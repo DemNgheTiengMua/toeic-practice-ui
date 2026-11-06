@@ -6,7 +6,10 @@ namespace Contracts;
 public sealed record CreateQuestionRequest(
     int GroupId,
     string Stem,
-    int DifficultyLevel,
+    // #229 / D1: dormant. Authoring no longer reads this or requires it - a row written today carries
+    // the level instead, and a caller that still passes a number has it ignored rather than stored.
+    // Nullable, not optional: "no difficulty" must be stated, and #231 deletes the member.
+    int? DifficultyLevel,
     QuestionTypeDto QuestionType,
     string? Explanation = null,
     int? CategoryId = null,
@@ -26,7 +29,8 @@ public sealed record CreateQuestionRequest(
     // the picture - and which of the two it is. Both null is a free-speech question.
     string? SampleAnswerOrImageDesc = null,
     ReferenceKindDto? ReferenceKind = null,
-    // #228 / D1: the level this question is authored at, beside the five-point difficulty it
-    // replaces. A code, not an enum: the column is a string and a bad value must be a 400 with a
-    // sentence, not a deserialisation failure. Optional, so every existing call site still compiles.
+    // #229 / D1: the level this question is authored at, required by every authoring path. A code, not
+    // an enum: the column is a string and a bad value must be a 400 with a sentence, not a
+    // deserialisation failure. Optional so every existing call site still compiles - an absent level is
+    // refused by name at the service, not defaulted.
     string? CefrLevelCode = null);

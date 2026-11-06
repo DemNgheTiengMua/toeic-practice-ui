@@ -131,7 +131,8 @@ public sealed partial class AdminExamService
                         SampleAnswerOrImageDesc: q.SampleAnswerOrImageDesc,
                         ReferenceKind: q.ReferenceKind is null
                             ? null
-                            : EnumCodes.Parse<ReferenceKindDto>(q.ReferenceKind)));
+                            : EnumCodes.Parse<ReferenceKindDto>(q.ReferenceKind),
+                        CefrLevelCode: q.CefrLevel?.Code));
                 }
 
                 groupDtos.Add(new ExamStudioGroupDto(

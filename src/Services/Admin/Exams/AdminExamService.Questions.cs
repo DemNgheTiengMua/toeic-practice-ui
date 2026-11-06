@@ -102,7 +102,8 @@ public sealed partial class AdminExamService
                 AcceptedAnswersJson: q.AcceptedAnswersJson,
                 RequiredKeywords: q.RequiredKeywords,
                 SampleAnswerOrImageDesc: q.SampleAnswerOrImageDesc,
-                ReferenceKind: ParseReferenceKind(q.ReferenceKind))).ToList(),
+                ReferenceKind: ParseReferenceKind(q.ReferenceKind),
+                CefrLevelCode: q.CefrLevel?.Code)).ToList(),
             UnitNumber: g.UnitNumber
         )).ToList();
 
@@ -162,7 +163,7 @@ public sealed partial class AdminExamService
             catch (JsonException) { }
         }
 
-        ValidateQuestionInputs(request.Stem, request.DifficultyLevel, request.QuestionType, request.PrepSeconds, request.ResponseSeconds, request.MinWords, request.MaxWords, request.Hint, request.Options, request.MaxSelections, request.AllowNumber, request.AcceptedAnswersJson, request.RequiredKeywords);
+        ValidateQuestionInputs(request.Stem, request.CefrLevelCode, request.QuestionType, request.PrepSeconds, request.ResponseSeconds, request.MinWords, request.MaxWords, request.Hint, request.Options, request.MaxSelections, request.AllowNumber, request.AcceptedAnswersJson, request.RequiredKeywords);
         ValidateReference(request.QuestionType, request.SampleAnswerOrImageDesc, request.ReferenceKind);
 
         if (request.CategoryId.HasValue)
@@ -181,7 +182,7 @@ public sealed partial class AdminExamService
             SectionId = group.SectionId,
             SkillId = group.Section.SkillId,
             Stem = request.Stem.Trim(),
-            DifficultyLevel = request.DifficultyLevel,
+            CefrLevel = ParseAuthoredLevel(request.CefrLevelCode),
             QuestionType = request.QuestionType.ToCode(),
             Explanation = Normalize(request.Explanation),
             CategoryId = request.CategoryId,
@@ -265,7 +266,8 @@ public sealed partial class AdminExamService
             AcceptedAnswersJson: question.AcceptedAnswersJson,
             RequiredKeywords: question.RequiredKeywords,
             SampleAnswerOrImageDesc: question.SampleAnswerOrImageDesc,
-            ReferenceKind: ParseReferenceKind(question.ReferenceKind));
+            ReferenceKind: ParseReferenceKind(question.ReferenceKind),
+            CefrLevelCode: question.CefrLevel?.Code);
     }
 
     public async Task<AdminQuestionDto> UpdateQuestionAsync(int questionId, UpdateQuestionRequest request, CancellationToken cancellationToken = default)
@@ -294,7 +296,7 @@ public sealed partial class AdminExamService
             catch (JsonException) { }
         }
 
-        ValidateQuestionInputs(request.Stem, request.DifficultyLevel, request.QuestionType, request.PrepSeconds, request.ResponseSeconds, request.MinWords, request.MaxWords, request.Hint, request.Options, request.MaxSelections, request.AllowNumber, request.AcceptedAnswersJson, request.RequiredKeywords);
+        ValidateQuestionInputs(request.Stem, request.CefrLevelCode, request.QuestionType, request.PrepSeconds, request.ResponseSeconds, request.MinWords, request.MaxWords, request.Hint, request.Options, request.MaxSelections, request.AllowNumber, request.AcceptedAnswersJson, request.RequiredKeywords);
         ValidateReference(request.QuestionType, request.SampleAnswerOrImageDesc, request.ReferenceKind);
 
         var hasAnswers = await db.AttemptAnswers.AnyAsync(a => a.QuestionId == questionId, cancellationToken)
@@ -354,7 +356,14 @@ public sealed partial class AdminExamService
         }
 
         question.Stem = request.Stem.Trim();
-        question.DifficultyLevel = request.DifficultyLevel;
+        // #229 / D1: the level replaces the difficulty, and a request that states none keeps the one
+        // already stored. Clearing it would make an autosave of an unrelated field silently unlevel an
+        // item, which is the same class of defect as defaulting it.
+        if (!string.IsNullOrWhiteSpace(request.CefrLevelCode))
+        {
+            question.CefrLevel = ParseAuthoredLevel(request.CefrLevelCode);
+        }
+
         question.QuestionType = request.QuestionType.ToCode();
         question.Explanation = Normalize(request.Explanation);
         question.CategoryId = request.CategoryId;
@@ -497,7 +506,8 @@ public sealed partial class AdminExamService
             AcceptedAnswersJson: question.AcceptedAnswersJson,
             RequiredKeywords: question.RequiredKeywords,
             SampleAnswerOrImageDesc: question.SampleAnswerOrImageDesc,
-            ReferenceKind: ParseReferenceKind(question.ReferenceKind));
+            ReferenceKind: ParseReferenceKind(question.ReferenceKind),
+            CefrLevelCode: question.CefrLevel?.Code);
     }
 
     public async Task DeleteQuestionAsync(int questionId, CancellationToken cancellationToken = default)

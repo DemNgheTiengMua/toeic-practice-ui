@@ -126,7 +126,7 @@ public sealed class AdminExamServiceSplitQueryTests(DatabaseFixture database)
                 [
                     new AdminQuestionOptionInput(null, "A", "first", IsCorrect: true, null),
                     new AdminQuestionOptionInput(null, "B", "second", IsCorrect: false, null),
-                ]));
+                ], CefrLevelCode: "B1"));
         }
 
         return exam.ExamId;

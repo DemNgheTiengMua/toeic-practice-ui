@@ -51,7 +51,11 @@ public sealed partial class ExamQuickIngestService
             var issues = new List<QuickIngestIssueDto>();
 
             var stem = item.TryGetProperty("stem", out var sProp) ? sProp.GetString() ?? string.Empty : string.Empty;
-            var difficulty = item.TryGetProperty("difficultyLevel", out var dProp) && dProp.TryGetInt32(out var diff) ? diff : 3;
+            // #229 / D1: a JSON paste may state its own level; when it does not, the commit's own
+            // level applies. There is deliberately no fallback to a number - the old parse filled in
+            // difficulty 3 here and that default is exactly what put items in the wrong cell.
+            var cefrLevel = item.TryGetProperty("cefrLevel", out var clProp) ? clProp.GetString() : null;
+            var difficulty = item.TryGetProperty("difficultyLevel", out var dProp) && dProp.TryGetInt32(out var diff) ? (int?)diff : null;
             var explanation = item.TryGetProperty("explanation", out var eProp) ? eProp.GetString() : null;
             var categoryCode = item.TryGetProperty("categoryCode", out var cProp) ? cProp.GetString() : null;
             var questionType = item.TryGetProperty("questionType", out var qtProp) ? qtProp.GetString()?.ToLowerInvariant() ?? "mcq" : "mcq";
@@ -168,7 +172,8 @@ public sealed partial class ExamQuickIngestService
                 PrepSeconds: prepSec,
                 ResponseSeconds: respSec,
                 SampleAnswerOrImageDesc: reference,
-                ReferenceKind: referenceKind is null ? null : EnumCodes.Parse<ReferenceKindDto>(referenceKind)));
+                ReferenceKind: referenceKind is null ? null : EnumCodes.Parse<ReferenceKindDto>(referenceKind),
+                CefrLevel: cefrLevel));
 
             qIdx++;
         }

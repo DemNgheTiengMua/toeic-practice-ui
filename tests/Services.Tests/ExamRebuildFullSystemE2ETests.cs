@@ -335,7 +335,7 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                     new AdminQuestionOptionInput(null, "B", "11:00 AM", false, "Distractor"),
                     new AdminQuestionOptionInput(null, "C", "12:15 PM", false, "Distractor"),
                     new AdminQuestionOptionInput(null, "D", "01:00 PM", false, "Distractor")
-                ]));
+                ], CefrLevelCode: "B1"));
             q1Id = q1.QuestionId;
             optQ1AId = q1.Options.Single(o => o.Label == "A").OptionId;
 
@@ -348,7 +348,7 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                 CategoryId: catId,
                 AcceptedAnswersJson: "[\"telecommunications\",\"telecom\"]",
                 MaxWords: 2,
-                AllowNumber: false));
+                AllowNumber: false, CefrLevelCode: "B1"));
             q2Id = q2.QuestionId;
 
             // Q3: mcq (in Reading SEC_R1 Unit 1)
@@ -364,7 +364,7 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                     new AdminQuestionOptionInput(null, "B", "Sales Associate", false, null),
                     new AdminQuestionOptionInput(null, "C", "Intern", false, null),
                     new AdminQuestionOptionInput(null, "D", "Consultant", false, null)
-                ]));
+                ], CefrLevelCode: "B1"));
             q3Id = q3.QuestionId;
             optQ3AId = q3.Options.Single(o => o.Label == "A").OptionId;
 
@@ -380,7 +380,7 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                     new AdminQuestionOptionInput(null, "A", "Da Nang City Center", true, "Downtown"),
                     new AdminQuestionOptionInput(null, "B", "Suburban Industrial Park", false, null),
                     new AdminQuestionOptionInput(null, "C", "International Airport", false, null)
-                ]));
+                ], CefrLevelCode: "B1"));
             q4Id = q4.QuestionId;
             optQ4AId = q4.Options.Single(o => o.Label == "A").OptionId;
 
@@ -398,7 +398,7 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                     new AdminQuestionOptionInput(null, "B", "Office lease cancellation", false, null),
                     new AdminQuestionOptionInput(null, "C", "Export market expansion", true, "Factor C"),
                     new AdminQuestionOptionInput(null, "D", "Hiring freeze", false, null)
-                ]));
+                ], CefrLevelCode: "B1"));
             q5Id = q5.QuestionId;
             optQ5AId = q5.Options.Single(o => o.Label == "A").OptionId;
             optQ5CId = q5.Options.Single(o => o.Label == "C").OptionId;
@@ -415,7 +415,7 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                     new AdminQuestionOptionInput(null, "A", "Consequently", true, "Correct conjunction"),
                     new AdminQuestionOptionInput(null, "B", "Otherwise", false, null),
                     new AdminQuestionOptionInput(null, "C", "Nevertheless", false, null)
-                ]));
+                ], CefrLevelCode: "B1"));
             q6Id = q6.QuestionId;
             optQ6AId = q6.Options.Single(o => o.Label == "A").OptionId;
 
@@ -431,7 +431,7 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                     new AdminQuestionOptionInput(null, "A", "Phase 1: Discovery", true, "Correct slot"),
                     new AdminQuestionOptionInput(null, "B", "Phase 2: Deployment", false, null),
                     new AdminQuestionOptionInput(null, "C", "Phase 3: Retirement", false, null)
-                ]));
+                ], CefrLevelCode: "B1"));
             q7Id = q7.QuestionId;
             optQ7AId = q7.Options.Single(o => o.Label == "A").OptionId;
 
@@ -444,7 +444,7 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                 ResponseSeconds: 600,
                 MinWords: 5,
                 MaxWords: 50,
-                RequiredKeywords: "sustainability, efficiency"));
+                RequiredKeywords: "sustainability, efficiency", CefrLevelCode: "B1"));
             q8Id = q8.QuestionId;
 
             // 5. Readiness Audit Check

@@ -37,6 +37,22 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected out-of-range difficulty as expected';
 END CATCH
+-- #229 / D1: the level is the authored fact. A row may carry no difficulty (the column is dormant
+-- until #231 and every authoring path writes NULL), but a level off the authored ladder is refused.
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
+  SELECT GroupId,ExamId,SectionId,@tRead,N'levelled', 'B1','mcq',6 FROM QuestionGroups WHERE ExamId=@exam AND SectionId=@tSec;
+PRINT 'accepted an authored level';
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,QuestionType,DisplayOrder)
+  SELECT GroupId,ExamId,SectionId,@tRead,N'unlevelled','mcq',7 FROM QuestionGroups WHERE ExamId=@exam AND SectionId=@tSec;
+PRINT 'accepted a question with no difficulty and no level';
+BEGIN TRY
+  INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
+    SELECT GroupId,ExamId,SectionId,@tRead,N'bad level','B3','mcq',8 FROM QuestionGroups WHERE ExamId=@exam;
+  THROW 50000,'EXPECT_REJECT FAILED: level B3 accepted',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected an off-ladder level as expected';
+END CATCH
 -- H-5: reject a question row asserting an ExamId that isn't its group's own
 BEGIN TRY
   INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)

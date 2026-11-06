@@ -68,7 +68,7 @@ public sealed class ExamEditorStillWorksTests : IClassFixture<ExamEditorStillWor
                 Stem: "A saved stem",
                 DifficultyLevel: 2,
                 QuestionType: QuestionTypeDto.Mcq,
-                Explanation: "Saved from the editor.")),
+                Explanation: "Saved from the editor.", CefrLevelCode: "B1")),
         };
         request.Headers.Add("RequestVerificationToken", token);
 

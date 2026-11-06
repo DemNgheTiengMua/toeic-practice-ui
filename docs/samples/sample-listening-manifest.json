@@ -1,10 +1,10 @@
-{
+﻿{
   "version": "1.0",
   "exam": {
     "title": "TOEIC Listening Sample (Part 1 Photograph & Part 2 Question-Response)",
     "purpose": "mock",
     "durationMinutes": 30,
-    "sourceName": "Sample pack — listening",
+    "sourceName": "Sample pack â€” listening",
     "description": null
   },
   "sections": [
@@ -23,7 +23,7 @@
           "questions": [
             {
               "stem": "Look at the photograph and choose the statement that best describes what you see.",
-              "difficultyLevel": 1,
+              "cefrLevel": "A2",
               "questionType": "mcq",
               "categoryCode": "listening_photo",
               "explanation": "Statement (B) accurately describes the action shown in the photo.",
@@ -75,7 +75,7 @@
           "questions": [
             {
               "stem": "Where did you leave the contract files?",
-              "difficultyLevel": 2,
+              "cefrLevel": "A2",
               "questionType": "mcq",
               "categoryCode": "listening_detail",
               "explanation": "Question starts with 'Where', requiring a location response.",

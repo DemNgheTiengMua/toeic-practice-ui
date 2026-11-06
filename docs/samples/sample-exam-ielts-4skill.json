@@ -1,4 +1,4 @@
-{
+﻿{
   "version": "1.0",
   "exam": {
     "title": "IELTS Academic Mock Test Form 01 (Text Ingest)",
@@ -24,7 +24,7 @@
             {
               "displayOrder": 1,
               "stem": "What temperature reduction was achieved with 40 percent urban canopy coverage?",
-              "difficultyLevel": 3,
+              "cefrLevel": "B2",
               "questionType": "mcq",
               "categoryCode": "ielts_detail",
               "explanation": "The text states an average reduction of 3.2 degrees Celsius.",
@@ -76,7 +76,7 @@
             {
               "displayOrder": 1,
               "stem": "Summarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-              "difficultyLevel": 4,
+              "cefrLevel": "B2",
               "questionType": "free_response",
               "categoryCode": null,
               "prepSeconds": null,
@@ -120,7 +120,7 @@
             {
               "displayOrder": 1,
               "stem": "In many countries, an increasing number of young people choose to study abroad rather than attending domestic universities. Do the advantages of this trend outweigh the disadvantages?",
-              "difficultyLevel": 4,
+              "cefrLevel": "C1",
               "questionType": "free_response",
               "categoryCode": null,
               "prepSeconds": null,
@@ -164,7 +164,7 @@
             {
               "displayOrder": 1,
               "stem": "Part 1 (Interview): Let's talk about daily routines. What time do you usually wake up, and how do you like to start your morning?",
-              "difficultyLevel": 3,
+              "cefrLevel": "B1",
               "questionType": "free_response",
               "categoryCode": null,
               "prepSeconds": 15,
@@ -191,7 +191,7 @@
             {
               "displayOrder": 2,
               "stem": "Part 2 (Cue Card): Describe an invention that has significantly changed people's daily lives. You should say: what the invention is, when you first used it, how it benefits society, and explain whether all changes brought by it are positive.",
-              "difficultyLevel": 4,
+              "cefrLevel": "B2",
               "questionType": "free_response",
               "categoryCode": null,
               "prepSeconds": 60,

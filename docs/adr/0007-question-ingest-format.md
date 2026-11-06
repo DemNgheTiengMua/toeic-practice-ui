@@ -43,7 +43,7 @@ The manifest mirrors the domain model (`Exams` → `Sections` → `QuestionGroup
           "questions": [
             {
               "stem": "Ms. Tanaka requested that all department managers submit their quarterly budgets by _____ Friday.",
-              "difficultyLevel": 3,
+              "cefrLevel": "B1",
               "questionType": "mcq",
               "categoryCode": "grammar_prep",
               "explanation": "The adjective 'next' correctly precedes a specific day of the week to denote future timing.",
@@ -70,7 +70,7 @@ The manifest mirrors the domain model (`Exams` → `Sections` → `QuestionGroup
 ```json
 {
   "stem": "Describe a difficult problem you solved at your workplace.",
-  "difficultyLevel": 4,
+  "cefrLevel": "B2",
   "questionType": "free_response",
   "prepSeconds": 45,
   "responseSeconds": 60,
@@ -81,6 +81,7 @@ The manifest mirrors the domain model (`Exams` → `Sections` → `QuestionGroup
   The rubric itself is the skill's `GradingCriteria`, managed by admins and used by AI grading (ADR-0004). `criteria` only asserts which ones the author wrote the question against, so each code must already exist for the section's skill; an unknown code is an error, and nothing is created.
 - Unknown fields are rejected, so a typo (`"exma"`) is reported rather than silently ignored. `$schema` is accepted as an editor hint.
 - Media paths are relative to the package root and must sit under `media/` (`media/part1-photo-01.wav`). Imported files are stored through `IFileStore` under `imports/{batchId}/` with generated names; the question rows hold `/media/imports/{batchId}/{file}`, which the MVC site serves to any signed-in user by forwarding to the API (ADR-0002).
+- **`version` stays `1.0` after #229.** The level field is additive on the reading side: a manifest written before #229 that carries only `difficultyLevel` still deserialises, and is refused per question with a message naming `cefrLevel` - a loud refusal, not a silent upgrade. Exports written since #229 carry `cefrLevel` and no `difficultyLevel`, and re-import as themselves. A version bump would refuse every file that already imports today without making any of them more correct, which is the opposite of what a version check is for.
 
 ### 3. Validation Rules
 
@@ -90,7 +91,7 @@ The whole file is validated before anything is written, and every problem is rep
 2. **Exam header**: `title` required, at most 160 characters, and not already the name of a live exam of that certificate; `durationMinutes > 0`; `purpose` a known code.
 3. **MCQ**: at least 2 options, **exactly one** `isCorrect: true` (`UX_Options_OneCorrect`), unique non-empty labels of at most 4 characters (`UQ_Options_Question_Label`), text on every option; no `prepSeconds`, `responseSeconds`, `minWords`, `maxWords` or `criteria` (`CK_Questions_Timing`, `CK_Questions_Words`); only in listening or reading sections.
 4. **Free response**: no options; `prepSeconds >= 0`, `responseSeconds > 0`, `minWords >= 1`, `maxWords >= minWords` (`CK_Questions_Timing`, `CK_Questions_Words`); only in speaking or writing sections; criteria codes must exist for the skill.
-5. **Every question**: `stem` required, `difficultyLevel` 1–5, `hint` at most 1000 characters.
+5. **Every question**: `stem` required, `cefrLevel` one of A1–C2 (`pre_a1` is reportable only, never authored), `hint` at most 1000 characters. `difficultyLevel` is accepted but dormant: it is read, never validated against a level and never defaulted, because there is no difficulty-to-level mapping (D1). A question that names no level is refused, and the refusal names the level, not the number.
 6. **Media integrity**: `audioFile` is `.mp3` or `.wav`, `imageFile` is `.jpg`, `.jpeg` or `.png`; each must exist in the package's `media/` folder and may not climb out of it. A plain `.json` upload cannot reference media. `imageAlt` is required with `imageFile` (`CK_QGroups_ImageAlt`).
 7. **Audio slicing**: `audioStartMs` and `audioEndMs` come together, with `audioEndMs > audioStartMs >= 0` (`CK_QGroups_AudioSlice`).
 8. **Modality**: a `speaking_practice` or `writing_practice` exam holds only sections of that skill (`trg_QGroups_SkillPracticeOneModality`).

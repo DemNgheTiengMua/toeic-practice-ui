@@ -176,6 +176,16 @@
       });
     });
 
+    // #229: a level change is a scored coordinate, so it saves at once rather than on a debounce that
+    // a page reload could outrun.
+    document.querySelectorAll('.studio-question-level').forEach(function(levelInput) {
+      if (levelInput._hasLevelChange) return;
+      levelInput._hasLevelChange = true;
+      levelInput.addEventListener('change', function() {
+        saveSingleQuestion(parseInt(levelInput.getAttribute('data-qid'), 10));
+      });
+    });
+
     document.querySelectorAll('.studio-criterion-checkbox').forEach(function(checkbox) {
       if (checkbox._hasCriterionChange) return;
       checkbox._hasCriterionChange = true;
@@ -283,8 +293,9 @@
     var isFreeResponse = questionTypeStr === 'free_response';
     var isInline = questionTypeStr === 'inline_completion';
 
-    var diffLevel = parseInt(card.getAttribute('data-difficulty'), 10);
-    if (!diffLevel || isNaN(diffLevel) || diffLevel < 1 || diffLevel > 5) diffLevel = 3;
+    // #229 / D1: the card's own level. No numeric fallback: the service refuses a request with no
+    // level, so inventing a 3 here would be the same silent default one layer up.
+    var cefrLevel = card.querySelector('.studio-question-level')?.value || card.getAttribute('data-cefr-level') || '';
 
     var dispOrder = parseInt(card.getAttribute('data-display-order'), 10) || 1;
     var grpId = parseInt(card.closest('.card-editor')?.dataset.groupId, 10) || null;
@@ -293,7 +304,7 @@
       groupId: grpId,
       displayOrder: dispOrder,
       stem: stem,
-      difficultyLevel: diffLevel,
+      cefrLevelCode: cefrLevel,
       questionType: questionTypeStr,
       explanation: expl,
       categoryId: catId ? parseInt(catId, 10) : null,
@@ -1004,6 +1015,10 @@
     var count = customCount || (mode === 'cluster' ? 3 : 1);
     var uFilter = document.getElementById('ws-unit-filter');
     var unitNum = uFilter && parseInt(uFilter.value, 10) > 0 ? parseInt(uFilter.value, 10) : 1;
+    // #229 / D1: the level the new cluster is authored at. The control always has a value, so an
+    // empty string here means the control is missing, not that the author chose "none".
+    var levelSelect = document.getElementById('add-cluster-level');
+    var clusterLevel = levelSelect ? levelSelect.value : '';
 
     markSaving();
     fetch('/admin/exams/' + examId + '/clusters', {
@@ -1015,7 +1030,8 @@
       body: JSON.stringify({
         sectionId: secId,
         questionCount: count,
-        unitNumber: unitNum
+        unitNumber: unitNum,
+        cefrLevelCode: clusterLevel
       })
     })
     .then(async function(res) {

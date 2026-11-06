@@ -8,8 +8,12 @@ namespace WebMVC.Tests;
 /// <para>
 /// A paste is text, so a CEFR level cannot be read off it and D1 forbids deriving one from the
 /// difficulty number. The dialog therefore asks once per batch, and the list of topics follows the
-/// selected section's skill - a listening paste must not be filed under a reading topic. Without
-/// these controls the commit writes the legacy rows only, which is legal but leaves the pool empty.
+/// selected section's skill - a listening paste must not be filed under a reading topic.
+/// </para>
+/// <para>
+/// #229 makes the level required, not advisory: an unlevelled commit is refused, so the dialog now
+/// blocks the commit with a message naming the control instead of sending a null the service rejects.
+/// The guard below is the same one - the level reaches the payload - read at its new shape.
 /// </para>
 /// </summary>
 public sealed class QuickIngestPoolControlsTests
@@ -30,9 +34,13 @@ public sealed class QuickIngestPoolControlsTests
         Assert.Contains("<option value=\"C2\">", modal);
         Assert.DoesNotContain("pre_a1", modal);
 
-        // …and the commit carries them, so the dialog is not decoration.
-        Assert.Contains("cefrLevel: cefrLevelSelect", script);
+        // …and the commit carries them, so the dialog is not decoration. #229: the level is sent as a
+        // required value, and the commit is refused client-side when it is empty - so there is no code
+        // path that sends `cefrLevel: null` and relies on a server-side default.
+        Assert.Contains("cefrLevel: commitLevel", script);
         Assert.Contains("topicCode: topicCodeSelect", script);
+        Assert.Contains("if (!commitLevel)", script);
+        Assert.DoesNotContain("cefrLevelSelect.value || null", script);
 
         // The topic list is the canonical twenty, filtered by the section's own skill.
         Assert.Contains("'R-GIST'", script);

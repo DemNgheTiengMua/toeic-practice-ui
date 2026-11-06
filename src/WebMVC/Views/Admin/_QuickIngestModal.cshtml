@@ -23,12 +23,13 @@
 
         <div class="row" style="gap: 1rem; align-items: center;">
           <div class="row" style="gap: 0.5rem; align-items: center;">
-            <!-- #189: a paste is text, so the level and topic it belongs to are stated once here.
-                 The parser cannot read a CEFR level, and D1 forbids deriving one from the
-                 difficulty number, so the pool write needs an answer the author gives. -->
+            <!-- #189 / #229: a paste is text, so the level it is authored at is stated once here.
+                 The parser cannot read a CEFR level, and D1 forbids deriving one from the difficulty
+                 number, so the pool write needs an answer the author gives - and a commit without one
+                 is refused rather than defaulted. -->
             <label for="qi-cefr-level" style="font-weight: 600; text-transform: uppercase; font-size: 0.85rem;">Level:</label>
             <select id="qi-cefr-level" class="field__input" style="padding: 0.4rem 0.6rem; border-radius: 0; border: 2px solid var(--color-ink, #14181d);">
-              <option value="">Not stated</option>
+              <option value="">Choose a level…</option>
               <option value="A1">A1</option>
               <option value="A2">A2</option>
               <option value="B1">B1</option>

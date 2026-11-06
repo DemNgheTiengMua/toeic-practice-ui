@@ -31,6 +31,16 @@
         <button type="button" class="btn btn--secondary btn--sm" id="btn-add-cluster" style="border-radius: 0;">
           + Add Cluster
         </button>
+        @* #229 / D1: a new cluster is content, so it is authored at a level like any other item.
+           Default B1 is the ladder's mid-point for the control's initial value only; the author
+           sees and changes it before the cluster is created, and the service refuses an absent one. *@
+        <label class="text-xs" for="add-cluster-level" style="margin-left: 0.5rem;">New items at:</label>
+        <select id="add-cluster-level" class="field__input text-xs" style="padding: 0.2rem 0.4rem; border-radius: 0;">
+          @foreach (var level in CefrLevelLabels.AuthoredCodes)
+          {
+            <option value="@level" selected="@(level == "B1")">@level</option>
+          }
+        </select>
       </div>
     </div>
 

@@ -251,7 +251,9 @@ public sealed partial class QuestionImportService
             SectionId = g.planned.Section.SectionId,
             SkillId = g.planned.Section.SkillId,
             Stem = question.Source.Stem!.Trim(),
-            DifficultyLevel = question.Source.DifficultyLevel!.Value,
+            // #229 / D1: the level the file was validated on, not a second parse of the same string.
+            // The difficulty is left NULL: it is dormant until #231 deletes the column.
+            CefrLevel = question.Level,
             QuestionType = question.Type.ToCode(),
             Explanation = Normalise(question.Source.Explanation),
             CategoryId = question.CategoryId,

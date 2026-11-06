@@ -94,6 +94,24 @@ public sealed class CefrLevelLabelDriftTests
         Assert.Contains("grammar", logger.Warnings[0], StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// #229: the picker's list is the authored ladder, exactly. An authoring screen that offered the
+    /// floor would produce a request the service refuses; one that offered B3 would produce a code the
+    /// schema refuses. The list is in Contracts because WebMVC cannot see <c>BusinessObjects</c>, which
+    /// is precisely why it needs this guard.
+    /// </summary>
+    [Fact]
+    public void The_pickers_level_list_is_exactly_the_authored_ladder()
+    {
+        Assert.Equal(
+            CefrLevel.AuthoredLevels.Select(level => level.Code),
+            CefrLevelLabels.AuthoredCodes);
+
+        Assert.DoesNotContain(CefrLevel.PreA1.Code, CefrLevelLabels.AuthoredCodes);
+        Assert.All(CefrLevelLabels.AuthoredCodes,
+            code => Assert.True(CefrLevel.TryParseAuthored(code, out _), $"{code} is pickable but not authorable"));
+    }
+
     private sealed class NullLogger : ILogger
     {
         public List<string> Warnings { get; } = [];

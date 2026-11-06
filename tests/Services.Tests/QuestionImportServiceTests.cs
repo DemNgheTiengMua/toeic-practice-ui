@@ -243,19 +243,29 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
         Assert.Equal("failed", (await db.ImportBatches.SingleAsync(b => b.BatchId == result.BatchId)).Status);
     }
 
+    /// <summary>
+    /// #229: the row that no longer carries a difficulty. A file whose question states neither a level
+    /// nor a difficulty used to be refused on the difficulty; it is now refused on the level, and the
+    /// error still names the question it is about - which is the whole point of the message.
+    /// <para>
+    /// Changed by #229: this test set <c>difficultyLevel = 9</c> and asserted the 1-5 message. The
+    /// difficulty is dormant, so 9 is no longer a refusal; a level off the ladder is.
+    /// </para>
+    /// </summary>
     [Fact]
     public async Task Each_error_names_the_question_it_is_about()
     {
         var (certId, adminId) = await SeedAsync();
         var manifest = Sample("sample-reading-mcq.json");
-        manifest["sections"]![1]!["groups"]![0]!["questions"]![0]!["difficultyLevel"] = 9;
+        manifest["sections"]![1]!["groups"]![0]!["questions"]![0]!["cefrLevel"] = "B3";
 
         var result = await ImportJsonAsync(CreateService(), certId, adminId, manifest);
 
         var error = Assert.Single(await LogsAsync(result.BatchId), l => l.Level == "error");
         Assert.Equal(2, error.RowNo);
         Assert.Contains("Section P7, group 1, question 1", error.Message);
-        Assert.Contains("difficultyLevel must be between 1 and 5", error.Message);
+        Assert.Contains("not an authored level", error.Message);
+        Assert.Contains("A1-C2", error.Message);
     }
 
     [Fact]
@@ -741,7 +751,7 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
                   "questions": [
                     {
                       "stem": "Which TWO factors contributed to the success?",
-                      "difficultyLevel": 3,
+                      "cefrLevel": "B1",
                       "questionType": "multi_select",
                       "maxSelections": 2,
                       "explanation": "Factors A and C are documented.",
@@ -756,7 +766,7 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
                     },
                     {
                       "stem": "The company was established in _____.",
-                      "difficultyLevel": 2,
+                      "cefrLevel": "A2",
                       "questionType": "inline_completion",
                       "allowNumber": true,
                       "maxWords": 2,
@@ -778,7 +788,7 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
                   "questions": [
                     {
                       "stem": "Write a response to the client inquiry.",
-                      "difficultyLevel": 4,
+                      "cefrLevel": "B2",
                       "questionType": "free_response",
                       "responseSeconds": 900,
                       "minWords": 100,

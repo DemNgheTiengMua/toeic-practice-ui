@@ -112,6 +112,14 @@ public sealed partial class QuestionImportService
         return sec.OptionCount == 3 ? ["mcq_3"] : ["mcq"];
     }
 
+    /// <summary>
+    /// A placeholder question for the downloadable template.
+    /// <para>
+    /// #229: every placeholder states a level, because the template is a file an author edits and
+    /// imports. A placeholder carrying only a difficulty produces a structurally valid file whose
+    /// every question the importer then refuses - a broken starting point that looked finished.
+    /// </para>
+    /// </summary>
     private static ImportManifestQuestion CreatePlaceholderQuestion(Section sec, string qType, int displayOrder)
     {
         return qType.ToLowerInvariant() switch
@@ -119,7 +127,7 @@ public sealed partial class QuestionImportService
             "free_response" => new ImportManifestQuestion
             {
                 Stem = $"[Prompt for {sec.Name}] Respond to the question or task description.",
-                DifficultyLevel = 3,
+                CefrLevel = "B1",
                 QuestionType = "free_response",
                 PrepSeconds = sec.NavigationMode == "SYSTEM_PACED_AUTO" ? 15 : null,
                 ResponseSeconds = sec.Modality == "speaking" ? 45 : 1200,
@@ -140,7 +148,7 @@ public sealed partial class QuestionImportService
             "multi_select" => new ImportManifestQuestion
             {
                 Stem = $"[Question #{displayOrder}] Which TWO of the following statements are supported by the passage?",
-                DifficultyLevel = 3,
+                CefrLevel = "B1",
                 QuestionType = "multi_select",
                 MaxSelections = 2,
                 DisplayOrder = displayOrder,
@@ -158,7 +166,7 @@ public sealed partial class QuestionImportService
             "inline_completion" => new ImportManifestQuestion
             {
                 Stem = $"[Question #{displayOrder}] The new distribution center reduced regional transit times by _____ percent.",
-                DifficultyLevel = 3,
+                CefrLevel = "B1",
                 QuestionType = "inline_completion",
                 AllowNumber = true,
                 MaxWords = 2,
@@ -171,7 +179,7 @@ public sealed partial class QuestionImportService
             "dropdown" or "drag_drop" => new ImportManifestQuestion
             {
                 Stem = $"[Question #{displayOrder}] Match the category label to this item.",
-                DifficultyLevel = 3,
+                CefrLevel = "B1",
                 QuestionType = qType.ToLowerInvariant(),
                 DisplayOrder = displayOrder,
                 Options =
@@ -187,7 +195,7 @@ public sealed partial class QuestionImportService
             "mcq_3" => new ImportManifestQuestion
             {
                 Stem = $"[Question #{displayOrder}] What was the primary topic discussed by the speakers?",
-                DifficultyLevel = 3,
+                CefrLevel = "B1",
                 QuestionType = "mcq_3",
                 DisplayOrder = displayOrder,
                 Options =
@@ -203,7 +211,7 @@ public sealed partial class QuestionImportService
             _ => new ImportManifestQuestion
             {
                 Stem = $"[Question #{displayOrder}] Which option best completes the sentence?",
-                DifficultyLevel = 3,
+                CefrLevel = "B1",
                 QuestionType = "mcq",
                 DisplayOrder = displayOrder,
                 Options = Enumerable.Range(0, sec.OptionCount is >= 2 and <= 6 ? sec.OptionCount : 4)

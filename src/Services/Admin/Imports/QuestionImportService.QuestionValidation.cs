@@ -33,19 +33,25 @@ public sealed partial class QuestionImportService
             Fail("stem is required.");
         }
 
-        if (question.DifficultyLevel is not (>= 1 and <= 5))
+        // #229 / D1: the level is required, and the difficulty beside it is not a substitute. A file
+        // that names only a difficulty used to import into the legacy shape and be told, per question,
+        // what to add; now the level is the only levelling fact, so a question without one is refused
+        // by name and the number is never read. This is the loud failure the ticket asks for: a
+        // fallback to the group's level or to A1 would leave every question levelled and land the item
+        // in a cell nobody chose.
+        var hasLevel = false;
+        CefrLevel level = default;
+        if (string.IsNullOrWhiteSpace(question.CefrLevel))
         {
-            Fail("difficultyLevel must be between 1 and 5.");
+            Fail("cefrLevel is required: content is authored at A1-C2 (A1, A2, B1, B2, C1, C2). There is no default and no difficulty-to-level mapping (D1).");
         }
-
-        // #189: the pool's own coordinates. Both are optional - a file that predates the pool has
-        // neither and still imports into the legacy shape - but when either is given it must be
-        // real: an invented topic and a level that is not on the authored ladder are typos the
-        // author can only see if the file is refused.
-        if (!string.IsNullOrWhiteSpace(question.CefrLevel)
-            && !CefrLevel.TryParseAuthored(question.CefrLevel.Trim(), out _))
+        else if (!CefrLevel.TryParseAuthored(question.CefrLevel.Trim(), out level))
         {
-            Fail($"cefrLevel '{question.CefrLevel}' is not an authored level. Content is authored at A1-C2; there is no difficulty-to-level mapping (D1).");
+            Fail($"cefrLevel '{question.CefrLevel}' is not an authored level. Content is authored at A1-C2; the pre-A1 floor is reportable only, and there is no difficulty-to-level mapping (D1).");
+        }
+        else
+        {
+            hasLevel = true;
         }
 
         var modality = section?.Modality ?? "reading";
@@ -153,9 +159,17 @@ public sealed partial class QuestionImportService
             requiredKeywords = string.Join(", ", question.RequiredKeywords);
         }
 
+        // The write needs the level, and reaching here without one means the refusal above was skipped.
+        if (!hasLevel)
+        {
+            return null;
+        }
+
         return report.ErrorCount > errorsBefore
             ? null
-            : new PlannedQuestion(question, type, categoryId, question.DisplayOrder ?? questionIndex, acceptedAnswersJson, requiredKeywords);
+            : new PlannedQuestion(
+                question, type, categoryId, question.DisplayOrder ?? questionIndex,
+                acceptedAnswersJson, requiredKeywords, level);
     }
 
     private static void ValidateMcq(ImportManifestQuestion question, Section? section, Action<string> fail)
