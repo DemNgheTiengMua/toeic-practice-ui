@@ -163,6 +163,10 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<ItemVersion> ItemVersions { get; set; }
 
 
+    /// <summary>#202 / D0.5: the per-cell content budget, one row per (skill, level).</summary>
+    public virtual DbSet<ContentQuota> ContentQuotas { get; set; }
+
+
     /// <summary>#185: the assembly binding - which pinned version each exam puts on its paper.</summary>
     public virtual DbSet<ExamItem> ExamItems { get; set; }
 
@@ -240,6 +244,10 @@ public partial class CompanionDbContext : DbContext
 
 
     public virtual DbSet<vw_UserSectionAccuracyAll> vw_UserSectionAccuracyAlls { get; set; }
+
+
+    /// <summary>#202: one row per coverage cell, always all 120 of them.</summary>
+    public virtual DbSet<vw_CoverageMatrix> vw_CoverageMatrices { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

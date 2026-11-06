@@ -2965,6 +2965,80 @@ CREATE VIEW vw_UserSectionAccuracy AS
   JOIN Sections s ON s.SectionId = ps.SectionId
   GROUP BY ps.UserId, s.SectionId, s.Name;
 GO
+-- ============ #202: Coverage budget and matrix ============
+-- D0.5: the pool is sized BY CELL, and the size is content budget, not a rule. The numbers live in
+-- rows so a later content ticket re-sizes a cell without a schema edit - a CHECK or a C# constant
+-- encoding "30" would be a second, silent copy of the volume tiers that no one can retune.
+--
+-- One row per (skill, level), not per topic: every topic inside a skill shares the band's depth, and
+-- D0.5 gives no figure that varies by topic. That is also why this table is the matrix's level axis:
+-- a cell exists because its quota row exists, so there is no second copy of the A1..C2 ladder to keep
+-- in step, and a missing quota row fails domain29's 120-cell count rather than vanishing silently.
+--
+-- A productive skill is sized in tasks, an objective one in items (8/4 vs 30/15 per D0.5), so the
+-- column is named for neither: it is the cell's target unit count.
+CREATE TABLE ContentQuotas (
+  Modality        VARCHAR(10) NOT NULL
+    CONSTRAINT CK_ContentQuotas_Modality CHECK (Modality IN ('listening','reading','speaking','writing')),
+  CefrLevel       VARCHAR(10) NOT NULL
+    CONSTRAINT CK_ContentQuotas_Level CHECK (CefrLevel IN ('A1','A2','B1','B2','C1','C2')),
+  -- A zero target would make a cell "satisfied" at empty and a negative one would make the deficit
+  -- arithmetic report a surplus nobody authored. The unit count is a budget, so it starts at one.
+  TargetItemCount INT NOT NULL
+    CONSTRAINT CK_ContentQuotas_Target CHECK (TargetItemCount > 0),
+  CONSTRAINT PK_ContentQuotas PRIMARY KEY (Modality, CefrLevel)
+);
+GO
+-- D0.5's volume tiers, as data: core bands (A2, B1, B2, C1) hold 30 objective items / 8 productive
+-- tasks per cell, peripheral bands (A1, C2) hold 15 / 4. Summed over the canonical twenty topics that
+-- is exactly the published per-skill total (listening 900, reading 900, speaking 160, writing 160 =
+-- 2,120), which is how this block was checked rather than by trusting the numbers twice.
+INSERT INTO ContentQuotas (Modality, CefrLevel, TargetItemCount) VALUES
+  ('listening','A1',15), ('listening','A2',30), ('listening','B1',30),
+  ('listening','B2',30), ('listening','C1',30), ('listening','C2',15),
+  ('reading',  'A1',15), ('reading',  'A2',30), ('reading',  'B1',30),
+  ('reading',  'B2',30), ('reading',  'C1',30), ('reading',  'C2',15),
+  ('speaking', 'A1', 4), ('speaking', 'A2', 8), ('speaking', 'B1', 8),
+  ('speaking', 'B2', 8), ('speaking', 'C1', 8), ('speaking', 'C2', 4),
+  ('writing',  'A1', 4), ('writing',  'A2', 8), ('writing',  'B1', 8),
+  ('writing',  'B2', 8), ('writing',  'C1', 8), ('writing',  'C2', 4);
+GO
+-- S-01: one row per cell, always 120 of them. The screen's rule is that "which cell is empty" is
+-- something you LOOK AT (D8), so an empty cell has to be a row with a deficit - not an absent row.
+-- A view grouped over Items alone renders an empty cell as nothing, which reads as "no problem here".
+-- The two joins below are what make that impossible: Topics x ContentQuotas is the cell grid and is
+-- built without reading Items at all, so authoring an item can only change a count, never the shape.
+--
+-- Only active stock counts (CNT-42): a retired, quarantined, validated or draft item is not depth the
+-- learner can drill. `PlacementEligibleItemCount` carries the same filter, because an eligible retired
+-- item is still not stock.
+--
+-- The deficit floors at zero. An over-supplied cell is not a negative gap; rendering "-2" would ask a
+-- reviewer to fix a surplus that does not exist.
+CREATE VIEW vw_CoverageMatrix AS
+  SELECT t.TopicId,
+         t.Modality,
+         t.Code           AS TopicCode,
+         t.Name           AS TopicName,
+         q.CefrLevel,
+         q.TargetItemCount,
+         ISNULL(x.ActiveItemCount, 0)            AS ActiveItemCount,
+         ISNULL(x.PlacementEligibleItemCount, 0) AS PlacementEligibleItemCount,
+         CASE WHEN q.TargetItemCount > ISNULL(x.ActiveItemCount, 0)
+              THEN q.TargetItemCount - ISNULL(x.ActiveItemCount, 0)
+              ELSE 0
+         END AS Deficit
+  FROM Topics t
+  JOIN ContentQuotas q ON q.Modality = t.Modality
+  LEFT JOIN (
+    SELECT TopicId, CefrLevel,
+           COUNT(*) AS ActiveItemCount,
+           SUM(CASE WHEN PlacementEligible = 1 THEN 1 ELSE 0 END) AS PlacementEligibleItemCount
+    FROM Items
+    WHERE LifecycleStatus = 'active'
+    GROUP BY TopicId, CefrLevel
+  ) x ON x.TopicId = t.TopicId AND x.CefrLevel = q.CefrLevel;
+GO
 -- ============ Query indexes ============
 -- SQL Server does not index foreign keys. These cover the joins the triggers run on every write
 -- and the screens' hot reads. Uniqueness lives above; nothing here enforces a rule.

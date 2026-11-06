@@ -61,5 +61,15 @@ public partial class CompanionDbContext
         {
             entity.ToView("vw_UserSectionAccuracyAll");
         });
+
+
+
+        // #202: S-01's matrix. Keyless and read-only like every other view here; the deficit is the
+        // database's arithmetic, never recomputed in C#.
+        modelBuilder.Entity<vw_CoverageMatrix>(entity =>
+        {
+            entity.ToView("vw_CoverageMatrix");
+        });
     }
+
 }

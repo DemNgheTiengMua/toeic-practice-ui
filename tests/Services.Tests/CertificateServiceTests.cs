@@ -124,6 +124,7 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
             .SqlQuery<int>($"SELECT COUNT(*) AS Value FROM sys.views")
             .SingleAsync();
         // #162: vw_LearnerPathIsPremium went with the premium-path feature, leaving eight views.
-        Assert.Equal(8, viewCount);
+        // #202: vw_CoverageMatrix is the ninth - one row per coverage cell, always all 120 of them.
+        Assert.Equal(9, viewCount);
     }
 }
