@@ -502,7 +502,11 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
         var previousTotal = attempt.TotalScore ?? 0;
 
         // ---- recompute, crediting the true key or excluding the item -----------------------------
-        var newScores = new List<(int SkillId, int RawScore, int ScaledScore)>();
+        // #251: every number is the engine's. Scaling is its ComputeScaledScoreAsync and the rule its
+        // AggregateTotalScore, so a certificate with a rule the engine refuses is refused here too
+        // instead of being summed by a second, weaker copy.
+        var engine = new AttemptEngine(db);
+        var newScores = new List<AttemptSkillScore>();
         foreach (var skillId in skillIds)
         {
             var skillAnswers = answers.Where(a => a.Question.Section.SkillId == skillId).ToList();
@@ -542,8 +546,15 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
                 continue;
             }
 
-            var scaled = await ComputeScaledAsync(attempt.CertId, skillId, attempt.ExamId, correct, denominator, cancellationToken);
-            newScores.Add((skillId, correct, scaled));
+            newScores.Add(new AttemptSkillScore
+            {
+                AttemptId = attemptId,
+                SkillId = skillId,
+                CertId = attempt.CertId,
+                RawScore = correct,
+                ScaledScore = await engine.ComputeScaledScoreAsync(
+                    attempt.CertId, skillId, attempt.ExamId, correct, denominator, cancellationToken),
+            });
         }
 
         if (newScores.Count == 0)
@@ -557,7 +568,7 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
             .Select(c => c.ScoreAggregationRule)
             .SingleAsync(cancellationToken);
 
-        var total = AggregateTotal(rule, newScores.Select(s => s.ScaledScore).ToList());
+        var total = AttemptEngine.AggregateTotalScore(rule, newScores);
         var recalculatedBand = AttemptEngine.MatchBandCode(total, bands);
 
         var previousRank = BandRank(bands, previousBand);
@@ -572,56 +583,11 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
                 attemptId, previousBand, recalculatedBand, previousTotal, total, Outcome: "kept");
         }
 
-        // ---- write: the plan's own three steps, because the guards require them ------------------
-        // trg_Attempts_SingleWriter wants the owner's declaration and a newer projection version on
-        // every score write; trg_Attempts_TotalMatchesSkills wants the total to agree with the skill
-        // rows. Clearing first, then replacing the rows, then writing the result is the order
-        // FinalizeAiGradedAttemptAsync already uses, so there is one way this is done and not two.
-        var tx = db.Database.CurrentTransaction is null
-            ? await db.Database.BeginTransactionAsync(cancellationToken)
-            : null;
-
-        try
-        {
-            attempt.TotalScore = null;
-            attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
-            attempt.ProjectionVersion++;
-            db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
-            await db.SaveChangesAsync(cancellationToken);
-
-            var existing = await db.AttemptSkillScores
-                .Where(s => s.AttemptId == attemptId)
-                .ToListAsync(cancellationToken);
-            db.AttemptSkillScores.RemoveRange(existing);
-            await db.SaveChangesAsync(cancellationToken);
-
-            foreach (var score in newScores)
-            {
-                db.AttemptSkillScores.Add(new AttemptSkillScore
-                {
-                    AttemptId = attemptId,
-                    SkillId = score.SkillId,
-                    CertId = attempt.CertId,
-                    RawScore = score.RawScore,
-                    ScaledScore = score.ScaledScore,
-                });
-            }
-
-            await db.SaveChangesAsync(cancellationToken);
-
-            attempt.TotalScore = total;
-            attempt.BandCode = recalculatedBand;
-            attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
-            attempt.ProjectionVersion++;
-            db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
-            await db.SaveChangesAsync(cancellationToken);
-
-            if (tx is not null) await tx.CommitAsync(cancellationToken);
-        }
-        finally
-        {
-            if (tx is not null) await tx.DisposeAsync();
-        }
+        // ---- write: through the fact's owner -----------------------------------------------------
+        // #251: the three statements and the declaration are AttemptEngine's, because it is the
+        // registry's owner of `attempt_score_and_band`. Writing them here was a second writer of a
+        // derived fact - the confirmed defect #191 exists to prevent - and it re-derived the rule.
+        await engine.WriteAttemptScoreAsync(attemptId, newScores, cancellationToken);
 
         return new AttemptRecalculationOutcome(
             attemptId, previousBand, recalculatedBand, previousTotal, total, Outcome: "upgraded");
@@ -642,56 +608,6 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
         var band = bands.FirstOrDefault(b => string.Equals(b.Code, code, StringComparison.OrdinalIgnoreCase));
         return band?.MinTotal ?? int.MinValue;
     }
-
-    private async Task<int> ComputeScaledAsync(
-        int certId, int skillId, int examId, int rawScore, int totalQuestions, CancellationToken cancellationToken)
-    {
-        var skill = await db.Skills
-            .AsNoTracking()
-            .Where(s => s.SkillId == skillId && s.CertId == certId)
-            .Select(s => new { s.MinScaledScore, s.MaxScaledScore, s.ScoreStep })
-            .SingleAsync(cancellationToken);
-
-        if (skill.MinScaledScore is not int minimum
-            || skill.MaxScaledScore is not int maximum
-            || skill.ScoreStep is not int step)
-        {
-            throw new ScoreConversionException(
-                ScoreConversionException.SkillScaleNotConfigured,
-                $"Skill {skillId} has no score scale, so the recalculation cannot place a score.");
-        }
-
-        var scaleRows = await db.ScoreScales
-            .AsNoTracking()
-            .Where(s => s.CertId == certId && s.SkillId == skillId && s.ExamId == examId)
-            .OrderBy(s => s.RawScore)
-            .ToListAsync(cancellationToken);
-
-        if (scaleRows.Count == 0)
-        {
-            scaleRows = await db.ScoreScales
-                .AsNoTracking()
-                .Where(s => s.CertId == certId && s.SkillId == skillId && s.ExamId == null)
-                .OrderBy(s => s.RawScore)
-                .ToListAsync(cancellationToken);
-        }
-
-        var lower = scaleRows.LastOrDefault(row => row.RawScore <= rawScore);
-        var upper = scaleRows.FirstOrDefault(row => row.RawScore >= rawScore);
-
-        return AttemptEngine.ProjectOntoScale(
-            rawScore, lower?.RawScore, lower?.ScaledScore, upper?.RawScore, upper?.ScaledScore,
-            minimum, maximum, step, totalQuestions);
-    }
-
-    /// <summary>The certificate's one aggregation rule, reused from the engine rather than re-derived.</summary>
-    private static int AggregateTotal(string? rule, IReadOnlyCollection<int> scaledScores) =>
-        rule?.Trim().ToLowerInvariant() switch
-        {
-            "avg_half_step" => AttemptEngine.RoundHalfStep(scaledScores.Count == 0 ? 0 : scaledScores.Average()),
-            "avg_whole" => (int)Math.Round(scaledScores.Count == 0 ? 0 : scaledScores.Average(), MidpointRounding.AwayFromZero),
-            _ => scaledScores.Sum(),
-        };
 }
 
 /// <summary>#199: one run of the schedule over every active item.</summary>
