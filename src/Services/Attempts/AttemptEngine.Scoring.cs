@@ -168,6 +168,76 @@ public sealed partial class AttemptEngine
         return (int)Math.Round(scaled / step, MidpointRounding.AwayFromZero) * step;
     }
 
+    /// <summary>
+    /// #251: the one write of an attempt's score and band outside a submission, for a caller that
+    /// recomputed the skill scores for its own reason (telemetry's recalculation after a confirmed
+    /// content defect). The caller supplies the skill rows; every number the derived fact is made of ΓÇö
+    /// the total through <see cref="AggregateTotalScore"/> and the band through
+    /// <see cref="FindBandCodeAsync"/> ΓÇö is decided here, and the write declares this table's owner.
+    /// <para>
+    /// #191: the clear, the skill rows and the result are three statements because the guards require
+    /// them in that order, and each score write declares the writer and moves the projection version
+    /// forward. <c>Property(...).IsModified</c> is needed because EF omits an unchanged column, and a
+    /// second write of the stamp would otherwise carry no declaration.
+    /// </para>
+    /// </summary>
+    public async Task<(int Total, string? Band)> WriteAttemptScoreAsync(
+        int attemptId,
+        IReadOnlyList<AttemptSkillScore> skillScores,
+        CancellationToken cancellationToken = default)
+    {
+        var tx = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+
+        try
+        {
+            var attempt = await db.ExamAttempts
+                .SingleOrDefaultAsync(a => a.AttemptId == attemptId, cancellationToken)
+                ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
+
+            // Both numbers are decided before the first write, so a certificate whose rule this engine
+            // refuses leaves the attempt exactly as it found it rather than relying on a rollback.
+            var rule = await db.Certificates
+                .Where(c => c.CertId == attempt.CertId)
+                .Select(c => c.ScoreAggregationRule)
+                .SingleAsync(cancellationToken);
+            var total = AggregateTotalScore(rule, skillScores);
+            var band = await FindBandCodeAsync(attempt.CertId, total, cancellationToken);
+
+            attempt.TotalScore = null;
+            attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
+            attempt.ProjectionVersion++;
+            db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
+            await db.SaveChangesAsync(cancellationToken);
+
+            // Deleted and saved before the replacements are added: the primary key is (attempt, skill),
+            // so tracking a removal and an insert of the same key in one save would collide.
+            var existing = await db.AttemptSkillScores
+                .Where(s => s.AttemptId == attemptId)
+                .ToListAsync(cancellationToken);
+            db.AttemptSkillScores.RemoveRange(existing);
+            await db.SaveChangesAsync(cancellationToken);
+
+            db.AttemptSkillScores.AddRange(skillScores);
+            await db.SaveChangesAsync(cancellationToken);
+
+            attempt.TotalScore = total;
+            attempt.BandCode = band;
+            attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
+            attempt.ProjectionVersion++;
+            db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
+            await db.SaveChangesAsync(cancellationToken);
+
+            if (tx is not null) await tx.CommitAsync(cancellationToken);
+            return (total, band);
+        }
+        finally
+        {
+            if (tx is not null) await tx.DisposeAsync();
+        }
+    }
+
     private async Task<string?> FindBandCodeAsync(int certId, int totalScore, CancellationToken cancellationToken)
     {
         var bands = await db.ScoreBands
