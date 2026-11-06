@@ -10,4 +10,13 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="10.0.12" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- #195: gate two's lexical coverage divides by these lists, so they travel with the assembly
+         that applies the rule. A file next to the process is a file that can go missing in a deploy
+         while the gate keeps answering; an embedded resource cannot. Regenerate with
+         scripts/build-cefr-wordlists.py. -->
+    <EmbeddedResource Include="Authoring\cefr-wordlists.txt" LogicalName="BusinessObjects.cefr-wordlists.txt" />
+    <EmbeddedResource Include="Authoring\awl-sublists.txt" LogicalName="BusinessObjects.awl-sublists.txt" />
+  </ItemGroup>
+
 </Project>
