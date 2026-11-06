@@ -36,7 +36,4 @@ public sealed record ExamStudioQuestionDto(
     ReferenceKindDto? ReferenceKind = null,
     // #229 / D1: the level this question is authored at. The authoring paths write it and an edit
     // reads it back.
-    string? CefrLevelCode = null,
-    // #230 / D1: dormant, and last so no projection has to name it. It stays on the wire so the
-    // editor's existing payloads keep deserialising; #231 deletes it.
-    int? DifficultyLevel = null);
+    string? CefrLevelCode = null);

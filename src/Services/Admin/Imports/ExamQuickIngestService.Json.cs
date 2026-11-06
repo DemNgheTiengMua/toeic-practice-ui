@@ -55,7 +55,6 @@ public sealed partial class ExamQuickIngestService
             // level applies. There is deliberately no fallback to a number - the old parse filled in
             // difficulty 3 here and that default is exactly what put items in the wrong cell.
             var cefrLevel = item.TryGetProperty("cefrLevel", out var clProp) ? clProp.GetString() : null;
-            var difficulty = item.TryGetProperty("difficultyLevel", out var dProp) && dProp.TryGetInt32(out var diff) ? (int?)diff : null;
             var explanation = item.TryGetProperty("explanation", out var eProp) ? eProp.GetString() : null;
             var categoryCode = item.TryGetProperty("categoryCode", out var cProp) ? cProp.GetString() : null;
             var questionType = item.TryGetProperty("questionType", out var qtProp) ? qtProp.GetString()?.ToLowerInvariant() ?? "mcq" : "mcq";
@@ -154,7 +153,6 @@ public sealed partial class ExamQuickIngestService
                 StartLineNumber: qIdx,
                 EndLineNumber: qIdx,
                 Stem: stem,
-                DifficultyLevel: difficulty,
                 Explanation: explanation,
                 CategoryCode: categoryCode,
                 Options: options,

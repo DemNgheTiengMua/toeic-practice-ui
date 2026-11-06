@@ -10,11 +10,11 @@ using Xunit;
 namespace Services.Tests;
 
 /// <summary>
-/// #228 batch one: a domain entity and a wire contract begin carrying the level beside the old
-/// five-point difficulty. The column and the integer member stay until the contract ticket, so the
-/// guards here are co-existence, fidelity, and — the one that matters — that nothing derives one from
-/// the other. A <c>DifficultyLevel 5 → C2</c> mapping looks like a finished retype and is the
-/// invention D1 forbids.
+/// #228 batch one began carrying the level beside the old five-point difficulty; #231 finished the
+/// retirement. What survives here is the guard that matters: nothing derives a level from a
+/// difficulty, and no wire contract carries a level as a number. The co-existence assertions that
+/// proved the two members sat beside each other are gone with the difficulty column — a test that a
+/// deleted member exists cannot be kept, only replaced by the scan below.
 /// </summary>
 public sealed class CefrLevelMigrationTests
 {
@@ -26,23 +26,23 @@ public sealed class CefrLevelMigrationTests
     private static readonly Dictionary<Type, Func<string, object>> WireContracts = new()
     {
         [typeof(CreateQuestionRequest)] = code => new CreateQuestionRequest(
-            GroupId: 1, Stem: "Stem", DifficultyLevel: 3, QuestionType: QuestionTypeDto.Mcq,
+            GroupId: 1, Stem: "Stem", QuestionType: QuestionTypeDto.Mcq,
             CefrLevelCode: code),
 
         [typeof(UpdateQuestionRequest)] = code => new UpdateQuestionRequest(
-            GroupId: 1, Stem: "Stem", DifficultyLevel: 3, QuestionType: QuestionTypeDto.Mcq,
+            GroupId: 1, Stem: "Stem", QuestionType: QuestionTypeDto.Mcq,
             CefrLevelCode: code),
 
         [typeof(AdminQuestionDto)] = code => new AdminQuestionDto(
             QuestionId: 1, GroupId: 2, ExamId: 3, SectionId: 4, SectionCode: "R", SectionName: "Reading",
-            SkillId: 5, SkillCode: "reading", Stem: "Stem", DifficultyLevel: 3,
+            SkillId: 5, SkillCode: "reading", Stem: "Stem",
             QuestionType: QuestionTypeDto.Mcq, Explanation: null, CategoryId: null, CategoryName: null,
             PrepSeconds: null, ResponseSeconds: null, MinWords: null, MaxWords: null, Hint: null,
             DisplayOrder: 1, UpdatedAt: null, Options: [], HasAnswers: false, CefrLevelCode: code),
 
         [typeof(ExamStudioQuestionDto)] = code => new ExamStudioQuestionDto(
             QuestionId: 1, GroupId: 2, ExamId: 3, SectionId: 4, SectionCode: "R", SectionName: "Reading",
-            SkillId: 5, SkillCode: "reading", Stem: "Stem", DifficultyLevel: 3,
+            SkillId: 5, SkillCode: "reading", Stem: "Stem",
             QuestionType: QuestionTypeDto.Mcq, Explanation: null, CategoryId: null, CategoryCode: null,
             CategoryName: null, PrepSeconds: null, ResponseSeconds: null, MinWords: null, MaxWords: null,
             Hint: null, DisplayOrder: 1, UpdatedAt: null, Options: [], Criteria: [], HasAnswers: false,
@@ -53,40 +53,15 @@ public sealed class CefrLevelMigrationTests
 
     [Theory]
     [MemberData(nameof(MigratedEntities))]
-    public void The_entity_carries_a_level_member_beside_the_difficulty(Type entity)
+    public void The_entity_carries_a_level_member_and_no_difficulty(Type entity)
     {
         var level = entity.GetProperty("CefrLevel", BindingFlags.Public | BindingFlags.Instance);
         Assert.NotNull(level);
         Assert.Equal(typeof(CefrLevel?), level.PropertyType);
 
-        // The old member still compiles beside it, so nothing downstream has to change yet.
-        var difficulty = entity.GetProperty("DifficultyLevel", BindingFlags.Public | BindingFlags.Instance);
-        Assert.NotNull(difficulty);
-        Assert.Contains(difficulty.PropertyType, new[] { typeof(int), typeof(int?) });
-    }
-
-    /// <summary>
-    /// The level is a fact of its own, not a projection of the difficulty, in either direction. This
-    /// fails the moment one member is computed from the other — the lossy 1..5 → A1..C1 mapping that
-    /// would look like a mechanical retype and would invent a level the author never chose.
-    /// </summary>
-    [Fact]
-    public void A_level_and_a_difficulty_never_derive_from_one_another()
-    {
-        var questions = new Question { DifficultyLevel = 5 };
-        Assert.Null(questions.CefrLevel);
-
-        questions.CefrLevel = CefrLevel.A1;
-        Assert.Equal(5, questions.DifficultyLevel);
-
-        questions.DifficultyLevel = 1;
-        Assert.Equal(CefrLevel.A1, questions.CefrLevel);
-
-        var item = new PathModuleItem { DifficultyLevel = 5 };
-        Assert.Null(item.CefrLevel);
-
-        item.CefrLevel = CefrLevel.C2;
-        Assert.Equal(5, item.DifficultyLevel);
+        // #231 deleted the 1-5 member rather than leaving it beside the level. A type that grew one
+        // back would reinstate the second scale D1 forbids, so its absence is the guard.
+        Assert.Null(entity.GetProperty("DifficultyLevel", BindingFlags.Public | BindingFlags.Instance));
     }
 
     /// <summary>
@@ -215,17 +190,12 @@ public sealed class CefrLevelMigrationTests
     }
 
     /// <summary>
-    /// #228 added the level beside the difficulty and left it unmapped, because no column existed.
-    /// #229 adds the column, so the level is mapped and round-trips through it, while the difficulty
-    /// still compiles beside it for the contract ticket.
-    /// <para>
-    /// Changed by #229: this test asserted <c>FindProperty("CefrLevel")</c> was null. That was the
-    /// correct guard for batch one and is the wrong one now - the whole point of batch two is that the
-    /// level reaches a column.
-    /// </para>
+    /// #229 added the level column; #231 removed the integer beside it. What remains worth guarding is
+    /// that the level is a mapped string code and the difficulty is gone from the model entirely — a
+    /// model that still mapped a 1-5 column would let a writer put a rank back where a level belongs.
     /// </summary>
     [Fact]
-    public void The_question_level_is_mapped_and_the_difficulty_survives_beside_it()
+    public void The_question_level_is_mapped_and_no_difficulty_is()
     {
         var options = new DbContextOptionsBuilder<CompanionDbContext>()
             .UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=ModelOnly;Trusted_Connection=True;")
@@ -235,7 +205,7 @@ public sealed class CefrLevelMigrationTests
 
         var question = db.Model.FindEntityType(typeof(Question));
         Assert.NotNull(question);
-        Assert.NotNull(question.FindProperty("DifficultyLevel"));
+        Assert.Null(question.FindProperty("DifficultyLevel"));
         Assert.NotNull(question.FindProperty("CefrLevel"));
 
         // A converted nullable struct: the column is a string code, not a second integer scale. Without
@@ -245,10 +215,11 @@ public sealed class CefrLevelMigrationTests
         Assert.Equal("varchar(10)", mapped.GetColumnType());
         Assert.Equal(typeof(string), mapped.GetValueConverter()!.ProviderClrType);
 
-        // PathModuleItem has no column yet, so its member stays unmapped until that table's own ticket.
+        // PathModuleItem has no level column: #231 removed the difficulty rather than inventing one, and
+        // the level a step is prescribed at arrives with the path rebuild (#232).
         var pathItem = db.Model.FindEntityType(typeof(PathModuleItem));
         Assert.NotNull(pathItem);
-        Assert.NotNull(pathItem.FindProperty("DifficultyLevel"));
+        Assert.Null(pathItem.FindProperty("DifficultyLevel"));
         Assert.Null(pathItem.FindProperty("CefrLevel"));
     }
 }

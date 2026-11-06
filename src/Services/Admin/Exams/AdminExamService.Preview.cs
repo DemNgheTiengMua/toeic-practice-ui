@@ -23,9 +23,10 @@ public sealed partial class AdminExamService
     /// version this paper actually pinned.
     /// </para>
     /// <para>
-    /// A position with no binding still reads the legacy row, because #231 deletes those and #231 has
-    /// not run. Falling back per position rather than per paper is deliberate: a half-assembled paper
-    /// must show the keys it has, not blank the ones it has not reached yet.
+    /// A position with no binding still reads the legacy row: #231 dropped the difficulty scale but not
+    /// <c>Questions</c>, because the paper chrome below it has no home in the pool yet. Falling back per
+    /// position rather than per paper is deliberate: a half-assembled paper must show the keys it has,
+    /// not blank the ones it has not reached yet.
     /// </para>
     /// </summary>
     public async Task<ExamPreviewTakeView> GetExamPreviewTakeAsync(

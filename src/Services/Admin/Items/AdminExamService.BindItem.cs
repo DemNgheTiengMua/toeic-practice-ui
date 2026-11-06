@@ -20,8 +20,8 @@ public sealed partial class AdminExamService
     /// Why here and not in <see cref="AdminItemService"/>: a binding is a row of <c>ExamItems</c>,
     /// which carries the exam, its certificate and its section, and is subject to #157's structure
     /// lock and INV-6. Those are the exam's rules, so the exam service owns the write. The pool
-    /// service stays free of any exam concept, which is the property #231 needs to delete the legacy
-    /// tables without unpicking this one.
+    /// service stays free of any exam concept, which is the property that makes the legacy tables
+    /// removable without unpicking it.
     /// </para>
     /// <para>
     /// The position is the paper's, not the item's: <c>UQ_ExamItems_Exam_Section_Order</c> makes one

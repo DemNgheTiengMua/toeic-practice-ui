@@ -21,9 +21,8 @@ public sealed partial class AttemptEngine
     private sealed record BoundPaperPosition(int ItemId, int ItemVersionId, ItemVersion Version);
 
     /// <summary>
-    /// The exam's bindings, keyed by paper position. Empty for a paper the pool has not assembled,
-    /// which is every paper #231 has not reached yet — the cheap empty result is what keeps the
-    /// legacy path untouched and unevaluated for those.
+    /// The exam's bindings, keyed by paper position. Empty for a paper the pool has not assembled —
+    /// the cheap empty result is what keeps the legacy path untouched and unevaluated for those.
     /// </summary>
     private Task<Dictionary<(int SectionId, int DisplayOrder), BoundPaperPosition>> LoadPaperBindingsAsync(
         int examId,

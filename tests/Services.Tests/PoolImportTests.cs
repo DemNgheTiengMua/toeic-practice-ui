@@ -23,9 +23,9 @@ namespace Services.Tests;
 /// this ticket is the expand half - both shapes are written and both stay readable until #231.
 /// </para>
 /// <para>
-/// <c>topicCode</c>/<c>cefrLevel</c> replace the legacy <c>categoryCode</c>/<c>difficultyLevel</c>
-/// where a pool row is expected, because D1 forbids a difficulty-to-level mapping and D3 replaces
-/// the categories. The legacy codes are still exercised where the test is about the legacy shape.
+/// <c>topicCode</c>/<c>cefrLevel</c> replace the legacy <c>categoryCode</c> where a pool row is
+/// expected, because D1 forbids a difficulty-to-level mapping and D3 replaces the categories. The
+/// legacy codes are still exercised where the test is about the legacy shape.
 /// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
@@ -436,7 +436,6 @@ public sealed class PoolImportTests(DatabaseFixture database)
             .ToListAsync();
         Assert.Equal(2, legacy.Count);
         Assert.All(legacy, q => Assert.Equal(CefrLevel.B1, q.CefrLevel));
-        Assert.All(legacy, q => Assert.Null(q.DifficultyLevel));
     }
 
     /// <summary>

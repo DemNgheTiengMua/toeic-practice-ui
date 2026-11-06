@@ -25,8 +25,7 @@ namespace Services;
 /// </para>
 /// <para>
 /// This service writes no legacy row. <c>Questions</c>/<c>QuestionOptions</c> keep being written by
-/// the exam editor until #231; both shapes therefore stay readable, which is the expand half of the
-/// rebuild.
+/// the exam editor, which #231 did not remove; both shapes therefore stay readable.
 /// </para>
 /// </summary>
 public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) : IAdminItemService

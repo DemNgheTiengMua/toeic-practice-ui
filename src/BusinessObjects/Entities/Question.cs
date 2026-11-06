@@ -27,18 +27,6 @@ public partial class Question
 
     public string Stem { get; set; } = null!;
 
-    /// <summary>
-    /// #229 / D1: dormant. Every authoring and import path writes <see cref="CefrLevel"/> instead, so a
-    /// row written today carries NULL here; #231 drops the column and this member. It stays nullable
-    /// because the alternative is a path inventing a 3 to satisfy NOT NULL, which is the silent
-    /// default #229 exists to remove. Never read to produce a level: there is no 1-5 to A1-C2 mapping.
-    /// </summary>
-    public int? DifficultyLevel { get; set; }
-
-    /// <summary>
-    /// #229 / D1: the level the item is authored at, mapped to <c>Questions.CefrLevel</c> by its code.
-    /// Authored, so the reportable floor (<c>pre_a1</c>) is refused on the way in and on the way out.
-    /// </summary>
     public CefrLevel? CefrLevel { get; set; }
 
     [StringLength(30)]

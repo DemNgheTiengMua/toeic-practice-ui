@@ -24,9 +24,8 @@ namespace Services.Tests;
 /// not that the reply does.
 /// </para>
 /// <para>
-/// The other half is the difficulty. It stays in the schema until #231, and every guard below asserts
-/// it is <b>NULL</b> on a row written today: a path that keeps writing 3 "for compatibility" is the
-/// silent default this ticket exists to remove, and it would still satisfy every level assertion.
+/// The other half was the difficulty. #231 dropped the column, so its absence is a schema fact now
+/// (domain33-contract-retirement.sql) rather than something a write-level assertion can observe.
 /// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
@@ -99,41 +98,36 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     /// by accident. NULL is returned as the marker below, because a DBNull in a string projection is
     /// how a check like this silently reads as "".
     /// </summary>
-    private async Task<(string Level, string Difficulty, int Rows)> StoredLevelAsync(int questionId)
+    private async Task<(string Level, int Rows)> StoredLevelAsync(int questionId)
     {
         await using var db = Db();
         // SqlQuery (not SqlQueryRaw) so the id is a parameter, not spliced text.
         var level = await db.Database
             .SqlQuery<string>($"SELECT ISNULL(CefrLevel, '(null)') AS [Value] FROM Questions WHERE QuestionId = {questionId}")
             .SingleAsync();
-        var difficulty = await db.Database
-            .SqlQuery<string>($"SELECT ISNULL(CAST(DifficultyLevel AS VARCHAR(10)), '(null)') AS [Value] FROM Questions WHERE QuestionId = {questionId}")
-            .SingleAsync();
-        return (level, difficulty, 1);
+        return (level, 1);
     }
 
-    private async Task<List<(string Level, string Difficulty)>> StoredLevelsAsync(int examId)
+    private async Task<List<string>> StoredLevelsAsync(int examId)
     {
         await using var db = Db();
-        var rows = await db.Database.SqlQuery<string>(
-                $"SELECT ISNULL(CefrLevel, '(null)') + '|' + ISNULL(CAST(DifficultyLevel AS VARCHAR(10)), '(null)') AS [Value] FROM Questions WHERE ExamId = {examId} ORDER BY SectionId, DisplayOrder, QuestionId")
+        return await db.Database.SqlQuery<string>(
+                $"SELECT ISNULL(CefrLevel, '(null)') AS [Value] FROM Questions WHERE ExamId = {examId} ORDER BY SectionId, DisplayOrder, QuestionId")
             .ToListAsync();
-        return rows.Select(row => (row.Split('|')[0], row.Split('|')[1])).ToList();
     }
 
     // ---- guard 1 and 2: an authored question lands with a level and no difficulty ----
 
     /// <summary>
-    /// The stored row carries the level the author chose, and carries no difficulty at all.
+    /// The stored row carries the level the author chose.
     /// <para>
     /// The input that would pass this while being wrong: a service that returns the level in its DTO
-    /// and also writes a difficulty beside it - every reply-level assertion passes and the row still
-    /// lands in whatever cell a 3 means. That is why the assertion is on the column, and why #230 has
-    /// every fixture stop writing the difficulty.
+    /// and leaves the row unlevelled - every reply-level assertion passes and the row still lands in
+    /// whatever cell a default means. That is why the assertion is on the column.
     /// </para>
     /// </summary>
     [Fact]
-    public async Task An_authored_question_lands_with_a_level_and_no_difficulty()
+    public async Task An_authored_question_lands_with_the_chosen_level()
     {
         var (certId, _, readingSectionId, _) = await SeedAsync();
         var (examId, groupId) = await SeedExamAsync(certId, readingSectionId);
@@ -141,9 +135,8 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
         var created = await CreateService().CreateQuestionAsync(
             examId, ReadingQuestion(groupId, "What time does the depot open?", "C1"));
 
-        var (level, difficulty, _) = await StoredLevelAsync(created.QuestionId);
+        var (level, _) = await StoredLevelAsync(created.QuestionId);
         Assert.Equal("C1", level);
-        Assert.Equal("(null)", difficulty);
 
         // And the reply says the same thing, because the editor reads it back to show the author.
         Assert.Equal("C1", created.CefrLevelCode);
@@ -165,9 +158,8 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
             var created = await service.CreateQuestionAsync(
                 examId, ReadingQuestion(groupId, $"What happens at {level.Code}?", level.Code));
 
-            var (stored, difficulty, _) = await StoredLevelAsync(created.QuestionId);
+            var (stored, _) = await StoredLevelAsync(created.QuestionId);
             Assert.Equal(level.Code, stored);
-            Assert.Equal("(null)", difficulty);
         }
     }
 
@@ -278,13 +270,12 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
                 new AdminQuestionOptionInput(null, "B", "At seven.", false, null),
             ]));
 
-        var (level, difficulty, _) = await StoredLevelAsync(edited.QuestionId);
+        var (level, _) = await StoredLevelAsync(edited.QuestionId);
         Assert.Equal("B2", level);
-        Assert.Equal("(null)", difficulty);
         Assert.Equal("Corrected stem.", edited.Stem);
     }
 
-    /// <summary>An edit that states a level writes it, and still leaves no difficulty behind.</summary>
+    /// <summary>An edit that states a level writes it.</summary>
     [Fact]
     public async Task An_edit_that_states_a_level_writes_it()
     {
@@ -306,9 +297,8 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
                 new AdminQuestionOptionInput(null, "B", "At seven.", false, null),
             ]));
 
-        var (level, difficulty, _) = await StoredLevelAsync(edited.QuestionId);
+        var (level, _) = await StoredLevelAsync(edited.QuestionId);
         Assert.Equal("C2", level);
-        Assert.Equal("(null)", difficulty);
     }
 
     /// <summary>The edit door refuses the floor with the same sentence the create door does.</summary>
@@ -344,7 +334,7 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     private static Stream Utf8(string text) => new MemoryStream(Encoding.UTF8.GetBytes(text));
 
     /// <summary>A two-question reading manifest; the level of each question is a parameter.</summary>
-    private static string Manifest(string title, string? firstLevel, string? secondLevel, int? difficulty = null) => $$"""
+    private static string Manifest(string title, string? firstLevel, string? secondLevel) => $$"""
         {
           "version": "1.0",
           "exam": {
@@ -364,7 +354,6 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
                   "questions": [
                     {
                       "stem": "What time does the depot open?",
-                      "difficultyLevel": {{(difficulty is null ? "null" : difficulty.ToString())}},
                       "cefrLevel": {{(firstLevel is null ? "null" : $"\"{firstLevel}\"")}},
                       "questionType": "mcq",
                       "explanation": "The passage states the opening time.",
@@ -396,13 +385,13 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
         """; 
 
     /// <summary>
-    /// An imported question lands on its legacy row with the level the file states, and with no
-    /// difficulty.
+    /// An imported question lands on its legacy row with the level the file states.
     /// <para>
     /// The input that would pass this while being wrong: an import that writes the level to the pool
     /// <c>Items</c> row only (which #189 already did) and leaves <c>Questions</c> unlevelled. Every
-    /// pool assertion in <c>PoolImportTests</c> passes; the paper still renders an unlevelled item,
-    /// and #231 cannot drop the column.
+    /// pool assertion in <c>PoolImportTests</c> passes; the paper still renders an unlevelled item.
+    /// #231 deleted the difficulty column, so its absence is now a schema fact rather than a write
+    /// this test can observe.
     /// </para>
     /// </summary>
     [Fact]
@@ -412,21 +401,18 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
 
         var result = await new QuestionImportService(
                 DbContextFactory.Create(database.ConnectionString), new RecordingFileStore(), TimeProvider.System)
-            .ImportAsync(adminId, certId, "levelled.json", Utf8(Manifest(Unique("Levelled "), "A2", "C1", difficulty: 4)));
+            .ImportAsync(adminId, certId, "levelled.json", Utf8(Manifest(Unique("Levelled "), "A2", "C1")));
 
         Assert.Equal(ImportBatchStatusDto.Done, result.Status);
 
         var stored = await StoredLevelsAsync(result.ExamId!.Value);
         Assert.Equal(2, stored.Count);
-        Assert.Equal(("A2", "(null)"), stored[0]);
-        // The second question states no difficulty at all; the file's 4 on the first is not a level and
-        // is not copied, because the column is dormant and a number there is what #231 deletes.
-        Assert.Equal(("C1", "(null)"), stored[1]);
+        Assert.Equal("A2", stored[0]);
+        Assert.Equal("C1", stored[1]);
     }
 
     /// <summary>
-    /// A manifest question with no level is refused by name, and the file's difficulty is never used to
-    /// invent one.
+    /// A manifest question with no level is refused by name, and nothing is invented in its place.
     /// <para>
     /// The input that would pass this while being wrong: a fallback to the group's <c>cefrLevel</c> or
     /// to a constant. Both produce a never-empty level column, so any assertion of the shape "the
@@ -435,14 +421,14 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     /// </para>
     /// </summary>
     [Fact]
-    public async Task A_manifest_question_with_no_level_is_refused_and_the_difficulty_is_not_used()
+    public async Task A_manifest_question_with_no_level_is_refused()
     {
         var (certId, adminId, _, _) = await SeedAsync();
 
         var result = await new QuestionImportService(
                 DbContextFactory.Create(database.ConnectionString), new RecordingFileStore(), TimeProvider.System)
             .ImportAsync(adminId, certId, "unlevelled.json",
-                Utf8(Manifest(Unique("Unlevelled "), null, "B1", difficulty: 4)));
+                Utf8(Manifest(Unique("Unlevelled "), null, "B1")));
 
         Assert.Equal(ImportBatchStatusDto.Failed, result.Status);
         Assert.Null(result.ExamId);
@@ -466,9 +452,9 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     /// The generated manifest template is a file an author imports, so its placeholders must carry a
     /// level; a template that cannot be imported is a broken starting point.
     /// <para>
-    /// The input that would pass this while being wrong: placeholders that set only
-    /// <c>difficultyLevel = 3</c>, which serialises to a structurally valid file whose every question
-    /// the importer then refuses.
+    /// The input that would pass this while being wrong: placeholders that set only a level field the
+    /// importer then ignores, which serialises to a structurally valid file whose every question is
+    /// refused at import.
     /// </para>
     /// </summary>
     [Fact]
@@ -499,11 +485,9 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     /// <summary>
     /// The export carries the level, and does not carry a difficulty standing in for one.
     /// <para>
-    /// The input that would pass this while being wrong: the writer left emitting
-    /// <c>difficultyLevel</c> from the legacy column and never emitting <c>cefrLevel</c>. Since #229
-    /// makes the legacy column NULL, such a file re-imports as a set of unlevelled questions and is
-    /// refused - so this asserts the wire, not the round trip, and the round trip is asserted beside it
-    /// in <c>PoolImportTests</c>.
+    /// The input that would pass this while being wrong: the writer emitting <c>cefrLevel</c> from the
+    /// pool but still emitting <c>difficultyLevel</c> from a number somewhere. Since #231 there is no
+    /// such field at all, so the assertion is the stronger one: the emitted JSON names no such member.
     /// </para>
     /// </summary>
     [Fact]
@@ -523,7 +507,6 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
         var question = manifest["sections"]![0]!["groups"]![0]!["questions"]![0]!;
 
         Assert.Equal("B2", question["cefrLevel"]?.GetValue<string>());
-        Assert.DoesNotContain("\"difficultyLevel\": 3", question.ToJsonString(), StringComparison.Ordinal);
-        Assert.True(question["difficultyLevel"] is null || question["difficultyLevel"] is JsonValue v && v.GetValue<object?>() is null);
+        Assert.Null(question["difficultyLevel"]);
     }
 }

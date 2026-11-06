@@ -42,7 +42,4 @@ public sealed record QuickIngestParsedQuestionDto(
     int? EvidenceStart = null,
     int? EvidenceEnd = null,
     string? EvidenceUnit = null,
-    string? EvidenceQuote = null,
-    // #230 / D1: dormant, and last so no parser call site has to name it. A parser that cannot read a
-    // level says so rather than inventing one, and never fills this in as a substitute. #231 deletes it.
-    int? DifficultyLevel = null);
+    string? EvidenceQuote = null);

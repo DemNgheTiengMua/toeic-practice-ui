@@ -26,18 +26,17 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected cross-cert group as expected';
 END CATCH
--- #230: a question row carries no difficulty at all. The 1-5 CHECK that used to be asserted here
--- belonged to the column #231 drops; what survives is the level, and its gate lives below.
+-- #230/#231: a question row carries no difficulty at all - #231 dropped the column and its CHECK.
+-- What survives is the level, and its gate lives below.
 INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,QuestionType,DisplayOrder)
   SELECT GroupId,ExamId,SectionId,@tRead,N'ok','mcq',1 FROM QuestionGroups WHERE ExamId=@exam AND SectionId=@tSec;
--- #229 / D1: the level is the authored fact. A row may carry no difficulty (the column is dormant
--- until #231 and every authoring path writes NULL), but a level off the authored ladder is refused.
+-- #229 / D1: the level is the authored fact. A level off the authored ladder is refused.
 INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
   SELECT GroupId,ExamId,SectionId,@tRead,N'levelled', 'B1','mcq',6 FROM QuestionGroups WHERE ExamId=@exam AND SectionId=@tSec;
 PRINT 'accepted an authored level';
 INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,QuestionType,DisplayOrder)
   SELECT GroupId,ExamId,SectionId,@tRead,N'unlevelled','mcq',7 FROM QuestionGroups WHERE ExamId=@exam AND SectionId=@tSec;
-PRINT 'accepted a question with no difficulty and no level';
+PRINT 'accepted a question with no level';
 BEGIN TRY
   INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
     SELECT GroupId,ExamId,SectionId,@tRead,N'bad level','B3','mcq',8 FROM QuestionGroups WHERE ExamId=@exam;

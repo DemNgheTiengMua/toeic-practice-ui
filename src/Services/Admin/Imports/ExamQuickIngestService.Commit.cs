@@ -20,7 +20,7 @@ public sealed partial class ExamQuickIngestService
     /// <summary>
     /// #189: writes the pasted questions, then the pool stock they become.
     /// <para>
-    /// The legacy rows come first because they are what a paper renders until #231, and because the
+    /// The legacy rows come first because they are what a paper renders, and because the
     /// pool binding is placed by the position those rows give a question. Each paste group - a
     /// passage plus its children - becomes <em>one</em> stimulus row shared by all of its children,
     /// which is the difference between a shared passage and a copy per question.
