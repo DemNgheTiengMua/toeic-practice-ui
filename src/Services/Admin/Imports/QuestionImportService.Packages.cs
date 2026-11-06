@@ -156,9 +156,14 @@ public sealed partial class QuestionImportService
 
     private static ImportManifest? ParseManifest(byte[] bytes, ImportReport report)
     {
+        // A UTF-8 BOM is not part of the JSON. `JsonSerializer.Deserialize(byte[])` does not strip
+        // one, so a manifest saved by an editor that adds a BOM failed with "'0xEF' is an invalid
+        // start of a value" -- including the two sample files this repo ships in `docs/samples`.
+        // Strip it here rather than ask every author to save without one.
+        var json = bytes is [0xEF, 0xBB, 0xBF, ..] ? bytes[3..] : bytes;
         try
         {
-            var manifest = JsonSerializer.Deserialize<ImportManifest>(bytes, ImportManifest.Json);
+            var manifest = JsonSerializer.Deserialize<ImportManifest>(json, ImportManifest.Json);
             if (manifest is null)
             {
                 report.Error(null, "manifest.json is empty.");
