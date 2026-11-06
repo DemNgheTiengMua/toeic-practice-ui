@@ -9,8 +9,8 @@ namespace Services;
 /// scored change to it inserts a version rather than rewriting the one a past attempt pinned.
 /// <para>
 /// This is a second door, not a replacement. The legacy exam editor still writes
-/// <c>Questions</c>/<c>QuestionOptions</c> and #231 is where those go; nothing here deletes or
-/// rewrites a legacy row, so both shapes stay readable until then.
+/// <c>Questions</c>/<c>QuestionOptions</c> and #231 did not remove them; nothing here deletes or
+/// rewrites a legacy row, so both shapes stay readable.
 /// </para>
 /// </summary>
 public interface IAdminItemService

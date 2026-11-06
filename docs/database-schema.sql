@@ -472,8 +472,10 @@ GO
 -- The warehouse stops being an exam's property. These three tables carry no ExamId, no SectionId and
 -- no CertId, and a schema test inserts all three with zero certificates, skills, sections and exams in
 -- the database - because PRN-05 ("content is certificate-agnostic") is a foreign-key fact, not a
--- service-layer one. QuestionGroups/Questions/QuestionOptions below are NOT deleted here: 20 tables
--- and 171 src files still read them, and #231 is where they go.
+-- service-layer one. QuestionGroups/Questions/QuestionOptions below are NOT deleted by #231: they still
+-- carry the paper chrome the pool does not model (question format, word limits, the group's audio
+-- slice), and 4 NOT NULL foreign keys still point at Questions. They go when the papers they hold are
+-- re-assembled from bound versions.
 --
 -- The skill axis is `Modality`. CONTEXT.md defines a Skill as exactly one modality
 -- (listening/reading/speaking/writing), and the certificate-scoped Skills table cannot be referenced
@@ -863,11 +865,8 @@ CREATE TABLE Questions (
   -- reportable floor 'pre_a1' is refused here as well as in CefrLevel.TryParseAuthored.
   CefrLevel       VARCHAR(10) NULL
     CONSTRAINT CK_Questions_Level CHECK (CefrLevel IS NULL OR CefrLevel IN ('A1','A2','B1','B2','C1','C2')),
-  -- #231 drops this column and CK_Questions_Difficulty. Until then it is dormant: no authoring path
-  -- requires or validates it, so it is nullable - a path with no difficulty must write NULL rather
-  -- than invent a 3 (#229's review finding). The 1-5 check stays and still refuses an out-of-range
-  -- integer; NULL passes it, as a CHECK passes on UNKNOWN.
-  DifficultyLevel INT NULL CONSTRAINT CK_Questions_Difficulty CHECK (DifficultyLevel BETWEEN 1 AND 5),
+  -- #231: DifficultyLevel and CK_Questions_Difficulty are gone. The 1-5 scale was the second level
+  -- model D1 forbids, and nothing had written it since #229 moved every authoring path to CefrLevel.
   QuestionType    VARCHAR(30) NOT NULL
     CONSTRAINT CK_Questions_Type CHECK (QuestionType IN ('mcq', 'mcq_3', 'multi_select', 'inline_completion', 'dropdown', 'drag_drop', 'free_response')),
   Explanation     NVARCHAR(MAX) NULL,
@@ -1067,7 +1066,8 @@ CREATE TABLE PracticeAnswers (
   SessionId        INT NOT NULL REFERENCES PracticeSessions(SessionId),
   -- #187: NULL for a pool answer. A pool item has no Questions row, so the legacy containment key
   -- is absent rather than invented; the pool shape names the item and version instead, exactly as
-  -- AttemptAnswers does. #231 drops the legacy half.
+  -- AttemptAnswers does. The legacy half stays: #231 could not drop it, because a paper position is
+  -- still resolved against Questions and 4 NOT NULL foreign keys still point at that table.
   QuestionId       INT NULL REFERENCES Questions(QuestionId),
   -- Low: carried down so a question must belong to the session's own section. NULL for a pool
   -- answer, which has no section: MATCH SIMPLE then skips both containing foreign keys below,
@@ -1126,8 +1126,8 @@ GO
 -- as defective (D21). It is not "a link to an item": a re-versioned item must leave an existing link
 -- alone, which only the pinned version can do.
 --
--- Two shapes live here for one release. A pool link names (ItemId, ItemVersionId); the legacy link
--- names QuestionId, because the exam-owned Questions row it points at still exists until #231.
+-- Two shapes live here. A pool link names (ItemId, ItemVersionId); the legacy link names QuestionId,
+-- because the exam-owned Questions row it points at survived #231.
 -- CK_SavedQuestions_Shape refuses a row that is half of either or both at once, and the two filtered
 -- unique indexes below carry the "one bookmark per thing" rule for whichever shape a row is.
 CREATE TABLE SavedQuestions (
@@ -1141,7 +1141,8 @@ CREATE TABLE SavedQuestions (
   -- question's section, exactly as before - the same choice PracticeSession makes between its two
   -- shapes.
   CertId     INT NULL REFERENCES Certificates(CertId),
-  -- #224: NULL for a pool link. Retired with Questions at #231.
+  -- #224: NULL for a pool link. #231 did not retire the legacy half; it retires when the papers behind
+  -- it are re-assembled from bound versions.
   QuestionId INT NULL REFERENCES Questions(QuestionId),
   -- #224: the pool item saved, and the version that was rendered when it was saved. Both NULL for a
   -- legacy link. D23 drops legacy links rather than re-pointing them - the rows they referenced are
@@ -1305,7 +1306,7 @@ CREATE TABLE AttemptAnswers (
   -- #186: which version of which item the learner answered. Copy-on-write (CNT-43) means this pair,
   -- not the item row, is what the review renders: re-versioning or retiring the item afterwards
   -- cannot change what the attempt shows. Both columns are NULL for an answer recorded before the
-  -- pool existed (the legacy reader is what #231 deletes), and the CHECK below refuses half a pair,
+  -- pool existed (a legacy reader #231 could not remove), and the CHECK below refuses half a pair,
   -- so an answer can never name an item without naming its version or the reverse.
   ItemId           INT NULL,
   ItemVersionId    INT NULL,
@@ -2298,7 +2299,9 @@ CREATE TABLE PathModuleItems (
     CONSTRAINT CK_PMI_Type CHECK (ItemType IN ('practice_section','mock_exam','ai_task','mentor','lesson')),
   RefSectionId    INT NULL,
   RefExamId       INT NULL,
-  DifficultyLevel INT NULL CONSTRAINT CK_PMI_Difficulty CHECK (DifficultyLevel IS NULL OR DifficultyLevel BETWEEN 1 AND 5),
+  -- #231: DifficultyLevel and CK_PMI_Difficulty are gone. The level a step is prescribed at is not
+  -- expressed on this table at all; the path rebuild (#232) carries it on LearnerPathSteps, and this
+  -- table is dropped with the rest of the template scaffolding there.
   QuestionCount   INT NULL CONSTRAINT CK_PMI_QCount CHECK (QuestionCount IS NULL OR QuestionCount > 0), -- UI-23: "20 questions"
   DisplayOrder    INT NOT NULL DEFAULT 0,
   -- Review Focus #3: the ref column must match ItemType

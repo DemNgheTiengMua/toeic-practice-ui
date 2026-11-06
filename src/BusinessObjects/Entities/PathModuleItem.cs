@@ -27,12 +27,10 @@ public partial class PathModuleItem
 
     public int? RefExamId { get; set; }
 
-    public int? DifficultyLevel { get; set; }
-
     /// <summary>
-    /// #228 / D1: the level the step is prescribed at, beside the nullable difficulty it replaces.
-    /// Not mapped until the schema gains the column, and never derived from
-    /// <see cref="DifficultyLevel"/> - D1 forbids a 1-5 to A1-C2 mapping.
+    /// #228 / D1: the level the step is prescribed at. #231 removed the 1-5 <c>DifficultyLevel</c> this
+    /// replaces; the column is not added here because <c>PathModuleItems</c> is dropped by the path
+    /// rebuild (#232), which carries the level on <c>LearnerPathSteps</c> instead.
     /// </summary>
     [NotMapped]
     public CefrLevel? CefrLevel { get; set; }

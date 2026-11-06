@@ -478,8 +478,7 @@ internal static class PoolImport
     /// within that section) - the join <c>AttemptEngine</c> and the preview already use, because a
     /// binding names no <c>QuestionId</c> and position is the only thing the two shapes share.
     /// <para>
-    /// An empty result is the legacy paper: one #231 has not reached binds nothing, and the export
-    /// writes it exactly as before.
+    /// An empty result is a legacy paper: one with no binding writes its export exactly as before.
     /// </para>
     /// </summary>
     internal static async Task<Dictionary<(string SectionCode, int Position), PoolQuestionAnnotation>> LoadPaperAnnotationsAsync(

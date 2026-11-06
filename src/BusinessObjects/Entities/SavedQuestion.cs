@@ -12,7 +12,7 @@ namespace BusinessObjects.Entities;
 /// A pool link names the <see cref="ItemId"/> and the exact <see cref="ItemVersionId"/> that was on
 /// screen when it was saved, so reopening it renders that version even after the item is corrected,
 /// retired, or withdrawn as defective (D21). A legacy link names its <see cref="QuestionId"/>, because
-/// the exam-owned row it points at still exists until #231; <c>CK_SavedQuestions_Shape</c> refuses a
+/// the exam-owned row it points at survived #231; <c>CK_SavedQuestions_Shape</c> refuses a
 /// row that is half of either. D23 drops legacy links rather than re-pointing them.
 /// </para>
 /// <para>
@@ -32,7 +32,7 @@ public partial class SavedQuestion
 
     public int UserId { get; set; }
 
-    /// <summary>NULL for a pool link. Retired with <c>Questions</c> at #231.</summary>
+    /// <summary>NULL for a pool link. The legacy half survives #231 along with <c>Questions</c>.</summary>
     public int? QuestionId { get; set; }
 
     /// <summary>#224: the pool item saved. NULL for a legacy link.</summary>

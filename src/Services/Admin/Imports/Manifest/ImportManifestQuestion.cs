@@ -7,12 +7,6 @@ public sealed class ImportManifestQuestion
 {
     public string? Stem { get; set; }
 
-    /// <summary>
-    /// #229 / D1: dormant. Every import path reads <see cref="CefrLevel"/> instead, and a file that
-    /// still carries this is accepted so a manifest written before #229 keeps importing - the number is
-    /// read, not interpreted, because there is no difficulty-to-level mapping.
-    /// </summary>
-    public int? DifficultyLevel { get; set; }
     public string? QuestionType { get; set; }
     public string? CategoryCode { get; set; }
     public string? Explanation { get; set; }

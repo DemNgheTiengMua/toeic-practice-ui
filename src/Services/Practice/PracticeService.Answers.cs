@@ -30,7 +30,7 @@ public sealed partial class PracticeService
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        // A pool item has no hint: it is authored on the legacy question row, which #231 deletes.
+        // A pool item has no hint: it is authored on the legacy question row, which #231 did not drop.
         return answer.Question?.Hint;
     }
 

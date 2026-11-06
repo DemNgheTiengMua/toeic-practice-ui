@@ -154,7 +154,7 @@ public sealed partial class AttemptEngine
         }
 
         // #186: where the pool has assembled this paper, the scored content comes from the version
-        // the binding pinned. A paper #231 has not reached binds nothing and reads exactly as before.
+        // the binding pinned. A paper with no binding reads its Questions rows exactly as before.
         var bindings = await LoadPaperBindingsAsync(attempt.ExamId, cancellationToken);
         var boundByQuestion = PlaceBindings(questions, bindings);
 

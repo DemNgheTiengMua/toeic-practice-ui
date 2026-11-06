@@ -4,13 +4,14 @@ using Xunit;
 namespace Services.Tests;
 
 /// <summary>
-/// #230 batch three: no fixture, seed or test asserts or assigns a difficulty any more.
+/// #230 batch three: no fixture, seed or test writes a difficulty any more. #231 dropped the column,
+/// so this scan now points the other way: the only surviving mentions are the guards that assert the
+/// scale is <b>absent</b>, and the allowlist below is exactly those files.
 /// <para>
-/// This is the check that makes #231's deletion safe. It scans every file that seeds or asserts
-/// content and fails on the identifier, so a new fixture that reaches for the old column is refused
-/// at test time rather than discovered when the column is dropped. The allowlist is deliberately
-/// tiny and every entry is a guard that exists <b>because</b> the difficulty is dormant; #231 shrinks
-/// it to nothing when the column goes.
+/// It still earns its place after the deletion. A re-run that resurrected the column would be caught
+/// by domain33-contract-retirement.sql, but a new fixture that started <b>writing</b> a difficulty is
+/// caught here, before the column exists to write into — which is the shape the failure took twice in
+/// this rebuild (a fixture inventing a default, and a service writing 3 "for compatibility").
 /// </para>
 /// <para>
 /// The scope is files, not a grep: docs/adr, docs/specs and docs/research discuss the retired scale on
@@ -23,19 +24,19 @@ public sealed class FixtureLevelGuardTests
     private static readonly Regex Difficulty = new(@"\bdifficulty_?level\b", RegexOptions.IgnoreCase);
 
     /// <summary>
-    /// Files still allowed to name it, and why. Each one asserts the difficulty is <b>not</b> written
-    /// or <b>not</b> derived from a level, so removing it would remove the guard, not the defect.
+    /// Files still allowed to name it, and why. Each one asserts the difficulty is <b>gone</b> - from
+    /// the entity, from the model, from the export wire, from the schema. Removing one would remove a
+    /// guard, not a defect.
     /// </summary>
     private static readonly Dictionary<string, string> Guards = new(StringComparer.OrdinalIgnoreCase)
     {
         ["tests/Services.Tests/CefrLevelMigrationTests.cs"] =
-            "#228: proves a level and a difficulty never derive from one another, and that the column "
-            + "still compiles beside the level until #231 drops it.",
+            "#231: asserts the difficulty member is absent from both entities and from the EF model, so "
+            + "a type that grew a second scale back is refused.",
         ["tests/Services.Tests/AuthoringLevelTests.cs"] =
-            "#229: reads the column through raw SQL to assert it is NULL on every row an authoring path "
-            + "writes today, and plants a difficulty in a manifest to prove it is not used as a level.",
-        ["tests/Services.Tests/PoolImportTests.cs"] =
-            "#229: asserts the legacy paper row a pool import also writes carries no difficulty.",
+            "#231: asserts the exported manifest names no difficulty field at all.",
+        ["docs/schema-tests/domain33-contract-retirement.sql"] =
+            "#231: asserts the column and its 1-5 CHECK are gone from Questions and PathModuleItems.",
     };
 
     [Fact]

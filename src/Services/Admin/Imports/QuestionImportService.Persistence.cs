@@ -43,7 +43,7 @@ public sealed partial class QuestionImportService
         {
             try
             {
-                // #189: the legacy shape first. Its rows are what a paper renders until #231, and the
+                // #189: the legacy shape first. Its rows are what a paper renders, and the
                 // pool write below needs their ids to bind the pool's versions back onto the paper.
                 (exam, var writtenQuestions) = await WriteExamAsync(batch.CertId, plan, stored, cancellationToken);
                 var pool = await WritePoolAsync(batch, writtenQuestions, exam, cancellationToken);
@@ -252,7 +252,7 @@ public sealed partial class QuestionImportService
             SkillId = g.planned.Section.SkillId,
             Stem = question.Source.Stem!.Trim(),
             // #229 / D1: the level the file was validated on, not a second parse of the same string.
-            // The difficulty is left NULL: it is dormant until #231 deletes the column.
+            // #231 deleted the difficulty column entirely, so there is no field here to leave null.
             CefrLevel = question.Level,
             QuestionType = question.Type.ToCode(),
             Explanation = Normalise(question.Source.Explanation),
