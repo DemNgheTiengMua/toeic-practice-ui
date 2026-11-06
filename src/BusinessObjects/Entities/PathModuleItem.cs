@@ -29,6 +29,14 @@ public partial class PathModuleItem
 
     public int? DifficultyLevel { get; set; }
 
+    /// <summary>
+    /// #228 / D1: the level the step is prescribed at, beside the nullable difficulty it replaces.
+    /// Not mapped until the schema gains the column, and never derived from
+    /// <see cref="DifficultyLevel"/> - D1 forbids a 1-5 to A1-C2 mapping.
+    /// </summary>
+    [NotMapped]
+    public CefrLevel? CefrLevel { get; set; }
+
     public int? QuestionCount { get; set; }
 
     public int DisplayOrder { get; set; }
