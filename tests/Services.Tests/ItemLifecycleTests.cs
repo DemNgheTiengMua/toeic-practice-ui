@@ -220,9 +220,9 @@ public sealed class ItemLifecycleTests(DatabaseFixture database)
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, {certId}, @sec, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
             VALUES (@grp, @exam, @sec, (SELECT SkillId FROM Skills WHERE CertId = {certId}),
-                    N'The legacy stem nobody should render.', 1, 'mcq', 1);
+                    N'The legacy stem nobody should render.', 'A2', 'mcq', 1);
             DECLARE @q INT = SCOPE_IDENTITY();
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
               (@q, 'mcq', 'A', N'legacy-a', 1), (@q, 'mcq', 'B', N'legacy-b', 0),

@@ -16,26 +16,26 @@ INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@ex,@c
 DECLARE @g INT=SCOPE_IDENTITY();
 
 -- A question with no reference at all is free speech, and stays legal.
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@g,@ex,@sec,@spk,N'Do you work or are you a student?',2,'free_response',1);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
+  VALUES (@g,@ex,@sec,@spk,N'Do you work or are you a student?','B1','free_response',1);
 PRINT 'accepted a free-speech question with no reference';
 
 -- A Read Aloud question carries its script and says so.
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder,SampleAnswerOrImageDesc,ReferenceKind)
-  VALUES (@g,@ex,@sec,@spk,N'Read the announcement aloud.',2,'free_response',2,
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder,SampleAnswerOrImageDesc,ReferenceKind)
+  VALUES (@g,@ex,@sec,@spk,N'Read the announcement aloud.','B1','free_response',2,
           N'Attention all shoppers. The sale ends today at 9:00 PM.','script');
 PRINT 'accepted a scripted question';
 
 -- A picture description is the other legal kind.
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder,SampleAnswerOrImageDesc,ReferenceKind)
-  VALUES (@g,@ex,@sec,@spk,N'Describe the picture.',3,'free_response',3,
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder,SampleAnswerOrImageDesc,ReferenceKind)
+  VALUES (@g,@ex,@sec,@spk,N'Describe the picture.','B2','free_response',3,
           N'Two colleagues are talking across a desk.','image_desc');
 PRINT 'accepted a picture description';
 
 -- Text with no kind: nothing says whether it is a script or a caption, so it cannot be used.
 BEGIN TRY
-  INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder,SampleAnswerOrImageDesc)
-    VALUES (@g,@ex,@sec,@spk,N'unclassified',2,'free_response',4,N'Some words with no kind.');
+  INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder,SampleAnswerOrImageDesc)
+    VALUES (@g,@ex,@sec,@spk,N'unclassified','B1','free_response',4,N'Some words with no kind.');
   THROW 50000,'EXPECT_REJECT FAILED: reference text with no kind accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
@@ -44,8 +44,8 @@ END CATCH
 
 -- A kind with no text is a declaration of nothing.
 BEGIN TRY
-  INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder,ReferenceKind)
-    VALUES (@g,@ex,@sec,@spk,N'kind only',2,'free_response',5,'script');
+  INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder,ReferenceKind)
+    VALUES (@g,@ex,@sec,@spk,N'kind only','B1','free_response',5,'script');
   THROW 50000,'EXPECT_REJECT FAILED: reference kind with no text accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
@@ -54,8 +54,8 @@ END CATCH
 
 -- An unknown kind is not a kind.
 BEGIN TRY
-  INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder,SampleAnswerOrImageDesc,ReferenceKind)
-    VALUES (@g,@ex,@sec,@spk,N'bad kind',2,'free_response',6,N'Some words.','essay');
+  INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder,SampleAnswerOrImageDesc,ReferenceKind)
+    VALUES (@g,@ex,@sec,@spk,N'bad kind','B1','free_response',6,N'Some words.','essay');
   THROW 50000,'EXPECT_REJECT FAILED: unknown reference kind accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;

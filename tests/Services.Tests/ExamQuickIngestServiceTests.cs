@@ -186,6 +186,11 @@ public sealed class ExamQuickIngestServiceTests
         Assert.Contains(q.Issues, i => i.Severity == "error" && i.Message.Contains("stem is empty"));
     }
 
+    /// <summary>
+    /// #230: this test used to paste a five-point number and assert the parser carried it into the
+    /// DTO. That number is dormant now, so it would prove nothing; the level is what a paste must
+    /// state for the commit to accept it, so the assertion moved there.
+    /// </summary>
     [Fact]
     public void JsonFallback_ParsesValidArray()
     {
@@ -193,7 +198,7 @@ public sealed class ExamQuickIngestServiceTests
             [
               {
                 "stem": "The shipment will arrive on time _____ weather conditions worsen.",
-                "difficultyLevel": 4,
+                "cefrLevel": "C1",
                 "categoryCode": "grammar_cond",
                 "explanation": "Unless introduces an exception condition.",
                 "options": [
@@ -212,7 +217,7 @@ public sealed class ExamQuickIngestServiceTests
         Assert.Single(result.Questions);
         var q = result.Questions[0];
         Assert.True(q.IsValid);
-        Assert.Equal(4, q.DifficultyLevel);
+        Assert.Equal("C1", q.CefrLevel);
         Assert.Equal("grammar_cond", q.CategoryCode);
         Assert.Equal("unless", q.Options.Single(o => o.IsCorrect).Text);
         Assert.Equal("Correct conditional conjunction.", q.Options.Single(o => o.IsCorrect).Rationale);

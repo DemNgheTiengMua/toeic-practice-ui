@@ -5,6 +5,7 @@ using BusinessObjects.Views;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using BusinessObjects;
 
 namespace Services.Tests;
 
@@ -284,7 +285,7 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
                 SectionId = section.SectionId,
                 SkillId = skill.SkillId,
                 Stem = "Choose two correct answers",
-                DifficultyLevel = 2,
+                CefrLevel = CefrLevel.B1,
                 QuestionType = "multi_select",
                 MaxSelections = 2
             };
@@ -308,7 +309,7 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
                 SectionId = section.SectionId,
                 SkillId = skill.SkillId,
                 Stem = "Single choice question",
-                DifficultyLevel = 1,
+                CefrLevel = CefrLevel.A2,
                 QuestionType = "mcq"
             };
             db.Questions.Add(mcqQuestion);
@@ -364,7 +365,7 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
                 SectionId = section.SectionId,
                 SkillId = skill.SkillId,
                 Stem = "The library is closed on [blank] afternoons.",
-                DifficultyLevel = 2,
+                CefrLevel = CefrLevel.B1,
                 QuestionType = "inline_completion",
                 MaxWords = 2,
                 AllowNumber = true,
@@ -434,7 +435,7 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
                 SectionId = section.SectionId,
                 SkillId = skill.SkillId,
                 Stem = "Fill in the blank",
-                DifficultyLevel = 1,
+                CefrLevel = CefrLevel.A2,
                 QuestionType = "inline_completion"
             };
             db.Questions.Add(q);

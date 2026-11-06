@@ -629,8 +629,8 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath, ImagePath, ImageAlt)
   VALUES (@toeicMock, @toeicCert, @secP1, 1, '/audio/toeic/test1-p1.mp3', '/img/part1-sample.svg', N'Office workers gathered around a whiteboard');
   DECLARE @gP1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
-  VALUES (@gP1, @toeicMock, @secP1, @toeicList, N'Look at the photograph and choose the statement that best describes what you see in the image.', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  VALUES (@gP1, @toeicMock, @secP1, @toeicList, N'Look at the photograph and choose the statement that best describes what you see in the image.', 'B1', 'mcq',
           N'Focus on what the person in the centre is holding and doing.', N'Option C correctly describes the action: the woman is writing notes on the whiteboard.', 1);
   DECLARE @qP1 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -645,8 +645,8 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath)
   VALUES (@toeicMock, @toeicCert, @secP2, 2, '/audio/toeic/test1-p2.mp3');
   DECLARE @gP2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
-  VALUES (@gP2, @toeicMock, @secP2, @toeicList, N'Where did you leave the project folders?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  VALUES (@gP2, @toeicMock, @secP2, @toeicList, N'Where did you leave the project folders?', 'B1', 'mcq',
           N'Listen for a location word that answers "Where".', N'Option B directly answers where the folders are placed.', 1);
   DECLARE @qP2 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -661,8 +661,8 @@ BEGIN
   VALUES (@toeicMock, @toeicCert, @secP3, 3, '/audio/toeic/test1-p3.mp3',
           N'Woman: Good morning, Mr. Evans. Did the catering team confirm the order for Friday''s banquet?\nMan: Yes, they did, but they said they need our final head count by tomorrow noon.\nWoman: I will email the department heads right away to get their RSVPs.');
   DECLARE @gP3 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
-  VALUES (@gP3, @toeicMock, @secP3, @toeicList, N'What deadline does the catering team have for the banquet?', 3, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  VALUES (@gP3, @toeicMock, @secP3, @toeicList, N'What deadline does the catering team have for the banquet?', 'B2', 'mcq',
           N'Pay attention to what the man says about when they need the count.', N'The man says they need the final head count by tomorrow noon.', 1);
   DECLARE @qP3 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -678,8 +678,8 @@ BEGIN
   VALUES (@toeicMock, @toeicCert, @secP4, 4, '/audio/toeic/test1-p4.mp3',
           N'Attention all passengers on flight VN 214 to Tokyo. Due to routine aircraft inspection, boarding will be delayed by approximately twenty minutes. Please remain seated near Gate 12 until boarding begins.');
   DECLARE @gP4 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
-  VALUES (@gP4, @toeicMock, @secP4, @toeicList, N'What is the reason for the flight delay?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  VALUES (@gP4, @toeicMock, @secP4, @toeicList, N'What is the reason for the flight delay?', 'B1', 'mcq',
           N'Listen for the phrase following "Due to".', N'The speaker explicitly announces that the delay is due to routine aircraft inspection.', 1);
   DECLARE @qP4 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -696,10 +696,10 @@ BEGIN
   DECLARE @gP5 INT = SCOPE_IDENTITY();
 
   -- Q1: Verb tense
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gP5, @toeicMock, @secP5, @toeicRead, @catTense,
           N'The regional manager ------- the quarterly figures before the board meeting.',
-          3, 'mcq', N'Look at the time marker and sentence structure.',
+          'B2', 'mcq', N'Look at the time marker and sentence structure.',
           N'The sentence lacks a main verb. "will review" expresses future scheduled action.', 1);
   DECLARE @qP5_1 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -709,10 +709,10 @@ BEGIN
     (@qP5_1, 'mcq', 'D', N'to review', 0);
 
   -- Q2: Preposition
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gP5, @toeicMock, @secP5, @toeicRead, @catPrep,
           N'All client inquiries must be resolved ------- forty-eight hours of submission.',
-          2, 'mcq', N'Which preposition indicates within a time span?',
+          'B1', 'mcq', N'Which preposition indicates within a time span?',
           N'"within" + time duration indicates action must take place before that span elapses.', 2);
   DECLARE @qP5_2 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -722,10 +722,10 @@ BEGIN
     (@qP5_2, 'mcq', 'D', N'within', 1);
 
   -- Q3: Part of speech
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gP5, @toeicMock, @secP5, @toeicRead, @catPos,
           N'The design studio provides ------- solutions for modern office spaces.',
-          3, 'mcq', N'The blank modifies the plural noun "solutions".',
+          'B2', 'mcq', N'The blank modifies the plural noun "solutions".',
           N'"innovative" is the adjective modifying "solutions".', 3);
   DECLARE @qP5_3 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -741,10 +741,10 @@ BEGIN
   VALUES (@toeicMock, @toeicCert, @secP6, 6,
           N'Dear Valued Customer, We ------- your recent order and your package is being prepared for shipment.');
   DECLARE @gP6 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gP6, @toeicMock, @secP6, @toeicRead, @catTense,
           N'Choose the word or phrase that best completes the sentence in the customer letter.',
-          2, 'mcq', N'The action happened recently with present relevance.',
+          'B1', 'mcq', N'The action happened recently with present relevance.',
           N'The present perfect "have received" describes an action that occurred recently with present impact.', 1);
   DECLARE @qP6 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -760,9 +760,9 @@ BEGIN
   VALUES (@toeicMock, @toeicCert, @secP7, 7,
           N'MEMORANDUM\nTo: All Branch Employees\nFrom: Facilities Management\nDate: October 14\nSubject: Elevator Maintenance\nPlease note that the main elevators will undergo safety upgrades this Saturday between 8:00 A.M. and 2:00 P.M. The service elevator near the loading dock will remain accessible throughout this period.');
   DECLARE @gP7 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gP7, @toeicMock, @secP7, @toeicRead,
-          N'What is the primary purpose of the memorandum?', 2, 'mcq', N'Look at the subject line and the main announcement.',
+          N'What is the primary purpose of the memorandum?', 'B1', 'mcq', N'Look at the subject line and the main announcement.',
           N'The memo announces temporary elevator upgrades and directs staff to an alternate service elevator.', 1);
   DECLARE @qP7 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -808,9 +808,9 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath, ImagePath, ImageAlt)
   VALUES (@toeicStdPlace, @toeicCert, @secP1, 1, '/audio/toeic/placement-p1.mp3', '/img/part1-sample.svg', N'Office workers in meeting');
   DECLARE @gStd1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gStd1, @toeicStdPlace, @secP1, @toeicList, N'Look at the picture and select the best statement describing what you see.',
-          2, 'mcq', N'Notice the people sitting around the table.', N'Option A correctly describes people seated around a conference table.', 1);
+          'B1', 'mcq', N'Notice the people sitting around the table.', N'Option A correctly describes people seated around a conference table.', 1);
   DECLARE @qStd1 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
     (@qStd1, 'mcq', 'A', N'People are seated around a conference table.', 1),
@@ -821,8 +821,8 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath)
   VALUES (@toeicStdPlace, @toeicCert, @secP2, 2, '/audio/toeic/placement-p2.mp3');
   DECLARE @gStd2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gStd2, @toeicStdPlace, @secP2, @toeicList, N'Where is the quarterly performance report?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@gStd2, @toeicStdPlace, @secP2, @toeicList, N'Where is the quarterly performance report?', 'B1', 'mcq',
           N'Option B directly answers the question about the report location.', 2);
   DECLARE @qStd2 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -833,10 +833,10 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
   VALUES (@toeicStdPlace, @toeicCert, @secP5, 3);
   DECLARE @gStd3 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@gStd3, @toeicStdPlace, @secP5, @toeicRead,
           N'Customer satisfaction surveys must be submitted ------- Friday afternoon to be included in the quarterly review.',
-          2, 'mcq', N'Preposition of time "before" indicates the deadline.', 3);
+          'B1', 'mcq', N'Preposition of time "before" indicates the deadline.', 3);
   DECLARE @qStd3 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
     (@qStd3, 'mcq', 'A', N'before', 1),
@@ -848,9 +848,9 @@ BEGIN
   VALUES (@toeicStdPlace, @toeicCert, @secP6, 4,
           N'Thank you for contacting Apex Support. We have received your inquiry regarding account renewal. A representative will review your request and ------- within 24 business hours.');
   DECLARE @gStd4 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@gStd4, @toeicStdPlace, @secP6, @toeicRead, N'Choose the correct verb form to complete the sentence.',
-          2, 'mcq', N'The modal auxiliary "will" requires the base form of the verb "respond".', 4);
+          'B1', 'mcq', N'The modal auxiliary "will" requires the base form of the verb "respond".', 4);
   DECLARE @qStd4 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
     (@qStd4, 'mcq', 'A', N'respond', 1),
@@ -879,8 +879,8 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath)
   VALUES (@qExam, @toeicCert, @secP2, 1, '/audio/toeic/placement-quick.mp3');
   DECLARE @gQ1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gQ1, @qExam, @secP2, @toeicList, N'Who is responsible for booking the meeting room?', 1, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@gQ1, @qExam, @secP2, @toeicList, N'Who is responsible for booking the meeting room?', 'A2', 'mcq',
           N'Option C identifies the person responsible.', 1);
   DECLARE @qQ1 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -891,10 +891,10 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
   VALUES (@qExam, @toeicCert, @secP5, 2);
   DECLARE @gQ2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@gQ2, @qExam, @secP5, @toeicRead,
           N'The new software update will ------- improve database query performance across all branch offices.',
-          2, 'mcq', N'Adverb "significantly" modifies the verb "improve".', 2);
+          'B1', 'mcq', N'Adverb "significantly" modifies the verb "improve".', 2);
   DECLARE @qQ2 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
     (@qQ2, 'mcq', 'A', N'significant', 0),
@@ -922,20 +922,20 @@ BEGIN
   VALUES (@speaExam, @toeicCert, @secS1, 1,
           N'Attention all shoppers. The annual summer clearance sale will end today at 9:00 PM. Please bring all selected items to the front registers.');
   DECLARE @gS1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
-  VALUES (@gS1, @speaExam, @secS1, @toeicSpea, N'Read the announcement aloud as clearly and naturally as possible.', 2, 'free_response', 45, 45, 1);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  VALUES (@gS1, @speaExam, @secS1, @toeicSpea, N'Read the announcement aloud as clearly and naturally as possible.', 'B1', 'free_response', 45, 45, 1);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ImagePath, ImageAlt)
   VALUES (@speaExam, @toeicCert, @secS2, 2, '/img/part1-sample.svg', N'Office workers in a team meeting');
   DECLARE @gS2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
-  VALUES (@gS2, @speaExam, @secS2, @toeicSpea, N'Look at the picture and describe it in as much detail as you can.', 2, 'free_response', 45, 30, 2);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  VALUES (@gS2, @speaExam, @secS2, @toeicSpea, N'Look at the picture and describe it in as much detail as you can.', 'B1', 'free_response', 45, 30, 2);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
   VALUES (@speaExam, @toeicCert, @secS3, 3);
   DECLARE @gS3 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
-  VALUES (@gS3, @speaExam, @secS3, @toeicSpea, N'How often do you go shopping for clothes, and what is your favorite clothing store?', 3, 'free_response', 3, 15, 3);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  VALUES (@gS3, @speaExam, @secS3, @toeicSpea, N'How often do you go shopping for clothes, and what is your favorite clothing store?', 'B2', 'free_response', 3, 15, 3);
 END;
 
 -- 4. TOEIC Writing Practice: ETS TOEIC Writing Practice Test 1
@@ -950,17 +950,17 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ImagePath, ImageAlt)
   VALUES (@writExam, @toeicCert, @secW1, 1, '/img/part1-sample.svg', N'Meeting in conference room');
   DECLARE @gW1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
   VALUES (@gW1, @writExam, @secW1, @toeicWrit,
-          N'Write ONE sentence based on the picture using two given words: "discuss" and "proposal".', 2, 'free_response', 8, 35, 1);
+          N'Write ONE sentence based on the picture using two given words: "discuss" and "proposal".', 'B1', 'free_response', 8, 35, 1);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
   VALUES (@writExam, @toeicCert, @secW2, 2,
           N'Some companies offer employees the option of flexible working hours. In your opinion, what are the advantages and disadvantages of flexible working schedules?');
   DECLARE @gW2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
   VALUES (@gW2, @writExam, @secW2, @toeicWrit,
-          N'Write an opinion essay of at least 250 words explaining your viewpoint with specific reasons and examples.', 4, 'free_response', 250, 450, 2);
+          N'Write an opinion essay of at least 250 words explaining your viewpoint with specific reasons and examples.', 'C1', 'free_response', 250, 450, 2);
 END;
 
 -------------------------------------------------------------------------------
@@ -985,8 +985,8 @@ BEGIN
   VALUES (@ieltsMock, @ieltsCert, @secRec, 1, '/audio/ielts/cambridge18-t1-listening.mp3',
           N'Guide: Welcome to the University Library induction. Daily guided tours depart every half hour from the information desk starting at 9:30 AM.');
   DECLARE @gRec INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
-  VALUES (@gRec, @ieltsMock, @secRec, @ieltsList, N'At what time does the first library induction tour depart?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  VALUES (@gRec, @ieltsMock, @secRec, @ieltsList, N'At what time does the first library induction tour depart?', 'B1', 'mcq',
           N'Listen for the starting time mentioned by the guide.', N'The guide states that the tours start at 9:30 AM.', 1);
   DECLARE @qRec INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1002,10 +1002,10 @@ BEGIN
   VALUES (@ieltsMock, @ieltsCert, @secPas, 2,
           N'Urban reforestation initiatives have demonstrated measurable cooling effects in metropolitan centres. Studies in Singapore and Seoul indicate that rooftop gardens and street canopy trees reduce localized surface temperatures by up to 2.8 degrees Celsius during peak summer months.');
   DECLARE @gPas INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gPas, @ieltsMock, @secPas, @ieltsRead,
           N'According to the passage, by how much can urban surface temperatures be reduced through green canopies?',
-          3, 'mcq', N'Scan the passage for specific numbers and degrees Celsius.',
+          'B2', 'mcq', N'Scan the passage for specific numbers and degrees Celsius.',
           N'The text explicitly mentions a reduction of up to 2.8 degrees Celsius.', 1);
   DECLARE @qPas INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1040,8 +1040,8 @@ BEGIN
   VALUES (@ieltsPlace, @ieltsCert, @secRec, 1, '/audio/ielts/placement-diagnostic.mp3',
           N'Officer: The student housing office is open Monday to Thursday from 9 AM to 4 PM. On Fridays we close at 1 PM for staff training.');
   DECLARE @gIP1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gIP1, @ieltsPlace, @secRec, @ieltsList, N'What time does the student housing office close on Fridays?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@gIP1, @ieltsPlace, @secRec, @ieltsList, N'What time does the student housing office close on Fridays?', 'B1', 'mcq',
           N'The officer says: "On Fridays we close at 1 PM".', 1);
   DECLARE @qIP1 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1054,8 +1054,8 @@ BEGIN
   VALUES (@ieltsPlace, @ieltsCert, @secPas, 2,
           N'Renewable energy capacity expanded by 50% in 2023 worldwide, with solar photovoltaics accounting for three-quarters of new installations globally.');
   DECLARE @gIP2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gIP2, @ieltsPlace, @secPas, @ieltsRead, N'What energy source accounted for the majority of new capacity?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@gIP2, @ieltsPlace, @secPas, @ieltsRead, N'What energy source accounted for the majority of new capacity?', 'B1', 'mcq',
           N'The passage states solar photovoltaics accounted for three-quarters of installations.', 2);
   DECLARE @qIP2 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1083,17 +1083,17 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
   VALUES (@ieltsSpeaExam, @ieltsCert, @secInt, 1);
   DECLARE @gIS1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
   VALUES (@gIS1, @ieltsSpeaExam, @secInt, @ieltsSpea,
-          N'Part 1: Do you work or are you a student? What do you enjoy most about your studies or job?', 2, 'free_response', 0, 60, 1);
+          N'Part 1: Do you work or are you a student? What do you enjoy most about your studies or job?', 'B1', 'free_response', 0, 60, 1);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
   VALUES (@ieltsSpeaExam, @ieltsCert, @secInt, 2,
           N'Describe a piece of technology you find difficult to use.\nYou should say:\n- What it is\n- When you got it\n- What you use it for\nAnd explain why you find it difficult to use.');
   DECLARE @gIS2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
   VALUES (@gIS2, @ieltsSpeaExam, @secInt, @ieltsSpea,
-          N'Part 2: Speak for 1 to 2 minutes on the cue card topic. You have 1 minute to prepare.', 4, 'free_response', 60, 120, 2);
+          N'Part 2: Speak for 1 to 2 minutes on the cue card topic. You have 1 minute to prepare.', 'C1', 'free_response', 60, 120, 2);
 END;
 
 -- 4. IELTS Writing Practice: Cambridge IELTS 18 — Writing Practice Test 1
@@ -1111,10 +1111,10 @@ BEGIN
           N'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.');
   DECLARE @grpT1 INT = SCOPE_IDENTITY();
 
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
   VALUES (@grpT1, @writingExam, @secT1, @ieltsWrit,
           N'Write at least 150 words summarizing the main features and comparisons in the chart.',
-          3, 'free_response', 150, NULL, 1);
+          'B2', 'free_response', 150, NULL, 1);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
   VALUES (@writingExam, @ieltsCert, @secT2, 2,
@@ -1122,10 +1122,10 @@ BEGIN
           N'To what extent do you agree or disagree? Give reasons for your answer and include any relevant examples from your own knowledge or experience.');
   DECLARE @grpT2 INT = SCOPE_IDENTITY();
 
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
   VALUES (@grpT2, @writingExam, @secT2, @ieltsWrit,
           N'Write an essay of at least 250 words discussing your opinion with supporting arguments.',
-          4, 'free_response', 250, NULL, 2);
+          'C1', 'free_response', 250, NULL, 2);
 END;
 
 -------------------------------------------------------------------------------
@@ -1150,8 +1150,8 @@ BEGIN
   VALUES (@vstepMock, @vstepCert, @secL3, 1, '/audio/vstep/sample1-listening.mp3',
           N'Speaker: Good afternoon listeners. The annual Da Nang International Fireworks Festival will open next month on June 8th along the Han River.');
   DECLARE @gL3 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
-  VALUES (@gL3, @vstepMock, @secL3, @vstepList, N'On what date will the festival open?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  VALUES (@gL3, @vstepMock, @secL3, @vstepList, N'On what date will the festival open?', 'B1', 'mcq',
           N'Listen for the exact month and date mentioned by the speaker.', N'The speaker explicitly states June 8th.', 1);
   DECLARE @qL3 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1167,9 +1167,9 @@ BEGIN
   VALUES (@vstepMock, @vstepCert, @secR4, 2,
           N'Community-based tourism has expanded significantly in the northern mountainous provinces of Vietnam. Local homestays in Ha Giang and Yen Bai allow visitors to experience ethnic cultural traditions while generating sustainable income for rural families.');
   DECLARE @gR4 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gR4, @vstepMock, @secR4, @vstepRead,
-          N'What is a primary benefit of community-based tourism described in the text?', 2, 'mcq',
+          N'What is a primary benefit of community-based tourism described in the text?', 'B1', 'mcq',
           N'Look at the final sentence describing the effect for rural families.',
           N'The passage notes it provides sustainable income for local families while sharing cultural traditions.', 1);
   DECLARE @qR4 INT = SCOPE_IDENTITY();
@@ -1205,8 +1205,8 @@ BEGIN
   VALUES (@vstepPlace, @vstepCert, @secL3, 1, '/audio/vstep/placement-diagnostic.mp3',
           N'Lecturer: Please submit your research proposals by Friday 5 PM through the faculty portal.');
   DECLARE @gVP1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gVP1, @vstepPlace, @secL3, @vstepList, N'How should students submit their research proposals?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@gVP1, @vstepPlace, @secL3, @vstepList, N'How should students submit their research proposals?', 'B1', 'mcq',
           N'The lecturer specifies "through the faculty portal".', 1);
   DECLARE @qVP1 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1219,8 +1219,8 @@ BEGIN
   VALUES (@vstepPlace, @vstepCert, @secR4, 2,
           N'Artificial intelligence is being integrated into medical imaging across hospital networks, providing diagnostic assistance for radiology scans.');
   DECLARE @gVP2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gVP2, @vstepPlace, @secR4, @vstepRead, N'What role does artificial intelligence play in medical imaging according to the passage?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@gVP2, @vstepPlace, @secR4, @vstepRead, N'What role does artificial intelligence play in medical imaging according to the passage?', 'B1', 'mcq',
           N'The passage states AI provides diagnostic assistance for radiology scans.', 2);
   DECLARE @qVP2 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1248,17 +1248,17 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
   VALUES (@vstepSpeaExam, @vstepCert, @secVS3, 1);
   DECLARE @gVS1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
   VALUES (@gVS1, @vstepSpeaExam, @secVS3, @vstepSpea,
-          N'Part 1: Social Interaction: Talk about your favorite leisure activity. Why do you enjoy it?', 2, 'free_response', 0, 60, 1);
+          N'Part 1: Social Interaction: Talk about your favorite leisure activity. Why do you enjoy it?', 'B1', 'free_response', 0, 60, 1);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
   VALUES (@vstepSpeaExam, @vstepCert, @secVS3, 2,
           N'Topic: Should universities make physical education courses compulsory for all undergraduate students?\n- Health benefits\n- Academic stress relief\n- Student freedom of choice');
   DECLARE @gVS2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
   VALUES (@gVS2, @vstepSpeaExam, @secVS3, @vstepSpea,
-          N'Part 2: Topic Development: Present your opinion in 3 minutes based on the prompt.', 3, 'free_response', 60, 180, 2);
+          N'Part 2: Topic Development: Present your opinion in 3 minutes based on the prompt.', 'B2', 'free_response', 60, 180, 2);
 END;
 
 -- 4. VSTEP Writing Practice: VSTEP Writing Practice Test 1
@@ -1274,17 +1274,17 @@ BEGIN
   VALUES (@vstepWritExam, @vstepCert, @secVW1, 1,
           N'You received an email from an international friend asking for recommendations on historical places to visit in Hanoi.\nWrite an email of at least 120 words suggesting two places, explaining why they are interesting, and giving advice on when to visit.');
   DECLARE @gVW1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
   VALUES (@gVW1, @vstepWritExam, @secVW1, @vstepWrit,
-          N'Write an email responding to your friend (at least 120 words).', 3, 'free_response', 120, 250, 1);
+          N'Write an email responding to your friend (at least 120 words).', 'B2', 'free_response', 120, 250, 1);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
   VALUES (@vstepWritExam, @vstepCert, @secVW2, 2,
           N'Some people think that online learning will eventually replace traditional classrooms. To what extent do you agree or disagree?');
   DECLARE @gVW2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
   VALUES (@gVW2, @vstepWritExam, @secVW2, @vstepWrit,
-          N'Write an essay of at least 250 words discussing both sides and giving your opinion with reasons.', 4, 'free_response', 250, 450, 2);
+          N'Write an essay of at least 250 words discussing both sides and giving your opinion with reasons.', 'C1', 'free_response', 250, 450, 2);
 END;
 GO
 

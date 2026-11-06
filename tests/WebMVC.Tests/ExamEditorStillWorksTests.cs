@@ -66,7 +66,6 @@ public sealed class ExamEditorStillWorksTests : IClassFixture<ExamEditorStillWor
             Content = JsonContent.Create(new UpdateQuestionRequest(
                 GroupId: 11,
                 Stem: "A saved stem",
-                DifficultyLevel: 2,
                 QuestionType: QuestionTypeDto.Mcq,
                 Explanation: "Saved from the editor.", CefrLevelCode: "B1")),
         };
@@ -193,7 +192,7 @@ public sealed class ExamEditorStillWorksTests : IClassFixture<ExamEditorStillWor
                     Questions:
                     [new AdminQuestionDto(
                         101, 11, 1, 2, "P5", "Incomplete Sentences", 2, "READ",
-                        "Depot notice ------- at six.", 2, QuestionTypeDto.Mcq,
+                        "Depot notice ------- at six.", QuestionTypeDto.Mcq,
                         "A is the only grammatical fit.", null, null, null, null, null, null, null, 1,
                         DateTimeOffset.UtcNow,
                         [new AdminQuestionOptionDto(1, 101, "A", "opens", true, null),
@@ -257,7 +256,7 @@ public sealed class ExamEditorStillWorksTests : IClassFixture<ExamEditorStillWor
                     var request = (UpdateQuestionRequest)args[1]!;
                     return Task.FromResult(new AdminQuestionDto(
                         101, request.GroupId ?? 11, 1, 2, "P5", "Incomplete Sentences", 2, "READ",
-                        request.Stem, request.DifficultyLevel, request.QuestionType, request.Explanation,
+                        request.Stem, request.QuestionType, request.Explanation,
                         null, null, null, null, null, null, null, request.DisplayOrder, DateTimeOffset.UtcNow,
                         [new AdminQuestionOptionDto(1, 101, "A", "opens", true, null)],
                         HasAnswers: false));

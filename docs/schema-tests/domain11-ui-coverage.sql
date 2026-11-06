@@ -27,10 +27,10 @@ INSERT INTO QuestionGroups (ExamId,CertId,SectionId,ImagePath,ImageAlt) VALUES (
 INSERT INTO QuestionCategories (CertId,Code,Name) VALUES (@c,'verb_tense',N'Verb tense'); DECLARE @cat INT=SCOPE_IDENTITY();
 -- UI-9: an MCQ cannot carry speaking timings
 BEGIN TRY
-  INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,PrepSeconds) VALUES (@g,@ex,@p5,@rd,N'x',2,'mcq',45);
+  INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,PrepSeconds) VALUES (@g,@ex,@p5,@rd,N'x','B1','mcq',45);
   THROW 50000,'EXPECT_REJECT FAILED: MCQ with timing accepted',1;
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected MCQ with timing'; END CATCH
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,CategoryId) VALUES (@g,@ex,@p5,@rd,N'q7',2,'mcq',@cat); DECLARE @q INT=SCOPE_IDENTITY();
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,CategoryId) VALUES (@g,@ex,@p5,@rd,N'q7','B1','mcq',@cat); DECLARE @q INT=SCOPE_IDENTITY();
 INSERT INTO QuestionOptions (QuestionId,QuestionType,Label,Text,IsCorrect,Rationale) VALUES (@q,'mcq','B',N'reviewing',0,N'V-ing cannot be the main verb'); DECLARE @optB INT=SCOPE_IDENTITY();
 INSERT INTO QuestionOptions (QuestionId,QuestionType,Label,Text,IsCorrect) VALUES (@q,'mcq','C',N'will review',1);
 PRINT 'accepted per-option rationale and category';
@@ -78,7 +78,7 @@ INSERT INTO GradingCriteria (CertId,SkillId,Code,Name,MaxScore) VALUES (@c,@spk,
 INSERT INTO GradingCriteria (CertId,SkillId,Code,Name,MaxScore) VALUES (@c,@spk,'COH',N'Cohesion',5); DECLARE @coh INT=SCOPE_IDENTITY();
 INSERT INTO SectionCriteria (SectionId,CriterionId,SkillId,MaxScore) VALUES (@s1,@pron,@spk,3);
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId) VALUES (@spx,@c,@s1); DECLARE @sg INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,PrepSeconds,ResponseSeconds) VALUES (@sg,@spx,@s1,@spk,N'read aloud',2,'free_response',45,45); DECLARE @sq INT=SCOPE_IDENTITY();
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,PrepSeconds,ResponseSeconds) VALUES (@sg,@spx,@s1,@spk,N'read aloud','B1','free_response',45,45); DECLARE @sq INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt,Status) VALUES (@u,@spx,@c,SYSDATETIMEOFFSET(),'submitted'); DECLARE @sa INT=SCOPE_IDENTITY();
 INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,AudioPath,DurationMs) VALUES (@sa,@sq,@spx,@spk,'free_response',N'q1.webm',27000); DECLARE @fr INT=SCOPE_IDENTITY();
 INSERT INTO AiGradings (FreeResponseId,SkillId) VALUES (@fr,@spk); DECLARE @gr INT=SCOPE_IDENTITY();

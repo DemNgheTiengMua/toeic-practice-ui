@@ -42,12 +42,12 @@ DECLARE @exam INT = SCOPE_IDENTITY();
 -- version's key below: that is what makes the pinned read path provable rather than incidental.
 INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
 DECLARE @grp INT = SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-VALUES (@grp, @exam, @sec, @skill, N'Legacy stem one.', 1, 'mcq', 1),
-       (@grp, @exam, @sec, @skill, N'Legacy stem two.', 1, 'mcq', 2),
-       (@grp, @exam, @sec, @skill, N'Legacy stem three.', 1, 'mcq', 3),
-       (@grp, @exam, @sec, @skill, N'Legacy stem four.', 1, 'mcq', 4),
-       (@grp, @exam, @sec, @skill, N'Legacy stem five.', 1, 'mcq', 5);
+INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+VALUES (@grp, @exam, @sec, @skill, N'Legacy stem one.', 'A2', 'mcq', 1),
+       (@grp, @exam, @sec, @skill, N'Legacy stem two.', 'A2', 'mcq', 2),
+       (@grp, @exam, @sec, @skill, N'Legacy stem three.', 'A2', 'mcq', 3),
+       (@grp, @exam, @sec, @skill, N'Legacy stem four.', 'A2', 'mcq', 4),
+       (@grp, @exam, @sec, @skill, N'Legacy stem five.', 'A2', 'mcq', 5);
 DECLARE @q1 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 1);
 DECLARE @q2 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 2);
 -- one question per refusal below, because UQ_AttemptAnswers makes (attempt, question) unique: reusing a

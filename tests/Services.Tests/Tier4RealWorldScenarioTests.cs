@@ -96,8 +96,8 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
             -- Group & Question for Listening
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secL, 1);
             DECLARE @grpL INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grpL, @exam, @secL, @sL, N'Listening Question 1', 1, 'mcq', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grpL, @exam, @secL, @sL, N'Listening Question 1', 'A2', 'mcq', 1);
             DECLARE @qL INT = SCOPE_IDENTITY();
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
               (@qL, 'mcq', 'A', N'Listening Option A (Correct)', 1),
@@ -106,8 +106,8 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
             -- Group & Question for Reading
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 2);
             DECLARE @grpR INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grpR, @exam, @secR, @sR, N'Reading Question 1', 1, 'mcq', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grpR, @exam, @secR, @sR, N'Reading Question 1', 'A2', 'mcq', 1);
             DECLARE @qR INT = SCOPE_IDENTITY();
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
               (@qR, 'mcq', 'A', N'Reading Option A (Wrong)', 0),
@@ -220,7 +220,6 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
         var question = await adminService.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "What is the correct answer?",
-            3,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -278,8 +277,8 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, @secR, @sR, N'Placement Diagnostic Question 1', 2, 'mcq', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grp, @exam, @secR, @sR, N'Placement Diagnostic Question 1', 'B1', 'mcq', 1);
             DECLARE @q INT = SCOPE_IDENTITY();
 
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES

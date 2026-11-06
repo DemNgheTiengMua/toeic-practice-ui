@@ -105,7 +105,6 @@ public sealed partial class AdminExamService
                         SkillId: q.SkillId,
                         SkillCode: sec.Skill?.Code ?? sec.Code,
                         Stem: q.Stem,
-                        DifficultyLevel: q.DifficultyLevel,
                         QuestionType: EnumCodes.Parse<QuestionType>(q.QuestionType).MapTo<QuestionTypeDto>(),
                         Explanation: q.Explanation,
                         CategoryId: q.CategoryId,

@@ -86,7 +86,6 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
         new(
             GroupId: groupId,
             Stem: stem,
-            DifficultyLevel: null,
             QuestionType: QuestionTypeDto.Mcq,
             CefrLevelCode: level,
             Options:
@@ -128,8 +127,9 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     /// The stored row carries the level the author chose, and carries no difficulty at all.
     /// <para>
     /// The input that would pass this while being wrong: a service that returns the level in its DTO
-    /// and writes <c>DifficultyLevel = 3</c> beside it - every reply-level assertion passes and the row
-    /// still lands in whatever cell a 3 means. That is why the assertion is on the column.
+    /// and also writes a difficulty beside it - every reply-level assertion passes and the row still
+    /// lands in whatever cell a 3 means. That is why the assertion is on the column, and why #230 has
+    /// every fixture stop writing the difficulty.
     /// </para>
     /// </summary>
     [Fact]
@@ -271,7 +271,6 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
         var edited = await service.UpdateQuestionAsync(created.QuestionId, new UpdateQuestionRequest(
             GroupId: groupId,
             Stem: "Corrected stem.",
-            DifficultyLevel: null,
             QuestionType: QuestionTypeDto.Mcq,
             Options:
             [
@@ -299,7 +298,6 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
         var edited = await service.UpdateQuestionAsync(created.QuestionId, new UpdateQuestionRequest(
             GroupId: groupId,
             Stem: "Levelled up.",
-            DifficultyLevel: null,
             QuestionType: QuestionTypeDto.Mcq,
             CefrLevelCode: "C2",
             Options:
@@ -329,7 +327,6 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
             new UpdateQuestionRequest(
                 GroupId: groupId,
                 Stem: "Floored.",
-                DifficultyLevel: null,
                 QuestionType: QuestionTypeDto.Mcq,
                 CefrLevelCode: "pre_a1",
                 Options:

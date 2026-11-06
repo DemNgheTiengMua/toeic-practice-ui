@@ -59,9 +59,9 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         db.QuestionGroups.Add(grp);
         await db.SaveChangesAsync();
 
-        var q1 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = readSec.SectionId, SkillId = skill.SkillId, Stem = "Stem 1", DifficultyLevel = 3, QuestionType = "mcq", Hint = "Hint 1", Explanation = "Explanation 1", DisplayOrder = 1 };
-        var q2 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = readSec.SectionId, SkillId = skill.SkillId, Stem = "Stem 2", DifficultyLevel = 3, QuestionType = "mcq", Hint = "Hint 2", Explanation = "Explanation 2", DisplayOrder = 2 };
-        var q3 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = readSec.SectionId, SkillId = skill.SkillId, Stem = "Stem 3", DifficultyLevel = 3, QuestionType = "mcq", Hint = "Hint 3", Explanation = "Explanation 3", DisplayOrder = 3 };
+        var q1 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = readSec.SectionId, SkillId = skill.SkillId, Stem = "Stem 1", CefrLevel = CefrLevel.B2, QuestionType = "mcq", Hint = "Hint 1", Explanation = "Explanation 1", DisplayOrder = 1 };
+        var q2 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = readSec.SectionId, SkillId = skill.SkillId, Stem = "Stem 2", CefrLevel = CefrLevel.B2, QuestionType = "mcq", Hint = "Hint 2", Explanation = "Explanation 2", DisplayOrder = 2 };
+        var q3 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = readSec.SectionId, SkillId = skill.SkillId, Stem = "Stem 3", CefrLevel = CefrLevel.B2, QuestionType = "mcq", Hint = "Hint 3", Explanation = "Explanation 3", DisplayOrder = 3 };
         db.Questions.AddRange(q1, q2, q3);
         await db.SaveChangesAsync();
 
@@ -239,7 +239,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
             {
                 GroupId = group.GroupId, ExamId = group.ExamId, SectionId = writingSectionId,
                 SkillId = await db.Sections.Where(s => s.SectionId == writingSectionId).Select(s => s.SkillId).FirstAsync(),
-                Stem = "Keyed question", DifficultyLevel = 2, QuestionType = "mcq", DisplayOrder = 2,
+                Stem = "Keyed question", CefrLevel = CefrLevel.B1, QuestionType = "mcq", DisplayOrder = 2,
             };
             db.Questions.Add(keyed);
             await db.SaveChangesAsync();
@@ -343,7 +343,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var question = new Question
         {
             GroupId = group.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId,
-            Stem = $"{section.Code} question", DifficultyLevel = 2, QuestionType = type,
+            Stem = $"{section.Code} question", CefrLevel = CefrLevel.B1, QuestionType = type,
             MinWords = type == "free_response" ? 5 : null, RequiredKeywords = type == "free_response" ? "proposal" : null,
             DisplayOrder = 1,
         };
@@ -424,7 +424,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var question = new Question
         {
             GroupId = group.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId,
-            Stem = "Write about the meeting.", DifficultyLevel = 2, QuestionType = "free_response",
+            Stem = "Write about the meeting.", CefrLevel = CefrLevel.B1, QuestionType = "free_response",
             MinWords = 5, MaxWords = 40, RequiredKeywords = "proposal", Explanation = "Use the past simple.",
             DisplayOrder = 1,
         };
@@ -862,7 +862,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
                 SectionId = sec.SectionId,
                 SkillId = skill.SkillId,
                 Stem = "Select all correct options - Q1",
-                DifficultyLevel = 3,
+                CefrLevel = CefrLevel.B2,
                 QuestionType = "multi_select",
                 MaxSelections = 2,
                 Hint = "Check both options",
@@ -876,7 +876,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
                 SectionId = sec.SectionId,
                 SkillId = skill.SkillId,
                 Stem = "Select all correct options - Q2",
-                DifficultyLevel = 3,
+                CefrLevel = CefrLevel.B2,
                 QuestionType = "multi_select",
                 MaxSelections = 2,
                 Hint = "Check both options",
@@ -966,7 +966,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
                 SectionId = sec.SectionId,
                 SkillId = skill.SkillId,
                 Stem = "Fill in the blank for Q1",
-                DifficultyLevel = 3,
+                CefrLevel = CefrLevel.B2,
                 QuestionType = "inline_completion",
                 AcceptedAnswersJson = "[\"development\", \"software development\"]",
                 AllowNumber = false,
@@ -982,7 +982,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
                 SectionId = sec.SectionId,
                 SkillId = skill.SkillId,
                 Stem = "Fill in the blank for Q2",
-                DifficultyLevel = 3,
+                CefrLevel = CefrLevel.B2,
                 QuestionType = "inline_completion",
                 AcceptedAnswersJson = "[\"apple\", \"apples\"]",
                 AllowNumber = false,
@@ -1054,7 +1054,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
                 SectionId = sec.SectionId,
                 SkillId = skill.SkillId,
                 Stem = "Take Question Stem",
-                DifficultyLevel = 3,
+                CefrLevel = CefrLevel.B2,
                 QuestionType = "inline_completion",
                 AcceptedAnswersJson = "[\"solution\"]",
                 AllowNumber = false,

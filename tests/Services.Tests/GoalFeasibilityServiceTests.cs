@@ -75,8 +75,8 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
             VALUES (@drillExam, @cert, @secR, 1);
             DECLARE @drillGroup INT = SCOPE_IDENTITY();
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@drillGroup, @drillExam, @secR, @sR, N'Drill question', 2, 'mcq', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@drillGroup, @drillExam, @secR, @sR, N'Drill question', 'B1', 'mcq', 1);
             DECLARE @drillQ INT = SCOPE_IDENTITY();
 
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES

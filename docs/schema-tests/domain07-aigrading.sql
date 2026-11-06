@@ -18,11 +18,11 @@ INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'M9 Exam','pu
 DECLARE @exam0 INT=SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@exam0,@c,@sec0,1);
 DECLARE @grp0 INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-q1',3,'free_response',1);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
+  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-q1','B2','free_response',1);
 DECLARE @qfr1 INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-q2',3,'free_response',2);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
+  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-q2','B2','free_response',2);
 DECLARE @qfr2 INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt) VALUES (@usr0,@exam0,@c,'submitted',SYSDATETIMEOFFSET());
 DECLARE @a0 INT=SCOPE_IDENTITY();
@@ -59,8 +59,8 @@ INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'M6 Exam','pu
 DECLARE @exam INT=SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@exam,@c,@sec,1);
 DECLARE @grp INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grp,@exam,@sec,@sk,N'm6-q',3,'free_response',1);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
+  VALUES (@grp,@exam,@sec,@sk,N'm6-q','B2','free_response',1);
 DECLARE @qm6 INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt) VALUES (@usr,@exam,@c,'submitted',SYSDATETIMEOFFSET());
 DECLARE @am6 INT=SCOPE_IDENTITY();
@@ -110,8 +110,8 @@ END TRY BEGIN CATCH
   PRINT 'rejected AiGradings skill unrelated to free response chain as expected';
 END CATCH
 -- M-3 clause 3: the free response's own skill IS accepted
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-q3',3,'free_response',3);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
+  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-q3','B2','free_response',3);
 DECLARE @qfr3 INT=SCOPE_IDENTITY();
 INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText) VALUES (@a0,@qfr3,@exam0,@sk,'free_response',N'r3');
 DECLARE @fr3 INT=SCOPE_IDENTITY();
@@ -143,8 +143,8 @@ END CATCH
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt) VALUES (@usr0,@exam0,@c,'in_progress',SYSDATETIMEOFFSET());
 DECLARE @aGraded INT=SCOPE_IDENTITY();
 UPDATE ExamAttempts SET Status='graded' WHERE AttemptId=@aGraded;   -- legal: it has no free responses yet
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-late',3,'free_response',9);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
+  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-late','B2','free_response',9);
 DECLARE @qLate INT=SCOPE_IDENTITY();
 BEGIN TRY
   INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText)

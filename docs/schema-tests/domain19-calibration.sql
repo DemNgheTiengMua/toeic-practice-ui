@@ -17,11 +17,11 @@ INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose,QuestionCount)
 DECLARE @e INT=SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@e,@c,@sec,1);
 DECLARE @g INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@g,@e,@sec,@s,N'Q',2,'mcq',1);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
+  VALUES (@g,@e,@sec,@s,N'Q','B1','mcq',1);
 DECLARE @q INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@g,@e,@sec,@s,N'Q2',2,'mcq',2);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
+  VALUES (@g,@e,@sec,@s,N'Q2','B1','mcq',2);
 DECLARE @q2 INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,StartedAt,ExpiresAt)
   VALUES (@u,@e,@c,'in_progress',SYSDATETIMEOFFSET(),DATEADD(hour,1,SYSDATETIMEOFFSET()));

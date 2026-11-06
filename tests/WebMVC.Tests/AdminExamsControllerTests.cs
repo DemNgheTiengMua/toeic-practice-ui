@@ -89,7 +89,7 @@ public sealed class AdminExamsControllerTests
         [
             new(1, examId, 1, 1, "P1", "Photos", ModalityDto.Listening, null, "audio/p1.mp3", 0, 5000, "img/p1.jpg", "An office desk", null, null, null, 1,
             [
-                new(101, 1, examId, 1, "P1", "Photos", 1, "P1", "What is on the desk?", 2, QuestionTypeDto.Mcq, "Explanation text", null, null, null, null, null, null, null, 1, DateTimeOffset.UtcNow,
+                new(101, 1, examId, 1, "P1", "Photos", 1, "P1", "What is on the desk?", QuestionTypeDto.Mcq, "Explanation text", null, null, null, null, null, null, null, 1, DateTimeOffset.UtcNow,
                 [
                     new(1001, 101, "A", "A laptop", true, "Correct rationale"),
                     new(1002, 101, "B", "A cat", false, "Wrong rationale")
@@ -454,7 +454,7 @@ public sealed class AdminExamsControllerTests
         var request = new QuickIngestCommitRequest(
             SectionId: 1,
             Mode: "append",
-            Questions: [new QuickIngestParsedQuestionDto(1, 1, 5, "Stem", 3, null, null, [new QuickIngestParsedOptionDto("A", "Yes", true), new QuickIngestParsedOptionDto("B", "No", false)], [], true)], CefrLevel: "B1");
+            Questions: [new QuickIngestParsedQuestionDto(1, 1, 5, "Stem", null, null, [new QuickIngestParsedOptionDto("A", "Yes", true), new QuickIngestParsedOptionDto("B", "No", false)], [], true, CefrLevel: "B1")], CefrLevel: "B1");
 
         var result = await controller.CommitQuickIngest(5, request, CancellationToken.None);
 
@@ -841,7 +841,6 @@ public sealed class AdminExamsControllerTests
         var request = new UpdateQuestionRequest(
             GroupId: 76,
             Stem: "Updated stem",
-            DifficultyLevel: 2,
             QuestionType: QuestionTypeDto.Mcq,
             Explanation: "Use 'before' directly in front of a day of the week to denote a deadline.",
             Options: [
@@ -871,7 +870,6 @@ public sealed class AdminExamsControllerTests
         var request = new UpdateQuestionRequest(
             GroupId: 76,
             Stem: "Stem",
-            DifficultyLevel: 2,
             QuestionType: QuestionTypeDto.Mcq, CefrLevelCode: "B1");
 
         var result = await controller.AutosaveQuestion(17, 89, request, CancellationToken.None);
@@ -1062,7 +1060,6 @@ public sealed class AdminExamsControllerTests
                 1,
                 "P1",
                 request.Stem,
-                request.DifficultyLevel,
                 request.QuestionType,
                 request.Explanation,
                 request.CategoryId,
@@ -1092,7 +1089,6 @@ public sealed class AdminExamsControllerTests
                 1,
                 "P1",
                 request.Stem,
-                request.DifficultyLevel,
                 request.QuestionType,
                 request.Explanation,
                 request.CategoryId,
@@ -1215,7 +1211,7 @@ public sealed class AdminExamsControllerTests
                     [
                         new ExamStudioGroupDto(1, examId, 1, 1, "P1", "Photographs", ModalityDto.Listening, null, null, null, null, null, null, null, null, null, 1,
                         [
-                            new ExamStudioQuestionDto(1, 1, examId, 1, "P1", "Photographs", 1, "P1", "Photo stem", 3, QuestionTypeDto.Mcq, "Expl", null, null, null, null, null, null, null, null, 1, null,
+                            new ExamStudioQuestionDto(1, 1, examId, 1, "P1", "Photographs", 1, "P1", "Photo stem", QuestionTypeDto.Mcq, "Expl", null, null, null, null, null, null, null, null, 1, null,
                             [
                                 new ExamStudioQuestionOptionDto(1, 1, "A", "Photo A", true, null),
                                 new ExamStudioQuestionOptionDto(2, 1, "B", "Photo B", false, null)

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using BusinessObjects;
 
 namespace Services.Tests;
 
@@ -139,7 +140,7 @@ public sealed class CertificateWizardScoringTests(DatabaseFixture database)
             SkillId = skillId,
             GroupId = group.GroupId,
             QuestionType = "mcq",
-            DifficultyLevel = 1,
+            CefrLevel = CefrLevel.A2,
             Stem = "Pick one.",
             DisplayOrder = 1,
         };

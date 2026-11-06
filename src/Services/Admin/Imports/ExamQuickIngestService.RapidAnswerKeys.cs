@@ -90,7 +90,6 @@ public sealed partial class ExamQuickIngestService
                     StartLineNumber: lineNum,
                     EndLineNumber: lineNum,
                     Stem: $"Question {parsedNum}",
-                    DifficultyLevel: null,
                     Explanation: null,
                     CategoryCode: null,
                     Options: options,

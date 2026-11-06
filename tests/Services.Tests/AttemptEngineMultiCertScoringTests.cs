@@ -98,9 +98,9 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
             DECLARE @listeningGroup INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND SectionId = @listeningSection);
             DECLARE @readingGroup INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND SectionId = @readingSection);
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder) VALUES
-              (@listeningGroup, @exam, @listeningSection, @listening, N'Listening question', 1, 'mcq', 1),
-              (@readingGroup, @exam, @readingSection, @reading, N'Reading question', 1, 'mcq', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder) VALUES
+              (@listeningGroup, @exam, @listeningSection, @listening, N'Listening question', 'A2', 'mcq', 1),
+              (@readingGroup, @exam, @readingSection, @reading, N'Reading question', 'A2', 'mcq', 2);
 
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
             SELECT QuestionId, 'mcq', 'A', N'Correct', 1 FROM Questions WHERE ExamId = @exam;

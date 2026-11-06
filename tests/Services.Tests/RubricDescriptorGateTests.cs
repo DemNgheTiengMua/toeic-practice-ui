@@ -75,8 +75,8 @@ public sealed class RubricDescriptorGateTests(DatabaseFixture database)
             DECLARE @exam INT = SCOPE_IDENTITY();
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @sW, N'Write about your week.', 1, 'free_response', 5, 200, 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+            VALUES (@grp, @exam, @sec, @sW, N'Write about your week.', 'A2', 'free_response', 5, 200, 1);
             """);
 
         if (gridRows > 0)

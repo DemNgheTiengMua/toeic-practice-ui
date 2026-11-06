@@ -66,9 +66,9 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
             DECLARE @gL INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND SectionId = @secL);
             DECLARE @gR INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND SectionId = @secR);
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder) VALUES
-              (@gL, @exam, @secL, @sL, N'Listening Q1', 1, 'mcq', 1),
-              (@gR, @exam, @secR, @sR, N'Reading Q2', 1, 'mcq', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder) VALUES
+              (@gL, @exam, @secL, @sL, N'Listening Q1', 'A2', 'mcq', 1),
+              (@gR, @exam, @secR, @sR, N'Reading Q2', 'A2', 'mcq', 2);
             DECLARE @q1 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND SectionId = @secL);
             DECLARE @q2 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND SectionId = @secR);
 
@@ -144,9 +144,9 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
             DECLARE @g1 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND UnitNumber = 1);
             DECLARE @g2 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND UnitNumber = 2);
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder) VALUES
-              (@g1, @exam, @sec, @skill, N'Unit 1 Question', 1, 'mcq', 1),
-              (@g2, @exam, @sec, @skill, N'Unit 2 Question', 1, 'mcq', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder) VALUES
+              (@g1, @exam, @sec, @skill, N'Unit 1 Question', 'A2', 'mcq', 1),
+              (@g2, @exam, @sec, @skill, N'Unit 2 Question', 'A2', 'mcq', 2);
             DECLARE @q1 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 1);
             DECLARE @q2 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 2);
 
@@ -222,9 +222,9 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
             DECLARE @g1 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND DisplayOrder = 1);
             DECLARE @g2 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND DisplayOrder = 2);
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder) VALUES
-              (@g1, @exam, @sec, @skill, N'Picture 1 Question', 1, 'free_response', 1),
-              (@g2, @exam, @sec, @skill, N'Essay 1 Question', 1, 'free_response', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder) VALUES
+              (@g1, @exam, @sec, @skill, N'Picture 1 Question', 'A2', 'free_response', 1),
+              (@g2, @exam, @sec, @skill, N'Essay 1 Question', 'A2', 'free_response', 2);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -334,8 +334,8 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
               (@exam, @cert, @sec, 1, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder) VALUES
-              (@grp, @exam, @sec, @skill, N'Listening Question', 1, 'mcq', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder) VALUES
+              (@grp, @exam, @sec, @skill, N'Listening Question', 'A2', 'mcq', 1);
             DECLARE @q INT = SCOPE_IDENTITY();
 
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -459,8 +459,8 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
             UPDATE Sections SET NavigationMode = 'AUDIO_DRIVEN' WHERE SectionId = @secL;
 
             UPDATE Questions SET DisplayOrder = 3 WHERE ExamId = {examId} AND QuestionId <> {q1Id};
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@gL, {examId}, @secL, @sL, N'Listening Q2', 1, 'mcq', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@gL, {examId}, @secL, @sL, N'Listening Q2', 'A2', 'mcq', 2);
             DECLARE @qL2 INT = SCOPE_IDENTITY();
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
               (@qL2, 'mcq', 'A', N'Opt A', 1),

@@ -111,15 +111,15 @@ public sealed class SpeakingGradingScaleTests(DatabaseFixture database)
 
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec1, 1);
             DECLARE @grp1 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder, SampleAnswerOrImageDesc, ReferenceKind)
-            VALUES (@grp1, @exam, @sec1, @sS, N'Read the announcement aloud.', 1, 'free_response', 1,
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder, SampleAnswerOrImageDesc, ReferenceKind)
+            VALUES (@grp1, @exam, @sec1, @sS, N'Read the announcement aloud.', 'A2', 'free_response', 1,
                     N'Attention all shoppers. The sale ends today at 9:00 PM.', 'script');
 
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ImagePath, ImageAlt)
             VALUES (@exam, @cert, @sec2, 2, '/img/sample.jpg', N'Office setting');
             DECLARE @grp2 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grp2, @exam, @sec2, @sS, N'Describe what you see in the picture.', 2, 'free_response', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grp2, @exam, @sec2, @sS, N'Describe what you see in the picture.', 'B1', 'free_response', 2);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);

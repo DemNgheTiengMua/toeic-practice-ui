@@ -122,13 +122,13 @@ BEGIN TRY
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 1)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, 
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, 
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP1_1, @examId, @secP1, @toeicList,
             N'Look at the picture marked Number 1 in your test book and select the statement that best describes what you see.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Hai nhân vật trong ảnh đang cúi nhìn vào bản thiết kế trải trên bàn làm việc (examining a blueprint on the desk).',
             1
         );
@@ -163,13 +163,13 @@ BEGIN TRY
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 2)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, 
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, 
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP1_2, @examId, @secP1, @toeicList,
             N'Look at the picture marked Number 2 in your test book and select the statement that best describes what you see.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Tranh tả vật trong phòng họp trống: các màn hình máy tính được xếp thành hàng trên bàn (arranged in a row).',
             2
         );
@@ -196,13 +196,13 @@ BEGIN TRY
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 3)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, 
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, 
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ3, @examId, @secP2, @toeicList,
             N'When is the quarterly budget proposal due? — Listen and choose the best response (A, B, or C).',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Câu hỏi "When" nhưng được trả lời gián tiếp bằng cách đẩy trách nhiệm kiểm tra sang lịch trình mà giám đốc tài chính đã gửi.',
             3
         );
@@ -226,13 +226,13 @@ BEGIN TRY
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 4)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, 
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, 
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ4, @examId, @secP2, @toeicList,
             N'Who is leading the new client orientation session tomorrow? — Listen and choose the best response (A, B, or C).',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Câu hỏi "Who" yêu cầu xác định nhân sự hoặc sự thay đổi phân công công việc.',
             4
         );
@@ -256,13 +256,13 @@ BEGIN TRY
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 5)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, 
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, 
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ5, @examId, @secP2, @toeicList,
             N'Why don''t we postpone the product launch until the packaging is finalized? — Listen and choose the best response (A, B, or C).',
-            2, 'mcq',
+            'B1', 'mcq',
             N'"Why don''t we..." là câu đề xuất (suggestion), không phải câu hỏi nguyên nhân "Why" thông thường.',
             5
         );
@@ -286,13 +286,13 @@ BEGIN TRY
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 6)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, 
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, 
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ6, @examId, @secP2, @toeicList,
             N'You''ve already updated the inventory database, haven''t you? — Listen and choose the best response (A, B, or C).',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Câu hỏi đuôi (Tag question) kiểm tra trạng thái hoàn thành công việc, thường được trả lời bằng lý do chưa thể thực hiện.',
             6
         );
@@ -330,13 +330,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 7)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP3, @examId, @secP3, @toeicList,
             N'What problem does the man mention?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Người đàn ông thông báo lô hàng ghế văn phòng bị kẹt ở Denver do thời tiết xấu dẫn đến giao hàng trễ.',
             7
         );
@@ -354,13 +354,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 8)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP3, @examId, @secP3, @toeicList,
             N'When is the shipment now expected to arrive?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Ban đầu dự kiến lắp đặt sáng thứ Năm, nhưng bị trễ 48 giờ nên chiều thứ Sáu hàng mới tới.',
             8
         );
@@ -378,13 +378,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 9)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP3, @examId, @secP3, @toeicList,
             N'What will the woman most likely do next?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Người phụ nữ quyết định liên hệ ngay với bên lắp đặt (setup agency) để đổi lịch sang thứ Bảy.',
             9
         );
@@ -420,13 +420,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 10)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP4, @examId, @secP4, @toeicList,
             N'Why is the keynote address being moved to a different location?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Bài phát biểu chính phải chuyển phòng vì sự cố thiết bị nghe nhìn (audio-visual malfunction) tại Ballroom A.',
             10
         );
@@ -444,13 +444,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 11)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP4, @examId, @secP4, @toeicList,
             N'What is available in Room 204?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Phòng 204 được bố trí làm phòng dự phòng (overflow seating) có truyền hình trực tiếp (live video feed).',
             11
         );
@@ -468,13 +468,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 12)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP4, @examId, @secP4, @toeicList,
             N'How can attendees earn professional credits?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Người tham dự cần quét thẻ hội nghị điện tử (scan digital conference badge) tại lối vào hội trường.',
             12
         );
@@ -501,13 +501,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 13)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ13, @examId, @secP5, @toeicRead,
             N'All reimbursement requests must be submitted to the accounting department ------- the fifteenth of each month.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Phân biệt giới từ chỉ hạn chót "by" (trước hoặc muộn nhất là thời điểm nào) và "until" (kéo dài liên tục đến thời điểm nào). Động từ "submit" là hành động điểm nên bắt buộc đi với "by".',
             13
         );
@@ -531,13 +531,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 14)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ14, @examId, @secP5, @toeicRead,
             N'By the time the chief executive officer arrives at the Tokyo headquarters tomorrow, the legal team ------- the merger contract.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Cấu trúc "By the time + S + V(hiện tại đơn), S + will have + V3/ed (tương lai hoàn thành)" diễn tả hành động sẽ hoàn tất trước một thời điểm hoặc hành động khác trong tương lai.',
             14
         );
@@ -561,13 +561,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 15)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ15, @examId, @secP5, @toeicRead,
             N'The newly installed inventory tracking software has made warehouse operations ------- more efficient.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Trước tính từ so sánh hơn "more efficient" cần một trạng từ (adverb) để nhấn mạnh mức độ.',
             15
         );
@@ -591,13 +591,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 16)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ16, @examId, @secP5, @toeicRead,
             N'Although the marketing interns were given guidance, they designed the social media campaign entirely by -------.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Cụm cố định "by + đại từ phản thân (oneself)" mang nghĩa "tự lực / một mình không ai giúp đỡ". Chủ ngữ là "they" nên dùng "themselves".',
             16
         );
@@ -621,13 +621,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 17)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ17, @examId, @secP5, @toeicRead,
             N'------- the rising cost of raw materials, Falcon Manufacturing managed to keep its retail prices stable this year.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Phía sau chỗ trống là một cụm danh từ ("the rising cost of raw materials", không có động từ chia thì) và mang nghĩa nhượng bộ tương phản, do đó cần giới từ "Despite".',
             17
         );
@@ -651,13 +651,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 18)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ18, @examId, @secP5, @toeicRead,
             N'Any employee ------- to attend the leadership seminar in Chicago must obtain written approval from a department head.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Rút gọn mệnh đề quan hệ: Câu gốc là "Any employee who wishes to attend...". Động từ chính của câu đã là "must obtain", nên chỗ trống cần hiện tại phân từ chủ động "wishing".',
             18
         );
@@ -681,13 +681,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 19)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ19, @examId, @secP5, @toeicRead,
             N'A comprehensive review of the company''s cybersecurity protocols and backup systems ------- conducted every six months.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Sự hòa hợp Chủ ngữ - Vị ngữ: Chủ ngữ chính là danh từ số ít "A comprehensive review", không phải cụm danh từ số nhiều đứng ngay trước chỗ trống ("protocols and backup systems").',
             19
         );
@@ -711,13 +711,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 20)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ20, @examId, @secP5, @toeicRead,
             N'The new biodegradable packaging is ------- durable enough for international shipping and cost-effective to produce.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Cặp liên từ tương quan: Phía sau có liên từ "and" nối hai tính từ, do đó vị trí phía trước bắt buộc là "both".',
             20
         );
@@ -763,13 +763,13 @@ Please note that any paper receipts dated prior to November 1 must still be proc
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 21)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP6, @examId, @secP6, @toeicRead,
             N'Select the best word to fill in blank [21].',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Ngữ cảnh phía sau giải thích nhân viên sẽ nhận được tiền hoàn lại trong 3 ngày thay vì 2 tuần, tức là quy trình được đẩy nhanh / tinh gọn ("streamline").',
             21
         );
@@ -787,13 +787,13 @@ Please note that any paper receipts dated prior to November 1 must still be proc
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 22)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP6, @examId, @secP6, @toeicRead,
             N'Select the best sentence to fill in blank [22].',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Câu trước nhắc tới "a 30-minute interactive tutorial", câu sau nhắc tới "Once you have finished the module...". Do đó câu ở vị trí [22] phải kết nối cách truy cập bài hướng dẫn.',
             22
         );
@@ -811,13 +811,13 @@ Please note that any paper receipts dated prior to November 1 must still be proc
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 23)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP6, @examId, @secP6, @toeicRead,
             N'Select the best transition word to fill in blank [23].',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Câu trước nói hóa đơn trước ngày 1/11 vẫn xử lý qua hệ thống cũ; câu sau nói chi phí từ ngày 1/11 trở đi chỉ được nhận qua ứng dụng mới. Hai mệnh đề đối lập nhau nên dùng "However".',
             23
         );
@@ -835,13 +835,13 @@ Please note that any paper receipts dated prior to November 1 must still be proc
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 24)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP6, @examId, @secP6, @toeicRead,
             N'Select the best word to fill in blank [24].',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Trong tiếng Anh thương mại, khi liên hệ qua số máy lẻ nội bộ (extension + số), giới từ chuẩn luôn là "at" (contact someone at extension 4402).',
             24
         );
@@ -898,13 +898,13 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 25)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP7_1, @examId, @secP7, @toeicRead,
             N'Who would most likely benefit from attending Session 3?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Session 3 trình bày về ưu đãi thuế bang dành cho các doanh nghiệp có dưới 50 nhân viên toàn thời gian (fewer than 50 full-time employees).',
             25
         );
@@ -922,13 +922,13 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 26)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP7_1, @examId, @secP7, @toeicRead,
             N'What is indicated about Ms. Patel''s session?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Ms. Patel phụ trách Session 2. Chú thích trong Session 2 yêu cầu mang laptop, và chú thích cuối bài ghi rõ Session 2 giới hạn 40 chỗ ngồi và bắt buộc đăng ký trước qua ứng dụng.',
             26
         );
@@ -946,13 +946,13 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 27)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP7_1, @examId, @secP7, @toeicRead,
             N'What is included with the symposium registration?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Dòng cuối cùng ghi rõ: "Registration includes complimentary morning coffee and a buffet lunch".',
             27
         );
@@ -1022,13 +1022,13 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 28)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP7_2, @examId, @secP7, @toeicRead,
             N'Why did Ms. Abbott send the e-mail?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Trong email, bà Abbott báo rằng thay vì nhận được Bamboo Facial Towels như trên hóa đơn, spa lại nhận nhầm sang khăn tay cotton thông thường.',
             28
         );
@@ -1046,13 +1046,13 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 29)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP7_2, @examId, @secP7, @toeicRead,
             N'If the requested item is out of stock, how much money should be refunded to Serenity Day Spa?',
-            3, 'mcq',
+            'B2', 'mcq',
             N'Suy luận chéo 2 văn bản: Trong email (Passage 2), mặt hàng bị giao sai cần hoàn tiền nếu hết hàng là "Bamboo Facial Towels". Đối chiếu lên Hóa đơn (Passage 1), mục "LB-310 | Bamboo Facial Towels" có tổng tiền (Total) là $180.00.',
             29
         );
@@ -1070,13 +1070,13 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 30)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP7_2, @examId, @secP7, @toeicRead,
             N'Why is Serenity Day Spa eligible for a free replacement?',
-            3, 'mcq',
+            'B2', 'mcq',
             N'Suy luận chéo: Chính sách cuối hóa đơn (Passage 1) quy định khiếu nại gửi trong vòng 5 ngày làm việc kể từ ngày giao hàng (March 6) sẽ được đổi miễn phí. Email (Passage 2) được gửi ngay ngày March 7 (1 ngày sau khi nhận hàng).',
             30
         );
@@ -1104,7 +1104,7 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 31)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder, PrepSeconds, ResponseSeconds, MinWords, MaxWords
         )
         VALUES (
@@ -1130,7 +1130,7 @@ Directions: Respond to the e-mail as if you are a Customer Fulfillment Represent
 2. Confirm the exact new delivery date before Thursday.
 3. Offer a clear form of compensation (e.g., partial refund, discount voucher, or waived shipping fee).
 (Target length: 60–100 words | Time limit: 10 minutes)',
-            3, 'free_response',
+            'B2', 'free_response',
             N'Tiêu chí chấm điểm ETS Writing Part 2: (1) Giải quyết trọn vẹn cả 3 yêu cầu trong đề bài; (2) Văn phong email thương mại lịch sự, trang trọng; (3) Sử dụng chính xác các từ nối và cấu trúc câu phức; (4) Đạt độ dài tiêu chuẩn 60–100 từ.',
             31, 0, 600, 60, 100
         );
@@ -1147,7 +1147,7 @@ Directions: Respond to the e-mail as if you are a Customer Fulfillment Represent
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 32)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder, PrepSeconds, ResponseSeconds, MinWords, MaxWords
         )
         VALUES (
@@ -1166,7 +1166,7 @@ Essay Guidelines:
 - Develop at least two well-structured body paragraphs with concrete business examples.
 - Include a concise concluding paragraph summarizing your main argument.
 (Target length: 150–220 words | Time limit: 20 minutes)',
-            4, 'free_response',
+            'C1', 'free_response',
             N'Tiêu chí chấm điểm ETS Writing Part 3: (1) Bố cục 3 phần (Introduction - Body Paragraphs - Conclusion) mạch lạc; (2) Lập luận nhất quán kèm ví dụ thực tiễn nơi công sở; (3) Đa dạng hóa cấu trúc ngữ pháp và từ vựng học thuật/thương mại; (4) Đạt độ dài 150–220 từ.',
             32, 0, 1200, 150, 220
         );

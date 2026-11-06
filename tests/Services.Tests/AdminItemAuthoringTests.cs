@@ -545,8 +545,8 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
             -- the skeleton a paper still needs, with its own key (B) and its own stem
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @skill, N'Legacy skeleton stem.', 1, 'mcq', N'Legacy explanation.', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
+            VALUES (@grp, @exam, @sec, @skill, N'Legacy skeleton stem.', 'A2', 'mcq', N'Legacy explanation.', 1);
             DECLARE @q INT = SCOPE_IDENTITY();
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
               (@q, 'mcq', 'A', N'legacy-a', 0), (@q, 'mcq', 'B', N'legacy-b', 1),

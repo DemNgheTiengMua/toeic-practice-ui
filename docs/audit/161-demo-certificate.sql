@@ -79,9 +79,9 @@ BEGIN
 
   DECLARE @demoGroup INT = SCOPE_IDENTITY();
 
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, QuestionType, DifficultyLevel, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, QuestionType, CefrLevel, DisplayOrder)
   VALUES (@demoGroup, @demoExam, @demoSecC1, @comp,
-          N'Pick the answer that matches the passage.', 'mcq', 3, 1);
+          N'Pick the answer that matches the passage.', 'mcq', 'B2', 1);
 
   DECLARE @demoQuestion INT = SCOPE_IDENTITY();
 

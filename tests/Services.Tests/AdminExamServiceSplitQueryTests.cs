@@ -121,7 +121,7 @@ public sealed class AdminExamServiceSplitQueryTests(DatabaseFixture database)
         foreach (var group in new[] { g1, g2 })
         {
             await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-                group.GroupId, "Pick one", 1, QuestionTypeDto.Mcq,
+                group.GroupId, "Pick one", QuestionTypeDto.Mcq,
                 Options:
                 [
                     new AdminQuestionOptionInput(null, "A", "first", IsCorrect: true, null),

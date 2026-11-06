@@ -55,11 +55,11 @@ VALUES (@cert, N'Saved links paper', 'draft', 60, 'mock', 1);
 DECLARE @exam INT = SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
 DECLARE @grp INT = SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-VALUES (@grp, @exam, @sec, @skill, @cat, N'Legacy stem.', 1, 'mcq', 1);
+INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, CefrLevel, QuestionType, DisplayOrder)
+VALUES (@grp, @exam, @sec, @skill, @cat, N'Legacy stem.', 'A2', 'mcq', 1);
 DECLARE @q INT = SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-VALUES (@grp, @exam, @sec, @skill, @cat, N'Legacy stem two.', 1, 'mcq', 2);
+INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, CefrLevel, QuestionType, DisplayOrder)
+VALUES (@grp, @exam, @sec, @skill, @cat, N'Legacy stem two.', 'A2', 'mcq', 2);
 DECLARE @q2 INT = SCOPE_IDENTITY();
 
 INSERT INTO SavedQuestions (UserId, QuestionId, Source) VALUES (@user, @q, 'manual');

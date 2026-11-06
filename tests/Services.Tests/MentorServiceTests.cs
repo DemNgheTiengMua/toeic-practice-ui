@@ -700,8 +700,8 @@ public sealed class MentorServiceTests(DatabaseFixture database)
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec1, 1);
             DECLARE @grp1 INT = SCOPE_IDENTITY();
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grp1, @exam, @sec1, @sS, N'Read aloud text.', 1, 'free_response', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grp1, @exam, @sec1, @sS, N'Read aloud text.', 'A2', 'free_response', 1);
             """);
 
         await using var dbSetup = DbContextFactory.Create(database.ConnectionString);

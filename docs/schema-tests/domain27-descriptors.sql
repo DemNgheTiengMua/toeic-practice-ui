@@ -246,8 +246,8 @@ INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQues
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'D27','published',60,'writing_practice');
 DECLARE @ex INT=SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@ex,@c,@sec,1); DECLARE @g INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,MinWords,DisplayOrder)
-  VALUES (@g,@ex,@sec,@wr,N'Essay',3,'free_response',100,1); DECLARE @q INT=SCOPE_IDENTITY();
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,MinWords,DisplayOrder)
+  VALUES (@g,@ex,@sec,@wr,N'Essay','B2','free_response',100,1); DECLARE @q INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt) VALUES (@u,@ex,@c,'submitted',SYSDATETIMEOFFSET());
 DECLARE @a INT=SCOPE_IDENTITY();
 INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText)

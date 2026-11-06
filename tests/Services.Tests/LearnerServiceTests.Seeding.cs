@@ -121,8 +121,8 @@ public sealed partial class LearnerServiceTests
             DECLARE @i INT = 1;
             WHILE @i <= {totalCount}
             BEGIN
-              INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, CategoryId, DisplayOrder)
-              VALUES (@grp, @exam, {sectionId}, @skill, CONCAT(N'Stem ', @i), 2, 'mcq', @cat, @i);
+              INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, CategoryId, DisplayOrder)
+              VALUES (@grp, @exam, {sectionId}, @skill, CONCAT(N'Stem ', @i), 'B1', 'mcq', @cat, @i);
               DECLARE @q INT = SCOPE_IDENTITY();
 
               INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES

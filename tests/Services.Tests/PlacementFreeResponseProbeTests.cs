@@ -56,8 +56,8 @@ public sealed partial class LearnerServiceTests
             DECLARE @exam INT = SCOPE_IDENTITY();
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
               VALUES (@exam, {certId}, {sectionId}, 1);
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-              SELECT GroupId, ExamId, SectionId, {skillId}, N'Write an email.', 3, 'free_response', 1
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+              SELECT GroupId, ExamId, SectionId, {skillId}, N'Write an email.', 'B2', 'free_response', 1
               FROM QuestionGroups WHERE ExamId = @exam;
             """);
 

@@ -3,6 +3,12 @@
 -- Single source of truth for demo data across all certificates and screens.
 -- Can be run cleanly and idempotently with:
 --   sqlcmd -S "(localdb)\MSSQLLocalDB" -d CompanionSchemaTest -I -b -i docs/seed-demo.sql
+--
+-- #230: every question is seeded with a CEFR level and no difficulty. The old 1-4 numbers ordered
+-- the seeded items by demand, so the level is that item's own language demand: 1 -> A2, 2 -> B1,
+-- 3 -> B2, 4 -> C1. No seeded item was ever 5 and none claims C2. This is not a 1-5 to A1-C2
+-- conversion table (D1 forbids one); it is the level each item actually asks the learner to read,
+-- hear or produce at, and the spread above is what keeps the diagnostic from stratifying one band.
 SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON; SET NOCOUNT ON;
 GO
 
@@ -719,8 +725,8 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath, ImagePath, ImageAlt)
   VALUES (@toeicMock, @toeicCert, @secP1, 1, '/audio/toeic/test1-p1.mp3', '/img/part1-sample.svg', N'Office workers gathered around a whiteboard');
   DECLARE @gP1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
-  VALUES (@gP1, @toeicMock, @secP1, @toeicList, N'Look at the photograph and choose the statement that best describes what you see in the image.', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  VALUES (@gP1, @toeicMock, @secP1, @toeicList, N'Look at the photograph and choose the statement that best describes what you see in the image.', 'B1', 'mcq',
           N'Focus on what the person in the centre is holding and doing.', N'Option C correctly describes the action: the woman is writing notes on the whiteboard.', 1);
   DECLARE @qP1 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -735,8 +741,8 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath)
   VALUES (@toeicMock, @toeicCert, @secP2, 2, '/audio/toeic/test1-p2.mp3');
   DECLARE @gP2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
-  VALUES (@gP2, @toeicMock, @secP2, @toeicList, N'Where did you leave the project folders?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  VALUES (@gP2, @toeicMock, @secP2, @toeicList, N'Where did you leave the project folders?', 'B1', 'mcq',
           N'Listen for a location word that answers "Where".', N'Option B directly answers where the folders are placed.', 1);
   DECLARE @qP2 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -753,8 +759,8 @@ BEGIN
 Man: Yes, they did, but they said they need our final head count by tomorrow noon.
 Woman: I will email the department heads right away to get their RSVPs.');
   DECLARE @gP3 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
-  VALUES (@gP3, @toeicMock, @secP3, @toeicList, N'What deadline does the catering team have for the banquet?', 3, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  VALUES (@gP3, @toeicMock, @secP3, @toeicList, N'What deadline does the catering team have for the banquet?', 'B2', 'mcq',
           N'Pay attention to what the man says about when they need the count.', N'The man says they need the final head count by tomorrow noon.', 1);
   DECLARE @qP3 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -770,8 +776,8 @@ BEGIN
   VALUES (@toeicMock, @toeicCert, @secP4, 4, '/audio/toeic/test1-p4.mp3',
           N'Attention all passengers on flight VN 214 to Tokyo. Due to routine aircraft inspection, boarding will be delayed by approximately twenty minutes. Please remain seated near Gate 12 until boarding begins.');
   DECLARE @gP4 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
-  VALUES (@gP4, @toeicMock, @secP4, @toeicList, N'What is the reason for the flight delay?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  VALUES (@gP4, @toeicMock, @secP4, @toeicList, N'What is the reason for the flight delay?', 'B1', 'mcq',
           N'Listen for the phrase following "Due to".', N'The speaker explicitly announces that the delay is due to routine aircraft inspection.', 1);
   DECLARE @qP4 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -788,10 +794,10 @@ BEGIN
   DECLARE @gP5 INT = SCOPE_IDENTITY();
 
   -- Q1: Verb tense
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gP5, @toeicMock, @secP5, @toeicRead, @catTense,
           N'The regional manager ------- the quarterly figures before the board meeting.',
-          3, 'mcq', N'Look at the time marker and sentence structure.',
+          'B2', 'mcq', N'Look at the time marker and sentence structure.',
           N'The sentence lacks a main verb. "will review" expresses future scheduled action.', 1);
   DECLARE @qP5_1 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -801,10 +807,10 @@ BEGIN
     (@qP5_1, 'mcq', 'D', N'to review', 0);
 
   -- Q2: Preposition
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gP5, @toeicMock, @secP5, @toeicRead, @catPrep,
           N'All client inquiries must be resolved ------- forty-eight hours of submission.',
-          2, 'mcq', N'Which preposition indicates within a time span?',
+          'B1', 'mcq', N'Which preposition indicates within a time span?',
           N'"within" + time duration indicates action must take place before that span elapses.', 2);
   DECLARE @qP5_2 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -814,10 +820,10 @@ BEGIN
     (@qP5_2, 'mcq', 'D', N'within', 1);
 
   -- Q3: Part of speech
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gP5, @toeicMock, @secP5, @toeicRead, @catPos,
           N'The design studio provides ------- solutions for modern office spaces.',
-          3, 'mcq', N'The blank modifies the plural noun "solutions".',
+          'B2', 'mcq', N'The blank modifies the plural noun "solutions".',
           N'"innovative" is the adjective modifying "solutions".', 3);
   DECLARE @qP5_3 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -833,10 +839,10 @@ BEGIN
   VALUES (@toeicMock, @toeicCert, @secP6, 6,
           N'Dear Valued Customer, We ------- your recent order and your package is being prepared for shipment.');
   DECLARE @gP6 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gP6, @toeicMock, @secP6, @toeicRead, @catTense,
           N'Choose the word or phrase that best completes the sentence in the customer letter.',
-          2, 'mcq', N'The action happened recently with present relevance.',
+          'B1', 'mcq', N'The action happened recently with present relevance.',
           N'The present perfect "have received" describes an action that occurred recently with present impact.', 1);
   DECLARE @qP6 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -857,9 +863,9 @@ Date: October 14
 Subject: Elevator Maintenance
 Please note that the main elevators will undergo safety upgrades this Saturday between 8:00 A.M. and 2:00 P.M. The service elevator near the loading dock will remain accessible throughout this period.');
   DECLARE @gP7 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gP7, @toeicMock, @secP7, @toeicRead,
-          N'What is the primary purpose of the memorandum?', 2, 'mcq', N'Look at the subject line and the main announcement.',
+          N'What is the primary purpose of the memorandum?', 'B1', 'mcq', N'Look at the subject line and the main announcement.',
           N'The memo announces temporary elevator upgrades and directs staff to an alternate service elevator.', 1);
   DECLARE @qP7 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -914,7 +920,7 @@ IF NOT EXISTS (SELECT 1 FROM ExamSectionAudio WHERE ExamId = @toeicDiagPlace AND
 DECLARE @plSection INT, @plSkill INT, @plGroup INT, @plQuestion INT;
 DECLARE @plOptions TABLE (Label CHAR(1) NOT NULL, Text NVARCHAR(300) NOT NULL, IsCorrect BIT NOT NULL);
 
--- Q1: P1 (difficulty 1)
+-- Q1: P1 (level A2)
 SET @plSection = @secP1;
 SET @plSkill = @toeicList;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 1)
@@ -926,9 +932,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 1)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'Look at the photograph and choose the statement that best describes what you see.', 1, 'mcq', N'Only option A describes what the photograph shows.', 1);
+          N'Look at the photograph and choose the statement that best describes what you see.', 'A2', 'mcq', N'Only option A describes what the photograph shows.', 1);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'A woman is writing on a whiteboard.', 1);
@@ -939,7 +945,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q2: P1 (difficulty 2)
+-- Q2: P1 (level B1)
 SET @plSection = @secP1;
 SET @plSkill = @toeicList;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 2)
@@ -951,9 +957,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 2)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'Look at the photograph and choose the statement that best describes what you see.', 2, 'mcq', N'The photograph shows luggage beside the counter; the other options describe actions that are not visible.', 2);
+          N'Look at the photograph and choose the statement that best describes what you see.', 'B1', 'mcq', N'The photograph shows luggage beside the counter; the other options describe actions that are not visible.', 2);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Passengers are waiting on a platform.', 0);
@@ -964,7 +970,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q3: P2 (difficulty 1)
+-- Q3: P2 (level A2)
 SET @plSection = @secP2;
 SET @plSkill = @toeicList;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 3)
@@ -976,9 +982,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 3)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'Where did you leave the project folders?', 1, 'mcq', N'The question asks for a place, and only B names one.', 3);
+          N'Where did you leave the project folders?', 'A2', 'mcq', N'The question asks for a place, and only B names one.', 3);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Yes, I folded them neatly.', 0);
@@ -988,7 +994,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q4: P2 (difficulty 2)
+-- Q4: P2 (level B1)
 SET @plSection = @secP2;
 SET @plSkill = @toeicList;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 4)
@@ -1000,9 +1006,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 4)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'Why was the shipment delayed?', 2, 'mcq', N'The question asks for a reason; only C gives one.', 4);
+          N'Why was the shipment delayed?', 'B1', 'mcq', N'The question asks for a reason; only C gives one.', 4);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'In the loading bay.', 0);
@@ -1012,7 +1018,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q5: P2 (difficulty 2)
+-- Q5: P2 (level B1)
 SET @plSection = @secP2;
 SET @plSkill = @toeicList;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 5)
@@ -1024,9 +1030,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 5)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'Should we book the larger room for the workshop?', 2, 'mcq', N'The question asks for a recommendation, and A answers it.', 5);
+          N'Should we book the larger room for the workshop?', 'B1', 'mcq', N'The question asks for a recommendation, and A answers it.', 5);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'That would be a good idea.', 1);
@@ -1036,7 +1042,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q6: P2 (difficulty 3)
+-- Q6: P2 (level B2)
 SET @plSection = @secP2;
 SET @plSkill = @toeicList;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 6)
@@ -1048,9 +1054,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 6)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'How long has the client been with the firm?', 3, 'mcq', N'The question asks for a duration, and only B provides one.', 6);
+          N'How long has the client been with the firm?', 'B2', 'mcq', N'The question asks for a duration, and only B provides one.', 6);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'At the downtown office.', 0);
@@ -1060,7 +1066,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q7: P3 (difficulty 2)
+-- Q7: P3 (level B1)
 SET @plSection = @secP3;
 SET @plSkill = @toeicList;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 7)
@@ -1072,11 +1078,11 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 7)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
           N'Woman: Did the catering team confirm the order for Friday''s banquet? Man: Yes, but they need our final head count by tomorrow noon. Woman: I will email the department heads right away.
 
-What deadline does the catering team have?', 2, 'mcq', N'The man states the head count is needed by tomorrow noon.', 7);
+What deadline does the catering team have?', 'B1', 'mcq', N'The man states the head count is needed by tomorrow noon.', 7);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'By the end of today.', 0);
@@ -1086,7 +1092,7 @@ What deadline does the catering team have?', 2, 'mcq', N'The man states the head
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q8: P3 (difficulty 3)
+-- Q8: P3 (level B2)
 SET @plSection = @secP3;
 SET @plSkill = @toeicList;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 8)
@@ -1098,11 +1104,11 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 8)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
           N'Man: I''m afraid the 3 p.m. train has been cancelled. Woman: Then I''ll take the 3:40 instead. Can I change my ticket at the counter? Man: Yes, at no extra charge.
 
-What will the woman do?', 3, 'mcq', N'She asks whether she can change the ticket at the counter and the man confirms it is free.', 8);
+What will the woman do?', 'B2', 'mcq', N'She asks whether she can change the ticket at the counter and the man confirms it is free.', 8);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Ask for a refund.', 0);
@@ -1112,7 +1118,7 @@ What will the woman do?', 3, 'mcq', N'She asks whether she can change the ticket
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q9: P4 (difficulty 2)
+-- Q9: P4 (level B1)
 SET @plSection = @secP4;
 SET @plSkill = @toeicList;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 9)
@@ -1124,11 +1130,11 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 9)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
           N'Attention, passengers. The north gallery is closed for lighting work this morning. The sculpture collection has moved upstairs, beside the reading room. The café is unaffected.
 
-Where can visitors find the sculpture collection?', 2, 'mcq', N'The announcement says the collection has moved upstairs beside the reading room.', 9);
+Where can visitors find the sculpture collection?', 'B1', 'mcq', N'The announcement says the collection has moved upstairs beside the reading room.', 9);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Upstairs beside the reading room.', 1);
@@ -1138,7 +1144,7 @@ Where can visitors find the sculpture collection?', 2, 'mcq', N'The announcement
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q10: P4 (difficulty 3)
+-- Q10: P4 (level B2)
 SET @plSection = @secP4;
 SET @plSkill = @toeicList;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 10)
@@ -1150,11 +1156,11 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 10)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
           N'A memorandum to all staff: from next month, expense claims must be submitted through the finance portal rather than by email. Claims received by the tenth of the month will be processed in that month''s payroll.
 
-How should staff submit expense claims from next month?', 3, 'mcq', N'The memorandum replaces email with the finance portal from next month.', 10);
+How should staff submit expense claims from next month?', 'B2', 'mcq', N'The memorandum replaces email with the finance portal from next month.', 10);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'By email to their manager.', 0);
@@ -1164,7 +1170,7 @@ How should staff submit expense claims from next month?', 3, 'mcq', N'The memora
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q11: P5 (difficulty 1)
+-- Q11: P5 (level A2)
 SET @plSection = @secP5;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 11)
@@ -1176,9 +1182,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 11)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'Customer satisfaction surveys must be submitted ------- Friday afternoon to be included in the quarterly review.', 1, 'mcq', N'Only ''before'' marks a deadline relative to a point in time.', 11);
+          N'Customer satisfaction surveys must be submitted ------- Friday afternoon to be included in the quarterly review.', 'A2', 'mcq', N'Only ''before'' marks a deadline relative to a point in time.', 11);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'before', 1);
@@ -1189,7 +1195,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q12: P5 (difficulty 1)
+-- Q12: P5 (level A2)
 SET @plSection = @secP5;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 12)
@@ -1201,9 +1207,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 12)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'All employees are required to wear their identification badges ------- visiting the research floor.', 1, 'mcq', N'The badge is worn during the visit, so ''while'' fits.', 12);
+          N'All employees are required to wear their identification badges ------- visiting the research floor.', 'A2', 'mcq', N'The badge is worn during the visit, so ''while'' fits.', 12);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'despite', 0);
@@ -1214,7 +1220,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q13: P5 (difficulty 2)
+-- Q13: P5 (level B1)
 SET @plSection = @secP5;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 13)
@@ -1226,9 +1232,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 13)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'The marketing team will ------- the campaign results at Thursday''s meeting.', 2, 'mcq', N'After the modal ''will'', the base form of the verb is required.', 13);
+          N'The marketing team will ------- the campaign results at Thursday''s meeting.', 'B1', 'mcq', N'After the modal ''will'', the base form of the verb is required.', 13);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'presentation', 0);
@@ -1239,7 +1245,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q14: P5 (difficulty 2)
+-- Q14: P5 (level B1)
 SET @plSection = @secP5;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 14)
@@ -1251,9 +1257,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 14)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'Ms. Alvarez has asked that the revised budget ------- to her by the end of the week.', 2, 'mcq', N'''Ask that'' takes the subjunctive, so the base form ''be sent'' is correct.', 14);
+          N'Ms. Alvarez has asked that the revised budget ------- to her by the end of the week.', 'B1', 'mcq', N'''Ask that'' takes the subjunctive, so the base form ''be sent'' is correct.', 14);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'be sent', 1);
@@ -1264,7 +1270,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q15: P5 (difficulty 3)
+-- Q15: P5 (level B2)
 SET @plSection = @secP5;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 15)
@@ -1276,9 +1282,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 15)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'The delay was caused not by the supplier ------- by the customs inspection.', 3, 'mcq', N'''Not by ... but by ...'' is the parallel construction the sentence needs.', 15);
+          N'The delay was caused not by the supplier ------- by the customs inspection.', 'B2', 'mcq', N'''Not by ... but by ...'' is the parallel construction the sentence needs.', 15);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'and', 0);
@@ -1289,7 +1295,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q16: P5 (difficulty 3)
+-- Q16: P5 (level B2)
 SET @plSection = @secP5;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 16)
@@ -1301,9 +1307,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 16)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'------- the branch had reported record sales, the regional office remained cautious about the next quarter.', 3, 'mcq', N'The two clauses contrast, which is what ''Although'' signals.', 16);
+          N'------- the branch had reported record sales, the regional office remained cautious about the next quarter.', 'B2', 'mcq', N'The two clauses contrast, which is what ''Although'' signals.', 16);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Because', 0);
@@ -1314,7 +1320,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q17: P6 (difficulty 2)
+-- Q17: P6 (level B1)
 SET @plSection = @secP6;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 17)
@@ -1326,9 +1332,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 17)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'Thank you for contacting Apex Support. We have received your inquiry regarding account renewal. A representative will review your request and ------- within 24 business hours.', 2, 'mcq', N'The modal ''will'' requires the base verb.', 17);
+          N'Thank you for contacting Apex Support. We have received your inquiry regarding account renewal. A representative will review your request and ------- within 24 business hours.', 'B1', 'mcq', N'The modal ''will'' requires the base verb.', 17);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'respond', 1);
@@ -1339,7 +1345,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q18: P6 (difficulty 2)
+-- Q18: P6 (level B1)
 SET @plSection = @secP6;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 18)
@@ -1351,9 +1357,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 18)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'Please note that the service centre closes at 5 p.m. on weekdays, ------- it remains open until 7 p.m. on Saturdays.', 2, 'mcq', N'The two clauses contrast weekdays with Saturdays.', 18);
+          N'Please note that the service centre closes at 5 p.m. on weekdays, ------- it remains open until 7 p.m. on Saturdays.', 'B1', 'mcq', N'The two clauses contrast weekdays with Saturdays.', 18);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'so', 0);
@@ -1364,7 +1370,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q19: P6 (difficulty 3)
+-- Q19: P6 (level B2)
 SET @plSection = @secP6;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 19)
@@ -1376,9 +1382,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 19)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'Customers who ------- their invoices before the due date are eligible for a two per cent discount.', 3, 'mcq', N'The relative clause needs a finite verb, ''pay'', agreeing with ''Customers''.', 19);
+          N'Customers who ------- their invoices before the due date are eligible for a two per cent discount.', 'B2', 'mcq', N'The relative clause needs a finite verb, ''pay'', agreeing with ''Customers''.', 19);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'paying', 0);
@@ -1389,7 +1395,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q20: P6 (difficulty 3)
+-- Q20: P6 (level B2)
 SET @plSection = @secP6;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 20)
@@ -1401,9 +1407,9 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 20)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
-          N'The new policy applies to all contractors ------- their length of service.', 3, 'mcq', N'The policy covers everyone, so ''regardless of'' is the only fit.', 20);
+          N'The new policy applies to all contractors ------- their length of service.', 'B2', 'mcq', N'The policy covers everyone, so ''regardless of'' is the only fit.', 20);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'instead of', 0);
@@ -1414,7 +1420,7 @@ BEGIN
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q21: P7 (difficulty 2)
+-- Q21: P7 (level B1)
 SET @plSection = @secP7;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 21)
@@ -1426,11 +1432,11 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 21)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
           N'Notice: The staff car park will be resurfaced from Monday to Wednesday. Employees are asked to use the visitor car park on those days and to display a temporary permit.
 
-What are employees asked to do?', 2, 'mcq', N'The notice redirects staff to the visitor car park and requires a temporary permit.', 21);
+What are employees asked to do?', 'B1', 'mcq', N'The notice redirects staff to the visitor car park and requires a temporary permit.', 21);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Resurface the car park themselves.', 0);
@@ -1440,7 +1446,7 @@ What are employees asked to do?', 2, 'mcq', N'The notice redirects staff to the 
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q22: P7 (difficulty 2)
+-- Q22: P7 (level B1)
 SET @plSection = @secP7;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 22)
@@ -1452,11 +1458,11 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 22)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
           N'Email: I have reviewed the draft proposal and have two comments. First, the timeline should include the client review week. Second, the budget table needs the contingency line. Otherwise the structure is strong.
 
-What does the writer want added to the timeline?', 2, 'mcq', N'The contingency line belongs to the budget table; the client review week is the timeline comment.', 22);
+What does the writer want added to the timeline?', 'B1', 'mcq', N'The contingency line belongs to the budget table; the client review week is the timeline comment.', 22);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'The client review week.', 1);
@@ -1466,7 +1472,7 @@ What does the writer want added to the timeline?', 2, 'mcq', N'The contingency l
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q23: P7 (difficulty 3)
+-- Q23: P7 (level B2)
 SET @plSection = @secP7;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 23)
@@ -1478,11 +1484,11 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 23)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
           N'An article reports that a city''s bicycle-sharing scheme grew from 400 to 5,000 bicycles in four years, and that journeys rose from 900 to 41,000 a day. The operator attributes the growth to docking stations near rail terminals.
 
-What does the operator say caused the growth?', 3, 'mcq', N'The article attributes growth to the placement of docking stations near rail terminals.', 23);
+What does the operator say caused the growth?', 'B2', 'mcq', N'The article attributes growth to the placement of docking stations near rail terminals.', 23);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'A fall in the price of bicycles.', 0);
@@ -1492,7 +1498,7 @@ What does the operator say caused the growth?', 3, 'mcq', N'The article attribut
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
 
--- Q24: P7 (difficulty 3)
+-- Q24: P7 (level B2)
 SET @plSection = @secP7;
 SET @plSkill = @toeicRead;
 IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 24)
@@ -1504,11 +1510,11 @@ SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 24)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
   VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
           N'Memo: Because the audit will occupy the fifth floor all week, the finance team will work from the second-floor meeting rooms. Printers on the fifth floor will be unavailable; please use the shared printer on the second floor.
 
-Why is the finance team moving?', 3, 'mcq', N'The audit occupies the fifth floor, which is why the team moves.', 24);
+Why is the finance team moving?', 'B2', 'mcq', N'The audit occupies the fifth floor, which is why the team moves.', 24);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Their printers have been removed.', 0);
@@ -1572,22 +1578,22 @@ BEGIN
   VALUES (@speaExam, @toeicCert, @secS1, 1,
           N'Attention all shoppers. The annual summer clearance sale will end today at 9:00 PM. Please bring all selected items to the front registers.');
   DECLARE @gS1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder, SampleAnswerOrImageDesc, ReferenceKind)
-  VALUES (@gS1, @speaExam, @secS1, @toeicSpea, N'Read the announcement aloud as clearly and naturally as possible.', 2, 'free_response', 45, 45, 1,
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder, SampleAnswerOrImageDesc, ReferenceKind)
+  VALUES (@gS1, @speaExam, @secS1, @toeicSpea, N'Read the announcement aloud as clearly and naturally as possible.', 'B1', 'free_response', 45, 45, 1,
           N'Attention all shoppers. The annual summer clearance sale will end today at 9:00 PM. Please bring all selected items to the front registers.',
           'script');
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ImagePath, ImageAlt)
   VALUES (@speaExam, @toeicCert, @secS2, 2, '/img/part1-sample.svg', N'Office workers in a team meeting');
   DECLARE @gS2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
-  VALUES (@gS2, @speaExam, @secS2, @toeicSpea, N'Look at the picture and describe it in as much detail as you can.', 2, 'free_response', 45, 30, 2);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  VALUES (@gS2, @speaExam, @secS2, @toeicSpea, N'Look at the picture and describe it in as much detail as you can.', 'B1', 'free_response', 45, 30, 2);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
   VALUES (@speaExam, @toeicCert, @secS3, 3);
   DECLARE @gS3 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
-  VALUES (@gS3, @speaExam, @secS3, @toeicSpea, N'How often do you go shopping for clothes, and what is your favorite clothing store?', 3, 'free_response', 3, 15, 3);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  VALUES (@gS3, @speaExam, @secS3, @toeicSpea, N'How often do you go shopping for clothes, and what is your favorite clothing store?', 'B2', 'free_response', 3, 15, 3);
 END;
 
 -- 4. TOEIC Writing Practice: ETS TOEIC Writing Practice Test 1
@@ -1602,17 +1608,17 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ImagePath, ImageAlt)
   VALUES (@writExam, @toeicCert, @secW1, 1, '/img/part1-sample.svg', N'Meeting in conference room');
   DECLARE @gW1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
   VALUES (@gW1, @writExam, @secW1, @toeicWrit,
-          N'Write ONE sentence based on the picture using two given words: "discuss" and "proposal".', 2, 'free_response', 8, 35, 1);
+          N'Write ONE sentence based on the picture using two given words: "discuss" and "proposal".', 'B1', 'free_response', 8, 35, 1);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
   VALUES (@writExam, @toeicCert, @secW2, 2,
           N'Some companies offer employees the option of flexible working hours. In your opinion, what are the advantages and disadvantages of flexible working schedules?');
   DECLARE @gW2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
   VALUES (@gW2, @writExam, @secW2, @toeicWrit,
-          N'Write an opinion essay of at least 250 words explaining your viewpoint with specific reasons and examples.', 4, 'free_response', 250, 450, 2);
+          N'Write an opinion essay of at least 250 words explaining your viewpoint with specific reasons and examples.', 'C1', 'free_response', 250, 450, 2);
 END;
 
 -------------------------------------------------------------------------------
@@ -1637,8 +1643,8 @@ BEGIN
   VALUES (@ieltsMock, @ieltsCert, @secRec, 1, '/audio/ielts/cambridge18-t1-listening.mp3',
           N'Guide: Welcome to the University Library induction. Daily guided tours depart every half hour from the information desk starting at 9:30 AM.');
   DECLARE @gRec INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
-  VALUES (@gRec, @ieltsMock, @secRec, @ieltsList, N'At what time does the first library induction tour depart?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  VALUES (@gRec, @ieltsMock, @secRec, @ieltsList, N'At what time does the first library induction tour depart?', 'B1', 'mcq',
           N'Listen for the starting time mentioned by the guide.', N'The guide states that the tours start at 9:30 AM.', 1);
   DECLARE @qRec INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1654,10 +1660,10 @@ BEGIN
   VALUES (@ieltsMock, @ieltsCert, @secPas, 2,
           N'Urban reforestation initiatives have demonstrated measurable cooling effects in metropolitan centres. Studies in Singapore and Seoul indicate that rooftop gardens and street canopy trees reduce localized surface temperatures by up to 2.8 degrees Celsius during peak summer months.');
   DECLARE @gPas INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gPas, @ieltsMock, @secPas, @ieltsRead,
           N'According to the passage, by how much can urban surface temperatures be reduced through green canopies?',
-          3, 'mcq', N'Scan the passage for specific numbers and degrees Celsius.',
+          'B2', 'mcq', N'Scan the passage for specific numbers and degrees Celsius.',
           N'The text explicitly mentions a reduction of up to 2.8 degrees Celsius.', 1);
   DECLARE @qPas INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1692,8 +1698,8 @@ BEGIN
   VALUES (@ieltsPlace, @ieltsCert, @secRec, 1, '/audio/ielts/placement-diagnostic.mp3',
           N'Officer: The student housing office is open Monday to Thursday from 9 AM to 4 PM. On Fridays we close at 1 PM for staff training.');
   DECLARE @gIP1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gIP1, @ieltsPlace, @secRec, @ieltsList, N'What time does the student housing office close on Fridays?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@gIP1, @ieltsPlace, @secRec, @ieltsList, N'What time does the student housing office close on Fridays?', 'B1', 'mcq',
           N'The officer says: "On Fridays we close at 1 PM".', 1);
   DECLARE @qIP1 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1706,8 +1712,8 @@ BEGIN
   VALUES (@ieltsPlace, @ieltsCert, @secPas, 2,
           N'Renewable energy capacity expanded by 50% in 2023 worldwide, with solar photovoltaics accounting for three-quarters of new installations globally.');
   DECLARE @gIP2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gIP2, @ieltsPlace, @secPas, @ieltsRead, N'What energy source accounted for the majority of new capacity?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@gIP2, @ieltsPlace, @secPas, @ieltsRead, N'What energy source accounted for the majority of new capacity?', 'B1', 'mcq',
           N'The passage states solar photovoltaics accounted for three-quarters of installations.', 2);
   DECLARE @qIP2 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1735,9 +1741,9 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
   VALUES (@ieltsSpeaExam, @ieltsCert, @secInt, 1);
   DECLARE @gIS1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
   VALUES (@gIS1, @ieltsSpeaExam, @secInt, @ieltsSpea,
-          N'Part 1: Do you work or are you a student? What do you enjoy most about your studies or job?', 2, 'free_response', 0, 60, 1);
+          N'Part 1: Do you work or are you a student? What do you enjoy most about your studies or job?', 'B1', 'free_response', 0, 60, 1);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
   VALUES (@ieltsSpeaExam, @ieltsCert, @secInt, 2,
@@ -1748,9 +1754,9 @@ You should say:
 - What you use it for
 And explain why you find it difficult to use.');
   DECLARE @gIS2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
   VALUES (@gIS2, @ieltsSpeaExam, @secInt, @ieltsSpea,
-          N'Part 2: Speak for 1 to 2 minutes on the cue card topic. You have 1 minute to prepare.', 4, 'free_response', 60, 120, 2);
+          N'Part 2: Speak for 1 to 2 minutes on the cue card topic. You have 1 minute to prepare.', 'C1', 'free_response', 60, 120, 2);
 END;
 
 -- 4. IELTS Writing Practice: Cambridge IELTS 18 — Writing Practice Test 1
@@ -1768,10 +1774,10 @@ BEGIN
           N'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.');
   DECLARE @grpT1 INT = SCOPE_IDENTITY();
 
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
   VALUES (@grpT1, @writingExam, @secT1, @ieltsWrit,
           N'Write at least 150 words summarizing the main features and comparisons in the chart.',
-          3, 'free_response', 150, NULL, 1);
+          'B2', 'free_response', 150, NULL, 1);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
   VALUES (@writingExam, @ieltsCert, @secT2, 2,
@@ -1779,10 +1785,10 @@ BEGIN
           N'To what extent do you agree or disagree? Give reasons for your answer and include any relevant examples from your own knowledge or experience.');
   DECLARE @grpT2 INT = SCOPE_IDENTITY();
 
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
   VALUES (@grpT2, @writingExam, @secT2, @ieltsWrit,
           N'Write an essay of at least 250 words discussing your opinion with supporting arguments.',
-          4, 'free_response', 250, NULL, 2);
+          'C1', 'free_response', 250, NULL, 2);
 END;
 
 -------------------------------------------------------------------------------
@@ -1807,8 +1813,8 @@ BEGIN
   VALUES (@vstepMock, @vstepCert, @secL3, 1, '/audio/vstep/sample1-listening.mp3',
           N'Speaker: Good afternoon listeners. The annual Da Nang International Fireworks Festival will open next month on June 8th along the Han River.');
   DECLARE @gL3 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
-  VALUES (@gL3, @vstepMock, @secL3, @vstepList, N'On what date will the festival open?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  VALUES (@gL3, @vstepMock, @secL3, @vstepList, N'On what date will the festival open?', 'B1', 'mcq',
           N'Listen for the exact month and date mentioned by the speaker.', N'The speaker explicitly states June 8th.', 1);
   DECLARE @qL3 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1824,9 +1830,9 @@ BEGIN
   VALUES (@vstepMock, @vstepCert, @secR4, 2,
           N'Community-based tourism has expanded significantly in the northern mountainous provinces of Vietnam. Local homestays in Ha Giang and Yen Bai allow visitors to experience ethnic cultural traditions while generating sustainable income for rural families.');
   DECLARE @gR4 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Hint, Explanation, DisplayOrder)
   VALUES (@gR4, @vstepMock, @secR4, @vstepRead,
-          N'What is a primary benefit of community-based tourism described in the text?', 2, 'mcq',
+          N'What is a primary benefit of community-based tourism described in the text?', 'B1', 'mcq',
           N'Look at the final sentence describing the effect for rural families.',
           N'The passage notes it provides sustainable income for local families while sharing cultural traditions.', 1);
   DECLARE @qR4 INT = SCOPE_IDENTITY();
@@ -1862,8 +1868,8 @@ BEGIN
   VALUES (@vstepPlace, @vstepCert, @secL3, 1, '/audio/vstep/placement-diagnostic.mp3',
           N'Lecturer: Please submit your research proposals by Friday 5 PM through the faculty portal.');
   DECLARE @gVP1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gVP1, @vstepPlace, @secL3, @vstepList, N'How should students submit their research proposals?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@gVP1, @vstepPlace, @secL3, @vstepList, N'How should students submit their research proposals?', 'B1', 'mcq',
           N'The lecturer specifies "through the faculty portal".', 1);
   DECLARE @qVP1 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1876,8 +1882,8 @@ BEGIN
   VALUES (@vstepPlace, @vstepCert, @secR4, 2,
           N'Artificial intelligence is being integrated into medical imaging across hospital networks, providing diagnostic assistance for radiology scans.');
   DECLARE @gVP2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gVP2, @vstepPlace, @secR4, @vstepRead, N'What role does artificial intelligence play in medical imaging according to the passage?', 2, 'mcq',
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@gVP2, @vstepPlace, @secR4, @vstepRead, N'What role does artificial intelligence play in medical imaging according to the passage?', 'B1', 'mcq',
           N'The passage states AI provides diagnostic assistance for radiology scans.', 2);
   DECLARE @qVP2 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -1905,9 +1911,9 @@ BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
   VALUES (@vstepSpeaExam, @vstepCert, @secVS3, 1);
   DECLARE @gVS1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
   VALUES (@gVS1, @vstepSpeaExam, @secVS3, @vstepSpea,
-          N'Part 1: Social Interaction: Talk about your favorite leisure activity. Why do you enjoy it?', 2, 'free_response', 0, 60, 1);
+          N'Part 1: Social Interaction: Talk about your favorite leisure activity. Why do you enjoy it?', 'B1', 'free_response', 0, 60, 1);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
   VALUES (@vstepSpeaExam, @vstepCert, @secVS3, 2,
@@ -1916,9 +1922,9 @@ BEGIN
 - Academic stress relief
 - Student freedom of choice');
   DECLARE @gVS2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
   VALUES (@gVS2, @vstepSpeaExam, @secVS3, @vstepSpea,
-          N'Part 2: Topic Development: Present your opinion in 3 minutes based on the prompt.', 3, 'free_response', 60, 180, 2);
+          N'Part 2: Topic Development: Present your opinion in 3 minutes based on the prompt.', 'B2', 'free_response', 60, 180, 2);
 END;
 
 -- 4. VSTEP Writing Practice: VSTEP Writing Practice Test 1
@@ -1935,17 +1941,17 @@ BEGIN
           N'You received an email from an international friend asking for recommendations on historical places to visit in Hanoi.
 Write an email of at least 120 words suggesting two places, explaining why they are interesting, and giving advice on when to visit.');
   DECLARE @gVW1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
   VALUES (@gVW1, @vstepWritExam, @secVW1, @vstepWrit,
-          N'Write an email responding to your friend (at least 120 words).', 3, 'free_response', 120, 250, 1);
+          N'Write an email responding to your friend (at least 120 words).', 'B2', 'free_response', 120, 250, 1);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
   VALUES (@vstepWritExam, @vstepCert, @secVW2, 2,
           N'Some people think that online learning will eventually replace traditional classrooms. To what extent do you agree or disagree?');
   DECLARE @gVW2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
   VALUES (@gVW2, @vstepWritExam, @secVW2, @vstepWrit,
-          N'Write an essay of at least 250 words discussing both sides and giving your opinion with reasons.', 4, 'free_response', 250, 450, 2);
+          N'Write an essay of at least 250 words discussing both sides and giving your opinion with reasons.', 'C1', 'free_response', 250, 450, 2);
 END;
 GO
 
@@ -2685,13 +2691,13 @@ SET XACT_ABORT ON;
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 1)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, 
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, 
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP1_1, @examId, @secP1, @toeicList,
             N'Look at the picture marked Number 1 in your test book and select the statement that best describes what you see.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Hai nhân vật trong ảnh đang cúi nhìn vào bản thiết kế trải trên bàn làm việc (examining a blueprint on the desk).',
             1
         );
@@ -2726,13 +2732,13 @@ SET XACT_ABORT ON;
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 2)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, 
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, 
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP1_2, @examId, @secP1, @toeicList,
             N'Look at the picture marked Number 2 in your test book and select the statement that best describes what you see.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Tranh tả vật trong phòng họp trống: các màn hình máy tính được xếp thành hàng trên bàn (arranged in a row).',
             2
         );
@@ -2759,13 +2765,13 @@ SET XACT_ABORT ON;
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 3)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, 
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, 
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ3, @examId, @secP2, @toeicList,
             N'When is the quarterly budget proposal due? — Listen and choose the best response (A, B, or C).',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Câu hỏi "When" nhưng được trả lời gián tiếp bằng cách đẩy trách nhiệm kiểm tra sang lịch trình mà giám đốc tài chính đã gửi.',
             3
         );
@@ -2789,13 +2795,13 @@ SET XACT_ABORT ON;
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 4)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, 
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, 
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ4, @examId, @secP2, @toeicList,
             N'Who is leading the new client orientation session tomorrow? — Listen and choose the best response (A, B, or C).',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Câu hỏi "Who" yêu cầu xác định nhân sự hoặc sự thay đổi phân công công việc.',
             4
         );
@@ -2819,13 +2825,13 @@ SET XACT_ABORT ON;
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 5)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, 
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, 
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ5, @examId, @secP2, @toeicList,
             N'Why don''t we postpone the product launch until the packaging is finalized? — Listen and choose the best response (A, B, or C).',
-            2, 'mcq',
+            'B1', 'mcq',
             N'"Why don''t we..." là câu đề xuất (suggestion), không phải câu hỏi nguyên nhân "Why" thông thường.',
             5
         );
@@ -2849,13 +2855,13 @@ SET XACT_ABORT ON;
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 6)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, 
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, 
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ6, @examId, @secP2, @toeicList,
             N'You''ve already updated the inventory database, haven''t you? — Listen and choose the best response (A, B, or C).',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Câu hỏi đuôi (Tag question) kiểm tra trạng thái hoàn thành công việc, thường được trả lời bằng lý do chưa thể thực hiện.',
             6
         );
@@ -2893,13 +2899,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 7)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP3, @examId, @secP3, @toeicList,
             N'What problem does the man mention?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Người đàn ông thông báo lô hàng ghế văn phòng bị kẹt ở Denver do thời tiết xấu dẫn đến giao hàng trễ.',
             7
         );
@@ -2917,13 +2923,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 8)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP3, @examId, @secP3, @toeicList,
             N'When is the shipment now expected to arrive?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Ban đầu dự kiến lắp đặt sáng thứ Năm, nhưng bị trễ 48 giờ nên chiều thứ Sáu hàng mới tới.',
             8
         );
@@ -2941,13 +2947,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 9)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP3, @examId, @secP3, @toeicList,
             N'What will the woman most likely do next?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Người phụ nữ quyết định liên hệ ngay với bên lắp đặt (setup agency) để đổi lịch sang thứ Bảy.',
             9
         );
@@ -2983,13 +2989,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 10)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP4, @examId, @secP4, @toeicList,
             N'Why is the keynote address being moved to a different location?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Bài phát biểu chính phải chuyển phòng vì sự cố thiết bị nghe nhìn (audio-visual malfunction) tại Ballroom A.',
             10
         );
@@ -3007,13 +3013,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 11)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP4, @examId, @secP4, @toeicList,
             N'What is available in Room 204?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Phòng 204 được bố trí làm phòng dự phòng (overflow seating) có truyền hình trực tiếp (live video feed).',
             11
         );
@@ -3031,13 +3037,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 12)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP4, @examId, @secP4, @toeicList,
             N'How can attendees earn professional credits?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Người tham dự cần quét thẻ hội nghị điện tử (scan digital conference badge) tại lối vào hội trường.',
             12
         );
@@ -3064,13 +3070,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 13)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ13, @examId, @secP5, @toeicRead,
             N'All reimbursement requests must be submitted to the accounting department ------- the fifteenth of each month.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Phân biệt giới từ chỉ hạn chót "by" (trước hoặc muộn nhất là thời điểm nào) và "until" (kéo dài liên tục đến thời điểm nào). Động từ "submit" là hành động điểm nên bắt buộc đi với "by".',
             13
         );
@@ -3094,13 +3100,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 14)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ14, @examId, @secP5, @toeicRead,
             N'By the time the chief executive officer arrives at the Tokyo headquarters tomorrow, the legal team ------- the merger contract.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Cấu trúc "By the time + S + V(hiện tại đơn), S + will have + V3/ed (tương lai hoàn thành)" diễn tả hành động sẽ hoàn tất trước một thời điểm hoặc hành động khác trong tương lai.',
             14
         );
@@ -3124,13 +3130,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 15)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ15, @examId, @secP5, @toeicRead,
             N'The newly installed inventory tracking software has made warehouse operations ------- more efficient.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Trước tính từ so sánh hơn "more efficient" cần một trạng từ (adverb) để nhấn mạnh mức độ.',
             15
         );
@@ -3154,13 +3160,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 16)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ16, @examId, @secP5, @toeicRead,
             N'Although the marketing interns were given guidance, they designed the social media campaign entirely by -------.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Cụm cố định "by + đại từ phản thân (oneself)" mang nghĩa "tự lực / một mình không ai giúp đỡ". Chủ ngữ là "they" nên dùng "themselves".',
             16
         );
@@ -3184,13 +3190,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 17)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ17, @examId, @secP5, @toeicRead,
             N'------- the rising cost of raw materials, Falcon Manufacturing managed to keep its retail prices stable this year.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Phía sau chỗ trống là một cụm danh từ ("the rising cost of raw materials", không có động từ chia thì) và mang nghĩa nhượng bộ tương phản, do đó cần giới từ "Despite".',
             17
         );
@@ -3214,13 +3220,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 18)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ18, @examId, @secP5, @toeicRead,
             N'Any employee ------- to attend the leadership seminar in Chicago must obtain written approval from a department head.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Rút gọn mệnh đề quan hệ: Câu gốc là "Any employee who wishes to attend...". Động từ chính của câu đã là "must obtain", nên chỗ trống cần hiện tại phân từ chủ động "wishing".',
             18
         );
@@ -3244,13 +3250,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 19)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ19, @examId, @secP5, @toeicRead,
             N'A comprehensive review of the company''s cybersecurity protocols and backup systems ------- conducted every six months.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Sự hòa hợp Chủ ngữ - Vị ngữ: Chủ ngữ chính là danh từ số ít "A comprehensive review", không phải cụm danh từ số nhiều đứng ngay trước chỗ trống ("protocols and backup systems").',
             19
         );
@@ -3274,13 +3280,13 @@ Woman: In that case, I''d better contact the setup agency right away to reschedu
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 20)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpQ20, @examId, @secP5, @toeicRead,
             N'The new biodegradable packaging is ------- durable enough for international shipping and cost-effective to produce.',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Cặp liên từ tương quan: Phía sau có liên từ "and" nối hai tính từ, do đó vị trí phía trước bắt buộc là "both".',
             20
         );
@@ -3326,13 +3332,13 @@ Please note that any paper receipts dated prior to November 1 must still be proc
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 21)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP6, @examId, @secP6, @toeicRead,
             N'Select the best word to fill in blank [21].',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Ngữ cảnh phía sau giải thích nhân viên sẽ nhận được tiền hoàn lại trong 3 ngày thay vì 2 tuần, tức là quy trình được đẩy nhanh / tinh gọn ("streamline").',
             21
         );
@@ -3350,13 +3356,13 @@ Please note that any paper receipts dated prior to November 1 must still be proc
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 22)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP6, @examId, @secP6, @toeicRead,
             N'Select the best sentence to fill in blank [22].',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Câu trước nhắc tới "a 30-minute interactive tutorial", câu sau nhắc tới "Once you have finished the module...". Do đó câu ở vị trí [22] phải kết nối cách truy cập bài hướng dẫn.',
             22
         );
@@ -3374,13 +3380,13 @@ Please note that any paper receipts dated prior to November 1 must still be proc
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 23)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP6, @examId, @secP6, @toeicRead,
             N'Select the best transition word to fill in blank [23].',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Câu trước nói hóa đơn trước ngày 1/11 vẫn xử lý qua hệ thống cũ; câu sau nói chi phí từ ngày 1/11 trở đi chỉ được nhận qua ứng dụng mới. Hai mệnh đề đối lập nhau nên dùng "However".',
             23
         );
@@ -3398,13 +3404,13 @@ Please note that any paper receipts dated prior to November 1 must still be proc
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 24)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP6, @examId, @secP6, @toeicRead,
             N'Select the best word to fill in blank [24].',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Trong tiếng Anh thương mại, khi liên hệ qua số máy lẻ nội bộ (extension + số), giới từ chuẩn luôn là "at" (contact someone at extension 4402).',
             24
         );
@@ -3461,13 +3467,13 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 25)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP7_1, @examId, @secP7, @toeicRead,
             N'Who would most likely benefit from attending Session 3?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Session 3 trình bày về ưu đãi thuế bang dành cho các doanh nghiệp có dưới 50 nhân viên toàn thời gian (fewer than 50 full-time employees).',
             25
         );
@@ -3485,13 +3491,13 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 26)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP7_1, @examId, @secP7, @toeicRead,
             N'What is indicated about Ms. Patel''s session?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Ms. Patel phụ trách Session 2. Chú thích trong Session 2 yêu cầu mang laptop, và chú thích cuối bài ghi rõ Session 2 giới hạn 40 chỗ ngồi và bắt buộc đăng ký trước qua ứng dụng.',
             26
         );
@@ -3509,13 +3515,13 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 27)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP7_1, @examId, @secP7, @toeicRead,
             N'What is included with the symposium registration?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Dòng cuối cùng ghi rõ: "Registration includes complimentary morning coffee and a buffet lunch".',
             27
         );
@@ -3585,13 +3591,13 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 28)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP7_2, @examId, @secP7, @toeicRead,
             N'Why did Ms. Abbott send the e-mail?',
-            2, 'mcq',
+            'B1', 'mcq',
             N'Trong email, bà Abbott báo rằng thay vì nhận được Bamboo Facial Towels như trên hóa đơn, spa lại nhận nhầm sang khăn tay cotton thông thường.',
             28
         );
@@ -3609,13 +3615,13 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 29)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP7_2, @examId, @secP7, @toeicRead,
             N'If the requested item is out of stock, how much money should be refunded to Serenity Day Spa?',
-            3, 'mcq',
+            'B2', 'mcq',
             N'Suy luận chéo 2 văn bản: Trong email (Passage 2), mặt hàng bị giao sai cần hoàn tiền nếu hết hàng là "Bamboo Facial Towels". Đối chiếu lên Hóa đơn (Passage 1), mục "LB-310 | Bamboo Facial Towels" có tổng tiền (Total) là $180.00.',
             29
         );
@@ -3633,13 +3639,13 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 30)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder
         )
         VALUES (
             @grpP7_2, @examId, @secP7, @toeicRead,
             N'Why is Serenity Day Spa eligible for a free replacement?',
-            3, 'mcq',
+            'B2', 'mcq',
             N'Suy luận chéo: Chính sách cuối hóa đơn (Passage 1) quy định khiếu nại gửi trong vòng 5 ngày làm việc kể từ ngày giao hàng (March 6) sẽ được đổi miễn phí. Email (Passage 2) được gửi ngay ngày March 7 (1 ngày sau khi nhận hàng).',
             30
         );
@@ -3667,7 +3673,7 @@ Overview: A detailed breakdown of upcoming state tax incentives for businesses w
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 31)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder, PrepSeconds, ResponseSeconds, MinWords, MaxWords
         )
         VALUES (
@@ -3693,7 +3699,7 @@ Directions: Respond to the e-mail as if you are a Customer Fulfillment Represent
 2. Confirm the exact new delivery date before Thursday.
 3. Offer a clear form of compensation (e.g., partial refund, discount voucher, or waived shipping fee).
 (Target length: 60–100 words | Time limit: 10 minutes)',
-            3, 'free_response',
+            'B2', 'free_response',
             N'Tiêu chí chấm điểm ETS Writing Part 2: (1) Giải quyết trọn vẹn cả 3 yêu cầu trong đề bài; (2) Văn phong email thương mại lịch sự, trang trọng; (3) Sử dụng chính xác các từ nối và cấu trúc câu phức; (4) Đạt độ dài tiêu chuẩn 60–100 từ.',
             31, 0, 600, 60, 100
         );
@@ -3710,7 +3716,7 @@ Directions: Respond to the e-mail as if you are a Customer Fulfillment Represent
     IF NOT EXISTS (SELECT 1 FROM dbo.Questions WHERE ExamId = @examId AND DisplayOrder = 32)
     BEGIN
         INSERT INTO dbo.Questions (
-            GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType,
+            GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType,
             Explanation, DisplayOrder, PrepSeconds, ResponseSeconds, MinWords, MaxWords
         )
         VALUES (
@@ -3729,7 +3735,7 @@ Essay Guidelines:
 - Develop at least two well-structured body paragraphs with concrete business examples.
 - Include a concise concluding paragraph summarizing your main argument.
 (Target length: 150–220 words | Time limit: 20 minutes)',
-            4, 'free_response',
+            'C1', 'free_response',
             N'Tiêu chí chấm điểm ETS Writing Part 3: (1) Bố cục 3 phần (Introduction - Body Paragraphs - Conclusion) mạch lạc; (2) Lập luận nhất quán kèm ví dụ thực tiễn nơi công sở; (3) Đa dạng hóa cấu trúc ngữ pháp và từ vựng học thuật/thương mại; (4) Đạt độ dài 150–220 từ.',
             32, 0, 1200, 150, 220
         );
@@ -4294,10 +4300,10 @@ IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @diagIeltsWritingExam
   VALUES (@diagIeltsWritingExam, @diagIeltsCert, @diagIeltsTask1Section, 1,
           N'The line chart shows the percentage of households with access to three energy sources in a European country from 2010 to 2020: solar rose from 10% to 50%, wind from 20% to 35%, and coal fell from 60% to 25%.');
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @diagIeltsWritingExam AND DisplayOrder = 1)
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, MinWords, MaxWords, DisplayOrder)
   SELECT g.GroupId, @diagIeltsWritingExam, @diagIeltsTask1Section, @diagIeltsWrit,
          N'Summarise the main trends, select the most important features, and make relevant comparisons. Write at least 150 words.',
-         3, 'free_response',
+         'B2', 'free_response',
          N'Assessment focus: a clear overview, accurate comparisons, selective data, and a coherent progression from 2010 to 2020.',
          150, 220, 1
   FROM QuestionGroups g
@@ -4308,10 +4314,10 @@ IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @diagIeltsWritingExam
   VALUES (@diagIeltsWritingExam, @diagIeltsCert, @diagIeltsTask2Section, 2,
           N'Some people believe that universities should focus on practical job skills, while others think academic knowledge is more important. Discuss both views and give your own opinion.');
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @diagIeltsWritingExam AND DisplayOrder = 2)
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, MinWords, MaxWords, DisplayOrder)
   SELECT g.GroupId, @diagIeltsWritingExam, @diagIeltsTask2Section, @diagIeltsWrit,
          N'Discuss both views and give your own opinion. Support your position with reasons and relevant examples. Write at least 250 words.',
-         4, 'free_response',
+         'C1', 'free_response',
          N'Assessment focus: address both views, state a consistent position, develop supported ideas, and control paragraph cohesion.',
          250, 350, 2
   FROM QuestionGroups g
@@ -4322,10 +4328,10 @@ IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @diagVstepWritingExam
   VALUES (@diagVstepWritingExam, @diagVstepCert, @diagVstepEmailSection, 1,
           N'You have received an email from the coordinator of a local community project. Reply to explain which weekend activity you can join, ask for the meeting details, and suggest one way to prepare.');
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @diagVstepWritingExam AND DisplayOrder = 1)
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, MinWords, MaxWords, DisplayOrder)
   SELECT g.GroupId, @diagVstepWritingExam, @diagVstepEmailSection, @diagVstepWrit,
          N'Write a polite email reply covering all three points. Use an appropriate greeting, clear paragraphs, and a suitable closing. Write 120–150 words.',
-         3, 'free_response',
+         'B2', 'free_response',
          N'Assessment focus: fulfil every communicative purpose, maintain an appropriate formal register, and organize a clear email.',
          120, 150, 1
   FROM QuestionGroups g
@@ -4336,10 +4342,10 @@ IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @diagVstepWritingExam
   VALUES (@diagVstepWritingExam, @diagVstepCert, @diagVstepEssaySection, 2,
           N'Some people think that cities should invest more in public parks than in shopping centres. Do you agree or disagree? Give reasons and examples.');
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @diagVstepWritingExam AND DisplayOrder = 2)
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, MinWords, MaxWords, DisplayOrder)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, MinWords, MaxWords, DisplayOrder)
   SELECT g.GroupId, @diagVstepWritingExam, @diagVstepEssaySection, @diagVstepWrit,
          N'Write an opinion essay with a clear position, two developed reasons, and relevant examples. Write 250–300 words.',
-         4, 'free_response',
+         'C1', 'free_response',
          N'Assessment focus: build a logical argument, explain examples, use cohesive paragraphs, and maintain accurate language.',
          250, 300, 2
   FROM QuestionGroups g
@@ -4539,8 +4545,8 @@ BEGIN
   WHERE ExamId = @diagQExam AND SectionId = @diagQSection AND DisplayOrder = @diagQGroupOrder;
 
   IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @diagQExam AND DisplayOrder = @diagQOrder)
-    INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-    VALUES (@diagQGroupId, @diagQExam, @diagQSection, @diagQSkill, @diagQStem, 3, 'mcq', @diagQExplanation, @diagQOrder);
+    INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
+    VALUES (@diagQGroupId, @diagQExam, @diagQSection, @diagQSkill, @diagQStem, 'B2', 'mcq', @diagQExplanation, @diagQOrder);
 
   SELECT @diagQId = QuestionId FROM Questions WHERE ExamId = @diagQExam AND DisplayOrder = @diagQOrder;
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect, Rationale)
@@ -4890,8 +4896,8 @@ DECLARE @grpUnit2 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @catE
 -- 1. MCQ (4 options)
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit1 AND DisplayOrder = 1)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'The quarterly budget report must be submitted _____ Friday at 5:00 PM.', 2, 'mcq', 1);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'The quarterly budget report must be submitted _____ Friday at 5:00 PM.', 'B1', 'mcq', 1);
   DECLARE @q1 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
     (@q1, 'mcq', 'A', N'before', 1),
@@ -4903,8 +4909,8 @@ END;
 -- 2. MCQ 3-option
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit1 AND DisplayOrder = 2)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'Where did Ms. Chen leave the presentation handouts?', 2, 'mcq_3', 2);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'Where did Ms. Chen leave the presentation handouts?', 'B1', 'mcq_3', 2);
   DECLARE @q2 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
     (@q2, 'mcq_3', 'A', N'On the conference table', 1),
@@ -4915,8 +4921,8 @@ END;
 -- 3. Multi-Select (Checkbox with max selections)
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit1 AND DisplayOrder = 3)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MaxSelections, DisplayOrder)
-  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'Select TWO benefits resulting from the newly installed automated inventory system:', 3, 'multi_select', 2, 3);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MaxSelections, DisplayOrder)
+  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'Select TWO benefits resulting from the newly installed automated inventory system:', 'B2', 'multi_select', 2, 3);
   DECLARE @q3 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
     (@q3, 'multi_select', 'A', N'Decreased fulfillment errors', 1),
@@ -4928,15 +4934,15 @@ END;
 -- 4. Inline Text Completion
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit1 AND DisplayOrder = 4)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MaxWords, AllowNumber, AcceptedAnswersJson, DisplayOrder)
-  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'The express shuttle departs every [blank] minutes from terminal two.', 2, 'inline_completion', 1, 1, '["15","fifteen"]', 4);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MaxWords, AllowNumber, AcceptedAnswersJson, DisplayOrder)
+  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'The express shuttle departs every [blank] minutes from terminal two.', 'B1', 'inline_completion', 1, 1, '["15","fifteen"]', 4);
 END;
 
 -- 5. Dropdown Matching
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit1 AND DisplayOrder = 5)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'Choose the best connective word to complete the sentence clause.', 3, 'dropdown', 5);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'Choose the best connective word to complete the sentence clause.', 'B2', 'dropdown', 5);
   DECLARE @q5 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
     (@q5, 'dropdown', 'A', N'consequently', 1),
@@ -4947,8 +4953,8 @@ END;
 -- 6. Drag-and-Drop Labelling
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit1 AND DisplayOrder = 6)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'Drag the appropriate department heading to the organizational slot.', 3, 'drag_drop', 6);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'Drag the appropriate department heading to the organizational slot.', 'B2', 'drag_drop', 6);
   DECLARE @q6 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
     (@q6, 'drag_drop', 'A', N'Quality Assurance', 1),
@@ -4959,8 +4965,8 @@ END;
 -- 7. Split-Screen Passage MCQ (Unit 2 Stage 2)
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit2 AND DisplayOrder = 7)
 BEGIN
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-  VALUES (@grpUnit2, @catExam, @secP7Cat, @catRead, N'What is mentioned as a key benefit of the Apex-Horizon merger?', 3, 'mcq', 7);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+  VALUES (@grpUnit2, @catExam, @secP7Cat, @catRead, N'What is mentioned as a key benefit of the Apex-Horizon merger?', 'B2', 'mcq', 7);
   DECLARE @q7 INT = SCOPE_IDENTITY();
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
     (@q7, 'mcq', 'A', N'Reduced shipping overhead costs', 1),
@@ -5018,18 +5024,18 @@ IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @swExam AND SectionId
 DECLARE @grpSwW3 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @swExam AND SectionId = @secSwW3 AND DisplayOrder = 3);
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @swExam AND DisplayOrder = 1)
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder, SampleAnswerOrImageDesc, ReferenceKind)
-  VALUES (@grpSwS1, @swExam, @secSwS1, @swSpea, N'Read the announcement aloud: Welcome to the annual Global Tech Conference. Please pick up your registration badge at the front desk.', 2, 'free_response', 5, 5, 1,
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder, SampleAnswerOrImageDesc, ReferenceKind)
+  VALUES (@grpSwS1, @swExam, @secSwS1, @swSpea, N'Read the announcement aloud: Welcome to the annual Global Tech Conference. Please pick up your registration badge at the front desk.', 'B1', 'free_response', 5, 5, 1,
           N'Welcome to the annual Global Tech Conference. Please pick up your registration badge at the front desk.',
           'script');
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @swExam AND DisplayOrder = 2)
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, RequiredKeywords, MinWords, MaxWords, ResponseSeconds, DisplayOrder)
-  VALUES (@grpSwW1, @swExam, @secSwW1, @swWrit, N'Write ONE sentence based on the picture using the two mandatory keywords: conference / yesterday.', 2, 'free_response', N'conference, yesterday', 5, 35, 480, 2);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, RequiredKeywords, MinWords, MaxWords, ResponseSeconds, DisplayOrder)
+  VALUES (@grpSwW1, @swExam, @secSwW1, @swWrit, N'Write ONE sentence based on the picture using the two mandatory keywords: conference / yesterday.', 'B1', 'free_response', N'conference, yesterday', 5, 35, 480, 2);
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @swExam AND DisplayOrder = 3)
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, ResponseSeconds, DisplayOrder)
-  VALUES (@grpSwW3, @swExam, @secSwW3, @swWrit, N'Write an opinion essay explaining whether remote work improves employee productivity.', 3, 'free_response', 15, 300, 1800, 3);
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, ResponseSeconds, DisplayOrder)
+  VALUES (@grpSwW3, @swExam, @secSwW3, @swWrit, N'Write an opinion essay explaining whether remote work improves employee productivity.', 'B2', 'free_response', 15, 300, 1800, 3);
 
 -- Seed ScoreScales for TOEIC_CAT and TOEIC_SW
 IF NOT EXISTS (SELECT 1 FROM ScoreScales WHERE CertId = @toeicCat AND SkillId = @catList)

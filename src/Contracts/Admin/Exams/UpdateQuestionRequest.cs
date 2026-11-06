@@ -6,8 +6,6 @@ namespace Contracts;
 public sealed record UpdateQuestionRequest(
     int? GroupId,
     string Stem,
-    // #229 / D1: dormant, exactly as on <see cref="CreateQuestionRequest"/>.
-    int? DifficultyLevel,
     QuestionTypeDto QuestionType,
     string? Explanation = null,
     int? CategoryId = null,
@@ -28,4 +26,6 @@ public sealed record UpdateQuestionRequest(
     // #229 / D1: the level this question is authored at, required by the edit path. Read the same way
     // the create path reads it, so a stored level cannot be dropped by an edit that omits it: an edit
     // that states no level keeps the item's own (moving an item between cells is a different act).
-    string? CefrLevelCode = null);
+    string? CefrLevelCode = null,
+    // #230 / D1: dormant, exactly as on <see cref="CreateQuestionRequest"/>. #231 deletes it.
+    int? DifficultyLevel = null);

@@ -13,9 +13,6 @@ public sealed record ExamStudioQuestionDto(
     int SkillId,
     string SkillCode,
     string Stem,
-    // #229 / D1: dormant. The studio reads and writes <see cref="CefrLevelCode"/>; this stays on the
-    // wire so the editor's existing payloads keep deserialising, and #231 deletes it.
-    int? DifficultyLevel,
     QuestionTypeDto QuestionType,
     string? Explanation,
     int? CategoryId,
@@ -38,5 +35,8 @@ public sealed record ExamStudioQuestionDto(
     string? SampleAnswerOrImageDesc = null,
     ReferenceKindDto? ReferenceKind = null,
     // #229 / D1: the level this question is authored at. The authoring paths write it and an edit
-    // reads it back; the difficulty is dormant until #231 deletes it.
-    string? CefrLevelCode = null);
+    // reads it back.
+    string? CefrLevelCode = null,
+    // #230 / D1: dormant, and last so no projection has to name it. It stays on the wire so the
+    // editor's existing payloads keep deserialising; #231 deletes it.
+    int? DifficultyLevel = null);

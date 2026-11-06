@@ -170,9 +170,9 @@ public sealed class ItemTelemetryServiceTests(DatabaseFixture database)
         await database.SqlAsync($"""
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES ({examId}, {certId}, {sectionId}, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, {examId}, {sectionId}, {skillId}, N'Legacy position one', 1, 'mcq', 1),
-                   (@grp, {examId}, {sectionId}, {skillId}, N'Legacy position two', 1, 'mcq', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grp, {examId}, {sectionId}, {skillId}, N'Legacy position one', 'A2', 'mcq', 1),
+                   (@grp, {examId}, {sectionId}, {skillId}, N'Legacy position two', 'A2', 'mcq', 2);
 
             INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder) VALUES
               ({examId}, {sectionId}, {certId}, {version1}, {item1}, 'reading', 1),

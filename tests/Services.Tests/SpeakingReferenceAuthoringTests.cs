@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BusinessObjects;
 using Contracts;
 using DataAccess;
 using Microsoft.EntityFrameworkCore;
@@ -69,7 +68,6 @@ public sealed class SpeakingReferenceAuthoringTests(DatabaseFixture database)
         var created = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "Read the announcement aloud as clearly as you can.",
-            2,
             QuestionTypeDto.FreeResponse,
             PrepSeconds: 5,
             ResponseSeconds: 45,
@@ -96,7 +94,6 @@ public sealed class SpeakingReferenceAuthoringTests(DatabaseFixture database)
         var updated = await service.UpdateQuestionAsync(created.QuestionId, new UpdateQuestionRequest(
             GroupId: null,
             Stem: created.Stem,
-            DifficultyLevel: 2,
             QuestionType: QuestionTypeDto.FreeResponse,
             PrepSeconds: 5,
             ResponseSeconds: 45,
@@ -108,7 +105,6 @@ public sealed class SpeakingReferenceAuthoringTests(DatabaseFixture database)
         var cleared = await service.UpdateQuestionAsync(created.QuestionId, new UpdateQuestionRequest(
             GroupId: null,
             Stem: created.Stem,
-            DifficultyLevel: 2,
             QuestionType: QuestionTypeDto.FreeResponse,
             PrepSeconds: 5,
             ResponseSeconds: 45, CefrLevelCode: "B1"));
@@ -131,13 +127,13 @@ public sealed class SpeakingReferenceAuthoringTests(DatabaseFixture database)
         var group = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(speakingSectionId));
 
         var textOnly = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId, "Read aloud.", 2, QuestionTypeDto.FreeResponse,
+            group.GroupId, "Read aloud.", QuestionTypeDto.FreeResponse,
             ResponseSeconds: 45, SampleAnswerOrImageDesc: "Some words.", CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.Validation, textOnly.Code);
         Assert.Contains("both", textOnly.Message, StringComparison.OrdinalIgnoreCase);
 
         var kindOnly = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId, "Read aloud.", 2, QuestionTypeDto.FreeResponse,
+            group.GroupId, "Read aloud.", QuestionTypeDto.FreeResponse,
             ResponseSeconds: 45, ReferenceKind: ReferenceKindDto.Script, CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.Validation, kindOnly.Code);
     }
@@ -157,7 +153,7 @@ public sealed class SpeakingReferenceAuthoringTests(DatabaseFixture database)
         var group = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(writingSectionId));
 
         var ex = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId, "Choose the correct answer.", 2, QuestionTypeDto.InlineCompletion,
+            group.GroupId, "Choose the correct answer.", QuestionTypeDto.InlineCompletion,
             AcceptedAnswersJson: "[\"x\"]",
             SampleAnswerOrImageDesc: "x", ReferenceKind: ReferenceKindDto.Script, CefrLevelCode: "B1")));
 

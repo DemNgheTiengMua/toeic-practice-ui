@@ -14,10 +14,6 @@ public sealed record QuickIngestParsedQuestionDto(
     int StartLineNumber,
     int EndLineNumber,
     string Stem,
-    // #229 / D1: nullable, because a parser that cannot read a level must say so rather than invent
-    // one. It was an `int` filled with 3 at three call sites - the silent default this ticket removes.
-    // Dormant: nothing writes it, and #231 deletes it.
-    int? DifficultyLevel,
     string? Explanation,
     string? CategoryCode,
     IReadOnlyList<QuickIngestParsedOptionDto> Options,
@@ -46,4 +42,7 @@ public sealed record QuickIngestParsedQuestionDto(
     int? EvidenceStart = null,
     int? EvidenceEnd = null,
     string? EvidenceUnit = null,
-    string? EvidenceQuote = null);
+    string? EvidenceQuote = null,
+    // #230 / D1: dormant, and last so no parser call site has to name it. A parser that cannot read a
+    // level says so rather than inventing one, and never fills this in as a substitute. #231 deletes it.
+    int? DifficultyLevel = null);

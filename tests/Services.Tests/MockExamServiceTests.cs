@@ -110,8 +110,8 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
             -- Question 1: Listening
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secL, 1);
             DECLARE @grp1 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grp1, @exam, @secL, @sL, N'Listening Q1', 1, 'mcq', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grp1, @exam, @secL, @sL, N'Listening Q1', 'A2', 'mcq', 1);
             DECLARE @q1 INT = SCOPE_IDENTITY();
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
               (@q1, 'mcq', 'A', N'Opt A', 1),
@@ -120,8 +120,8 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
             -- Question 2: Reading
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 2);
             DECLARE @grp2 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grp2, @exam, @secR, @sR, N'Reading Q2', 1, 'mcq', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grp2, @exam, @secR, @sR, N'Reading Q2', 'A2', 'mcq', 2);
             DECLARE @q2 INT = SCOPE_IDENTITY();
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
               (@q2, 'mcq', 'A', N'Opt A', 0),
@@ -171,8 +171,8 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
             VALUES (@exam, @cert, @listeningSection, 1);
             DECLARE @listeningGroup INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@listeningGroup, @exam, @listeningSection, @listeningSkill, N'Choose the correct answer.', 1, 'mcq', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@listeningGroup, @exam, @listeningSection, @listeningSkill, N'Choose the correct answer.', 'A2', 'mcq', 1);
             DECLARE @listeningQuestion INT = SCOPE_IDENTITY();
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
             VALUES (@listeningQuestion, 'mcq', 'A', N'Correct answer', 1);
@@ -180,8 +180,8 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
             VALUES (@exam, @cert, @writingSection, 2);
             DECLARE @writingGroup INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
-            VALUES (@writingGroup, @exam, @writingSection, @writingSkill, N'Write a short response.', 1, 'free_response', 3, 100, 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+            VALUES (@writingGroup, @exam, @writingSection, @writingSkill, N'Write a short response.', 'A2', 'free_response', 3, 100, 2);
             DECLARE @writingQuestion INT = SCOPE_IDENTITY();
             INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder)
             VALUES (@cert, @writingSkill, 'CONTENT', N'Content', N'Band 6: fully addresses the task. Band 3: only partly addresses it. Band 0: no response.', 10, 1, 1);
