@@ -14,7 +14,7 @@ namespace BusinessObjects;
 /// <c>sp_set_session_context</c> — session context survives commit and rollback on a pooled
 /// connection and would vouch for whatever ran next.
 ///
-/// Coverage today is three of the seven. The rest are named here so the registry has one source in
+/// Coverage today is four of the seven. The rest are named here so the registry has one source in
 /// the application as well as in the schema, and so a later ticket has a name to declare rather than
 /// inventing one.
 /// </summary>
@@ -31,10 +31,10 @@ public static class DerivedFactWriters
     /// <summary>Step closure: <c>LearnerPathSteps</c> moving to done.</summary>
     public const string StepClosure = "PathStepCompletion";
 
-    // ---- awaiting a table ----
-
-    /// <summary>Learner per-skill state: awaiting <c>LearnerSkillStates</c> (#210).</summary>
+    /// <summary>#211: learner per-skill state, <c>LearnerSkillStates</c>.</summary>
     public const string LearnerSkillState = "SkillStateWriter";
+
+    // ---- awaiting a table ----
 
     /// <summary>Topic capability: awaiting the per-cell mastery table (#232).</summary>
     public const string TopicCapability = "CapabilityWriter";

@@ -92,14 +92,17 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // no-delete rule.
 // #191: trg_Attempts_SingleWriter, trg_PlacementTests_SingleWriter and
         // trg_LearnerPathSteps_SingleWriter - one per covered derived fact. The registry names seven;
-        // the other four have no table yet or are exempt, which domain27 asserts rather than assumes.
+        // #211 has since covered a fourth (trg_LearnerSkillStates_SingleWriter), so two have no table
+        // yet and one is exempt. domain27 asserts the split rather than assuming it.
         // #192: trg_GradingCriteria_FrozenWhenLocked,
         // trg_GradingCriterionDescriptors_FrozenWhenLocked,
         // trg_GradingRubricLocks_CompleteCanonicalRubric and
         // trg_GradingRubricLocks_IrreversibleOnceGraded - the seven-band grid and the lock.
         // #193: trg_GradingCriterionAnchors_FrozenWhenLocked - the three calibrated anchors.
         // #210: trg_CefrCutScores_NoOverlap - per-skill cut ranges may not overlap within one version.
-        Assert.Equal(42, triggerCount);
+        // #211: trg_LearnerSkillStates_SingleWriter - the fourth covered derived fact. The count moves
+        // 42 -> 43 and the registry's split moves 3/3/1 -> 4/2/1; domain27 pins the split.
+        Assert.Equal(43, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
@@ -113,6 +116,7 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
                      "trg_Attempts_SingleWriter",
                      "trg_PlacementTests_SingleWriter",
                      "trg_LearnerPathSteps_SingleWriter",
+                     "trg_LearnerSkillStates_SingleWriter",
                  })
         {
             var present = await db.Database

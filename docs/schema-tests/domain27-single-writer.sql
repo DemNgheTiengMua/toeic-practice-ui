@@ -32,7 +32,7 @@ IF (SELECT COUNT(*) FROM DerivedFactOwners) <> 7
 DECLARE @expected TABLE (FactCode VARCHAR(32) NOT NULL PRIMARY KEY, Coverage VARCHAR(16) NOT NULL);
 INSERT INTO @expected (FactCode, Coverage) VALUES
   ('placement_result',      'covered'),
-  ('learner_skill_state',   'awaiting_table'),
+  ('learner_skill_state',   'covered'),
   ('attempt_score_and_band', 'covered'),
   ('topic_capability',      'awaiting_table'),
   ('step_closure',          'covered'),
@@ -55,9 +55,16 @@ IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered' AND Covere
   THROW 50000, 'EXPECT_REJECT FAILED: a fact claims coverage but names no table, so its guard protects nothing', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage <> 'covered' AND CoveredTable IS NOT NULL) <> 0
   THROW 50000, 'EXPECT_REJECT FAILED: a fact that is not covered names a table, which overstates the mechanism', 1;
-IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 3
-  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the three tables that exist today', 1;
-PRINT 'the registry names seven facts: three covered now, three awaiting a table, one exempt';
+-- #211 narrowed this from three to four and it is now 4/2/1: creating LearnerSkillStates moved one fact
+-- out of `awaiting_table`, which is the only direction this split may ever move. The three per-fact
+-- counts are asserted separately, not just the total, so a swap that kept the sum would still fail.
+IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 4
+  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the four tables that exist today (#211 added the per-skill state)', 1;
+IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'awaiting_table') <> 2
+  THROW 50000, 'EXPECT_REJECT FAILED: the awaiting-table set is not the two facts whose table no ticket has created yet', 1;
+IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'exempt') <> 1
+  THROW 50000, 'EXPECT_REJECT FAILED: the exempt set is not the one fact that already carries its own guard', 1;
+PRINT 'the registry names seven facts: four covered now, two awaiting a table, one exempt';
 
 BEGIN TRY
   INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable)
@@ -482,8 +489,8 @@ DECLARE @covered TABLE (TableName SYSNAME NOT NULL PRIMARY KEY);
 INSERT INTO @covered (TableName)
   SELECT CoveredTable FROM DerivedFactOwners WHERE Coverage = 'covered';
 
-IF (SELECT COUNT(*) FROM @covered) <> 3
-  THROW 50000, 'EXPECT_REJECT FAILED: the covered table set is not the three this file exercises', 1;
+IF (SELECT COUNT(*) FROM @covered) <> 4
+  THROW 50000, 'EXPECT_REJECT FAILED: the covered table set is not the four this schema ships (#211 added LearnerSkillStates)', 1;
 
 DECLARE @t SYSNAME, @missing INT = 0;
 DECLARE tbl CURSOR LOCAL FAST_FORWARD FOR SELECT TableName FROM @covered;
@@ -508,8 +515,8 @@ BEGIN
   FETCH NEXT FROM tbl INTO @t;
 END
 CLOSE tbl; DEALLOCATE tbl;
-IF @missing <> 3
-  THROW 50000, 'EXPECT_REJECT FAILED: the column audit did not visit the three covered tables', 1;
+IF @missing <> 4
+  THROW 50000, 'EXPECT_REJECT FAILED: the column audit did not visit the four covered tables', 1;
 PRINT 'every covered table carries a writer column and a projection version';
 
-PRINT '#191: seven facts registered, three enforced today, and each guard refuses a valid write by the wrong writer';
+PRINT '#191: seven facts registered, four enforced today, and each guard refuses a valid write by the wrong writer';

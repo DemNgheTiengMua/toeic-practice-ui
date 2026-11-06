@@ -41,20 +41,20 @@ break the product.
 
 ## Coverage, stated honestly
 
-Seven facts are registered. Three have a table today and are enforced:
+Seven facts are registered. Four have a table today and are enforced:
 
 | Fact | Owner | Table |
 |---|---|---|
 | Placement result | `AttemptEngine` | `PlacementTests` |
 | Attempt score and band | `AttemptEngine` | `ExamAttempts` |
 | Step closure | `PathStepCompletion` | `LearnerPathSteps` |
+| Learner per-skill state | `SkillStateWriter` | `LearnerSkillStates` |
 
-Three are waiting on a table another ticket creates, and the registry says `awaiting_table` so the gap
+Two are waiting on a table another ticket creates, and the registry says `awaiting_table` so the gap
 is data rather than a missing promise:
 
 | Fact | Owner | Waiting on |
 |---|---|---|
-| Learner per-skill state | `SkillStateWriter` | #210, `LearnerSkillStates` |
 | Topic capability | `CapabilityWriter` | #232, per-cell mastery |
 | Window synthesis | `PathWindowSynthesizer` | #212, window rows |
 
@@ -76,8 +76,20 @@ one.** Credit movement has one; the registry records that rather than duplicatin
   its grading settles rather than crashing at submit.
 - Every fixture that wrote a derived column now declares a writer, including `docs/seed-demo.sql`. The
   seed stays idempotent because the guard is per row, not per table.
-- `docs/schema-tests/domain27-single-writer.sql` asserts the registry, the three guards, the accepted
+- `docs/schema-tests/domain27-single-writer.sql` asserts the registry, the four guards, the accepted
   cases and the refusals. `docs/schema-tests/prove-guard-single-writer.sh` removes each guard and
   checks the specific expected failure.
-- Adding a fourth covered fact means: create the table, add the columns, write the trigger copying the
+- Adding a fifth covered fact means: create the table, add the columns, write the trigger copying the
   shape here, register the fact with `Coverage='covered'`, and extend `domain27`.
+
+## #211 added the fourth
+
+`LearnerSkillStates` (D15) is one row per learner per skill, and unlike the other three its **whole row**
+is the derived fact — there is no sitting-state or lifecycle column to carve out, so every INSERT
+declares a writer. The `WrittenByService` column is nullable, matching the three tables that predate
+per-write enforcement: the trigger refuses an undeclared write, the column does not.
+
+`docs/schema-tests/domain34-skill-state.sql` owns this table's shape and guard, and
+`prove-guard-skill-state.sh` proves all fifteen guards load-bearing. Writing that script found five
+fixtures that a foreign key or the primary key was refusing before the CHECK under test ran — which is
+why each shape refusal there uses its own learner.

@@ -10,8 +10,8 @@ GO
 -- trigger comparing it against the fact's owner, so an invented or mistyped service name is
 -- unstorable and a real second writer is refused at write time.
 --
--- This is a table rather than a comment because the coverage is the thing that must not drift. Three
--- of the seven have a table today; three are waiting on a table another ticket creates; one is
+-- This is a table rather than a comment because the coverage is the thing that must not drift. Four
+-- of the seven have a table today; two are waiting on a table another ticket creates; one is
 -- exempt because its table already carries the guarantee and the SRS decision log D-09 forbids a
 -- second one. `Coverage` says which, and a CHECK makes "claims coverage but names no table"
 -- unrepresentable - a mechanism that silently covers two and claims seven is this ticket's worst
@@ -38,8 +38,8 @@ GO
 INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable, Note) VALUES
   ('placement_result',       'AttemptEngine',      'covered',        'PlacementTests',
    N'The snapshot is derived from the attempt, never written beside it (the confirmed defect).'),
-  ('learner_skill_state',    'SkillStateWriter',   'awaiting_table', NULL,
-   N'#210 creates LearnerSkillStates; the guard lands with the table.'),
+  ('learner_skill_state',    'SkillStateWriter',   'covered',        'LearnerSkillStates',
+   N'#211: the one row every screen reads to answer "what is my level". The overall is MIN over measured skills, never a column.'),
   ('attempt_score_and_band', 'AttemptEngine',      'covered',        'ExamAttempts',
    N'TotalScore and BandCode, the two values the snapshot is copied from.'),
   ('topic_capability',       'CapabilityWriter',   'awaiting_table', NULL,
@@ -357,6 +357,133 @@ BEGIN
       AND a.MaxScaled >= b.MinScaled
   )
     THROW 50050, 'CefrCutScores ranges may not overlap within one certificate, skill and table version.', 1;
+END;
+GO
+-- ============ Domain 4c: Learner per-skill state (#211 / D15) ============
+-- The one row every screen reads to answer "what is my level". Before this, three surfaces answered it
+-- from three different places - the placement snapshot, the calibration decision, the latest attempt -
+-- and the learner saw three levels on one day (docs/research/output/6.md, Defect 3).
+--
+-- ONE ROW PER LEARNER PER SKILL. The key is the rule, not a convention: a second row for the same
+-- (learner, skill) is two answers to one question, which is the defect the table exists to remove.
+--
+-- NO OVERALL, ANYWHERE. The overall is MIN over the certificate's MEASURED skills, computed at read
+-- and tethered to the skill that produced it (TRN-13 identity 2). A stored column, a computed column
+-- and an "overall pseudo-skill" row are three different ways to store the same second fact; a stored
+-- overall can disagree with MIN, and then the two screens that read it disagree with the third that
+-- computes it. domain34 asserts the absence in the catalog because a C#-only check cannot see two of
+-- the three.
+--
+-- EXPIRY IS STORED, NOT DERIVED, and it is not free: the CHECK pins it to MeasuredAt + 90 days (D18).
+-- Storing it means a later change to the window does not silently re-date a measurement that was taken
+-- under the old rule - the same reason a projection records its CutScoreTableVersion. Pinning it to the
+-- measurement means the two cannot disagree, so there is still exactly one writer of the value.
+CREATE TABLE LearnerSkillStates (
+  UserId               INT NOT NULL,
+  CertId               INT NOT NULL,
+  SkillId              INT NOT NULL,
+  -- A result may report the pre-A1 floor (CefrLevel.Reportable), unlike authored content, which may
+  -- not: "below A1" is an honest answer and inventing A1 for it is not.
+  CefrLevel            VARCHAR(10) NOT NULL
+    CONSTRAINT CK_LSS_Level CHECK (CefrLevel IN ('pre_a1','A1','A2','B1','B2','C1','C2')),
+  -- 0-100 inside the band. Shown as a position, never a percentage: crossing a band resets it downward.
+  PositionInBand       INT NOT NULL
+    CONSTRAINT CK_LSS_Position CHECK (PositionInBand BETWEEN 0 AND 100),
+  -- The measured coordinate the level and position were projected from. 1.00 is A1's floor and 6.99
+  -- is "above C2" - the axis the whole rebuild measures on, stored once so two screens cannot re-derive
+  -- it differently. DECIMAL(3,2) is the precision the scale is defined at, not a guess.
+  ContinuousCoordinate DECIMAL(3,2) NOT NULL
+    CONSTRAINT CK_LSS_Coordinate CHECK (ContinuousCoordinate BETWEEN 1.00 AND 6.99),
+  -- What measured it. Closed: the three events D15's writer is invoked by.
+  Source               VARCHAR(16) NOT NULL
+    CONSTRAINT CK_LSS_Source CHECK (Source IN ('placement','mock_section','calibration')),
+  MeasuredAt           DATETIMEOFFSET NOT NULL,
+  ExpiresAt            DATETIMEOFFSET NOT NULL,
+  -- #191 / D14: nullable because the guarded tables all predate per-write enforcement and the
+  -- trigger, not the column, is what refuses a write that declares nothing. Following the existing
+  -- convention rather than inventing a stricter one: a NOT NULL here would refuse an EF insert that
+  -- sets the property after construction, for a reason unrelated to the rule being guarded.
+  WrittenByService     VARCHAR(64) NULL,
+  ProjectionVersion    INT NOT NULL CONSTRAINT DF_LSS_ProjectionVersion DEFAULT 0,
+  CONSTRAINT PK_LearnerSkillStates PRIMARY KEY (UserId, CertId, SkillId),
+  -- The expiry is the measurement plus D18's 90 calendar days, so the two columns cannot disagree
+  -- about when this result stops being trustworthy. A CHECK that only demanded "later than
+  -- MeasuredAt" would accept 91 days and 365; both are refused in domain34. It is a table-level
+  -- constraint because a column constraint cannot name another column.
+  CONSTRAINT CK_LSS_Expiry CHECK (ExpiresAt = DATEADD(DAY, 90, MeasuredAt)),
+  -- The composite is the isolation rule: one certificate's skill cannot be recorded under another's.
+  -- A single-column key on SkillId accepts exactly that row, which is why it is not one.
+  CONSTRAINT FK_LSS_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
+  -- The composite above already pins CertId to a real certificate (Skills.CertId is a foreign key), so
+  -- a second FK on CertId alone would add nothing enforceable. The learner does need one.
+  CONSTRAINT FK_LSS_User FOREIGN KEY (UserId) REFERENCES Users(UserId)
+);
+GO
+-- The "my skills" read of one certificate, in the certificate's own order.
+CREATE INDEX IX_LSS_UserCert ON LearnerSkillStates(UserId, CertId);
+GO
+-- #191 / D14: the per-skill state has exactly one writer, SkillStateWriter.
+--
+-- Unlike ExamAttempts and LearnerPathSteps, this table has no non-derived write at all: the whole row
+-- IS the derived fact, so every insert must declare. There is no sitting-state column here to carve
+-- out, and no lifecycle act that legitimately touches the row without deriving it.
+--
+-- The predicate looks at what CHANGED. A write that sets the same level and position derives nothing,
+-- and refusing it would be a guard that looks right and refuses the idempotent save EF produces when a
+-- tracked row is saved twice.
+CREATE TRIGGER trg_LearnerSkillStates_SingleWriter
+ON LearnerSkillStates AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @owner VARCHAR(64) =
+    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'learner_skill_state');
+
+  DECLARE @touched TABLE (
+    UserId INT NOT NULL, CertId INT NOT NULL, SkillId INT NOT NULL, WasVersion INT NOT NULL,
+    PRIMARY KEY (UserId, CertId, SkillId));
+  INSERT INTO @touched (UserId, CertId, SkillId, WasVersion)
+    SELECT i.UserId, i.CertId, i.SkillId, ISNULL(d.ProjectionVersion, 0)
+    FROM inserted i
+    LEFT JOIN deleted d
+      ON d.UserId = i.UserId AND d.CertId = i.CertId AND d.SkillId = i.SkillId
+    WHERE d.UserId IS NULL
+       OR ISNULL(i.CefrLevel, '') <> ISNULL(d.CefrLevel, '')
+       OR i.PositionInBand <> d.PositionInBand
+       OR i.ContinuousCoordinate <> d.ContinuousCoordinate
+       OR ISNULL(i.Source, '') <> ISNULL(d.Source, '')
+       OR i.MeasuredAt <> d.MeasuredAt
+       OR i.ExpiresAt <> d.ExpiresAt
+       OR i.ProjectionVersion <> d.ProjectionVersion;
+
+  IF NOT EXISTS (SELECT 1 FROM @touched)
+    RETURN;
+
+  -- The declaration must be IN THIS STATEMENT. A column already holding the owner's name vouches for
+  -- nobody: a second writer that changes only PositionInBand leaves that value untouched, so a
+  -- value-only check would pass it. `UPDATE()` is the statement-level "this write assigned the
+  -- column" test, which is the missing half.
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN @touched t
+      ON t.UserId = i.UserId AND t.CertId = i.CertId AND t.SkillId = i.SkillId
+    WHERE ISNULL(i.WrittenByService, '') <> @owner
+       OR (EXISTS (SELECT 1 FROM deleted d
+                   WHERE d.UserId = i.UserId AND d.CertId = i.CertId AND d.SkillId = i.SkillId)
+           AND NOT UPDATE(WrittenByService))
+  )
+    THROW 50077, 'The learner per-skill state has exactly one writer, SkillStateWriter. A write declaring another writer (or none) is refused.', 1;
+
+  -- Monotonic: an older out-of-order callback must not overwrite a newer state. `<=` is the point - an
+  -- equal version is a replay, not progress.
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN @touched t
+      ON t.UserId = i.UserId AND t.CertId = i.CertId AND t.SkillId = i.SkillId
+    WHERE i.ProjectionVersion <= t.WasVersion
+  )
+    THROW 50078, 'The learner per-skill state projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
 END;
 GO
 -- ============ Domain 3: Content ============
