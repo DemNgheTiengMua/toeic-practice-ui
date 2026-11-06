@@ -364,7 +364,7 @@ public sealed partial class ExamQuickIngestService
         out string reason)
     {
         var options = (question.Options ?? [])
-            .Select(o => ((string?)o.Label, (string?)o.Text, o.IsCorrect))
+            .Select(o => ((string?)o.Label, (string?)o.Text, o.IsCorrect, (string?)o.Rationale))
             .ToList();
 
         return PoolImport.TryBuildContent(

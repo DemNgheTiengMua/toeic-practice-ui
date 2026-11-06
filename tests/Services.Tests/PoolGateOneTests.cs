@@ -278,9 +278,15 @@ public sealed class PoolGateOneTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// The negative half: an item saved without a rationale is refused by the gate, and the message
-    /// names the option missing one. A draft may be saved before its rationale is written; it is the
-    /// gate, not the save, that refuses it.
+    /// The negative half: an item whose version carries no rationale is refused by the gate, and the
+    /// message names the option missing one.
+    /// <para>
+    /// #198: the item is written through the schema rather than through <c>AdminItemService</c>, which
+    /// now invokes gate one itself and refuses this record at save time. The gate's own verdict still
+    /// has to be demonstrated for a row that reached the table another way - a migration, a direct
+    /// import, a version written before the gate had a caller - because #194's contract is that the
+    /// gate reads what is stored, not what a service intended.
+    /// </para>
     /// </summary>
     [Fact]
     public async Task An_item_saved_without_a_rationale_is_refused_by_the_gate()
@@ -290,21 +296,12 @@ public sealed class PoolGateOneTests(DatabaseFixture database)
 
         var topicId = await ReadingTopicAsync(db);
 
-        var created = await new AdminItemService(db, TimeProvider.System).CreateAsync(
-            new Contracts.CreatePoolItemRequest(
-                Contracts.ModalityDto.Reading, topicId, "B1", "sentence_cloze",
-                "What must every visitor do at the gate?",
-                OptionA: "The night ledger.",
-                OptionB: "The depot shutter.",
-                OptionC: "The depot supervisor.",
-                OptionD: "The office door.",
-                KeyLabel: "A",
-                Explanation: "The notice says every visitor signs the night ledger.",
-                RationaleA: "Correct: the notice names the ledger.",
-                RationaleB: "The passage never mentions a shutter.",
-                RationaleD: "A door is not what the notice requires."));
+        var stored = SeededItem(topicId, CefrLevel.B1, "A", "gate1-rationale");
+        stored.ItemVersions.Single().RationaleC = null;
+        db.Items.Add(stored);
+        await db.SaveChangesAsync();
 
-        var verdict = await PoolGateOne.ReviewAsync(db, created.ItemId);
+        var verdict = await PoolGateOne.ReviewAsync(db, stored.ItemId);
 
         var refusal = Assert.Single(verdict.Refusals, r => r.Rule == GateOneRules.OptionRationale);
         Assert.Contains("C", refusal.Message, StringComparison.Ordinal);

@@ -81,7 +81,13 @@ public static class PoolGateOne
         CancellationToken cancellationToken = default) =>
         GateOne.ReviewCell(await CellAsync(db, topicId, level, exceptItemId: null, cancellationToken));
 
-    private static async Task<GateOneCell> CellAsync(
+    /// <summary>
+    /// The keys already stored in one cell, excluding the item being judged. <c>internal</c> because
+    /// #198's ingestion seam judges items that are not rows yet: it passes the bundle's own content to
+    /// <see cref="GateOne.Review"/> and needs the same cell count this class uses. A second copy of
+    /// the cell query in the seam would answer "what is in this cell" differently from the gate.
+    /// </summary>
+    internal static async Task<GateOneCell> CellAsync(
         CompanionDbContext db,
         int topicId,
         CefrLevel level,

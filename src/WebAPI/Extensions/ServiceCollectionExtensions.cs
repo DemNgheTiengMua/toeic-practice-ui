@@ -54,6 +54,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAdminCoverageService, AdminCoverageService>();
         services.AddScoped<IExamQuickIngestService, ExamQuickIngestService>();
         services.AddScoped<IQuestionImportService, QuestionImportService>();
+
+        // #198: the ingestion seam and its four gates. The gates need models, and the container is
+        // where a deployment opts into real ones; unconfigured, they refuse rather than pass (see
+        // PoolIngestionGates). The seam itself is always registered, because its own rules - version,
+        // skill, tier prefix, record shape - need no model at all.
+        services.AddScoped<PoolIngestionGates>();
+        services.AddScoped<PoolIngestionService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         services.AddScoped<IPlacementService, PlacementService>();
         services.AddScoped<ICalibrationService, CalibrationService>();

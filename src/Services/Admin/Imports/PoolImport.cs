@@ -170,15 +170,20 @@ internal static class PoolImport
     /// </summary>
     internal static bool TryBuildOptions(
         string modality,
-        IReadOnlyList<(string? Label, string? Text, bool IsCorrect)> options,
+        IReadOnlyList<(string? Label, string? Text, bool IsCorrect, string? Rationale)> options,
         out string? optionA,
         out string? optionB,
         out string? optionC,
         out string? optionD,
         out string? keyLabel,
+        out string? rationaleA,
+        out string? rationaleB,
+        out string? rationaleC,
+        out string? rationaleD,
         out string reason)
     {
         optionA = optionB = optionC = optionD = keyLabel = null;
+        rationaleA = rationaleB = rationaleC = rationaleD = null;
         reason = string.Empty;
 
         if (options.Count == 0)
@@ -200,7 +205,8 @@ internal static class PoolImport
         }
 
         var byLabel = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (label, text, _) in options)
+        var rationales = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (label, text, _, rationale) in options)
         {
             var clean = label?.Trim().ToUpperInvariant();
             if (clean is not ("A" or "B" or "C" or "D"))
@@ -214,6 +220,8 @@ internal static class PoolImport
                 reason = $"option label '{clean}' is used twice.";
                 return false;
             }
+
+            rationales[clean] = Normalise(rationale);
         }
 
         if (byLabel.Count != 4 || byLabel.Values.Any(string.IsNullOrWhiteSpace))
@@ -234,6 +242,10 @@ internal static class PoolImport
         optionC = byLabel["C"];
         optionD = byLabel["D"];
         keyLabel = keys[0];
+        rationaleA = rationales["A"];
+        rationaleB = rationales["B"];
+        rationaleC = rationales["C"];
+        rationaleD = rationales["D"];
         return true;
     }
 
@@ -251,7 +263,7 @@ internal static class PoolImport
         string? legacyCategoryCode,
         string? levelCode,
         bool placementEligible,
-        IReadOnlyList<(string? Label, string? Text, bool IsCorrect)> options,
+        IReadOnlyList<(string? Label, string? Text, bool IsCorrect, string? Rationale)> options,
         int? evidenceStart,
         int? evidenceEnd,
         string? evidenceUnit,
@@ -261,7 +273,8 @@ internal static class PoolImport
     {
         content = null;
 
-        if (!TryBuildOptions(modality, options, out var a, out var b, out var c, out var d, out var key, out reason))
+        if (!TryBuildOptions(modality, options, out var a, out var b, out var c, out var d, out var key,
+                out var rationaleA, out var rationaleB, out var rationaleC, out var rationaleD, out reason))
         {
             return false;
         }
@@ -348,6 +361,7 @@ internal static class PoolImport
             itemType,
             placementEligible,
             a, b, c, d, key,
+            rationaleA, rationaleB, rationaleC, rationaleD,
             evidenceStart,
             evidenceEnd,
             Normalise(evidenceUnit),
@@ -444,6 +458,10 @@ internal static class PoolImport
             OptionD = content.OptionD,
             KeyLabel = content.KeyLabel,
             Explanation = Normalise(explanation),
+            RationaleA = content.RationaleA,
+            RationaleB = content.RationaleB,
+            RationaleC = content.RationaleC,
+            RationaleD = content.RationaleD,
             EvidenceStart = content.EvidenceStart,
             EvidenceEnd = content.EvidenceEnd,
             EvidenceUnit = content.EvidenceUnit,
@@ -647,6 +665,10 @@ internal sealed record PoolContent(
     string? OptionC,
     string? OptionD,
     string? KeyLabel,
+    string? RationaleA,
+    string? RationaleB,
+    string? RationaleC,
+    string? RationaleD,
     int? EvidenceStart,
     int? EvidenceEnd,
     string? EvidenceUnit,
