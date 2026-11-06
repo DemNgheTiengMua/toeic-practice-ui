@@ -180,14 +180,7 @@ public sealed partial class AttemptEngine
         int userId,
         CancellationToken cancellationToken = default)
     {
-        var attempt = await db.ExamAttempts
-            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
-            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
-
-        if (attempt.Status != AttemptStatus.InProgress.ToCode())
-        {
-            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Exam attempt is not in progress.");
-        }
+        var attempt = await LoadSittingAttemptAsync(db.ExamAttempts, attemptId, userId, cancellationToken);
 
         attempt.Status = AttemptStatus.Abandoned.ToCode();
         await db.SaveChangesAsync(cancellationToken);
@@ -206,15 +199,7 @@ public sealed partial class AttemptEngine
         Func<int, int, Task>? onAutoSubmitted = null,
         CancellationToken cancellationToken = default)
     {
-        var attempt = await db.ExamAttempts
-            .Include(a => a.Exam)
-            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && (userId == null || a.UserId == userId), cancellationToken)
-            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
-
-        if (attempt.Status != AttemptStatus.InProgress.ToCode())
-        {
-            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Exam attempt is not in progress.");
-        }
+        var attempt = await LoadSittingAttemptAsync(db.ExamAttempts.Include(a => a.Exam), attemptId, userId, cancellationToken);
 
         if (attempt.PreflightVerifiedAt == null)
         {
