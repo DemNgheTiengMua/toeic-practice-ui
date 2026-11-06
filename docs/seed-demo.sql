@@ -5310,3 +5310,153 @@ GO
 
 PRINT '24. Section noun backfilled: TOEIC calls its sections Parts';
 GO
+
+-- ============================================================================
+-- 25. Per-skill CEFR cut scores (#210 / D6 / LVL-13)
+-- ============================================================================
+-- §4.6's table, seeded as the version-1 lookup. Read by CefrProjectionService and nothing else:
+-- the table is read-only at the presentation layer, and projection is a lookup rather than
+-- arithmetic on a total (LVL-12).
+--
+-- Two properties of this block are deliberate:
+--
+--   * every row is guarded individually, never the table as a whole. One `IF NOT EXISTS (SELECT 1
+--     FROM CefrCutScores)` around the whole set is the #184/#185 seed defect: any test that inserts
+--     a single cut row first would make the rest silently skip.
+--   * the range is part of what is guarded, so editing a number here re-seeds it. A guard that
+--     checked only (cert, version, skill, level) would leave a corrected §4.6 figure unstored.
+--
+-- The C2 rows for TOEIC and VSTEP are display_ceiling rows: they record the top of the scale and
+-- carry NO MinScaled, so "emit the ceiling as a level" is unrepresentable (LVL-14, LVL-15).
+DECLARE @cultVersions TABLE (CertCode VARCHAR(20), TableVersion INT, Separate BIT, Source NVARCHAR(200), PublishedAt DATE);
+INSERT INTO @cultVersions (CertCode, TableVersion, Separate, Source, PublishedAt) VALUES
+  ('TOEIC',     1, 0, N'ETS TOEIC Listening & Reading standard-setting (per-section cuts)', '2023-06-01'),
+  ('TOEIC_SW',  1, 1, N'ETS TOEIC Speaking & Writing standard-setting (per-skill cuts)',    '2023-06-01'),
+  ('IELTS',     1, 0, N'IELTS band descriptors and published CEFR alignment',               '2023-06-01'),
+  ('VSTEP',     1, 0, N'VSTEP (VSTEP.3-5) level descriptors, MOET Vietnam',                 '2023-06-01');
+
+INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
+SELECT c.CertId, v.TableVersion, v.Separate, v.Source, v.PublishedAt
+FROM @cultVersions v
+JOIN Certificates c ON c.Code = v.CertCode
+WHERE NOT EXISTS (SELECT 1 FROM CefrCutScoreVersions x
+                  WHERE x.CertId = c.CertId AND x.TableVersion = v.TableVersion);
+GO
+
+-- §4.6, transcribed per skill. (CertCode, SkillCode, Level, Kind, MinScaled, MaxScaled).
+DECLARE @cuts TABLE (
+  CertCode VARCHAR(20), SkillCode VARCHAR(20), Level VARCHAR(10), Kind VARCHAR(20),
+  MinScaled INT NULL, MaxScaled INT NOT NULL);
+INSERT INTO @cuts (CertCode, SkillCode, Level, Kind, MinScaled, MaxScaled) VALUES
+  -- TOEIC Listening (5-495)
+  ('TOEIC','LIST','pre_a1','cut',             5,  55),
+  ('TOEIC','LIST','A1',    'cut',            60, 105),
+  ('TOEIC','LIST','A2',    'cut',           110, 270),
+  ('TOEIC','LIST','B1',    'cut',           275, 395),
+  ('TOEIC','LIST','B2',    'cut',           400, 485),
+  ('TOEIC','LIST','C1',    'cut',           490, 495),
+  ('TOEIC','LIST','C2',    'display_ceiling',NULL, 495),
+  -- TOEIC Reading (5-495)
+  ('TOEIC','READ','pre_a1','cut',             5,  55),
+  ('TOEIC','READ','A1',    'cut',            60, 110),
+  ('TOEIC','READ','A2',    'cut',           115, 270),
+  ('TOEIC','READ','B1',    'cut',           275, 380),
+  ('TOEIC','READ','B2',    'cut',           385, 450),
+  ('TOEIC','READ','C1',    'cut',           455, 495),
+  ('TOEIC','READ','C2',    'display_ceiling',NULL, 495),
+  -- TOEIC Speaking (0-200)
+  ('TOEIC_SW','SPEA','pre_a1','cut',          0,  40),
+  ('TOEIC_SW','SPEA','A1',    'cut',         50,  80),
+  ('TOEIC_SW','SPEA','A2',    'cut',         90, 110),
+  ('TOEIC_SW','SPEA','B1',    'cut',        120, 150),
+  ('TOEIC_SW','SPEA','B2',    'cut',        160, 170),
+  ('TOEIC_SW','SPEA','C1',    'cut',        180, 200),
+  ('TOEIC_SW','SPEA','C2',    'display_ceiling',NULL, 200),
+  -- TOEIC Writing (0-200)
+  ('TOEIC_SW','WRIT','pre_a1','cut',          0,  20),
+  ('TOEIC_SW','WRIT','A1',    'cut',         30,  60),
+  ('TOEIC_SW','WRIT','A2',    'cut',         70, 110),
+  ('TOEIC_SW','WRIT','B1',    'cut',        120, 140),
+  ('TOEIC_SW','WRIT','B2',    'cut',        150, 170),
+  ('TOEIC_SW','WRIT','C1',    'cut',        180, 200),
+  ('TOEIC_SW','WRIT','C2',    'display_ceiling',NULL, 200),
+  -- IELTS (0-9, stored in tenths like the certificate's own bands). The below-A1 row is
+  -- uncertified: IELTS scores it and does not certify a level there.
+  ('IELTS','LIST','pre_a1','uncertified',     0,  15),
+  ('IELTS','LIST','A1',    'cut',            20,  25),
+  ('IELTS','LIST','A2',    'cut',            30,  35),
+  ('IELTS','LIST','B1',    'cut',            40,  50),
+  ('IELTS','LIST','B2',    'cut',            55,  65),
+  ('IELTS','LIST','C1',    'cut',            70,  80),
+  ('IELTS','LIST','C2',    'cut',            85,  90),
+  ('IELTS','READ','pre_a1','uncertified',     0,  15),
+  ('IELTS','READ','A1',    'cut',            20,  25),
+  ('IELTS','READ','A2',    'cut',            30,  35),
+  ('IELTS','READ','B1',    'cut',            40,  50),
+  ('IELTS','READ','B2',    'cut',            55,  65),
+  ('IELTS','READ','C1',    'cut',            70,  80),
+  ('IELTS','READ','C2',    'cut',            85,  90),
+  ('IELTS','WRIT','pre_a1','uncertified',     0,  15),
+  ('IELTS','WRIT','A1',    'cut',            20,  25),
+  ('IELTS','WRIT','A2',    'cut',            30,  35),
+  ('IELTS','WRIT','B1',    'cut',            40,  50),
+  ('IELTS','WRIT','B2',    'cut',            55,  65),
+  ('IELTS','WRIT','C1',    'cut',            70,  80),
+  ('IELTS','WRIT','C2',    'cut',            85,  90),
+  ('IELTS','SPEA','pre_a1','uncertified',     0,  15),
+  ('IELTS','SPEA','A1',    'cut',            20,  25),
+  ('IELTS','SPEA','A2',    'cut',            30,  35),
+  ('IELTS','SPEA','B1',    'cut',            40,  50),
+  ('IELTS','SPEA','B2',    'cut',            55,  65),
+  ('IELTS','SPEA','C1',    'cut',            70,  80),
+  ('IELTS','SPEA','C2',    'cut',            85,  90),
+  -- VSTEP (0-10, stored in tenths). VSTEP certifies B1-C1 and awards nothing below 4.0, so the
+  -- below-B1 rows are uncertified and there is no C2 row at all: the display ceiling replaces it.
+  ('VSTEP','LIST','pre_a1','uncertified',     0,  15),
+  ('VSTEP','LIST','A1',    'uncertified',    20,  25),
+  ('VSTEP','LIST','A2',    'uncertified',    30,  35),
+  ('VSTEP','LIST','B1',    'cut',            40,  55),
+  ('VSTEP','LIST','B2',    'cut',            60,  80),
+  ('VSTEP','LIST','C1',    'cut',            85, 100),
+  ('VSTEP','LIST','C2',    'display_ceiling',NULL, 100),
+  ('VSTEP','READ','pre_a1','uncertified',     0,  15),
+  ('VSTEP','READ','A1',    'uncertified',    20,  25),
+  ('VSTEP','READ','A2',    'uncertified',    30,  35),
+  ('VSTEP','READ','B1',    'cut',            40,  55),
+  ('VSTEP','READ','B2',    'cut',            60,  80),
+  ('VSTEP','READ','C1',    'cut',            85, 100),
+  ('VSTEP','READ','C2',    'display_ceiling',NULL, 100),
+  ('VSTEP','WRIT','pre_a1','uncertified',     0,  15),
+  ('VSTEP','WRIT','A1',    'uncertified',    20,  25),
+  ('VSTEP','WRIT','A2',    'uncertified',    30,  35),
+  ('VSTEP','WRIT','B1',    'cut',            40,  55),
+  ('VSTEP','WRIT','B2',    'cut',            60,  80),
+  ('VSTEP','WRIT','C1',    'cut',            85, 100),
+  ('VSTEP','WRIT','C2',    'display_ceiling',NULL, 100),
+  ('VSTEP','SPEA','pre_a1','uncertified',     0,  15),
+  ('VSTEP','SPEA','A1',    'uncertified',    20,  25),
+  ('VSTEP','SPEA','A2',    'uncertified',    30,  35),
+  ('VSTEP','SPEA','B1',    'cut',            40,  55),
+  ('VSTEP','SPEA','B2',    'cut',            60,  80),
+  ('VSTEP','SPEA','C1',    'cut',            85, 100),
+  ('VSTEP','SPEA','C2',    'display_ceiling',NULL, 100);
+
+-- Guarded row by row, including the range, so a corrected figure re-seeds.
+INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
+SELECT c.CertId, 1, s.SkillId, k.Level, k.Kind, k.MinScaled, k.MaxScaled
+FROM @cuts k
+JOIN Certificates c ON c.Code = k.CertCode
+JOIN Skills s ON s.CertId = c.CertId AND s.Code = k.SkillCode
+WHERE NOT EXISTS (
+  SELECT 1 FROM CefrCutScores x
+  WHERE x.CertId = c.CertId
+    AND x.TableVersion = 1
+    AND x.SkillId = s.SkillId
+    AND x.CefrLevel = k.Level
+    AND x.RowKind = k.Kind
+    AND ((x.MinScaled IS NULL AND k.MinScaled IS NULL) OR x.MinScaled = k.MinScaled)
+    AND x.MaxScaled = k.MaxScaled);
+GO
+
+PRINT '25. Per-skill CEFR cut scores seeded (version 1)';
+GO

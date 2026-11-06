@@ -262,6 +262,103 @@ CREATE TABLE ScoreScales (
   CONSTRAINT FK_ScoreScales_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId)
 );
 GO
+-- ============ Domain 4b: Per-skill CEFR cut scores (#210 / D6 / LVL-13) ============
+-- ScoreBands above stays exactly what it is: the certificate's own band rows, keyed by a total.
+-- It cannot express "TOEIC Reading >= 385 is B2 while 785 total is not", because a band is one
+-- interval on one axis and the claim is per skill. These two tables are the crosswalk §4.6 describes,
+-- and they are read-only at the presentation layer: projection is a lookup, never arithmetic on a total.
+--
+-- The version header is a table rather than a column on every row for two reasons. A recorded
+-- projection must name the version that produced it (LVL-13), so a version needs an identity and a
+-- provenance; and a version carries one property no cut row can carry - whether the certificate
+-- reports its skills separately with no combined total, which is TOEIC S&W's rule and is not one of
+-- the three attempt aggregation rules (CK_Certificates_ScoreAggregationRule deliberately has no
+-- `independent`, #171). Putting that bit on the version keeps a projection reproducible from the
+-- version alone, so re-standardising one certificate cannot silently change an old result.
+CREATE TABLE CefrCutScoreVersions (
+  CertId                 INT NOT NULL REFERENCES Certificates(CertId),
+  TableVersion           INT NOT NULL,
+  -- "report each skill on its own, with no combined total". The three aggregation rules stay on
+  -- Certificates and are reused through AttemptEngine.AggregateTotalScore; this bit only says whether
+  -- a total is reported at all.
+  ReportsSkillsSeparately BIT NOT NULL CONSTRAINT DF_CefrCutScoreVersions_Separate DEFAULT 0,
+  -- The published standard-setting study the numbers are taken from. Required: a cut score with no
+  -- source is the arithmetic-on-a-total this table replaces.
+  Source                 NVARCHAR(200) NOT NULL,
+  PublishedAt            DATE NOT NULL,
+  CONSTRAINT PK_CefrCutScoreVersions PRIMARY KEY (CertId, TableVersion),
+  CONSTRAINT CK_CefrCutScoreVersions_Version CHECK (TableVersion > 0)
+);
+GO
+-- One row per (certificate, version, skill, level). §4.6's table has three row kinds and a single
+-- (MinScaled, MaxScaled) pair cannot carry all three, so MinScaled is NULL exactly where the row
+-- records no range:
+--
+--   'cut'             MinScaled..MaxScaled is that level. The only kind a level may be read from.
+--   'uncertified'     a range the certificate scores but does not certify (IELTS/VSTEP below A1).
+--                     The scaled value is real; the level is never awarded.
+--   'display_ceiling' NO range at all. MaxScaled is the highest value the scale can display when the
+--                     coordinate sits above the highest level the certificate can express (TOEIC tops
+--                     out at C1, VSTEP has no C2). MinScaled NULL is what makes "emit the ceiling as a
+--                     level" unrepresentable rather than a branch a caller has to remember.
+CREATE TABLE CefrCutScores (
+  CutScoreId    INT IDENTITY(1,1) PRIMARY KEY,
+  CertId        INT NOT NULL,
+  TableVersion  INT NOT NULL,
+  SkillId       INT NOT NULL,
+  -- Reportable levels only: the Pre-A1 floor is a result, not an authored band.
+  CefrLevel     VARCHAR(10) NOT NULL
+    CONSTRAINT CK_CefrCutScores_Level CHECK (CefrLevel IN ('pre_a1','A1','A2','B1','B2','C1','C2')),
+  RowKind       VARCHAR(20) NOT NULL
+    CONSTRAINT CK_CefrCutScores_RowKind CHECK (RowKind IN ('cut','uncertified','display_ceiling')),
+  MinScaled     INT NULL,
+  MaxScaled     INT NOT NULL,
+  CONSTRAINT CK_CefrCutScores_Scaled CHECK (MaxScaled >= 0 AND (MinScaled IS NULL OR MinScaled >= 0)),
+  -- The shape that carries all three kinds. A ceiling row with a range, or a cut row without one,
+  -- is not a partly-wrong row: it is a lookup that has no answer and would be guessed instead.
+  CONSTRAINT CK_CefrCutScores_KindsHoldTheirShape CHECK (
+       (RowKind =  'display_ceiling' AND MinScaled IS NULL)
+    OR (RowKind <> 'display_ceiling' AND MinScaled IS NOT NULL AND MinScaled <= MaxScaled)),
+  -- One answer per level per version. Two rows for B1 in one version is a lookup with two answers.
+  CONSTRAINT UQ_CefrCutScores_Version_Skill_Level UNIQUE (CertId, TableVersion, SkillId, CefrLevel),
+  CONSTRAINT FK_CefrCutScores_Version FOREIGN KEY (CertId, TableVersion)
+    REFERENCES CefrCutScoreVersions(CertId, TableVersion),
+  -- The skill must belong to this same certificate: one certificate's cut scores cannot describe
+  -- another's skill (the isolation rule that carries CertId down every table).
+  CONSTRAINT FK_CefrCutScores_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId)
+);
+GO
+-- INV-5: no two cut ranges for one skill may overlap within one version, or a score has two levels.
+-- A CHECK cannot compare across rows, so this is a trigger. Two properties matter and both are
+-- tested in domain32:
+--   * the predicate is scoped to (CertId, TableVersion, SkillId) - a guard scoped to the certificate
+--     alone would refuse the same Reading range beside the Listening one, and a guard that ignored
+--     TableVersion would refuse every re-standardisation;
+--   * it compares the inserted rows against the whole table, so a single multi-row INSERT that
+--     overlaps ITSELF is caught. A version is loaded in one statement, which is exactly the shape a
+--     "compare against pre-existing rows only" trigger would let through.
+CREATE TRIGGER trg_CefrCutScores_NoOverlap
+ON CefrCutScores AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM CefrCutScores a
+    JOIN CefrCutScores b
+      ON b.CertId = a.CertId
+     AND b.TableVersion = a.TableVersion
+     AND b.SkillId = a.SkillId
+     AND b.CutScoreId <> a.CutScoreId
+    WHERE a.CutScoreId IN (SELECT CutScoreId FROM inserted)
+      -- A display-ceiling row records a single value, not an interval, so it cannot overlap.
+      AND a.MinScaled IS NOT NULL
+      AND b.MinScaled IS NOT NULL
+      AND a.MinScaled <= b.MaxScaled
+      AND a.MaxScaled >= b.MinScaled
+  )
+    THROW 50050, 'CefrCutScores ranges may not overlap within one certificate, skill and table version.', 1;
+END;
+GO
 -- ============ Domain 3: Content ============
 -- (Sections already carries CertId + composite FK from Task 1)
 CREATE TABLE Exams (
