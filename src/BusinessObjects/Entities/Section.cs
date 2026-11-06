@@ -74,9 +74,6 @@ public partial class Section
     public virtual ICollection<ExamItem> ExamItems { get; set; } = new List<ExamItem>();
 
     [InverseProperty("Section")]
-    public virtual ICollection<PathModuleItem> PathModuleItems { get; set; } = new List<PathModuleItem>();
-
-    [InverseProperty("Section")]
     public virtual ICollection<PracticeSession> PracticeSessionSections { get; set; } = new List<PracticeSession>();
 
     [InverseProperty("Section")]

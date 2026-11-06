@@ -36,17 +36,27 @@ IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_Questions_Diffic
   THROW 50000, 'EXPECT_REJECT FAILED: CK_Questions_Difficulty still exists; it went with the column', 1;
 PRINT 'Questions carries no difficulty and no 1-5 CHECK';
 
--- 3. PathModuleItems likewise. Its level requirement is unexpressed here by decision: the column was
---    removed rather than replaced, and #232 carries the level on LearnerPathSteps.
-IF EXISTS (
+-- 3. #232: PathModuleItems is gone, so a column lookup against it would find nothing and report the
+--    table clean while it is absent for a different reason. Assert the drop itself, and that the level
+--    requirement has a home: a step's own TargetCefr, with its authored-level CHECK. A lookup that
+--    found nothing would pass this check on a database with no path steps at all, so the CHECK is
+--    required to exist by name rather than merely not to be contradicted.
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'PathModuleItems')
+  THROW 50000, 'EXPECT_REJECT FAILED: PathModuleItems still exists; D10 dropped the template scaffolding', 1;
+PRINT 'PathModuleItems is dropped';
+
+IF NOT EXISTS (
   SELECT 1 FROM sys.columns c
   JOIN sys.tables t ON t.object_id = c.object_id
-  WHERE t.name = 'PathModuleItems' AND c.name = 'DifficultyLevel'
+  WHERE t.name = 'LearnerPathSteps' AND c.name = 'TargetCefr'
 )
-  THROW 50000, 'EXPECT_REJECT FAILED: PathModuleItems.DifficultyLevel still exists; #231 dropped it', 1;
-IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_PMI_Difficulty')
-  THROW 50000, 'EXPECT_REJECT FAILED: CK_PMI_Difficulty still exists; it went with the column', 1;
-PRINT 'PathModuleItems carries no difficulty and no 1-5 CHECK';
+  THROW 50000, 'EXPECT_REJECT FAILED: LearnerPathSteps.TargetCefr is missing; #232 carries the step level here', 1;
+IF NOT EXISTS (
+  SELECT 1 FROM sys.check_constraints
+  WHERE name = 'CK_Steps_TargetCefr' AND definition LIKE '%''A1''%' AND definition LIKE '%''C2''%'
+)
+  THROW 50000, 'EXPECT_REJECT FAILED: CK_Steps_TargetCefr is missing or does not name A1..C2', 1;
+PRINT 'the step carries its own level with an authored-level CHECK';
 
 -- 4. the level column the difficulty was replaced by is still the authored ladder, unchanged. A
 --    retirement that widened this CHECK would let 'pre_a1' content in through the back door.

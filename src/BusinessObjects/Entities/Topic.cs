@@ -38,5 +38,9 @@ public partial class Topic
     /// <summary>#187: the practice sessions drawn from this topic's cells.</summary>
     [InverseProperty("Topic")]
     public virtual ICollection<PracticeSession> PracticeSessions { get; set; } = new List<PracticeSession>();
+
+    /// <summary>#232: the path steps drilled at this topic.</summary>
+    [InverseProperty("Topic")]
+    public virtual ICollection<LearnerPathStep> LearnerPathSteps { get; set; } = new List<LearnerPathStep>();
 }
 

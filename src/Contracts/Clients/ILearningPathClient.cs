@@ -7,8 +7,10 @@ public interface ILearningPathClient
     Task<LearningPathSummaryDto> GetLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) => GetLearningPathAsync(cancellationToken);
     Task<LearningPathSummaryDto> GenerateLearningPathAsync(GenerateLearningPathRequest? request, CancellationToken cancellationToken = default);
     Task<LearningPathSummaryDto> GenerateLearningPathAsync(GenerateLearningPathRequest? request, string bearerToken, CancellationToken cancellationToken = default) => GenerateLearningPathAsync(request, cancellationToken);
-    Task<LearningPathModuleDetailDto> GetLearningPathModuleAsync(int moduleId, CancellationToken cancellationToken = default);
-    Task<LearningPathModuleDetailDto> GetLearningPathModuleAsync(int moduleId, string bearerToken, CancellationToken cancellationToken = default) => GetLearningPathModuleAsync(moduleId, cancellationToken);
+    /// <summary>#232: one step by its own id. There is no module to address: a step is a coordinate
+    /// the timeline renders inline.</summary>
+    Task<PathStepDto?> GetLearningPathStepAsync(int stepId, CancellationToken cancellationToken = default);
+    Task<PathStepDto?> GetLearningPathStepAsync(int stepId, string bearerToken, CancellationToken cancellationToken = default) => GetLearningPathStepAsync(stepId, cancellationToken);
     Task<StartStepResultDto> StartLearningPathStepAsync(int stepId, CancellationToken cancellationToken = default);
     Task<StartStepResultDto> StartLearningPathStepAsync(int stepId, string bearerToken, CancellationToken cancellationToken = default) => StartLearningPathStepAsync(stepId, cancellationToken);
     Task<ResetLearningPathResultDto> ResetLearningPathAsync(CancellationToken cancellationToken = default);

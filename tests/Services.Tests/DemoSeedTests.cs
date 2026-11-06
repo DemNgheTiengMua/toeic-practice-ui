@@ -115,10 +115,8 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
                 JOIN Skills s ON s.SkillId=c.SkillId AND s.CertId=e.CertId AND s.Code='WRIT'
                 WHERE e.Name IN ('IELTS-DIAG-01 Writing Extension','VSTEP-DIAG-01 Writing Extension')
                 """));
-            Assert.Equal(2, await CountAsync("""
-                SELECT COUNT(*) FROM PathTemplates
-                WHERE Name IN ('IELTS Diagnostic Remedial Sprint','VSTEP Diagnostic Remedial Sprint')
-                """));
+            // #232: the diagnostic sprint seeds its lessons and cards; the path steps that use them are
+            // planned at run time, so there is no template row to count here any more.
             Assert.Equal(8, await CountAsync("""
                 SELECT COUNT(*) FROM Lessons
                 WHERE Title IN (
@@ -158,17 +156,26 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
                   AND (SELECT COUNT(*) FROM LessonCards c WHERE c.LessonId=l.LessonId)=4
                   AND (SELECT COUNT(DISTINCT CardType) FROM LessonCards c WHERE c.LessonId=l.LessonId)=4
                 """));
-            Assert.Equal(8, await CountAsync("""
-                SELECT COUNT(*) FROM PathModules m
-                JOIN PathTemplates t ON t.TemplateId=m.TemplateId AND t.CertId=m.CertId
-                WHERE t.Name IN ('IELTS Diagnostic Remedial Sprint','VSTEP Diagnostic Remedial Sprint')
+            // #232: PathModules and PathModuleItems are dropped. The seeded demo path is asserted through
+            // the coordinate instead: a lesson step, a drill step and a review step, each with a level.
+            Assert.Equal(6, await CountAsync("""
+                SELECT COUNT(*) FROM LearnerPathSteps s
+                JOIN LearnerPaths p ON p.LearnerPathId=s.LearnerPathId
+                JOIN Users u ON u.UserId=p.UserId
+                WHERE u.Email='learner@demo.local' AND p.Status='active'
                 """));
-            Assert.Equal(4, await CountAsync("""
-                SELECT COUNT(*) FROM PathModuleItems i
-                JOIN PathModules m ON m.ModuleId=i.ModuleId
-                JOIN PathTemplates t ON t.TemplateId=m.TemplateId AND t.CertId=m.CertId
-                WHERE t.Name IN ('IELTS Diagnostic Remedial Sprint','VSTEP Diagnostic Remedial Sprint')
-                  AND i.ItemType='ai_task'
+            Assert.Equal(3, await CountAsync("""
+                SELECT COUNT(DISTINCT s.StepType) FROM LearnerPathSteps s
+                JOIN LearnerPaths p ON p.LearnerPathId=s.LearnerPathId
+                JOIN Users u ON u.UserId=p.UserId
+                WHERE u.Email='learner@demo.local' AND p.Status='active'
+                """));
+            Assert.Equal(6, await CountAsync("""
+                SELECT COUNT(*) FROM LearnerPathSteps s
+                JOIN LearnerPaths p ON p.LearnerPathId=s.LearnerPathId
+                JOIN Users u ON u.UserId=p.UserId
+                WHERE u.Email='learner@demo.local' AND p.Status='active'
+                AND s.TargetCefr IN ('A1','A2','B1','B2','C1','C2')
                 """));
 
             // 1. Verify demo accounts

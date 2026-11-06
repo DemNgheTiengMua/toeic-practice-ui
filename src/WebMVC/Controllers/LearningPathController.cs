@@ -46,7 +46,9 @@ public sealed class LearningPathController(
             CalibrationViewDto? calibration = null;
             try
             {
-                calibration = await placementClient.GetCalibrationAsync(cancellationToken);
+                calibration = placementClient is null
+                    ? null
+                    : await placementClient.GetCalibrationAsync(cancellationToken);
             }
             catch (ApiException ex)
             {
@@ -95,24 +97,24 @@ public sealed class LearningPathController(
         }
     }
 
-    [HttpGet("/learning-path/modules/{moduleId:int}")]
-    public async Task<IActionResult> ModuleDetail(int moduleId, CancellationToken cancellationToken)
+    [HttpGet("/learning-path/steps/{stepId:int}")]
+    public async Task<IActionResult> Step(int stepId, CancellationToken cancellationToken)
     {
         try
         {
-            var detail = await api.GetLearningPathModuleAsync(moduleId, cancellationToken);
-            return View(new LearningPathModuleDetailViewModel(detail, TempData["ErrorMessage"] as string));
-        }
-        catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.LearningPathModuleNotFound || ex.Code == ApiError.Codes.LearningPathNotFound)
-        {
-            logger.LogWarning(ex, "Learning path module {ModuleId} not found", moduleId);
-            TempData["ShellError"] = "Module was not found.";
-            return RedirectToAction(nameof(Index));
+            var step = await api.GetLearningPathStepAsync(stepId, cancellationToken);
+            if (step is null)
+            {
+                TempData["ShellError"] = "Step was not found.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(step);
         }
         catch (ApiException ex)
         {
-            logger.LogError(ex, "Failed to load learning path module {ModuleId}", moduleId);
-            TempData["ShellError"] = "Could not load the module detail.";
+            logger.LogError(ex, "Failed to load learning path step {StepId}", stepId);
+            TempData["ShellError"] = "Could not load the step.";
             return RedirectToAction(nameof(Index));
         }
     }

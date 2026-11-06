@@ -49,7 +49,7 @@ public sealed class CefrLevelMigrationTests
             CefrLevelCode: code),
     };
 
-    public static TheoryData<Type> MigratedEntities => new() { typeof(Question), typeof(PathModuleItem) };
+    public static TheoryData<Type> MigratedEntities => new() { typeof(Question) };
 
     [Theory]
     [MemberData(nameof(MigratedEntities))]
@@ -215,11 +215,16 @@ public sealed class CefrLevelMigrationTests
         Assert.Equal("varchar(10)", mapped.GetColumnType());
         Assert.Equal(typeof(string), mapped.GetValueConverter()!.ProviderClrType);
 
-        // PathModuleItem has no level column: #231 removed the difficulty rather than inventing one, and
-        // the level a step is prescribed at arrives with the path rebuild (#232).
-        var pathItem = db.Model.FindEntityType(typeof(PathModuleItem));
-        Assert.NotNull(pathItem);
-        Assert.Null(pathItem.FindProperty("DifficultyLevel"));
-        Assert.Null(pathItem.FindProperty("CefrLevel"));
+        // #232: the level a step is prescribed at now lives on LearnerPathSteps.TargetCefr, so this checks
+        // the step's own column rather than the dropped PathModuleItems table. A step at no level, or a
+        // step carrying the 1-5 difficulty beside its level, is the second scale D1 forbids.
+        var step = db.Model.FindEntityType(typeof(LearnerPathStep));
+        Assert.NotNull(step);
+        Assert.Null(step.FindProperty("DifficultyLevel"));
+
+        var targetCefr = step.FindProperty("TargetCefr");
+        Assert.NotNull(targetCefr);
+        Assert.Equal(typeof(string), targetCefr.ClrType);
+        Assert.Equal("varchar(10)", targetCefr.GetColumnType());
     }
 }

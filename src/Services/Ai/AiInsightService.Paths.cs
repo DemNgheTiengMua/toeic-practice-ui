@@ -95,7 +95,6 @@ public sealed partial class AiInsightService
     {
         var path = await db.LearnerPaths
             .AsNoTracking()
-            .Include(p => p.PathTemplate)
             .Include(p => p.Cert)
             .FirstOrDefaultAsync(p => p.LearnerPathId == insight.LearnerPathId!.Value, cancellationToken);
 
@@ -103,14 +102,16 @@ public sealed partial class AiInsightService
 
         var certName = path.Cert.Name;
 
+        // #232: a step carries its own coordinate, so the narrative reads the skill and level off the
+        // step itself rather than walking a template->module->item chain that no longer exists.
         var allSteps = await db.LearnerPathSteps
             .AsNoTracking()
-            .Include(s => s.PathModuleItem)
-                .ThenInclude(pmi => pmi.PathModule)
-                    .ThenInclude(pm => pm.Skill)
+            .Include(s => s.Skill)
+            .Include(s => s.Topic)
             .Where(s => s.LearnerPathId == path.LearnerPathId)
-            .OrderBy(s => s.PathModuleItem.PathModule.DisplayOrder)
-            .ThenBy(s => s.PathModuleItem.DisplayOrder)
+            .OrderBy(s => s.WeekNumber ?? 0)
+            .ThenBy(s => s.WeekSequence)
+            .ThenBy(s => s.StepId)
             .ToListAsync(cancellationToken);
 
         int totalSteps = allSteps.Count;
@@ -174,14 +175,14 @@ public sealed partial class AiInsightService
             AiInsightScope.Path,
             null,
             null,
-            $"{path.PathTemplate.FromBandCode} → {path.PathTemplate.ToBandCode} Learning Path",
+            $"{path.CurrentBandCode} → {targetBand?.TargetBandCode} Learning Path",
             totalSteps,
             completedCount,
             completedSteps.Count(s => (s.Score ?? 0) >= 70),
             null,
             null,
-            targetBand?.TargetBandCode ?? path.PathTemplate.ToBandCode,
-            targetBand?.ScoreBand?.Name ?? path.PathTemplate.ToBandCode,
+            targetBand?.TargetBandCode,
+            targetBand?.ScoreBand?.Name ?? targetBand?.TargetBandCode,
             latestPlacement?.TotalScore,
             path.CurrentBandCode,
             Array.Empty<InsightQuestionDetail>(),

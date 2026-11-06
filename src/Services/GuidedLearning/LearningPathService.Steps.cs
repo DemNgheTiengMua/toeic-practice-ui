@@ -6,21 +6,22 @@ using System.Threading.Tasks;
 using BusinessObjects;
 using DataAccess;
 using BusinessObjects.Entities;
-using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
-using Services.Credits;
 
 namespace Services;
 
 public sealed partial class LearningPathService
 {
-
+    /// <summary>
+    /// #232 / D10: opens a step on its own route. The three step types bind to three different
+    /// surfaces — the item selector, the lesson reader and <c>IAttemptEngine</c> — and this switch is
+    /// where that binding is real. A single route serving all three would be the label the ticket says
+    /// is not three types.
+    /// </summary>
     public async Task<StartStepResult> StartStepAsync(int userId, int stepId, CancellationToken cancellationToken = default)
     {
         var step = await db.LearnerPathSteps
             .Include(s => s.LearnerPath)
-            .Include(s => s.PathModuleItem)
-                .ThenInclude(pmi => pmi.PathModule)
             .FirstOrDefaultAsync(s => s.StepId == stepId, cancellationToken)
             ?? throw new LearningPathException(LearningPathException.StepNotFound, $"Step {stepId} not found.");
 
@@ -29,126 +30,225 @@ public sealed partial class LearningPathService
             throw new LearningPathException(LearningPathException.StepNotFound, $"Step {stepId} not found.");
         }
 
-        if (step.Status == "locked")
+        if (step.Status == LearnerPathStepStatus.Locked.ToCode())
         {
             throw new LearningPathException(LearningPathException.StepLocked, "This step is locked.");
         }
 
-        if (step.Status == "available")
+        if (step.Status == LearnerPathStepStatus.Available.ToCode())
         {
-            step.Status = "in_progress";
+            step.Status = LearnerPathStepStatus.InProgress.ToCode();
             step.StartedAt ??= DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        var itemType = EnumCodes.Parse<PathModuleItemType>(step.PathModuleItem.ItemType);
+        var stepType = EnumCodes.Parse<PathStepType>(step.StepType);
+        var route = LearningPathPlanner.ExecutionRouteOf(stepType);
 
-        switch (itemType)
+        return route switch
         {
-            case PathModuleItemType.PracticeSection:
-            {
-                int sectionId = step.PathModuleItem.RefSectionId
-                    ?? throw new InvalidOperationException($"Practice section step {stepId} is missing RefSectionId.");
+            StepRoute.ItemSelector => await StartDrillStepAsync(step, stepType, cancellationToken),
+            StepRoute.LessonReader => await StartLessonStepAsync(step, stepType, cancellationToken),
+            StepRoute.AttemptEngine => await StartMockSectionStepAsync(step, stepType, cancellationToken),
+            _ => throw new InvalidOperationException($"Step {stepId} names a route with no execution: {route}."),
+        };
+    }
 
-                var existingSession = await db.PracticeSessions
-                    .Where(ps => ps.LearnerPathStepId == stepId && ps.UserId == userId)
-                    .OrderByDescending(ps => ps.StartedAt)
-                    .FirstOrDefaultAsync(cancellationToken);
+    /// <summary>
+    /// A drill runs through the item selector (D11). It draws from <c>(cert, skill, topic, level)</c>,
+    /// excluding placement-eligible items, ordered least-seen first.
+    /// <para>
+    /// <b>Resume is at the exact unsubmitted item.</b> A step already holding a session hands back the
+    /// same session; the practice screen's own "first unanswered" rule then lands on the exact item the
+    /// learner left.
+    /// </para>
+    /// <para>
+    /// shortcut: this is the path's own draw, not yet the one selector #235 collapses into
+    /// SmartPracticePlanner. Upgrade when #235 lands — this file then calls that one selector and the
+    /// two origins cannot disagree.
+    /// </para>
+    /// </summary>
+    private async Task<StartStepResult> StartDrillStepAsync(
+        LearnerPathStep step, PathStepType stepType, CancellationToken cancellationToken)
+    {
+        var existingSession = await db.PracticeSessions
+            .Where(ps => ps.LearnerPathStepId == step.StepId)
+            .OrderByDescending(ps => ps.StartedAt)
+            .FirstOrDefaultAsync(cancellationToken);
 
-                if (existingSession != null)
-                {
-                    string target = existingSession.Status == PracticeStatus.Finished.ToCode()
-                        ? $"/practice/{existingSession.SessionId}/summary"
-                        : $"/practice/{existingSession.SessionId}";
-                    return new StartStepResult(stepId, itemType, target, existingSession.SessionId, null);
-                }
-
-                var section = await db.Sections.SingleAsync(s => s.SectionId == sectionId, cancellationToken);
-                var questionIds = await db.Questions
-                    .Where(q => q.SectionId == sectionId && q.QuestionType == "mcq" && db.QuestionOptions.Any(o => o.QuestionId == q.QuestionId))
-                    .OrderBy(q => q.DisplayOrder)
-                    .ThenBy(q => q.QuestionId)
-                    .Select(q => q.QuestionId)
-                    .ToListAsync(cancellationToken);
-
-                if (questionIds.Count == 0)
-                {
-                    throw new LearningPathException(LearningPathException.NoQuestionsAvailable, $"No practice questions are available for section {sectionId}.");
-                }
-
-                int qCount = Math.Min(questionIds.Count, step.PathModuleItem.QuestionCount ?? 20);
-                if (qCount == 0 && questionIds.Count > 0) qCount = questionIds.Count;
-
-                var session = new PracticeSession
-                {
-                    UserId = userId,
-                    CertId = section.CertId,
-                    SectionId = sectionId,
-                    Modality = section.Modality,
-                    QuestionCount = Math.Max(1, qCount),
-                    Status = PracticeStatus.InProgress.ToCode(),
-                    CorrectCount = 0,
-                    QuestionSource = QuestionSource.All.ToCode(),
-                    LearnerPathStepId = step.StepId,
-                    StartedAt = DateTimeOffset.UtcNow
-                };
-
-                db.PracticeSessions.Add(session);
-                await db.SaveChangesAsync(cancellationToken);
-
-                for (int i = 0; i < qCount; i++)
-                {
-                    db.PracticeAnswers.Add(new PracticeAnswer
-                    {
-                        SessionId = session.SessionId,
-                        QuestionId = questionIds[i],
-                        SectionId = sectionId,
-                        SelectedOptionId = null,
-                        IsCorrect = null,
-                        HintUsed = false,
-                        DisplayOrder = i + 1
-                    });
-                }
-
-                await db.SaveChangesAsync(cancellationToken);
-                return new StartStepResult(stepId, itemType, $"/practice/{session.SessionId}", session.SessionId, null);
-            }
-
-            case PathModuleItemType.MockExam:
-            {
-                int examId = step.PathModuleItem.RefExamId
-                    ?? throw new InvalidOperationException($"Mock exam step {stepId} is missing RefExamId.");
-                return new StartStepResult(stepId, itemType, $"/exams/{examId}/instructions", null, null);
-            }
-
-            case PathModuleItemType.AiTask:
-            {
-                if (step.PathModuleItem.RefExamId is { } refExamId)
-                {
-                    var exam = await db.Exams.FindAsync([refExamId], cancellationToken);
-                    if (exam?.Purpose == "speaking_practice")
-                    {
-                        return new StartStepResult(stepId, itemType, $"/speaking/{refExamId}/instructions", null, null);
-                    }
-                    if (exam?.Purpose == "writing_practice")
-                    {
-                        return new StartStepResult(stepId, itemType, $"/writing/{refExamId}/instructions", null, null);
-                    }
-                    return new StartStepResult(stepId, itemType, $"/exams/{refExamId}/instructions", null, null);
-                }
-                return new StartStepResult(stepId, itemType, "/practice", null, null);
-            }
-
-            case PathModuleItemType.Lesson:
-            {
-                int lessonId = step.PathModuleItem.RefLessonId
-                    ?? throw new InvalidOperationException($"Lesson step {stepId} is missing RefLessonId.");
-                return new StartStepResult(stepId, itemType, $"/lessons/{lessonId}", null, null);
-            }
-
-            case PathModuleItemType.Mentor:
-            default:
-                return new StartStepResult(stepId, itemType, "/mentors", null, null);
+        if (existingSession is not null)
+        {
+            var target = existingSession.Status == PracticeStatus.Finished.ToCode()
+                ? $"/practice/{existingSession.SessionId}/summary"
+                : $"/practice/{existingSession.SessionId}";
+            return new StartStepResult(step.StepId, stepType, StepRoute.ItemSelector, target, existingSession.SessionId, null);
         }
+
+        var level = CefrLevel.TryParseAuthored(step.TargetCefr, out var parsed)
+            ? parsed
+            : throw new InvalidOperationException($"Step {step.StepId} carries an unauthorable level '{step.TargetCefr}'.");
+
+        var selected = await DrawDrillItemsAsync(step, level, cancellationToken);
+
+        if (selected.Count == 0)
+        {
+            throw new LearningPathException(
+                LearningPathException.NoQuestionsAvailable,
+                $"No items are available for this step's topic at {step.TargetCefr}. Its cell is empty or every item is cooling down.");
+        }
+
+        var session = new PracticeSession
+        {
+            UserId = step.LearnerPath.UserId,
+            CertId = step.CertId,
+            SectionId = null,
+            TopicId = step.TopicId,
+            CefrLevel = level,
+            Modality = step.Modality,
+            QuestionCount = selected.Count,
+            Status = PracticeStatus.InProgress.ToCode(),
+            CorrectCount = 0,
+            QuestionSource = QuestionSource.All.ToCode(),
+            LearnerPathStepId = step.StepId,
+            StartedAt = DateTimeOffset.UtcNow,
+        };
+
+        db.PracticeSessions.Add(session);
+        await db.SaveChangesAsync(cancellationToken);
+
+        for (var i = 0; i < selected.Count; i++)
+        {
+            db.PracticeAnswers.Add(new PracticeAnswer
+            {
+                SessionId = session.SessionId,
+                QuestionId = null,
+                SectionId = null,
+                ItemId = selected[i].ItemId,
+                ItemVersionId = selected[i].ItemVersionId,
+                SelectedLabel = null,
+                SelectedOptionId = null,
+                IsCorrect = null,
+                HintUsed = false,
+                DisplayOrder = i + 1,
+            });
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        // The honest count the step actually got, which may be short of the tier's range: the step says
+        // so rather than claiming a size the cell cannot fill. The minutes stay the plan's own, because
+        // the week's budget is what the week is judged on and a per-item formula here would make the
+        // week's minutes disagree with the pace the learner set.
+        step.PlannedItemCount = selected.Count;
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new StartStepResult(step.StepId, stepType, StepRoute.ItemSelector, $"/practice/{session.SessionId}", session.SessionId, null);
+    }
+
+    /// <summary>
+    /// D11's selection order, applied to the step's own cell: least seen, then least recently seen,
+    /// then item id — so a repeated draw is a reproducible choice rather than whatever the storage
+    /// engine returns. Items still cooling down are excluded, and the step is never blocked: what is
+    /// left is what the step gets.
+    /// </summary>
+    private async Task<List<(int ItemId, int ItemVersionId)>> DrawDrillItemsAsync(
+        LearnerPathStep step, CefrLevel level, CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var wanted = step.PlannedItemCount
+            ?? LearningPathPlanner.ItemCountFor(EnumCodes.Parse<SizingTier>(step.SizingTier), availableInCell: null);
+
+        var items = await db.Items
+            .AsNoTracking()
+            .Where(i => i.Modality == step.Modality
+                && i.TopicId == step.TopicId
+                && i.CefrLevel == level
+                && i.LifecycleStatus == ActiveItemLifecycle
+                && i.PlacementEligible == DrillPlacementEligible)
+            .Select(i => new
+            {
+                i.ItemId,
+                TimesSeen = db.PracticeAnswers.Count(pa => pa.ItemId == i.ItemId && pa.Session.UserId == step.LearnerPath.UserId),
+                LastSeenAt = db.PracticeAnswers
+                    .Where(pa => pa.ItemId == i.ItemId && pa.Session.UserId == step.LearnerPath.UserId)
+                    .Max(pa => (DateTimeOffset?)pa.AnsweredAt),
+                CoolingUntil = db.UserQuestionHistories
+                    .Where(h => h.UserId == step.LearnerPath.UserId && h.QuestionId == i.ItemId)
+                    .Max(h => (DateTimeOffset?)h.CooldownUntil),
+            })
+            .ToListAsync(cancellationToken);
+
+        var eligible = items
+            .Where(i => i.CoolingUntil is null || i.CoolingUntil <= now)
+            .Where(i => i.LastSeenAt is null || i.LastSeenAt <= now)
+            .ToList();
+
+        if (eligible.Count == 0)
+        {
+            return [];
+        }
+
+        var itemIds = eligible.Select(i => i.ItemId).ToList();
+        var latestVersions = await db.ItemVersions
+            .AsNoTracking()
+            .Where(v => itemIds.Contains(v.ItemId))
+            .GroupBy(v => v.ItemId)
+            .Select(g => new { ItemId = g.Key, ItemVersionId = g.Max(v => v.ItemVersionId) })
+            .ToDictionaryAsync(v => v.ItemId, v => v.ItemVersionId, cancellationToken);
+
+        return eligible
+            .Where(i => latestVersions.ContainsKey(i.ItemId))
+            .OrderBy(i => i.TimesSeen)
+            .ThenBy(i => i.LastSeenAt ?? DateTimeOffset.MinValue)
+            .ThenBy(i => i.ItemId)
+            .Take(wanted)
+            .Select(i => (i.ItemId, latestVersions[i.ItemId]))
+            .ToList();
+    }
+
+    /// <summary>A lesson step opens the reader at its own lesson. The reader keeps its own progress
+    /// row, so a partially read lesson resumes where it was.</summary>
+    private Task<StartStepResult> StartLessonStepAsync(
+        LearnerPathStep step, PathStepType stepType, CancellationToken cancellationToken)
+    {
+        var lessonId = step.RefLessonId
+            ?? throw new InvalidOperationException($"Lesson step {step.StepId} names no lesson.");
+
+        return Task.FromResult(new StartStepResult(
+            step.StepId, stepType, StepRoute.LessonReader, $"/lessons/{lessonId}", null, null));
+    }
+
+    /// <summary>
+    /// A mock section is a real sitting, so it resolves through <c>IAttemptEngine</c>'s own exam path
+    /// rather than a second paper-opening scheme. The attempt is created by the sitting screen, which
+    /// owns the countdown and the credit movement; this returns where to go.
+    /// </summary>
+    private async Task<StartStepResult> StartMockSectionStepAsync(
+        LearnerPathStep step, PathStepType stepType, CancellationToken cancellationToken)
+    {
+        var examId = step.RefExamId
+            ?? throw new InvalidOperationException($"Mock section step {step.StepId} names no exam.");
+
+        var examExists = await db.Exams
+            .AsNoTracking()
+            .AnyAsync(e => e.ExamId == examId && e.CertId == step.CertId, cancellationToken);
+
+        if (!examExists)
+        {
+            throw new LearningPathException(
+                LearningPathException.NoQuestionsAvailable,
+                $"The mock exam this step opens ({examId}) is no longer available for this certificate.");
+        }
+
+        var attempt = await db.ExamAttempts
+            .AsNoTracking()
+            .Where(a => a.UserId == step.LearnerPath.UserId
+                && a.ExamId == examId
+                && a.Status == AttemptStatus.InProgress.ToCode())
+            .Select(a => (int?)a.AttemptId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new StartStepResult(
+            step.StepId, stepType, StepRoute.AttemptEngine, $"/exams/{examId}/instructions", null, attempt);
     }
 }

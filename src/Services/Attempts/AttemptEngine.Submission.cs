@@ -287,7 +287,7 @@ public sealed partial class AttemptEngine
                 await PathStepCompletion.CloseAsync(
                     db,
                     attempt.UserId,
-                    PathStepCompletion.Activity.MockExam,
+                    PathStepCompletion.Activity.MockSection,
                     attempt.ExamId,
                     score: attempt.TotalScore,
                     accuracyPct: null,
@@ -554,7 +554,7 @@ public sealed partial class AttemptEngine
                 await PathStepCompletion.CloseAsync(
                     db,
                     attempt.UserId,
-                    PathStepCompletion.Activity.MockExam,
+                    PathStepCompletion.Activity.MockSection,
                     attempt.ExamId,
                     score: attempt.TotalScore,
                     accuracyPct: null,

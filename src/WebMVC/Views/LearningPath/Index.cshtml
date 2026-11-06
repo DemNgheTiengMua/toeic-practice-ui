@@ -2,7 +2,7 @@
 @{
     Layout = "_LearnerLayout";
     ViewData["Title"] = "My learning path";
-    ViewData["Description"] = "Personalized learning path with structured modules to reach your target band.";
+    ViewData["Description"] = "Your four-week learning path, planned from your own per-skill levels.";
     var summary = Model.Summary;
 }
 
@@ -45,18 +45,35 @@ else
     <div class="row row--between" style="align-items: center;">
       <div>
         <h1 class="m-0 mb-1">@summary.FromBandCode → @summary.ToBandCode learning path</h1>
-        <p class="text-muted no-margin">From <strong>@summary.FromBandName</strong> to <strong>@summary.ToBandName</strong>. Modules unlock in order.</p>
+        <p class="text-muted no-margin">From <strong>@summary.FromBandName</strong> to <strong>@summary.ToBandName</strong>. Steps unlock in order.</p>
       </div>
     </div>
+
+    @* #232 / D10: each skill is pitched at its own level. Showing one overall level here would be the
+       defect the ticket exists to prevent, so every skill's level is printed. *@
+    @if (summary.SkillLevels is { Count: > 0 })
+    {
+      <div class="card"><div class="card__body">
+        <strong class="text-sm">Level by skill</strong>
+        <div class="row" style="gap: var(--space-4); flex-wrap: wrap; margin-top: var(--space-2);">
+          @foreach (var skillLevel in summary.SkillLevels)
+          {
+            <div class="font-mono text-sm">
+              <span class="text-muted">@skillLevel.Key</span>
+              <strong>@skillLevel.Value</strong>
+            </div>
+          }
+        </div>
+      </div></div>
+    }
 
     <div class="card"><div class="card__body stack">
       <div class="row row--between">
         <strong class="text-sm">Path progress</strong>
-
-        <span class="text-sm text-muted">@summary.CompletedModules of @summary.TotalModules modules done · @Model.TimeLeft</span>
+        <span class="text-sm text-muted">@summary.CompletedSteps of @summary.TotalSteps steps done · @Model.TimeLeft</span>
       </div>
 
-      <div class="progress" role="progressbar" aria-valuenow="@summary.CompletedModules" aria-valuemin="0" aria-valuemax="@summary.TotalModules" aria-label="Learning path progress">
+      <div class="progress" role="progressbar" aria-valuenow="@summary.CompletedSteps" aria-valuemin="0" aria-valuemax="@summary.TotalSteps" aria-label="Learning path progress">
         <div class="progress__bar" style="width: @Model.ProgressPercent%"></div>
       </div>
       <div class="cefr">
@@ -123,8 +140,10 @@ else
                   @foreach (var step in week.Steps)
                   {
                     <li class="text-sm">
-                      <span class="font-mono text-xs">@(step.EstimatedMinutes?.ToString() ?? "—")m</span>
+                      <span class="font-mono text-xs">@step.WeekSequence. @step.TargetCefr</span>
+                      <span class="font-mono text-xs">@step.TopicCode</span>
                       @step.Title
+                      <span class="text-muted text-xs">· @LearningPathIndexViewModel.StepTypeLabel(step.StepType) · @LearningPathIndexViewModel.SizeLabel(step)</span>
                       @if (step.Status == LearnerPathStepStatusDto.Done)
                       {
                         <span class="badge badge--success text-xs">Done</span>
@@ -137,6 +156,13 @@ else
                       {
                         <span class="badge text-xs">Locked</span>
                       }
+                      else
+                      {
+                        <form method="post" action="/learning-path/steps/@step.StepId/start" class="no-margin" style="display:inline">
+                          @Html.AntiForgeryToken()
+                          <button type="submit" class="btn btn--sm btn--primary">Start</button>
+                        </form>
+                      }
                     </li>
                   }
                 </ul>
@@ -147,64 +173,12 @@ else
       </section>
     }
 
-    @foreach (var group in Model.ModuleGroups)
-    {
-      <section>
-        <h2 class="section-group__title">@group.Key</h2>
-        <div class="stack">
-          @foreach (var module in group)
-          {
-            <article class="path-module">
-              <div class="path-module__status">
-                @if (module.Status == "done")
-                {
-                  <span class="badge badge--success">Done</span>
-                }
-                else if (module.Status == "in_progress")
-                {
-                  <span class="badge badge--warning">In progress</span>
-                }
-                else if (module.Status == "locked")
-                {
-                  <span class="badge">Locked</span>
-                }
-                else
-                {
-                  <span class="badge">Not started</span>
-                }
-              </div>
-              <div class="path-module__content">
-                <strong>@module.Title</strong>
-                <p>@module.SkillName · @module.TotalQuestions questions · Est. @module.EstimatedMinutes minutes</p>
-              </div>
-              @if (module.Status == "done")
-              {
-                <a href="/learning-path/modules/@module.ModuleId" class="btn btn--sm">Review</a>
-              }
-              else if (module.Status == "in_progress")
-              {
-                <a href="/learning-path/modules/@module.ModuleId" class="btn btn--primary btn--sm">Continue</a>
-              }
-              else if (module.Status == "locked")
-              {
-                <button class="btn btn--sm" disabled>Locked</button>
-              }
-              else
-              {
-                <a href="/learning-path/modules/@module.ModuleId" class="btn btn--primary btn--sm">Start</a>
-              }
-            </article>
-          }
-        </div>
-      </section>
-    }
-
     <div class="card mt-4"><div class="card__footer">
       <form method="post" action="/learning-path/reset">
         @Html.AntiForgeryToken()
         <div class="row row--between" style="align-items: center;">
-          <span class="text-sm text-muted">Resetting clears your module progress. Your placement result and target level are kept.</span>
-          <button type="submit" class="btn btn--danger" onclick="return confirm('Resetting clears your module progress. Are you sure you want to reset your learning path?');">Reset progress</button>
+          <span class="text-sm text-muted">Resetting clears your step progress. Your placement result and target level are kept.</span>
+          <button type="submit" class="btn btn--danger" onclick="return confirm('Resetting clears your step progress. Are you sure you want to reset your learning path?');">Reset progress</button>
         </div>
       </form>
     </div></div>

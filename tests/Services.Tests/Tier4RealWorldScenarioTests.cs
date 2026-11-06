@@ -249,6 +249,23 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
     {
         var certCode = Unique("PLC4");
         await database.SqlAsync($"""
+            -- #232: the canonical twenty topics are the step coordinate's topic axis.
+            INSERT INTO Topics (Modality, Code, Name)
+            SELECT v.Modality, v.Code, v.Name
+            FROM (VALUES
+              ('listening','L-GIST',N'Global gist'), ('listening','L-DET',N'Detail'),
+              ('listening','L-INF',N'Inference'), ('listening','L-ATT',N'Attitude'),
+              ('listening','L-FUNC',N'Function'), ('listening','L-ORG',N'Organisation'),
+              ('reading','R-GIST',N'Global thesis'), ('reading','R-DET',N'Local detail'),
+              ('reading','R-INF',N'Bridging inference'), ('reading','R-ATT',N'Authorial stance'),
+              ('reading','R-COH',N'Cohesion'), ('reading','R-GRAM',N'Grammar'),
+              ('speaking','S-DESC',N'Description'), ('speaking','S-INT',N'Interaction'),
+              ('speaking','S-ARG',N'Argument'), ('speaking','S-SYN',N'Synthesis'),
+              ('writing','W-CORR',N'Correspondence'), ('writing','W-DATA',N'Data'),
+              ('writing','W-ARG',N'Argument'), ('writing','W-DISC',N'Discourse')
+            ) v(Modality, Code, Name)
+            WHERE NOT EXISTS (SELECT 1 FROM Topics t WHERE t.Modality = v.Modality AND t.Code = v.Code);
+
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
             DECLARE @certStr VARCHAR(10) = CAST(@cert AS VARCHAR(10));
@@ -285,17 +302,29 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
               (@q, 'mcq', 'A', N'Placement Answer A', 1),
               (@q, 'mcq', 'B', N'Placement Answer B', 0);
 
-            -- Guided Learning Path Template
-            INSERT INTO PathTemplates (CertId, FromBandCode, ToBandCode, Name)
-            VALUES (@cert, 'A2', 'B1', N'Diagnostic Guided Path A2 to B1');
-            DECLARE @tpl INT = SCOPE_IDENTITY();
+            -- #232: the plan is synthesised from the skill's own level, so the fixture supplies the
+            -- coordinate's inputs - a cut-score row and drillable stock - rather than a template.
+            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
+            VALUES (@cert, 1, 0, N'Tier4 standard-setting', '2024-01-01');
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled) VALUES
+              (@cert, 1, @sR, 'A2', 'cut', 0, 50),
+              (@cert, 1, @sR, 'B1', 'cut', 51, 100);
 
-            INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, GroupName, Description, EstimatedMinutes)
-            VALUES (@tpl, @sR, @cert, 1, N'Module 1: Remediation', N'Core', N'Core Remediation', 30);
-            DECLARE @m1 INT = SCOPE_IDENTITY();
-
-            INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-            VALUES (@m1, @cert, @tpl, 'practice_section', @secR, 5, 1);
+            -- Stock is at B1 because the placement below reports B1, and it is stocked in R-COH rather
+            -- than R-DET because `PoolIngestionTests` counts that cell exactly and the pool is shared by
+            -- the whole assembly.
+            DECLARE @topicId INT = (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'reading' AND Code = 'R-COH');
+            DECLARE @n INT = 1;
+            WHILE @n <= 4
+            BEGIN
+              INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('B1', N'Passage');
+              INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus)
+              VALUES (SCOPE_IDENTITY(), 'reading', @topicId, 'B1', 'passage_comprehension', 0, 'demo', 'active');
+              DECLARE @itemId INT = SCOPE_IDENTITY();
+              INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
+              VALUES (@itemId, 1, N'Stem', N'A', N'B', N'C', N'D', 'A');
+              SET @n = @n + 1;
+            END
             """);
 
         var learnerId = await SeedLearnerWithCreditsAsync(0, certCode);
@@ -339,16 +368,16 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
         var pathSummary = await pathService.GeneratePathAsync(learnerId, "B1");
         Assert.NotNull(pathSummary);
         Assert.True(pathSummary.HasActivePath);
-        Assert.NotEmpty(pathSummary.Modules);
+        Assert.NotEmpty(pathSummary.OpenSteps);
 
-        // 6. Retrieve active module details and start the first step
-        var moduleId = pathSummary.Modules[0].ModuleId;
-        var moduleDetail = await pathService.GetModuleDetailAsync(learnerId, moduleId);
-        Assert.NotEmpty(moduleDetail.Steps);
-        var stepId = moduleDetail.Steps[0].StepId;
+        // 6. Retrieve the first step by its own id and start it. #232: a step is a coordinate, so
+        // there is no module to walk into.
+        var stepId = pathSummary.OpenSteps[0].StepId;
+        await database.SqlAsync($"UPDATE LearnerPathSteps SET Status = 'available' WHERE StepId = {stepId};");
 
         var startStepResult = await pathService.StartStepAsync(learnerId, stepId);
         Assert.NotNull(startStepResult);
+        Assert.Equal(StepRoute.ItemSelector, startStepResult.Route);
         Assert.NotNull(startStepResult.SessionId);
 
         // 7. Complete the step: #160 removed the manual "mark done" route with CompleteStepAsync, so

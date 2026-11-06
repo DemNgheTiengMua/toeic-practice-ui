@@ -343,7 +343,8 @@ public sealed partial class CertificateService
         var incomingCodes = incoming.Select(b => b.Code.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         // Bands that disappeared from the form. Deleting one still referenced by a learner's target
-        // band or a path template would violate FK_TargetBands_Band and its siblings.
+        // band would violate FK_TargetBands_Band and its siblings. #232 removed the fourth referrer
+        // (PathTemplates), so the target band is the only surviving one.
         var removals = existing
             .Where(b => !incomingCodes.Contains(b.Code))
             .ToList();
@@ -352,10 +353,6 @@ public sealed partial class CertificateService
             var referencedCodes = (await db.TargetBands
                     .Where(t => t.CertId == certId)
                     .Select(t => t.TargetBandCode)
-                    .ToListAsync(cancellationToken))
-                .Concat(await db.PathTemplates
-                    .Where(p => p.CertId == certId)
-                    .SelectMany(p => new[] { p.FromBandCode, p.ToBandCode })
                     .ToListAsync(cancellationToken))
                 .Where(code => code is not null)
                 .Select(code => code!)

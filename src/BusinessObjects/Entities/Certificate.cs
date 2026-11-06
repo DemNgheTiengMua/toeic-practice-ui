@@ -60,9 +60,6 @@ public partial class Certificate
     public virtual ICollection<MentorProfile> MentorProfiles { get; set; } = new List<MentorProfile>();
 
     [InverseProperty("Cert")]
-    public virtual ICollection<PathTemplate> PathTemplates { get; set; } = new List<PathTemplate>();
-
-    [InverseProperty("Cert")]
     public virtual ICollection<PlacementTest> PlacementTests { get; set; } = new List<PlacementTest>();
 
     /// <summary>#187: drills carry their certificate directly, so a pool drill needs no section.</summary>

@@ -44,8 +44,9 @@ public partial class Lesson
     [InverseProperty("Lesson")]
     public virtual ICollection<LessonCard> LessonCards { get; set; } = new List<LessonCard>();
 
+    /// <summary>#232: path steps whose lesson reader is this lesson.</summary>
     [InverseProperty("Lesson")]
-    public virtual ICollection<PathModuleItem> PathModuleItems { get; set; } = new List<PathModuleItem>();
+    public virtual ICollection<LearnerPathStep> LearnerPathSteps { get; set; } = new List<LearnerPathStep>();
 
     [ForeignKey("SkillId, CertId")]
     [InverseProperty("Lessons")]

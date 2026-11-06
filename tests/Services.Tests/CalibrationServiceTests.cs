@@ -53,6 +53,10 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
               (@cert, 'B1', N'Intermediate', 40, 59, 2),
               (@cert, 'B2', N'Upper intermediate', 60, 90, 3);
 
+            -- #232: the step needs a topic coordinate.
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Detail');
+
             INSERT INTO Roles (Code, Name) SELECT 'learner', N'Learner'
               WHERE NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner');
             INSERT INTO Users (RoleId, Email, PasswordHash, FullName, ActiveCertId)
@@ -72,22 +76,15 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
             INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ResultBandCode, AttemptId, TotalScore, TakenAt, WrittenByService, ProjectionVersion)
               VALUES (@user, @cert, @exam, 'done', '{placedBand}', @attempt, 70, DATEADD(DAY, -10, SYSDATETIMEOFFSET()), 'AttemptEngine', 1);
 
-            INSERT INTO PathTemplates (CertId, FromBandCode, ToBandCode, Name)
-              VALUES (@cert, 'B1', 'B2', N'Template {certCode}');
-            DECLARE @tpl INT = SCOPE_IDENTITY();
-            INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, EstimatedMinutes)
-              VALUES (@tpl, @skill, @cert, 1, N'Module', 20);
-            DECLARE @mod INT = SCOPE_IDENTITY();
-            INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-              VALUES (@mod, @cert, @tpl, 'practice_section', @sec, 10, 1);
-            DECLARE @item INT = SCOPE_IDENTITY();
-
-            INSERT INTO LearnerPaths (UserId, CertId, TemplateId, CurrentBandCode, Status)
-              VALUES (@user, @cert, @tpl, '{placedBand}', 'active');
+            -- #232: a path is a coordinate set. The fixture names the skill's own topic and level rather
+            -- than pointing at a template's module item.
+            INSERT INTO LearnerPaths (UserId, CertId, CurrentBandCode, Status)
+              VALUES (@user, @cert, '{placedBand}', 'active');
             DECLARE @path INT = SCOPE_IDENTITY();
-            INSERT INTO LearnerPathSteps (LearnerPathId, PathModuleItemId, TemplateId, Status)
-              VALUES (@path, @item, @tpl, 'available');
-
+            INSERT INTO LearnerPathSteps (LearnerPathId, CertId, SkillId, Modality, TopicId, TargetCefr, StepType, SizingTier, Status)
+              VALUES (@path, @cert, @skill, 'reading',
+                      (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'reading'),
+                      'B1', 'focus_practice', 'developing', 'available');
             SELECT @user AS UserId, @path AS PathId, @sec AS SectionId;
             """);
 

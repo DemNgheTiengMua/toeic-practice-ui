@@ -37,13 +37,13 @@ public sealed class LearningPathControllerTests
                 TargetScore: null,
                 Status: null,
                 StartedAt: null,
-                TotalModules: 0,
-                CompletedModules: 0,
+                TotalSteps: 0,
+                CompletedSteps: 0,
                 TotalEstimatedMinutes: 0,
                 RemainingMinutes: 0,
                 CefrBands: [],
-                Modules: [],
-                NextModuleId: null)
+                OpenSteps: [],
+                NextStepId: null)
         };
 
         var controller = CreateController(api);
@@ -52,7 +52,7 @@ public sealed class LearningPathControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<LearningPathIndexViewModel>(viewResult.Model);
         Assert.False(model.Summary.HasActivePath);
-        Assert.Empty(model.Summary.Modules);
+        Assert.Empty(model.Summary.OpenSteps);
     }
 
     [Fact]
@@ -74,17 +74,17 @@ public sealed class LearningPathControllerTests
                 TargetScore: 785,
                 Status: LearnerPathStatusDto.Active,
                 StartedAt: DateTimeOffset.UtcNow,
-                TotalModules: 2,
-                CompletedModules: 1,
+                TotalSteps: 3,
+                CompletedSteps: 1,
                 TotalEstimatedMinutes: 45,
                 RemainingMinutes: 20,
                 CefrBands: [],
-                Modules:
+                OpenSteps:
                 [
-                    new LearningPathModuleSummaryDto(1, 1, "Module 1", "Group 1", "Desc 1", 25, 1, "READ", "Reading", ModalityDto.Reading, "done", false, false, 20, 20, 1, 1, null),
-                    new LearningPathModuleSummaryDto(2, 1, "Module 2", "Group 1", "Desc 2", 20, 2, "READ", "Reading", ModalityDto.Reading, "in_progress", false, true, 25, 10, 1, 0, 5)
+                    Step(1, 1, 1, LearnerPathStepStatusDto.Done),
+                    Step(2, 1, 2, LearnerPathStepStatusDto.InProgress)
                 ],
-                NextModuleId: 2)
+                NextStepId: 2)
         };
 
         var controller = CreateController(api);
@@ -93,8 +93,8 @@ public sealed class LearningPathControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<LearningPathIndexViewModel>(viewResult.Model);
         Assert.True(model.Summary.HasActivePath);
-        Assert.Equal(2, model.Summary.TotalModules);
-        Assert.Equal(1, model.Summary.CompletedModules);
+        Assert.Equal(3, model.Summary.TotalSteps);
+        Assert.Equal(1, model.Summary.CompletedSteps);
     }
 
     [Fact]
@@ -133,13 +133,13 @@ public sealed class LearningPathControllerTests
                 TargetScore: null,
                 Status: LearnerPathStatusDto.Active,
                 StartedAt: DateTimeOffset.UtcNow,
-                TotalModules: 1,
-                CompletedModules: 0,
+                TotalSteps: 1,
+                CompletedSteps: 0,
                 TotalEstimatedMinutes: 20,
                 RemainingMinutes: 20,
                 CefrBands: [],
-                Modules: [],
-                NextModuleId: null)
+                OpenSteps: [],
+                NextStepId: null)
         };
 
         var controller = CreateController(api);
@@ -166,66 +166,55 @@ public sealed class LearningPathControllerTests
     }
 
     [Fact]
-    public async Task ModuleDetail_ReturnsViewWithModuleDetail()
+    public async Task Step_ReturnsViewWithTheStepsCoordinate()
     {
         var api = new TestApiClient
         {
-            LearningPathModuleDetail = new LearningPathModuleDetailDto(
-                LearnerPathId: 10,
-                ModuleId: 2,
-                Title: "Module 2: Present Continuous",
-                GroupName: "Grammar foundations",
-                Description: "Module description",
-                EstimatedMinutes: 20,
-                DisplayOrder: 2,
+            LearningPathStep = new PathStepDto(
+                StepId: 5,
+                WeekNumber: 1,
+                WeekSequence: 2,
+                StepType: PathStepTypeDto.FocusPractice,
+                Route: StepRouteDto.ItemSelector,
+                Title: "R-DET focus practice",
+                Status: LearnerPathStepStatusDto.InProgress,
                 SkillCode: "READ",
                 SkillName: "Reading",
                 Modality: ModalityDto.Reading,
-                Status: "in_progress",
-                IsLocked: false,
-                ModuleIndex: 2,
-                TotalModules: 5,
-                FromBandCode: "A2",
-                ToBandCode: "B2",
-                AnsweredQuestions: 15,
-                TotalQuestions: 25,
-                AccuracyPercentage: 73,
-                CorrectCount: 11,
-                TotalAnswered: 15,
-                TimeSpentMinutes: 12,
-                EstimatedMinutesRemaining: 8,
-                Topics:
-                [
-                    new ModuleTopicDto(1, "Topic 1", 8, "done")
-                ],
-                Steps:
-                [
-                    new ModuleStepDto(5, 2, PathModuleItemTypeDto.PracticeSection, "Practice: Module 2", LearnerPathStepStatusDto.InProgress, null, 25, true, DateTimeOffset.UtcNow, null, 1, null)
-                ],
-                ActiveStepId: 5)
+                TopicCode: "R-DET",
+                TopicName: "Local factual retrieval",
+                TargetCefr: "B1",
+                SizingTier: SizingTierDto.Developing,
+                PlannedItemCount: 8,
+                EstimatedMinutes: 15,
+                Score: null,
+                ActualAccuracyPct: null,
+                TargetAccuracyPct: 80,
+                CanStart: true,
+                StartedAt: DateTimeOffset.UtcNow,
+                CompletedAt: null,
+                RefLessonId: null,
+                RefExamId: null)
         };
 
         var controller = CreateController(api);
-        var result = await controller.ModuleDetail(2, CancellationToken.None);
+        var result = await controller.Step(5, CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<LearningPathModuleDetailViewModel>(viewResult.Model);
-        Assert.Equal(2, model.Detail.ModuleId);
-        Assert.Equal("Module 2: Present Continuous", model.Detail.Title);
-        Assert.Equal(15, model.Detail.AnsweredQuestions);
-        Assert.Equal(73, model.Detail.AccuracyPercentage);
+        var model = Assert.IsType<PathStepDto>(viewResult.Model);
+        Assert.Equal(5, model.StepId);
+        Assert.Equal("R-DET", model.TopicCode);
+        Assert.Equal("B1", model.TargetCefr);
+        Assert.Equal(StepRouteDto.ItemSelector, model.Route);
     }
 
     [Fact]
-    public async Task ModuleDetail_WhenNotFound_RedirectsToIndex()
+    public async Task Step_WhenNotFound_RedirectsToIndex()
     {
-        var api = new TestApiClient
-        {
-            ExceptionToThrow = new ApiException(ApiError.Codes.LearningPathModuleNotFound, "Module not found", 404)
-        };
+        var api = new TestApiClient { LearningPathStep = null };
 
         var controller = CreateController(api);
-        var result = await controller.ModuleDetail(99, CancellationToken.None);
+        var result = await controller.Step(99, CancellationToken.None);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal(nameof(LearningPathController.Index), redirect.ActionName);
@@ -239,7 +228,8 @@ public sealed class LearningPathControllerTests
         {
             StartStepResult = new StartStepResultDto(
                 StepId: 5,
-                ItemType: PathModuleItemTypeDto.PracticeSection,
+                StepType: PathStepTypeDto.FocusPractice,
+                Route: StepRouteDto.ItemSelector,
                 RedirectUrl: "/practice/42",
                 SessionId: 42,
                 AttemptId: null)
@@ -301,6 +291,33 @@ public sealed class LearningPathControllerTests
         Assert.Contains("unchanged", (string)controller.TempData["SuccessMessage"]!, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static PathStepDto Step(int stepId, int week, int sequence, LearnerPathStepStatusDto status) =>
+        new(
+            StepId: stepId,
+            WeekNumber: week,
+            WeekSequence: sequence,
+            StepType: PathStepTypeDto.FocusPractice,
+            Route: StepRouteDto.ItemSelector,
+            Title: "R-DET focus practice",
+            Status: status,
+            SkillCode: "READ",
+            SkillName: "Reading",
+            Modality: ModalityDto.Reading,
+            TopicCode: "R-DET",
+            TopicName: "Local factual retrieval",
+            TargetCefr: "B1",
+            SizingTier: SizingTierDto.Developing,
+            PlannedItemCount: 8,
+            EstimatedMinutes: 15,
+            Score: null,
+            ActualAccuracyPct: null,
+            TargetAccuracyPct: 80,
+            CanStart: status != LearnerPathStepStatusDto.Locked,
+            StartedAt: null,
+            CompletedAt: null,
+            RefLessonId: null,
+            RefExamId: null);
+
     private static LearningPathController CreateController(TestApiClient api)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(7, "learner@test.local", Roles.Learner, "Learner"), "Cookies");
@@ -337,7 +354,7 @@ public sealed class LearningPathControllerTests
     {
         public Exception? ExceptionToThrow { get; set; }
         public LearningPathSummaryDto? LearningPathSummary { get; set; }
-        public LearningPathModuleDetailDto? LearningPathModuleDetail { get; set; }
+        public PathStepDto? LearningPathStep { get; set; }
         public StartStepResultDto? StartStepResult { get; set; }
         public ResetLearningPathResultDto? ResetResult { get; set; }
         public GenerateLearningPathRequest? LastGenerateRequest { get; set; }
@@ -351,8 +368,8 @@ public sealed class LearningPathControllerTests
             return ExceptionToThrow != null ? Task.FromException<LearningPathSummaryDto>(ExceptionToThrow) : Task.FromResult(LearningPathSummary!);
         }
 
-        public Task<LearningPathModuleDetailDto> GetLearningPathModuleAsync(int moduleId, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<LearningPathModuleDetailDto>(ExceptionToThrow) : Task.FromResult(LearningPathModuleDetail!);
+        public Task<PathStepDto?> GetLearningPathStepAsync(int stepId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<PathStepDto?>(ExceptionToThrow) : Task.FromResult(LearningPathStep);
 
         public Task<StartStepResultDto> StartLearningPathStepAsync(int stepId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<StartStepResultDto>(ExceptionToThrow) : Task.FromResult(StartStepResult!);
@@ -441,13 +458,13 @@ public sealed class LearningPathControllerTests
                 TargetScore: 785,
                 Status: LearnerPathStatusDto.Active,
                 StartedAt: DateTimeOffset.UtcNow,
-                TotalModules: 2,
-                CompletedModules: 1,
+                TotalSteps: 3,
+                CompletedSteps: 1,
                 TotalEstimatedMinutes: 45,
                 RemainingMinutes: 20,
                 CefrBands: [],
-                Modules: [],
-                NextModuleId: 2)
+                OpenSteps: [],
+                NextStepId: 2)
         };
 
         var controller = CreateController(api);
@@ -542,13 +559,13 @@ public sealed class LearningPathControllerTests
                 TargetScore: 785,
                 Status: LearnerPathStatusDto.Active,
                 StartedAt: DateTimeOffset.UtcNow,
-                TotalModules: 2,
-                CompletedModules: 1,
+                TotalSteps: 3,
+                CompletedSteps: 1,
                 TotalEstimatedMinutes: 45,
                 RemainingMinutes: 20,
                 CefrBands: [],
-                Modules: [],
-                NextModuleId: 2)
+                OpenSteps: [],
+                NextStepId: 2)
         };
         var controller = CreateController(api);
         controller.TempData["SuccessMessage"] = "Your target band is saved.";
