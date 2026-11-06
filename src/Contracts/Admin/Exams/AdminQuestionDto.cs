@@ -32,4 +32,7 @@ public sealed record AdminQuestionDto(
     string? AcceptedAnswersJson = null,
     string? RequiredKeywords = null,
     string? SampleAnswerOrImageDesc = null,
-    ReferenceKindDto? ReferenceKind = null);
+    ReferenceKindDto? ReferenceKind = null,
+    // #228 / D1: the level this question is authored at, beside the five-point difficulty it
+    // replaces. Null while the schema keeps only the difficulty.
+    string? CefrLevelCode = null);

@@ -23,4 +23,6 @@ public sealed record UpdateQuestionRequest(
     string? AcceptedAnswersJson = null,
     string? RequiredKeywords = null,
     string? SampleAnswerOrImageDesc = null,
-    ReferenceKindDto? ReferenceKind = null);
+    ReferenceKindDto? ReferenceKind = null,
+    // #228 / D1: the level to author this question at, beside the five-point difficulty it replaces.
+    string? CefrLevelCode = null);
