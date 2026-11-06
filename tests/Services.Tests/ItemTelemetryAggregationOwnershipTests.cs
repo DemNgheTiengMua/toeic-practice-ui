@@ -250,9 +250,14 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
         Assert.Equal(sitting.AttemptId, outcome.AttemptId);
         Assert.Equal(expectedTotal, outcome.PreviousTotal);
         Assert.Equal(expectedTotal, outcome.RecalculatedTotal);
-        // An equal band is not an upgrade, so nothing is written and the learner's row is untouched.
+        // An equal band is not an upgrade, so nothing is written and the learner's row stands as the
+        // engine left it.
         Assert.Equal("kept", outcome.Outcome);
-        Assert.Equal(sitting.Total, outcome.RecalculatedTotal);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var stored = await db.ExamAttempts.AsNoTracking().SingleAsync(a => a.AttemptId == sitting.AttemptId);
+        Assert.Equal(expectedTotal, stored.TotalScore);
+        Assert.Equal(sitting.Version, stored.ProjectionVersion);
     }
 
     // =============================================================================================
