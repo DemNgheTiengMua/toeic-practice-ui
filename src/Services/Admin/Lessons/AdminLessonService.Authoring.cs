@@ -128,12 +128,15 @@ public sealed partial class AdminLessonService
             throw new AdminLessonException(ApiError.Codes.LessonNotFound, $"Lesson {lessonId} was not found.", 404);
         }
 
-        var isReferencedInPath = await db.PathModuleItems.AnyAsync(p => p.RefLessonId == lessonId, cancellationToken);
+        // #232: a lesson's reader reference now lives on the step's coordinate, so this is the one
+        // place a deleted lesson could strand a live path step.
+        var isReferencedInPath = await db.LearnerPathSteps
+            .AnyAsync(s => s.RefLessonId == lessonId && s.LearnerPath.Status == "active", cancellationToken);
         if (isReferencedInPath)
         {
             throw new AdminLessonException(
                 ApiError.Codes.Validation,
-                "Cannot delete lesson because it is referenced by an active learning path item. Remove it from the path template first.",
+                "Cannot delete lesson because it is referenced by an active learning path step. Reset the learner's path first.",
                 400);
         }
 

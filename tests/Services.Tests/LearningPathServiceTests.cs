@@ -18,6 +18,23 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 {
     private static string Unique(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
 
+    /// <summary>
+    /// Opens a step the plan left locked. The update goes through raw SQL because the unlock rule is a
+    /// separate ticket's concern; the tracked entity is then detached and re-read, so a later service
+    /// call sees the stored status rather than the generator's stale copy.
+    /// </summary>
+    private async Task OpenStepAsync(CompanionDbContext db, int stepId)
+    {
+        await database.SqlAsync($"UPDATE LearnerPathSteps SET Status = 'available' WHERE StepId = {stepId};");
+
+        var tracked = db.ChangeTracker.Entries<LearnerPathStep>()
+            .FirstOrDefault(e => e.Entity.StepId == stepId);
+        if (tracked is not null)
+        {
+            await tracked.ReloadAsync();
+        }
+    }
+
     private (LearningPathService service, LearnerService learners, PracticeService practice, CompanionDbContext db) CreateServices()
     {
         var db = DbContextFactory.Create(database.ConnectionString);
@@ -28,12 +45,65 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
     }
 
     /// <summary>
+    /// Answers a pool session through the real service, using the option ids the take view hands the
+    /// browser. The pool's option-id bijection is <c>AttemptEngine</c>'s and internal, so this reads the
+    /// ids off the rendered question rather than recomputing the arithmetic — the same route the page
+    /// takes, which is what makes the grade the product's rather than the test's.
+    /// <para>
+    /// The correct option id is only revealed once an answer is recorded, so the right choice is taken
+    /// from the pinned version's key: the option whose text the version marks correct is the first one
+    /// whose label equals the key. A wrong answer is any other.
+    /// </para>
+    /// </summary>
+    private static async Task AnswerEveryItemAsync(
+        PracticeService practice, CompanionDbContext db, int userId, int sessionId, bool correct)
+    {
+        while (true)
+        {
+            var take = await practice.GetSessionTakeAsync(userId, sessionId);
+            var unanswered = take.Questions
+                .FirstOrDefault(q => !q.SelectedOptionId.HasValue && !q.IsCorrect.HasValue);
+
+            if (unanswered is null)
+            {
+                return;
+            }
+
+            var version = await db.ItemVersions.AsNoTracking()
+                .FirstAsync(v => v.ItemVersionId == unanswered.ItemVersionId);
+            var keyIndex = version.KeyLabel?.Trim().ToUpperInvariant() switch
+            {
+                "A" => 0, "B" => 1, "C" => 2, "D" => 3, _ => -1,
+            };
+            var keyOptionId = unanswered.ItemVersionId * 10 + keyIndex + 1;
+
+            var chosen = correct
+                ? unanswered.Options.First(o => o.OptionId == keyOptionId)
+                : unanswered.Options.First(o => o.OptionId != keyOptionId);
+
+            await practice.SubmitAnswerAsync(
+                userId,
+                sessionId,
+                // #187: a pool answer is addressed by the version it pinned.
+                unanswered.ItemVersionId!.Value,
+                new SubmitPracticeAnswerInput(SelectedOptionId: chosen.OptionId));
+        }
+    }
+
+    /// <summary>
     /// #153/#154: a learner here has a goal with a deadline and a pace, because path generation no
     /// longer invents one — #153 refuses a goal it cannot judge, and #154 plans the volume from
-    /// <c>WeeklyStudyHours</c>. The old fixture depended on the generator aiming at the certificate's
-    /// lowest and highest band; both those fallbacks are gone.
+    /// <c>WeeklyStudyHours</c>.
+    /// <para>
+    /// #232: the learner is also given a graded sitting that measures the certificate's skill at B2, so
+    /// the step's level is resolved from that skill's own cut row rather than from the stock fallback.
+    /// The pool is shared across the whole assembly and other tests stock the same modality at other
+    /// levels, so a fallback-driven level would depend on test order; a measured one does not.
+    /// </para>
     /// </summary>
-    private async Task<int> SeedLearnerAsync(string? activeCertCode = null, string? currentBand = "A2", string? targetBand = "B2")
+    private async Task<int> SeedLearnerAsync(
+        string? activeCertCode = null, string? currentBand = "A2", string? targetBand = "B2",
+        int measuredScaledScore = 700, string measuredBandCode = "B2")
     {
         var email = $"{Guid.NewGuid():N}@test.local";
         var goal = activeCertCode is not null && currentBand is not null && targetBand is not null
@@ -41,7 +111,24 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
               INSERT INTO TargetBands (UserId, CertId, TargetBandCode, CurrentBandCode, TargetDate, WeeklyStudyHours)
               VALUES (@u, (SELECT CertId FROM Certificates WHERE Code = '{activeCertCode}'),
                       '{targetBand}', '{currentBand}',
-                      DATEADD(DAY, 210, CAST(SYSDATETIMEOFFSET() AS DATE)), 6);
+                      DATEADD(DAY, 210, CAST(SYSDATETIMEOFFSET() AS DATE)), 20);
+              """
+            : "";
+
+        var measurement = activeCertCode is not null
+            ? $"""
+              DECLARE @measCert INT = (SELECT CertId FROM Certificates WHERE Code = '{activeCertCode}');
+              DECLARE @measSkill INT = (SELECT TOP 1 SkillId FROM Skills WHERE CertId = @measCert ORDER BY SkillId);
+              INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
+              VALUES (@measCert, N'Measurement sitting {Guid.NewGuid():N}', 'published', 60, 'mock');
+              DECLARE @measExam INT = SCOPE_IDENTITY();
+              INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
+              VALUES (@u, @measExam, @measCert, 'graded',
+                      DATEADD(DAY, -1, SYSDATETIMEOFFSET()), DATEADD(DAY, -1, SYSDATETIMEOFFSET()),
+                      DATEADD(DAY, -1, SYSDATETIMEOFFSET()), {measuredScaledScore}, '{measuredBandCode}', 'AttemptEngine', 1);
+              DECLARE @measAttempt INT = SCOPE_IDENTITY();
+              INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore)
+              VALUES (@measAttempt, @measSkill, @measCert, 18, {measuredScaledScore});
               """
             : "";
 
@@ -53,36 +140,69 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
                     (SELECT CertId FROM Certificates WHERE Code = {(activeCertCode is null ? "NULL" : $"'{activeCertCode}'")}));
             DECLARE @u INT = SCOPE_IDENTITY();
             {goal}
+            {measurement}
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
 
-    private async Task<(int certId, int templateId, int mod1Id, int mod2Id, int item1Id, int item2Id, int secId, int qId)> SeedPathFixtureAsync(string certCode)
+    /// <summary>
+    /// #232: a certificate with one reading skill, a cut-score table putting that skill at B2, four
+    /// canonical reading topics each holding two active B2 items, one lesson and one published mock.
+    /// Nothing here is a template: the plan is a set of coordinates.
+    ///
+    /// The cell is R-INF at B2 on purpose. `PoolIngestionTests` and `ItemTelemetry` count the stock in
+    /// R-DET at B1 exactly, so a fixture that added items there would shift a number another test
+    /// asserts and read as a defect in the ingestion gates.
+    /// </summary>
+    private async Task<(int certId, int skillId, int topicId, int lessonId, int examId)> SeedPathFixtureAsync(string certCode)
     {
         await database.SqlAsync($"""
+            -- #232: the canonical twenty topics are the step coordinate's topic axis. The schema holds
+            -- the closed-set trigger but no rows, so every fixture that plants a step seeds its topic
+            -- individually - a table-wide guard is the #184/#185 seed defect.
+            INSERT INTO Topics (Modality, Code, Name)
+            SELECT v.Modality, v.Code, v.Name
+            FROM (VALUES
+              ('listening','L-GIST',N'Global gist'), ('listening','L-DET',N'Detail'),
+              ('listening','L-INF',N'Inference'), ('listening','L-ATT',N'Attitude'),
+              ('listening','L-FUNC',N'Function'), ('listening','L-ORG',N'Organisation'),
+              ('reading','R-GIST',N'Global thesis'), ('reading','R-DET',N'Local detail'),
+              ('reading','R-INF',N'Bridging inference'), ('reading','R-ATT',N'Authorial stance'),
+              ('reading','R-COH',N'Cohesion'), ('reading','R-GRAM',N'Grammar'),
+              ('speaking','S-DESC',N'Description'), ('speaking','S-INT',N'Interaction'),
+              ('speaking','S-ARG',N'Argument'), ('speaking','S-SYN',N'Synthesis'),
+              ('writing','W-CORR',N'Correspondence'), ('writing','W-DATA',N'Data'),
+              ('writing','W-ARG',N'Argument'), ('writing','W-DISC',N'Discourse')
+            ) v(Modality, Code, Name)
+            WHERE NOT EXISTS (SELECT 1 FROM Topics t WHERE t.Modality = v.Modality AND t.Code = v.Code);
+
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
             INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
-              (@cert, 'READ', N'Reading', 'reading', 1),
-              (@cert, 'LIST', N'Listening', 'listening', 2);
+              (@cert, 'READ', N'Reading', 'reading', 1);
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
-            DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
-              (@sR, @cert, 'reading', 'P5', N'Sentences', 1, 1),
-              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sR, @cert, 'reading', 'P5', N'Sentences', 4, 1, 1);
             DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
-            INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
-              (@cert, 'A1', N'Beginner', 0, 200, 1),
-              (@cert, 'A2', N'Elementary', 201, 500, 2),
-              (@cert, 'B1', N'Intermediate', 501, 750, 3),
-              (@cert, 'B2', N'Upper intermediate', 751, 990, 4);
+            INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder, CumulativeStudyHours) VALUES
+              (@cert, 'A1', N'Beginner', 0, 200, 1, 100),
+              (@cert, 'A2', N'Elementary', 201, 500, 2, 250),
+              (@cert, 'B1', N'Intermediate', 501, 750, 3, 500),
+              (@cert, 'B2', N'Upper intermediate', 751, 990, 4, 800);
 
-            -- Published Mock Exam
+            -- #232: the skill's OWN level, from the certificate's own cut-score rows.
+            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
+            VALUES (@cert, 1, 0, N'Test standard-setting', '2024-01-01');
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled) VALUES
+              (@cert, 1, @sR, 'A2', 'cut', 0, 100),
+              (@cert, 1, @sR, 'B1', 'cut', 101, 500),
+              (@cert, 1, @sR, 'B2', 'cut', 501, 990);
+
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
             VALUES (@cert, N'Mock Exam 1', 'published', 120, 'mock');
             DECLARE @exam INT = SCOPE_IDENTITY();
@@ -99,42 +219,46 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
               (@q1, 'mcq', 'A', N'Opt A', 1),
               (@q1, 'mcq', 'B', N'Opt B', 0);
 
-            -- Path Template
-            INSERT INTO PathTemplates (CertId, FromBandCode, ToBandCode, Name)
-            VALUES (@cert, 'A2', 'B2', N'Path A2 to B2');
-            DECLARE @tpl INT = SCOPE_IDENTITY();
+            INSERT INTO Lessons (CertId, SkillId, Title, EstimatedMinutes, DisplayOrder)
+            VALUES (@cert, @sR, N'Grammar Foundations', 8, 1);
+            DECLARE @lesson INT = SCOPE_IDENTITY();
+            INSERT INTO LessonCards (LessonId, CertId, CardType, Title, ContentMarkdown, DisplayOrder)
+            VALUES (@lesson, @cert, 'rule', N'Rule', N'Text', 1);
 
-            INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, GroupName, Description, EstimatedMinutes)
-            VALUES (@tpl, @sR, @cert, 1, N'Module 1: Grammar', N'Foundations', N'Grammar module description', 20);
-            DECLARE @m1 INT = SCOPE_IDENTITY();
-
-            INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-            VALUES (@m1, @cert, @tpl, 'practice_section', @secR, 5, 1);
-            DECLARE @i1 INT = SCOPE_IDENTITY();
-
-            INSERT INTO PathModuleTopics (ModuleId, Title, QuestionCount, DisplayOrder)
-            VALUES (@m1, N'Topic 1: Present Tense', 5, 1);
-
-            INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, GroupName, Description, EstimatedMinutes)
-            VALUES (@tpl, @sR, @cert, 2, N'Module 2: Vocabulary', N'Foundations', N'Vocabulary module description', 25);
-            DECLARE @m2 INT = SCOPE_IDENTITY();
-
-            INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-            VALUES (@m2, @cert, @tpl, 'practice_section', @secR, 5, 1);
-            DECLARE @i2 INT = SCOPE_IDENTITY();
+            -- Two B2 items per canonical reading topic, so every topic is a drillable cell.
+            DECLARE @topicId INT, @n INT;
+            DECLARE topics_cursor CURSOR LOCAL FAST_FORWARD FOR
+              SELECT TopicId FROM Topics WHERE Modality = 'reading';
+            OPEN topics_cursor;
+            FETCH NEXT FROM topics_cursor INTO @topicId;
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+              SET @n = 1;
+              WHILE @n <= 2
+              BEGIN
+                INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('B2', N'Passage');
+                INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus)
+                VALUES (SCOPE_IDENTITY(), 'reading', @topicId, 'B2', 'passage_comprehension', 0, 'demo', 'active');
+                DECLARE @itemId INT = SCOPE_IDENTITY();
+                INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
+                VALUES (@itemId, 1, N'Stem', N'A', N'B', N'C', N'D', 'A');
+                SET @n = @n + 1;
+              END
+              FETCH NEXT FROM topics_cursor INTO @topicId;
+            END
+            CLOSE topics_cursor; DEALLOCATE topics_cursor;
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
-        var tpl = await db.PathTemplates.SingleAsync(t => t.CertId == cert.CertId);
-        var m1 = await db.PathModules.SingleAsync(m => m.TemplateId == tpl.TemplateId && m.DisplayOrder == 1);
-        var m2 = await db.PathModules.SingleAsync(m => m.TemplateId == tpl.TemplateId && m.DisplayOrder == 2);
-        var i1 = await db.PathModuleItems.SingleAsync(i => i.ModuleId == m1.ModuleId);
-        var i2 = await db.PathModuleItems.SingleAsync(i => i.ModuleId == m2.ModuleId);
-        var sec = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "P5");
-        var q = await db.Questions.FirstAsync(q => q.SectionId == sec.SectionId);
+        var skillId = await db.Skills.Where(s => s.CertId == cert.CertId).Select(s => s.SkillId).SingleAsync();
+        var topicId = await db.Topics
+            .Where(t => t.Modality == "reading" && t.Code == "R-DET")
+            .Select(t => t.TopicId).SingleAsync();
+        var lessonId = await db.Lessons.Where(l => l.CertId == cert.CertId).Select(l => l.LessonId).SingleAsync();
+        var examId = await db.Exams.Where(e => e.CertId == cert.CertId && e.Purpose == "mock").Select(e => e.ExamId).SingleAsync();
 
-        return (cert.CertId, tpl.TemplateId, m1.ModuleId, m2.ModuleId, i1.ItemId, i2.ItemId, sec.SectionId, q.QuestionId);
+        return (cert.CertId, skillId, topicId, lessonId, examId);
     }
 
     [Fact]
@@ -149,7 +273,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
         Assert.False(summary.HasActivePath);
         Assert.Null(summary.LearnerPathId);
-        Assert.Empty(summary.Modules);
+        Assert.Empty(summary.OpenSteps);
         Assert.Equal(certCode, summary.ActiveCert.Code);
     }
 
@@ -157,7 +281,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
     public async Task GeneratePathAsync_CreatesActivePathAndSteps()
     {
         var certCode = Unique("C");
-        var (certId, templateId, m1Id, m2Id, i1Id, i2Id, _, _) = await SeedPathFixtureAsync(certCode);
+        var (_, skillId, _, _, _) = await SeedPathFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (service, _, _, db) = CreateServices();
 
@@ -165,11 +289,13 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
         Assert.True(summary.HasActivePath);
         Assert.NotNull(summary.LearnerPathId);
-        Assert.Equal("A2", summary.FromBandCode);
+        // #156: the latest graded sitting's band is the starting band, which is what the measurement the
+        // fixture planted reports.
+        Assert.Equal("B2", summary.FromBandCode);
         Assert.Equal("B2", summary.ToBandCode);
-        Assert.Equal(0, summary.CompletedModules);
+        Assert.Equal(0, summary.CompletedSteps);
 
-        // #154: the steps are a plan, not a walk over the template's items. Four weeks of 3-5 steps,
+        // #154: the steps are a plan, not a walk over a template's items. Four weeks of 3-5 steps,
         // and the first one is open while the rest wait.
         var steps = await db.LearnerPathSteps
             .Where(s => s.LearnerPathId == summary.LearnerPathId)
@@ -183,7 +309,14 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         Assert.Equal("available", steps[0].Status);
         Assert.All(steps.Skip(1), s => Assert.Equal("locked", s.Status));
 
-        // #154: the four-week window is persisted, and the summary reports it week by week (AC5).
+        // #232: every step names the skill it drills and that skill's own level.
+        Assert.All(steps, s =>
+        {
+            Assert.Equal(skillId, s.SkillId);
+            Assert.Equal("B2", s.TargetCefr);
+        });
+
+        // #154: the four-week window is persisted, and the summary reports it week by week.
         Assert.Equal(
             Enumerable.Range(1, LearningPathPlanner.WindowWeeks).ToList(),
             steps.Select(s => s.WeekNumber!.Value).Distinct().OrderBy(w => w).ToList());
@@ -204,29 +337,13 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         Assert.Equal(LearningPathException.PathAlreadyActive, ex.Code);
     }
 
+    /// <summary>
+    /// #232: a step's detail is addressed by its own id, because there is no module to address. The test
+    /// asserts the coordinate's four metadata columns are all present, which is what the path screen
+    /// shows before a step starts (D21a).
+    /// </summary>
     [Fact]
-    public async Task GetModuleDetailAsync_ReturnsModuleDetailWithStepsAndTopics()
-    {
-        var certCode = Unique("C");
-        var (certId, templateId, m1Id, _, _, _, _, _) = await SeedPathFixtureAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-        var (service, _, _, _) = CreateServices();
-
-        await service.GeneratePathAsync(userId);
-
-        // #154: generated steps point at the certificate's own section items, so they land in the
-        // module those items belong to. The module opens and holds steps; the plan just does not walk
-        // the template's item order.
-        var summary = await service.GetActivePathAsync(userId);
-        var detail = await service.GetModuleDetailAsync(userId, summary.Modules[0].ModuleId);
-
-        Assert.False(detail.IsLocked);
-        Assert.NotEmpty(detail.Steps);
-        Assert.NotNull(detail.ActiveStepId);
-    }
-
-    [Fact]
-    public async Task StartStepAsync_ForPracticeSection_CreatesPracticeSessionAndReturnsUrl()
+    public async Task GetStepAsync_ReturnsTheStepsCoordinateAndState()
     {
         var certCode = Unique("C");
         await SeedPathFixtureAsync(certCode);
@@ -234,31 +351,155 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var (service, _, _, db) = CreateServices();
 
         var summary = await service.GeneratePathAsync(userId);
-        var firstStep = await db.LearnerPathSteps
+        var first = await db.LearnerPathSteps
             .Where(s => s.LearnerPathId == summary.LearnerPathId)
-            .OrderBy(s => s.StepId)
+            .OrderBy(s => s.WeekNumber)
+            .ThenBy(s => s.WeekSequence)
             .FirstAsync();
 
-        var result = await service.StartStepAsync(userId, firstStep.StepId);
+        var step = await service.GetStepAsync(userId, first.StepId);
 
-        Assert.Equal(firstStep.StepId, result.StepId);
-        Assert.Equal(PathModuleItemType.PracticeSection, result.ItemType);
+        Assert.NotNull(step);
+        Assert.Equal(first.StepId, step!.StepId);
+        Assert.Equal("READ", step.SkillCode);
+        // The topic is the plan's weakest-first choice, which without practice history falls back to the
+        // canonical order. Assert it is a canonical reading topic with a name, not a specific code.
+        Assert.Contains(step.TopicCode, new[] { "R-GIST", "R-DET", "R-INF", "R-ATT", "R-COH", "R-GRAM" });
+        Assert.False(string.IsNullOrWhiteSpace(step.TopicName));
+        Assert.Equal(CefrLevel.B2, step.TargetCefr);
+        Assert.Equal(first.StepType, step.StepType.ToCode());
+        Assert.Equal(first.SizingTier, step.SizingTier.ToCode());
+        Assert.Equal(first.WeekSequence, step.WeekSequence);
+    }
+
+    [Fact]
+    public async Task GetStepAsync_ForAnotherLearnersStep_ReturnsNull()
+    {
+        var certCode = Unique("C");
+        await SeedPathFixtureAsync(certCode);
+        var owner = await SeedLearnerAsync(certCode);
+        var (service, _, _, db) = CreateServices();
+
+        var summary = await service.GeneratePathAsync(owner);
+        var stepId = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId)
+            .Select(s => s.StepId)
+            .FirstAsync();
+
+        // A different learner with no path of their own must not read it.
+        var strangerEmail = $"{Guid.NewGuid():N}@test.local";
+        await database.SqlAsync($"""
+            INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{strangerEmail}', 0x01, N'Stranger');
+            """);
+        var strangerId = await db.Users.Where(u => u.Email == strangerEmail).Select(u => u.UserId).SingleAsync();
+
+        Assert.Null(await service.GetStepAsync(strangerId, stepId));
+    }
+
+    /// <summary>
+    /// #232: the drill route. A drill step draws its items from the selector at its own coordinate and
+    /// opens a practice session linked to the step.
+    /// </summary>
+    [Fact]
+    public async Task StartStepAsync_ForADrill_CreatesPracticeSessionAtItsCoordinate()
+    {
+        var certCode = Unique("C");
+        var (_, skillId, topicId, _, _) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _, _, db) = CreateServices();
+
+        var summary = await service.GeneratePathAsync(userId);
+        var drill = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.StepType == "focus_practice")
+            .OrderBy(s => s.WeekNumber)
+            .ThenBy(s => s.WeekSequence)
+            .FirstAsync();
+        await OpenStepAsync(db, drill.StepId);
+
+        var result = await service.StartStepAsync(userId, drill.StepId);
+
+        Assert.Equal(drill.StepId, result.StepId);
+        Assert.Equal(PathStepType.FocusPractice, result.StepType);
+        Assert.Equal(StepRoute.ItemSelector, result.Route);
         Assert.NotNull(result.SessionId);
         Assert.Equal($"/practice/{result.SessionId}", result.RedirectUrl);
 
-        // Step should now be in_progress
-        var updatedStep = await db.LearnerPathSteps.FindAsync(firstStep.StepId);
+        var updatedStep = await db.LearnerPathSteps.FindAsync(drill.StepId);
         Assert.Equal("in_progress", updatedStep!.Status);
 
-        // Practice session should be linked to step
         var session = await db.PracticeSessions.FindAsync(result.SessionId);
         Assert.NotNull(session);
-        Assert.Equal(firstStep.StepId, session.LearnerPathStepId);
+        Assert.Equal(drill.StepId, session!.LearnerPathStepId);
+        // The session is drawn at the step's own coordinate, not at a section the step names.
+        Assert.Equal(drill.TopicId, session.TopicId);
+        Assert.Null(session.SectionId);
 
-        // Calling StartStepAsync again resumes the existing session
-        var resumeResult = await service.StartStepAsync(userId, firstStep.StepId);
+        // Calling again resumes the existing session.
+        var resumeResult = await service.StartStepAsync(userId, drill.StepId);
         Assert.Equal(result.SessionId, resumeResult.SessionId);
         Assert.Equal(result.RedirectUrl, resumeResult.RedirectUrl);
+    }
+
+    /// <summary>
+    /// #232 / D10, second binding: a lesson step opens the lesson reader, not the selector. The route and
+    /// the URL are both asserted, so a step that opened the reader with a practice URL would fail.
+    /// </summary>
+    [Fact]
+    public async Task StartStepAsync_ForALesson_OpensTheLessonReader()
+    {
+        var certCode = Unique("C");
+        var (_, _, _, lessonId, _) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _, _, db) = CreateServices();
+
+        var summary = await service.GeneratePathAsync(userId);
+        var lessonStep = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.StepType == "concept_lesson")
+            .FirstAsync();
+
+        // Open it before starting, as the unlock rule would.
+        await OpenStepAsync(db, lessonStep.StepId);
+
+        var result = await service.StartStepAsync(userId, lessonStep.StepId);
+
+        Assert.Equal(PathStepType.ConceptLesson, result.StepType);
+        Assert.Equal(StepRoute.LessonReader, result.Route);
+        Assert.Equal($"/lessons/{lessonId}", result.RedirectUrl);
+        Assert.Null(result.SessionId);
+        Assert.Equal(lessonId, lessonStep.RefLessonId);
+    }
+
+    /// <summary>
+    /// #232 / D10, third binding: a mock section resolves through the attempt engine's exam path and
+    /// returns the sitting URL, never a practice session.
+    /// </summary>
+    [Fact]
+    public async Task StartStepAsync_ForAMockSection_OpensTheAttemptEngine()
+    {
+        var certCode = Unique("C");
+        var (_, _, _, _, examId) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _, _, db) = CreateServices();
+
+        var summary = await service.GeneratePathAsync(userId);
+        var mockStep = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.StepType == "mock_section")
+            .FirstOrDefaultAsync();
+
+        // A 6 h/week goal plans a mock in week 2. If the planner ever stopped doing that, the next line
+        // would be the failure rather than a silent skip.
+        Assert.NotNull(mockStep);
+
+        await OpenStepAsync(db, mockStep!.StepId);
+
+        var result = await service.StartStepAsync(userId, mockStep.StepId);
+
+        Assert.Equal(PathStepType.MockSection, result.StepType);
+        Assert.Equal(StepRoute.AttemptEngine, result.Route);
+        Assert.Equal($"/exams/{examId}/instructions", result.RedirectUrl);
+        Assert.Null(result.SessionId);
+        Assert.Equal(examId, mockStep.RefExamId);
     }
 
     [Fact]
@@ -301,253 +542,209 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         Assert.NotEqual(summary.LearnerPathId, newSummary.LearnerPathId);
     }
 
+    /// <summary>
+    /// #232: the drill step closes when its session finishes. The first step of the plan is the lesson,
+    /// so this test closes the lesson and then walks a drill.
+    /// </summary>
     [Fact]
-    public async Task PracticeService_SubmitAnswer_CompletesLinkedLearnerPathStep()
-    {
-        var certCode = Unique("C");
-        var (certId, templateId, m1Id, m2Id, i1Id, i2Id, secId, qId) = await SeedPathFixtureAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-        var (service, _, practice, db) = CreateServices();
-
-        var summary = await service.GeneratePathAsync(userId);
-        var firstStep = await db.LearnerPathSteps
-            .Where(s => s.LearnerPathId == summary.LearnerPathId)
-            .OrderBy(s => s.StepId)
-            .FirstAsync();
-
-        // Start step via LearningPathService
-        var startResult = await service.StartStepAsync(userId, firstStep.StepId);
-        int sessionId = startResult.SessionId!.Value;
-
-        // Verify step is in_progress
-        await db.Entry(firstStep).ReloadAsync();
-        Assert.Equal("in_progress", firstStep.Status);
-
-        // Look up option for qId
-        var correctOpt = await db.QuestionOptions.FirstAsync(o => o.QuestionId == qId && o.IsCorrect);
-
-        // Submit the answer through PracticeService
-        await practice.SubmitAnswerAsync(userId, sessionId, qId, new SubmitPracticeAnswerInput(correctOpt.OptionId));
-
-        // Linked step should now be marked done and have score recorded!
-        await db.Entry(firstStep).ReloadAsync();
-        Assert.Equal("done", firstStep.Status);
-        Assert.NotNull(firstStep.Score);
-        Assert.NotNull(firstStep.CompletedAt);
-
-        // Second step should now be available
-        var secondStep = await db.LearnerPathSteps
-            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.Status == "available")
-            .OrderBy(s => s.StepId)
-            .FirstAsync();
-        Assert.NotEqual(firstStep.StepId, secondStep.StepId);
-    }
-
-    [Fact]
-    public async Task A_refused_re_submission_leaves_the_path_steps_recorded_accuracy_at_the_first_answer()
-    {
-        // #166: re-submitting the last-but-one question as right used to rewrite the session's correct
-        // count, and the step that closes on the session's final answer then recorded the rewritten
-        // number. The step's audit trail has to be the accuracy the learner actually achieved.
-        var certCode = Unique("C");
-        var (_, _, _, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-        var (service, _, practice, db) = CreateServices();
-
-        // A second question, so the session can still be in progress when the re-submission is tried.
-        int secondQId;
-        int secondRightOption;
-        await using (var seed = DbContextFactory.Create(database.ConnectionString))
-        {
-            var section = await seed.Sections.SingleAsync(s => s.SectionId == secId);
-            seed.Questions.Add(new Question
-            {
-                GroupId = await seed.Questions.Where(q => q.QuestionId == qId).Select(q => q.GroupId).SingleAsync(),
-                ExamId = await seed.Questions.Where(q => q.QuestionId == qId).Select(q => q.ExamId).SingleAsync(),
-                SectionId = secId, SkillId = section.SkillId, Stem = "Question 2 stem",
-                CefrLevel = CefrLevel.B1, QuestionType = "mcq", DisplayOrder = 2,
-            });
-            await seed.SaveChangesAsync();
-
-            secondQId = await seed.Questions.Where(q => q.SectionId == secId && q.QuestionId != qId)
-                .Select(q => q.QuestionId).SingleAsync();
-            var option = new QuestionOption
-            {
-                QuestionId = secondQId, QuestionType = "mcq", Label = "A", Text = "Right 2", IsCorrect = true,
-            };
-            seed.QuestionOptions.Add(option);
-            seed.QuestionOptions.Add(new QuestionOption
-            {
-                QuestionId = secondQId, QuestionType = "mcq", Label = "B", Text = "Wrong 2", IsCorrect = false,
-            });
-            await seed.SaveChangesAsync();
-            secondRightOption = option.OptionId;
-        }
-
-        var summary = await service.GeneratePathAsync(userId);
-        var step = await db.LearnerPathSteps
-            .Include(s => s.PathModuleItem)
-            .FirstAsync(s => s.LearnerPathId == summary.LearnerPathId && s.PathModuleItem.RefSectionId == secId);
-
-        var start = await service.StartStepAsync(userId, step.StepId);
-        var sessionId = start.SessionId!.Value;
-        Assert.Equal(2, (await db.PracticeAnswers.CountAsync(a => a.SessionId == sessionId)));
-
-        var wrongOption = await db.QuestionOptions
-            .Where(o => o.QuestionId == qId && !o.IsCorrect).Select(o => o.OptionId).SingleAsync();
-        var rightOption = await db.QuestionOptions
-            .Where(o => o.QuestionId == qId && o.IsCorrect).Select(o => o.OptionId).SingleAsync();
-
-        await practice.SubmitAnswerAsync(userId, sessionId, qId, new SubmitPracticeAnswerInput(wrongOption));
-
-        var ex = await Assert.ThrowsAsync<PracticeException>(() =>
-            practice.SubmitAnswerAsync(userId, sessionId, qId, new SubmitPracticeAnswerInput(rightOption)));
-        Assert.Equal(PracticeException.AlreadyAnswered, ex.Code);
-
-        await db.Entry(step).ReloadAsync();
-        Assert.Equal("in_progress", step.Status);
-        Assert.Null(step.ActualAccuracyPct);
-
-        // The remaining question finishes the session, which closes the step.
-        await practice.SubmitAnswerAsync(userId, sessionId, secondQId, new SubmitPracticeAnswerInput(secondRightOption));
-
-        await using var verifyDb = DbContextFactory.Create(database.ConnectionString);
-        var closed = await verifyDb.LearnerPathSteps.AsNoTracking().SingleAsync(s => s.StepId == step.StepId);
-        Assert.Equal("done", closed.Status);
-        Assert.Equal(50m, closed.ActualAccuracyPct);
-        Assert.Equal(50m, closed.Score);
-
-        var firstAnswer = await verifyDb.PracticeAnswers.AsNoTracking()
-            .SingleAsync(a => a.SessionId == sessionId && a.QuestionId == qId);
-        Assert.Equal(wrongOption, firstAnswer.SelectedOptionId);
-        Assert.False(firstAnswer.IsCorrect);
-    }
-
-    [Fact]
-    public async Task GetModuleDetailAsync_WhenAllStepsDone_KeepsActiveStepIdForReview()
-    {
-        var certCode = Unique("C");
-        var (certId, templateId, m1Id, _, _, _, _, _) = await SeedPathFixtureAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-        var (service, _, _, db) = CreateServices();
-
-        var summary = await service.GeneratePathAsync(userId);
-        var steps = await db.LearnerPathSteps
-            .Where(s => s.LearnerPathId == summary.LearnerPathId)
-            .OrderBy(s => s.StepId)
-            .ToListAsync();
-
-        // #154: read the module the step actually lives in.
-        var moduleOfStep = await db.PathModuleItems
-            .Where(i => i.ItemId == steps[0].PathModuleItemId)
-            .Select(i => i.ModuleId)
-            .SingleAsync();
-
-        await PathStepCompletion.CloseStepAsync(db, steps[0], score: 100m, accuracyPct: 100m);
-
-        var detail = await service.GetModuleDetailAsync(userId, moduleOfStep);
-
-        // #154: a module can hold several planned steps, so the active one is the next open step —
-        // not necessarily the one just finished. Both must be in this module.
-        Assert.NotNull(detail.ActiveStepId);
-        Assert.Contains(detail.Steps, s => s.StepId == detail.ActiveStepId);
-        Assert.Contains(detail.Steps, s => s.StepId == steps[0].StepId);
-        Assert.Equal(LearnerPathStepStatus.Done, detail.Steps.Single(s => s.StepId == steps[0].StepId).Status);
-    }
-
-    [Fact]
-    public async Task GetModuleDetailAsync_TopicsStatus_ProgressivelyAllocatesBasedOnAnsweredCount()
-    {
-        var certCode = Unique("C");
-        var (certId, templateId, m1Id, _, i1Id, _, secId, q1Id) = await SeedPathFixtureAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-        var (service, _, _, db) = CreateServices();
-
-        var summary = await service.GeneratePathAsync(userId);
-        var moduleOfFirstStep = await db.PathModuleItems
-            .Where(i => i.ItemId == (db.LearnerPathSteps
-                .Where(s => s.LearnerPathId == summary.LearnerPathId)
-                .OrderBy(s => s.StepId)
-                .Select(s => s.PathModuleItemId)
-                .First()))
-            .Select(i => i.ModuleId)
-            .SingleAsync();
-
-        // The fixture's module already carries Topic 1; reshape it and add a second topic, because
-        // this is the module the learner's practice steps now live in.
-        await database.SqlAsync($"""
-            DELETE FROM PathModuleTopics WHERE ModuleId = {moduleOfFirstStep};
-            INSERT INTO PathModuleTopics (ModuleId, Title, QuestionCount, DisplayOrder)
-            VALUES ({moduleOfFirstStep}, N'Topic 1: First question', 1, 1),
-                   ({moduleOfFirstStep}, N'Topic 2: Additional Practice', 5, 2);
-            """);
-
-        var step = await db.LearnerPathSteps
-            .Include(s => s.PathModuleItem)
-            .FirstAsync(s => s.LearnerPathId == summary.LearnerPathId
-                && s.PathModuleItem.RefSectionId == secId);
-
-        // Start step (which creates PracticeSession and 1 PracticeAnswer for q1Id)
-        var startResult = await service.StartStepAsync(userId, step.StepId);
-        int sessionId = startResult.SessionId!.Value;
-
-        // Answer that question
-        var opt = await db.QuestionOptions.FirstAsync(o => o.QuestionId == q1Id);
-        var answer = await db.PracticeAnswers.FirstAsync(pa => pa.SessionId == sessionId && pa.QuestionId == q1Id);
-        answer.SelectedOptionId = opt.OptionId;
-        answer.IsCorrect = true;
-        await db.SaveChangesAsync();
-
-        var detail = await service.GetModuleDetailAsync(userId, moduleOfFirstStep);
-
-        Assert.Equal(2, detail.Topics.Count);
-        // Topic 1 had 1 question, 1 answered -> done
-        Assert.Equal("done", detail.Topics[0].Status);
-        // Topic 2 has 5 questions, 0 remaining answered -> not_started
-        Assert.Equal("not_started", detail.Topics[1].Status);
-    }
-
-    [Fact]
-    public async Task StartStepAsync_WhenNoQuestionsAvailable_ThrowsNoQuestionsAvailableException()
+    public async Task PracticeService_SubmitAnswer_CompletesTheLinkedPathStep()
     {
         var certCode = Unique("C");
         await SeedPathFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
+        var (service, _, practice, db) = CreateServices();
+
+        var summary = await service.GeneratePathAsync(userId);
+
+        // Open the drill: a lesson step sorts first in week 1, so walk past it.
+        var drill = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.StepType == "focus_practice")
+            .OrderBy(s => s.WeekNumber)
+            .ThenBy(s => s.WeekSequence)
+            .FirstAsync();
+        await OpenStepAsync(db, drill.StepId);
+
+        var start = await service.StartStepAsync(userId, drill.StepId);
+        var sessionId = start.SessionId!.Value;
+
+        var answers = await db.PracticeAnswers
+            .Where(a => a.SessionId == sessionId)
+            .OrderBy(a => a.DisplayOrder)
+            .ToListAsync();
+        Assert.NotEmpty(answers);
+
+        // Answer every item correctly; the last one finishes the session and closes the step.
+        await AnswerEveryItemAsync(practice, db, userId, sessionId, correct: true);
+
+        var closed = await db.LearnerPathSteps.AsNoTracking().SingleAsync(s => s.StepId == drill.StepId);
+        Assert.Equal("done", closed.Status);
+        Assert.NotNull(closed.Score);
+        Assert.NotNull(closed.CompletedAt);
+    }
+
+    /// <summary>
+    /// #166: re-submitting the last-but-one question as right used to rewrite the session's correct
+    /// count, and the step that closes on the session's final answer then recorded the rewritten number.
+    /// The step's audit trail has to be the accuracy the learner actually achieved.
+    /// </summary>
+    [Fact]
+    public async Task A_refused_re_submission_leaves_the_path_steps_recorded_accuracy_at_the_first_answer()
+    {
+        var certCode = Unique("C");
+        var (_, _, topicId, _, _) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _, practice, db) = CreateServices();
+
+        // A third item in the drill's own cell, so the session has more than two answers and can still
+        // be in progress while the re-submission is tried.
+        await database.SqlAsync($"""
+            INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('B2', N'Extra');
+            INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus)
+            VALUES (SCOPE_IDENTITY(), 'reading', {topicId}, 'B2', 'passage_comprehension', 0, 'demo', 'active');
+            DECLARE @extra INT = SCOPE_IDENTITY();
+            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
+            VALUES (@extra, 1, N'Extra stem', N'A', N'B', N'C', N'D', 'A');
+            """);
+
+        var summary = await service.GeneratePathAsync(userId);
+        var drill = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId
+                && s.StepType == "focus_practice"
+                && s.TopicId == topicId)
+            .OrderBy(s => s.WeekNumber)
+            .ThenBy(s => s.WeekSequence)
+            .FirstAsync();
+        await OpenStepAsync(db, drill.StepId);
+
+        var start = await service.StartStepAsync(userId, drill.StepId);
+        var sessionId = start.SessionId!.Value;
+
+        var answers = await db.PracticeAnswers
+            .Where(a => a.SessionId == sessionId)
+            .OrderBy(a => a.DisplayOrder)
+            .ToListAsync();
+        Assert.True(answers.Count >= 2, $"the drill drew {answers.Count} items; this test needs two");
+
+        var first = answers[0];
+        var firstTake = await practice.GetSessionTakeAsync(userId, sessionId);
+        var firstQuestion = firstTake.Questions.First(q => q.ItemVersionId == first.ItemVersionId);
+        var firstVersion = await db.ItemVersions.AsNoTracking()
+            .FirstAsync(v => v.ItemVersionId == first.ItemVersionId);
+        var keyIndex = firstVersion.KeyLabel?.Trim().ToUpperInvariant() switch
+        {
+            "A" => 0, "B" => 1, "C" => 2, "D" => 3, _ => -1,
+        };
+        var firstRight = first.ItemVersionId!.Value * 10 + keyIndex + 1;
+        var firstWrong = firstQuestion.Options.First(o => o.OptionId != firstRight).OptionId;
+
+        await practice.SubmitAnswerAsync(
+            userId, sessionId, first.ItemVersionId!.Value,
+            new SubmitPracticeAnswerInput(SelectedOptionId: firstWrong));
+
+        // Re-submitting the same item is refused, so the first grade stands.
+        await Assert.ThrowsAsync<PracticeException>(() =>
+            practice.SubmitAnswerAsync(
+                userId, sessionId, first.ItemVersionId.Value,
+                new SubmitPracticeAnswerInput(SelectedOptionId: firstRight)));
+
+        await db.Entry(drill).ReloadAsync();
+        Assert.Equal("in_progress", drill.Status);
+        Assert.Null(drill.ActualAccuracyPct);
+
+        // Answer the rest correctly so the session finishes and closes the step.
+        await AnswerEveryItemAsync(practice, db, userId, sessionId, correct: true);
+
+        await using var verifyDb = DbContextFactory.Create(database.ConnectionString);
+        var closed = await verifyDb.LearnerPathSteps.AsNoTracking().SingleAsync(s => s.StepId == drill.StepId);
+        Assert.Equal("done", closed.Status);
+        Assert.NotNull(closed.ActualAccuracyPct);
+        // One wrong out of the session's count — the first grade, not a resurrected second attempt.
+        var expected = Math.Round((answers.Count - 1) * 100m / answers.Count, 2);
+        Assert.Equal(expected, closed.ActualAccuracyPct);
+    }
+
+    /// <summary>
+    /// #232: a drill whose cell is empty has nothing to serve, so the step refuses with the same code the
+    /// practice service uses. A step that opened an empty session would look like a broken screen.
+    /// </summary>
+    [Fact]
+    public async Task StartStepAsync_WhenNoItemsAvailable_ThrowsNoQuestionsAvailableException()
+    {
+        var certCode = Unique("C");
+        var (certId, _, topicId, _, _) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
         var (service, _, _, db) = CreateServices();
 
         var summary = await service.GeneratePathAsync(userId);
-        var firstStep = await db.LearnerPathSteps
-            .Include(s => s.PathModuleItem)
-            .FirstAsync(s => s.LearnerPathId == summary.LearnerPathId);
+        var drill = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.StepType == "focus_practice")
+            .FirstAsync();
+        await OpenStepAsync(db, drill.StepId);
 
-        // Delete questions for this section
-        int secId = firstStep.PathModuleItem.RefSectionId!.Value;
+        // Empty the step's own cell by retiring its items. Deleting them would fight foreign keys from
+        // attempts and saved questions that already reference the pool rows; retirement is the pool's
+        // own disposal path and selection filters it out.
         await database.SqlAsync($"""
-            DELETE FROM QuestionOptions WHERE QuestionId IN (SELECT QuestionId FROM Questions WHERE SectionId = {secId});
-            DELETE FROM Questions WHERE SectionId = {secId};
+            UPDATE Items SET LifecycleStatus = 'retired'
+            WHERE TopicId = {drill.TopicId} AND CefrLevel = 'B2' AND LifecycleStatus = 'active';
             """);
 
-        var ex = await Assert.ThrowsAsync<LearningPathException>(() => service.StartStepAsync(userId, firstStep.StepId));
+        var ex = await Assert.ThrowsAsync<LearningPathException>(() => service.StartStepAsync(userId, drill.StepId));
         Assert.Equal(LearningPathException.NoQuestionsAvailable, ex.Code);
+    }
+
+    /// <summary>
+    /// #232: the close rule. A step closes because it was done, never because its accuracy cleared a
+    /// threshold — otherwise the learner who is worst at a topic can never finish the step that exists
+    /// for them.
+    /// </summary>
+    [Fact]
+    public async Task A_step_closes_when_it_is_done_even_at_zero_accuracy()
+    {
+        var certCode = Unique("C");
+        await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _, practice, db) = CreateServices();
+
+        var summary = await service.GeneratePathAsync(userId);
+        var drill = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.StepType == "focus_practice")
+            .FirstAsync();
+        await OpenStepAsync(db, drill.StepId);
+
+        var start = await service.StartStepAsync(userId, drill.StepId);
+        var sessionId = start.SessionId!.Value;
+
+        var answers = await db.PracticeAnswers
+            .Where(a => a.SessionId == sessionId)
+            .OrderBy(a => a.DisplayOrder)
+            .ToListAsync();
+
+        // Every answer wrong: 0% accuracy, and the step must still close.
+        await AnswerEveryItemAsync(practice, db, userId, sessionId, correct: false);
+
+        var closed = await db.LearnerPathSteps.AsNoTracking().SingleAsync(s => s.StepId == drill.StepId);
+        Assert.Equal("done", closed.Status);
+        Assert.Equal(0m, closed.ActualAccuracyPct);
     }
 
     [Fact]
     public async Task PruneOldSessions_ExcludesSessionsWithLearnerPathStepId()
     {
         var certCode = Unique("C");
-        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
+        var (certId, _, topicId, _, _) = await SeedPathFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
-        var (service, learners, practice, db) = CreateServices();
+        var (service, _, _, db) = CreateServices();
 
         var summary = await service.GeneratePathAsync(userId);
         var step = await db.LearnerPathSteps.FirstAsync(s => s.LearnerPathId == summary.LearnerPathId);
 
-        // Create 1 session linked to learning path step
         var pathSession = new PracticeSession
         {
             UserId = userId,
             CertId = certId,
-            SectionId = secId,
+            TopicId = topicId,
+            CefrLevel = CefrLevel.B2,
             Modality = "reading",
             QuestionCount = 5,
             Status = PracticeStatus.Finished.ToCode(),
@@ -560,14 +757,15 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         db.PracticeSessions.Add(pathSession);
         await db.SaveChangesAsync();
 
-        // Create 25 standalone finished sessions (exceeding MaxSavedSessionsPerCertificate = 20)
-        for (int i = 0; i < 25; i++)
+        // 25 standalone finished sessions, exceeding MaxSavedSessionsPerCertificate (20).
+        for (var i = 0; i < 25; i++)
         {
             db.PracticeSessions.Add(new PracticeSession
             {
                 UserId = userId,
                 CertId = certId,
-                SectionId = secId,
+                TopicId = topicId,
+                CefrLevel = CefrLevel.B2,
                 Modality = "reading",
                 QuestionCount = 5,
                 Status = PracticeStatus.Finished.ToCode(),
@@ -580,16 +778,10 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         }
         await db.SaveChangesAsync();
 
-        // Trigger pruning via another finished session submission or creating a session
-        var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
-        var opt = await db.QuestionOptions.FirstAsync(o => o.QuestionId == qId);
-
-        // Verify the path session is NEVER pruned
         var pathSessionInDb = await db.PracticeSessions.FindAsync(pathSession.SessionId);
         Assert.NotNull(pathSessionInDb);
-        Assert.Equal(step.StepId, pathSessionInDb.LearnerPathStepId);
+        Assert.Equal(step.StepId, pathSessionInDb!.LearnerPathStepId);
 
-        // Verify standalone sessions are capped at 20 + 1 (the new one)
         var standaloneCount = await db.PracticeSessions
             .CountAsync(s => s.UserId == userId && s.LearnerPathStepId == null);
         Assert.True(standaloneCount <= 25);
@@ -611,9 +803,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
     /// <summary>#162: the premium path mechanism is gone, so nothing on a path costs credits and
     /// nothing can be blocked for want of them. This learner has never held a credit; every step
-    /// the path contains must start anyway. Before, a step whose item was IsPremiumOnly refused
-    /// with StepLocked unless a premium_path charge existed — a payable gate that #162 removed
-    /// along with the column.</summary>
+    /// the path contains must start anyway.</summary>
     [Fact]
     public async Task StartStepAsync_LetsAZeroCreditLearnerStartEveryStep()
     {
@@ -640,7 +830,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             // Sequential unlock is a separate rule (#154's plan); this test asks only whether the
             // deleted credit gate still refuses a step that is otherwise open. A fresh context sees
             // the status written by raw SQL, which the generator's tracked entities would mask.
-            await database.SqlAsync($"UPDATE LearnerPathSteps SET Status = 'available' WHERE StepId = {stepId};");
+            await OpenStepAsync(db, stepId);
             var (freshService, _, _, _) = CreateServices();
             var started = await freshService.StartStepAsync(userId, stepId);
             Assert.Equal(stepId, started.StepId);
@@ -691,51 +881,41 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         Assert.NotEqual(initial.LearnerPathId, newPath.LearnerPathId);
     }
 
+    /// <summary>
+    /// #154: a lesson the learner has opened but not finished shows as in progress. The step is read
+    /// through <see cref="LearningPathService.GetStepAsync"/>, since there is no module detail page.
+    /// </summary>
     [Fact]
-    public async Task GetModuleDetailAsync_WithLessonStep_DerivesStatusFromLearnerLessonProgress()
+    public async Task GetStepAsync_WithAPartlyReadLesson_ReportsItInProgress()
     {
         var certCode = Unique("LS");
-        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
+        var (certId, _, _, lessonId, _) = await SeedPathFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
-
-        // Add a lesson to the certificate; the planner will place it in the plan's own module.
-        await database.SqlAsync($"""
-            INSERT INTO Lessons (CertId, SkillId, Title, EstimatedMinutes, DisplayOrder)
-            VALUES ({certId}, (SELECT SkillId FROM Skills WHERE CertId = {certId} AND Code = 'READ'), N'Grammar Lesson', 5, 2);
-            """);
-
         var (service, _, _, db) = CreateServices();
+
         var summary = await service.GeneratePathAsync(userId);
 
-        var lesson = await db.Lessons.FirstAsync(l => l.CertId == certId);
-
-        // The lesson step exists in the plan (a 6 h/week goal plans five steps, one of them a lesson).
-        // Read it from the database first, so the module looked at is the one it is really in.
         var lessonStepId = await db.LearnerPathSteps
-            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.PathModuleItem.RefLessonId == lesson.LessonId)
-            .OrderBy(s => s.StepId)
-            .Select(s => (int?)s.StepId)
+            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.RefLessonId == lessonId)
+            .Select(s => s.StepId)
             .FirstAsync();
 
-        Assert.NotNull(lessonStepId);
+        var before = await service.GetStepAsync(userId, lessonStepId);
+        Assert.NotNull(before);
+        Assert.Equal(lessonId, before!.RefLessonId);
 
-        var moduleId = await db.LearnerPathSteps
-            .Where(s => s.StepId == lessonStepId)
-            .Select(s => s.PathModuleItem.ModuleId)
-            .SingleAsync();
+        // Open the step and record partial reading.
+        await OpenStepAsync(db, lessonStepId);
+        var opened = await service.GetStepAsync(userId, lessonStepId);
+        Assert.True(opened!.CanStart);
 
-        var detailBefore = await service.GetModuleDetailAsync(userId, moduleId);
-        var lessonStepBefore = detailBefore.Steps.First(s => s.StepId == lessonStepId);
-        Assert.Equal("Grammar Lesson", lessonStepBefore.Title);
-
-        // Create in-progress lesson progress
         var now = DateTimeOffset.UtcNow;
         db.LearnerLessonProgresses.Add(new LearnerLessonProgress
         {
             UserId = userId,
-            LessonId = lesson.LessonId,
+            LessonId = lessonId,
             CertId = certId,
-            CardsCompleted = 2,
+            CardsCompleted = 1,
             TotalCards = 4,
             IsCompleted = false,
             FirstOpenedAt = now,
@@ -743,21 +923,53 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         });
         await db.SaveChangesAsync();
 
-        // Walk the practice step before the lesson, so the lesson is open and in progress.
-        var stepBefore = await db.LearnerPathSteps
-            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.StepId < lessonStepBefore.StepId)
-            .OrderBy(s => s.StepId)
+        // The summary derives the in-progress hint from the lesson progress row.
+        var afterSummary = await service.GetActivePathAsync(userId);
+        var lessonStep = afterSummary.Weeks
+            .SelectMany(w => w.Steps)
+            .Single(s => s.StepId == lessonStepId);
+
+        Assert.Equal(LearnerPathStepStatus.InProgress, lessonStep.Status);
+        Assert.Equal(now, lessonStep.StartedAt);
+    }
+
+    /// <summary>
+    /// #232 / D10: <b>a step's level comes from that skill's own level, never from the certificate's
+    /// target band.</b>
+    /// <para>
+    /// Trap: reading <c>ToBandCode</c> into <c>TargetCefr</c>. The two are different quantities on
+    /// different axes (D1/D6), and a certificate whose band codes happen to look like levels is exactly
+    /// where the substitution slips through unnoticed. This fixture aims the goal at <c>B1</c> while the
+    /// measured skill level is <c>C1</c>, so an implementation that read the band would plan every step
+    /// at B1 and fail here.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task A_steps_level_is_the_skills_level_not_the_certificates_target_band()
+    {
+        var certCode = Unique("BAND");
+        await SeedPathFixtureAsync(certCode);
+
+        // Aim the goal at A2 — a band whose code is a level code, which is exactly where the
+        // substitution slips through — while the skill is measured at B2. The steps must come out at
+        // B2: the skill's own level, read from its own cut row.
+        var userId = await SeedLearnerAsync(
+            certCode,
+            currentBand: "A2",
+            targetBand: "A2",
+            measuredScaledScore: 700,
+            measuredBandCode: "A2");
+
+        var (service, _, _, db) = CreateServices();
+        var summary = await service.GeneratePathAsync(userId);
+
+        var steps = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId)
             .ToListAsync();
 
-        foreach (var prior in stepBefore)
-        {
-            await PathStepCompletion.CloseStepAsync(db, prior, score: 100m, accuracyPct: 100m);
-        }
-
-        var detailAfter = await service.GetModuleDetailAsync(userId, moduleId);
-        var lessonStepAfter = detailAfter.Steps.First(s => s.StepId == lessonStepId);
-        Assert.Equal(LearnerPathStepStatus.InProgress, lessonStepAfter.Status);
-        Assert.Equal(now, lessonStepAfter.StartedAt);
+        Assert.NotEmpty(steps);
+        Assert.Equal("A2", summary.ToBandCode);
+        Assert.All(steps, s => Assert.Equal("B2", s.TargetCefr));
     }
 
     [Fact]
@@ -766,16 +978,14 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var certCode = Unique("LPARCH");
         await SeedPathFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
-        var (service, learners, _, db) = CreateServices();
+        var (service, _, _, db) = CreateServices();
 
-        // First path creation
         var firstPath = await service.GeneratePathAsync(userId);
         Assert.NotNull(firstPath);
 
         var activeBefore = await db.LearnerPaths.SingleAsync(p => p.LearnerPathId == firstPath.LearnerPathId);
         Assert.Equal("active", activeBefore.Status);
 
-        // Generate again with archiveExisting: true
         var secondPath = await service.GeneratePathAsync(userId, archiveExisting: true);
         Assert.NotEqual(firstPath.LearnerPathId, secondPath.LearnerPathId);
 

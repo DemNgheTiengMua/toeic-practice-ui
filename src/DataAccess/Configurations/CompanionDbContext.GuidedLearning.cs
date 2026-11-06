@@ -34,11 +34,7 @@ public partial class CompanionDbContext
                 .HasForeignKey(d => new { d.PlacementId, d.UserId })
                 .HasConstraintName("FK_LearnerPaths_PlacementUser");
 
-            entity.HasOne(d => d.PathTemplate).WithMany(p => p.LearnerPaths)
-                .HasPrincipalKey(p => new { p.TemplateId, p.CertId })
-                .HasForeignKey(d => new { d.TemplateId, d.CertId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_LearnerPaths_TemplateCert");
+            // #232: no PathTemplate relationship. The path is synthesised, not looked up.
         });
 
 
@@ -49,21 +45,42 @@ public partial class CompanionDbContext
 
             // #191: the step-closure single-writer guard
             entity.ToTable(tb => tb.HasTrigger("trg_LearnerPathSteps_SingleWriter"));
+            // #232: UI-44's rule moved here from the dropped PathModuleItems
+            entity.ToTable(tb => tb.HasTrigger("trg_LearnerPathSteps_MockSectionIsSittableExam"));
 
             entity.Property(e => e.Status).HasDefaultValue("locked");
             entity.Property(e => e.TargetAccuracyPct).HasDefaultValue(70);
+            entity.Property(e => e.WeekSequence).HasDefaultValue(0);
 
             entity.HasOne(d => d.LearnerPath).WithMany(p => p.LearnerPathSteps)
-                .HasPrincipalKey(p => new { p.LearnerPathId, p.TemplateId })
-                .HasForeignKey(d => new { d.LearnerPathId, d.TemplateId })
+                .HasPrincipalKey(p => new { p.LearnerPathId, p.CertId })
+                .HasForeignKey(d => new { d.LearnerPathId, d.CertId })
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Steps_PathTemplate");
+                .HasConstraintName("FK_Steps_PathCert");
 
-            entity.HasOne(d => d.PathModuleItem).WithMany(p => p.LearnerPathSteps)
-                .HasPrincipalKey(p => new { p.ItemId, p.TemplateId })
-                .HasForeignKey(d => new { d.PathModuleItemId, d.TemplateId })
+            // #232: the coordinate's own relationships. Each carries CertId where the schema does, so
+            // the model and the constraint cannot disagree about which key is being used.
+            entity.HasOne(d => d.Skill).WithMany(p => p.LearnerPathSteps)
+                .HasPrincipalKey(p => new { p.SkillId, p.Modality })
+                .HasForeignKey(d => new { d.SkillId, d.Modality })
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Steps_ItemTemplate");
+                .HasConstraintName("FK_Steps_SkillModality");
+
+            entity.HasOne(d => d.Topic).WithMany(p => p.LearnerPathSteps)
+                .HasPrincipalKey(p => new { p.TopicId, p.Modality })
+                .HasForeignKey(d => new { d.TopicId, d.Modality })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Steps_TopicModality");
+
+            entity.HasOne(d => d.Lesson).WithMany(p => p.LearnerPathSteps)
+                .HasPrincipalKey(p => new { p.LessonId, p.CertId })
+                .HasForeignKey(d => new { d.RefLessonId, d.CertId })
+                .HasConstraintName("FK_Steps_LessonCert");
+
+            entity.HasOne(d => d.Exam).WithMany(p => p.LearnerPathSteps)
+                .HasPrincipalKey(p => new { p.ExamId, p.CertId })
+                .HasForeignKey(d => new { d.RefExamId, d.CertId })
+                .HasConstraintName("FK_Steps_ExamCert");
         });
 
 
@@ -104,94 +121,6 @@ public partial class CompanionDbContext
 
 
 
-        modelBuilder.Entity<PathTemplate>(entity =>
-        {
-            entity.HasKey(e => e.TemplateId).HasName("PK__PathTemp__F87ADD2726DC6DA2");
-
-            entity.HasOne(d => d.Cert).WithMany(p => p.PathTemplates)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__PathTempl__CertI__056ECC6A");
-
-            entity.HasOne(d => d.ScoreBand).WithMany(p => p.PathTemplateScoreBands)
-                .HasPrincipalKey(p => new { p.CertId, p.Code })
-                .HasForeignKey(d => new { d.CertId, d.FromBandCode })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PathTpl_FromBand");
-
-            entity.HasOne(d => d.ScoreBandNavigation).WithMany(p => p.PathTemplateScoreBandNavigations)
-                .HasPrincipalKey(p => new { p.CertId, p.Code })
-                .HasForeignKey(d => new { d.CertId, d.ToBandCode })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PathTpl_ToBand");
-        });
-
-
-
-        modelBuilder.Entity<PathModule>(entity =>
-        {
-            entity.HasKey(e => e.ModuleId).HasName("PK__PathModu__2B7477A71FBFA640");
-
-            entity.HasOne(d => d.Skill).WithMany(p => p.PathModules)
-                .HasPrincipalKey(p => new { p.SkillId, p.CertId })
-                .HasForeignKey(d => new { d.SkillId, d.CertId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PathModules_SkillCert");
-
-            entity.HasOne(d => d.PathTemplate).WithMany(p => p.PathModules)
-                .HasPrincipalKey(p => new { p.TemplateId, p.CertId })
-                .HasForeignKey(d => new { d.TemplateId, d.CertId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PathModules_TemplateCert");
-        });
-
-
-
-        modelBuilder.Entity<PathModuleTopic>(entity =>
-        {
-            entity.HasKey(e => e.TopicId).HasName("PK__PathModu__022E0F5D1DBB1B56");
-
-            entity.HasOne(d => d.Category).WithMany(p => p.PathModuleTopics).HasConstraintName("FK__PathModul__Categ__1F2E9E6D");
-
-            entity.HasOne(d => d.Module).WithMany(p => p.PathModuleTopics)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__PathModul__Modul__1E3A7A34");
-        });
-
-
-
-        modelBuilder.Entity<PathModuleItem>(entity =>
-        {
-            entity.HasKey(e => e.ItemId).HasName("PK__PathModu__727E838B42341F73");
-
-            entity.ToTable(tb => tb.HasTrigger("trg_PMI_AiTaskRefsSkillPracticeExam"));
-
-            entity.HasOne(d => d.PathModule).WithMany(p => p.PathModuleItemPathModules)
-                .HasPrincipalKey(p => new { p.ModuleId, p.CertId })
-                .HasForeignKey(d => new { d.ModuleId, d.CertId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PMI_ModuleCert");
-
-            entity.HasOne(d => d.PathModuleNavigation).WithMany(p => p.PathModuleItemPathModuleNavigations)
-                .HasPrincipalKey(p => new { p.ModuleId, p.TemplateId })
-                .HasForeignKey(d => new { d.ModuleId, d.TemplateId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PMI_ModuleTemplate");
-
-            entity.HasOne(d => d.Exam).WithMany(p => p.PathModuleItems)
-                .HasPrincipalKey(p => new { p.ExamId, p.CertId })
-                .HasForeignKey(d => new { d.RefExamId, d.CertId })
-                .HasConstraintName("FK_PMI_ExamCert");
-
-            entity.HasOne(d => d.Lesson).WithMany(p => p.PathModuleItems)
-                .HasPrincipalKey(p => new { p.LessonId, p.CertId })
-                .HasForeignKey(d => new { d.RefLessonId, d.CertId })
-                .HasConstraintName("FK_PMI_LessonCert");
-
-            entity.HasOne(d => d.Section).WithMany(p => p.PathModuleItems)
-                .HasPrincipalKey(p => new { p.SectionId, p.CertId })
-                .HasForeignKey(d => new { d.RefSectionId, d.CertId })
-                .HasConstraintName("FK_PMI_SectionCert");
-        });
 
 
 

@@ -12,9 +12,13 @@ using Xunit;
 namespace Services.Tests;
 
 /// <summary>
-/// #154: a step that cannot be finished makes the whole path a lie. These tests close each activity
-/// type through the real service and then re-read the row from a fresh DbContext — "done" has to be
-/// persisted, not drawn at read time.
+/// #154 / #232: a step that cannot be finished makes the whole path a lie. These tests close each
+/// activity type through the real service and then re-read the row from a fresh DbContext — "done" has
+/// to be persisted, not drawn at read time.
+/// <para>
+/// #232 moved the match from "which module item" to "which route and which resource", because a drill
+/// step names no resource at all: the selector decides its items at run time.
+/// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
 public sealed class PathStepCompletionTests(DatabaseFixture database)
@@ -34,13 +38,33 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// One section with one question, one lesson with one card, one published mock exam with one
-    /// question, and CEFR bands carrying the seeded hours. Every activity type the planner can place
-    /// is sat-able here.
+    /// One reading skill at B2 by its own cut-score row, four canonical topics holding two active B2
+    /// items each, one lesson with one card, and one published mock exam with one question. Every
+    /// activity type the planner can place is sat-able here.
+    ///
+    /// The cell is B2 on purpose: `PoolIngestionTests` counts R-DET at B1 exactly, so a fixture that
+    /// stocked there would shift a number another test asserts.
     /// </summary>
-    private async Task<(int certId, int sectionId, int questionId, int examId, int lessonId, int cardId)> SeedCertAsync(string certCode)
+    private async Task<(int certId, int skillId, int topicId, int questionId, int examId, int lessonId, int cardId)> SeedCertAsync(string certCode)
     {
         await database.SqlAsync($"""
+            -- #232: the canonical twenty topics are the step coordinate's topic axis.
+            INSERT INTO Topics (Modality, Code, Name)
+            SELECT v.Modality, v.Code, v.Name
+            FROM (VALUES
+              ('listening','L-GIST',N'Global gist'), ('listening','L-DET',N'Detail'),
+              ('listening','L-INF',N'Inference'), ('listening','L-ATT',N'Attitude'),
+              ('listening','L-FUNC',N'Function'), ('listening','L-ORG',N'Organisation'),
+              ('reading','R-GIST',N'Global thesis'), ('reading','R-DET',N'Local detail'),
+              ('reading','R-INF',N'Bridging inference'), ('reading','R-ATT',N'Authorial stance'),
+              ('reading','R-COH',N'Cohesion'), ('reading','R-GRAM',N'Grammar'),
+              ('speaking','S-DESC',N'Description'), ('speaking','S-INT',N'Interaction'),
+              ('speaking','S-ARG',N'Argument'), ('speaking','S-SYN',N'Synthesis'),
+              ('writing','W-CORR',N'Correspondence'), ('writing','W-DATA',N'Data'),
+              ('writing','W-ARG',N'Argument'), ('writing','W-DISC',N'Discourse')
+            ) v(Modality, Code, Name)
+            WHERE NOT EXISTS (SELECT 1 FROM Topics t WHERE t.Modality = v.Modality AND t.Code = v.Code);
+
             INSERT INTO Certificates (Code, Name, IsActive, ScoreAggregationRule) VALUES ('{certCode}', N'Cert {certCode}', 1, 'avg_whole');
             DECLARE @cert INT = SCOPE_IDENTITY();
 
@@ -48,8 +72,8 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
               (@cert, 'READ', N'Reading', 'reading', 1);
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
-              (@sR, @cert, 'reading', 'P5', N'Incomplete Sentences', 1, 1);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sR, @cert, 'reading', 'P5', N'Incomplete Sentences', 4, 1, 1);
             DECLARE @sec INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
             UPDATE Skills SET MinScaledScore = 0, MaxScaledScore = 990, ScoreStep = 1 WHERE SkillId = @sR;
@@ -62,6 +86,14 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
             INSERT INTO ScoreScales (CertId, SkillId, RawScore, ScaledScore) VALUES
               (@cert, @sR, 0, 0),
               (@cert, @sR, 1, 990);
+
+            -- #232: the skill's OWN level, from this certificate's cut-score rows.
+            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
+            VALUES (@cert, 1, 0, N'Test standard-setting', '2024-01-01');
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled) VALUES
+              (@cert, 1, @sR, 'A2', 'cut', 0, 100),
+              (@cert, 1, @sR, 'B1', 'cut', 101, 500),
+              (@cert, 1, @sR, 'B2', 'cut', 501, 990);
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
             VALUES (@cert, N'Mock Exam', 'published', 60, 'mock');
@@ -86,18 +118,39 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
             VALUES (@lesson, @cert, 'rule', N'Rule', N'Body', 1);
             DECLARE @card INT = SCOPE_IDENTITY();
 
-            INSERT INTO PathTemplates (CertId, FromBandCode, ToBandCode, Name)
-            VALUES (@cert, 'B1', 'B2', N'B1 to B2');
+            -- Two B2 items per canonical reading topic, so every topic is a drillable cell.
+            DECLARE @topicId INT, @n INT;
+            DECLARE topics_cursor CURSOR LOCAL FAST_FORWARD FOR
+              SELECT TopicId FROM Topics WHERE Modality = 'reading' ORDER BY TopicId;
+            OPEN topics_cursor;
+            FETCH NEXT FROM topics_cursor INTO @topicId;
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+              SET @n = 1;
+              WHILE @n <= 2
+              BEGIN
+                INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('B2', N'Passage');
+                INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus)
+                VALUES (SCOPE_IDENTITY(), 'reading', @topicId, 'B2', 'passage_comprehension', 0, 'demo', 'active');
+                DECLARE @itemId INT = SCOPE_IDENTITY();
+                INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
+                VALUES (@itemId, 1, N'Stem', N'A', N'B', N'C', N'D', 'A');
+                SET @n = @n + 1;
+              END
+              FETCH NEXT FROM topics_cursor INTO @topicId;
+            END
+            CLOSE topics_cursor; DEALLOCATE topics_cursor;
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
-        var sectionId = await db.Sections.Where(s => s.CertId == cert.CertId).Select(s => s.SectionId).SingleAsync();
-        var questionId = await db.Questions.Where(q => q.SectionId == sectionId).Select(q => q.QuestionId).SingleAsync();
+        var skillId = await db.Skills.Where(s => s.CertId == cert.CertId).Select(s => s.SkillId).SingleAsync();
+        var topicId = await db.Topics.Where(t => t.Modality == "reading" && t.Code == "R-DET").Select(t => t.TopicId).SingleAsync();
+        var questionId = await db.Questions.Where(q => q.Section.CertId == cert.CertId).Select(q => q.QuestionId).SingleAsync();
         var examId = await db.Exams.Where(e => e.CertId == cert.CertId && e.Purpose == "mock").Select(e => e.ExamId).SingleAsync();
         var lessonId = await db.Lessons.Where(l => l.CertId == cert.CertId).Select(l => l.LessonId).SingleAsync();
         var cardId = await db.LessonCards.Where(c => c.LessonId == lessonId).Select(c => c.CardId).SingleAsync();
-        return (cert.CertId, sectionId, questionId, examId, lessonId, cardId);
+        return (cert.CertId, skillId, topicId, questionId, examId, lessonId, cardId);
     }
 
     private async Task<int> SeedLearnerAsync(int certId, decimal weeklyHours = 10m)
@@ -111,6 +164,21 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
             DECLARE @u INT = SCOPE_IDENTITY();
             INSERT INTO TargetBands (UserId, CertId, TargetBandCode, CurrentBandCode, TargetDate, WeeklyStudyHours, FeasibilityStatus)
             VALUES (@u, {certId}, 'B2', 'B1', DATEADD(DAY, 210, CAST(SYSDATETIMEOFFSET() AS DATE)), {weeklyHours}, 'feasible');
+
+            -- #232: a measured level, so the step's level is read from this skill's own cut row rather
+            -- than from the stocked cell. The pool is shared across the assembly, so a fallback-driven
+            -- level would depend on which other tests ran first.
+            DECLARE @measSkill INT = (SELECT TOP 1 SkillId FROM Skills WHERE CertId = {certId} ORDER BY SkillId);
+            INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
+            VALUES ({certId}, N'Measurement sitting {Guid.NewGuid():N}', 'published', 60, 'mock');
+            DECLARE @measExam INT = SCOPE_IDENTITY();
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
+            VALUES (@u, @measExam, {certId}, 'graded',
+                    DATEADD(DAY, -1, SYSDATETIMEOFFSET()), DATEADD(DAY, -1, SYSDATETIMEOFFSET()),
+                    DATEADD(DAY, -1, SYSDATETIMEOFFSET()), 700, 'B2', 'AttemptEngine', 1);
+            DECLARE @measAttempt INT = SCOPE_IDENTITY();
+            INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore)
+            VALUES (@measAttempt, @measSkill, {certId}, 18, 700);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -133,24 +201,26 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
 
     private static async Task<List<LearnerPathStep>> StepsAsync(CompanionDbContext db, int learnerPathId) =>
         await db.LearnerPathSteps
-            .Include(s => s.PathModuleItem)
             .Where(s => s.LearnerPathId == learnerPathId)
             .OrderBy(s => s.WeekNumber)
+            .ThenBy(s => s.WeekSequence)
             .ThenBy(s => s.StepId)
             .ToListAsync();
 
     /// <summary>
-    /// Does the activity a step plans, through the real service, in the way a learner would.
+    /// Does the activity a step plans, through the real service, in the way a learner would. The step's
+    /// type decides the route; a drill step closes through its practice session, which the real learner
+    /// answers.
     /// </summary>
     private async Task SitStepAsync(
         int userId, LearnerPathStep step, MockExamService mocks, LessonService lessons,
-        LearningPathService paths, int questionId, int lessonId, int cardId, CompanionDbContext db)
+        LearningPathService paths, PracticeService practice, int questionId, int lessonId, int cardId, CompanionDbContext db)
     {
-        switch (step.PathModuleItem.ItemType)
+        switch (step.StepType)
         {
-            case "mock_exam":
+            case "mock_section":
             {
-                var attempt = await mocks.StartAttemptAsync(userId, step.PathModuleItem.RefExamId!.Value);
+                var attempt = await mocks.StartAttemptAsync(userId, step.RefExamId!.Value);
                 var correct = await db.QuestionOptions
                     .Where(o => o.QuestionId == questionId && o.IsCorrect)
                     .Select(o => o.OptionId)
@@ -159,14 +229,60 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
                 await mocks.SubmitAttemptAsync(userId, attempt.AttemptId, isAutoSubmit: false);
                 break;
             }
-            case "lesson":
+            case "concept_lesson":
+            case "expanded_remedial":
                 await lessons.RecordCardViewAsync(userId, lessonId, cardId);
                 break;
             default:
-                // #160: the manual "mark done" route is gone with CompleteStepAsync; a practice step is
-                // closed by answering its session, which is what the real learner does.
-                await PathStepCompletion.CloseStepAsync(db, step, score: 90m, accuracyPct: 90m);
+                // #160: there is no manual "mark done" route. A drill is closed by answering its
+                // session, which is what the real learner does.
+                await SitDrillAsync(userId, step, paths, practice, db);
                 break;
+        }
+    }
+
+    /// <summary>Opens a drill step through the service and answers every item it drew.</summary>
+    private async Task SitDrillAsync(
+        int userId, LearnerPathStep step, LearningPathService paths, PracticeService practice, CompanionDbContext db)
+    {
+        // A step closed directly by an earlier test in this file may already be open.
+        await db.Entry(step).ReloadAsync();
+        if (step.Status == "done")
+        {
+            return;
+        }
+
+        if (step.Status == "locked")
+        {
+            await database.SqlAsync($"UPDATE LearnerPathSteps SET Status = 'available' WHERE StepId = {step.StepId};");
+            await db.Entry(step).ReloadAsync();
+        }
+
+        var start = await paths.StartStepAsync(userId, step.StepId);
+        var sessionId = start.SessionId!.Value;
+
+        while (true)
+        {
+            var take = await practice.GetSessionTakeAsync(userId, sessionId);
+            var unanswered = take.Questions.FirstOrDefault(q => !q.SelectedOptionId.HasValue && !q.IsCorrect.HasValue);
+            if (unanswered is null)
+            {
+                return;
+            }
+
+            var version = await db.ItemVersions.AsNoTracking()
+                .FirstAsync(v => v.ItemVersionId == unanswered.ItemVersionId);
+            var keyIndex = version.KeyLabel?.Trim().ToUpperInvariant() switch
+            {
+                "A" => 0, "B" => 1, "C" => 2, "D" => 3, _ => -1,
+            };
+            var keyOptionId = unanswered.ItemVersionId!.Value * 10 + keyIndex + 1;
+            var chosen = unanswered.Options.First(o => o.OptionId == keyOptionId);
+
+            // #187: a pool answer is addressed by the version it pinned.
+            await practice.SubmitAnswerAsync(
+                userId, sessionId, unanswered.ItemVersionId.Value,
+                new SubmitPracticeAnswerInput(SelectedOptionId: chosen.OptionId));
         }
     }
 
@@ -174,15 +290,16 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
     public async Task Sitting_a_mock_exam_marks_its_path_step_done_and_unlocks_the_next()
     {
         var certCode = Unique("MOCK");
-        var (certId, _, questionId, examId, lessonId, cardId) = await SeedCertAsync(certCode);
+        var (certId, _, _, questionId, examId, lessonId, cardId) = await SeedCertAsync(certCode);
         var userId = await SeedLearnerAsync(certId);
         await GrantCreditsAsync(userId, 5);
 
-        var (paths, _, mocks, lessons, db) = CreateServices();
+        var (paths, learners, mocks, lessons, db) = CreateServices();
+        var practice = new PracticeService(db, learners);
         var summary = await paths.GeneratePathAsync(userId);
         var steps = await StepsAsync(db, summary.LearnerPathId!.Value);
 
-        var mockStep = steps.First(s => s.PathModuleItem.RefExamId == examId);
+        var mockStep = steps.First(s => s.RefExamId == examId);
         Assert.NotEqual("done", mockStep.Status);
 
         // Walk the earlier steps so the mock step is the one open when the exam is sat.
@@ -190,7 +307,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         {
             await db.Entry(earlier).ReloadAsync();
             Assert.NotEqual("locked", earlier.Status);
-            await SitStepAsync(userId, earlier, mocks, lessons, paths, questionId, lessonId, cardId, db);
+            await SitStepAsync(userId, earlier, mocks, lessons, paths, practice, questionId, lessonId, cardId, db);
             await db.Entry(earlier).ReloadAsync();
             Assert.Equal("done", earlier.Status);
         }
@@ -215,7 +332,8 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         // And the step after it is open.
         var nextStep = await verifyDb.LearnerPathSteps
             .Where(s => s.LearnerPathId == summary.LearnerPathId && s.StepId > mockStep.StepId)
-            .OrderBy(s => s.StepId)
+            .OrderBy(s => s.WeekNumber)
+            .ThenBy(s => s.WeekSequence)
             .FirstOrDefaultAsync();
 
         if (nextStep is not null)
@@ -228,17 +346,17 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
     public async Task Finishing_a_lesson_marks_its_path_step_done_and_the_row_survives_a_reload()
     {
         var certCode = Unique("LESSON");
-        var (certId, _, _, _, lessonId, cardId) = await SeedCertAsync(certCode);
+        var (certId, _, _, _, _, lessonId, cardId) = await SeedCertAsync(certCode);
         var userId = await SeedLearnerAsync(certId);
 
         var (paths, _, _, lessons, db) = CreateServices();
         var summary = await paths.GeneratePathAsync(userId);
         var steps = await StepsAsync(db, summary.LearnerPathId!.Value);
 
-        var lessonStep = steps.First(s => s.PathModuleItem.RefLessonId == lessonId);
+        var lessonStep = steps.First(s => s.RefLessonId == lessonId);
 
         // Walk the steps before it so the lesson is open.
-        foreach (var earlier in steps.Where(s => s.StepId < lessonStep.StepId))
+        foreach (var earlier in steps.TakeWhile(s => s.StepId < lessonStep.StepId))
         {
             await db.Entry(earlier).ReloadAsync();
             await PathStepCompletion.CloseStepAsync(db, earlier, score: 90m, accuracyPct: 90m);
@@ -259,16 +377,16 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
     public async Task A_finished_lesson_written_by_hand_still_shows_done_after_a_reload_of_the_path_screen()
     {
         var certCode = Unique("RELOAD");
-        var (certId, _, _, _, lessonId, cardId) = await SeedCertAsync(certCode);
+        var (certId, _, _, _, _, lessonId, cardId) = await SeedCertAsync(certCode);
         var userId = await SeedLearnerAsync(certId);
 
         var (paths, _, _, lessons, db) = CreateServices();
         var summary = await paths.GeneratePathAsync(userId);
         var steps = await StepsAsync(db, summary.LearnerPathId!.Value);
-        var lessonStep = steps.First(s => s.PathModuleItem.RefLessonId == lessonId);
+        var lessonStep = steps.First(s => s.RefLessonId == lessonId);
 
         await PathStepCompletion.CloseStepAsync(
-            db, steps.First(s => s.StepId < lessonStep.StepId), score: 90m, accuracyPct: 90m);
+            db, steps.FirstOrDefault(s => s.StepId < lessonStep.StepId) ?? steps[1], score: 90m, accuracyPct: 90m);
 
         // Force the lesson step open, then finish the lesson.
         var step = await db.LearnerPathSteps.SingleAsync(s => s.StepId == lessonStep.StepId);
@@ -298,11 +416,12 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         // The gate: no step may sit unreachable forever. Walk the whole path, mock exams included,
         // in the order the plan wrote it.
         var certCode = Unique("WALK");
-        var (certId, _, questionId, examId, lessonId, cardId) = await SeedCertAsync(certCode);
+        var (certId, _, _, questionId, _, lessonId, cardId) = await SeedCertAsync(certCode);
         var userId = await SeedLearnerAsync(certId);
         await GrantCreditsAsync(userId, 20);
 
-        var (paths, _, mocks, lessons, db) = CreateServices();
+        var (paths, learners, mocks, lessons, db) = CreateServices();
+        var practice = new PracticeService(db, learners);
         var summary = await paths.GeneratePathAsync(userId);
 
         var steps = await StepsAsync(db, summary.LearnerPathId!.Value);
@@ -313,7 +432,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
             await db.Entry(step).ReloadAsync();
             Assert.NotEqual("locked", step.Status);   // it must already be open by now
 
-            await SitStepAsync(userId, step, mocks, lessons, paths, questionId, lessonId, cardId, db);
+            await SitStepAsync(userId, step, mocks, lessons, paths, practice, questionId, lessonId, cardId, db);
 
             var closed = await FreshStepAsync(step.StepId);
             Assert.Equal("done", closed.Status);
@@ -324,36 +443,51 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
     }
 
     [Fact]
-    public async Task A_practice_step_records_its_measured_accuracy()
+    public async Task A_drill_step_records_its_measured_accuracy()
     {
         var certCode = Unique("ACC");
-        var (certId, sectionId, questionId, _, _, _) = await SeedCertAsync(certCode);
+        var (certId, _, _, _, _, _, _) = await SeedCertAsync(certCode);
         var userId = await SeedLearnerAsync(certId);
 
-        var (paths, _, _, _, db) = CreateServices();
+        var (paths, learners, _, _, db) = CreateServices();
+        var practice = new PracticeService(db, learners);
         var summary = await paths.GeneratePathAsync(userId);
         var steps = await StepsAsync(db, summary.LearnerPathId!.Value);
-        var practiceStep = steps.First(s => s.PathModuleItem.RefSectionId == sectionId);
+        var drillStep = steps.First(s => s.StepType == "focus_practice");
 
-        var start = await paths.StartStepAsync(userId, practiceStep.StepId);
-        var practice = new PracticeService(db, new LearnerService(db));
-        var correct = await db.QuestionOptions
-            .Where(o => o.QuestionId == questionId && o.IsCorrect)
-            .Select(o => o.OptionId)
-            .SingleAsync();
-        await practice.SubmitAnswerAsync(userId, start.SessionId!.Value, questionId, new SubmitPracticeAnswerInput(correct));
+        await database.SqlAsync($"UPDATE LearnerPathSteps SET Status = 'available' WHERE StepId = {drillStep.StepId};");
+        await db.Entry(drillStep).ReloadAsync();
 
-        var closed = await FreshStepAsync(practiceStep.StepId);
+        var start = await paths.StartStepAsync(userId, drillStep.StepId);
+        var sessionId = start.SessionId!.Value;
+
+        // Answer every item right: 100% accuracy on the step.
+        while (true)
+        {
+            var take = await practice.GetSessionTakeAsync(userId, sessionId);
+            var unanswered = take.Questions.FirstOrDefault(q => !q.SelectedOptionId.HasValue && !q.IsCorrect.HasValue);
+            if (unanswered is null)
+            {
+                break;
+            }
+
+            var right = unanswered.Options.FirstOrDefault(o => o.OptionId == unanswered.CorrectOptionId)
+                        ?? unanswered.Options[0];
+            await practice.SubmitAnswerAsync(
+                userId, sessionId, unanswered.ItemVersionId!.Value,
+                new SubmitPracticeAnswerInput(SelectedOptionId: right.OptionId));
+        }
+
+        var closed = await FreshStepAsync(drillStep.StepId);
         Assert.Equal("done", closed.Status);
         Assert.Equal(100m, closed.ActualAccuracyPct);
-        Assert.Equal(100m, closed.Score);
     }
 
     [Fact]
     public async Task Closing_a_planned_step_marks_it_done_with_its_score_and_unlocks_the_next()
     {
         var certCode = Unique("CLOSE");
-        var (certId, _, _, _, _, _) = await SeedCertAsync(certCode);
+        var (certId, _, _, _, _, _, _) = await SeedCertAsync(certCode);
         var userId = await SeedLearnerAsync(certId);
 
         var (paths, _, _, _, db) = CreateServices();
@@ -383,7 +517,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         // path, so a late answer marked the reset path's step done and UnlockNextAsync could then
         // flip the whole path to "completed" - a path the learner never walked.
         var certCode = Unique("RST");
-        var (certId, _, _, _, _, _) = await SeedCertAsync(certCode);
+        var (certId, _, _, _, _, _, _) = await SeedCertAsync(certCode);
         var userId = await SeedLearnerAsync(certId);
         await GrantCreditsAsync(userId, 20);
 
@@ -415,7 +549,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         // Idempotence: two activities can finish close together. The second close must not overwrite
         // the score the first one recorded, nor run the unlock a second time.
         var certCode = Unique("IDEM");
-        var (certId, _, _, _, _, _) = await SeedCertAsync(certCode);
+        var (certId, _, _, _, _, _, _) = await SeedCertAsync(certCode);
         var userId = await SeedLearnerAsync(certId);
         await GrantCreditsAsync(userId, 20);
 

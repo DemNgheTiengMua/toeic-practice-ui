@@ -1,0 +1,97 @@
+@model PathStepDto
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = Model.Title;
+    ViewData["Description"] = $"{Model.SkillName} · {Model.TopicName} · {Model.TargetCefr}";
+    var sizeLabel = LearningPathIndexViewModel.SizeLabel(Model);
+    var typeLabel = LearningPathIndexViewModel.StepTypeLabel(Model.StepType);
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/learning-path" class="breadcrumbs__item">My learning path</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">@Model.Title</span>
+</nav>
+
+<div class="stack">
+  <div class="row row--between" style="align-items: flex-start;">
+    <div>
+      <h1 class="m-0 mb-1">@Model.Title</h1>
+      <p class="text-muted no-margin">@typeLabel · @Model.SkillName</p>
+    </div>
+    @if (Model.Status == LearnerPathStepStatusDto.Done)
+    {
+      <span class="badge badge--success">Done</span>
+    }
+    else if (Model.Status == LearnerPathStepStatusDto.InProgress)
+    {
+      <span class="badge badge--warning">In progress</span>
+    }
+    else if (Model.Status == LearnerPathStepStatusDto.Locked)
+    {
+      <span class="badge">Locked</span>
+    }
+    else
+    {
+      <span class="badge">Available</span>
+    }
+  </div>
+
+  @* D21a: the four metadata columns a step shows before it starts. *@
+  <div class="card"><div class="card__body">
+    <div class="row" style="gap: var(--space-6); flex-wrap: wrap;">
+      <div>
+        <div class="text-xs text-muted">SEQUENCE</div>
+        <div class="font-mono">Week @Model.WeekNumber · @Model.WeekSequence</div>
+      </div>
+      <div>
+        <div class="text-xs text-muted">TOPIC</div>
+        <div class="font-mono">@Model.TopicCode</div>
+        <div class="text-sm text-muted">@Model.TopicName</div>
+      </div>
+      <div>
+        <div class="text-xs text-muted">LEVEL</div>
+        <div class="font-mono">@Model.TargetCefr</div>
+        <div class="text-sm text-muted">@Model.SkillName</div>
+      </div>
+      <div>
+        <div class="text-xs text-muted">SIZE</div>
+        <div class="font-mono">@sizeLabel</div>
+        <div class="text-sm text-muted">@Model.SizingTier.ToString().ToLowerInvariant()</div>
+      </div>
+    </div>
+  </div></div>
+
+  @if (Model.Score.HasValue || Model.ActualAccuracyPct.HasValue)
+  {
+    <div class="card"><div class="card__body">
+      <strong class="text-sm">This step's result</strong>
+      <p class="font-mono no-margin">
+        @if (Model.Score.HasValue)
+        {
+          <span>Score @Model.Score.Value.ToString("0.##")</span>
+        }
+        @if (Model.ActualAccuracyPct.HasValue)
+        {
+          <span> · accuracy @Model.ActualAccuracyPct.Value.ToString("0.#")% (target @Model.TargetAccuracyPct%)</span>
+        }
+      </p>
+    </div></div>
+  }
+
+  @if (Model.CanStart)
+  {
+    <form method="post" action="/learning-path/steps/@Model.StepId/start">
+      @Html.AntiForgeryToken()
+      <button type="submit" class="btn btn--primary">
+        @(Model.Status == LearnerPathStepStatusDto.InProgress ? "Resume step" : "Start step")
+      </button>
+    </form>
+  }
+  else
+  {
+    <p class="text-muted text-sm no-margin">Complete the steps before this one to open it.</p>
+  }
+</div>

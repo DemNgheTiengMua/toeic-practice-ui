@@ -70,10 +70,11 @@ public partial class Skill
     public virtual ICollection<MentorProfile> MentorProfileSkills { get; set; } = new List<MentorProfile>();
 
     [InverseProperty("Skill")]
-    public virtual ICollection<PathModule> PathModules { get; set; } = new List<PathModule>();
-
-    [InverseProperty("Skill")]
     public virtual ICollection<Recommendation> Recommendations { get; set; } = new List<Recommendation>();
+
+    /// <summary>#232: the path steps drilled at this skill.</summary>
+    [InverseProperty("Skill")]
+    public virtual ICollection<LearnerPathStep> LearnerPathSteps { get; set; } = new List<LearnerPathStep>();
 
     [InverseProperty("Skill")]
     public virtual ICollection<ScoreScale> ScoreScales { get; set; } = new List<ScoreScale>();

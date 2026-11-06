@@ -5,40 +5,105 @@ INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c,'R',N'R',
 INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@sk,@c,'reading','P5',N'IC',4,30,1); DECLARE @sec INT=SCOPE_IDENTITY();
 INSERT INTO Users (RoleId,Email,PasswordHash,ActiveCertId) VALUES (@r,'u@x.com',0x00,@c); DECLARE @u INT=SCOPE_IDENTITY();
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES (@c,'below_A1',N'Below A1',10,119,1), (@c,'A2',N'A2',225,549,3);
-INSERT INTO PathTemplates (CertId,FromBandCode,ToBandCode,Name) VALUES (@c,'below_A1','A2',N'Starter'); DECLARE @tpl INT=SCOPE_IDENTITY();
-INSERT INTO PathModules (TemplateId,SkillId,CertId,DisplayOrder,Title) VALUES (@tpl,@sk,@c,1,N'Reading'); DECLARE @mod INT=SCOPE_IDENTITY();
--- valid practice_section item (RefSectionId set, RefExamId null)
-INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefSectionId,RefExamId,DisplayOrder)
-  VALUES (@mod,@c,@tpl,'practice_section',@sec,NULL,1);
-INSERT INTO LearnerPaths (UserId,CertId,TemplateId,CurrentBandCode,Status) VALUES (@u,@c,@tpl,'below_A1','active');
+INSERT INTO Topics (Modality,Code,Name) VALUES ('reading','R-DET',N'Detail'); DECLARE @tDet INT=SCOPE_IDENTITY();
+INSERT INTO Topics (Modality,Code,Name) VALUES ('reading','R-GRAM',N'Grammar'); DECLARE @tGram INT=SCOPE_IDENTITY();
+INSERT INTO Lessons (CertId,SkillId,Title,EstimatedMinutes,DisplayOrder) VALUES (@c,@sk,N'Lesson',10,1); DECLARE @les INT=SCOPE_IDENTITY();
+INSERT INTO LearnerPaths (UserId,CertId,CurrentBandCode,Status) VALUES (@u,@c,'below_A1','active');
 DECLARE @lp INT=SCOPE_IDENTITY();
 PRINT 'valid path accepted';
--- reject (Review Focus #3): practice_section with NULL RefSectionId
+
+-- #232 / D10: THE STEP IS A COORDINATE. A step names its skill, topic, level, type and size; it no
+-- longer points at a PathModuleItem. These checks are the coordinate's own constraints.
+
+-- valid drill step: no resource at all, because the selector picks its items at run time
+INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier,WeekNumber,WeekSequence)
+  VALUES (@lp,@c,@sk,'reading',@tDet,'B1','focus_practice','developing',1,1);
+PRINT 'valid drill step accepted';
+
+-- reject (CK_Steps_ResourceMatchesType): a drill that names a lesson is not a drill
 BEGIN TRY
-  INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefSectionId,RefExamId,DisplayOrder)
-    VALUES (@mod,@c,@tpl,'practice_section',NULL,NULL,2);
-  THROW 50000,'EXPECT_REJECT FAILED: practice_section without section accepted',1;
+  INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier,RefLessonId)
+    VALUES (@lp,@c,@sk,'reading',@tDet,'B1','focus_practice','developing',@les);
+  THROW 50000,'EXPECT_REJECT FAILED: a drill naming a lesson was accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  PRINT 'rejected practice_section w/o section as expected';
+  PRINT 'rejected drill with a lesson as expected';
 END CATCH
--- reject (Review Focus #3): mock_exam carrying a RefSectionId
+
+-- reject (CK_Steps_ResourceMatchesType): a lesson step with no lesson opens an empty reader
 BEGIN TRY
-  INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefSectionId,RefExamId,DisplayOrder)
-    VALUES (@mod,@c,@tpl,'mock_exam',@sec,NULL,3);
-  THROW 50000,'EXPECT_REJECT FAILED: mock_exam with section accepted',1;
+  INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier)
+    VALUES (@lp,@c,@sk,'reading',@tDet,'B1','concept_lesson','developing');
+  THROW 50000,'EXPECT_REJECT FAILED: a lesson step with no lesson was accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  PRINT 'rejected mock_exam with section as expected';
+  PRINT 'rejected lesson step without a lesson as expected';
 END CATCH
+
+-- the valid lesson step, which the cross-cert checks below re-use
+INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier,RefLessonId)
+  VALUES (@lp,@c,@sk,'reading',@tGram,'B1','concept_lesson','developing',@les);
+PRINT 'valid lesson step accepted';
+
+-- reject (CK_Steps_TargetCefr): the reportable floor is not an authorable level
+BEGIN TRY
+  INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier)
+    VALUES (@lp,@c,@sk,'reading',@tDet,'pre_a1','focus_practice','developing');
+  THROW 50000,'EXPECT_REJECT FAILED: a step authored at pre_a1 was accepted',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected pre_a1 target level as expected';
+END CATCH
+
+-- reject (CK_Steps_SizingTier): D10 has exactly three tiers
+BEGIN TRY
+  INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier)
+    VALUES (@lp,@c,@sk,'reading',@tDet,'B1','focus_practice','enormous');
+  THROW 50000,'EXPECT_REJECT FAILED: a fourth sizing tier was accepted',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected a sizing tier D10 does not name as expected';
+END CATCH
+
+-- reject (CK_Steps_StepType): the six types D10 names, and no invented seventh
+BEGIN TRY
+  INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier)
+    VALUES (@lp,@c,@sk,'reading',@tDet,'B1','mentor_chat','developing');
+  THROW 50000,'EXPECT_REJECT FAILED: an invented step type was accepted',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected an invented step type as expected';
+END CATCH
+
+-- reject (FK_Steps_SkillModality): a step whose modality is not its skill's
+BEGIN TRY
+  INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier)
+    VALUES (@lp,@c,@sk,'listening',@tDet,'B1','focus_practice','developing');
+  THROW 50000,'EXPECT_REJECT FAILED: a reading skill with listening modality was accepted',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected a step whose modality is not its skill''s as expected';
+END CATCH
+
+-- reject (FK_Steps_TopicModality): a listening step on a reading topic
+BEGIN TRY
+  INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier)
+    VALUES (@lp,@c,@sk,'listening',@tDet,'B1','focus_practice','developing');
+  THROW 50000,'EXPECT_REJECT FAILED: a listening step on a reading topic was accepted',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected a listening step on a reading topic as expected';
+END CATCH
+
 -- reject (Review Focus #5): a second active path for the same (UserId,CertId)
 BEGIN TRY
-  INSERT INTO LearnerPaths (UserId,CertId,TemplateId,CurrentBandCode,Status) VALUES (@u,@c,@tpl,'below_A1','active');
+  INSERT INTO LearnerPaths (UserId,CertId,CurrentBandCode,Status) VALUES (@u,@c,'below_A1','active');
   THROW 50000,'EXPECT_REJECT FAILED: second active path accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected second active path as expected';
 END CATCH
+
 -- cross-cert fixtures (IELTS) for M-1/M-2 leakage checks
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('IELTS',N'I',1); DECLARE @c2 INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c2,'SPK',N'Speaking','speaking',1); DECLARE @sk2 INT=SCOPE_IDENTITY();
@@ -46,52 +111,30 @@ INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c2,'SPK',N'
 INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@sk2,@c2,'speaking','S1',N'Interview',4,3,1); DECLARE @sec2 INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c2,N'IELTS Exam','published',60); DECLARE @exam2 INT=SCOPE_IDENTITY();
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES (@c2,'below_A1',N'Below A1',10,119,1), (@c2,'A2',N'A2',225,549,3);
-INSERT INTO PathTemplates (CertId,FromBandCode,ToBandCode,Name) VALUES (@c2,'below_A1','A2',N'IELTS Starter'); DECLARE @tpl2 INT=SCOPE_IDENTITY();
--- M-1: reject a PathModules row whose SkillId belongs to a different certificate than its template
+INSERT INTO Topics (Modality,Code,Name) VALUES ('speaking','S-DESC',N'Describe'); DECLARE @tDesc INT=SCOPE_IDENTITY();
+INSERT INTO Lessons (CertId,SkillId,Title,EstimatedMinutes,DisplayOrder) VALUES (@c2,@sk2,N'IELTS Lesson',10,1); DECLARE @les2 INT=SCOPE_IDENTITY();
+
+-- M-1: reject a step whose CertId is not its path's own. The path is this certificate's; the skill and
+-- topic below belong to the other one, so every carried-down key disagrees at once.
 BEGIN TRY
-  INSERT INTO PathModules (TemplateId,SkillId,CertId,DisplayOrder,Title) VALUES (@tpl,@sk2,@c,2,N'Cross-cert module');
-  THROW 50000,'EXPECT_REJECT FAILED: cross-cert PathModules skill accepted',1;
+  INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier)
+    VALUES (@lp,@c2,@sk2,'speaking',@tDesc,'B1','focus_practice','developing');
+  THROW 50000,'EXPECT_REJECT FAILED: cross-cert LearnerPathSteps accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  PRINT 'rejected cross-cert PathModules skill as expected';
+  PRINT 'rejected cross-cert LearnerPathSteps as expected';
 END CATCH
--- M-1: reject a PathModuleItems row whose RefSectionId belongs to a different certificate than its module
+
+-- M-1: reject a lesson step whose lesson belongs to a different certificate
 BEGIN TRY
-  INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefSectionId,RefExamId,DisplayOrder)
-    VALUES (@mod,@c,@tpl,'practice_section',@sec2,NULL,4);
-  THROW 50000,'EXPECT_REJECT FAILED: cross-cert PathModuleItems section accepted',1;
+  INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier,RefLessonId)
+    VALUES (@lp,@c,@sk,'reading',@tGram,'B1','concept_lesson','developing',@les2);
+  THROW 50000,'EXPECT_REJECT FAILED: a cross-cert lesson reference was accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  PRINT 'rejected cross-cert PathModuleItems section as expected';
+  PRINT 'rejected a cross-cert lesson reference as expected';
 END CATCH
--- M-1: reject a PathModuleItems row whose RefExamId belongs to a different certificate than its module
-BEGIN TRY
-  INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefSectionId,RefExamId,DisplayOrder)
-    VALUES (@mod,@c,@tpl,'mock_exam',NULL,@exam2,5);
-  THROW 50000,'EXPECT_REJECT FAILED: cross-cert PathModuleItems exam accepted',1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  PRINT 'rejected cross-cert PathModuleItems exam as expected';
-END CATCH
--- M-1: reject a LearnerPaths row whose CertId disagrees with its TemplateId's own certificate
-BEGIN TRY
-  INSERT INTO LearnerPaths (UserId,CertId,TemplateId,CurrentBandCode,Status) VALUES (@u,@c2,@tpl,'below_A1','active');
-  THROW 50000,'EXPECT_REJECT FAILED: cross-cert LearnerPaths template accepted',1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  PRINT 'rejected cross-cert LearnerPaths template as expected';
-END CATCH
--- M-1: reject a LearnerPathSteps row whose PathModuleItemId belongs to a different template
-INSERT INTO PathModules (TemplateId,SkillId,CertId,DisplayOrder,Title) VALUES (@tpl2,@sk2,@c2,1,N'IELTS Speaking'); DECLARE @mod2 INT=SCOPE_IDENTITY();
-INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefSectionId,RefExamId,DisplayOrder)
-  VALUES (@mod2,@c2,@tpl2,'practice_section',@sec2,NULL,1); DECLARE @item2 INT=SCOPE_IDENTITY();
-BEGIN TRY
-  INSERT INTO LearnerPathSteps (LearnerPathId,PathModuleItemId,TemplateId,Status) VALUES (@lp,@item2,@tpl,'locked');
-  THROW 50000,'EXPECT_REJECT FAILED: cross-template LearnerPathSteps item accepted',1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  PRINT 'rejected cross-template LearnerPathSteps item as expected';
-END CATCH
+
 -- M-2: reject a PlacementTests row whose ExamId belongs to a different certificate
 BEGIN TRY
   INSERT INTO PlacementTests (UserId,CertId,ExamId,Status) VALUES (@u,@c,@exam2,'in_progress');

@@ -22,7 +22,7 @@ public sealed class LessonsController(
     private readonly CurrentUser _currentUser = currentUser;
 
     [HttpGet("/lessons/{id:int}")]
-    public async Task<IActionResult> Index(int id, [FromQuery] int? moduleId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(int id, CancellationToken cancellationToken)
     {
         if (User.IsStaff())
         {
@@ -46,7 +46,7 @@ public sealed class LessonsController(
 
             var lesson = await api.GetLessonAsync(id, cancellationToken);
             var progress = await api.GetLessonProgressAsync(id, cancellationToken);
-            var model = new LessonViewModel(lesson, progress, moduleId);
+            var model = new LessonViewModel(lesson, progress);
             return View(model);
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.LessonNotFound || ex.Status == 404)
@@ -64,7 +64,7 @@ public sealed class LessonsController(
     }
 
     [HttpGet("/lessons/by-category/{categoryId:int}")]
-    public async Task<IActionResult> ByCategory(int categoryId, [FromQuery] int? moduleId, CancellationToken cancellationToken)
+    public async Task<IActionResult> ByCategory(int categoryId, CancellationToken cancellationToken)
     {
         if (User.IsStaff())
         {
@@ -79,7 +79,7 @@ public sealed class LessonsController(
                 TempData["ShellError"] = "No lesson found for this topic yet.";
                 return RedirectToAction("Index", "LearningPath");
             }
-            return RedirectToAction(nameof(Index), new { id = lesson.LessonId, moduleId });
+            return RedirectToAction(nameof(Index), new { id = lesson.LessonId });
         }
         catch (ApiException ex)
         {

@@ -77,8 +77,9 @@ public partial class Exam
     [InverseProperty("Exam")]
     public virtual ICollection<ExamItem> ExamItems { get; set; } = new List<ExamItem>();
 
+    /// <summary>#232: path steps that sit this exam as a mock section.</summary>
     [InverseProperty("Exam")]
-    public virtual ICollection<PathModuleItem> PathModuleItems { get; set; } = new List<PathModuleItem>();
+    public virtual ICollection<LearnerPathStep> LearnerPathSteps { get; set; } = new List<LearnerPathStep>();
 
     [InverseProperty("ExamNavigation")]
     public virtual ICollection<PlacementTest> PlacementTestExamNavigations { get; set; } = new List<PlacementTest>();

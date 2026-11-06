@@ -237,9 +237,9 @@ public sealed partial class PracticeService
             if (answer.Session.LearnerPathStepId is { } stepId)
             {
                 // #154: the step's close and the unlock now live in one place, shared with the mock
-                // exam and lesson writers, so all three cannot drift apart.
+                // exam and lesson writers, so all three cannot drift apart. #232: the step carries its
+                // own coordinate, so nothing about the step is read off a template.
                 var step = await db.LearnerPathSteps
-                    .Include(s => s.PathModuleItem)
                     .FirstOrDefaultAsync(s => s.StepId == stepId, cancellationToken);
                 if (step != null && step.Status != "done")
                 {

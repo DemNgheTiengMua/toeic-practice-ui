@@ -17,11 +17,16 @@ public sealed record LearningPathSummaryDto(
     int? TargetScore,
     LearnerPathStatusDto? Status,
     DateTimeOffset? StartedAt,
-    int TotalModules,
-    int CompletedModules,
+    int TotalSteps,
+    int CompletedSteps,
     int TotalEstimatedMinutes,
     int RemainingMinutes,
     List<CefrBandInfoDto> CefrBands,
-    List<LearningPathModuleSummaryDto> Modules,
-    int? NextModuleId,
-    List<LearningPathWeekSummaryDto>? Weeks = null);
+    List<PathStepDto> OpenSteps,
+    int? NextStepId,
+    List<LearningPathWeekSummaryDto>? Weeks = null,
+    /// <summary>
+    /// #232: the level each skill is pitched at. Every step at a skill carries that skill's own level
+    /// (D10), so this reads the plan rather than computing a second fact. Unmeasured skills are absent.
+    /// </summary>
+    Dictionary<string, string>? SkillLevels = null);

@@ -130,13 +130,14 @@ public sealed class LessonsControllerTests
         var api = new TestApiClient { Lesson = lesson, Progress = progress };
         var controller = CreateController(api);
 
-        var result = await controller.Index(10, moduleId: 2, CancellationToken.None);
+        var result = await controller.Index(10, CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<LessonViewModel>(viewResult.Model);
         Assert.Equal(10, model.Lesson.LessonId);
         Assert.Equal(1, model.Progress.CardsCompleted);
-        Assert.Equal(2, model.ModuleId);
+        // #232: the reader is addressed by the lesson alone; there is no module to carry.
+        Assert.Equal("/learning-path", model.FinishUrl);
     }
 
     [Fact]
@@ -148,7 +149,7 @@ public sealed class LessonsControllerTests
         };
         var controller = CreateController(api);
 
-        var result = await controller.Index(999, moduleId: null, CancellationToken.None);
+        var result = await controller.Index(999, CancellationToken.None);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
@@ -171,12 +172,14 @@ public sealed class LessonsControllerTests
         var api = new TestApiClient { Lesson = lesson };
         var controller = CreateController(api);
 
-        var result = await controller.ByCategory(15, moduleId: 3, CancellationToken.None);
+        var result = await controller.ByCategory(15, CancellationToken.None);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
         Assert.Equal(42, redirect.RouteValues!["id"]);
-        Assert.Equal(3, redirect.RouteValues!["moduleId"]);
+        // #232: there is no module to carry in the URL. A step is a coordinate, so the lesson reader
+        // is addressed by the lesson alone.
+        Assert.False(redirect.RouteValues!.ContainsKey("moduleId"));
     }
 
     [Fact]
@@ -185,7 +188,7 @@ public sealed class LessonsControllerTests
         var api = new TestApiClient { Lesson = null };
         var controller = CreateController(api);
 
-        var result = await controller.ByCategory(999, moduleId: null, CancellationToken.None);
+        var result = await controller.ByCategory(999, CancellationToken.None);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);

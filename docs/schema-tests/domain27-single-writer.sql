@@ -86,6 +86,7 @@ VALUES (@skill, @cert, 'listening', 'P1', N'Photographs', 4, 1, 1);
 DECLARE @sec INT = SCOPE_IDENTITY();
 INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder)
 VALUES (@cert, 'A2', N'A2', 201, 500, 1), (@cert, 'B1', N'B1', 501, 784, 2);
+INSERT INTO Topics (Modality, Code, Name) VALUES ('listening', 'L-DET', N'Detail');
 INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
 VALUES (@cert, N'Placement single writer', 'published', 30, 'placement');
 DECLARE @exam INT = SCOPE_IDENTITY();
@@ -357,22 +358,14 @@ PRINT 'refused a projection version bumped by code that did not declare its writ
 -- 5. step closure: owner is PathStepCompletion. `LearningPathService` also writes the step row -
 --    it moves a step to in_progress - so it is the plausible wrong name to try here.
 -- ---------------------------------------------------------------------------------------------
-INSERT INTO PathTemplates (CertId, FromBandCode, ToBandCode, Name)
-VALUES (@cert, 'A2', 'B1', N'Single writer path');
-DECLARE @tpl INT = SCOPE_IDENTITY();
-INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title)
-VALUES (@tpl, @skill, @cert, 1, N'Module 1');
-DECLARE @mod INT = SCOPE_IDENTITY();
-INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, DisplayOrder)
-VALUES (@mod, @cert, @tpl, 'practice_section', @sec, 1);
-DECLARE @item INT = SCOPE_IDENTITY();
-INSERT INTO LearnerPaths (UserId, CertId, TemplateId, CurrentBandCode, Status)
-VALUES (@user, @cert, @tpl, 'A2', 'active');
+INSERT INTO LearnerPaths (UserId, CertId, CurrentBandCode, Status)
+VALUES (@user, @cert, 'A2', 'active');
 DECLARE @path INT = SCOPE_IDENTITY();
-
+DECLARE @sectionTopic INT = (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'listening');
+-- #232: the step is a coordinate. It names its skill, topic, level, type and size, and no module item.
 -- an open step is not a closure
-INSERT INTO LearnerPathSteps (LearnerPathId, PathModuleItemId, TemplateId, Status)
-VALUES (@path, @item, @tpl, 'in_progress');
+INSERT INTO LearnerPathSteps (LearnerPathId, CertId, SkillId, Modality, TopicId, TargetCefr, StepType, SizingTier, Status, WeekNumber, WeekSequence)
+VALUES (@path, @cert, @skill, 'listening', @sectionTopic, 'B1', 'focus_practice', 'developing', 'in_progress', 1, 1);
 DECLARE @step INT = SCOPE_IDENTITY();
 IF (SELECT WrittenByService FROM LearnerPathSteps WHERE StepId = @step) IS NOT NULL
   THROW 50000, 'EXPECT_REJECT FAILED: an open step demanded a writer declaration', 1;
@@ -462,8 +455,8 @@ BEGIN CATCH
   PRINT 'refused an undeclared reopen as expected';
 END CATCH
 
-INSERT INTO LearnerPathSteps (LearnerPathId, PathModuleItemId, TemplateId, Status)
-VALUES (@path, @item, @tpl, 'available');
+INSERT INTO LearnerPathSteps (LearnerPathId, CertId, SkillId, Modality, TopicId, TargetCefr, StepType, SizingTier, Status)
+VALUES (@path, @cert, @skill, 'listening', @sectionTopic, 'B1', 'focus_practice', 'developing', 'available');
 DECLARE @openStep INT = SCOPE_IDENTITY();
 BEGIN TRY
   UPDATE LearnerPathSteps SET Status = 'in_progress' WHERE StepId = @openStep;

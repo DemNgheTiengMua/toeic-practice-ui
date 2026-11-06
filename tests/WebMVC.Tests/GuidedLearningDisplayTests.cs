@@ -21,11 +21,12 @@ public sealed class GuidedLearningDisplayTests
         var lesson = new LessonDetailDto(7, "Grammar", null, 1, null, 5,
             [Card(22, 2, "example", "<script>alert(1)</script>"), Card(11, 1, "rule", "**Rule**")]);
         var progress = new LessonProgressDto(1, 2, false, 22, null, null, null);
-        var model = new LessonViewModel(lesson, progress, 9);
+        var model = new LessonViewModel(lesson, progress);
 
         Assert.Equal(new[] { 11, 22 }, model.Cards.Select(c => c.Card.CardId));
         Assert.Equal(2, model.InitialIndex);
-        Assert.Equal("/learning-path/modules/9", model.FinishUrl);
+        // #232: the reader finishes back on the path timeline, not on a module detail screen.
+        Assert.Equal("/learning-path", model.FinishUrl);
         Assert.Equal("/admin/lessons/7/edit", model.ReturnUrl);
         Assert.Equal("lesson-card--rule", model.Cards[0].CssClass);
         Assert.Equal("<p><strong>Rule</strong></p>", model.Cards[0].ContentHtml);

@@ -35,12 +35,6 @@ public partial class ScoreBand
     [InverseProperty("ScoreBands")]
     public virtual Certificate Cert { get; set; } = null!;
 
-    [InverseProperty("ScoreBandNavigation")]
-    public virtual ICollection<PathTemplate> PathTemplateScoreBandNavigations { get; set; } = new List<PathTemplate>();
-
-    [InverseProperty("ScoreBand")]
-    public virtual ICollection<PathTemplate> PathTemplateScoreBands { get; set; } = new List<PathTemplate>();
-
     [InverseProperty("ScoreBand")]
     public virtual ICollection<Recommendation> Recommendations { get; set; } = new List<Recommendation>();
 

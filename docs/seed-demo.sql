@@ -2052,113 +2052,62 @@ BEGIN
   WHERE CardId = @mcCardId;
 END;
 
-IF NOT EXISTS (SELECT 1 FROM PathTemplates WHERE CertId = @toeicCert AND FromBandCode = 'B1' AND ToBandCode = 'B2')
-BEGIN
-  INSERT INTO PathTemplates (CertId, FromBandCode, ToBandCode, Name)
-  VALUES (@toeicCert, 'B1', 'B2', N'TOEIC B1 → B2 Intermediate to Upper-Intermediate Path');
-  DECLARE @tplId INT = SCOPE_IDENTITY();
-  DECLARE @presentContinuousLesson INT = (SELECT TOP 1 LessonId FROM Lessons WHERE CertId = @toeicCert AND Title = N'Present Continuous Tense');
-
-  -- Module 1: Incomplete Sentences Grammar Mastery
-  INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, GroupName, Description, EstimatedMinutes)
-  VALUES (@tplId, @toeicRead, @toeicCert, 1, N'Module 1: Incomplete Sentences Grammar Mastery',
-          N'Grammar foundations · modules 1–2',
-          N'Master high-frequency Part 5 patterns: verb tenses, voice, and agreement.', 25);
-  DECLARE @m1 INT = SCOPE_IDENTITY();
-  IF @presentContinuousLesson IS NOT NULL
-  BEGIN
-    INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefLessonId, DisplayOrder)
-    VALUES (@m1, @toeicCert, @tplId, 'lesson', @presentContinuousLesson, 1);
-  END;
-  INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-  VALUES (@m1, @toeicCert, @tplId, 'practice_section', @secP5, 20, 2);
-  INSERT INTO PathModuleTopics (ModuleId, Title, CategoryId, QuestionCount, DisplayOrder) VALUES
-    (@m1, N'Subject-verb agreement and tenses', @catTense, 10, 1);
-
-  -- Module 2: Sentence Structure & AI Speaking Drill
-  INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, GroupName, Description, EstimatedMinutes)
-  VALUES (@tplId, @toeicRead, @toeicCert, 2, N'Module 2: Sentence Structure & AI Speaking Drill',
-          N'Grammar foundations · modules 1–2',
-          N'Apply grammar structures in spoken English and written context.', 25);
-  DECLARE @m2 INT = SCOPE_IDENTITY();
-  INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-  VALUES (@m2, @toeicCert, @tplId, 'practice_section', @secP5, 25, 1);
-  IF @speaExam IS NOT NULL
-  BEGIN
-    INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefExamId, QuestionCount, DisplayOrder)
-    VALUES (@m2, @toeicCert, @tplId, 'ai_task', @speaExam, 3, 2);
-  END;
-
-  -- Module 3: Workplace Reading & Text Completion
-  INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, GroupName, Description, EstimatedMinutes)
-  VALUES (@tplId, @toeicRead, @toeicCert, 3, N'Module 3: Workplace Reading & Text Completion',
-          N'Reading & listening · modules 3–4',
-          N'Master Part 6 text completion and business email vocabulary.', 30);
-  DECLARE @m3 INT = SCOPE_IDENTITY();
-  INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-  VALUES (@m3, @toeicCert, @tplId, 'practice_section', @secP6, 20, 1);
-
-  -- Module 4: Listening Tactics — Conversations
-  INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, GroupName, Description, EstimatedMinutes)
-  VALUES (@tplId, @toeicList, @toeicCert, 4, N'Module 4: Listening Tactics — Conversations',
-          N'Reading & listening · modules 3–4',
-          N'Develop rapid inference skills for Part 3 conversations.', 25);
-  DECLARE @m4 INT = SCOPE_IDENTITY();
-  INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-  VALUES (@m4, @toeicCert, @tplId, 'practice_section', @secP3, 15, 1);
-END;
 GO
 
--- Active Learning Path for learner@demo.local (B1 -> B2)
+-- #232 / D10: the seeded path is a set of coordinates, not a template's items. Each step names the skill
+-- it drills, the canonical topic, THAT SKILL'S OWN level, the step type and the sizing tier - the five
+-- fields that say what a step is. No template, no module, no module item.
+--
+-- The coordinates below are grounded in the seeded pool: R-DET and R-GRAM reading items exist at B1, and
+-- the TOEIC skill levels come from the certificate's own cut-score rows (LIST B1, READ B1) rather than
+-- from the path's target band. That distinction is the ticket: a band is not a level.
 DECLARE @learner INT = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local');
 DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');
-DECLARE @tplB1B2 INT = (SELECT TOP 1 TemplateId FROM PathTemplates WHERE CertId = @toeicCert AND FromBandCode = 'B1' AND ToBandCode = 'B2');
+DECLARE @toeicReadPath INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicCert AND Code = 'READ');
+DECLARE @toeicListPath INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicCert AND Code = 'LIST');
+DECLARE @tRDet INT = (SELECT TopicId FROM Topics WHERE Modality = 'reading' AND Code = 'R-DET');
+DECLARE @tRGram INT = (SELECT TopicId FROM Topics WHERE Modality = 'reading' AND Code = 'R-GRAM');
+DECLARE @tLGist INT = (SELECT TopicId FROM Topics WHERE Modality = 'listening' AND Code = 'L-GIST');
+DECLARE @pathDemoLesson INT = (SELECT TOP 1 LessonId FROM Lessons WHERE CertId = @toeicCert AND Title = N'Present Continuous Tense');
 
 IF NOT EXISTS (SELECT 1 FROM LearnerPaths WHERE UserId = @learner AND CertId = @toeicCert AND Status = 'active')
 BEGIN
   DECLARE @placeId INT = (SELECT TOP 1 PlacementId FROM PlacementTests WHERE UserId = @learner AND CertId = @toeicCert AND Status = 'done' ORDER BY TakenAt DESC);
 
-  INSERT INTO LearnerPaths (UserId, CertId, TemplateId, CurrentBandCode, PlacementId, Status, StartedAt)
-  VALUES (@learner, @toeicCert, @tplB1B2, 'B1', @placeId, 'active', DATEADD(DAY, -14, SYSDATETIMEOFFSET()));
+  INSERT INTO LearnerPaths (UserId, CertId, CurrentBandCode, PlacementId, Status, StartedAt)
+  VALUES (@learner, @toeicCert, 'B1', @placeId, 'active', DATEADD(DAY, -14, SYSDATETIMEOFFSET()));
   DECLARE @lpId INT = SCOPE_IDENTITY();
 
-  -- LearnerPathSteps: Module 1 Lesson done (100%), Module 1 Practice done (85%), Module 2 Practice done (80%), Module 2 AI Task in_progress, Module 3 available, Module 4 locked
-  ;WITH NumberedItems AS (
-    SELECT i.ItemId, i.TemplateId,
-           ROW_NUMBER() OVER (ORDER BY m.DisplayOrder, i.DisplayOrder) AS StepOrder
-    FROM PathModuleItems i
-    JOIN PathModules m ON m.ModuleId = i.ModuleId
-    WHERE i.TemplateId = @tplB1B2
-  )
-  INSERT INTO LearnerPathSteps (LearnerPathId, PathModuleItemId, TemplateId, Status, Score, StartedAt, CompletedAt,
-                                WrittenByService, ProjectionVersion)
-  SELECT @lpId, ItemId, TemplateId,
-         CASE StepOrder
-           WHEN 1 THEN 'done'
-           WHEN 2 THEN 'done'
-           WHEN 3 THEN 'done'
-           WHEN 4 THEN 'in_progress'
-           WHEN 5 THEN 'available'
-           ELSE 'locked'
-         END,
-         CASE StepOrder
-           WHEN 1 THEN 100.00
-           WHEN 2 THEN 85.00
-           WHEN 3 THEN 80.00
-           ELSE NULL
-         END,
-         CASE WHEN StepOrder IN (1, 2, 3, 4) THEN DATEADD(DAY, -12, SYSDATETIMEOFFSET()) ELSE NULL END,
-         CASE
-           WHEN StepOrder = 1 THEN DATEADD(DAY, -11, SYSDATETIMEOFFSET())
-           WHEN StepOrder = 2 THEN DATEADD(DAY, -10, SYSDATETIMEOFFSET())
-           WHEN StepOrder = 3 THEN DATEADD(DAY, -5, SYSDATETIMEOFFSET())
-           ELSE NULL
-         END,
+  -- The step set: a concept lesson, then blocked practice on two reading topics, then a spaced review.
+  -- WeekSequence makes the pedagogical order explicit (lesson -> blocked practice -> interleaved review)
+  -- rather than leaving it to insertion order.
+  DECLARE @pathSteps TABLE (
+    WeekNumber INT, WeekSequence INT, SkillId INT, Modality VARCHAR(10), TopicId INT,
+    TargetCefr VARCHAR(10), StepType VARCHAR(20), SizingTier VARCHAR(12),
+    RefLessonId INT NULL, PlannedItemCount INT NULL, EstimatedMinutes INT,
+    Status VARCHAR(12), Score DECIMAL(6,2) NULL, StartedAt DATETIMEOFFSET NULL, CompletedAt DATETIMEOFFSET NULL);
+
+  INSERT INTO @pathSteps VALUES
+    (1, 1, @toeicReadPath, 'reading', @tRGram, 'B1', 'concept_lesson',  'developing', @pathDemoLesson, NULL, 12, 'done',        100.00, DATEADD(DAY, -12, SYSDATETIMEOFFSET()), DATEADD(DAY, -11, SYSDATETIMEOFFSET())),
+    (1, 2, @toeicReadPath, 'reading', @tRGram, 'B1', 'focus_practice',  'developing', NULL,            8,    15, 'done',         85.00, DATEADD(DAY, -11, SYSDATETIMEOFFSET()), DATEADD(DAY, -10, SYSDATETIMEOFFSET())),
+    (1, 3, @toeicListPath, 'listening', @tLGist, 'B1', 'focus_practice', 'developing', NULL,           8,    15, 'done',         80.00, DATEADD(DAY, -10, SYSDATETIMEOFFSET()), DATEADD(DAY,  -5, SYSDATETIMEOFFSET())),
+    (2, 1, @toeicReadPath, 'reading', @tRDet,  'B1', 'focus_practice',  'developing', NULL,            8,    15, 'in_progress',  NULL,  DATEADD(DAY,  -5, SYSDATETIMEOFFSET()), NULL),
+    (2, 2, @toeicReadPath, 'reading', @tRDet,  'B1', 'review_spaced',   'mastered',   NULL,            5,     8, 'available',    NULL,  NULL, NULL),
+    (2, 3, @toeicListPath, 'listening', @tLGist, 'B1', 'review_spaced',  'developing', NULL,           8,    15, 'locked',       NULL,  NULL, NULL);
+
+  INSERT INTO LearnerPathSteps (
+    LearnerPathId, CertId, SkillId, Modality, TopicId, TargetCefr, StepType, SizingTier,
+    RefLessonId, RefExamId, Status, Score, StartedAt, CompletedAt,
+    WeekNumber, WeekSequence, PlannedItemCount, EstimatedMinutes, TargetAccuracyPct, ActualAccuracyPct,
+    WrittenByService, ProjectionVersion)
+  SELECT @lpId, @toeicCert, SkillId, Modality, TopicId, TargetCefr, StepType, SizingTier,
+         RefLessonId, NULL, Status, Score, StartedAt, CompletedAt,
+         WeekNumber, WeekSequence, PlannedItemCount, EstimatedMinutes, 80,
+         CASE WHEN Score IS NULL THEN NULL ELSE Score END,
          -- #191: a closed step names its writer; an open one derives nothing and declares none
-         CASE WHEN StepOrder <= 3 THEN 'PathStepCompletion' ELSE NULL END,
-         CASE WHEN StepOrder <= 3 THEN 1 ELSE 0 END
-  FROM NumberedItems
-  ORDER BY StepOrder;
+         CASE WHEN Status = 'done' THEN 'PathStepCompletion' ELSE NULL END,
+         CASE WHEN Status = 'done' THEN 1 ELSE 0 END
+  FROM @pathSteps;
 
   -- Seed LearnerLessonProgress for learner@demo.local
   DECLARE @demoLesson INT = (SELECT TOP 1 LessonId FROM Lessons WHERE CertId = @toeicCert AND Title = N'Present Continuous Tense');
@@ -2176,8 +2125,9 @@ BEGIN
 END;
 GO
 
-PRINT '10. Learning path templates and active learner path seeded';
+PRINT '10. Active learner path seeded as a set of step coordinates';
 GO
+
 
 -- ============================================================================
 -- 11. Practice Sessions & Weakness Analysis
@@ -3743,72 +3693,6 @@ Essay Guidelines:
     /* ======================================================================================
        PHẦN 2: LỘ TRÌNH ĐIỀU TRỊ ĐỘNG & BÀI HỌC GUIDED LESSONS (SPRINT 2-3 TUẦN)
        ====================================================================================== */
-    DECLARE @tplId INT;
-    DECLARE @tplName NVARCHAR(200) = N'TOEIC Diagnostic Sprint (Target B1/B2)';
-
-    -- 2.1. Tạo Master PathTemplate
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathTemplates WHERE CertId = @toeicCert AND Name = @tplName)
-    BEGIN
-        INSERT INTO dbo.PathTemplates (
-            CertId, Name, FromBandCode, ToBandCode
-        )
-        VALUES (
-            @toeicCert, @tplName, 'A2', 'B1'
-        );
-    END
-    SELECT @tplId = TemplateId FROM dbo.PathTemplates WHERE CertId = @toeicCert AND Name = @tplName;
-
-    -- 2.2. Tạo 4 PathModules tương ứng với 4 điểm yếu điển hình
-    DECLARE @mod1 INT, @mod2 INT, @mod3 INT, @mod4 INT;
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModules WHERE CertId = @toeicCert AND TemplateId = @tplId AND DisplayOrder = 1)
-    BEGIN
-        INSERT INTO dbo.PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, Description, EstimatedMinutes)
-        VALUES (
-            @tplId, @toeicRead, @toeicCert, 1,
-            N'Tense & Aspect Mastery',
-            N'Làm chủ hệ thống thì động từ, sự phối hợp thì (By the time / Since) và thể bị động trong ngữ cảnh doanh nghiệp Part 5 & Part 6.',
-            25
-        );
-    END
-    SELECT @mod1 = ModuleId FROM dbo.PathModules WHERE CertId = @toeicCert AND TemplateId = @tplId AND DisplayOrder = 1;
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModules WHERE CertId = @toeicCert AND TemplateId = @tplId AND DisplayOrder = 2)
-    BEGIN
-        INSERT INTO dbo.PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, Description, EstimatedMinutes)
-        VALUES (
-            @tplId, @toeicList, @toeicCert, 2,
-            N'Auditory Traps & Indirect Responses',
-            N'Nhận diện và hóa giải bẫy lặp từ (Same-word trap), bẫy đồng âm và câu trả lời gián tiếp trong TOEIC Listening Part 2.',
-            25
-        );
-    END
-    SELECT @mod2 = ModuleId FROM dbo.PathModules WHERE CertId = @toeicCert AND TemplateId = @tplId AND DisplayOrder = 2;
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModules WHERE CertId = @toeicCert AND TemplateId = @tplId AND DisplayOrder = 3)
-    BEGIN
-        INSERT INTO dbo.PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, Description, EstimatedMinutes)
-        VALUES (
-            @tplId, @toeicWrit, @toeicCert, 3,
-            N'Business Email Structure & Tone',
-            N'Chuẩn hóa cấu trúc email phản hồi đối tác, xử lý khiếu nàn và nâng cấp văn phong chuyên nghiệp cho TOEIC Writing Part 2 (Section W2).',
-            25
-        );
-    END
-    SELECT @mod3 = ModuleId FROM dbo.PathModules WHERE CertId = @toeicCert AND TemplateId = @tplId AND DisplayOrder = 3;
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModules WHERE CertId = @toeicCert AND TemplateId = @tplId AND DisplayOrder = 4)
-    BEGIN
-        INSERT INTO dbo.PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, Description, EstimatedMinutes)
-        VALUES (
-            @tplId, @toeicRead, @toeicCert, 4,
-            N'Cross-Text Inference & Speed Reading',
-            N'Chiến thuật đọc lướt (Skimming/Scanning) và kỹ năng móc nối dữ kiện chéo giữa Hóa đơn - Email trong TOEIC Reading Part 7.',
-            30
-        );
-    END
-    SELECT @mod4 = ModuleId FROM dbo.PathModules WHERE CertId = @toeicCert AND TemplateId = @tplId AND DisplayOrder = 4;
-
     /* --------------------------------------------------------------------------------------
        2.3. TẠO 4 GUIDED LESSONS & 16 LESSON CARDS
        -------------------------------------------------------------------------------------- */
@@ -4128,84 +4012,6 @@ Essay Guidelines:
         );
     END
 
-    /* --------------------------------------------------------------------------------------
-       2.4. LIÊN KẾT PATH MODULE ITEMS & TOPICS
-       -------------------------------------------------------------------------------------- */
-    -- Module 1 Items
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModuleItems WHERE CertId = @toeicCert AND ModuleId = @mod1 AND DisplayOrder = 1)
-    BEGIN
-        INSERT INTO dbo.PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefLessonId, DisplayOrder)
-        VALUES (@mod1, @toeicCert, @tplId, 'lesson', @les1, 1);
-    END
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModuleItems WHERE CertId = @toeicCert AND ModuleId = @mod1 AND DisplayOrder = 2)
-    BEGIN
-        INSERT INTO dbo.PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-        VALUES (@mod1, @toeicCert, @tplId, 'practice_section', @secP5, 20, 2);
-    END
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModuleTopics WHERE ModuleId = @mod1 AND Title = N'Tense & Aspect Foundations')
-    BEGIN
-        INSERT INTO dbo.PathModuleTopics (ModuleId, Title, QuestionCount, DisplayOrder)
-        VALUES (@mod1, N'Tense & Aspect Foundations', 15, 1);
-    END
-
-    -- Module 2 Items
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModuleItems WHERE CertId = @toeicCert AND ModuleId = @mod2 AND DisplayOrder = 1)
-    BEGIN
-        INSERT INTO dbo.PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefLessonId, DisplayOrder)
-        VALUES (@mod2, @toeicCert, @tplId, 'lesson', @les2, 1);
-    END
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModuleItems WHERE CertId = @toeicCert AND ModuleId = @mod2 AND DisplayOrder = 2)
-    BEGIN
-        INSERT INTO dbo.PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-        VALUES (@mod2, @toeicCert, @tplId, 'practice_section', @secP2, 25, 2);
-    END
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModuleTopics WHERE ModuleId = @mod2 AND Title = N'Auditory Distractors & Traps')
-    BEGIN
-        INSERT INTO dbo.PathModuleTopics (ModuleId, Title, QuestionCount, DisplayOrder)
-        VALUES (@mod2, N'Auditory Distractors & Traps', 25, 1);
-    END
-
-    -- Module 3 Items
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModuleItems WHERE CertId = @toeicCert AND ModuleId = @mod3 AND DisplayOrder = 1)
-    BEGIN
-        INSERT INTO dbo.PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefLessonId, DisplayOrder)
-        VALUES (@mod3, @toeicCert, @tplId, 'lesson', @les3, 1);
-    END
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModuleItems WHERE CertId = @toeicCert AND ModuleId = @mod3 AND DisplayOrder = 2)
-    BEGIN
-        INSERT INTO dbo.PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-        VALUES (@mod3, @toeicCert, @tplId, 'practice_section', @secW2, 2, 2);
-    END
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModuleTopics WHERE ModuleId = @mod3 AND Title = N'Business Email Formatting')
-    BEGIN
-        INSERT INTO dbo.PathModuleTopics (ModuleId, Title, QuestionCount, DisplayOrder)
-        VALUES (@mod3, N'Business Email Formatting', 5, 1);
-    END
-
-    -- Module 4 Items
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModuleItems WHERE CertId = @toeicCert AND ModuleId = @mod4 AND DisplayOrder = 1)
-    BEGIN
-        INSERT INTO dbo.PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefLessonId, DisplayOrder)
-        VALUES (@mod4, @toeicCert, @tplId, 'lesson', @les4, 1);
-    END
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModuleItems WHERE CertId = @toeicCert AND ModuleId = @mod4 AND DisplayOrder = 2)
-    BEGIN
-        INSERT INTO dbo.PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-        VALUES (@mod4, @toeicCert, @tplId, 'practice_section', @secP7, 20, 2);
-    END
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.PathModuleTopics WHERE ModuleId = @mod4 AND Title = N'Double Passage Cross-Inference')
-    BEGIN
-        INSERT INTO dbo.PathModuleTopics (ModuleId, Title, QuestionCount, DisplayOrder)
-        VALUES (@mod4, N'Double Passage Cross-Inference', 15, 1);
-    END
 GO
 
 PRINT '17. 3-Skill Diagnostic Benchmark and dynamic path template seeded';
@@ -4703,7 +4509,7 @@ DECLARE @diagLessonIndex INT=1, @diagLessonCount INT=(SELECT COUNT(*) FROM @diag
 DECLARE @diagLessonCert INT, @diagLessonSkill INT, @diagLessonTitle NVARCHAR(160), @diagLessonSummary NVARCHAR(500);
 DECLARE @diagModuleOrder INT, @diagPracticeSection INT, @diagRule NVARCHAR(MAX), @diagPitfall NVARCHAR(MAX), @diagExample NVARCHAR(MAX);
 DECLARE @diagQuiz NVARCHAR(MAX), @diagOptA NVARCHAR(250), @diagOptB NVARCHAR(250), @diagOptC NVARCHAR(250), @diagOptD NVARCHAR(250);
-DECLARE @diagCorrect CHAR(1), @diagQuizExplanation NVARCHAR(MAX), @diagLessonId INT, @diagTemplateId INT, @diagModuleId INT;
+DECLARE @diagCorrect CHAR(1), @diagQuizExplanation NVARCHAR(MAX), @diagLessonId INT;
 DECLARE @diagWritingExam INT;
 
 WHILE @diagLessonIndex <= @diagLessonCount
@@ -4732,38 +4538,14 @@ BEGIN
   ) c(CardType,Title,ContentMarkdown,DisplayOrder,QuestionPrompt,OptionA,OptionB,OptionC,OptionD,CorrectOption,Explanation)
   WHERE NOT EXISTS (SELECT 1 FROM LessonCards old WHERE old.LessonId=@diagLessonId AND old.DisplayOrder=c.DisplayOrder);
 
+  -- #232: a diagnostic sprint is no longer a template. A path is synthesised from capability, so this
+  -- loop seeds the lessons and their cards only; the steps that use them are planned at run time by
+  -- LearningPathPlanner, not planted here. The skill's own level resolves from the certificate's cut
+  -- scores, so no seeded step needs to carry one.
   IF @diagLessonCert=@diagIeltsCert
-  BEGIN
-    IF NOT EXISTS (SELECT 1 FROM PathTemplates WHERE CertId=@diagLessonCert AND Name=N'IELTS Diagnostic Remedial Sprint')
-      INSERT INTO PathTemplates (CertId,FromBandCode,ToBandCode,Name)
-      VALUES (@diagLessonCert,'B1','B2',N'IELTS Diagnostic Remedial Sprint');
-    SELECT @diagTemplateId=TemplateId FROM PathTemplates WHERE CertId=@diagLessonCert AND Name=N'IELTS Diagnostic Remedial Sprint';
     SET @diagWritingExam=@diagIeltsWritingExam;
-  END
   ELSE
-  BEGIN
-    IF NOT EXISTS (SELECT 1 FROM PathTemplates WHERE CertId=@diagLessonCert AND Name=N'VSTEP Diagnostic Remedial Sprint')
-      INSERT INTO PathTemplates (CertId,FromBandCode,ToBandCode,Name)
-      VALUES (@diagLessonCert,'B1','B2',N'VSTEP Diagnostic Remedial Sprint');
-    SELECT @diagTemplateId=TemplateId FROM PathTemplates WHERE CertId=@diagLessonCert AND Name=N'VSTEP Diagnostic Remedial Sprint';
     SET @diagWritingExam=@diagVstepWritingExam;
-  END;
-
-  IF NOT EXISTS (SELECT 1 FROM PathModules WHERE CertId=@diagLessonCert AND TemplateId=@diagTemplateId AND DisplayOrder=@diagModuleOrder)
-    INSERT INTO PathModules (TemplateId,SkillId,CertId,DisplayOrder,Title,Description,EstimatedMinutes)
-    VALUES (@diagTemplateId,@diagLessonSkill,@diagLessonCert,@diagModuleOrder,@diagLessonTitle,@diagLessonSummary,25);
-  SELECT @diagModuleId=ModuleId FROM PathModules WHERE CertId=@diagLessonCert AND TemplateId=@diagTemplateId AND DisplayOrder=@diagModuleOrder;
-
-  IF NOT EXISTS (SELECT 1 FROM PathModuleItems WHERE ModuleId=@diagModuleId AND ItemType='lesson' AND DisplayOrder=1)
-    INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefLessonId,DisplayOrder)
-    VALUES (@diagModuleId,@diagLessonCert,@diagTemplateId,'lesson',@diagLessonId,1);
-  IF NOT EXISTS (SELECT 1 FROM PathModuleItems WHERE ModuleId=@diagModuleId AND ItemType='practice_section' AND DisplayOrder=2)
-    INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefSectionId,QuestionCount,DisplayOrder)
-    VALUES (@diagModuleId,@diagLessonCert,@diagTemplateId,'practice_section',@diagPracticeSection,5,2);
-  IF @diagLessonSkill=@diagIeltsWrit OR @diagLessonSkill=@diagVstepWrit
-    IF NOT EXISTS (SELECT 1 FROM PathModuleItems WHERE ModuleId=@diagModuleId AND ItemType='ai_task' AND DisplayOrder=3)
-      INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefExamId,DisplayOrder)
-      VALUES (@diagModuleId,@diagLessonCert,@diagTemplateId,'ai_task',@diagWritingExam,3);
 
   SET @diagLessonIndex+=1;
 END;

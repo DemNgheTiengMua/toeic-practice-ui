@@ -59,13 +59,20 @@ END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   IF ERROR_MESSAGE() NOT LIKE '%CK_Placement_DoneHasResult%' THROW;
   PRINT 'rejected done placement without band/total'; END CATCH
 
--- UI-44: an ai_task path item may open a writing/speaking practice exam, but never a mock or a placement
+-- UI-44, carried across #232: a mock_section step may open a mock exam and nothing else. Before
+-- #232 this rule lived on PathModuleItems' ai_task rows, which D10 drops; the surviving shape is the
+-- only column that can still open a paper.
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal) VALUES (@c,'B1',N'B1',550,784);
-INSERT INTO PathTemplates (CertId,FromBandCode,ToBandCode,Name) VALUES (@c,'A2','B1',N'Starter'); DECLARE @tpl INT=SCOPE_IDENTITY();
-INSERT INTO PathModules (TemplateId,SkillId,CertId,Title) VALUES (@tpl,@wr,@c,N'Writing'); DECLARE @mod INT=SCOPE_IDENTITY();
-INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefExamId) VALUES (@mod,@c,@tpl,'ai_task',@wx);
-PRINT 'accepted ai_task opening a writing-practice exam';
+INSERT INTO Topics (Modality,Code,Name) VALUES ('writing','W-CORR',N'Correspondence');
+DECLARE @tWr13 INT=(SELECT TopicId FROM Topics WHERE Modality='writing' AND Code='W-CORR');
+INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'Writing mock 13',N'published',60,'mock');
+DECLARE @wxMock13 INT=SCOPE_IDENTITY();
+INSERT INTO LearnerPaths (UserId,CertId,Status) VALUES (@u,@c,'reset'); DECLARE @u44lp13 INT=SCOPE_IDENTITY();
+INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier,RefExamId)
+  VALUES (@u44lp13,@c,@wr,'writing',@tWr13,'B1','mock_section','developing',@wxMock13);
+PRINT 'accepted mock_section pointing at a mock exam';
 BEGIN TRY
-  INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefExamId) VALUES (@mod,@c,@tpl,'ai_task',@ps);
-  THROW 50000,'EXPECT_REJECT FAILED: ai_task opening a placement exam accepted',1;
-END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected ai_task opening a placement exam'; END CATCH
+  INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier,RefExamId)
+    VALUES (@u44lp13,@c,@wr,'writing',@tWr13,'B1','mock_section','developing',@ps);
+  THROW 50000,'EXPECT_REJECT FAILED: mock_section opening a placement exam accepted',1;
+END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected mock_section opening a placement exam'; END CATCH

@@ -18,7 +18,11 @@ public interface ILearningPathService
 
     Task<LearningPathSummaryView> GeneratePathAsync(int userId, string? targetBandCode = null, CancellationToken cancellationToken = default, bool archiveExisting = false);
 
-    Task<LearningPathModuleDetailView> GetModuleDetailAsync(int userId, int moduleId, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// #232: opens one step's detail by its own id. There is no module to address: a step is a
+    /// coordinate the timeline renders inline, so this reads the step the caller already sees.
+    /// </summary>
+    Task<PathStepInfo?> GetStepAsync(int userId, int stepId, CancellationToken cancellationToken = default);
 
     Task<StartStepResult> StartStepAsync(int userId, int stepId, CancellationToken cancellationToken = default);
 

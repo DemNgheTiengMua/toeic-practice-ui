@@ -192,15 +192,16 @@ BEGIN TRY
   INSERT INTO Complaints (OrderId,UserId,Type,Reason) VALUES (@o1,@adm,'payment_issue',N'not mine');
   THROW 50000,'EXPECT_REJECT FAILED: complaint on another user''s order accepted',1;
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected complaint on another user''s order'; END CATCH
--- UI-25 / UI-12: an in-progress module step, with a practice session running against it
+-- UI-25 / UI-12: an in-progress path step, with a practice session running against it.
+-- #232: the step is a coordinate - it names its skill, topic, level, type and size, and carries no
+-- module item. The practice session links to the step by id, which is all UI-12 ever needed.
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal) VALUES (@c,'B2',N'B2',785,944);
-INSERT INTO PathTemplates (CertId,FromBandCode,ToBandCode,Name) VALUES (@c,'A1','B2',N'A1→B2'); DECLARE @tpl INT=SCOPE_IDENTITY();
-INSERT INTO PathModules (TemplateId,SkillId,CertId,Title,GroupName,EstimatedMinutes) VALUES (@tpl,@rd,@c,N'Present Continuous',N'Grammar foundations',20); DECLARE @mod INT=SCOPE_IDENTITY();
-INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefSectionId,QuestionCount) VALUES (@mod,@c,@tpl,'practice_section',@p5,25); DECLARE @it INT=SCOPE_IDENTITY();
-INSERT INTO PathModuleTopics (ModuleId,Title,CategoryId,QuestionCount) VALUES (@mod,N'Time expressions',@cat,5);
+INSERT INTO Topics (Modality,Code,Name) VALUES ('reading','R-DET',N'Detail');
+DECLARE @tTime INT=(SELECT TopicId FROM Topics WHERE Modality='reading' AND Code='R-DET');
 DECLARE @plc INT=(SELECT PlacementId FROM PlacementTests WHERE AttemptId=@pa);
-INSERT INTO LearnerPaths (UserId,CertId,TemplateId,PlacementId) VALUES (@u,@c,@tpl,@plc); DECLARE @lp INT=SCOPE_IDENTITY();
-INSERT INTO LearnerPathSteps (LearnerPathId,PathModuleItemId,TemplateId,Status,StartedAt) VALUES (@lp,@it,@tpl,'in_progress',SYSDATETIMEOFFSET()); DECLARE @st INT=SCOPE_IDENTITY();
+INSERT INTO LearnerPaths (UserId,CertId,PlacementId) VALUES (@u,@c,@plc); DECLARE @lp INT=SCOPE_IDENTITY();
+INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier,Status,StartedAt,WeekNumber,WeekSequence)
+  VALUES (@lp,@c,@rd,'reading',@tTime,'B1','focus_practice','developing','in_progress',SYSDATETIMEOFFSET(),1,1); DECLARE @st INT=SCOPE_IDENTITY();
 INSERT INTO PracticeSessions (UserId,CertId,SectionId,Modality,QuestionCount,QuestionSource,LearnerPathStepId) VALUES (@u,@c,@p5,'reading',25,'wrong_before',@st);
 INSERT INTO SavedQuestions (UserId,QuestionId,Source) VALUES (@u,@q,'incorrect');
 PRINT 'accepted in-progress module step with linked practice session';

@@ -14,8 +14,8 @@ public sealed partial class CompanionApiClient
     public Task<LearningPathSummaryDto> GenerateLearningPathAsync(GenerateLearningPathRequest? request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<GenerateLearningPathRequest, LearningPathSummaryDto>("api/learner/learning-path/generate", request ?? new GenerateLearningPathRequest(), bearerToken, cancellationToken);
 
-    public Task<LearningPathModuleDetailDto> GetLearningPathModuleAsync(int moduleId, string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<LearningPathModuleDetailDto>($"api/learner/learning-path/modules/{moduleId}", bearerToken, cancellationToken);
+    public Task<PathStepDto?> GetLearningPathStepAsync(int stepId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<PathStepDto?>($"api/learner/learning-path/steps/{stepId}", bearerToken, cancellationToken);
 
     public Task<StartStepResultDto> StartLearningPathStepAsync(int stepId, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<object, StartStepResultDto>($"api/learner/learning-path/steps/{stepId}/start", new { }, bearerToken, cancellationToken);
@@ -29,8 +29,8 @@ public sealed partial class CompanionApiClient
     public Task<LearningPathSummaryDto> GenerateLearningPathAsync(GenerateLearningPathRequest? request, CancellationToken cancellationToken = default) =>
         GenerateLearningPathAsync(request, string.Empty, cancellationToken);
 
-    public Task<LearningPathModuleDetailDto> GetLearningPathModuleAsync(int moduleId, CancellationToken cancellationToken = default) =>
-        GetLearningPathModuleAsync(moduleId, string.Empty, cancellationToken);
+    public Task<PathStepDto?> GetLearningPathStepAsync(int stepId, CancellationToken cancellationToken = default) =>
+        GetLearningPathStepAsync(stepId, string.Empty, cancellationToken);
 
     public Task<StartStepResultDto> StartLearningPathStepAsync(int stepId, CancellationToken cancellationToken = default) =>
         StartLearningPathStepAsync(stepId, string.Empty, cancellationToken);
