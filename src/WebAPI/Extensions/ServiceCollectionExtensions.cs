@@ -51,6 +51,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IScoreConversionService, ScoreConversionService>();
         services.AddScoped<IAdminExamService, AdminExamService>();
         services.AddScoped<IAdminItemService, AdminItemService>();
+        services.AddScoped<IAdminCoverageService, AdminCoverageService>();
         services.AddScoped<IExamQuickIngestService, ExamQuickIngestService>();
         services.AddScoped<IQuestionImportService, QuestionImportService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();

@@ -1,0 +1,103 @@
+@model WebMVC.Models.AdminCoverageViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Coverage matrix";
+}
+
+@section Styles {
+  <link rel="stylesheet" href="~/css/admin/coverage.css" asp-append-version="true" />
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+  <span class="breadcrumbs__item" aria-current="page">Coverage</span>
+</nav>
+
+<div class="row row--between">
+  <h1>Warehouse coverage</h1>
+</div>
+
+<p class="text-muted">
+  Every cell of the pool: how much active content it holds against the budget it should hold.
+  A cell with nothing in it reads as a deficit, not as an absence.
+</p>
+
+@if (Model.ErrorMessage is not null)
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (Model.HasNoCells)
+{
+  @if (Model.ErrorMessage is null)
+  {
+    <div class="card">
+      <div class="card__body">
+        <div class="state-block">
+          <div class="state-block__icon state-block__icon--danger" aria-hidden="true">EMPTY</div>
+          <h2 class="state-block__title">The matrix reported no cells</h2>
+          <p class="state-block__desc">
+            A warehouse without a cell grid is a defect, not a covered pool: the matrix is always 120
+            cells. Nothing here can be read as coverage.
+          </p>
+        </div>
+      </div>
+    </div>
+  }
+}
+else
+{
+  <div class="coverage-legend" role="note" aria-label="How to read a cell">
+    <span class="coverage-legend__item coverage-cell--empty">Empty cell</span>
+    <span class="coverage-legend__item coverage-cell--short">Below budget</span>
+    <span class="coverage-legend__item coverage-cell--met">At budget</span>
+    <span class="coverage-legend__note">Figures are active units / target. Retired, quarantined and draft items are not stock.</span>
+  </div>
+
+  @foreach (var skill in Model.Skills)
+  {
+    <section class="coverage-skill" aria-labelledby="coverage-skill-@skill.Modality">
+      <div class="coverage-skill__header">
+        <h2 id="coverage-skill-@skill.Modality" class="coverage-skill__title">@skill.ModalityLabel</h2>
+      </div>
+
+      <div class="coverage-grid-wrap">
+        <table class="coverage-grid">
+          <caption class="visually-hidden">Coverage by topic and level for @skill.ModalityLabel</caption>
+          <thead>
+            <tr>
+              <th scope="col" class="coverage-grid__corner">Topic</th>
+              @foreach (var level in skill.LevelLabels)
+              {
+                <th scope="col" class="coverage-grid__level font-mono">@level</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var row in skill.Rows)
+            {
+              <tr>
+                <th scope="row" class="coverage-grid__topic">
+                  <span class="coverage-grid__code font-mono">@row.TopicCode</span>
+                  <span class="coverage-grid__name">@row.TopicName</span>
+                </th>
+                @foreach (var cell in row.Cells)
+                {
+                  @* The empty cell is the whole point of the screen: it keeps its plaque, its
+                     target and its deficit, and only its paint changes. *@
+                  <td class="coverage-cell @cell.StateClass"
+                      title="@cell.CefrLevelLabel: @cell.Cell.ActiveItemCount of @cell.Cell.TargetItemCount active, @cell.Cell.PlacementEligibleItemCount placement-eligible">
+                    <span class="coverage-cell__stock font-mono">@cell.Cell.ActiveItemCount<span class="coverage-cell__of">/</span>@cell.Cell.TargetItemCount</span>
+                    <span class="coverage-cell__deficit font-mono">@cell.DeficitText</span>
+                    <span class="coverage-cell__placement font-mono">@cell.Cell.PlacementEligibleItemCount eligible</span>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+}
