@@ -258,32 +258,41 @@ public sealed partial class PracticeService
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        bool isSaved = false;
         // #150: only an objective answer has options, so only it can be reviewed as a saved question.
         // Filing a failed free response there put a question with "0 options" in the bank.
-        // #187: a pool item has no Questions row to file, so it is not offered to the bank yet.
-        if (!isFreeResponse && answer.IsCorrect == false && answer.QuestionId is { } savedQuestionId)
+        // #224: a pool item is filed too, pinning the version that was answered - the same version this
+        // answer pinned, so the bank and the drill cannot disagree about what was sat. A free response
+        // version is productive and still has no options, so #150's rule holds for it as well.
+        int? savedQuestionId = pinned is not null
+            ? await db.SavedQuestions
+                .Where(sq => sq.UserId == userId && sq.ItemId == answer.ItemId)
+                .Select(sq => (int?)sq.SavedQuestionId)
+                .FirstOrDefaultAsync(cancellationToken)
+            : answer.QuestionId is { } answeredQuestionId
+                ? await db.SavedQuestions
+                    .Where(sq => sq.UserId == userId && sq.QuestionId == answeredQuestionId)
+                    .Select(sq => (int?)sq.SavedQuestionId)
+                    .FirstOrDefaultAsync(cancellationToken)
+                : null;
+
+        if (!isFreeResponse && answer.IsCorrect == false && savedQuestionId == null)
         {
-            var existingSq = await db.SavedQuestions
-                .FirstOrDefaultAsync(sq => sq.UserId == userId && sq.QuestionId == savedQuestionId, cancellationToken);
-            if (existingSq == null)
+            var filed = new SavedQuestion
             {
-                db.SavedQuestions.Add(new SavedQuestion
-                {
-                    UserId = userId,
-                    QuestionId = savedQuestionId,
-                    Source = SavedQuestionSource.Incorrect.ToCode(),
-                    SavedAt = DateTimeOffset.UtcNow
-                });
-                await db.SaveChangesAsync(cancellationToken);
-            }
-            isSaved = true;
+                UserId = userId,
+                QuestionId = answer.QuestionId,
+                CertId = pinned is not null ? answer.Session.CertId : null,
+                ItemId = pinned is not null ? answer.ItemId : null,
+                ItemVersionId = pinned?.ItemVersionId,
+                Source = SavedQuestionSource.Incorrect.ToCode(),
+                SavedAt = DateTimeOffset.UtcNow
+            };
+            db.SavedQuestions.Add(filed);
+            await db.SaveChangesAsync(cancellationToken);
+            savedQuestionId = filed.SavedQuestionId;
         }
-        else if (answer.QuestionId is { } existingQuestionId)
-        {
-            isSaved = await db.SavedQuestions
-                .AnyAsync(sq => sq.UserId == userId && sq.QuestionId == existingQuestionId, cancellationToken);
-        }
+
+        var isSaved = savedQuestionId.HasValue;
 
         int? nextDisplayOrder = null;
         if (!isLast)
@@ -319,7 +328,8 @@ public sealed partial class PracticeService
                 ? correctOptionId is { } key ? [key] : []
                 : allOptions.Where(o => o.IsCorrect).Select(o => o.OptionId).ToList(),
             answer.ResponseText,
-            answer.SelectedOptionIdsJson);
+            answer.SelectedOptionIdsJson,
+            savedQuestionId);
     }
 
     /// <summary>

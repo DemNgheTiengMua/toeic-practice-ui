@@ -13,4 +13,5 @@ public sealed record PracticeNavigatorItem(
     bool? IsCorrect,
     bool IsSaved,
     bool IsCurrent,
-    int? ItemVersionId = null);
+    int? ItemVersionId = null,
+    int? SavedQuestionId = null);

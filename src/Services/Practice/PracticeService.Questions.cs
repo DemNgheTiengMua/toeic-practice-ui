@@ -34,14 +34,25 @@ public sealed partial class PracticeService
 
         var isFinished = session.Status == PracticeStatus.Finished.ToCode();
         var questionIds = answers.Where(a => a.QuestionId.HasValue).Select(a => a.QuestionId!.Value).ToList();
+        var itemIds = answers.Where(a => a.ItemId.HasValue).Select(a => a.ItemId!.Value).ToList();
 
-        var savedQuestionIds = questionIds.Count == 0
+        // #224: the bank holds both shapes now, so the saved state is asked of whichever identity each
+        // answer has. The row id comes along, because unsaving addresses the bookmark itself - the
+        // practice page has no other way to name the right row. One query per shape, each skipped when
+        // its id list is empty.
+        var savedByQuestionId = questionIds.Count == 0
             ? []
             : await db.SavedQuestions
                 .AsNoTracking()
-                .Where(sq => sq.UserId == userId && questionIds.Contains(sq.QuestionId))
-                .Select(sq => sq.QuestionId)
-                .ToHashSetAsync(cancellationToken);
+                .Where(sq => sq.UserId == userId && sq.QuestionId.HasValue && questionIds.Contains(sq.QuestionId.Value))
+                .ToDictionaryAsync(sq => sq.QuestionId!.Value, sq => sq.SavedQuestionId, cancellationToken);
+
+        var savedByItemId = itemIds.Count == 0
+            ? []
+            : await db.SavedQuestions
+                .AsNoTracking()
+                .Where(sq => sq.UserId == userId && sq.ItemId.HasValue && itemIds.Contains(sq.ItemId.Value))
+                .ToDictionaryAsync(sq => sq.ItemId!.Value, sq => sq.SavedQuestionId, cancellationToken);
 
         // #187: a pool answer renders the version it pinned, and nothing else decides. The pinned rows
         // are loaded in one query, so a session with no pool answers costs no second round trip.
@@ -50,7 +61,7 @@ public sealed partial class PracticeService
 
         return answers.Select(answer =>
             ProjectAnswer(session, answer, isFinished, pinned.GetValueOrDefault(answer.AnswerId),
-                stimuli, savedQuestionIds)).ToList();
+                stimuli, savedByQuestionId, savedByItemId)).ToList();
     }
 
     public async Task<PracticeQuestionView> GetQuestionAsync(int userId, int sessionId, int displayOrder, CancellationToken cancellationToken = default)
@@ -94,12 +105,16 @@ public sealed partial class PracticeService
         var pinned = PlacePinnedVersions([answer], await LoadPinnedVersionsAsync([answer], cancellationToken));
         var stimulus = await LoadStimuliAsync(pinned.Values, cancellationToken);
 
-        var isSaved = answer.QuestionId is { } questionId
-            && await db.SavedQuestions.AnyAsync(sq => sq.UserId == userId && sq.QuestionId == questionId, cancellationToken);
+        var savedQuestionId = await db.SavedQuestions
+            .Where(sq => sq.UserId == userId
+                && (answer.QuestionId != null ? sq.QuestionId == answer.QuestionId : sq.ItemId == answer.ItemId))
+            .Select(sq => (int?)sq.SavedQuestionId)
+            .FirstOrDefaultAsync(cancellationToken);
 
         return ProjectAnswer(
             answer.Session, answer, isFinished, pinned.GetValueOrDefault(answer.AnswerId), stimulus,
-            isSaved ? [answer.QuestionId!.Value] : []);
+            savedQuestionId is { } id && answer.QuestionId is { } qid ? new Dictionary<int, int> { [qid] = id } : [],
+            savedQuestionId is { } iid && answer.ItemId is { } itemId2 ? new Dictionary<int, int> { [itemId2] = iid } : []);
     }
 
     /// <summary>
@@ -113,7 +128,8 @@ public sealed partial class PracticeService
         bool isFinished,
         ItemVersion? pinned,
         IReadOnlyDictionary<int, Stimulus> stimuli,
-        IReadOnlyCollection<int> savedQuestionIds)
+        IReadOnlyDictionary<int, int> savedByQuestionId,
+        IReadOnlyDictionary<int, int> savedByItemId)
     {
         var q = answer.Question;
         var (_, sectionName) = ScopeLabels(session);
@@ -194,7 +210,10 @@ public sealed partial class PracticeService
         }
 
         var hintText = answer.HintUsed ? q?.Hint : null;
-        var isSaved = answer.QuestionId is { } qid && savedQuestionIds.Contains(qid);
+        int? savedQuestionId = answer.QuestionId is { } qid
+            ? savedByQuestionId.TryGetValue(qid, out var idForQuestion) ? idForQuestion : null
+            : answer.ItemId is { } iid && savedByItemId.TryGetValue(iid, out var idForItem) ? idForItem : null;
+        var isSaved = savedQuestionId.HasValue;
 
         return new PracticeQuestionView(
             session.SessionId,
@@ -234,7 +253,8 @@ public sealed partial class PracticeService
                     ? correctOptionId is { } key ? [key] : []
                     : q?.QuestionOptionQuestionNavigations.Where(o => o.IsCorrect).Select(o => o.OptionId).ToList() ?? []
                 : [],
-            answer.ItemVersionId);
+            answer.ItemVersionId,
+            savedQuestionId);
     }
 
     /// <summary>The stimuli the pinned versions point at, keyed by item, so a passage is read once.</summary>
@@ -282,7 +302,8 @@ public sealed partial class PracticeService
             item.IsCorrect,
             item.IsSaved,
             item.DisplayOrder == currentQuestion.DisplayOrder,
-            item.ItemVersionId
+            item.ItemVersionId,
+            item.SavedQuestionId
         )).ToList();
 
         return new PracticeSessionTake(session, currentQuestion, questions, navigator);

@@ -30,12 +30,18 @@ public static class EndpointHelpers
                 b.BandId, b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder)).ToList());
 
     public static SavedQuestionItemDto ToSavedQuestionDto(SavedQuestionItem q) => new(
+        q.SavedQuestionId,
         q.QuestionId,
+        q.ItemId,
+        q.ItemVersionId,
+        q.IsRetiredDefective,
         q.Source.MapTo<SavedQuestionSourceDto>(),
         q.SavedAt,
         q.SectionId,
         q.SectionCode,
         q.SectionName,
+        q.TopicCode,
+        q.TopicName,
         q.CategoryId,
         q.CategoryName,
         q.Stem,

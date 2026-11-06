@@ -4,6 +4,12 @@ using WebMVC.Models;
 
 namespace WebMVC.Controllers;
 
+/// <summary>
+/// #224: a bookmark is addressed by its own row id (<c>savedQuestionId</c>), and saving is two routes
+/// because a legacy question id and a pool item-version id are separate counters. Each route is named
+/// for the shape it accepts, so a pool address can never be posted to a route that treats it as a
+/// question id.
+/// </summary>
 public sealed class SavedQuestionsController(
     ISavedQuestionsClient api,
     CurrentUser currentUser,
@@ -28,7 +34,7 @@ public sealed class SavedQuestionsController(
             var data = await api.GetSavedQuestionsAsync(source, sectionId, categoryId, cancellationToken);
             return View(new SavedQuestionsIndexViewModel(data, source, sectionId, categoryId, TempData["ErrorMessage"] as string)
             {
-                SavedAtDisplays = data.Questions.ToDictionary(q => q.QuestionId, q => dates.Format(q.SavedAt))
+                SavedAtDisplays = data.Questions.ToDictionary(q => q.SavedQuestionId, q => dates.Format(q.SavedAt))
             });
         }
         catch (ApiException ex)
@@ -39,12 +45,12 @@ public sealed class SavedQuestionsController(
         }
     }
 
-    [HttpGet("/saved-questions/{questionId:int}")]
-    public async Task<IActionResult> Review(int questionId, CancellationToken cancellationToken)
+    [HttpGet("/saved-questions/{savedQuestionId:int}")]
+    public async Task<IActionResult> Review(int savedQuestionId, CancellationToken cancellationToken)
     {
         try
         {
-            var question = await api.GetSavedQuestionAsync(questionId, cancellationToken);
+            var question = await api.GetSavedQuestionAsync(savedQuestionId, cancellationToken);
 
             if (IsAjaxRequest)
             {
@@ -58,7 +64,7 @@ public sealed class SavedQuestionsController(
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.SavedQuestionNotFound)
         {
-            logger.LogWarning(ex, "Saved question not found: {QuestionId}", questionId);
+            logger.LogWarning(ex, "Saved question not found: {SavedQuestionId}", savedQuestionId);
             if (IsAjaxRequest)
             {
                 return StatusCode(404, new { error = "Question not found in your saved bank.", code = ex.Code });
@@ -68,7 +74,7 @@ public sealed class SavedQuestionsController(
         }
         catch (ApiException ex)
         {
-            logger.LogError(ex, "Failed to load saved question review: {QuestionId}", questionId);
+            logger.LogError(ex, "Failed to load saved question review: {SavedQuestionId}", savedQuestionId);
             if (IsAjaxRequest)
             {
                 return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
@@ -78,42 +84,26 @@ public sealed class SavedQuestionsController(
         }
     }
 
-    [HttpPost("/saved-questions/{questionId:int}")]
+    /// <summary>Saves a legacy question-shaped link.</summary>
+    [HttpPost("/saved-questions/questions/{questionId:int}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Save(int questionId, [FromForm] string? source, CancellationToken cancellationToken)
+    public Task<IActionResult> Save(int questionId, [FromForm] string? source, CancellationToken cancellationToken) =>
+        SaveCore(() => api.SaveQuestionAsync(questionId, source ?? "manual", cancellationToken), questionId, cancellationToken);
+
+    /// <summary>#224: saves a pool item, pinning the version that was on screen.</summary>
+    [HttpPost("/saved-questions/item-versions/{itemVersionId:int}")]
+    [ValidateAntiForgeryToken]
+    public Task<IActionResult> SaveItemVersion(int itemVersionId, [FromForm] string? source, CancellationToken cancellationToken) =>
+        SaveCore(() => api.SaveItemVersionAsync(itemVersionId, source ?? "manual", cancellationToken), itemVersionId, cancellationToken);
+
+    [HttpPost("/saved-questions/{savedQuestionId:int}/remove")]
+    [HttpDelete("/saved-questions/{savedQuestionId:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Remove(int savedQuestionId, CancellationToken cancellationToken)
     {
         try
         {
-            var res = await api.SaveQuestionAsync(questionId, source ?? "manual", cancellationToken);
-
-            if (IsAjaxRequest)
-            {
-                return Json(new { isSaved = res.IsSaved, source = res.Source, savedAt = res.SavedAt });
-            }
-
-            TempData["SuccessMessage"] = "Question saved to your bank.";
-            return RedirectBackOr(nameof(Index));
-        }
-        catch (ApiException ex)
-        {
-            logger.LogWarning(ex, "Failed to save question {QuestionId}", questionId);
-            if (IsAjaxRequest)
-            {
-                return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
-            }
-            TempData["ErrorMessage"] = ex.Detail ?? "Could not save question. Please try again.";
-            return RedirectBackOr(nameof(Index));
-        }
-    }
-
-    [HttpPost("/saved-questions/{questionId:int}/remove")]
-    [HttpDelete("/saved-questions/{questionId:int}")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Remove(int questionId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var res = await api.UnsaveQuestionAsync(questionId, cancellationToken);
+            await api.UnsaveQuestionAsync(savedQuestionId, cancellationToken);
 
             if (IsAjaxRequest)
             {
@@ -125,7 +115,7 @@ public sealed class SavedQuestionsController(
         }
         catch (ApiException ex)
         {
-            logger.LogWarning(ex, "Failed to remove saved question {QuestionId}", questionId);
+            logger.LogWarning(ex, "Failed to remove saved question {SavedQuestionId}", savedQuestionId);
             if (IsAjaxRequest)
             {
                 return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
@@ -135,28 +125,72 @@ public sealed class SavedQuestionsController(
         }
     }
 
-    [HttpPost("/saved-questions/{questionId:int}/toggle")]
+    /// <summary>
+    /// The practice page's Save control. Unsaving addresses the bookmark by its own row id; saving
+    /// addresses the shape the drill is showing, which is exactly one of the two ids below.
+    /// </summary>
+    [HttpPost("/saved-questions/toggle")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Toggle(int questionId, [FromForm] bool? currentlySaved, [FromForm] string? source, CancellationToken cancellationToken)
+    public async Task<IActionResult> Toggle(
+        [FromForm] int? savedQuestionId,
+        [FromForm] int? questionId,
+        [FromForm] int? itemVersionId,
+        [FromForm] bool? currentlySaved,
+        [FromForm] string? source,
+        CancellationToken cancellationToken)
     {
         try
         {
             SaveQuestionResultDto res;
-            if (currentlySaved == true)
+            if (currentlySaved == true && savedQuestionId.HasValue)
             {
-                res = await api.UnsaveQuestionAsync(questionId, cancellationToken);
+                res = await api.UnsaveQuestionAsync(savedQuestionId.Value, cancellationToken);
+            }
+            else if (itemVersionId.HasValue)
+            {
+                res = await api.SaveItemVersionAsync(itemVersionId.Value, source ?? "manual", cancellationToken);
+            }
+            else if (questionId.HasValue)
+            {
+                res = await api.SaveQuestionAsync(questionId.Value, source ?? "manual", cancellationToken);
             }
             else
             {
-                res = await api.SaveQuestionAsync(questionId, source ?? "manual", cancellationToken);
+                return StatusCode(400, new { error = "A saved question, question or item version is required.", code = ApiError.Codes.Validation });
             }
 
-            return Json(new { isSaved = res.IsSaved, source = res.Source, savedAt = res.SavedAt });
+            return Json(new { isSaved = res.IsSaved, source = res.Source, savedAt = res.SavedAt, savedQuestionId = res.SavedQuestionId });
         }
         catch (ApiException ex)
         {
-            logger.LogWarning(ex, "Failed to toggle save state for question {QuestionId}", questionId);
+            logger.LogWarning(ex, "Failed to toggle save state for saved question {SavedQuestionId}", savedQuestionId);
             return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    private async Task<IActionResult> SaveCore(Func<Task<SaveQuestionResultDto>> save, int address, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var res = await save();
+
+            if (IsAjaxRequest)
+            {
+                return Json(new { isSaved = res.IsSaved, source = res.Source, savedAt = res.SavedAt, savedQuestionId = res.SavedQuestionId });
+            }
+
+            TempData["SuccessMessage"] = "Question saved to your bank.";
+            return RedirectBackOr(nameof(Index));
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to save question {Address}", address);
+            if (IsAjaxRequest)
+            {
+                return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
+            }
+            TempData["ErrorMessage"] = ex.Detail ?? "Could not save question. Please try again.";
+            return RedirectBackOr(nameof(Index));
         }
     }
 

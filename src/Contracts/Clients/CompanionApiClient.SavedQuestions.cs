@@ -17,12 +17,12 @@ public sealed partial class CompanionApiClient
         return GetAuthorizedAsync<SavedQuestionsViewDto>(path, bearerToken, cancellationToken);
     }
 
-    public Task<SavedQuestionItemDto> GetSavedQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<SavedQuestionItemDto>($"api/learner/saved-questions/{questionId}", bearerToken, cancellationToken);
+    public Task<SavedQuestionItemDto> GetSavedQuestionAsync(int savedQuestionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<SavedQuestionItemDto>($"api/learner/saved-questions/{savedQuestionId}", bearerToken, cancellationToken);
 
     public async Task<SaveQuestionResultDto> SaveQuestionAsync(int questionId, string? source, string bearerToken, CancellationToken cancellationToken = default)
     {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/saved-questions/{questionId}")
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/saved-questions/questions/{questionId}")
         {
             Content = JsonContent.Create(new SaveQuestionRequest(source ?? "manual"), options: Json),
         };
@@ -32,9 +32,21 @@ public sealed partial class CompanionApiClient
         return (await response.Content.ReadFromJsonAsync<SaveQuestionResultDto>(Json, cancellationToken))!;
     }
 
-    public async Task<SaveQuestionResultDto> UnsaveQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default)
+    public async Task<SaveQuestionResultDto> SaveItemVersionAsync(int itemVersionId, string? source, string bearerToken, CancellationToken cancellationToken = default)
     {
-        using var message = new HttpRequestMessage(HttpMethod.Delete, $"api/learner/saved-questions/{questionId}");
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/saved-questions/item-versions/{itemVersionId}")
+        {
+            Content = JsonContent.Create(new SaveQuestionRequest(source ?? "manual"), options: Json),
+        };
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<SaveQuestionResultDto>(Json, cancellationToken))!;
+    }
+
+    public async Task<SaveQuestionResultDto> UnsaveQuestionAsync(int savedQuestionId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Delete, $"api/learner/saved-questions/{savedQuestionId}");
         AttachBearer(message, bearerToken);
         using var response = await http.SendAsync(message, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
@@ -44,12 +56,15 @@ public sealed partial class CompanionApiClient
     public Task<SavedQuestionsViewDto> GetSavedQuestionsAsync(string? source, int? sectionId, int? categoryId, CancellationToken cancellationToken = default) =>
         GetSavedQuestionsAsync(source, sectionId, categoryId, string.Empty, cancellationToken);
 
-    public Task<SavedQuestionItemDto> GetSavedQuestionAsync(int questionId, CancellationToken cancellationToken = default) =>
-        GetSavedQuestionAsync(questionId, string.Empty, cancellationToken);
+    public Task<SavedQuestionItemDto> GetSavedQuestionAsync(int savedQuestionId, CancellationToken cancellationToken = default) =>
+        GetSavedQuestionAsync(savedQuestionId, string.Empty, cancellationToken);
 
     public Task<SaveQuestionResultDto> SaveQuestionAsync(int questionId, string? source, CancellationToken cancellationToken = default) =>
         SaveQuestionAsync(questionId, source, string.Empty, cancellationToken);
 
-    public Task<SaveQuestionResultDto> UnsaveQuestionAsync(int questionId, CancellationToken cancellationToken = default) =>
-        UnsaveQuestionAsync(questionId, string.Empty, cancellationToken);
+    public Task<SaveQuestionResultDto> SaveItemVersionAsync(int itemVersionId, string? source, CancellationToken cancellationToken = default) =>
+        SaveItemVersionAsync(itemVersionId, source, string.Empty, cancellationToken);
+
+    public Task<SaveQuestionResultDto> UnsaveQuestionAsync(int savedQuestionId, CancellationToken cancellationToken = default) =>
+        UnsaveQuestionAsync(savedQuestionId, string.Empty, cancellationToken);
 }

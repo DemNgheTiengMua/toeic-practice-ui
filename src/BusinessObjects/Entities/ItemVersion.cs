@@ -102,4 +102,8 @@ public partial class ItemVersion
     /// <summary>#187: the practice answers that pinned this exact version.</summary>
     [InverseProperty("ItemVersion")]
     public virtual ICollection<PracticeAnswer> PracticeAnswers { get; set; } = new List<PracticeAnswer>();
+
+    /// <summary>#224: the saved links that pinned this exact version.</summary>
+    [InverseProperty("ItemVersion")]
+    public virtual ICollection<SavedQuestion> SavedQuestions { get; set; } = new List<SavedQuestion>();
 }

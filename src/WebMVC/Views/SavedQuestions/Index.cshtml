@@ -128,7 +128,7 @@ else
     <div class="stack mt-4" style="gap: var(--space-4);" id="saved-questions-list">
       @foreach (var item in data.Questions)
       {
-        <article class="card saved-question-card" id="card-@item.QuestionId" data-question-id="@item.QuestionId">
+        <article class="card saved-question-card" id="card-@item.SavedQuestionId" data-saved-question-id="@item.SavedQuestionId">
           <div class="card__body stack" style="gap: var(--space-3);">
             <div class="row row--between row--wrap">
               <span class="text-sm">
@@ -140,24 +140,38 @@ else
                 {
                   <span class="badge badge--info">Saved by you</span>
                 }
-                <span class="badge badge--muted">@item.SectionCode — @item.SectionName</span>
+                @if (item.IsRetiredDefective)
+                {
+                  @* #224 / D21: the item was withdrawn as defective. What the learner saved still
+                     renders below, but a wrong key must never look like a normal answer. *@
+                  <span class="badge badge--warning">Withdrawn as defective</span>
+                }
+                <span class="badge badge--muted">@item.ScopeCode — @item.ScopeName</span>
                 @if (!string.IsNullOrEmpty(item.CategoryName))
                 {
                   <span class="badge badge--muted">@item.CategoryName</span>
                 }
               </span>
-              <span class="text-sm text-muted">Saved @Model.SavedAtDisplays[item.QuestionId]</span>
+              <span class="text-sm text-muted">Saved @Model.SavedAtDisplays[item.SavedQuestionId]</span>
             </div>
+
+            @if (item.IsRetiredDefective)
+            {
+              <div class="alert alert--warning no-margin" role="note">
+                This item was withdrawn because its key was wrong. What you saved is shown so you can
+                review your thinking, but do not treat the marked answer as correct.
+              </div>
+            }
 
             <p class="no-margin" style="white-space: pre-wrap;">@item.Stem</p>
 
             <div class="row row--between row--middle row--wrap">
-              <span class="text-xs text-muted">@item.SectionCode · @item.Options.Count options</span>
+              <span class="text-xs text-muted">@item.ScopeCode · @item.Options.Count options</span>
               <div class="row">
-                <button type="button" class="btn btn--sm review-toggle-btn" data-target="review-@item.QuestionId" aria-expanded="false" aria-controls="review-@item.QuestionId">
+                <button type="button" class="btn btn--sm review-toggle-btn" data-target="review-@item.SavedQuestionId" aria-expanded="false" aria-controls="review-@item.SavedQuestionId">
                   Review explanation
                 </button>
-                <form method="post" action="/saved-questions/@item.QuestionId/remove" class="no-margin remove-form" data-question-id="@item.QuestionId">
+                <form method="post" action="/saved-questions/@item.SavedQuestionId/remove" class="no-margin remove-form" data-saved-question-id="@item.SavedQuestionId">
                   @Html.AntiForgeryToken()
                   <button type="submit" class="btn btn--ghost btn--sm">Remove</button>
                 </form>
@@ -165,7 +179,7 @@ else
             </div>
 
             <!-- Review panel (expanded inline) -->
-            <div class="saved-review-panel mt-3 pt-3" id="review-@item.QuestionId" style="display: none; border-top: 1px solid var(--rule-soft);" role="region" aria-label="Question @item.QuestionId review and explanation">
+            <div class="saved-review-panel mt-3 pt-3" id="review-@item.SavedQuestionId" style="display: none; border-top: 1px solid var(--rule-soft);" role="region" aria-label="Saved question @item.SavedQuestionId review and explanation">
               @if (!string.IsNullOrEmpty(item.Passage))
               {
                 <div class="card mb-3">
@@ -184,12 +198,15 @@ else
 
               @if (!string.IsNullOrEmpty(item.AudioPath))
               {
-                @await Html.PartialAsync("_ExamAudioPlayer", Model.QuestionAudio[item.QuestionId])
+                @await Html.PartialAsync("_ExamAudioPlayer", Model.QuestionAudio[item.SavedQuestionId])
               }
 
               <div class="option-list" aria-label="Answer options">
                 @foreach (var opt in item.Options)
                 {
+                  @* #224: a version stores labels and a key, not option rows, so the learner's own
+                     choice has no id to match here. Every option is shown with the key marked, which is
+                     what a review screen is for. *@
                   var isCorrect = opt.IsCorrect;
                   var optClass = isCorrect ? "option option--correct" : "option";
                   <div class="@optClass">
@@ -218,8 +235,8 @@ else
               }
 
               <div class="row row--between mt-3 text-xs text-muted">
-                <a href="/saved-questions/@item.QuestionId" class="text-muted" style="text-decoration: underline;">Open dedicated review page ›</a>
-                <button type="button" class="btn btn--ghost btn--sm close-review-btn" data-target="review-@item.QuestionId">Close review</button>
+                <a href="/saved-questions/@item.SavedQuestionId" class="text-muted" style="text-decoration: underline;">Open dedicated review page ›</a>
+                <button type="button" class="btn btn--ghost btn--sm close-review-btn" data-target="review-@item.SavedQuestionId">Close review</button>
               </div>
             </div>
           </div>
