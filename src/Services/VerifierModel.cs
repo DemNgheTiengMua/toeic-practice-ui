@@ -132,7 +132,7 @@ public sealed class ClaudeVerifierModel : IVerifierModel
         GateThreeSolveRequest request,
         CancellationToken cancellationToken = default)
     {
-        var prompt = BuildPrompt(request, Family);
+        var prompt = BuildPrompt(request);
         for (var attempt = 1; attempt <= AttemptsAllowed; attempt++)
         {
             var raw = await _client.CreateMessageAsync(
@@ -159,7 +159,7 @@ public sealed class ClaudeVerifierModel : IVerifierModel
     /// The blind prompt. There is no branch that mentions the key or the explanation because the
     /// request type has neither; the stimulus is simply absent when the ablation runs.
     /// </summary>
-    private static string BuildPrompt(GateThreeSolveRequest request, string family)
+    private static string BuildPrompt(GateThreeSolveRequest request)
     {
         var prompt = new StringBuilder();
         prompt.AppendLine("Solve this item as a candidate sitting the exam would: choose one option.");
