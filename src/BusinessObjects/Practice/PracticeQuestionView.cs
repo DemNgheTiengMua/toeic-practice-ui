@@ -41,4 +41,5 @@ public sealed record PracticeQuestionView(
     IReadOnlyList<int>? SelectedOptionIds = null,
     string? SelectedOptionIdsJson = null,
     IReadOnlyList<int>? CorrectOptionIds = null,
-    int? ItemVersionId = null);
+    int? ItemVersionId = null,
+    int? SavedQuestionId = null);

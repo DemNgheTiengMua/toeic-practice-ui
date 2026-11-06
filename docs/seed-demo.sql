@@ -2539,24 +2539,22 @@ GO
 -- ============================================================================
 -- 16. Saved Questions
 -- ============================================================================
+-- #224 / D23: a legacy saved link is DROPPED, not re-pointed. It named a Questions row whose item no
+-- longer exists in the rebuild, so re-pointing it would invent a bookmark the learner never made.
+--
+-- The drop is a data decision, and this repo has no migration: the schema file is the source of truth
+-- and a fresh database never holds a legacy row. This statement is what makes the same claim true of a
+-- database seeded before #224 by this script, which is the only place a legacy row could survive. It
+-- is scoped to the seeded demo learner rather than the whole table, because destroying an operator's
+-- rows is not this script's job - the cutover drop is D23's, and it runs once.
+--
+-- The pool links are seeded in section 19c, after the pool items they point at exist.
 DECLARE @learner INT = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local');
-DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');
-DECLARE @toeicMock INT = (SELECT ExamId FROM Exams WHERE CertId = @toeicCert AND Name = N'ETS 2024 — Test 1');
-DECLARE @secP5 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'P5');
-
-DECLARE @qP5_2 INT = (SELECT TOP 1 QuestionId FROM Questions WHERE ExamId = @toeicMock AND SectionId = @secP5 AND DisplayOrder = 2);
-DECLARE @qP5_3 INT = (SELECT TOP 1 QuestionId FROM Questions WHERE ExamId = @toeicMock AND SectionId = @secP5 AND DisplayOrder = 3);
-
-IF @qP5_3 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM SavedQuestions WHERE UserId = @learner AND QuestionId = @qP5_3)
-  INSERT INTO SavedQuestions (UserId, QuestionId, Source, SavedAt)
-  VALUES (@learner, @qP5_3, 'incorrect', DATEADD(DAY, -4, SYSDATETIMEOFFSET()));
-
-IF @qP5_2 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM SavedQuestions WHERE UserId = @learner AND QuestionId = @qP5_2)
-  INSERT INTO SavedQuestions (UserId, QuestionId, Source, SavedAt)
-  VALUES (@learner, @qP5_2, 'manual', DATEADD(DAY, -3, SYSDATETIMEOFFSET()));
+IF @learner IS NOT NULL
+  DELETE FROM SavedQuestions WHERE UserId = @learner AND QuestionId IS NOT NULL;
 GO
 
-PRINT '16. Saved questions seeded';
+PRINT '16. Legacy saved questions dropped (D23); pool links follow in 19c';
 GO
 
 
@@ -5154,6 +5152,46 @@ WHERE i.BatchTag = 'seed-vstep-sample-1' AND i.Modality = 'reading'
                   WHERE b.ExamId = @poolVstepMock AND b.SectionId = @poolSecR4 AND b.DisplayOrder = 1);
 
 PRINT '19b. VSTEP Sample Test 1 assembled from the pool: two versions bound, position and unit carried';
+GO
+
+-- ============================================================================
+-- 19c. #224: the demo learner's saved bank, as pool links.
+-- ============================================================================
+-- Two links: one saved by hand against the reading item, one filed automatically from a wrong answer on
+-- the listening item. Both pin version 1 - the only version these items have.
+--
+-- The certificate is the BANK the link was filed into, not the item's owner: an item is
+-- certificate-agnostic (D2), and a learner on TOEIC who drills a pool item saves it into the TOEIC
+-- bank. So this uses the learner's own active certificate rather than VSTEP, which is where the demo
+-- sample items happen to be bound. Filing them under VSTEP would leave the demo learner's bank empty
+-- and contradict docs/MANUAL-TEST-CREDENTIALS.md's "2 saved questions".
+--
+-- Both are guarded individually and by item, not by table: this script is re-run mid-suite
+-- (AttemptEngineTests), and a guard over the whole table would skip the second link.
+DECLARE @savedLearner INT = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local');
+DECLARE @savedCert INT = (SELECT ActiveCertId FROM Users WHERE UserId = @savedLearner);
+
+IF @savedLearner IS NOT NULL AND @savedCert IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM SavedQuestions sq
+                   JOIN Items i ON i.ItemId = sq.ItemId
+                   WHERE sq.UserId = @savedLearner AND i.BatchTag = 'seed-vstep-sample-1' AND i.Modality = 'reading')
+  INSERT INTO SavedQuestions (UserId, CertId, ItemId, ItemVersionId, Source, SavedAt)
+  SELECT @savedLearner, @savedCert, i.ItemId, v.ItemVersionId, 'manual', DATEADD(DAY, -3, SYSDATETIMEOFFSET())
+  FROM Items i
+  JOIN ItemVersions v ON v.ItemId = i.ItemId AND v.VersionNumber = 1
+  WHERE i.BatchTag = 'seed-vstep-sample-1' AND i.Modality = 'reading';
+
+IF @savedLearner IS NOT NULL AND @savedCert IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM SavedQuestions sq
+                   JOIN Items i ON i.ItemId = sq.ItemId
+                   WHERE sq.UserId = @savedLearner AND i.BatchTag = 'seed-vstep-sample-1' AND i.Modality = 'listening')
+  INSERT INTO SavedQuestions (UserId, CertId, ItemId, ItemVersionId, Source, SavedAt)
+  SELECT @savedLearner, @savedCert, i.ItemId, v.ItemVersionId, 'incorrect', DATEADD(DAY, -4, SYSDATETIMEOFFSET())
+  FROM Items i
+  JOIN ItemVersions v ON v.ItemId = i.ItemId AND v.VersionNumber = 1
+  WHERE i.BatchTag = 'seed-vstep-sample-1' AND i.Modality = 'listening';
+
+PRINT '19c. Saved bank seeded as two pool links, each pinning its item version';
 GO
 
 -- ============================================================================

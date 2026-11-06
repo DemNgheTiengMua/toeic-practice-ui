@@ -14,4 +14,5 @@ public sealed record GradedPracticeAnswerResult(
     string? AcceptedAnswersJson = null,
     IReadOnlyList<int>? CorrectOptionIds = null,
     string? ResponseText = null,
-    string? SelectedOptionIdsJson = null);
+    string? SelectedOptionIdsJson = null,
+    int? SavedQuestionId = null);

@@ -12,7 +12,7 @@ public static class SavedQuestionEndpoints
     {
         var learner = app.MapGroup("/api/learner").RequireAuthorization(Roles.Learner);
 
-        // ---- Saved Questions (issue #9) ----
+        // ---- Saved Questions (issue #9, #224) ----
         var savedQuestions = learner.MapGroup("/saved-questions");
 
         savedQuestions.MapGet("", async (
@@ -37,15 +37,16 @@ public static class SavedQuestionEndpoints
                 view.Categories.Select(c => new SavedQuestionCategoryFilterDto(c.CategoryId, c.Name, c.Count)).ToList()));
         });
 
-        savedQuestions.MapGet("/{questionId:int}", async Task<IResult> (
-            int questionId,
+        // #224: addressed by the bookmark's own row id, which is unique across both shapes.
+        savedQuestions.MapGet("/{savedQuestionId:int}", async Task<IResult> (
+            int savedQuestionId,
             HttpContext http,
             ISavedQuestionService savedService,
             CancellationToken cancellationToken) =>
         {
             try
             {
-                var q = await savedService.GetSavedQuestionAsync(CurrentUserId(http), questionId, cancellationToken);
+                var q = await savedService.GetSavedQuestionAsync(CurrentUserId(http), savedQuestionId, cancellationToken);
                 return Results.Ok(ToSavedQuestionDto(q));
             }
             catch (SavedQuestionException ex) when (ex.Code == SavedQuestionException.SavedQuestionNotFound)
@@ -54,7 +55,9 @@ public static class SavedQuestionEndpoints
             }
         });
 
-        savedQuestions.MapPost("/{questionId:int}", async Task<IResult> (
+        // The two save shapes are two routes: a question id and an item-version id are separate
+        // counters, so one address would file the wrong thing.
+        savedQuestions.MapPost("/questions/{questionId:int}", async Task<IResult> (
             int questionId,
             SaveQuestionRequest? request,
             HttpContext http,
@@ -63,12 +66,8 @@ public static class SavedQuestionEndpoints
         {
             try
             {
-                // Only the practice flow asks for "incorrect"; anything else is a manual save.
-                var source = EnumCodes.TryParse<SavedQuestionSource>(request?.Source, out var parsedSource)
-                    ? parsedSource
-                    : SavedQuestionSource.Manual;
-                var res = await savedService.SaveQuestionAsync(CurrentUserId(http), questionId, source, cancellationToken);
-                return Results.Ok(new SaveQuestionResultDto(res.IsSaved, res.Source?.MapTo<SavedQuestionSourceDto>(), res.SavedAt));
+                var res = await savedService.SaveQuestionAsync(CurrentUserId(http), questionId, ParseSource(request), cancellationToken);
+                return Results.Ok(ToResultDto(res));
             }
             catch (SavedQuestionException ex) when (ex.Code == SavedQuestionException.QuestionNotFound)
             {
@@ -76,14 +75,42 @@ public static class SavedQuestionEndpoints
             }
         });
 
-        savedQuestions.MapDelete("/{questionId:int}", async (
-            int questionId,
+        // #224: a pool item is saved by the version on screen, which is what the link pins.
+        savedQuestions.MapPost("/item-versions/{itemVersionId:int}", async Task<IResult> (
+            int itemVersionId,
+            SaveQuestionRequest? request,
             HttpContext http,
             ISavedQuestionService savedService,
             CancellationToken cancellationToken) =>
         {
-            var res = await savedService.UnsaveQuestionAsync(CurrentUserId(http), questionId, cancellationToken);
-            return Results.Ok(new SaveQuestionResultDto(res.IsSaved, res.Source?.MapTo<SavedQuestionSourceDto>(), res.SavedAt));
+            try
+            {
+                var res = await savedService.SaveItemVersionAsync(CurrentUserId(http), itemVersionId, ParseSource(request), cancellationToken);
+                return Results.Ok(ToResultDto(res));
+            }
+            catch (SavedQuestionException ex) when (ex.Code == SavedQuestionException.QuestionNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Item version not found", ApiError.Codes.QuestionNotFound, ex.Message);
+            }
+        });
+
+        savedQuestions.MapDelete("/{savedQuestionId:int}", async (
+            int savedQuestionId,
+            HttpContext http,
+            ISavedQuestionService savedService,
+            CancellationToken cancellationToken) =>
+        {
+            var res = await savedService.UnsaveAsync(CurrentUserId(http), savedQuestionId, cancellationToken);
+            return Results.Ok(ToResultDto(res));
         });
     }
+
+    /// <summary>Only the practice flow asks for "incorrect"; anything else is a manual save.</summary>
+    private static SavedQuestionSource ParseSource(SaveQuestionRequest? request) =>
+        EnumCodes.TryParse<SavedQuestionSource>(request?.Source, out var parsedSource)
+            ? parsedSource
+            : SavedQuestionSource.Manual;
+
+    private static SaveQuestionResultDto ToResultDto(SaveQuestionResult res) =>
+        new(res.IsSaved, res.Source?.MapTo<SavedQuestionSourceDto>(), res.SavedAt, res.SavedQuestionId);
 }

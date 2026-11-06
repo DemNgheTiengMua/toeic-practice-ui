@@ -12,7 +12,8 @@ public sealed class PracticeTakePresentation
         Question = question;
         Questions = questions ?? [question];
         Navigator = navigator ?? Questions.Select(x => new PracticeNavigatorItemDto(x.QuestionId, x.DisplayOrder,
-            x.SelectedOptionId.HasValue || x.IsCorrect.HasValue, x.IsCorrect, x.IsSaved, x.DisplayOrder == question.DisplayOrder)).ToList();
+            x.SelectedOptionId.HasValue || x.IsCorrect.HasValue, x.IsCorrect, x.IsSaved, x.DisplayOrder == question.DisplayOrder,
+            x.ItemVersionId, x.SavedQuestionId)).ToList();
         IsFinished = session.Status == PracticeStatusDto.Finished;
         NavigatorCells = Navigator.Select(item => new PracticeNavigatorCellViewModel(item,
             (item.IsCorrect == true ? "is-correct" : item.IsCorrect == false ? "is-incorrect"

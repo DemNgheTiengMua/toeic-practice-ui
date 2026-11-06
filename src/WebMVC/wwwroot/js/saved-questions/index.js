@@ -32,8 +32,8 @@
       document.querySelectorAll('.remove-form').forEach(function (form) {
         form.addEventListener('submit', function (e) {
           e.preventDefault();
-          var questionId = form.getAttribute('data-question-id');
-          var card = document.getElementById('card-' + questionId);
+          var savedQuestionId = form.getAttribute('data-saved-question-id');
+          var card = document.getElementById('card-' + savedQuestionId);
           var csrfInput = form.querySelector('input[name="__RequestVerificationToken"]');
           var token = csrfInput ? csrfInput.value : '';
 
@@ -43,7 +43,7 @@
           var formData = new URLSearchParams();
           formData.append('__RequestVerificationToken', token);
 
-          fetch('/saved-questions/' + questionId + '/remove', {
+          fetch('/saved-questions/' + savedQuestionId + '/remove', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',

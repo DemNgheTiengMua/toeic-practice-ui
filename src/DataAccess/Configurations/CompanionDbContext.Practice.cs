@@ -138,12 +138,40 @@ public partial class CompanionDbContext
 
 
 
+        // #224: a saved link pins the item version it rendered, so it has two shapes and one address.
+        // The two unique indexes are filtered (one per shape), which EF cannot infer, so they are
+        // declared by name here and excluded from the key. The composite version FK is written by hand
+        // for the same reason PracticeAnswers' is: EF cannot infer (version, item) as one relation.
         modelBuilder.Entity<SavedQuestion>(entity =>
-        {            entity.Property(e => e.SavedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+        {
+            entity.HasKey(e => e.SavedQuestionId).HasName("PK_SavedQuestions");
+
+            entity.Property(e => e.SavedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+
+            entity.HasIndex(e => new { e.UserId, e.QuestionId }, "UQ_SavedQuestions_Question")
+                .IsUnique()
+                .HasFilter("([QuestionId] IS NOT NULL)");
+            entity.HasIndex(e => new { e.UserId, e.ItemId }, "UQ_SavedQuestions_Item")
+                .IsUnique()
+                .HasFilter("([ItemId] IS NOT NULL)");
+            entity.HasIndex(e => new { e.UserId, e.CertId }, "IX_SavedQuestions_User_Cert")
+                .HasFilter("([CertId] IS NOT NULL)");
 
             entity.HasOne(d => d.Question).WithMany(p => p.SavedQuestions)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__SavedQues__Quest__756D6ECB");
+
+            // The pinned version must be a version of the item the link names.
+            entity.HasOne(d => d.ItemVersion).WithMany(p => p.SavedQuestions)
+                .HasPrincipalKey(p => new { p.ItemVersionId, p.ItemId })
+                .HasForeignKey(d => new { d.ItemVersionId, d.ItemId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SavedQuestions_VersionItem");
+
+            entity.HasOne(d => d.Cert).WithMany(p => p.SavedQuestions)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SavedQuestions_Cert");
 
             entity.HasOne(d => d.User).WithMany(p => p.SavedQuestions)
                 .OnDelete(DeleteBehavior.ClientSetNull)

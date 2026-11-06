@@ -100,7 +100,8 @@ public sealed class PracticeController(
                 item.IsCorrect,
                 item.IsSaved,
                 item.DisplayOrder == question.DisplayOrder,
-                item.ItemVersionId
+                item.ItemVersionId,
+                item.SavedQuestionId
             )).ToList();
 
             return View(new PracticeTakeViewModel(
@@ -175,6 +176,7 @@ public sealed class PracticeController(
                     correctOptionIds = result.CorrectOptionIds,
                     responseText = result.ResponseText,
                     selectedOptionIdsJson = result.SelectedOptionIdsJson,
+                    savedQuestionId = result.SavedQuestionId,
                 });
             }
 

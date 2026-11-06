@@ -28,7 +28,7 @@ public static partial class PracticeEndpoints
                     qv.SelectedOptionId, qv.IsCorrect, qv.CorrectOptionId, qv.Explanation, qv.Transcript,
                     qv.Passage, qv.AudioPath, qv.ImagePath, qv.ImageAlt, qv.IsSaved, qv.AudioStartMs, qv.AudioEndMs,
                     qv.QuestionType, qv.MaxSelections, qv.AllowNumber, qv.AcceptedAnswersJson, qv.RequiredKeywords,
-                    qv.MinWords, qv.MaxWords, qv.ResponseText, qv.SelectedOptionIds, qv.SelectedOptionIdsJson, qv.CorrectOptionIds, qv.ItemVersionId);
+                    qv.MinWords, qv.MaxWords, qv.ResponseText, qv.SelectedOptionIds, qv.SelectedOptionIdsJson, qv.CorrectOptionIds, qv.ItemVersionId, qv.SavedQuestionId);
 
                 return Results.Ok(new PracticeSessionTakeDto(
                     new PracticeSessionDto(
@@ -38,7 +38,7 @@ public static partial class PracticeEndpoints
                         take.Session.StartedAt, take.Session.FinishedAt),
                     ToQuestionDto(take.Question),
                     take.Questions.Select(ToQuestionDto).ToList(),
-                    take.Navigator.Select(n => new PracticeNavigatorItemDto(n.QuestionId, n.DisplayOrder, n.IsAnswered, n.IsCorrect, n.IsSaved, n.IsCurrent, n.ItemVersionId)).ToList()));
+                    take.Navigator.Select(n => new PracticeNavigatorItemDto(n.QuestionId, n.DisplayOrder, n.IsAnswered, n.IsCorrect, n.IsSaved, n.IsCurrent, n.ItemVersionId, n.SavedQuestionId)).ToList()));
             }
             catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
             {

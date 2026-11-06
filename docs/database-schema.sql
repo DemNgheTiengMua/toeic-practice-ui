@@ -1014,13 +1014,63 @@ CREATE UNIQUE INDEX UQ_PracticeAnswers_Version ON PracticeAnswers(SessionId, Ite
   WHERE ItemVersionId IS NOT NULL;
 GO
 -- UI-13: "Save this question for review" / "saved to your incorrect-answer bank"
+--
+-- #224: a saved link names the ITEM and the exact VERSION that was on screen when it was saved, so
+-- reopening it renders what the learner saved even after a correction, a retirement, or a withdrawal
+-- as defective (D21). It is not "a link to an item": a re-versioned item must leave an existing link
+-- alone, which only the pinned version can do.
+--
+-- Two shapes live here for one release. A pool link names (ItemId, ItemVersionId); the legacy link
+-- names QuestionId, because the exam-owned Questions row it points at still exists until #231.
+-- CK_SavedQuestions_Shape refuses a row that is half of either or both at once, and the two filtered
+-- unique indexes below carry the "one bookmark per thing" rule for whichever shape a row is.
 CREATE TABLE SavedQuestions (
+  -- The row's own identity, and the address the bank's review and remove routes use: an item id and
+  -- a question id are two counters that can collide, so neither can address a row on its own.
+  SavedQuestionId INT IDENTITY(1,1) PRIMARY KEY,
   UserId     INT NOT NULL REFERENCES Users(UserId),
-  QuestionId INT NOT NULL REFERENCES Questions(QuestionId),
+  -- #224: which certificate's bank this link lives in. A pool link must carry it: an item is
+  -- certificate-agnostic (D2) and has no section to climb to one, so a demo VSTEP item would otherwise
+  -- appear in every certificate's bank. A legacy link leaves it NULL and is scoped through its
+  -- question's section, exactly as before - the same choice PracticeSession makes between its two
+  -- shapes.
+  CertId     INT NULL REFERENCES Certificates(CertId),
+  -- #224: NULL for a pool link. Retired with Questions at #231.
+  QuestionId INT NULL REFERENCES Questions(QuestionId),
+  -- #224: the pool item saved, and the version that was rendered when it was saved. Both NULL for a
+  -- legacy link. D23 drops legacy links rather than re-pointing them - the rows they referenced are
+  -- the ones this rebuild deletes - so the two shapes are never manufactured from one another.
+  ItemId        INT NULL,
+  ItemVersionId INT NULL,
   Source     VARCHAR(10) NOT NULL CONSTRAINT CK_SavedQ_Source CHECK (Source IN ('manual','incorrect')),
   SavedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-  CONSTRAINT PK_SavedQuestions PRIMARY KEY (UserId, QuestionId)
+  -- #224: one shape or the other, never half of each. A pool link names its certificate because an
+  -- item has none of its own; a legacy link does not, because its question already carries one.
+  CONSTRAINT CK_SavedQuestions_Shape CHECK (
+       (QuestionId IS NOT NULL AND ItemId IS NULL AND ItemVersionId IS NULL AND CertId IS NULL)
+    OR (QuestionId IS NULL AND ItemId IS NOT NULL AND ItemVersionId IS NOT NULL AND CertId IS NOT NULL)
+  ),
+  -- #224: the saved version must be a version of the saved item - the same composite idiom
+  -- ExamItems, AttemptAnswers and PracticeAnswers use, so a link can never name one item and another
+  -- item's version.
+  CONSTRAINT FK_SavedQuestions_VersionItem FOREIGN KEY (ItemVersionId, ItemId)
+    REFERENCES ItemVersions(ItemVersionId, ItemId)
 );
+GO
+-- #224: filtered, because a pool link has no QuestionId and a plain PRIMARY KEY/UNIQUE would let a
+-- learner hold at most one of them. Each shape keeps "one bookmark per thing".
+CREATE UNIQUE INDEX UQ_SavedQuestions_Question ON SavedQuestions(UserId, QuestionId)
+  WHERE QuestionId IS NOT NULL;
+GO
+-- One bookmark per item, not per version: re-saving an item at a newer version is the same bookmark,
+-- and the row keeps the version it already pinned.
+CREATE UNIQUE INDEX UQ_SavedQuestions_Item ON SavedQuestions(UserId, ItemId)
+  WHERE ItemId IS NOT NULL;
+GO
+-- The bank lists and counts a learner's pool links per certificate, as it already does for legacy
+-- links through the question's section.
+CREATE INDEX IX_SavedQuestions_User_Cert ON SavedQuestions(UserId, CertId)
+  WHERE CertId IS NOT NULL;
 GO
 
 -- #155: mastery is a fact about a Category, never about a single Question. Spaced repetition over
@@ -3038,6 +3088,66 @@ CREATE VIEW vw_CoverageMatrix AS
     WHERE LifecycleStatus = 'active'
     GROUP BY TopicId, CefrLevel
   ) x ON x.TopicId = t.TopicId AND x.CefrLevel = q.CefrLevel;
+GO
+-- ============ #199: telemetry quarantine ============
+-- D0.7 / CNT-44: one row per (item, administration checkpoint) where an active item's stored answers
+-- were evaluated. Nothing here is a counter the platform maintains: AdministrationCount and every
+-- statistic beside it are derived from PracticeAnswers / AttemptAnswers / AiGradings at the moment the
+-- row is written, so a recount cannot disagree with the stored number (NFI-05). The row exists for two
+-- reasons only:
+--
+--   * idempotency. The primary key is (ItemId, CheckpointSize), so a schedule that runs twice at the
+--     same administration count cannot record the evaluation twice; the second run reads the row and
+--     stops.
+--   * evidence. A reviewer opening a quarantined item sees which condition fired and the four numbers
+--     behind it, rather than a state with no explanation.
+--
+-- CheckpointSize is the sample size the evaluation answers, not the count at the time of writing: D0.7
+-- names 30, 50, 100 and 250, and the CHECK is what makes a fifth checkpoint impossible to invent
+-- silently.
+CREATE TABLE ItemTelemetryEvaluations (
+  ItemId            INT NOT NULL REFERENCES Items(ItemId),
+  CheckpointSize    INT NOT NULL
+    CONSTRAINT CK_ItemTelemetry_Checkpoint CHECK (CheckpointSize IN (30, 50, 100, 250)),
+  -- the sample the row was computed over. It can exceed the checkpoint (an item that jumped from 40
+  -- to 120 administrations is first evaluated at 100); the checkpoint is what the row answers.
+  AdministrationCount INT NOT NULL
+    CONSTRAINT CK_ItemTelemetry_Administrations CHECK (AdministrationCount >= 30),
+  TargetBandCount   INT NOT NULL
+    CONSTRAINT CK_ItemTelemetry_TargetBandCount CHECK (TargetBandCount >= 0),
+  -- point-biserial r. NULL is "undefined", never zero: an item every learner answered correctly has no
+  -- variance in the item score, and a stored 0 would fire the r < 0.10 gate on a healthy item.
+  Discrimination    DECIMAL(9,6) NULL
+    CONSTRAINT CK_ItemTelemetry_Discrimination CHECK (Discrimination IS NULL OR Discrimination BETWEEN -1 AND 1),
+  -- target-band facility (p-value), and the mean rubric band of a productive task's AI gradings.
+  TargetFacility    DECIMAL(9,6) NULL
+    CONSTRAINT CK_ItemTelemetry_Facility CHECK (TargetFacility IS NULL OR TargetFacility BETWEEN 0 AND 1),
+  MeanResponseBand  DECIMAL(9,6) NULL
+    CONSTRAINT CK_ItemTelemetry_ResponseBand CHECK (MeanResponseBand IS NULL OR MeanResponseBand BETWEEN 0 AND 6),
+  -- D0.7's four conditions, one bit each, so "how many items breached facility this week" is a query
+  -- and not a string parse. A column rather than a breach-code row because the specification fixes the
+  -- count at four; a fifth condition ships with a schema change, which is what it should cost.
+  BreachDiscrimination       BIT NOT NULL CONSTRAINT DF_ItemTelemetry_BreachDiscrimination DEFAULT 0,
+  BreachFacility             BIT NOT NULL CONSTRAINT DF_ItemTelemetry_BreachFacility DEFAULT 0,
+  BreachDistractorDominance  BIT NOT NULL CONSTRAINT DF_ItemTelemetry_BreachDistractorDominance DEFAULT 0,
+  BreachProductiveDrift      BIT NOT NULL CONSTRAINT DF_ItemTelemetry_BreachProductiveDrift DEFAULT 0,
+  -- the verdict the service acted on. Redundant with the four bits by design: the row must not be able
+  -- to say "clean" while carrying a breach, and the CHECK below is what makes that impossible rather
+  -- than a service convention the next caller forgets.
+  Quarantined       BIT NOT NULL,
+  EvaluatedAt       DATETIMEOFFSET NOT NULL CONSTRAINT DF_ItemTelemetry_EvaluatedAt DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT PK_ItemTelemetryEvaluations PRIMARY KEY (ItemId, CheckpointSize),
+  CONSTRAINT CK_ItemTelemetry_Verdict CHECK (
+       Quarantined = CASE
+         WHEN BreachDiscrimination = 1 OR BreachFacility = 1
+           OR BreachDistractorDominance = 1 OR BreachProductiveDrift = 1 THEN 1
+         ELSE 0
+       END)
+);
+GO
+-- The console asks "which items are quarantined on telemetry, most recent first" (S-10). The
+-- primary key already serves the item's own history, so this covers only the other direction.
+CREATE INDEX IX_ItemTelemetry_Quarantined ON ItemTelemetryEvaluations(EvaluatedAt) WHERE Quarantined = 1;
 GO
 -- ============ Query indexes ============
 -- SQL Server does not index foreign keys. These cover the joins the triggers run on every write

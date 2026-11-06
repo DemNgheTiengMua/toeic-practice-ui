@@ -75,6 +75,10 @@ public partial class Certificate
     [InverseProperty("Cert")]
     public virtual ICollection<Recommendation> Recommendations { get; set; } = new List<Recommendation>();
 
+    /// <summary>#224: the saved bank entries filed under this certificate.</summary>
+    [InverseProperty("Cert")]
+    public virtual ICollection<SavedQuestion> SavedQuestions { get; set; } = new List<SavedQuestion>();
+
     [InverseProperty("Cert")]
     public virtual ICollection<ScoreBand> ScoreBands { get; set; } = new List<ScoreBand>();
 

@@ -57,6 +57,7 @@
           hintUsed: q.hintUsed,
           hint: q.hint,
           isSaved: q.isSaved,
+          savedQuestionId: q.savedQuestionId != null ? q.savedQuestionId : null,
           explanation: q.explanation,
           transcript: q.transcript,
           correctOptionId: q.correctOptionId,
@@ -1010,6 +1011,7 @@
           s.transcript = data.transcript;
           s.acceptedAnswersJson = data.acceptedAnswersJson;
           if (data.isSaved) s.isSaved = true;
+          if (data.savedQuestionId != null) s.savedQuestionId = data.savedQuestionId;
           if (data.isSessionFinished) isSessionFinished = true;
 
           renderQuestion(currentOrder);
@@ -1112,11 +1114,17 @@
         var isCurrentlySaved = s.isSaved;
         if (saveToggleBtn) saveToggleBtn.disabled = true;
 
+        // #224: the bookmark is addressed by its own row id, and a new save by the shape the drill is
+        // showing - a question id for a section drill, the pinned version for a pool item. One address
+        // for both used to file a pool item against an unrelated legacy question.
         var formData = new URLSearchParams();
         formData.append("__RequestVerificationToken", csrfToken);
         formData.append("currentlySaved", isCurrentlySaved ? "true" : "false");
+        if (s.savedQuestionId != null) formData.append("savedQuestionId", s.savedQuestionId);
+        if (q.questionId != null) formData.append("questionId", q.questionId);
+        if (q.itemVersionId != null) formData.append("itemVersionId", q.itemVersionId);
 
-        fetch("/saved-questions/" + questionAddress(q) + "/toggle", {
+        fetch("/saved-questions/toggle", {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -1133,6 +1141,7 @@
         .then(function (resData) {
           if (saveToggleBtn) saveToggleBtn.disabled = false;
           s.isSaved = resData.isSaved;
+          s.savedQuestionId = resData.savedQuestionId != null ? resData.savedQuestionId : null;
           renderQuestion(currentOrder);
           showToast(resData.isSaved ? "Question saved to your bank" : "Question removed from your bank");
         })
