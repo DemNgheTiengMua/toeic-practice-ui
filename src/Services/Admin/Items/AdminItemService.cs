@@ -86,6 +86,13 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
             }
         }
 
+        // D17: the gates run server-side, so an item cannot be persisted with no explanation, no
+        // rationale or options that give the key away. Gate one is the one that needs no model and no
+        // provider call, and it is the gate the review's example failed; gates two to four need a
+        // profiler, verifiers and a classifier, and run at the ingestion seam (PoolIngestionService)
+        // where those are composed.
+        await RequireGateOneAsync(request, level, stimulus, modality, cancellationToken);
+
         var item = new Item
         {
             Stimulus = stimulus,
@@ -145,6 +152,11 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
             .FirstOrDefaultAsync(i => i.ItemId == itemId, cancellationToken)
             ?? throw new ItemNotFoundException(itemId);
 
+        // D17: an edit that forks a version is the same door as a create, one save later. A gate that
+        // only guarded creation would let an author write a version with no rationale by editing one
+        // away, which is the bypass #198's review found wearing a different route.
+        await RequireGateOneAsync(item, request, cancellationToken);
+
         var versions = await db.ItemVersions
             .Where(v => v.ItemId == itemId)
             .OrderByDescending(v => v.VersionNumber)
@@ -192,6 +204,106 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
         await db.SaveChangesAsync(cancellationToken);
 
         return ToDto(item, current, versions.Count, item.Topic.Code);
+    }
+
+    /// <summary>
+    /// D17 at the single-item door: gate one, against the cell the item is joining.
+    /// <para>
+    /// The review that opened #198 proved this path could persist an item with three options, no
+    /// explanation and no rationale - every rule gate one states, and no caller of it. A refusal is an
+    /// <see cref="AdminItemException"/> rather than a returned verdict, because this path already
+    /// answers with one and a caller that ignored a verdict would be the same bypass again.
+    /// </para>
+    /// <para>
+    /// <b>The cell is read before the item exists</b>, which is what makes the balance rule answerable:
+    /// <see cref="PoolGateOne.CellAsync"/> excludes nothing when there is nothing to exclude yet.
+    /// </para>
+    /// </summary>
+    private async Task RequireGateOneAsync(
+        CreatePoolItemRequest request,
+        CefrLevel level,
+        Stimulus? stimulus,
+        string modality,
+        CancellationToken cancellationToken)
+    {
+        var cell = await PoolGateOne.CellAsync(db, request.TopicId, level, exceptItemId: null, cancellationToken);
+
+        // The stimulus this item is being authored with, or the one it is joining: gate one's lemma rule
+        // compares the stem and key against the text the learner will read, and a rule that skipped it
+        // whenever the passage came from a second call would judge nothing on a shared passage.
+        var stimulusText = stimulus?.Passage ?? stimulus?.Transcript ?? stimulus?.PromptCopy
+            ?? (request.StimulusId is int stimulusId
+                ? await db.Stimuli.AsNoTracking()
+                    .Where(s => s.StimulusId == stimulusId)
+                    .Select(s => s.Passage ?? s.Transcript ?? s.PromptCopy)
+                    .SingleOrDefaultAsync(cancellationToken)
+                : null);
+
+        var verdict = GateOne.Review(
+            new GateOneItem(
+                request.Stem,
+                stimulusText,
+                Normalize(request.OptionA), Normalize(request.OptionB),
+                Normalize(request.OptionC), Normalize(request.OptionD),
+                NormalizeKey(request.KeyLabel),
+                Normalize(request.Explanation),
+                Normalize(request.RationaleA), Normalize(request.RationaleB),
+                Normalize(request.RationaleC), Normalize(request.RationaleD)),
+            cell);
+
+        if (verdict.Accepted)
+        {
+            return;
+        }
+
+        throw new AdminItemException(
+            ApiError.Codes.Validation,
+            "The item was refused by gate one (D17), so nothing was saved: "
+            + string.Join(" ", verdict.Refusals.Select(r => $"[{r.Rule}] {r.Message}")));
+    }
+
+    /// <summary>
+    /// D17 at the edit door: the gate judges the version that is about to be served, against the cell
+    /// the item already sits in. The cell excludes this item, because the balance rule is about the
+    /// distribution the item makes rather than the one it found.
+    /// </summary>
+    private async Task RequireGateOneAsync(
+        Item item,
+        UpdatePoolItemRequest request,
+        CancellationToken cancellationToken)
+    {
+        var cell = await PoolGateOne.CellAsync(db, item.TopicId, item.CefrLevel, item.ItemId, cancellationToken);
+
+        // The stimulus is not editable through this request, so it is read from the item rather than
+        // from the edit: gate one's lemma rule compares against the text a learner will actually read.
+        var stimulusText = item.StimulusId is int stimulusId
+            ? await db.Stimuli.AsNoTracking()
+                .Where(s => s.StimulusId == stimulusId)
+                .Select(s => s.Passage ?? s.Transcript ?? s.PromptCopy)
+                .SingleOrDefaultAsync(cancellationToken)
+            : null;
+
+        var verdict = GateOne.Review(
+            new GateOneItem(
+                request.Stem,
+                stimulusText,
+                Normalize(request.OptionA), Normalize(request.OptionB),
+                Normalize(request.OptionC), Normalize(request.OptionD),
+                NormalizeKey(request.KeyLabel),
+                Normalize(request.Explanation),
+                Normalize(request.RationaleA), Normalize(request.RationaleB),
+                Normalize(request.RationaleC), Normalize(request.RationaleD)),
+            cell);
+
+        if (verdict.Accepted)
+        {
+            return;
+        }
+
+        throw new AdminItemException(
+            ApiError.Codes.Validation,
+            "The edit was refused by gate one (D17), so nothing was written: "
+            + string.Join(" ", verdict.Refusals.Select(r => $"[{r.Rule}] {r.Message}")));
     }
 
     private static Stimulus BuildStimulus(CreatePoolStimulusRequest request)

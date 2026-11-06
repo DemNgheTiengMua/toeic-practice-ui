@@ -60,24 +60,53 @@ public static class PoolGateTwo
             throw new ItemNotFoundException(itemId);
         }
 
-        var modality = ModalityOf(row.Modality);
-        var kind = KindOf(row.ItemType);
+        return await ReviewContentAsync(
+            row.Modality,
+            row.ItemType,
+            row.CefrLevel,
+            row.Passage,
+            row.Transcript,
+            row.PromptCopy,
+            row.AudioPath,
+            transcriber,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Judges content that is not a row yet, which is what #198's ingestion seam needs: D17 requires the
+    /// gates to run <em>before</em> the first write, so a bundle that would be refused leaves no row to
+    /// read back. The stored-item overload above loads the row and calls this, so the two cannot
+    /// disagree about which text is measured or which modality column applies.
+    /// </summary>
+    public static async Task<GateTwoVerdict> ReviewContentAsync(
+        string modality,
+        string itemType,
+        CefrLevel band,
+        string? passage,
+        string? transcript,
+        string? promptCopy,
+        string? audioPath,
+        IGateTwoTranscriber? transcriber = null,
+        CancellationToken cancellationToken = default)
+    {
+        var column = ModalityOf(modality);
+        var kind = KindOf(itemType);
 
         // D0.2 profiles authored text. A listening item is profiled on its transcript, a reading item
         // on its passage, and a productive task on its prompt - which is not profiled at all, so the
         // prompt is passed through only so the verdict can say so.
-        var text = modality switch
+        var text = column switch
         {
-            GateTwoModality.Listening => row.Transcript,
-            GateTwoModality.Reading => row.Passage,
-            _ => row.PromptCopy,
+            GateTwoModality.Listening => transcript,
+            GateTwoModality.Reading => passage,
+            _ => promptCopy,
         };
 
-        var asr = modality == GateTwoModality.Listening && !string.IsNullOrWhiteSpace(row.AudioPath)
-            ? await TranscribeAsync(transcriber, row.AudioPath!, row.Transcript, cancellationToken)
+        var asr = column == GateTwoModality.Listening && !string.IsNullOrWhiteSpace(audioPath)
+            ? await TranscribeAsync(transcriber, audioPath!, transcript, cancellationToken)
             : null;
 
-        return GateTwo.Review(new GateTwoItem(text, row.CefrLevel, modality, kind, asr));
+        return GateTwo.Review(new GateTwoItem(text, band, column, kind, asr));
     }
 
     /// <summary>

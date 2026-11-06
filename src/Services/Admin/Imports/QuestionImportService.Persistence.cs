@@ -134,7 +134,7 @@ public sealed partial class QuestionImportService
             {
                 var source = question.Source;
                 var options = (source.Options ?? [])
-                    .Select(o => (o.Label, o.Text, o.IsCorrect))
+                    .Select(o => (o.Label, o.Text, o.IsCorrect, o.Rationale))
                     .ToList();
 
                 if (!PoolImport.TryBuildContent(

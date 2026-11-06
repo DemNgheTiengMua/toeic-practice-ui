@@ -61,7 +61,14 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
             "Only the supervisor opens the gate.",
             "Visitors wait outside until seven.",
             key,
-            "The first option restates the passage.");
+            "The first option restates the passage.",
+            // #198: gate one refuses an option with no rationale (CNT-35), and the authoring path
+            // invokes it. These four are what an author supplies; a fixture without them is testing a
+            // save the gate is meant to refuse.
+            RationaleA: "Correct: the passage states the opening time.",
+            RationaleB: "The passage never gives a time for the ledger.",
+            RationaleC: "The supervisor opens the gate, not the depot.",
+            RationaleD: "Waiting outside is what visitors do, not when the depot opens.");
 
     private async Task<int> CountLegacyQuestionsAsync()
     {
@@ -153,7 +160,13 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
                 OptionC: "Eight in the morning.",
                 OptionD: "Eight in the evening.",
                 KeyLabel: "B",
-                Explanation: "The passage gives the closing time."));
+                Explanation: "The passage gives the closing time.",
+                // #198: an edit is the same door as a create, so the version it writes is judged by
+                // gate one too. A request that drops the rationales would now be refused.
+                RationaleA: created.RationaleA,
+                RationaleB: "Correct: six in the evening is the closing time.",
+                RationaleC: created.RationaleC,
+                RationaleD: created.RationaleD));
 
         // Two versions exist, and the edit went through the second.
         Assert.Equal(2, edited.VersionCount);
@@ -214,7 +227,11 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
                 OptionC: created.OptionC,
                 OptionD: created.OptionD,
                 KeyLabel: created.KeyLabel,
-                Explanation: "The first option restates the passage (typo fixed)."));
+                Explanation: "The first option restates the passage (typo fixed).",
+                RationaleA: created.RationaleA,
+                RationaleB: created.RationaleB,
+                RationaleC: created.RationaleC,
+                RationaleD: created.RationaleD));
 
         Assert.Equal(1, edited.VersionCount);
         Assert.Equal(1, edited.VersionNumber);
@@ -552,7 +569,11 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
                 "What time does the depot open?",
                 "Six in the morning.", "Six in the evening.", "Eight in the morning.", "Eight in the evening.",
                 "C",
-                "The author's own explanation, which the preview must show."));
+                "The author's own explanation, which the preview must show.",
+                RationaleA: "The passage gives the opening time, which is six in the morning.",
+                RationaleB: "The passage gives the opening time, not the closing time.",
+                RationaleC: "Correct: eight in the morning is what the passage states.",
+                RationaleD: "The passage gives a single opening time."));
 
         await using (var db = Db())
         {
