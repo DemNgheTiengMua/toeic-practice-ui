@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BusinessObjects;
 using Contracts;
 using Microsoft.Extensions.Logging;
@@ -50,6 +51,47 @@ public sealed class CefrLevelLabelDriftTests
         Assert.Equal(CefrLevelLabels.Unknown, CefrLevelLabels.LabelForCode("below_A1", logger));
         Assert.Single(logger.Warnings);
         Assert.Contains("below_A1", logger.Warnings[0], StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// #202 / D19: the same seam for the skill axis. S-01 prints a skill name above each table, and
+    /// <c>listening</c> in a placard is the same defect as <c>below_A1</c> in a badge.
+    /// </summary>
+    [Fact]
+    public void The_modality_registry_labels_exactly_the_four_skills_the_enum_defines()
+    {
+        var enumCodes = Enum.GetValues<ModalityDto>().Select(v => EnumCodes.ToCode(v)).Order(StringComparer.OrdinalIgnoreCase);
+        var registryCodes = ModalityLabels.KnownCodes.Order(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Equal(enumCodes, registryCodes);
+        Assert.Equal(4, registryCodes.Count());
+    }
+
+    [Fact]
+    public void Every_skill_renders_as_its_own_capitalised_label_and_never_as_its_code()
+    {
+        var logger = new NullLogger();
+
+        var labels = Enum.GetValues<ModalityDto>()
+            .Select(v => ModalityLabels.LabelForCode(EnumCodes.ToCode(v), logger))
+            .ToList();
+
+        Assert.Equal(4, labels.Distinct().Count());
+        Assert.DoesNotContain(labels, label => label.Contains('_', StringComparison.Ordinal));
+        Assert.DoesNotContain(ModalityLabels.Unknown, labels);
+        Assert.Empty(logger.Warnings);
+        // A lowercase code in a heading is the defect; the label is the word a reader expects.
+        Assert.DoesNotContain(labels, label => label == label.ToLowerInvariant());
+    }
+
+    [Fact]
+    public void An_unknown_skill_code_falls_back_and_logs()
+    {
+        var logger = new NullLogger();
+
+        Assert.Equal(ModalityLabels.Unknown, ModalityLabels.LabelForCode("grammar", logger));
+        Assert.Single(logger.Warnings);
+        Assert.Contains("grammar", logger.Warnings[0], StringComparison.Ordinal);
     }
 
     private sealed class NullLogger : ILogger

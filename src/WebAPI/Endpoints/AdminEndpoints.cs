@@ -15,7 +15,7 @@ public static partial class AdminEndpoints
         // prefix, requiring one capability, so what an account may do is what its role was granted
         // and not what the role is called.
         //
-        //   pool.content.author           exams, questions, quick-ingest, studio, imports, lessons
+        //   pool.content.author           exams, questions, quick-ingest, studio, imports, lessons, coverage
         //   assessment.blueprint.design   certificates, score conversion
         //   operations.support.triage     complaints, mentors
         //   system.governance.admin       summary, dashboard, packages, orders, users
@@ -30,6 +30,7 @@ public static partial class AdminEndpoints
         MapExams(Capability(app, Permissions.ContentAuthor));
         MapQuestions(Capability(app, Permissions.ContentAuthor));
         MapItems(Capability(app, Permissions.ContentAuthor));
+        MapCoverage(Capability(app, Permissions.ContentAuthor));
         MapQuickIngest(Capability(app, Permissions.ContentAuthor));
         MapStudio(Capability(app, Permissions.ContentAuthor));
         MapCertificates(Capability(app, Permissions.BlueprintDesign));
