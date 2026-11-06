@@ -21,8 +21,12 @@ namespace Services.Tests;
 /// <c>avg_half_step</c> nor <c>avg_whole</c> is the input that splits them.
 /// </para>
 /// <para>
-/// Every fixture authors its own certificate, exam, items and learner under a unique code, because the
-/// suite shares one database and the pool's topics are a closed set.
+/// <b>Every test here authors a whole certificate — skills, sections, bands, scales, a paper, items,
+/// versions and a learner — so every test runs on its own disposable database.</b> The collection
+/// shares one catalog across the assembly; seeding a certificate and a user into it would leak into
+/// every other class, and the symptom is not a failure here but a duplicate-email failure three
+/// classes away. <c>CreateFreshDatabaseAsync</c> and <c>DropDatabaseAsync</c> are the pattern, and a
+/// <c>[Theory]</c> gets one database per row for the same reason.
 /// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
@@ -40,6 +44,9 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
 
     private sealed record Sitting(int AttemptId, int? Total, string? Band, string? Writer, int Version);
 
+    /// <summary>A name short enough for the catalog, unique enough that two runs cannot collide.</summary>
+    private static string FreshName(string prefix) => $"{prefix}_{Guid.NewGuid():N}"[..25];
+
     private static async Task RunSqlAsync(string connectionString, string sql)
     {
         await using var connection = new SqlConnection(connectionString);
@@ -48,8 +55,13 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
         await command.ExecuteNonQueryAsync();
     }
 
-    private ItemTelemetryService CreateService() =>
-        new(DbContextFactory.Create(database.ConnectionString), TimeProvider.System);
+    /// <summary>
+    /// The service over the database the fixture was seeded into. It takes the connection string
+    /// rather than reading the fixture's, so a test cannot seed one database and then assert against
+    /// another — which would pass while proving nothing.
+    /// </summary>
+    private static ItemTelemetryService CreateService(string connectionString) =>
+        new(DbContextFactory.Create(connectionString), TimeProvider.System);
 
     /// <summary>
     /// One certificate, two reading skills, a three-position paper and one item per position. The
@@ -62,7 +74,7 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
     /// one.
     /// </para>
     /// </summary>
-    private async Task<RuleFixture> SeedRuleFixtureAsync(
+    private static async Task<RuleFixture> SeedRuleFixtureAsync(
         string connectionString, string storedRule, bool allowUnstorableRule = false)
     {
         var certCode = $"TR{Guid.NewGuid():N}"[..16];
@@ -187,17 +199,18 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
     /// item's stored key is D), positions two and three answered A (their key). Returns what the
     /// sitting engine stored, read back from the row rather than from its return value.
     /// </summary>
-    private async Task<Sitting> SitAsync(RuleFixture fixture, string defectiveLabel = "B")
+    private static async Task<Sitting> SitAsync(
+        string connectionString, RuleFixture fixture, string defectiveLabel = "B")
     {
         int attemptId;
-        await using (var ctx = DbContextFactory.Create(database.ConnectionString))
+        await using (var ctx = DbContextFactory.Create(connectionString))
         {
             var engine = new AttemptEngine(ctx);
             attemptId = await SitUnscoredAsync(engine, fixture, defectiveLabel);
             await engine.SubmitAttemptAsync(attemptId, fixture.LearnerId, isAutoSubmit: false);
         }
 
-        await using var db = DbContextFactory.Create(database.ConnectionString);
+        await using var db = DbContextFactory.Create(connectionString);
         var stored = await db.ExamAttempts.AsNoTracking().SingleAsync(a => a.AttemptId == attemptId);
         return new Sitting(attemptId, stored.TotalScore, stored.BandCode, stored.WrittenByService, stored.ProjectionVersion);
     }
@@ -230,6 +243,7 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
     /// scores exactly where the sitting engine left them: the recalculation is a second opinion on one
     /// number, not a rescore of different answers.
     /// </para>
+    /// <para>One database per row, dropped in <c>finally</c>, for the reason in the class summary.</para>
     /// </summary>
     [Theory]
     [InlineData("sum", 125)]
@@ -238,26 +252,36 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
     public async Task Telemetry_and_the_sitting_engine_report_the_same_total_for_each_real_rule(
         string rule, int expectedTotal)
     {
-        var fixture = await SeedRuleFixtureAsync(database.ConnectionString, rule);
+        var databaseName = FreshName("EE251Rule");
+        var connectionString = await database.CreateFreshDatabaseAsync(databaseName);
+        try
+        {
+            var fixture = await SeedRuleFixtureAsync(connectionString, rule);
 
-        var sitting = await SitAsync(fixture);
-        Assert.Equal(expectedTotal, sitting.Total);
-        Assert.Equal("LOW", sitting.Band);
+            var sitting = await SitAsync(connectionString, fixture);
+            Assert.Equal(expectedTotal, sitting.Total);
+            Assert.Equal("LOW", sitting.Band);
 
-        var recalculation = await CreateService().RecalculateForDefectiveItemAsync(fixture.DefectiveItemId, trueKeyLabel: "C");
+            var recalculation = await CreateService(connectionString)
+                .RecalculateForDefectiveItemAsync(fixture.DefectiveItemId, trueKeyLabel: "C");
 
-        var outcome = Assert.Single(recalculation.Attempts);
-        Assert.Equal(sitting.AttemptId, outcome.AttemptId);
-        Assert.Equal(expectedTotal, outcome.PreviousTotal);
-        Assert.Equal(expectedTotal, outcome.RecalculatedTotal);
-        // An equal band is not an upgrade, so nothing is written and the learner's row stands as the
-        // engine left it.
-        Assert.Equal("kept", outcome.Outcome);
+            var outcome = Assert.Single(recalculation.Attempts);
+            Assert.Equal(sitting.AttemptId, outcome.AttemptId);
+            Assert.Equal(expectedTotal, outcome.PreviousTotal);
+            Assert.Equal(expectedTotal, outcome.RecalculatedTotal);
+            // An equal band is not an upgrade, so nothing is written and the learner's row stands as
+            // the engine left it.
+            Assert.Equal("kept", outcome.Outcome);
 
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-        var stored = await db.ExamAttempts.AsNoTracking().SingleAsync(a => a.AttemptId == sitting.AttemptId);
-        Assert.Equal(expectedTotal, stored.TotalScore);
-        Assert.Equal(sitting.Version, stored.ProjectionVersion);
+            await using var db = DbContextFactory.Create(connectionString);
+            var stored = await db.ExamAttempts.AsNoTracking().SingleAsync(a => a.AttemptId == sitting.AttemptId);
+            Assert.Equal(expectedTotal, stored.TotalScore);
+            Assert.Equal(sitting.Version, stored.ProjectionVersion);
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(databaseName);
+        }
     }
 
     // =============================================================================================
@@ -280,7 +304,7 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
     [Fact]
     public async Task A_rule_the_sitting_engine_refuses_is_refused_by_telemetry_and_never_summed()
     {
-        var databaseName = $"TelemetryRule_{Guid.NewGuid():N}";
+        var databaseName = FreshName("EE251Refuse");
         var connectionString = await database.CreateFreshDatabaseAsync(databaseName);
         try
         {
@@ -319,7 +343,7 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
                 WHERE AttemptId = {gradedAttemptId};
                 """);
 
-            var telemetry = new ItemTelemetryService(DbContextFactory.Create(connectionString), TimeProvider.System);
+            var telemetry = CreateService(connectionString);
             var refusedRecalculation = await Assert.ThrowsAsync<ScoreConversionException>(
                 () => telemetry.RecalculateForDefectiveItemAsync(fixture.DefectiveItemId, trueKeyLabel: "C"));
             Assert.Equal(ScoreConversionException.AggregationRuleUnknown, refusedRecalculation.Code);
@@ -356,39 +380,49 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
     [Fact]
     public async Task The_recalculated_score_is_written_by_the_registered_owner_and_the_trigger_refuses_any_other()
     {
-        var fixture = await SeedRuleFixtureAsync(database.ConnectionString, "sum");
+        var databaseName = FreshName("EE251Writer");
+        var connectionString = await database.CreateFreshDatabaseAsync(databaseName);
+        try
+        {
+            var fixture = await SeedRuleFixtureAsync(connectionString, "sum");
 
-        var sitting = await SitAsync(fixture, defectiveLabel: "A");
-        Assert.Equal(125, sitting.Total);
-        Assert.Equal("LOW", sitting.Band);
+            var sitting = await SitAsync(connectionString, fixture, defectiveLabel: "A");
+            Assert.Equal(125, sitting.Total);
+            Assert.Equal("LOW", sitting.Band);
 
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-        var owner = await db.Database
-            .SqlQueryRaw<string>("SELECT OwningService AS Value FROM DerivedFactOwners WHERE FactCode = 'attempt_score_and_band'")
-            .SingleAsync();
-        // Hard-coded on purpose: a registry that named telemetry would make every other assertion here
-        // pass while the fact gained a second writer.
-        Assert.Equal("AttemptEngine", owner);
-        Assert.Equal(owner, sitting.Writer);
+            await using var db = DbContextFactory.Create(connectionString);
+            var owner = await db.Database
+                .SqlQueryRaw<string>("SELECT OwningService AS Value FROM DerivedFactOwners WHERE FactCode = 'attempt_score_and_band'")
+                .SingleAsync();
+            // Hard-coded on purpose: a registry that named telemetry would make every other assertion
+            // here pass while the fact gained a second writer.
+            Assert.Equal("AttemptEngine", owner);
+            Assert.Equal(owner, sitting.Writer);
 
-        var recalculation = await CreateService().RecalculateForDefectiveItemAsync(fixture.DefectiveItemId, trueKeyLabel: "A");
+            var recalculation = await CreateService(connectionString)
+                .RecalculateForDefectiveItemAsync(fixture.DefectiveItemId, trueKeyLabel: "A");
 
-        var outcome = Assert.Single(recalculation.Attempts);
-        Assert.Equal("upgraded", outcome.Outcome);
-        Assert.Equal(145, outcome.RecalculatedTotal);
+            var outcome = Assert.Single(recalculation.Attempts);
+            Assert.Equal("upgraded", outcome.Outcome);
+            Assert.Equal(145, outcome.RecalculatedTotal);
 
-        var stored = await db.ExamAttempts.AsNoTracking().SingleAsync(a => a.AttemptId == sitting.AttemptId);
-        Assert.Equal(145, stored.TotalScore);
-        Assert.Equal("HIGH", stored.BandCode);
-        // The recalculation's write declares the same single name as the engine's own scoring write,
-        // and lands as a newer projection — the two halves the trigger requires.
-        Assert.Equal(owner, stored.WrittenByService);
-        Assert.True(stored.ProjectionVersion > sitting.Version);
+            var stored = await db.ExamAttempts.AsNoTracking().SingleAsync(a => a.AttemptId == sitting.AttemptId);
+            Assert.Equal(145, stored.TotalScore);
+            Assert.Equal("HIGH", stored.BandCode);
+            // The recalculation's write declares the same single name as the engine's own scoring write,
+            // and lands as a newer projection — the two halves the trigger requires.
+            Assert.Equal(owner, stored.WrittenByService);
+            Assert.True(stored.ProjectionVersion > sitting.Version);
 
-        // Contrast: the same row, declaring a second writer's name, is refused by the trigger.
-        var refused = await Assert.ThrowsAsync<SqlException>(() => RunSqlAsync(
-            database.ConnectionString,
-            $"UPDATE ExamAttempts SET WrittenByService = 'ItemTelemetryService', ProjectionVersion = ProjectionVersion + 1 WHERE AttemptId = {sitting.AttemptId};"));
-        Assert.Equal(50070, refused.Number);
+            // Contrast: the same row, declaring a second writer's name, is refused by the trigger.
+            var refused = await Assert.ThrowsAsync<SqlException>(() => RunSqlAsync(
+                connectionString,
+                $"UPDATE ExamAttempts SET WrittenByService = 'ItemTelemetryService', ProjectionVersion = ProjectionVersion + 1 WHERE AttemptId = {sitting.AttemptId};"));
+            Assert.Equal(50070, refused.Number);
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(databaseName);
+        }
     }
 }
