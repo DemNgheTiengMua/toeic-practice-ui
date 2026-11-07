@@ -49,6 +49,7 @@
 .ingestion-upload,
 .ingestion-batches,
 .ingestion-verdicts,
+.ingestion-rules,
 .ingestion-staged {
   border: 2px solid var(--color-ink, #14181d);
   padding: var(--space-4, 1rem);
@@ -192,6 +193,18 @@
   color: var(--color-danger, #b31217);
 }
 
+/* #207: withdrawn. Muted ink with a solid keyline, not red and not gold: the record is settled, and
+   the two colours already mean "must act" and "failed". */
+.ingestion-verdict__badge--discarded,
+.ingestion-state--discarded {
+  color: var(--color-muted, #59636b);
+  border-style: dashed;
+}
+
+.ingestion-verdict__note {
+  color: var(--color-muted, #59636b);
+}
+
 /* Staged is gold: attention, not success and not refusal. A staged item is waiting, and the colour
    says "someone must act" rather than "this is fine". */
 .ingestion-state--staged {
@@ -251,6 +264,47 @@
   box-shadow: none;
 }
 
+/* ---- #207: the discard form ------------------------------------------------------------- */
+
+/* Beside the correction form, not inside it: correcting and withdrawing are two answers to the same
+   refusal, and nesting the buttons would put the destructive one next to the one the page wants
+   clicked. */
+.ingestion-discard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+  margin-top: var(--space-3, 0.75rem);
+  padding-left: var(--space-3, 0.75rem);
+  border-left: 2px dashed var(--color-rule, #ccd2d6);
+}
+
+.ingestion-discard__submit {
+  align-self: flex-start;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* ---- #207: refusals by rule ------------------------------------------------------------ */
+
+.ingestion-rule-row__code {
+  white-space: nowrap;
+}
+
+.ingestion-rule-row[data-is-filtered="true"] {
+  border-left: 2px solid var(--color-ink, #14181d);
+}
+
+/* Selection inverts to solid ink on white, never a tint (§5). */
+.ingestion-rule-row[data-is-filtered="true"] .ingestion-rule-row__code {
+  color: var(--color-paper, #ffffff);
+  background: var(--color-ink, #14181d);
+  padding: 0 var(--space-1, 0.25rem);
+}
+
+.ingestion-filter {
+  white-space: nowrap;
+}
+
 /* ---- the tally ------------------------------------------------------------------------- */
 
 .ingestion-tally {
@@ -278,6 +332,12 @@
 
 .ingestion-tally__item--bad .ingestion-tally__value {
   color: var(--color-danger, #b31217);
+}
+
+/* #207: a withdrawn record is settled, not failing. Muted ink rather than red, so the tally does not
+   report work as still broken. */
+.ingestion-tally__item--discarded .ingestion-tally__value {
+  color: var(--color-muted, #59636b);
 }
 
 .ingestion-tally__label {

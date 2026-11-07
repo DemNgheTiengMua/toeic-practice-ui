@@ -12,8 +12,14 @@ public sealed partial class CompanionApiClient
     public Task<IngestionBatchListDto> GetWorkbenchBatchesAsync(string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<IngestionBatchListDto>("api/admin/ingestion", bearerToken, cancellationToken);
 
-    public Task<IngestionBatchDetailDto> GetWorkbenchBatchAsync(int batchId, string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<IngestionBatchDetailDto>($"api/admin/ingestion/{batchId}", bearerToken, cancellationToken);
+    public Task<IngestionBatchDetailDto> GetWorkbenchBatchAsync(
+        int batchId, string? rule, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<IngestionBatchDetailDto>(
+            rule is null
+                ? $"api/admin/ingestion/{batchId}"
+                : $"api/admin/ingestion/{batchId}?rule={Uri.EscapeDataString(rule)}",
+            bearerToken,
+            cancellationToken);
 
     public async Task<IngestionUploadResultDto> UploadWorkbenchFileAsync(
         string skill, Stream content, string fileName, string bearerToken, CancellationToken cancellationToken = default)
@@ -63,11 +69,28 @@ public sealed partial class CompanionApiClient
         await EnsureSuccessAsync(response, cancellationToken);
     }
 
+    public async Task DiscardWorkbenchRecordAsync(
+        int batchId, int line, string? reason, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post, $"api/admin/ingestion/{batchId}/records/{line}/discard")
+        {
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { reason }, IngestionJson),
+                Encoding.UTF8,
+                "application/json"),
+        };
+        AttachBearer(request, bearerToken);
+        using var response = await http.SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     public Task<IngestionBatchListDto> GetWorkbenchBatchesAsync(CancellationToken cancellationToken = default) =>
         GetWorkbenchBatchesAsync(string.Empty, cancellationToken);
 
-    public Task<IngestionBatchDetailDto> GetWorkbenchBatchAsync(int batchId, CancellationToken cancellationToken = default) =>
-        GetWorkbenchBatchAsync(batchId, string.Empty, cancellationToken);
+    public Task<IngestionBatchDetailDto> GetWorkbenchBatchAsync(
+        int batchId, string? rule = null, CancellationToken cancellationToken = default) =>
+        GetWorkbenchBatchAsync(batchId, rule, string.Empty, cancellationToken);
 
     public Task<IngestionUploadResultDto> UploadWorkbenchFileAsync(
         string skill, Stream content, string fileName, CancellationToken cancellationToken = default) =>
@@ -76,6 +99,10 @@ public sealed partial class CompanionApiClient
     public Task<IngestionRecordDto> ResubmitWorkbenchRecordAsync(
         int batchId, int line, string correctedRecordJson, CancellationToken cancellationToken = default) =>
         ResubmitWorkbenchRecordAsync(batchId, line, correctedRecordJson, string.Empty, cancellationToken);
+
+    public Task DiscardWorkbenchRecordAsync(
+        int batchId, int line, string? reason, CancellationToken cancellationToken = default) =>
+        DiscardWorkbenchRecordAsync(batchId, line, reason, string.Empty, cancellationToken);
 
     public Task ClearWorkbenchItemAsync(int batchId, int itemId, CancellationToken cancellationToken = default) =>
         ClearWorkbenchItemAsync(batchId, itemId, string.Empty, cancellationToken);

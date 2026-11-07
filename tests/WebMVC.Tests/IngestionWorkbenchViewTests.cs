@@ -31,9 +31,10 @@ public sealed class IngestionWorkbenchViewTests : IClassFixture<IngestionWorkben
     public IngestionWorkbenchViewTests(Site site) => this.site = site;
 
     /// <summary>
-    /// Criterion 5, precisely. Four records: two accepted in the first group, two refused in the
+    /// Criterion 5, precisely. Five records: two accepted in the first group, two refused in the
     /// second, and the first refused one breaks <b>two</b> rules - so a list keyed on errors would
-    /// have five rows where the file had four.
+    /// have six rows where the file had five. The fifth record is #207's withdrawal, which is a
+    /// verdict like any other and must still be exactly one row.
     /// </summary>
     [Fact]
     public async Task The_verdict_list_renders_exactly_one_row_per_record_with_the_accepted_ones_present()
@@ -42,15 +43,15 @@ public sealed class IngestionWorkbenchViewTests : IClassFixture<IngestionWorkben
 
         var body = await client.GetStringAsync("/admin/ingestion/7");
 
-        // One row per record: the fixture has 4 records and one of them breaks two rules.
+        // One row per record: the fixture has 5 records, one breaks two rules and one is withdrawn.
         var rows = Regex.Matches(body, @"<tr[^>]*class=""ingestion-verdict[^""]*""[^>]*>");
-        Assert.Equal(4, rows.Count);
+        Assert.Equal(5, rows.Count);
 
         // And the two accepted records are present and distinguishable, not omitted.
         var accepted = Regex.Matches(body, @"data-accepted=""true""");
         var refused = Regex.Matches(body, @"data-accepted=""false""");
         Assert.Equal(2, accepted.Count);
-        Assert.Equal(2, refused.Count);
+        Assert.Equal(3, refused.Count);
 
         // The line number and the failing rule are both in the row the author has to act on:
         // line 141 was refused by gate one, and line 160 broke gate one and gate four.
@@ -215,6 +216,106 @@ public sealed class IngestionWorkbenchViewTests : IClassFixture<IngestionWorkben
         Assert.DoesNotContain(">done<", body, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// #207 AC1 at the screen: the refusals are grouped by rule, and the count beside each rule is the
+    /// number of records, not the number of refusal rows.
+    /// <para>
+    /// <b>Which guard could this pass while being wrong:</b> a group table that renders a heading per
+    /// rule with a count of one every time, because the page grouped on each row's message. The fixture
+    /// has two records breaking <c>gate1.feedback.explanation</c> with different sentences, so a
+    /// grouping on prose renders two groups of one and the count assertion fails.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task The_page_groups_the_refusals_by_rule_with_a_record_count_beside_each() 
+    {
+        using var client = site.CreateClientForStaff();
+
+        var body = await client.GetStringAsync("/admin/ingestion/7");
+
+        var rows = Regex.Matches(body, @"<tr[^>]*class=""ingestion-rule-row[^""]*""[^>]*>");
+        Assert.Equal(2, rows.Count);
+
+        var explained = Regex.Match(
+            body,
+            @"<tr[^>]*data-rule=""gate1\.feedback\.explanation""[^>]*>.*?</tr>",
+            RegexOptions.Singleline);
+        Assert.True(explained.Success, "gate1.feedback.explanation is not a rule group");
+        Assert.Contains(">2<", explained.Value, StringComparison.Ordinal);
+
+        // Each group can be used to narrow the list, and the links are MVC routes.
+        Assert.Contains("rule=gate1.feedback.explanation", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("/api/admin/ingestion", body, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// #207 AC3 at the screen: a refused record offers a discard form beside its correction form, and
+    /// the form posts to an MVC route carrying an anti-forgery token.
+    /// <para>
+    /// <b>Which guard could this pass while being wrong:</b> a discard button rendered with no token.
+    /// It would look right and return 400 on every click. The assertion is the token inside the form.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task A_refused_record_offers_a_discard_form_that_posts_a_token_to_the_mvc_route()
+    {
+        using var client = site.CreateClientForStaff();
+
+        var body = await client.GetStringAsync("/admin/ingestion/7");
+
+        var form = Regex.Match(
+            body,
+            @"<form[^>]*action=""/admin/ingestion/7/records/141/discard""[^>]*>.*?</form>",
+            RegexOptions.Singleline);
+        Assert.True(form.Success, "the refused record at line 141 has no discard form");
+        Assert.Contains("name=\"__RequestVerificationToken\"", form.Value, StringComparison.Ordinal);
+        Assert.Contains("Discard this record", form.Value, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// #207 at the screen: a withdrawn record is labelled as withdrawn and is not labelled refused or
+    /// staged. <b>Which guard could this pass while being wrong:</b> a page that reuses the refused
+    /// badge for a discarded row, which would report settled work as still broken.
+    /// </summary>
+    [Fact]
+    public async Task A_discarded_record_is_labelled_discarded_and_offers_no_correction()
+    {
+        using var client = site.CreateClientForStaff();
+
+        var body = await client.GetStringAsync("/admin/ingestion/7");
+
+        var row = Regex.Match(
+            body,
+            @"<tr[^>]*class=""ingestion-verdict[^""]*""[^>]*data-line=""190""[^>]*>.*?</tr>",
+            RegexOptions.Singleline);
+        Assert.True(row.Success, "line 190 has no verdict row");
+        Assert.Contains("data-state=\"discarded\"", row.Value, StringComparison.Ordinal);
+        Assert.Contains("ingestion-verdict__badge--discarded", row.Value, StringComparison.Ordinal);
+
+        // The withdrawal sentence is on the row, and no correction form follows it.
+        Assert.Contains("data-discarded=\"true\"", row.Value, StringComparison.Ordinal);
+        Assert.DoesNotContain("ingestion-verdict--refused", row.Value, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "action=\"/admin/ingestion/7/records/190\"", body, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// #207 AC4 at the screen: a batch with no outstanding refusal reads as settled, and a batch that
+    /// settled nothing reads as such. The two words must differ, or the status column would report the
+    /// two states as one.
+    /// </summary>
+    [Fact]
+    public async Task The_batch_list_tells_a_settled_batch_apart_from_one_that_settled_nothing()
+    {
+        using var client = site.CreateClientForStaff();
+
+        var body = await client.GetStringAsync("/admin/ingestion");
+
+        Assert.Contains("All records settled", body, StringComparison.Ordinal);
+        Assert.Contains("Nothing accepted", body, StringComparison.Ordinal);
+        Assert.DoesNotContain(">done<", body, StringComparison.Ordinal);
+    }
+
     /// <summary>An author without the review namespace does not see the clearance control.</summary>
     [Fact]
     public async Task An_account_without_review_gets_no_clearance_control()
@@ -328,8 +429,8 @@ public sealed class IngestionWorkbenchViewTests : IClassFixture<IngestionWorkben
             new IngestionBatchSummaryDto(
                 7, "reading-pool.json", "done", 1, "author@test.local",
                 new DateTimeOffset(2026, 10, 12, 9, 30, 0, TimeSpan.Zero),
-                new DateTimeOffset(2026, 10, 12, 9, 31, 0, TimeSpan.Zero), 4, 2),
-            // Every record refused: the screen must not call this "done".
+                new DateTimeOffset(2026, 10, 12, 9, 31, 0, TimeSpan.Zero), 5, 2, 1),
+            // Every record refused and none withdrawn: the screen must not call this "done".
             new IngestionBatchSummaryDto(
                 8, "broken.json", "failed", 2, "reviewer@test.local",
                 new DateTimeOffset(2026, 10, 13, 11, 0, 0, TimeSpan.Zero), null, 3, 0),
@@ -339,7 +440,7 @@ public sealed class IngestionWorkbenchViewTests : IClassFixture<IngestionWorkben
             new IngestionBatchSummaryDto(
                 7, "reading-pool.json", "done", 1, "author@test.local",
                 new DateTimeOffset(2026, 10, 12, 9, 30, 0, TimeSpan.Zero),
-                new DateTimeOffset(2026, 10, 12, 9, 31, 0, TimeSpan.Zero), 4, 2),
+                new DateTimeOffset(2026, 10, 12, 9, 31, 0, TimeSpan.Zero), 5, 2, 1),
             [
                 new IngestionRecordDto(26, 1, true, 11, [],
                     """{ "item_id": "item_demo_depotitem00000000" }"""),
@@ -349,13 +450,24 @@ public sealed class IngestionWorkbenchViewTests : IClassFixture<IngestionWorkben
                     [new IngestionRefusalDto("gate1.feedback.explanation",
                         "the explanation is empty; gate one refuses an item whose key cannot be justified.")],
                     """{ "item_id": "item_demo_depotitem00000011", "verbatim_quote": "Verbatim quote" }"""),
-                // Two rules on one record: a row-per-error list renders five rows for four records.
+                // Two rules on one record: a row-per-error list renders six rows for five records.
                 new IngestionRecordDto(160, 1, false, null,
                     [
                         new IngestionRefusalDto("gate1.feedback.explanation", "the explanation is empty."),
                         new IngestionRefusalDto("gate4.span.overlap", "its evidence span overlaps its sibling's."),
                     ],
                     """{ "item_id": "item_demo_depotitem00000021" }"""),
+                // #207: a withdrawn record. It carries no refusal and no correction box, and it is
+                // still one row for its line - the same row the read path returns at attempt 2.
+                new IngestionRecordDto(190, 2, false, null, [],
+                    """{ "item_id": "item_demo_depotitem00000031" }""",
+                    Discarded: true, Note: "Record discarded by staff: superseded by line 141."),
+            ],
+            // #207: two records break gate one and one of those two also breaks gate four. A grouping
+            // on the message text would report four groups of one; this is two groups, 2 and 1.
+            [
+                new IngestionRuleGroupDto("gate1.feedback.explanation", 2),
+                new IngestionRuleGroupDto("gate4.span.overlap", 1),
             ],
             [
                 new IngestionStagedItemDto(11, "R-DET", "B1", "reading", "validated", 1),

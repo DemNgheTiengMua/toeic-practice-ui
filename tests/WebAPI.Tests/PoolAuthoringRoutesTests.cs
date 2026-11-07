@@ -25,6 +25,10 @@ public sealed class PoolAuthoringRoutesTests : IClassFixture<PoolAuthoringRoutes
     [InlineData("POST", "api/admin/items")]
     [InlineData("PUT", "api/admin/items/{itemId:int}")]
     [InlineData("POST", "api/admin/exams/{examId:int}/bindings")]
+    [InlineData("GET", "api/admin/ingestion/{batchId:int}")]
+    [InlineData("POST", "api/admin/ingestion/{batchId:int}/records/{line:int}/resubmit")]
+    [InlineData("POST", "api/admin/ingestion/{batchId:int}/records/{line:int}/discard")]
+    [InlineData("POST", "api/admin/ingestion/{batchId:int}/items/{itemId:int}/clear")]
     public void The_authoring_routes_are_mapped_on_the_authoring_capability(string method, string route)
     {
         var endpoint = site.Services.GetRequiredService<EndpointDataSource>().Endpoints
@@ -39,7 +43,10 @@ public sealed class PoolAuthoringRoutesTests : IClassFixture<PoolAuthoringRoutes
             .OfType<string>()
             .ToList();
 
-        Assert.Contains(Permissions.ContentAuthor, policies);
+        // #207: clearing is review, not authoring; every other workbench route is authoring.
+        Assert.Contains(
+            route.EndsWith("/clear", StringComparison.Ordinal) ? Permissions.ContentReview : Permissions.ContentAuthor,
+            policies);
         Assert.All(policies, policy => Assert.Contains(policy, Permissions.All));
         Assert.All(
             endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>(),

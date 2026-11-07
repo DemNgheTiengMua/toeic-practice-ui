@@ -17,7 +17,8 @@ public sealed record IngestionBatchRow(
     string UploadedBy,
     string CreatedAt,
     string Records,
-    string Accepted);
+    string Accepted,
+    string Discarded);
 
 public sealed record IngestionBatchListViewModel(
     IReadOnlyList<IngestionBatchRow> Batches,
@@ -32,6 +33,11 @@ public sealed record IngestionBatchListViewModel(
 /// would send the author back for a second upload to discover the next one - and the gates already
 /// report them all in one pass, which is what makes a single correction worth doing.
 /// </para>
+/// <para>
+/// #207: <see cref="Discarded"/> is a third outcome beside accepted and refused, and
+/// <see cref="Note"/> is the withdrawal sentence. A withdrawn record keeps its line number so the
+/// reviewer can still find it in the file.
+/// </para>
 /// </summary>
 public sealed record IngestionRecordRow(
     int Line,
@@ -39,7 +45,16 @@ public sealed record IngestionRecordRow(
     bool Accepted,
     IReadOnlyList<IngestionRefusalRow> Refusals,
     string? RecordJson,
-    int? ItemId);
+    int? ItemId,
+    bool Discarded = false,
+    string? Note = null);
+
+/// <summary>#207: one rule and the number of records still breaking it, with each line it holds.</summary>
+public sealed record IngestionRuleGroupRow(
+    string Rule,
+    int Records,
+    IReadOnlyList<int> Lines,
+    bool IsFiltered);
 
 /// <summary>#205: one broken rule, as a row shows it.</summary>
 public sealed record IngestionRefusalRow(string Rule, string Message);
@@ -66,14 +81,18 @@ public sealed record IngestionBatchDetailViewModel(
     int BatchId,
     string SourceName,
     string StatusLabel,
+    string StatusCode,
     string UploadedBy,
     string CreatedAt,
     string? CompletedAt,
+    IReadOnlyList<IngestionRuleGroupRow> RuleGroups,
     IReadOnlyList<IngestionRecordRow> Records,
     IReadOnlyList<IngestionStagedRow> Staged,
     int AcceptedCount,
     int RejectedCount,
+    int DiscardedCount,
     bool CanClear,
+    string? SelectedRule,
     string? Message,
     string? ErrorMessage);
 
@@ -97,7 +116,7 @@ public static class IngestionPresentation
     }
 
     public static IngestionBatchDetailViewModel FromDetail(
-        IngestionBatchDetailDto dto, bool canClear, string? message, string? error)
+        IngestionBatchDetailDto dto, bool canClear, string? selectedRule, string? message, string? error)
     {
         var records = new List<IngestionRecordRow>(dto.Records.Count);
         foreach (var record in dto.Records)
@@ -114,7 +133,35 @@ public static class IngestionPresentation
                 record.Accepted,
                 refusals,
                 record.RecordJson,
-                record.ItemId));
+                record.ItemId,
+                record.Discarded,
+                record.Note));
+        }
+
+        // #207 AC1: the lines each rule holds come from the rows on screen. The count itself is the
+        // service's, computed over the whole batch, so a group does not report zero records merely
+        // because the page is filtered to another rule.
+        var groups = new List<IngestionRuleGroupRow>(dto.RuleGroups.Count);
+        foreach (var group in dto.RuleGroups)
+        {
+            var lines = new List<int>();
+            foreach (var record in dto.Records)
+            {
+                foreach (var refusal in record.Refusals)
+                {
+                    if (string.Equals(refusal.Rule, group.Rule, StringComparison.Ordinal))
+                    {
+                        lines.Add(record.Line);
+                        break;
+                    }
+                }
+            }
+
+            groups.Add(new IngestionRuleGroupRow(
+                group.Rule,
+                group.Records,
+                lines,
+                string.Equals(group.Rule, selectedRule, StringComparison.Ordinal)));
         }
 
         var staged = new List<IngestionStagedRow>(dto.Staged.Count);
@@ -137,16 +184,20 @@ public static class IngestionPresentation
             batch.BatchId,
             batch.SourceName,
             batch.StatusLabel,
+            dto.Batch.Status,
             batch.UploadedBy,
             batch.CreatedAt,
             dto.Batch.CompletedAt is { } completed
                 ? completed.ToString("d MMM yyyy HH:mm", CultureInfo.InvariantCulture)
                 : null,
+            groups,
             records,
             staged,
             dto.Batch.Accepted,
-            dto.Batch.Records - dto.Batch.Accepted,
+            dto.Batch.Records - dto.Batch.Accepted - dto.Batch.Discarded,
+            dto.Batch.Discarded,
             canClear,
+            selectedRule,
             message,
             error);
     }
@@ -154,23 +205,32 @@ public static class IngestionPresentation
     private static IngestionBatchRow FromBatch(IngestionBatchSummaryDto batch) => new(
         batch.BatchId,
         batch.SourceName,
-        StatusLabel(batch.Status),
-        string.Equals(batch.Status, "failed", StringComparison.Ordinal),
+        StatusLabel(batch.Status, batch.Accepted),
+        // #207: "nothing accepted" is now a narrower fact than `failed`. A batch that landed some
+        // records and still holds refusals is failed but not empty, and the two must not share a word.
+        batch.Accepted == 0 && batch.Status == "failed",
         batch.UploadedByEmail,
         batch.CreatedAt.ToString("d MMM yyyy HH:mm", CultureInfo.InvariantCulture),
         batch.Records.ToString(CultureInfo.InvariantCulture),
-        batch.Accepted.ToString(CultureInfo.InvariantCulture));
+        batch.Accepted.ToString(CultureInfo.InvariantCulture),
+        batch.Discarded.ToString(CultureInfo.InvariantCulture));
 
     /// <summary>
     /// The batch's three states, in words an author acts on. A file whose every record was refused is
     /// not "done": it produced nothing, and saying otherwise is the sort of summary that hides a
     /// problem.
+    /// <para>
+    /// #207: <c>done</c> now means "no record is still refused", so a batch that was <c>failed</c> and
+    /// has had every rejection corrected or withdrawn reads "All records settled" rather than
+    /// "Nothing accepted". <c>failed</c> splits in two, because the two cases need different actions:
+    /// nothing landed ("Nothing accepted") versus some landed and refusals remain ("Refusals remain").
+    /// </para>
     /// </summary>
-    private static string StatusLabel(string status) => status switch
+    private static string StatusLabel(string status, int accepted) => status switch
     {
         "pending" => "In progress",
-        "failed" => "Nothing accepted",
-        "done" => "Judged",
+        "failed" => accepted == 0 ? "Nothing accepted" : "Refusals remain",
+        "done" => "All records settled",
         _ => status,
     };
 

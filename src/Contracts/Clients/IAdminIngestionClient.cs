@@ -21,9 +21,9 @@ public interface IAdminIngestionClient
     Task<IngestionBatchListDto> GetWorkbenchBatchesAsync(string bearerToken, CancellationToken cancellationToken = default) =>
         GetWorkbenchBatchesAsync(cancellationToken);
 
-    Task<IngestionBatchDetailDto> GetWorkbenchBatchAsync(int batchId, CancellationToken cancellationToken = default);
-    Task<IngestionBatchDetailDto> GetWorkbenchBatchAsync(int batchId, string bearerToken, CancellationToken cancellationToken = default) =>
-        GetWorkbenchBatchAsync(batchId, cancellationToken);
+    Task<IngestionBatchDetailDto> GetWorkbenchBatchAsync(int batchId, string? rule = null, CancellationToken cancellationToken = default);
+    Task<IngestionBatchDetailDto> GetWorkbenchBatchAsync(int batchId, string? rule, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetWorkbenchBatchAsync(batchId, rule, cancellationToken);
 
     Task<IngestionUploadResultDto> UploadWorkbenchFileAsync(string skill, Stream content, string fileName, CancellationToken cancellationToken = default);
     Task<IngestionUploadResultDto> UploadWorkbenchFileAsync(string skill, Stream content, string fileName, string bearerToken, CancellationToken cancellationToken = default) =>
@@ -32,6 +32,11 @@ public interface IAdminIngestionClient
     Task<IngestionRecordDto> ResubmitWorkbenchRecordAsync(int batchId, int line, string correctedRecordJson, CancellationToken cancellationToken = default);
     Task<IngestionRecordDto> ResubmitWorkbenchRecordAsync(int batchId, int line, string correctedRecordJson, string bearerToken, CancellationToken cancellationToken = default) =>
         ResubmitWorkbenchRecordAsync(batchId, line, correctedRecordJson, cancellationToken);
+
+    /// <summary>#207 AC3: withdraw one refused record. The refusals that led to it stay readable.</summary>
+    Task DiscardWorkbenchRecordAsync(int batchId, int line, string? reason, CancellationToken cancellationToken = default);
+    Task DiscardWorkbenchRecordAsync(int batchId, int line, string? reason, string bearerToken, CancellationToken cancellationToken = default) =>
+        DiscardWorkbenchRecordAsync(batchId, line, reason, cancellationToken);
 
     Task ClearWorkbenchItemAsync(int batchId, int itemId, CancellationToken cancellationToken = default);
     Task ClearWorkbenchItemAsync(int batchId, int itemId, string bearerToken, CancellationToken cancellationToken = default) =>
