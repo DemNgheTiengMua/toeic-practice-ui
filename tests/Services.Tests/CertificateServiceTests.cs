@@ -108,7 +108,11 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // Review finding: two more, 49 -> 51 - Exams and Items. A triage-only account could publish an
         // exam and activate an item, which ADM-03's "exam structure" and "item text" both forbid; the
         // five original guards covered assembly and rubric but neither of these two.
-        Assert.Equal(51, triggerCount);
+        // #212: three more, 51 -> 54 - trg_PlacementSkillResults_SingleWriter (the fifth covered derived
+        // fact), trg_PlacementTests_CompletionIsEarned and trg_PlacementSkillResults_CompletionIsEarned
+        // (PLC-36's "done needs a measured skill or a recorded failure", which reads another table and so
+        // cannot be a CHECK).
+        Assert.Equal(54, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
@@ -123,6 +127,11 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
                      "trg_PlacementTests_SingleWriter",
                      "trg_LearnerPathSteps_SingleWriter",
                      "trg_LearnerSkillStates_SingleWriter",
+                     // #212: the fifth covered derived fact, and the completion rule it takes two
+                     // triggers to express (the placement side and the skill-row side).
+                     "trg_PlacementSkillResults_SingleWriter",
+                     "trg_PlacementTests_CompletionIsEarned",
+                     "trg_PlacementSkillResults_CompletionIsEarned",
                      // #201: the two invariants, by name. A rename must not pass as a count.
                      "trg_ReviewSampleDecisions_NoSelfApproval",
                      "trg_ItemVersions_TriageCannotWrite",

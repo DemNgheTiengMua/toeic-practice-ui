@@ -224,27 +224,19 @@ public sealed partial class AttemptEngine
                 attempt.BandCode = null;
             }
 
-            // Snapshot matching invariant: PlacementTests.TotalScore must match ExamAttempts.TotalScore
-            if (!hasPendingMockResponses)
-            {
-                var linkedPlacements = await db.PlacementTests
-                    .Where(p => p.AttemptId == attempt.AttemptId && p.Status == PlacementStatus.InProgress.ToCode())
-                    .ToListAsync(cancellationToken);
-
-                foreach (var placement in linkedPlacements)
-                {
-                    placement.Status = PlacementStatus.Done.ToCode();
-                    placement.TotalScore = totalScore;
-                    placement.ResultBandCode = attempt.BandCode;
-                    placement.TakenAt = now;
-                    // #191: this is the placement snapshot's one writer. PlacementService used to
-                    // write the same row again unconditionally - the confirmed defect in
-                    // docs/research/placement-free-response-defect.md - and the trigger now refuses it.
-                    placement.WrittenByService = DerivedFactWriters.PlacementResult;
-                    placement.ProjectionVersion++;
-                    db.Entry(placement).Property(p => p.WrittenByService).IsModified = true;
-                }
-            }
+            // #212 / #191: the placement snapshot is derived from the attempt, and this is the only
+            // place that may write it. The rows are written BEFORE the placement's own completion is
+            // decided, because the completion guard reads them: a done placement with nothing measured
+            // is refused, and a productive task still in the AI queue leaves it in progress.
+            //
+            // The remaining drafts are not yet graded, so calling the writer here would report
+            // `grading`. It is called on both paths - here for the objective half, and again from
+            // FinalizeAiGradedAttemptAsync when the productive half settles - and it is idempotent, so
+            // the second call rewrites only the rows that changed.
+            var linkedPlacements = await db.PlacementTests
+                .Where(p => p.AttemptId == attempt.AttemptId && p.Status == PlacementStatus.InProgress.ToCode())
+                .Select(p => p.PlacementId)
+                .ToListAsync(cancellationToken);
 
             var hasFreeResponses = freeResponses.Count > 0;
             attempt.Status = hasFreeResponses
@@ -276,6 +268,14 @@ public sealed partial class AttemptEngine
             }
 
             await db.SaveChangesAsync(cancellationToken);
+
+            // #212: the per-skill rows and the placement's own completion, from what was just saved.
+            // A productive task still in the queue reads as `grading` and leaves the placement in
+            // progress; the objective half is measured and visible immediately (PLC-34).
+            foreach (var placementId in linkedPlacements)
+            {
+                await PlacementResults.WriteAsync(placementId, cancellationToken);
+            }
 
             // #154: a finished mock exam closes the path step that planned it. This is the writer that
             // did not exist — sitting the exam left the step available forever. Inside the same
@@ -522,29 +522,27 @@ public sealed partial class AttemptEngine
             db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
             attempt.Status = AttemptStatus.Graded.ToCode();
 
-            // #191 / D14: the placement snapshot is derived from the attempt, and this is the only
-            // place that may write it. Before #191 the AI-grading path stopped at the attempt and
+            // #191 / D14 / #212: the placement snapshot is derived from the attempt, and this is the
+            // only place that may write it. Before #191 the AI-grading path stopped at the attempt and
             // left the placement on the earlier null-band value, while `AiGradingProcessor` patched
             // the snapshot from the outside - a second writer on the row the confirmed defect is
             // about. When a placement carries a free response, this is the moment its result exists.
-            if (attempt.Exam.Purpose == ExamPurpose.Placement.ToCode())
-            {
-                var placement = await db.PlacementTests
-                    .FirstOrDefaultAsync(p => p.AttemptId == attempt.AttemptId, cancellationToken);
-
-                if (placement is not null)
-                {
-                    placement.Status = PlacementStatus.Done.ToCode();
-                    placement.TotalScore = totalScore;
-                    placement.ResultBandCode = attempt.BandCode;
-                    placement.TakenAt = DateTimeOffset.UtcNow;
-                    placement.WrittenByService = DerivedFactWriters.PlacementResult;
-                    placement.ProjectionVersion++;
-                    db.Entry(placement).Property(p => p.WrittenByService).IsModified = true;
-                }
-            }
+            //
+            // The per-skill rows are derived from the attempt's own scoring and the AI gradings that
+            // just settled, so this call is what turns a `grading` row into `measured`.
+            var linkedPlacements = attempt.Exam.Purpose == ExamPurpose.Placement.ToCode()
+                ? await db.PlacementTests
+                    .Where(p => p.AttemptId == attempt.AttemptId)
+                    .Select(p => p.PlacementId)
+                    .ToListAsync(cancellationToken)
+                : [];
 
             await db.SaveChangesAsync(cancellationToken);
+
+            foreach (var placementId in linkedPlacements)
+            {
+                await PlacementResults.WriteAsync(placementId, cancellationToken);
+            }
 
             // #154: this is the second way a mock reaches `graded` (a mock with free responses is
             // finalized here after AI grading). Both writers close the step; leaving this one out

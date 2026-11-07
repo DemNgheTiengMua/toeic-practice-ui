@@ -87,6 +87,10 @@ public partial class Skill
     [InverseProperty("SkillNavigation")]
     public virtual ICollection<LearnerSkillState> LearnerSkillStates { get; set; } = new List<LearnerSkillState>();
 
+    /// <summary>#212: this skill's row in each placement sitting that touched it.</summary>
+    [InverseProperty("SkillNavigation")]
+    public virtual ICollection<PlacementSkillResult> PlacementSkillResults { get; set; } = new List<PlacementSkillResult>();
+
     [InverseProperty("SkillNavigation")]
     public virtual ICollection<Section> SectionSkillNavigations { get; set; } = new List<Section>();
 

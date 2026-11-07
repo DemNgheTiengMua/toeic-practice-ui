@@ -19,6 +19,13 @@ public sealed partial class LearnerServiceTests
     /// synchronously. Under the old two-writer arrangement this threw, because PlacementService wrote
     /// `done` with a null ResultBandCode and CK_Placement_DoneHasResult refused it. Now the placement
     /// stays in progress until its grading settles, and the learner can still read the page.
+    /// <para>
+    /// #212 changed the stored shape this asserts. Before it, "not yet done" was represented by the
+    /// snapshot columns being untouched, so <c>WrittenByService</c> had to be null. Now the row carries a
+    /// grading state - the per-skill row says `grading` and the placement is still in progress - which is
+    /// the state a screen can actually read. The writer is therefore declared, and asserting it is null
+    /// would assert the absence of exactly the information the ticket added.
+    /// </para>
     /// </summary>
     [Fact]
     public async Task A_placement_with_a_free_response_stays_in_progress_instead_of_crashing_on_submit()
@@ -49,9 +56,15 @@ public sealed partial class LearnerServiceTests
         var placement = await verifyDb.PlacementTests.AsNoTracking()
             .SingleAsync(p => p.PlacementId == started.PlacementId);
         Assert.Equal(PlacementStatus.InProgress.ToCode(), placement.Status);
-        // Nobody claimed the snapshot, because there is no result to derive it from yet
-        Assert.Null(placement.WrittenByService);
-        Assert.Equal(0, placement.ProjectionVersion);
+        // The snapshot has no result - which is what the constraint used to reject - but the row now
+        // carries the grading state instead, so the absence is representable and readable.
+        Assert.Null(placement.ResultBandCode);
+        Assert.Null(placement.CompletionFailureReason);
+
+        var skillRow = await verifyDb.PlacementSkillResults.AsNoTracking()
+            .SingleAsync(r => r.PlacementId == started.PlacementId);
+        Assert.Equal(PlacementResultStatus.Grading, skillRow.ResultStatus);
+        Assert.Null(skillRow.CefrLevel);
     }
 
     /// <summary>

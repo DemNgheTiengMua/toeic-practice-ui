@@ -413,8 +413,20 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
             DECLARE @exam INT = SCOPE_IDENTITY();
             INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
             VALUES ({userId}, @exam, @cert, 'graded', SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), 400, 'B1', 'AttemptEngine', 1);
-            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ResultBandCode, AttemptId, TotalScore, WrittenByService, ProjectionVersion)
-            VALUES ({userId}, @cert, @exam, 'done', 'B1', SCOPE_IDENTITY(), 400, 'AttemptEngine', 1);
+            DECLARE @attempt INT = SCOPE_IDENTITY();
+            -- #212: a done placement needs one measured skill. Rows first, then the move to done.
+            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, AttemptId)
+            VALUES ({userId}, @cert, @exam, 'in_progress', @attempt);
+            DECLARE @plc INT = SCOPE_IDENTITY();
+            INSERT INTO PlacementSkillResults
+              (PlacementId, SkillId, CertId, ResultStatus, CefrLevel, PositionInBand, ContinuousCoordinate,
+               MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
+            VALUES (@plc, (SELECT TOP 1 SkillId FROM Skills WHERE CertId = @cert), @cert, 'measured', 'B1', 50, 3.50,
+                    SYSDATETIMEOFFSET(), DATEADD(DAY, 90, SYSDATETIMEOFFSET()), 'AttemptEngine', 1);
+            UPDATE PlacementTests
+              SET Status = 'done', ResultBandCode = 'B1', TotalScore = 400,
+                  WrittenByService = 'AttemptEngine', ProjectionVersion = 1
+            WHERE PlacementId = @plc;
             """);
 
         var (_, paths, db) = CreateServices();

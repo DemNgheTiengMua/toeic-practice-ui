@@ -36,9 +36,12 @@ public sealed partial class LearnerServiceTests
             rejected = true;
         }
 
+        // #212 replaced CK_Placement_DoneHasResult ("done needs a band and a total") with a rule about
+        // measured skills, which is enforced by trg_PlacementTests_CompletionIsEarned. Either way this
+        // row is refused, and the assertion is that a finished placement cannot carry no result at all.
         Assert.True(rejected,
-            "CK_Placement_DoneHasResult should reject a done placement with no band and no total. "
-            + "If this row was accepted, the constraint does not enforce what its name claims.");
+            "A done placement with no band, no total and nothing measured should be refused. "
+            + "If this row was accepted, neither the constraint nor the completion trigger enforces what its name claims.");
     }
 
     [Fact]

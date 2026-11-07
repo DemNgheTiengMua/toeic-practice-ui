@@ -34,6 +34,13 @@ public static class DerivedFactWriters
     /// <summary>#211: learner per-skill state, <c>LearnerSkillStates</c>.</summary>
     public const string LearnerSkillState = "SkillStateWriter";
 
+    /// <summary>
+    /// #212: one row per skill per placement, <c>PlacementSkillResults</c>. Registered as its own fact
+    /// rather than folded into <see cref="PlacementResult"/>: <c>CoveredTable</c> names exactly one
+    /// table, so folding it in would leave this table guarded by nothing.
+    /// </summary>
+    public const string PlacementSkillResult = "AttemptEngine";
+
     // ---- awaiting a table ----
 
     /// <summary>Topic capability: awaiting the per-cell mastery table (#232).</summary>

@@ -2001,10 +2001,25 @@ BEGIN
           DATEADD(DAY, -22, DATEADD(MINUTE, 38, SYSDATETIMEOFFSET())), 650, 'B1', 'AttemptEngine', 1);
   DECLARE @attPlace INT = SCOPE_IDENTITY();
 
-  INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ResultBandCode, AttemptId, TotalScore, TakenAt,
-                              WrittenByService, ProjectionVersion)
-  VALUES (@learner, @toeicCert, @stdExam, 'done', 'B1', @attPlace, 650, DATEADD(DAY, -22, SYSDATETIMEOFFSET()),
-          'AttemptEngine', 1);
+  -- the placement is created as a lifecycle act: null result, in progress, no declaration needed.
+  INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, AttemptId, TakenAt)
+  VALUES (@learner, @toeicCert, @stdExam, 'in_progress', @attPlace,
+          DATEADD(DAY, -22, SYSDATETIMEOFFSET()));
+  DECLARE @plc INT = SCOPE_IDENTITY();
+
+  DECLARE @plcMeasured DATETIMEOFFSET = DATEADD(DAY, -22, SYSDATETIMEOFFSET());
+  INSERT INTO PlacementSkillResults
+    (PlacementId, SkillId, CertId, ResultStatus, CefrLevel, PositionInBand, ContinuousCoordinate,
+     MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
+  SELECT @plc, s.SkillId, @toeicCert, 'measured', 'B1', 55, 3.55,
+         @plcMeasured, DATEADD(DAY, 90, @plcMeasured), 'AttemptEngine', 1
+  FROM Skills s
+  WHERE s.CertId = @toeicCert AND s.Code IN ('LIST', 'READ');
+
+  UPDATE PlacementTests
+    SET Status = 'done', ResultBandCode = 'B1', TotalScore = 650,
+        WrittenByService = 'AttemptEngine', ProjectionVersion = 1
+  WHERE PlacementId = @plc;
 END;
 GO
 
