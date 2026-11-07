@@ -76,13 +76,13 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
                 "Name either a new stimulus or an existing one, not both: a child belongs to one passage.");
         }
 
+        // One read: this row proves the stimulus exists and carries the text gate one's lemma rule
+        // compares against, so the gate is handed that text rather than querying for it a second time.
+        Stimulus? existingStimulus = null;
         if (request.StimulusId is int existingStimulusId)
         {
-            var exists = await db.Stimuli.AsNoTracking().AnyAsync(s => s.StimulusId == existingStimulusId, cancellationToken);
-            if (!exists)
-            {
-                throw new AdminItemException(ApiError.Codes.Validation, $"Stimulus {existingStimulusId} not found.");
-            }
+            existingStimulus = await GateContext.FindStimulusAsync(db, existingStimulusId, cancellationToken)
+                ?? throw new AdminItemException(ApiError.Codes.Validation, $"Stimulus {existingStimulusId} not found.");
         }
 
         // D17: the gates run server-side, so an item cannot be persisted with no explanation, no
@@ -90,7 +90,13 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
         // provider call, and it is the gate the review's example failed; gates two to four need a
         // profiler, verifiers and a classifier, and run at the ingestion seam (PoolIngestionService)
         // where those are composed.
-        await RequireGateOneAsync(request, level, stimulus, modality, cancellationToken);
+        await RequireGateOneAsync(
+            GateItem(request, GateContext.TextOf(stimulus) ?? GateContext.TextOf(existingStimulus)),
+            request.TopicId,
+            level,
+            exceptItemId: null,
+            "The item was refused by gate one (D17), so nothing was saved: ",
+            cancellationToken);
 
         var item = new Item
         {
@@ -153,8 +159,18 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
 
         // D17: an edit that forks a version is the same door as a create, one save later. A gate that
         // only guarded creation would let an author write a version with no rationale by editing one
-        // away, which is the bypass #198's review found wearing a different route.
-        await RequireGateOneAsync(item, request, cancellationToken);
+        // away, which is the bypass #198's review found wearing a different route. The cell excludes
+        // this item, because the balance rule is about the distribution the item makes rather than the
+        // one it found.
+        await RequireGateOneAsync(
+            GateItem(
+                request,
+                GateContext.TextOf(await GateContext.FindStimulusAsync(db, item.StimulusId, cancellationToken))),
+            item.TopicId,
+            item.CefrLevel,
+            exceptItemId: item.ItemId,
+            "The edit was refused by gate one (D17), so nothing was written: ",
+            cancellationToken);
 
         var versions = await db.ItemVersions
             .Where(v => v.ItemId == itemId)
@@ -206,7 +222,7 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
     }
 
     /// <summary>
-    /// D17 at the single-item door: gate one, against the cell the item is joining.
+    /// D17 at both authoring doors: gate one, against the cell the item is joining.
     /// <para>
     /// The review that opened #198 proved this path could persist an item with three options, no
     /// explanation and no rationale - every rule gate one states, and no caller of it. A refusal is an
@@ -214,42 +230,25 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
     /// answers with one and a caller that ignored a verdict would be the same bypass again.
     /// </para>
     /// <para>
-    /// <b>The cell is read before the item exists</b>, which is what makes the balance rule answerable:
-    /// <see cref="PoolGateOne.CellAsync"/> excludes nothing when there is nothing to exclude yet.
+    /// <paramref name="refusalPrefix"/> is the one thing the two doors say differently: a save that
+    /// wrote nothing and an edit that forked nothing are two sentences. Everything else - the cell,
+    /// the item, the gate, the exception type and the rule list - is shared, so an edit cannot come to
+    /// judge an item differently from a create.
     /// </para>
     /// </summary>
     private async Task RequireGateOneAsync(
-        CreatePoolItemRequest request,
+        GateOneItem gateItem,
+        int topicId,
         CefrLevel level,
-        Stimulus? stimulus,
-        string modality,
+        int? exceptItemId,
+        string refusalPrefix,
         CancellationToken cancellationToken)
     {
-        var cell = await PoolGateOne.CellAsync(db, request.TopicId, level, exceptItemId: null, cancellationToken);
+        // excludeItemId is what makes the balance rule answerable at each door: a create has nothing to
+        // exclude yet, and an edit must exclude itself or its own key would vouch for its own balance.
+        var cell = await GateContext.CellAsync(db, topicId, level, exceptItemId, cancellationToken);
 
-        // The stimulus this item is being authored with, or the one it is joining: gate one's lemma rule
-        // compares the stem and key against the text the learner will read, and a rule that skipped it
-        // whenever the passage came from a second call would judge nothing on a shared passage.
-        var stimulusText = stimulus?.Passage ?? stimulus?.Transcript ?? stimulus?.PromptCopy
-            ?? (request.StimulusId is int stimulusId
-                ? await db.Stimuli.AsNoTracking()
-                    .Where(s => s.StimulusId == stimulusId)
-                    .Select(s => s.Passage ?? s.Transcript ?? s.PromptCopy)
-                    .SingleOrDefaultAsync(cancellationToken)
-                : null);
-
-        var verdict = GateOne.Review(
-            new GateOneItem(
-                request.Stem,
-                stimulusText,
-                Normalize(request.OptionA), Normalize(request.OptionB),
-                Normalize(request.OptionC), Normalize(request.OptionD),
-                NormalizeKey(request.KeyLabel),
-                Normalize(request.Explanation),
-                Normalize(request.RationaleA), Normalize(request.RationaleB),
-                Normalize(request.RationaleC), Normalize(request.RationaleD)),
-            cell);
-
+        var verdict = GateOne.Review(gateItem, cell);
         if (verdict.Accepted)
         {
             return;
@@ -257,53 +256,40 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
 
         throw new AdminItemException(
             ApiError.Codes.Validation,
-            "The item was refused by gate one (D17), so nothing was saved: "
-            + string.Join(" ", verdict.Refusals.Select(r => $"[{r.Rule}] {r.Message}")));
+            refusalPrefix + string.Join(" ", verdict.Refusals.Select(r => $"[{r.Rule}] {r.Message}")));
     }
 
     /// <summary>
-    /// D17 at the edit door: the gate judges the version that is about to be served, against the cell
-    /// the item already sits in. The cell excludes this item, because the balance rule is about the
-    /// distribution the item makes rather than the one it found.
+    /// The create request as the gate sees it. <paramref name="stimulusText"/> is the passage,
+    /// transcript or prompt copy of the stimulus the item is authored with or joins - gate one's lemma
+    /// rule compares the stem and key against the text the learner will read, and a rule that skipped
+    /// it whenever the passage came from a second row would judge nothing on a shared passage.
     /// </summary>
-    private async Task RequireGateOneAsync(
-        Item item,
-        UpdatePoolItemRequest request,
-        CancellationToken cancellationToken)
-    {
-        var cell = await PoolGateOne.CellAsync(db, item.TopicId, item.CefrLevel, item.ItemId, cancellationToken);
+    private static GateOneItem GateItem(CreatePoolItemRequest request, string? stimulusText) =>
+        new(
+            request.Stem,
+            stimulusText,
+            Normalize(request.OptionA), Normalize(request.OptionB),
+            Normalize(request.OptionC), Normalize(request.OptionD),
+            NormalizeKey(request.KeyLabel),
+            Normalize(request.Explanation),
+            Normalize(request.RationaleA), Normalize(request.RationaleB),
+            Normalize(request.RationaleC), Normalize(request.RationaleD));
 
-        // The stimulus is not editable through this request, so it is read from the item rather than
-        // from the edit: gate one's lemma rule compares against the text a learner will actually read.
-        var stimulusText = item.StimulusId is int stimulusId
-            ? await db.Stimuli.AsNoTracking()
-                .Where(s => s.StimulusId == stimulusId)
-                .Select(s => s.Passage ?? s.Transcript ?? s.PromptCopy)
-                .SingleOrDefaultAsync(cancellationToken)
-            : null;
-
-        var verdict = GateOne.Review(
-            new GateOneItem(
-                request.Stem,
-                stimulusText,
-                Normalize(request.OptionA), Normalize(request.OptionB),
-                Normalize(request.OptionC), Normalize(request.OptionD),
-                NormalizeKey(request.KeyLabel),
-                Normalize(request.Explanation),
-                Normalize(request.RationaleA), Normalize(request.RationaleB),
-                Normalize(request.RationaleC), Normalize(request.RationaleD)),
-            cell);
-
-        if (verdict.Accepted)
-        {
-            return;
-        }
-
-        throw new AdminItemException(
-            ApiError.Codes.Validation,
-            "The edit was refused by gate one (D17), so nothing was written: "
-            + string.Join(" ", verdict.Refusals.Select(r => $"[{r.Rule}] {r.Message}")));
-    }
+    /// <summary>
+    /// The edit request as the gate sees it. The stimulus is not editable through this request, so its
+    /// text is read from the item rather than from the edit.
+    /// </summary>
+    private static GateOneItem GateItem(UpdatePoolItemRequest request, string? stimulusText) =>
+        new(
+            request.Stem,
+            stimulusText,
+            Normalize(request.OptionA), Normalize(request.OptionB),
+            Normalize(request.OptionC), Normalize(request.OptionD),
+            NormalizeKey(request.KeyLabel),
+            Normalize(request.Explanation),
+            Normalize(request.RationaleA), Normalize(request.RationaleB),
+            Normalize(request.RationaleC), Normalize(request.RationaleD));
 
     private static Stimulus BuildStimulus(CreatePoolStimulusRequest request)
     {

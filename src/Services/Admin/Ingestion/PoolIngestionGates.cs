@@ -178,7 +178,7 @@ public sealed class PoolIngestionGates(
             var cellKey = (child.TopicId, child.Level.Rank);
             if (!cells.TryGetValue(cellKey, out var cell))
             {
-                cell = await PoolGateOne.CellAsync(db, child.TopicId, child.Level, exceptItemId: null, cancellationToken);
+                cell = await GateContext.CellAsync(db, child.TopicId, child.Level, exceptItemId: null, cancellationToken);
                 cells[cellKey] = cell;
             }
 
