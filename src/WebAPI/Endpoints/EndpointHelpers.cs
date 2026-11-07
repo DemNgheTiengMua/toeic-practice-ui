@@ -8,6 +8,22 @@ namespace WebAPI.Endpoints;
 /// <summary>Shared result and mapping helpers for the endpoint files.</summary>
 public static class EndpointHelpers
 {
+    /// <summary>32 hex characters and an allow-listed extension, as <c>LocalFileStore.SaveImportMediaAsync</c>
+    /// and <c>SaveExamMediaAsync</c> name them. One definition, because both media routes need it: the
+    /// imports route always checked it, and the exams route did not until a review found the gap.</summary>
+    public static bool IsGeneratedName(string? fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
+        {
+            return false;
+        }
+
+        var dot = fileName.IndexOf('.');
+        return dot == 32
+            && fileName[..dot].All(Uri.IsHexDigit)
+            && fileName[dot..] is ".mp3" or ".wav" or ".jpg" or ".jpeg" or ".png";
+    }
+
     public static CertificateOptionDto ToCertificateDto(CertificateOption option) =>
         new(option.Code, option.Name, option.SectionNoun);
 
