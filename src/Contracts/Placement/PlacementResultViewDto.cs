@@ -25,4 +25,6 @@ public sealed record PlacementResultViewDto(
     int FailedFreeResponseCount = 0,
     // #152: stored units per reported point; the page divides by it before printing a score.
     int ScoreDisplayFactor = 1,
-    bool IsGraded = true);
+    bool IsGraded = true,
+    // #213 / story 55: the per-skill rows, carrying ReusedFromPrior and the original MeasuredAt.
+    List<PlacementSkillResultInfoDto>? SkillResults = null);

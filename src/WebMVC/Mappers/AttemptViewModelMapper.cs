@@ -87,7 +87,9 @@ internal static class AttemptViewModelMapper
             // #161: no bands means no declared ceiling. The page says so; inventing 990 made every
             // certificate without band data look like a TOEIC paper scored out of 990.
             : "",
-        Skills = result.SkillScores
+        Skills = result.SkillScores,
+        SkillResults = result.SkillResults ?? [],
+        Dates = dates
     };
 
     public static TargetBandViewModel TargetBand(TargetBandViewDto view, string? error, string? success)

@@ -709,6 +709,74 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
     }
 
     // -------------------------------------------------------------------------------------------
+    // story 55: the RESULT carries the per-skill rows, so the result page can badge one
+    // -------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// The result view carries one entry per skill with <c>ReusedFromPrior</c> and the ORIGINAL
+    /// measurement date, including a carried skill that has no <c>AttemptSkillScore</c> at all.
+    ///
+    /// <b>The input that would pass a weaker test:</b> building the result's skill list from
+    /// <c>AttemptSkillScores</c> only. That is what the page did before, and it silently omitted the
+    /// carried skill — the one number the learner most needs dated — because a carried skill was never
+    /// sat and therefore has no score row. Asserting the carried skill is PRESENT is what catches it.
+    /// </summary>
+    [Fact]
+    public async Task The_result_view_carries_each_skills_reuse_flag_and_original_measurement_date()
+    {
+        var fixture = await SeedAsync(Unique("T213N"), ("LIST", "listening", false), ("READ", "reading", false));
+        var userId = await SeedLearnerAsync(fixture.CertCode);
+        await SitAsync(userId, fixture);
+
+        DateTimeOffset originalMeasuredAt;
+        await using (var db = Db())
+        {
+            originalMeasuredAt = await db.LearnerSkillStates.AsNoTracking()
+                .Where(s => s.UserId == userId && s.SkillId == fixture.SkillIds["READ"])
+                .Select(s => s.MeasuredAt).SingleAsync();
+        }
+
+        var clock = new TestClock(DateTimeOffset.UtcNow.AddDays(1));
+        int placementId;
+        await using (var db = Db())
+        {
+            var info = await Service(db, clock).StartPlacementTestAsync(userId, fixture.ExamId, PlacementReuseChoice.ReuseValid);
+            placementId = info.PlacementId;
+        }
+
+        // only Listening is sat, so Reading is the carried gap and has no AttemptSkillScore
+        await using (var db = Db())
+        {
+            await Service(db, clock).SaveAnswerAsync(
+                userId, placementId, fixture.QuestionIds[fixture.SkillIds["LIST"]],
+                fixture.CorrectOptionBySkillId[fixture.SkillIds["LIST"]], isFlagged: false);
+        }
+
+        await using (var db = Db())
+        {
+            await Service(db, clock).SubmitPlacementTestAsync(userId, placementId, isAutoSubmit: false);
+        }
+
+        await using var verify = Db();
+        var result = await Service(verify, clock).GetPlacementResultAsync(userId, placementId);
+
+        Assert.NotNull(result.SkillResults);
+        Assert.Equal(2, result.SkillResults!.Count);
+
+        var carried = result.SkillResults.Single(r => r.SkillCode == "READ");
+        Assert.True(carried.ReusedFromPrior);
+        Assert.True(carried.IsMeasured);
+        Assert.Equal(originalMeasuredAt, carried.MeasuredAt);
+        Assert.NotNull(carried.Level);
+        Assert.NotNull(carried.PositionInBand);
+
+        var fresh = result.SkillResults.Single(r => r.SkillCode == "LIST");
+        Assert.False(fresh.ReusedFromPrior);
+        Assert.True(fresh.IsMeasured);
+        Assert.True(fresh.MeasuredAt > originalMeasuredAt);
+    }
+
+    // -------------------------------------------------------------------------------------------
     // helpers
     // -------------------------------------------------------------------------------------------
 

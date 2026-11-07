@@ -280,5 +280,19 @@ public static partial class PlacementEndpoints
             result.GradedFreeResponseCount,
             result.FailedFreeResponseCount,
             result.ScoreDisplayFactor,
-            result.IsGraded);
+            result.IsGraded,
+            // #213 / story 55: per skill, with the original measurement date, so the result screen can
+            // badge a carried-over number rather than saying "something here is old".
+            result.SkillResults?
+                .Select(r => new PlacementSkillResultInfoDto(
+                    r.SkillId,
+                    r.SkillCode,
+                    r.SkillName,
+                    r.Status.ToString(),
+                    r.Level?.Code,
+                    r.PositionInBand,
+                    r.MeasuredAt,
+                    r.ReusedFromPrior,
+                    r.FailureReason))
+                .ToList() ?? []);
 }

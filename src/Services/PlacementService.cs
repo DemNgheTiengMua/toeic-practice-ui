@@ -990,6 +990,27 @@ public sealed partial class PlacementService(
                 resultBandCode));
         }
 
+        // #213 / story 55: the per-skill rows are READ, not derived here. They are the one writer's
+        // product, and they are the only place a carried-over result exists: its skill has no
+        // AttemptSkillScore (it was never sat), so a page built only from the scores above would omit
+        // the very number the learner is being shown.
+        var skillResults = await db.PlacementSkillResults
+            .AsNoTracking()
+            .Where(r => r.PlacementId == placement.PlacementId)
+            .Join(db.Skills.AsNoTracking(), r => r.SkillId, s => s.SkillId, (r, s) => new { r, s })
+            .OrderBy(x => x.s.DisplayOrder).ThenBy(x => x.s.SkillId)
+            .Select(x => new PlacementSkillResultInfo(
+                x.r.SkillId,
+                x.s.Code,
+                x.s.Name,
+                x.r.ResultStatus,
+                x.r.CefrLevel,
+                x.r.PositionInBand,
+                x.r.MeasuredAt,
+                x.r.ReusedFromPrior,
+                x.r.FailureReason))
+            .ToListAsync(cancellationToken);
+
         // Weaker section analysis: compare percentage of raw scores
         string? weakerSkillName = null;
         if (skillInfos.Count >= 2)
@@ -1060,7 +1081,10 @@ public sealed partial class PlacementService(
             gradedFreeResponseCount,
             failedFreeResponseCount,
             scoreDisplayFactor,
-            isGraded);
+            isGraded)
+        {
+            SkillResults = skillResults,
+        };
     }
     private async Task<(int Total, int Graded, int Failed, bool IsGraded)> GetAttemptGradingCountsAsync(
         int attemptId,
