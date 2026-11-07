@@ -48,6 +48,8 @@ INSERT INTO @required (ColumnName) VALUES
   ('ResultStatus'), ('CefrLevel'), ('PositionInBand'), ('ContinuousCoordinate'),
   ('ProjectedBandCode'), ('ProjectedScore'), ('CutScoreTableVersion'),
   ('IsEstimatedFromOneTask'), ('IsTruncated'), ('ReusedFromPrior'), ('FailureReason'),
+  -- #219: the placement's only contribution to path initialisation, and the productive profile.
+  ('TopicPriorsJson'), ('CriterionProfileJson'),
   ('MeasuredAt'), ('ExpiresAt'), ('WrittenByService'), ('ProjectionVersion');
 IF EXISTS (
   SELECT 1 FROM @required r
@@ -76,7 +78,7 @@ BEGIN
     + N' extra) - a stored overall is a second writer of the fact the rows already state';
   THROW 50000, @msg, 1;
 END
-PRINT 'PlacementSkillResults carries the eighteen columns the fact is made of, and no stored overall';
+PRINT 'PlacementSkillResults carries the twenty columns the fact is made of, and no stored overall';
 
 -- ---------------------------------------------------------------------------------------------
 -- 2. the fixtures
@@ -404,6 +406,113 @@ IF (SELECT r.ProjectedScore
    <> @v1
   THROW 50000, 'EXPECT_REJECT FAILED: the recorded score is not reproducible from the version the row records', 1;
 PRINT 'a recorded projection is reproducible from the cut-score version stored on its own row';
+
+-- ---------------------------------------------------------------------------------------------
+-- 5b. the topic and criterion signals (#219)
+-- ---------------------------------------------------------------------------------------------
+-- A measured row may carry both. The topic hint is placement's only contribution to path
+-- initialisation and is explicitly NOT mastery: three items cannot support a mastery judgement.
+INSERT INTO PlacementSkillResults
+  (PlacementId, SkillId, CertId, ResultStatus, CefrLevel, PositionInBand, ContinuousCoordinate,
+   TopicPriorsJson, CriterionProfileJson, MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
+VALUES (@placement3, @list, @cert, 'measured', 'B1', 42, 3.62,
+        '[{"topicId":7,"evaluatedBand":"B1","itemsSeen":3,"itemsCorrect":1,"routingSignal":"weak"}]',
+        '{"scores":[{"criterionId":1,"code":"GRAM","score":3,"maxScore":6}],"weakestCriterion":"GRAM","priorityFix":null}',
+        CAST('2026-01-01T00:00:00+00:00' AS DATETIMEOFFSET),
+        DATEADD(DAY, 90, CAST('2026-01-01T00:00:00+00:00' AS DATETIMEOFFSET)), 'AttemptEngine', 1);
+PRINT 'accepted a measured row carrying a topic hint and a criterion profile';
+
+-- THE INPUT THAT PASSES A NON-NULL CHECK: a `not_measured` row with priors. Nothing was measured, so
+-- a path that read it would order week one from a sitting that produced no evidence at all.
+INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, ExpiresAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
+VALUES (@user, @exam, @cert, 'graded', DATEADD(HOUR, 1, SYSDATETIMEOFFSET()), 385, 'A2', 'AttemptEngine', 1);
+DECLARE @attempt8 INT = SCOPE_IDENTITY();
+INSERT INTO PlacementTests (UserId, CertId, ExamId, AttemptId, Status, ResultBandCode, TotalScore,
+                            WrittenByService, ProjectionVersion)
+VALUES (@user, @cert, @exam, @attempt8, 'in_progress', 'A2', 385, 'AttemptEngine', 1);
+DECLARE @placement8 INT = SCOPE_IDENTITY();
+
+BEGIN TRY
+  INSERT INTO PlacementSkillResults
+    (PlacementId, SkillId, CertId, ResultStatus, FailureReason, TopicPriorsJson, WrittenByService, ProjectionVersion)
+  VALUES (@placement8, @list, @cert, 'not_measured', 'candidate_skipped',
+          '[{"topicId":7,"evaluatedBand":"B1","itemsSeen":2,"itemsCorrect":0,"routingSignal":"weak"}]',
+          'AttemptEngine', 1);
+  THROW 50000, 'EXPECT_REJECT FAILED: an unmeasured skill carried a topic hint', 1;
+END TRY
+BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'refused a topic hint on a skill that measured nothing';
+END CATCH
+
+-- Malformed JSON is refused at the column, not discovered by a reader later.
+BEGIN TRY
+  INSERT INTO PlacementSkillResults
+    (PlacementId, SkillId, CertId, ResultStatus, CefrLevel, PositionInBand, ContinuousCoordinate,
+     MeasuredAt, ExpiresAt, TopicPriorsJson, WrittenByService, ProjectionVersion)
+  VALUES (@placement8, @list, @cert, 'measured', 'B1', 10, 3.10,
+          CAST('2026-01-01T00:00:00+00:00' AS DATETIMEOFFSET),
+          DATEADD(DAY, 90, CAST('2026-01-01T00:00:00+00:00' AS DATETIMEOFFSET)),
+          'not json at all', 'AttemptEngine', 1);
+  THROW 50000, 'EXPECT_REJECT FAILED: a topic hint that is not JSON was accepted', 1;
+END TRY
+BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'refused a topic hint that is not JSON';
+END CATCH
+
+-- THE INPUT THAT PASSES ISJSON: the empty array. It is valid JSON and claims topics were touched
+-- while naming none - a path reading it would find no hint and no reason why.
+BEGIN TRY
+  INSERT INTO PlacementSkillResults
+    (PlacementId, SkillId, CertId, ResultStatus, CefrLevel, PositionInBand, ContinuousCoordinate,
+     MeasuredAt, ExpiresAt, TopicPriorsJson, WrittenByService, ProjectionVersion)
+  VALUES (@placement8, @list, @cert, 'measured', 'B1', 10, 3.10,
+          CAST('2026-01-01T00:00:00+00:00' AS DATETIMEOFFSET),
+          DATEADD(DAY, 90, CAST('2026-01-01T00:00:00+00:00' AS DATETIMEOFFSET)),
+          '[]', 'AttemptEngine', 1);
+  THROW 50000, 'EXPECT_REJECT FAILED: an empty topic hint array was accepted', 1;
+END TRY
+BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'refused an empty topic hint array';
+END CATCH
+
+-- THE INPUT THAT PASSES A VALUE-ONLY GUARD: a write that changes ONLY the topic hint. Under the old
+-- touch predicate no column the trigger compared had changed, the write declared nothing, and it was
+-- allowed - a second writer could rewrite the path's hint with the owner's name still on the row.
+BEGIN TRY
+  UPDATE PlacementSkillResults
+    SET TopicPriorsJson = '[{"topicId":9,"evaluatedBand":"B2","itemsSeen":1,"itemsCorrect":1,"routingSignal":"on_level"}]',
+        ProjectionVersion = 2
+  WHERE PlacementId = @placement3 AND SkillId = @list;
+  THROW 50000, 'EXPECT_REJECT FAILED: a topic-hint-only write inherited the owner''s name', 1;
+END TRY
+BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_MESSAGE() NOT LIKE '%per-skill result has exactly one writer%'
+  BEGIN
+    SET @msg = N'EXPECT_REJECT FAILED: the hint-only write was refused by the wrong guard: ' + ERROR_MESSAGE();
+    THROW 50000, @msg, 1;
+  END
+END CATCH
+IF (SELECT TopicPriorsJson FROM PlacementSkillResults WHERE PlacementId = @placement3 AND SkillId = @list)
+   NOT LIKE '%"topicId":7%'
+  THROW 50000, 'EXPECT_REJECT FAILED: a topic-hint-only write that inherited the owner''s name changed the hint', 1;
+PRINT 'refused a write that changed only the topic hint without declaring its writer';
+
+-- and the owner may rewrite its own hint, which is what a re-derivation does
+BEGIN TRY
+  UPDATE PlacementSkillResults
+    SET TopicPriorsJson = '[{"topicId":7,"evaluatedBand":"B1","itemsSeen":3,"itemsCorrect":2,"routingSignal":"on_level"}]',
+        WrittenByService = 'AttemptEngine', ProjectionVersion = 2
+  WHERE PlacementId = @placement3 AND SkillId = @list;
+END TRY
+BEGIN CATCH
+  SET @msg = N'EXPECT_REJECT FAILED: the writer could not rewrite its own topic hint: ' + ERROR_MESSAGE();
+  THROW 50000, @msg, 1;
+END CATCH
+PRINT 'accepted the writer rewriting its own topic hint';
 
 -- ---------------------------------------------------------------------------------------------
 -- 6. the single writer

@@ -1,5 +1,6 @@
 using BusinessObjects;
 using BusinessObjects.Entities;
+using Contracts;
 using DataAccess;
 using Microsoft.EntityFrameworkCore;
 
@@ -90,7 +91,8 @@ public sealed class PlacementResultWriter(
         var answeredBySkill = await db.AttemptAnswers
             .AsNoTracking()
             .Where(a => a.AttemptId == attempt.AttemptId
-                && (a.SelectedOptionId != null || a.SelectedOptionIdsJson != null || a.ResponseText != null))
+                && (a.SelectedOptionId != null || a.SelectedLabel != null
+                    || a.SelectedOptionIdsJson != null || a.ResponseText != null))
             .GroupBy(a => a.Question.Section.SkillId)
             .Select(g => new { SkillId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.SkillId, g => g.Count, cancellationToken);
@@ -101,6 +103,17 @@ public sealed class PlacementResultWriter(
                 .Select(g => new { g.SkillId, g.Status })
                 .ToListAsync(cancellationToken))
             .ToLookup(g => g.SkillId, g => g.Status);
+
+        // #219 / D5: what the sitting SAW, per (skill, topic, band). Read from the answers themselves
+        // rather than from AttemptSkillScores, because a topic is a property of the item the learner
+        // answered and the aggregates carry no topic. An answer with no pool pin has no topic to name
+        // (the pool assembled this paper after the sitting, or never), so it contributes nothing
+        // rather than an invented one.
+        var topicPriorsBySkill = await LoadTopicPriorsAsync(attempt.AttemptId, cancellationToken);
+
+        // #219 / D5: the productive half's rubric profile, so the path starts from a named weakest
+        // criterion instead of recomputing it from the grading rows every time it plans.
+        var criterionProfilesBySkill = await LoadCriterionProfilesAsync(attempt.AttemptId, cancellationToken);
 
         // The version is resolved ONCE. Null means the certificate publishes no table yet, which makes
         // every projection a null triple rather than a number nobody can reproduce.
@@ -206,6 +219,11 @@ public sealed class PlacementResultWriter(
                 row.FailureReason = null;
                 row.IsTruncated = false;
                 row.ReusedFromPrior = true;
+                // #219: no topic or criterion signal is set here, and none needs clearing. This branch
+                // runs only where the sitting measured nothing, so the row was either just created
+                // (null by construction) or written by the not-measured branch below, which nulls
+                // both. Copying the earlier hint forward would present last month's observation as
+                // this sitting's - the re-stamping defect MeasuredAt avoids.
                 measured++;
                 continue;
             }
@@ -233,6 +251,12 @@ public sealed class PlacementResultWriter(
                 row.MeasuredAt = now;
                 row.ExpiresAt = now + ReuseWindow;
                 row.FailureReason = null;
+                // #219 / D5: the sequencing hint and the rubric profile. Both are nullable: a paper
+                // that carried no pool pin has no topic to name, and an objective skill has no rubric.
+                row.TopicPriorsJson = PlacementTopicPrior.Serialize(
+                    topicPriorsBySkill.GetValueOrDefault(skillId) ?? []);
+                row.CriterionProfileJson = PlacementCriterionProfile.Serialize(
+                    criterionProfilesBySkill.GetValueOrDefault(skillId));
                 // #214 owns the 70%-rule pass that can truncate a level; nothing here has per-band
                 // correctness to truncate from, so the flag is set where that evidence exists.
                 row.IsTruncated = false;
@@ -257,6 +281,9 @@ public sealed class PlacementResultWriter(
                 row.ExpiresAt = null;
                 row.FailureReason = failureReason;
                 row.IsTruncated = false;
+                // #219: nothing measured means nothing was read from it, so it contributes no hint.
+                row.TopicPriorsJson = null;
+                row.CriterionProfileJson = null;
 
                 if (status == PlacementResultStatus.Grading) grading++;
                 else firstFailure ??= failureReason;
@@ -354,6 +381,147 @@ public sealed class PlacementResultWriter(
             ? PlacementFailureReason.InactivityTimeout
             : PlacementFailureReason.CandidateSkipped;
         return PlacementResultStatus.NotMeasured;
+    }
+
+    /// <summary>
+    /// #219 / D5: what the sitting saw per (skill, topic, band). A topic is a property of the pool item
+    /// the answer is pinned to, and an answer with no pin has no topic to name G�� it contributes
+    /// nothing rather than an invented one.
+    /// <para>
+    /// <b>Only answered items count.</b> The engine pre-creates an empty row per objective question
+    /// when the sitting starts, so a row is not evidence of an answer; the same rule
+    /// <see cref="AnswerContent.IsAnswered"/> gives the answered counter and the review page.
+    /// </para>
+    /// <para>
+    /// <b>The signal is coarse on purpose.</b> A topic is <see cref="PlacementTopicPrior.Weak"/> when
+    /// fewer than 70% of its items were right G�� the same cutoff the certificate's own accuracy target
+    /// uses G�� and <see cref="PlacementTopicPrior.OnLevel"/> otherwise. It is not a proportion and it
+    /// is not mastery: it exists so week one can order one topic before another.
+    /// </para>
+    /// </summary>
+    private async Task<Dictionary<int, IReadOnlyList<PlacementTopicPrior>>> LoadTopicPriorsAsync(
+        int attemptId, CancellationToken cancellationToken)
+    {
+        var answers = await db.AttemptAnswers
+            .AsNoTracking()
+            .Where(a => a.AttemptId == attemptId && a.ItemId != null)
+            .Select(a => new
+            {
+                a.ItemId,
+                a.SelectedOptionId,
+                a.SelectedLabel,
+                a.ResponseText,
+                a.SelectedOptionIdsJson,
+                a.IsCorrect,
+                a.Question.Section.SkillId,
+            })
+            .ToListAsync(cancellationToken);
+
+        if (answers.Count == 0)
+        {
+            return [];
+        }
+
+        var itemIds = answers.Select(a => a.ItemId!.Value).Distinct().ToList();
+        var items = await db.Items
+            .AsNoTracking()
+            .Where(i => itemIds.Contains(i.ItemId))
+            .Select(i => new { i.ItemId, i.TopicId, Band = i.CefrLevel.Code })
+            .ToDictionaryAsync(i => i.ItemId, cancellationToken);
+
+        return answers
+            .Where(a => AnswerContent.IsAnswered(
+                a.SelectedOptionId, a.SelectedLabel, a.ResponseText, a.SelectedOptionIdsJson))
+            // #219: only a JUDGED answer says anything about items seen and items correct. A productive
+            // task is stored with IsCorrect null on purpose (#253), and counting it as a wrong item
+            // would report a writing topic as weak because nothing marked it right - the rubric profile
+            // is the productive half's evidence, not this tally.
+            .Where(a => a.IsCorrect.HasValue)
+            .Where(a => items.ContainsKey(a.ItemId!.Value))
+            .GroupBy(a => a.SkillId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<PlacementTopicPrior>)g
+                    .GroupBy(a => (items[a.ItemId!.Value].TopicId, items[a.ItemId!.Value].Band))
+                    .OrderBy(t => t.Key.TopicId)
+                    .Select(t =>
+                    {
+                        var seen = t.Count();
+                        var correct = t.Count(a => a.IsCorrect == true);
+                        return new PlacementTopicPrior(
+                            t.Key.TopicId,
+                            t.Key.Band,
+                            seen,
+                            correct,
+                            correct * 100 >= seen * 70
+                                ? PlacementTopicPrior.OnLevel
+                                : PlacementTopicPrior.Weak);
+                    })
+                    .ToList());
+    }
+
+    /// <summary>
+    /// #219 / D5: the productive half's rubric profile, one per skill. Only a graded task contributes:
+    /// a pending grading has no scores, and a failed one scored nothing, so neither names a weakest
+    /// criterion.
+    /// <para>
+    /// The priority fix is the grader's own text from the attempt's lowest-scoring graded task G�� the
+    /// only row in the system that knows what to do about the weakness it found.
+    /// </para>
+    /// </summary>
+    private async Task<Dictionary<int, PlacementCriterionProfile>> LoadCriterionProfilesAsync(
+        int attemptId, CancellationToken cancellationToken)
+    {
+        var scored = await db.AiGradingScores
+            .AsNoTracking()
+            .Where(s => s.AiGrading.FreeResponse.AttemptId == attemptId
+                && s.AiGrading.Status == AiGradingStatus.Done.ToCode())
+            .Select(s => new
+            {
+                s.SkillId,
+                s.CriterionId,
+                s.GradingCriterion.Code,
+                s.Score,
+                // UI-20: a section may override the ceiling, so the ratio is read against the score the
+                // criterion was actually marked out of rather than its table default.
+                MaxScore = s.AiGrading.FreeResponse.Question.Section.SectionCriteria
+                    .Where(sc => sc.CriterionId == s.CriterionId)
+                    .Select(sc => sc.MaxScore)
+                    .FirstOrDefault() ?? s.GradingCriterion.MaxScore,
+            })
+            .ToListAsync(cancellationToken);
+
+        if (scored.Count == 0)
+        {
+            return [];
+        }
+
+        var fixes = await db.AiGradings
+            .AsNoTracking()
+            .Where(g => g.FreeResponse.AttemptId == attemptId
+                && g.Status == AiGradingStatus.Done.ToCode()
+                && g.PriorityFix != null
+                && g.OverallScaled != null)
+            .OrderBy(g => g.OverallScaled)
+            .ThenBy(g => g.GradingId)
+            .Select(g => new { g.SkillId, g.PriorityFix })
+            .ToListAsync(cancellationToken);
+
+        var fixBySkill = fixes
+            .GroupBy(f => f.SkillId)
+            .ToDictionary(g => g.Key, g => g.First().PriorityFix);
+
+        return scored
+            .GroupBy(s => s.SkillId)
+            .Select(g => new
+            {
+                SkillId = g.Key,
+                Profile = PlacementCriterionProfile.FromScores(
+                    g.Select(s => new PlacementCriterionScore(s.CriterionId, s.Code, s.Score, s.MaxScore)),
+                    fixBySkill.GetValueOrDefault(g.Key)),
+            })
+            .Where(x => x.Profile is not null)
+            .ToDictionary(x => x.SkillId, x => x.Profile!);
     }
 
     private static string? BandCodeFor(int? totalScore, IReadOnlyList<ScoreBand> bands) =>

@@ -45,6 +45,12 @@ public partial class CompanionDbContext
             entity.Property(e => e.ProjectedBandCode).HasMaxLength(20).IsUnicode(false);
             entity.Property(e => e.FailureReason).HasMaxLength(24).IsUnicode(false);
             entity.Property(e => e.WrittenByService).HasMaxLength(64).IsUnicode(false);
+
+            // #219 / D5: the two placement signals. JSON text, so they are unconstrained on the EF
+            // side; CK_PSR_TopicPriorsIsJson and CK_PSR_SignalsOnlyWhenMeasured are what make a
+            // malformed or unmeasured pair unstorable.
+            entity.Property(e => e.TopicPriorsJson);
+            entity.Property(e => e.CriterionProfileJson);
             entity.Property(e => e.ProjectionVersion).HasDefaultValue(0);
             entity.Property(e => e.ReusedFromPrior).HasDefaultValue(false);
 
