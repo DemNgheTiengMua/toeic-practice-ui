@@ -84,6 +84,33 @@ public partial class ItemVersion
     [Unicode(false)]
     public string? ReferenceKind { get; set; }
 
+    /// <summary>
+    /// #204: the output demand a written answer is counted against, both ends, or null for an
+    /// objective item.
+    /// <para>
+    /// It lives on the version rather than on the stimulus because a two-part writing task carries a
+    /// range per part (D0.7), and on the version rather than on the deprecated <c>Questions</c> row
+    /// because a pool item is what the sitting renders. Scored: the word meter and the under-length
+    /// penalty both read it, so <c>trg_ItemVersions_ScoredFieldsImmutable</c> refuses an in-place edit.
+    /// </para>
+    /// </summary>
+    public int? MinWords { get; set; }
+
+    public int? MaxWords { get; set; }
+
+    /// <summary>
+    /// #204: planning (writing) or preparation (speaking), in seconds. Null is "no window", which is
+    /// not the same fact as zero and is why the schema's CHECK refuses zero.
+    /// </summary>
+    public int? PrepSeconds { get; set; }
+
+    /// <summary>
+    /// #204: the composition budget (writing) or the recording window (speaking), in seconds. A
+    /// placement speaking task is capped at 60 (D0.2, D0.7); that cap is the studio's rule, not this
+    /// column's, because practice may run as long as the learner needs.
+    /// </summary>
+    public int? ResponseSeconds { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>

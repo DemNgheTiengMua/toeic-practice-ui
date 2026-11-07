@@ -780,6 +780,22 @@ CREATE TABLE ItemVersions (
   ReferenceText  NVARCHAR(1000) NULL,
   ReferenceKind  VARCHAR(12) NULL
     CONSTRAINT CK_ItemVersions_ReferenceKind CHECK (ReferenceKind IN ('script','image_desc')),
+  -- #204: a productive task's output demand and its two timed windows.
+  --
+  -- They live on the version, not on the stimulus, because a writing task may be authored as two
+  -- sub-tasks and each carries its OWN word range and time budget (D0.7's two-task sitting weights
+  -- the extended one twice). A single pair on Stimuli could describe only one of the two.
+  --
+  -- They are scored fields: the sitting renders them and the under-length penalty reads MinWords, so
+  -- an in-place change would rewrite what a past attempt was asked for - the trigger below refuses it.
+  --
+  -- D0.4 states a word range for writing and timed windows for both productive skills, and nothing
+  -- for a speaking task's length: a spoken answer is bounded by its recording window, and a word
+  -- count over a transcript of speech is not an authored demand.
+  MinWords        INT NULL,
+  MaxWords        INT NULL,
+  PrepSeconds     INT NULL,   -- planning (writing) or preparation (speaking)
+  ResponseSeconds INT NULL,   -- composition budget (writing) or recording window (speaking)
   CreatedAt      DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   CONSTRAINT UQ_ItemVersions_Item_Number UNIQUE (ItemId, VersionNumber),
   -- #185: composite target so a version's identity is (version, item). A binding carries both, so
@@ -806,6 +822,17 @@ CREATE TABLE ItemVersions (
   CONSTRAINT CK_ItemVersions_EvidenceSpan CHECK (
        (EvidenceStart IS NULL AND EvidenceEnd IS NULL AND EvidenceUnit IS NULL)
     OR (EvidenceStart >= 0 AND EvidenceEnd > EvidenceStart AND EvidenceUnit IS NOT NULL)
+  ),
+  -- #204: a declared window is a real window. Zero is not "no preparation" - that is NULL - and a
+  -- negative or inverted one is a sitting the learner cannot finish. The pair is checked together
+  -- because a word range with no ceiling is a range nobody can satisfy.
+  CONSTRAINT CK_ItemVersions_WordRange CHECK (
+       (MinWords IS NULL AND MaxWords IS NULL)
+    OR (MinWords IS NOT NULL AND MaxWords IS NOT NULL AND MinWords > 0 AND MaxWords >= MinWords)
+  ),
+  CONSTRAINT CK_ItemVersions_Timing CHECK (
+       (PrepSeconds IS NULL OR PrepSeconds > 0)
+   AND (ResponseSeconds IS NULL OR ResponseSeconds > 0)
   )
 );
 GO
@@ -838,6 +865,12 @@ BEGIN
        OR ISNULL(i.EvidenceQuote, N'') <> ISNULL(d.EvidenceQuote, N'')
        OR ISNULL(i.ReferenceText, N'') <> ISNULL(d.ReferenceText, N'')
        OR ISNULL(i.ReferenceKind, '')  <> ISNULL(d.ReferenceKind, '')
+       -- #204: the productive task's word range and timed windows are what the sitting renders and
+       -- what the under-length penalty reads, so an in-place move rewrites a past attempt.
+       OR ISNULL(i.MinWords,        -1) <> ISNULL(d.MinWords,        -1)
+       OR ISNULL(i.MaxWords,        -1) <> ISNULL(d.MaxWords,        -1)
+       OR ISNULL(i.PrepSeconds,     -1) <> ISNULL(d.PrepSeconds,     -1)
+       OR ISNULL(i.ResponseSeconds, -1) <> ISNULL(d.ResponseSeconds, -1)
   )
     THROW 50048, 'An ItemVersions scored field is immutable; a scored change requires a new version row (copy-on-write, CNT-43).', 1;
 END;

@@ -253,6 +253,12 @@ internal static class PoolImport
     /// Everything a pool write needs, or the reason it cannot be made. The reasons are returned rather
     /// than thrown because a legacy shape that has no pool form is not a broken file - it is a file
     /// whose content the pool cannot hold yet, and the batch records it as a warning and carries on.
+    /// <para>
+    /// #204: <paramref name="subTask"/> is the productive task's own output demand and windows. It is
+    /// a single object rather than four more parameters because it is one fact - "this part is N-M
+    /// words, prepared for P seconds and answered in R" - and it is null for every objective item,
+    /// which is the shape the 2.0.0 upload format writes.
+    /// </para>
     /// </summary>
     internal static bool TryBuildContent(
         TopicCatalog topics,
@@ -269,7 +275,8 @@ internal static class PoolImport
         string? evidenceUnit,
         string? evidenceQuote,
         out PoolContent? content,
-        out string reason)
+        out string reason,
+        ProductiveOutput? subTask = null)
     {
         content = null;
 
@@ -365,9 +372,24 @@ internal static class PoolImport
             evidenceStart,
             evidenceEnd,
             Normalise(evidenceUnit),
-            Normalise(evidenceQuote));
+            Normalise(evidenceQuote),
+            subTask?.MinWords,
+            subTask?.MaxWords,
+            subTask?.PrepSeconds,
+            subTask?.ResponseSeconds);
         return true;
     }
+
+    /// <summary>
+    /// #204: a productive part's output demand and its two timed windows. All four are optional
+    /// individually - a speaking part declares no word range, a writing part no preparation - and
+    /// <see cref="BusinessObjects.ProductiveTaskEnvelope"/> is what judges whether the set is legal.
+    /// </summary>
+    internal sealed record ProductiveOutput(
+        int? MinWords = null,
+        int? MaxWords = null,
+        int? PrepSeconds = null,
+        int? ResponseSeconds = null);
 
     /// <summary>
     /// The stimulus a group's children share: one row per group, never one per child. A passage
@@ -468,6 +490,11 @@ internal static class PoolImport
             EvidenceQuote = content.EvidenceQuote,
             ReferenceText = Normalise(referenceText),
             ReferenceKind = Normalise(referenceKind),
+            // #204: the productive part's own demand and windows.
+            MinWords = content.MinWords,
+            MaxWords = content.MaxWords,
+            PrepSeconds = content.PrepSeconds,
+            ResponseSeconds = content.ResponseSeconds,
         };
 
         return (item, version);
@@ -671,7 +698,17 @@ internal sealed record PoolContent(
     int? EvidenceStart,
     int? EvidenceEnd,
     string? EvidenceUnit,
-    string? EvidenceQuote);
+    string? EvidenceQuote,
+    // #204: a productive task's output demand and its two timed windows. All null for an objective
+    // item, and all four travel into ItemVersions through BuildItem below.
+    int? MinWords = null,
+    int? MaxWords = null,
+    int? PrepSeconds = null,
+    int? ResponseSeconds = null)
+{
+    /// <summary>#204: the productive shape - no key, no options.</summary>
+    public bool IsProductiveTask => KeyLabel is null && OptionA is null;
+}
 
 /// <summary>#189: what a bound paper position carries from the pool, for the exporter to write back.</summary>
 internal sealed record PoolQuestionAnnotation(

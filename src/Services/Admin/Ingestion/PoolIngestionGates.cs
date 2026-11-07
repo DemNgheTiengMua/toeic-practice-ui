@@ -137,6 +137,13 @@ public sealed class PoolIngestionGates(
             : null;
         var audioPath = group.Content?.AudioAsset?.AudioUri;
 
+        // #204: a productive prompt is the stimulus's own copy, and gate two profiles it (and says so:
+        // D0.2's columns for these skills are learner-output demands, not properties of the prompt).
+        var promptCopy = string.Equals(skill, "speaking", StringComparison.Ordinal)
+                         || string.Equals(skill, "writing", StringComparison.Ordinal)
+            ? group.Content?.TextOrTranscript
+            : null;
+
         // ---- gate two, once per stimulus: it profiles the passage or transcript, not a child's stem ----
         var gateTwo = await PoolGateTwo.ReviewContentAsync(
             skill,
@@ -144,7 +151,7 @@ public sealed class PoolIngestionGates(
             stimulusLevel,
             passage,
             transcript,
-            promptCopy: null,
+            promptCopy,
             audioPath,
             transcriber,
             cancellationToken);
@@ -210,6 +217,12 @@ public sealed class PoolIngestionGates(
         }
 
         // ---- gate three per child: two blind solves plus the ablation ----
+        //
+        // #204: a productive task has no key and no options, so gate three has nothing to verify and
+        // must not be run against it. Two blind verifiers handed an empty option list would answer a
+        // distribution over nothing, and the "distinct families" rule would then refuse every task for
+        // a check that was never applicable. The *level* half (gate four) still runs, because a task
+        // makes the same band claim an item does.
         var gateThree = new GateThreeVerifier(
             verifierOne ?? Unavailable("verifier 1"),
             verifierTwo ?? Unavailable("verifier 2"),
@@ -222,6 +235,14 @@ public sealed class PoolIngestionGates(
                 continue;
             }
 
+            if (child.Content.KeyLabel is null)
+            {
+                // The productive shape: no key to verify, so gate three is not applicable rather than
+                // "not run". A task has no options for a blind solver to distribute over, and running
+                // one anyway would report a key error about a key that does not exist.
+                continue;
+            }
+
             var options = new List<GateThreeOption>();
             AddOption(options, "A", child.Content.OptionA);
             AddOption(options, "B", child.Content.OptionB);
@@ -231,7 +252,7 @@ public sealed class PoolIngestionGates(
             var verdict = await gateThree.ReviewAsync(
                 child.AuthorFamily,
                 new GateThreeSolveRequest(child.Stem, passage ?? transcript, options),
-                child.Content.KeyLabel ?? string.Empty,
+                child.Content.KeyLabel,
                 cancellationToken);
 
             refusals[record.Line].AddRange(verdict.Refusals.Select(r => new IngestionRefusal(r.Rule, r.Message)));
@@ -255,7 +276,7 @@ public sealed class PoolIngestionGates(
             refusals[record.Line].AddRange(verdict.Refusals.Select(r => new IngestionRefusal(r.Rule, r.Message)));
         }
 
-        AddToAll(refusals, SpanRefusals(skill, children.Values, passage));
+        AddToAll(refusals, SpanRefusals(skill, children.Values, passage, productiveBundle: children.Values.All(c => c.Content.IsProductiveTask)));
 
         // A bundle is written whole or not at all, so a record of a refused bundle may not be reported
         // accepted: it would name a row the pool does not hold. Each child of the bundle is told, and
@@ -291,7 +312,9 @@ public sealed class PoolIngestionGates(
             ImagePath: group.Content?.ImageUri,
             ImageAlt: group.Content?.ImageAlt,
             DomainContext: group.DomainContext,
-            PromptCopy: null);
+            // #204: a productive task's instruction copy is the stimulus. For reading and listening
+            // this stays null, because there the prompt is the child's stem and not the passage.
+            PromptCopy: promptCopy);
 
         return new BundleVerdict(
             bundle,
@@ -317,8 +340,18 @@ public sealed class PoolIngestionGates(
     private static IEnumerable<IngestionRefusal> SpanRefusals(
         string skill,
         IEnumerable<ResolvedChild> children,
-        string? passage)
+        string? passage,
+        bool productiveBundle = false)
     {
+        // #204: CNT-10 and CNT-12 are rules about evidence spans over a passage or a recording. A
+        // productive task cites nothing - it is one prompt a learner answers - so a span rule over a
+        // set of them would measure absence and report a defect of zero. Named here rather than
+        // filtered at the call site, so the one place that decides "is this a bundle of spans" says so.
+        if (productiveBundle)
+        {
+            return [];
+        }
+
         if (string.Equals(skill, "listening", StringComparison.Ordinal))
         {
             var ordered = children
@@ -466,6 +499,8 @@ public sealed class PoolIngestionGates(
             options.Add((option.Key, option.Text, isCorrect, option.DistractorRationale));
         }
 
+        var productive = item.IsProductiveTask;
+
         var listening = string.Equals(skill, "listening", StringComparison.Ordinal);
         var spanStart = listening ? item.EvidenceSpan?.StartSec : item.EvidenceSpan?.CharStart;
         var spanEnd = listening ? item.EvidenceSpan?.EndSec : item.EvidenceSpan?.CharEnd;
@@ -475,7 +510,12 @@ public sealed class PoolIngestionGates(
         // jump to the evidence and what gate four's overlap rule is computed on. An absent span is not
         // a zero-length one, and gate four would report it as a malformed span rather than as a
         // missing one - so the record is refused here with the rule it actually broke.
-        if (spanStart is null || spanEnd is null)
+        //
+        // #204: a productive task is not a child of a stimulus in that sense. It has no passage to
+        // cite, no evidence to jump to and no sibling to overlap with, so demanding a span would
+        // refuse every task the studio can author. The rule is about evidence spans, and a task has
+        // none.
+        if (!productive && (spanStart is null || spanEnd is null))
         {
             reason =
                 $"the record stores no evidence span. CNT-11 requires every child of a stimulus to carry "
@@ -495,12 +535,18 @@ public sealed class PoolIngestionGates(
                 levelCode: level.Code,
                 placementEligible: item.PlacementEligible ?? false,
                 options,
-                spanStart,
-                spanEnd,
-                spanUnit,
+                // A productive task carries no evidence, so all three of the span's parts are absent
+                // together - passing a unit with a null start would be refused as a half-filled span.
+                productive ? null : spanStart,
+                productive ? null : spanEnd,
+                productive ? null : spanUnit,
                 item.EvidenceSpan?.VerbatimQuote,
                 out var content,
-                out reason))
+                out reason,
+                productive
+                    ? new PoolImport.ProductiveOutput(
+                        item.MinWords, item.MaxWords, item.PrepSeconds, item.ResponseSeconds)
+                    : null))
         {
             return false;
         }
@@ -513,8 +559,8 @@ public sealed class PoolIngestionGates(
             level,
             content!.TopicId,
             content.TopicCode,
-            spanStart.Value,
-            spanEnd.Value,
+            spanStart ?? 0,
+            spanEnd ?? 0,
             spanUnit,
             AuthorFamily(item),
             ordinal);
@@ -567,9 +613,19 @@ public sealed class PoolIngestionGates(
     /// <summary>
     /// The type gate two profiles a stimulus with: its only distinction is <c>sentence_cloze</c> against
     /// everything else, and a stimulus-level reading item that is not a standalone cloze is a passage.
+    /// <para>
+    /// #204: a productive prompt is not profiled at all - D0.2's columns for those skills are
+    /// learner-output demands - so the productive branch of <see cref="PoolGateTwo"/> is chosen and any
+    /// of the skill's own types reaches it.
+    /// </para>
     /// </summary>
-    private static string GroupItemType(string skill) =>
-        string.Equals(skill, "listening", StringComparison.Ordinal) ? "extended_dialogue" : "passage_comprehension";
+    private static string GroupItemType(string skill) => skill switch
+    {
+        "listening" => "extended_dialogue",
+        "speaking" => "argumentative_monologue",
+        "writing" => "persuasive_essay",
+        _ => "passage_comprehension",
+    };
 
     private static void AddOption(List<GateThreeOption> options, string label, string? text)
     {

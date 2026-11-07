@@ -64,6 +64,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAdminExamService, AdminExamService>();
         services.AddScoped<IAdminItemService, AdminItemService>();
         services.AddScoped<IStimulusStudioService, StimulusStudioService>();
+        services.AddScoped<IProductiveStudioService, ProductiveStudioService>();
         services.AddScoped<IAdminCoverageService, AdminCoverageService>();
         services.AddScoped<IExamQuickIngestService, ExamQuickIngestService>();
         services.AddScoped<IQuestionImportService, QuestionImportService>();

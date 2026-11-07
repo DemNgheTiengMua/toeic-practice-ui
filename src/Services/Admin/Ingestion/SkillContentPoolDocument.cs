@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 
 namespace Services;
@@ -87,7 +89,16 @@ public sealed class SkillContentPoolAudio
     public string? AudioUri { get; set; }
 }
 
-/// <summary>One objective item: four options, one key, an explanation and a rationale per option.</summary>
+/// <summary>
+/// One objective item: four options, one key, an explanation and a rationale per option.
+/// <para>
+/// #204: a productive task is the other legal shape - no options, no key - and carries its output
+/// demand and its two timed windows instead. The four extra members are null for an objective item
+/// and are read by <see cref="PoolImport.BuildItem"/>; the 2.0.0 upload format does not declare
+/// them, because a productive task never enters through that door (it needs a rubric, see
+/// <see cref="PoolIngestionService"/>).
+/// </para>
+/// </summary>
 public sealed class SkillContentPoolItem
 {
     /// <summary><c>item_demo_…</c> or <c>item_prod_…</c>.</summary>
@@ -121,11 +132,31 @@ public sealed class SkillContentPoolItem
 
     public SkillContentPoolSpan? EvidenceSpan { get; set; }
 
+    /// <summary>#204: a written answer's declared range, both ends, or null for an objective item.</summary>
+    public int? MinWords { get; set; }
+
+    public int? MaxWords { get; set; }
+
+    /// <summary>#204: planning (writing) or preparation (speaking), in seconds.</summary>
+    public int? PrepSeconds { get; set; }
+
+    /// <summary>#204: composition budget (writing) or recording window (speaking), in seconds.</summary>
+    public int? ResponseSeconds { get; set; }
+
     /// <summary>
     /// The model family that wrote the item. Gate three's three-family rule needs it, and the file is
     /// the only place it can come from - a gate that named the author itself could not check it.
     /// </summary>
     public SkillContentPoolAudit? VerificationAudit { get; set; }
+
+    /// <summary>
+    /// #204: the productive shape - no options at all. Gate one's rules are the multiple-choice
+    /// rules, gate three verifies a key, and gate four's span rule compares evidence; a task has none
+    /// of the three, which is what makes each of them a distinct branch below rather than a
+    /// tolerance.
+    /// </summary>
+    public bool IsProductiveTask =>
+        (Options is null || Options.Count == 0) && string.IsNullOrWhiteSpace(CorrectOption);
 }
 
 public sealed class SkillContentPoolOption
