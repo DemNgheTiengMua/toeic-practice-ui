@@ -40,6 +40,8 @@ INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable, 
    N'The snapshot is derived from the attempt, never written beside it (the confirmed defect).'),
   ('learner_skill_state',    'SkillStateWriter',   'covered',        'LearnerSkillStates',
    N'#211: the one row every screen reads to answer "what is my level". The overall is MIN over measured skills, never a column.'),
+  ('placement_skill_result', 'AttemptEngine',      'covered',        'PlacementSkillResults',
+   N'#212: one row per skill per placement. A registered fact of its own, not a second table under placement_result: CoveredTable names exactly one table, and an unregistered table would be guarded by nothing.'),
   ('attempt_score_and_band', 'AttemptEngine',      'covered',        'ExamAttempts',
    N'TotalScore and BandCode, the two values the snapshot is copied from.'),
   ('topic_capability',       'CapabilityWriter',   'awaiting_table', NULL,
@@ -2282,16 +2284,257 @@ CREATE TABLE PlacementTests (
   -- in-progress placement derives nothing yet and declares neither.
   WrittenByService VARCHAR(64) NULL,
   ProjectionVersion INT NOT NULL CONSTRAINT DF_Placement_ProjectionVersion DEFAULT 0,
+  -- UI-46, replaced in #212: a finished placement names its result band and its total **where it has
+  -- one**. `done ⇒ band AND total` was the constraint that turned the confirmed defect
+  -- (docs/research/placement-free-response-defect.md) into a live crash: a placement carrying a free
+  -- response had no band yet, so the row could not be written at all. The rule that replaces it is
+  -- about measured SKILLS, not about a certificate band, and it lives in
+  -- trg_PlacementTests_CompletionIsEarned below because it reads another table.
+  --
+  -- CompletionFailureReason is the honest second way to finish: PLC-36's "done ⇒ overall present, or a
+  -- completion failure recorded". It is deliberately NOT a fourth PlacementStatus - the sitting is
+  -- still `in_progress` while a productive task is in the AI queue, and that state is carried by the
+  -- per-skill rows' `grading` status, which is the grain the screen needs.
+  CompletionFailureReason VARCHAR(24) NULL
+    CONSTRAINT CK_Placement_CompletionFailure
+    CHECK (CompletionFailureReason IS NULL
+           OR CompletionFailureReason IN ('candidate_skipped','inactivity_timeout','ai_grading_failed')),
   -- M-2: the placement exam must belong to the same certificate (NULL stays legal, MATCH SIMPLE)
   CONSTRAINT FK_Placement_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
   -- UI-3: and must be a placement exam, not a mock
   CONSTRAINT FK_Placement_ExamPurpose FOREIGN KEY (ExamId, CertId, ExamPurpose) REFERENCES Exams(ExamId, CertId, Purpose),
   -- UI-22: the attempt must be this user's own
   CONSTRAINT FK_Placement_AttemptUser FOREIGN KEY (AttemptId, UserId) REFERENCES ExamAttempts(AttemptId, UserId),
-  -- UI-46: a finished placement snapshot names its result band and its total
-  CONSTRAINT CK_Placement_DoneHasResult CHECK (Status <> 'done' OR (ResultBandCode IS NOT NULL AND TotalScore IS NOT NULL AND AttemptId IS NOT NULL)),
-  CONSTRAINT UQ_PlacementTests_Id_User UNIQUE (PlacementId, UserId)
+  -- UI-46 kept, narrowed: a finished placement still traces back to the attempt it was derived from.
+  -- The band and total arms moved to trg_PlacementTests_CompletionIsEarned, because a partial result
+  -- with a recorded failure legitimately has no band.
+  CONSTRAINT CK_Placement_DoneHasAttempt CHECK (Status <> 'done' OR AttemptId IS NOT NULL),
+  CONSTRAINT UQ_PlacementTests_Id_User UNIQUE (PlacementId, UserId),
+  -- #212: the pair the per-skill rows hang off, so a row's CertId is pinned to its placement's and one
+  -- certificate's skill cannot be recorded under another's (the isolation rule carried down every table).
+  CONSTRAINT UQ_PlacementTests_Id_Cert UNIQUE (PlacementId, CertId)
 );
+GO
+-- ============ Domain 9a: the per-skill placement result (#212) ============
+-- One row per skill per placement, and the row is the derived fact: the level, the position inside it,
+-- the continuous coordinate they were read from, the certificate projection computed from that
+-- coordinate, and — the part that is new — WHICH of five outcomes this skill actually had.
+--
+-- **Why a status and not a nullable level.** Before #212 a null CefrLevel meant three different things
+-- at once: the learner skipped this skill, the sitting timed out before it, and its free response is
+-- still in the AI queue. No screen can tell those apart from a null, and the one that tried said
+-- "not measured" to a learner whose writing was simply still being graded. Each of the five outcomes
+-- now has its own status, and the CHECK below ties the measurement columns to it, so "measured with no
+-- level" and "grading with a level" are both unstorable rather than merely unhandled.
+--
+-- **The cut-score version is STORED, and that is the point.** #222 had to resolve a version at read
+-- time because ExamAttempts carries none, and recorded that as a reproducibility risk. A recorded
+-- projection must name the table it was computed from (LVL-13), so ProjectedScore without
+-- CutScoreTableVersion is refused here: a row that says "version 3" and a number computed from version
+-- 4 is the defect this column exists to prevent.
+--
+-- **WrittenByService / ProjectionVersion: registered as its own fact.** It could arguably be "part of
+-- placement_result", but CoveredTable names exactly one table, so folding it in would leave this table
+-- guarded by nothing while the registry claimed coverage of the placement snapshot. It is registered
+-- as `placement_skill_result`, owned by AttemptEngine, with the same trigger idiom.
+--
+-- Deliberately absent: an overall (MIN over the measured rows, computed at read — a stored one is a
+-- second writer, D15), IsPartialResult (derived from the rows), ReusedFromPrior (reuse is #213) and the
+-- topic/criterion JSON (#219). A column that restates what the rows say is a second copy that can
+-- disagree with them.
+CREATE TABLE PlacementSkillResults (
+  PlacementId          INT NOT NULL,
+  SkillId              INT NOT NULL,
+  -- Carried down from the placement so the skill must belong to that same certificate.
+  CertId               INT NOT NULL,
+  -- The five outcomes the SRS distinguishes on screen (PLC-19, PLC-33, PLC-35, LRN-55). `measured`
+  -- and `estimated_from_one_task` are the two that count as a measured skill for completion;
+  -- `exempt_accommodated` is deliberately NOT one (LRN-55 excludes it from the overall).
+  ResultStatus         VARCHAR(24) NOT NULL
+    CONSTRAINT CK_PSR_Status CHECK (ResultStatus IN
+      ('measured','estimated_from_one_task','grading','not_measured','exempt_accommodated')),
+  -- Reportable levels only, the same set LearnerSkillStates allows: a result may say "below A1".
+  CefrLevel            VARCHAR(10) NULL
+    CONSTRAINT CK_PSR_Level CHECK (CefrLevel IS NULL
+      OR CefrLevel IN ('pre_a1','A1','A2','B1','B2','C1','C2')),
+  PositionInBand       INT NULL
+    CONSTRAINT CK_PSR_Position CHECK (PositionInBand IS NULL OR PositionInBand BETWEEN 0 AND 100),
+  ContinuousCoordinate DECIMAL(3,2) NULL
+    CONSTRAINT CK_PSR_Coordinate CHECK (ContinuousCoordinate IS NULL
+      OR ContinuousCoordinate BETWEEN 1.00 AND 6.99),
+  -- The certificate's own scale, read back from the cut-score table (§4.5). Read-only lookup, never
+  -- arithmetic: LVL-12/PRN-03 remove the "TOEIC 785 = B2" conversion, not this projection.
+  ProjectedBandCode    VARCHAR(20) NULL,
+  ProjectedScore       INT NULL,
+  CutScoreTableVersion INT NULL,
+  -- PLC-33 asks for this as its own fact, but it IS the status: two columns stating one thing can
+  -- disagree. The CHECK pins it, the same way CK_LSS_Expiry pins expiry to its measurement.
+  IsEstimatedFromOneTask BIT NOT NULL CONSTRAINT DF_PSR_Estimated DEFAULT 0,
+  -- PLC-28/D15: a non-monotonic result truncates to the highest contiguous pass run, and the anomaly is
+  -- recorded rather than silently accepted.
+  IsTruncated          BIT NOT NULL CONSTRAINT DF_PSR_Truncated DEFAULT 0,
+  -- The three reasons a skill ends up not measured. Null for every other status: "grading" is not a
+  -- failure yet, and saying it failed while the job is queued is the mirror of the defect being fixed.
+  FailureReason        VARCHAR(24) NULL
+    CONSTRAINT CK_PSR_FailureReason CHECK (FailureReason IS NULL
+      OR FailureReason IN ('candidate_skipped','inactivity_timeout','ai_grading_failed')),
+  MeasuredAt           DATETIMEOFFSET NULL,
+  ExpiresAt            DATETIMEOFFSET NULL,
+  WrittenByService     VARCHAR(64) NULL,
+  ProjectionVersion    INT NOT NULL CONSTRAINT DF_PSR_ProjectionVersion DEFAULT 0,
+  CONSTRAINT PK_PlacementSkillResults PRIMARY KEY (PlacementId, SkillId),
+  -- The placement must be this learner's and this certificate's: the pair comes from the placement's
+  -- own unique key, so CertId cannot be invented here.
+  CONSTRAINT FK_PSR_PlacementCert FOREIGN KEY (PlacementId, CertId)
+    REFERENCES PlacementTests(PlacementId, CertId),
+  -- One certificate's skill cannot be recorded under another's (the composite is the isolation rule).
+  CONSTRAINT FK_PSR_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
+  -- THE SHAPE OF EACH STATUS. This is what makes the null level stop standing for three outcomes:
+  -- every status has exactly one legal combination of the measurement columns, so a row that claims
+  -- `measured` without a level, or `grading` with one, cannot be stored.
+  CONSTRAINT CK_PSR_StatusCarriesItsShape CHECK (
+       (ResultStatus IN ('measured','estimated_from_one_task')
+          AND CefrLevel IS NOT NULL AND PositionInBand IS NOT NULL
+          AND ContinuousCoordinate IS NOT NULL AND MeasuredAt IS NOT NULL AND ExpiresAt IS NOT NULL
+          AND FailureReason IS NULL)
+    OR (ResultStatus IN ('grading','not_measured','exempt_accommodated')
+          AND CefrLevel IS NULL AND PositionInBand IS NULL AND ContinuousCoordinate IS NULL
+          AND MeasuredAt IS NULL AND ExpiresAt IS NULL)),
+  -- A failure reason belongs to `not_measured` alone. `grading` with a reason would read as "failed,
+  -- still retrying"; `measured` with one would read as a result that is also a failure.
+  CONSTRAINT CK_PSR_FailureOnlyWhenNotMeasured CHECK (
+       (ResultStatus = 'not_measured' AND FailureReason IS NOT NULL)
+    OR (ResultStatus <> 'not_measured' AND FailureReason IS NULL)),
+  -- The status IS the single-task flag, in one direction only.
+  CONSTRAINT CK_PSR_EstimatedMatchesStatus CHECK (
+    IsEstimatedFromOneTask = CASE WHEN ResultStatus = 'estimated_from_one_task' THEN 1 ELSE 0 END),
+  -- A projection is a triple or nothing. A score with no version is the unreproducible projection
+  -- LVL-13 forbids; a version with no score is a claim that nothing was projected from it.
+  CONSTRAINT CK_PSR_ProjectionIsATriple CHECK (
+       (ProjectedBandCode IS NULL AND ProjectedScore IS NULL AND CutScoreTableVersion IS NULL)
+    OR (ProjectedBandCode IS NOT NULL AND ProjectedScore IS NOT NULL AND CutScoreTableVersion IS NOT NULL
+        AND ResultStatus IN ('measured','estimated_from_one_task'))),
+  -- D18: the same 90-day reuse window as a stored per-skill state, pinned to the measurement so the
+  -- two cannot disagree.
+  CONSTRAINT CK_PSR_Expiry CHECK (
+    (MeasuredAt IS NULL AND ExpiresAt IS NULL)
+    OR (MeasuredAt IS NOT NULL AND ExpiresAt = DATEADD(DAY, 90, MeasuredAt)))
+);
+GO
+-- #212 / D14: the per-skill result has exactly one writer, AttemptEngine — the same service that owns
+-- the certificate-level snapshot, because both are derived from one attempt and a second writer is
+-- what the confirmed defect was made of.
+--
+-- Every insert declares: unlike ExamAttempts there is no sitting-state column to carve out here, and
+-- a `grading` placeholder is still derived (it states that a task is in the AI queue). The predicate
+-- looks at what CHANGED, so the idempotent save EF produces when a tracked row is written twice is
+-- not refused.
+CREATE TRIGGER trg_PlacementSkillResults_SingleWriter
+ON PlacementSkillResults AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @owner VARCHAR(64) =
+    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'placement_skill_result');
+
+  DECLARE @touched TABLE (PlacementId INT NOT NULL, SkillId INT NOT NULL, WasVersion INT NOT NULL,
+                          PRIMARY KEY (PlacementId, SkillId));
+  INSERT INTO @touched (PlacementId, SkillId, WasVersion)
+    SELECT i.PlacementId, i.SkillId, ISNULL(d.ProjectionVersion, 0)
+    FROM inserted i
+    LEFT JOIN deleted d ON d.PlacementId = i.PlacementId AND d.SkillId = i.SkillId
+    WHERE d.SkillId IS NULL
+       OR i.ResultStatus <> d.ResultStatus
+       OR ISNULL(i.CefrLevel, '') <> ISNULL(d.CefrLevel, '')
+       OR ISNULL(i.PositionInBand, -1) <> ISNULL(d.PositionInBand, -1)
+       OR ISNULL(i.ContinuousCoordinate, -1) <> ISNULL(d.ContinuousCoordinate, -1)
+       OR ISNULL(i.ProjectedBandCode, '') <> ISNULL(d.ProjectedBandCode, '')
+       OR ISNULL(i.ProjectedScore, -2147483648) <> ISNULL(d.ProjectedScore, -2147483648)
+       OR ISNULL(i.CutScoreTableVersion, -1) <> ISNULL(d.CutScoreTableVersion, -1)
+       OR i.IsEstimatedFromOneTask <> d.IsEstimatedFromOneTask
+       OR i.IsTruncated <> d.IsTruncated
+       OR ISNULL(i.FailureReason, '') <> ISNULL(d.FailureReason, '')
+       OR ISNULL(i.MeasuredAt, '0001-01-01') <> ISNULL(d.MeasuredAt, '0001-01-01')
+       OR ISNULL(i.ExpiresAt, '0001-01-01') <> ISNULL(d.ExpiresAt, '0001-01-01')
+       OR i.ProjectionVersion <> d.ProjectionVersion;
+
+  IF NOT EXISTS (SELECT 1 FROM @touched)
+    RETURN;
+
+  -- The declaration must be in THIS statement. A column already holding the owner's name vouches for
+  -- nobody: a second writer that changes only CefrLevel leaves WrittenByService untouched, so a
+  -- value-only check passes it. `UPDATE()` is the half that catches it.
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN @touched t ON t.PlacementId = i.PlacementId AND t.SkillId = i.SkillId
+    WHERE ISNULL(i.WrittenByService, '') <> @owner
+       OR (EXISTS (SELECT 1 FROM deleted d
+                   WHERE d.PlacementId = i.PlacementId AND d.SkillId = i.SkillId)
+           AND NOT UPDATE(WrittenByService))
+  )
+    THROW 50076, 'A placement per-skill result has exactly one writer, AttemptEngine. A write declaring another writer (or none) is refused.', 1;
+
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN @touched t ON t.PlacementId = i.PlacementId AND t.SkillId = i.SkillId
+    WHERE i.ProjectionVersion <= t.WasVersion
+  )
+    THROW 50077, 'The per-skill result projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
+END;
+GO
+-- #212 criterion 4: a finished placement requires at least one MEASURED skill, or a recorded
+-- completion failure. PLC-36.
+--
+-- Why a trigger rather than a CHECK: the condition reads PlacementSkillResults, and a CHECK cannot
+-- see another table. There is no CHECK that could express it, so "pick one and justify it" resolves
+-- to the trigger by the shape of the rule, not by preference.
+--
+-- The count is over measured statuses SPECIFICALLY, not over rows. A placement whose four skills are
+-- all `not_measured` has four rows and zero measurements; a guard counting rows would pass it, which
+-- is the input this rule exists to refuse. `exempt_accommodated` is excluded too: LRN-55 excludes an
+-- accommodated skill from the overall, so it is not evidence that anything was measured.
+--
+-- Two triggers, because the fact has two parents: the placement can be marked done before its rows
+-- are written, and a measured row can be rewritten to not_measured after. AttemptEngine writes the
+-- rows first and marks done second (in one transaction), so the first trigger's view is never stale.
+CREATE TRIGGER trg_PlacementTests_CompletionIsEarned
+ON PlacementTests AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    WHERE i.Status = 'done'
+      AND i.CompletionFailureReason IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM PlacementSkillResults r
+        WHERE r.PlacementId = i.PlacementId
+          AND r.ResultStatus IN ('measured','estimated_from_one_task'))
+  )
+    THROW 50078, 'A placement cannot be done without at least one measured skill or a recorded completion failure.', 1;
+END;
+GO
+CREATE TRIGGER trg_PlacementSkillResults_CompletionIsEarned
+ON PlacementSkillResults AFTER INSERT, UPDATE, DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+  -- Only a placement that is ALREADY done can be made dishonest by this write; an in-progress one is
+  -- still assembling. Checking the parent on every skill write keeps the two directions of the rule
+  -- in one place instead of trusting the order the application happens to save in.
+  IF EXISTS (
+    SELECT 1
+    FROM PlacementTests p
+    WHERE p.Status = 'done'
+      AND p.CompletionFailureReason IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM PlacementSkillResults r
+        WHERE r.PlacementId = p.PlacementId
+          AND r.ResultStatus IN ('measured','estimated_from_one_task'))
+      AND (EXISTS (SELECT 1 FROM inserted i WHERE i.PlacementId = p.PlacementId)
+        OR EXISTS (SELECT 1 FROM deleted d WHERE d.PlacementId = p.PlacementId))
+  )
+    THROW 50078, 'A placement cannot be done without at least one measured skill or a recorded completion failure.', 1;
+END;
 GO
 -- UI-46: the snapshot is a copy of the attempt's own result, not a free-standing number —
 -- a placement-result page ("385 out of 990 · L 215 · R 170") must trace back to real scores.

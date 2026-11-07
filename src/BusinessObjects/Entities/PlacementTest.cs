@@ -47,6 +47,24 @@ public partial class PlacementTest
 
     public DateTimeOffset TakenAt { get; set; }
 
+    /// <summary>
+    /// #212 / PLC-36: the second honest way to finish. A placement with no measured skill can be done
+    /// only if the reason is recorded here — the learner skipped, the sitting timed out, or grading
+    /// failed. One of <see cref="PlacementFailureReason"/>.
+    /// </summary>
+    [StringLength(24)]
+    [Unicode(false)]
+    public string? CompletionFailureReason { get; set; }
+
+    /// <summary>
+    /// #212: the per-skill results, one per skill the sitting touched. The placement is done when at
+    /// least one of these is <see cref="PlacementResultStatus.Measured"/> or
+    /// <see cref="PlacementResultStatus.EstimatedFromOneTask"/>, or when
+    /// <see cref="CompletionFailureReason"/> is set.
+    /// </summary>
+    [InverseProperty("Placement")]
+    public virtual ICollection<PlacementSkillResult> SkillResults { get; set; } = new List<PlacementSkillResult>();
+
     [ForeignKey("CertId")]
     [InverseProperty("PlacementTests")]
     public virtual Certificate Cert { get; set; } = null!;

@@ -41,11 +41,12 @@ break the product.
 
 ## Coverage, stated honestly
 
-Seven facts are registered. Four have a table today and are enforced:
+Eight facts are registered. Five have a table today and are enforced:
 
 | Fact | Owner | Table |
 |---|---|---|
 | Placement result | `AttemptEngine` | `PlacementTests` |
+| Placement per-skill result | `AttemptEngine` | `PlacementSkillResults` |
 | Attempt score and band | `AttemptEngine` | `ExamAttempts` |
 | Step closure | `PathStepCompletion` | `LearnerPathSteps` |
 | Learner per-skill state | `SkillStateWriter` | `LearnerSkillStates` |
@@ -56,7 +57,7 @@ is data rather than a missing promise:
 | Fact | Owner | Waiting on |
 |---|---|---|
 | Topic capability | `CapabilityWriter` | #232, per-cell mastery |
-| Window synthesis | `PathWindowSynthesizer` | #212, window rows |
+| Window synthesis | `PathWindowSynthesizer` | the window rows (not #212, which this table claims) |
 
 One is exempt on purpose:
 
@@ -93,3 +94,21 @@ per-write enforcement: the trigger refuses an undeclared write, the column does 
 `prove-guard-skill-state.sh` proves all fifteen guards load-bearing. Writing that script found five
 fixtures that a foreign key or the primary key was refusing before the CHECK under test ran — which is
 why each shape refusal there uses its own learner.
+
+## #212 added the fifth, and it is the placement's per-skill grain
+
+`PlacementSkillResults` is registered as `placement_skill_result`, owned by the same `AttemptEngine`
+that owns the certificate-level snapshot. It could have been argued to be "part of `placement_result`",
+and that would have been wrong for a mechanical reason: `CoveredTable` names exactly one table, so
+folding it in leaves this table guarded by nothing while the registry claims coverage of the placement.
+
+Unlike the other four, **the whole row is the derived fact including its status**, so every insert
+declares — a `grading` placeholder is still a derived statement ("a task is in the AI queue"). The row
+also carries `CutScoreTableVersion`, resolved once by `PlacementResultWriter`, passed to the projection
+and stored on the same row: a projection must be reproducible from the version it names (LVL-13), and
+#222 had to resolve a version at read time precisely because `ExamAttempts` carries none.
+
+Two further triggers express PLC-36's completion rule — `done` requires at least one `measured` or
+`estimated_from_one_task` skill, or a recorded completion failure. A CHECK cannot see another table, so
+this is a trigger by the shape of the rule. `domain37-placement-skill-result.sql` owns both, and the
+five mutations that prove them load-bearing report `RED` rather than `NOT LOAD-BEARING`.

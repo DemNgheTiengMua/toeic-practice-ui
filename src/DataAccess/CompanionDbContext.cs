@@ -200,6 +200,9 @@ public partial class CompanionDbContext : DbContext
     /// <summary>#211: one row per learner per skill — the answer every "what is my level" screen reads.</summary>
     public virtual DbSet<LearnerSkillState> LearnerSkillStates { get; set; }
 
+    /// <summary>#212: one row per skill per placement — which of five outcomes the skill had, and the level.</summary>
+    public virtual DbSet<PlacementSkillResult> PlacementSkillResults { get; set; }
+
 
     public virtual DbSet<Section> Sections { get; set; }
 
@@ -260,6 +263,7 @@ public partial class CompanionDbContext : DbContext
         ConfigureCalibration(modelBuilder);
         ConfigurePractice(modelBuilder);
         ConfigureSkillState(modelBuilder);
+        ConfigurePlacementSkillResults(modelBuilder);
         ConfigureFreeResponse(modelBuilder);
         ConfigureGuidedLearning(modelBuilder);
         ConfigureFinance(modelBuilder);

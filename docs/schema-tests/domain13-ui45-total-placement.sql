@@ -49,15 +49,18 @@ END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   IF ERROR_MESSAGE() NOT LIKE '%snapshot of the attempt%' THROW;
   PRINT 'rejected placement total that disagrees with the attempt'; END CATCH
 BEGIN TRY
-  -- likewise a third attempt, so the refusal is the done-needs-a-result constraint
+  -- likewise a third attempt, so the refusal is the completion guard
   INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt)
     VALUES (@u,@ps,@c,'submitted',DATEADD(HOUR,-1,SYSDATETIMEOFFSET())); DECLARE @pa3 INT=SCOPE_IDENTITY();
   INSERT INTO PlacementTests (UserId,CertId,ExamId,AttemptId,Status,WrittenByService,ProjectionVersion)
     VALUES (@u,@c,@ps,@pa3,'done','AttemptEngine',1);
   THROW 50000,'EXPECT_REJECT FAILED: done placement without a result accepted',1;
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  IF ERROR_MESSAGE() NOT LIKE '%CK_Placement_DoneHasResult%' THROW;
-  PRINT 'rejected done placement without band/total'; END CATCH
+  -- #212 replaced CK_Placement_DoneHasResult ("done needs a band and a total") with the rule that a
+  -- done placement needs one measured skill or a recorded completion failure. Both refuse this row;
+  -- the message names which one, so a future narrowing cannot silently pass.
+  IF ERROR_MESSAGE() NOT LIKE '%without at least one measured skill%' THROW;
+  PRINT 'rejected done placement without a measured skill'; END CATCH
 
 -- UI-44, carried across #232: a mock_section step may open a mock exam and nothing else. Before
 -- #232 this rule lived on PathModuleItems' ai_task rows, which D10 drops; the surviving shape is the

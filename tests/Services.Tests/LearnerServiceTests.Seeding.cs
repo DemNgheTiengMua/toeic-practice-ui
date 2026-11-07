@@ -21,8 +21,21 @@ public sealed partial class LearnerServiceTests
                     DATEADD(MINUTE, 30, CAST('{takenAt}' AS DATETIMEOFFSET)),
                     '{takenAt}', {total}, '{band}', 'AttemptEngine', 1);
             DECLARE @attempt INT = SCOPE_IDENTITY();
-            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ResultBandCode, AttemptId, TotalScore, TakenAt, WrittenByService, ProjectionVersion)
-            VALUES ({userId}, @cert, @exam, 'done', '{band}', @attempt, {total}, '{takenAt}', 'AttemptEngine', 1);
+            -- #212: a done placement needs a measured skill or a recorded completion failure, and the
+            -- per-skill row is what the result screen reads. Rows first, then the move to done.
+            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, AttemptId, TakenAt)
+            VALUES ({userId}, @cert, @exam, 'in_progress', @attempt, '{takenAt}');
+            DECLARE @plc INT = SCOPE_IDENTITY();
+            DECLARE @skill INT = (SELECT TOP 1 SkillId FROM Skills WHERE CertId = @cert);
+            INSERT INTO PlacementSkillResults
+              (PlacementId, SkillId, CertId, ResultStatus, CefrLevel, PositionInBand, ContinuousCoordinate,
+               MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
+            VALUES (@plc, @skill, @cert, 'measured', 'B1', 50, 3.50,
+                    '{takenAt}', DATEADD(DAY, 90, CAST('{takenAt}' AS DATETIMEOFFSET)), 'AttemptEngine', 1);
+            UPDATE PlacementTests
+              SET Status = 'done', ResultBandCode = '{band}', TotalScore = {total},
+                  WrittenByService = 'AttemptEngine', ProjectionVersion = 1
+            WHERE PlacementId = @plc;
             """);
 
     private Task SeedSetTargetBandAsync(int userId, string certCode, string targetBandCode) =>

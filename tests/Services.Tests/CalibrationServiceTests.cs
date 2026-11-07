@@ -73,8 +73,22 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
                       DATEADD(DAY, -10, SYSDATETIMEOFFSET()), 70, '{placedBand}', 'AttemptEngine', 1);
             DECLARE @attempt INT = SCOPE_IDENTITY();
 
-            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ResultBandCode, AttemptId, TotalScore, TakenAt, WrittenByService, ProjectionVersion)
-              VALUES (@user, @cert, @exam, 'done', '{placedBand}', @attempt, 70, DATEADD(DAY, -10, SYSDATETIMEOFFSET()), 'AttemptEngine', 1);
+            -- #212: the placement is created in progress, its per-skill row is written, and only then is
+            -- it marked done. The completion guard reads PlacementSkillResults, so a done INSERT would
+            -- run before any row exists and be refused for the wrong reason.
+            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, AttemptId, TakenAt)
+              VALUES (@user, @cert, @exam, 'in_progress', @attempt, DATEADD(DAY, -10, SYSDATETIMEOFFSET()));
+            DECLARE @plc INT = SCOPE_IDENTITY();
+            DECLARE @measured DATETIMEOFFSET = DATEADD(DAY, -10, SYSDATETIMEOFFSET());
+            INSERT INTO PlacementSkillResults
+              (PlacementId, SkillId, CertId, ResultStatus, CefrLevel, PositionInBand, ContinuousCoordinate,
+               MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
+              VALUES (@plc, @skill, @cert, 'measured', 'B2', 50, 4.50,
+                      @measured, DATEADD(DAY, 90, @measured), 'AttemptEngine', 1);
+            UPDATE PlacementTests
+              SET Status = 'done', ResultBandCode = '{placedBand}', TotalScore = 70,
+                  WrittenByService = 'AttemptEngine', ProjectionVersion = 1
+            WHERE PlacementId = @plc;
 
             -- #232: a path is a coordinate set. The fixture names the skill's own topic and level rather
             -- than pointing at a template's module item.
@@ -339,8 +353,13 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
     {
         var certCode = Unique("CALNEW");
         var (userId, _, sectionId) = await SeedPlacedLearnerAsync(certCode, placedBand: "B2");
-        // Remove the placement: a new learner who has only ever practised.
+        // Remove the placement: a new learner who has only ever practised. The placement is abandoned
+        // first, because a done placement may not lose its measured row (trg_PlacementSkillResults_
+        // CompletionIsEarned), and then the rows go before the parent (FK_PSR_PlacementCert).
         await database.SqlAsync($"""
+            UPDATE PlacementTests SET Status = 'abandoned' WHERE UserId = {userId};
+            DELETE FROM PlacementSkillResults
+              WHERE PlacementId IN (SELECT PlacementId FROM PlacementTests WHERE UserId = {userId});
             DELETE FROM PlacementTests WHERE UserId = {userId};
             DELETE FROM ExamAttempts WHERE UserId = {userId};
             """);
