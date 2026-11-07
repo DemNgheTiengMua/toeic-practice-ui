@@ -47,7 +47,11 @@ public sealed class Tier1PersistenceAndDomainTests(DatabaseFixture database)
             "ExamItems",
             // #211: the per-skill state's single-writer guard. Also exercised through a real save in
             // SkillStateWriterTests for the same reason, and through a raw INSERT in domain34.
-            "LearnerSkillStates"
+            "LearnerSkillStates",
+            // #206: the stratum's single-writer guard, and the sample's blind-solve and batch-scope
+            // guards. Exercised through real saves in StratifiedAuditTests for the same reason.
+            "ReviewStrata",
+            "ReviewSampleItems",
         ];
 
         foreach (var tableName in auditedTables)

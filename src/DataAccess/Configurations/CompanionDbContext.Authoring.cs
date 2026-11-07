@@ -620,5 +620,77 @@ public partial class CompanionDbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__ImportLog__Batch__540C7B00");
         });
+
+        // #206: the stratified audit. HasTrigger: trg_ReviewStrata_SingleWriter refuses a decision that
+        // declares a second writer, and a re-run that rewrites a taken decision. Without this
+        // declaration every save to this table fails on the OUTPUT clause - the defect ADR-0001 and
+        // Tier1PersistenceAndDomainTests exist to catch.
+        modelBuilder.Entity<ReviewStratum>(entity =>
+        {
+            entity.HasKey(e => e.StratumId).HasName("PK_ReviewStrata");
+
+            entity.ToTable(tb => tb.HasTrigger("trg_ReviewStrata_SingleWriter"));
+
+            entity.Property(e => e.CefrLevel)
+                .HasConversion(v => v.Code, v => ParseAuthoredLevel(v))
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.Status).HasDefaultValue("pending");
+            entity.Property(e => e.QuarantineReason).HasMaxLength(24).IsUnicode(false);
+            entity.Property(e => e.WrittenByService).HasMaxLength(64).IsUnicode(false);
+            entity.Property(e => e.ProjectionVersion).HasDefaultValue(0);
+
+            entity.HasIndex(e => new { e.BatchId, e.TopicId, e.CefrLevel }, "UQ_ReviewStrata_Batch_Cell").IsUnique();
+            entity.HasIndex(e => e.BatchId, "IX_ReviewStrata_Batch");
+
+            entity.HasOne(d => d.Batch).WithMany(p => p.Strata)
+                .HasForeignKey(d => d.BatchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ReviewStrata_Batch");
+
+            entity.HasOne(d => d.Topic).WithMany(p => p.ReviewStrata)
+                .HasForeignKey(d => d.TopicId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ReviewStrata_Topic");
+        });
+
+        // HasTrigger: W-01's blind-solve order, and the batch-scope rule that stops a sample pointing at
+        // another author's stock. Both would fail every save on the OUTPUT clause without this.
+        modelBuilder.Entity<ReviewSampleItem>(entity =>
+        {
+            entity.HasKey(e => e.SampleItemId).HasName("PK_ReviewSampleItems");
+
+            entity.ToTable(tb =>
+            {
+                tb.HasTrigger("trg_ReviewSampleItems_SolveIsBlind");
+                tb.HasTrigger("trg_ReviewSampleItems_ItemIsInItsBatch");
+            });
+
+            entity.Property(e => e.SolvedLabel).HasMaxLength(1).IsUnicode(false);
+            entity.Property(e => e.Verdict).HasMaxLength(20).IsUnicode(false);
+
+            entity.HasIndex(e => new { e.StratumId, e.ItemId }, "UQ_ReviewSampleItems_Stratum_Item").IsUnique();
+            entity.HasIndex(e => e.StratumId, "IX_ReviewSampleItems_Stratum");
+
+            // The stratum is pinned by (id, batch) rather than id alone, so a sample cannot name a
+            // stratum of one batch and an item of another. EF cannot infer the two-column shape.
+            entity.HasOne(d => d.Stratum).WithMany(p => p.SampleItems)
+                .HasPrincipalKey(p => new { p.StratumId, p.BatchId })
+                .HasForeignKey(d => new { d.StratumId, d.BatchId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ReviewSampleItems_Stratum");
+
+            entity.HasOne(d => d.Item).WithMany(p => p.ReviewSampleItems)
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ReviewSampleItems_Item");
+
+            // The version must be the item's own: the same composite target ExamItems pins.
+            entity.HasOne(d => d.ItemVersion).WithMany(p => p.ReviewSampleItems)
+                .HasPrincipalKey(p => new { p.ItemVersionId, p.ItemId })
+                .HasForeignKey(d => new { d.ItemVersionId, d.ItemId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ReviewSampleItems_VersionItem");
+        });
     }
 }

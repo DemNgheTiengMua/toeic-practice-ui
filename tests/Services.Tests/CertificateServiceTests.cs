@@ -112,7 +112,10 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // fact), trg_PlacementTests_CompletionIsEarned and trg_PlacementSkillResults_CompletionIsEarned
         // (PLC-36's "done needs a measured skill or a recorded failure", which reads another table and so
         // cannot be a CHECK).
-        Assert.Equal(54, triggerCount);
+        // #206: three more, 54 -> 57 - trg_ReviewStrata_SingleWriter (the sixth covered derived fact,
+        // W-01's blind-solve order on ReviewSampleItems, and the batch-scope rule that stops a stratum
+        // sampling another author's stock).
+        Assert.Equal(57, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
@@ -143,6 +146,12 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
                      // activate an item before these existed.
                      "trg_Exams_TriageCannotWrite",
                      "trg_Items_TriageCannotWrite",
+                     // #206: the three the stratified audit adds. The first is the sixth covered
+                     // derived fact; the other two close the blind-solve order and the batch scope at
+                     // the database, for writes the service does not make.
+                     "trg_ReviewStrata_SingleWriter",
+                     "trg_ReviewSampleItems_SolveIsBlind",
+                     "trg_ReviewSampleItems_ItemIsInItsBatch",
                  })
         {
             var present = await db.Database

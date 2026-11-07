@@ -11,7 +11,7 @@ SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 --   2. a trigger refusing a write that declares a different writer
 --   3. a monotonic ProjectionVersion, so a stale out-of-order callback cannot overwrite a newer result
 --
--- The registry names all eight facts, including the two whose table does not exist yet. A row that
+-- The registry names all nine facts, including the two whose table does not exist yet. A row that
 -- claims coverage it does not have is this ticket's worst failure mode, so section 1 counts the
 -- covered/awaiting/exempt split instead of trusting the prose.
 --
@@ -24,10 +24,10 @@ SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 DECLARE @msg NVARCHAR(2048);
 
 -- ---------------------------------------------------------------------------------------------
--- 1. the registry: eight facts, eight owners, and an honest coverage count
+-- 1. the registry: nine facts, nine owners, and an honest coverage count
 -- ---------------------------------------------------------------------------------------------
-IF (SELECT COUNT(*) FROM DerivedFactOwners) <> 8
-  THROW 50000, 'EXPECT_REJECT FAILED: the registry does not name eight derived facts', 1;
+IF (SELECT COUNT(*) FROM DerivedFactOwners) <> 9
+  THROW 50000, 'EXPECT_REJECT FAILED: the registry does not name nine derived facts', 1;
 
 DECLARE @expected TABLE (FactCode VARCHAR(32) NOT NULL PRIMARY KEY, Coverage VARCHAR(16) NOT NULL);
 INSERT INTO @expected (FactCode, Coverage) VALUES
@@ -35,6 +35,7 @@ INSERT INTO @expected (FactCode, Coverage) VALUES
   ('placement_skill_result', 'covered'),
   ('learner_skill_state',   'covered'),
   ('attempt_score_and_band', 'covered'),
+  ('stratum_decision',      'covered'),
   ('topic_capability',      'awaiting_table'),
   ('step_closure',          'covered'),
   ('window_synthesis',      'awaiting_table'),
@@ -46,7 +47,7 @@ IF EXISTS (
   FULL OUTER JOIN DerivedFactOwners o ON o.FactCode = e.FactCode
   WHERE e.FactCode IS NULL OR o.FactCode IS NULL OR o.Coverage <> e.Coverage
 )
-  THROW 50000, 'EXPECT_REJECT FAILED: the registry does not name the eight facts with their real coverage', 1;
+  THROW 50000, 'EXPECT_REJECT FAILED: the registry does not name the nine facts with their real coverage', 1;
 
 IF EXISTS (SELECT 1 FROM DerivedFactOwners WHERE OwningService IS NULL)
   THROW 50000, 'EXPECT_REJECT FAILED: a derived fact has no owning service named', 1;
@@ -56,16 +57,17 @@ IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered' AND Covere
   THROW 50000, 'EXPECT_REJECT FAILED: a fact claims coverage but names no table, so its guard protects nothing', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage <> 'covered' AND CoveredTable IS NOT NULL) <> 0
   THROW 50000, 'EXPECT_REJECT FAILED: a fact that is not covered names a table, which overstates the mechanism', 1;
--- #211 narrowed this from three to four and #212 added a fifth; it is now 5/2/1: creating LearnerSkillStates and
--- out of `awaiting_table`, which is the only direction this split may ever move. The three per-fact
--- counts are asserted separately, not just the total, so a swap that kept the sum would still fail.
-IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 5
-  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the four tables that exist today (#211 added the per-skill state)', 1;
+-- #211 narrowed this from three to four, #212 added a fifth and #206 a sixth; it is now 6/2/1:
+-- creating a table and moving it out of `awaiting_table` is the only direction this split may ever
+-- move. The three per-fact counts are asserted separately, not just the total, so a swap that kept the
+-- sum would still fail.
+IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 6
+  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the six tables that exist today (#206 added the stratum decision)', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'awaiting_table') <> 2
   THROW 50000, 'EXPECT_REJECT FAILED: the awaiting-table set is not the two facts whose table no ticket has created yet', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'exempt') <> 1
   THROW 50000, 'EXPECT_REJECT FAILED: the exempt set is not the one fact that already carries its own guard', 1;
-PRINT 'the registry names eight facts: five covered now, two awaiting a table, one exempt';
+PRINT 'the registry names nine facts: six covered now, two awaiting a table, one exempt';
 
 BEGIN TRY
   INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable)
@@ -496,8 +498,8 @@ DECLARE @covered TABLE (TableName SYSNAME NOT NULL PRIMARY KEY);
 INSERT INTO @covered (TableName)
   SELECT CoveredTable FROM DerivedFactOwners WHERE Coverage = 'covered';
 
-IF (SELECT COUNT(*) FROM @covered) <> 5
-  THROW 50000, 'EXPECT_REJECT FAILED: the covered table set is not the four this schema ships (#211 added LearnerSkillStates)', 1;
+IF (SELECT COUNT(*) FROM @covered) <> 6
+  THROW 50000, 'EXPECT_REJECT FAILED: the covered table set is not the six this schema ships (#206 added ReviewStrata)', 1;
 
 DECLARE @t SYSNAME, @missing INT = 0;
 DECLARE tbl CURSOR LOCAL FAST_FORWARD FOR SELECT TableName FROM @covered;
@@ -522,8 +524,8 @@ BEGIN
   FETCH NEXT FROM tbl INTO @t;
 END
 CLOSE tbl; DEALLOCATE tbl;
-IF @missing <> 5
-  THROW 50000, 'EXPECT_REJECT FAILED: the column audit did not visit the four covered tables', 1;
+IF @missing <> 6
+  THROW 50000, 'EXPECT_REJECT FAILED: the column audit did not visit the six covered tables', 1;
 PRINT 'every covered table carries a writer column and a projection version';
 
-PRINT '#191/#212: eight facts registered, five enforced today, and each guard refuses a valid write by the wrong writer';
+PRINT '#191/#212/#206: nine facts registered, six enforced today, and each guard refuses a valid write by the wrong writer';
