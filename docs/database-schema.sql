@@ -1862,10 +1862,33 @@ GO
 -- modality. That is what reconciles "one canonical four" with certificate-scoped Skills: the FK keeps
 -- each criterion inside its own certificate, and the lock compares that certificate's own four codes
 -- against the set its modality prescribes. No certificate can borrow another's criteria.
+--
+-- #208: the ladder's verdict travels on the lock row, because "this rubric was calibrated" is a fact
+-- about this lock and nothing else - the lock is one row per skill, so three columns are the whole
+-- relationship and a second table would be a join to fetch one word.
+--
+-- Why the verdict is STORED rather than checked in the trigger: the ladder grades seven responses
+-- through a model, and a trigger cannot call one. What the trigger can do is refuse to believe a claim
+-- nobody made - `LadderOutcome IS NULL` is "the ladder did not run", which is exactly the state a
+-- rubric with all 28 cells was in before this ticket.
+--
+-- The four outcome codes are the ladder's own outcomes (Services.RubricCalibrationOutcome), not a
+-- second vocabulary: 'accepted', 'not_monotonic', 'separation', 'trap_ceiling', 'not_plotted'.
 CREATE TABLE GradingRubricLocks (
   SkillId     INT NOT NULL,
   CertId      INT NOT NULL,
   LockedAt    DATETIMEOFFSET NOT NULL CONSTRAINT DF_GradingRubricLocks_LockedAt DEFAULT SYSDATETIMEOFFSET(),
+  -- NULL = not run. Never a pass: the trigger below refuses it by name.
+  LadderOutcome VARCHAR(20) NULL
+    CONSTRAINT CK_GRL_LadderOutcome CHECK (LadderOutcome IS NULL OR LadderOutcome IN
+      ('accepted','not_monotonic','separation','trap_ceiling','not_plotted')),
+  -- The runner's own sentence, which names the criterion a flat segment stalled on. Stored rather
+  -- than rebuilt so the trigger cannot invent a different diagnosis from the one the author saw.
+  LadderReason  NVARCHAR(400) NULL,
+  LadderRunAt   DATETIMEOFFSET NULL,
+  -- A verdict and the moment it was reached travel together or not at all.
+  CONSTRAINT CK_GRL_LadderRunIsDated
+    CHECK ((LadderOutcome IS NULL AND LadderRunAt IS NULL) OR (LadderOutcome IS NOT NULL AND LadderRunAt IS NOT NULL)),
   CONSTRAINT PK_GradingRubricLocks PRIMARY KEY (SkillId),
   CONSTRAINT FK_GradingRubricLocks_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId)
 );
@@ -1946,6 +1969,37 @@ BEGIN
     DECLARE @msg NVARCHAR(400) = N'A rubric cannot be locked while criterion ' + @code
       + N' is missing a descriptor. Missing bands (0-6): ' + @missing + N'.';
     THROW 50046, @msg, 1;
+  END
+
+  -- #208: the 28 cells are the rubric's SHAPE; the ladder is the proof that the cells describe
+  -- something that separates. Before this clause a complete grid could lock while the ladder had
+  -- never run - `LadderNotPlotted` exists precisely to name that state, and it was the state of
+  -- every lock in the schema. A lock claims the rubric is calibrated, so the claim has to carry its
+  -- evidence.
+  --
+  -- FOUR messages, not one: the three failures are three different rewrites (move a band's
+  -- descriptors, widen them, cap the length-rewarding criterion) and "the rubric was not calibrated"
+  -- sends the author nowhere. The sentence is the runner's own, so the criterion it names is the one
+  -- the author will see again when they re-run.
+  IF EXISTS (SELECT 1 FROM inserted i
+              WHERE i.LadderOutcome IS NULL OR i.LadderOutcome <> 'accepted')
+  BEGIN
+    DECLARE @outcome VARCHAR(20) = (SELECT TOP 1 LadderOutcome FROM inserted
+                                     WHERE LadderOutcome IS NULL OR LadderOutcome <> 'accepted');
+    DECLARE @reason NVARCHAR(400) = (SELECT TOP 1 LadderReason FROM inserted
+                                      WHERE LadderOutcome IS NULL OR LadderOutcome <> 'accepted');
+
+    IF @outcome IS NULL OR @outcome = 'not_plotted'
+      THROW 50091, N'A rubric cannot be locked until its seven-response ladder has been run and passed. The ladder was not plotted: no verdict is recorded for this lock, and a rubric nobody calibrated is a cell grid with no evidence that its bands separate.', 1;
+
+    IF @outcome = 'not_monotonic'
+      THROW 50092, N'A rubric cannot be locked: the ladder is not strictly monotonic, so a higher band scored no better than the one below it (gate4.ladder.monotonic). The runner named the criterion that stalled; rewrite that criterion''s descriptors between the two bands it names.', 1;
+
+    IF @outcome = 'separation'
+      THROW 50093, N'A rubric cannot be locked: adjacent bands are closer than the ladder''s minimum separation (gate4.ladder.separation). The runner named the criterion that moved least across the step; widen that criterion''s descriptors before locking.', 1;
+
+    IF @outcome = 'trap_ceiling'
+      THROW 50094, N'A rubric cannot be locked: the verbose trap scored above the ladder''s ceiling (gate4.ladder.trap). The rubric rewards length. Cap the criterion the trap climbed on, or require evidence the padding does not contain, then re-run the ladder.', 1;
   END
 END;
 GO

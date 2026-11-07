@@ -97,7 +97,8 @@ IF (SELECT COUNT(*) FROM GradingCriterionDescriptors d JOIN GradingCriteria c ON
      WHERE c.CertId=@c AND c.SkillId=@wr) <> 28
   THROW 50000,'EXPECT_REJECT FAILED: the grid is not 28 rows',1;
 
-INSERT INTO GradingRubricLocks (SkillId,CertId) VALUES (@wr,@c);
+INSERT INTO GradingRubricLocks (SkillId,CertId,LadderOutcome,LadderReason,LadderRunAt)
+  VALUES (@wr,@c,'accepted',N'The ladder separated every adjacent band.',SYSDATETIMEOFFSET());
   EXEC ExpectFixtureRows N'domain28-anchors.sql: the lock row';
 PRINT 'locked the rubric with anchors on three of its four criteria';
 

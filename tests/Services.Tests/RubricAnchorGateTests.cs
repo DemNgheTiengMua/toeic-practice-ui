@@ -127,7 +127,7 @@ public sealed class RubricAnchorGateTests(DatabaseFixture database)
         var certCode = Unique("AN01");
         var (_, skillId, examId, questionId, criterionIds) = await SeedAsync(certCode, CanonicalWriting);
         await database.SqlAsync(
-            $"INSERT INTO GradingRubricLocks (SkillId, CertId) SELECT {skillId}, CertId FROM Skills WHERE SkillId = {skillId};");
+            $"INSERT INTO GradingRubricLocks (SkillId, CertId, LadderOutcome, LadderReason, LadderRunAt) SELECT {skillId}, CertId, 'accepted', N'The ladder separated every band (#208 fixture).', SYSDATETIMEOFFSET() FROM Skills WHERE SkillId = {skillId};");
         var userId = await SeedLearnerAsync(certCode);
         var attemptId = await SubmitAsync(userId, examId, questionId, "A short but real answer to the task.");
 
@@ -162,7 +162,7 @@ public sealed class RubricAnchorGateTests(DatabaseFixture database)
         var (_, skillId, examId, questionId, criterionIds) = await SeedAsync(certCode, CanonicalWriting);
         await database.SqlAsync($"""
             DELETE FROM GradingCriterionAnchors WHERE CriterionId = {criterionIds[3]};
-            INSERT INTO GradingRubricLocks (SkillId, CertId) SELECT {skillId}, CertId FROM Skills WHERE SkillId = {skillId};
+            INSERT INTO GradingRubricLocks (SkillId, CertId, LadderOutcome, LadderReason, LadderRunAt) SELECT {skillId}, CertId, 'accepted', N'The ladder separated every band (#208 fixture).', SYSDATETIMEOFFSET() FROM Skills WHERE SkillId = {skillId};
             """);
         var userId = await SeedLearnerAsync(certCode);
         var attemptId = await SubmitAsync(userId, examId, questionId, "A short but real answer to the task.");
@@ -197,7 +197,7 @@ public sealed class RubricAnchorGateTests(DatabaseFixture database)
         await database.SqlAsync(
             $"DELETE FROM GradingCriterionAnchors WHERE CriterionId = {criterionIds[0]} AND Band = 3;");
         await database.SqlAsync(
-            $"INSERT INTO GradingRubricLocks (SkillId, CertId) SELECT {skillId}, CertId FROM Skills WHERE SkillId = {skillId};");
+            $"INSERT INTO GradingRubricLocks (SkillId, CertId, LadderOutcome, LadderReason, LadderRunAt) SELECT {skillId}, CertId, 'accepted', N'The ladder separated every band (#208 fixture).', SYSDATETIMEOFFSET() FROM Skills WHERE SkillId = {skillId};");
         var userId = await SeedLearnerAsync(certCode);
         var attemptId = await SubmitAsync(userId, examId, questionId, "A short but real answer to the task.");
 

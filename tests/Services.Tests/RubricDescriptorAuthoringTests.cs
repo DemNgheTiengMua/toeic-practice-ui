@@ -132,7 +132,7 @@ public sealed class RubricDescriptorAuthoringTests(DatabaseFixture database)
         }
 
         // The lock door accepts: exactly four canonical codes, seven bands each.
-        db.GradingRubricLocks.Add(new GradingRubricLock { SkillId = skillId, CertId = saved.CertId });
+        db.GradingRubricLocks.Add(Locked(skillId, saved.CertId));
         await db.SaveChangesAsync();
 
         await using var check = DbContextFactory.Create(database.ConnectionString);
@@ -164,7 +164,7 @@ public sealed class RubricDescriptorAuthoringTests(DatabaseFixture database)
         await db.Database.ExecuteSqlRawAsync(
             "DELETE FROM GradingCriterionDescriptors WHERE CriterionId = {0} AND Band = 6", target);
 
-        db.GradingRubricLocks.Add(new GradingRubricLock { SkillId = skillId, CertId = saved.CertId });
+        db.GradingRubricLocks.Add(Locked(skillId, saved.CertId));
         var error = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
         Assert.Contains("W_GR", Flatten(error), StringComparison.Ordinal);
     }
@@ -194,6 +194,21 @@ public sealed class RubricDescriptorAuthoringTests(DatabaseFixture database)
         await using var check = DbContextFactory.Create(database.ConnectionString);
         Assert.Equal(7, await check.GradingCriterionDescriptors.CountAsync(d => d.CriterionId == criterionId));
     }
+
+    /// <summary>
+    /// #208: a lock now carries the ladder's verdict, and the lock trigger refuses a row that declares
+    /// none. These tests are about the grid and the anchors, not about calibration, so they declare the
+    /// verdict the ladder would have written. The verdict is NOT a bypass: domain39 proves the trigger's
+    /// four refusals, and RubricStudioTests drives the real ladder through the real service.
+    /// </summary>
+    private static GradingRubricLock Locked(int skillId, int certId) => new()
+    {
+        SkillId = skillId,
+        CertId = certId,
+        LadderOutcome = "accepted",
+        LadderReason = "The ladder separated every adjacent band (#208 fixture).",
+        LadderRunAt = DateTimeOffset.UtcNow,
+    };
 
     /// <summary>EF wraps a THROW in a chain of exceptions; the trigger's message is at the bottom.</summary>
     private static string Flatten(Exception e)
@@ -330,7 +345,7 @@ public sealed class RubricDescriptorAuthoringTests(DatabaseFixture database)
                 CanonicalWriting.Select((c, i) => Criterion("WRIT", c, i + 1, Grid())).ToList()));
 
         var skillId = await db.Skills.Where(s => s.Cert.Code == certCode).Select(s => s.SkillId).SingleAsync();
-        db.GradingRubricLocks.Add(new GradingRubricLock { SkillId = skillId, CertId = saved.CertId });
+        db.GradingRubricLocks.Add(Locked(skillId, saved.CertId));
         await db.SaveChangesAsync();
 
         var criterionId = await db.GradingCriteria
