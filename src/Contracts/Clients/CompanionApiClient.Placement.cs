@@ -5,6 +5,12 @@ public sealed partial class CompanionApiClient
     public Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<PlacementCatalogViewDto>("api/learner/placement", bearerToken, cancellationToken);
 
+    public Task<PlacementPreflightViewDto> GetPlacementGateAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<PlacementPreflightViewDto>("api/learner/placement/preflight", bearerToken, cancellationToken);
+
+    public Task<PlacementPreflightViewDto> GetPlacementGateAsync(CancellationToken cancellationToken = default) =>
+        GetPlacementGateAsync(string.Empty, cancellationToken);
+
     public Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<StartPlacementTestRequest, PlacementTestInfoDto>("api/learner/placement/start", request, bearerToken, cancellationToken);
 

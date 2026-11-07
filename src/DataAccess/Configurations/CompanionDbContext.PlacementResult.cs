@@ -46,6 +46,7 @@ public partial class CompanionDbContext
             entity.Property(e => e.FailureReason).HasMaxLength(24).IsUnicode(false);
             entity.Property(e => e.WrittenByService).HasMaxLength(64).IsUnicode(false);
             entity.Property(e => e.ProjectionVersion).HasDefaultValue(0);
+            entity.Property(e => e.ReusedFromPrior).HasDefaultValue(false);
 
             // The composite pins the row to its placement's certificate, so one certificate's skill
             // cannot be recorded under another's.

@@ -11,12 +11,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Services;
 
-public sealed class PlacementService(
+public sealed partial class PlacementService(
     CompanionDbContext db,
     ILearnerService learners,
-    IAttemptEngine? attemptEngine = null) : IPlacementService
+    IAttemptEngine? attemptEngine = null,
+    TimeProvider? clock = null) : IPlacementService
 {
     private readonly IAttemptEngine _attemptEngine = attemptEngine ?? new AttemptEngine(db);
+
+    /// <summary>#213: the cooldown is a wall-clock rule, so the clock is injected rather than assumed.</summary>
+    private readonly TimeProvider _clock = clock ?? TimeProvider.System;
 
     private static PlacementException MapPlacementException(AttemptEngineException ex) => ex.Code switch
     {
@@ -105,6 +109,21 @@ public sealed class PlacementService(
 
     public async Task<PlacementTestInfo> StartPlacementTestAsync(int userId, int examId, CancellationToken cancellationToken = default)
     {
+        return await StartPlacementInternalAsync(userId, examId, PlacementReuseChoice.Remeasure, cancellationToken);
+    }
+
+    public async Task<PlacementTestInfo> StartPlacementTestAsync(
+        int userId, int examId, PlacementReuseChoice reuse, CancellationToken cancellationToken = default)
+    {
+        return await StartPlacementInternalAsync(userId, examId, reuse, cancellationToken);
+    }
+
+    private async Task<PlacementTestInfo> StartPlacementInternalAsync(
+        int userId,
+        int examId,
+        PlacementReuseChoice reuse,
+        CancellationToken cancellationToken)
+    {
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
         var exam = await db.Exams
             .Where(e => e.ExamId == examId && e.CertId == certId && e.Purpose == ExamPurpose.Placement.ToCode() && e.Status == ExamStatus.Published.ToCode() && !e.IsDeleted)
@@ -141,6 +160,12 @@ public sealed class PlacementService(
             }
         }
 
+        // #213 / PLC-07: the retake cooldown. It reads the most recent FINISHED sitting and nothing else,
+        // so there is no lifetime cap anywhere in this rule. A resume of the sitting already in progress
+        // returned above and is never refused by it - a cooldown that blocked a resume would strand a
+        // learner halfway through a paper.
+        await EnsureCooldownElapsedAsync(userId, certId, cancellationToken);
+
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
 
         // Abandon any other in-progress placement test for this certificate and its linked attempt
@@ -170,6 +195,8 @@ public sealed class PlacementService(
             TakenAt = attempt.StartedAt,
             TotalScore = null,
             ResultBandCode = null,
+            // The choice lives on the sitting; the result writer reads it per skill.
+            ReusesPriorResults = reuse == PlacementReuseChoice.ReuseValid,
         };
 
         db.PlacementTests.Add(placement);

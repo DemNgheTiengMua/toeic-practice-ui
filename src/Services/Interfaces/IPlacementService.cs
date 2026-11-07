@@ -12,6 +12,20 @@ public interface IPlacementService
 
     Task<PlacementTestInfo> StartPlacementTestAsync(int userId, int examId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// #213 / story 52: the learner's answer to the preflight's one question — carry over the skills
+    /// whose stored result is still valid, or measure everything again. The choice is theirs, not the
+    /// system's, so it is a parameter rather than a policy.
+    /// </summary>
+    Task<PlacementTestInfo> StartPlacementTestAsync(
+        int userId, int examId, PlacementReuseChoice reuse, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #213 / SCR-PL-01: what the placement will measure, what may be carried over, and whether a
+    /// retake is allowed yet. Reads no credit balance — placement is free.
+    /// </summary>
+    Task<PlacementPreflightView> GetPreflightAsync(int userId, CancellationToken cancellationToken = default);
+
     Task<PreflightStatusView> GetPlacementPreflightStatusAsync(int userId, int placementId, CancellationToken cancellationToken = default);
 
     Task<PlacementTakeView> GetPlacementTakeAsync(int userId, int placementId, int? questionDisplayOrder, CancellationToken cancellationToken = default);

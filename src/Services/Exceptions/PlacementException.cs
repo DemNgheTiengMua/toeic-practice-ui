@@ -13,6 +13,9 @@ public class PlacementException(string code, string message) : Exception(message
     public const string InvalidOption = "invalid_option";
     public const string TargetBandInvalid = "target_band_invalid";
 
+    /// <summary>#213 / PLC-07: a retake inside the 24-hour cooldown. Never a lifetime cap.</summary>
+    public const string PlacementCooldown = "placement_cooldown";
+
     /// <summary>#153: the declared pace is above the 25 h/week ceiling the spec allows any plan.</summary>
     public const string WeeklyHoursTooHigh = "weekly_hours_too_high";
 

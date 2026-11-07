@@ -721,6 +721,73 @@ public sealed class PlacementControllerTests
         Assert.Equal("Please select a target level.", controller.TempData["ErrorMessage"]);
     }
 
+    [Fact]
+    public async Task Preflight_returns_the_gate_with_its_offers_and_cooldown()
+    {
+        var api = new TestApiClient
+        {
+            PlacementGate = Gate(startable: true, offers:
+            [
+                new PlacementSkillOfferDto(1, "LIST", "Listening", "listening", false, true, "B1", 42,
+                    DateTimeOffset.UtcNow.AddDays(-5), DateTimeOffset.UtcNow.AddDays(85), true, false),
+                new PlacementSkillOfferDto(2, "READ", "Reading", "reading", false, false, null, null, null, null, false, false)
+            ])
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Preflight(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<PlacementPreflightPageViewModel>(viewResult.Model);
+        Assert.True(model.CanStart);
+        Assert.Equal(2, model.Gate.Offers.Count);
+        Assert.Equal("B1 (42/100)", model.LevelAndPosition(model.Gate.Offers[0]));
+        Assert.Equal("Not measured", model.LevelAndPosition(model.Gate.Offers[1]));
+    }
+
+    /// <summary>
+    /// The cooldown refusal reaches the learner as an error on the placement page, not a 500. The detail
+    /// says when the retake opens, which is what makes a refusal a wait rather than a wall.
+    /// </summary>
+    [Fact]
+    public async Task Start_when_the_cooldown_has_not_elapsed_returns_to_Index_with_the_reason()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.PlacementCooldown,
+                "A placement can be retaken every 24 hours; this one opens tomorrow.", 429,
+                "A placement can be retaken every 24 hours; this one opens tomorrow.")
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Start(1, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(PlacementController.Index), redirect.ActionName);
+        Assert.Contains("24 hours", controller.TempData["ErrorMessage"] as string);
+    }
+
+    /// <summary>A gate that is not startable renders no start form, so the refusal cannot be clicked past.</summary>
+    [Fact]
+    public async Task Preflight_inside_the_cooldown_offers_no_start()
+    {
+        var api = new TestApiClient
+        {
+            PlacementGate = Gate(startable: false, offers: []) with { CooldownUntil = DateTimeOffset.UtcNow.AddHours(6) }
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Preflight(CancellationToken.None);
+
+        var model = Assert.IsType<PlacementPreflightPageViewModel>(
+            Assert.IsType<ViewResult>(result).Model);
+        Assert.False(model.CanStart);
+        Assert.NotNull(model.Gate.CooldownUntil);
+    }
+
+    private static PlacementPreflightViewDto Gate(bool startable, List<PlacementSkillOfferDto> offers) =>
+        new(1, "TOEIC", 10, offers, null, false, offers.Any(o => o.CanReuse), startable, false, offers.Any(o => o.RequiresAudio));
+
     private static PlacementController CreateController(TestApiClient api)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(7, "learner@test.local", Roles.Learner, "Learner"), "Cookies");
@@ -797,6 +864,14 @@ public sealed class PlacementControllerTests
 
         public Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PlacementCatalogViewDto>(ExceptionToThrow) : Task.FromResult(PlacementCatalog!);
+
+        /// <summary>#213: the preflight read. Null here means the fake was not told what to answer.</summary>
+        public PlacementPreflightViewDto? PlacementGate { get; set; }
+
+        public Task<PlacementPreflightViewDto> GetPlacementGateAsync(CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null
+                ? Task.FromException<PlacementPreflightViewDto>(ExceptionToThrow)
+                : Task.FromResult(PlacementGate!);
 
         public Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PlacementTestInfoDto>(ExceptionToThrow) : Task.FromResult(StartPlacementResponse!);
