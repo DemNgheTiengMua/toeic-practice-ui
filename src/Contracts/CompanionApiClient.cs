@@ -42,6 +42,7 @@ public interface ICompanionApiClient :
     IStimulusStudioClient,
     IProductiveStudioClient,
     IAdminCoverageClient,
+    IAdminIngestionClient,
     IAdminImportsClient,
     IAdminLessonsClient,
     IAdminCertificatesClient

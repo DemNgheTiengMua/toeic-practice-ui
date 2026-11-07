@@ -30,9 +30,21 @@ internal static class PoolImport
     /// An imported item is demo and draft, the schema's own defaults. Import must not mint production
     /// stock: INV-6 keeps it out of a paid paper until a review gate promotes it, and a flag a caller
     /// could set is how unreviewed content goes on sale.
+    /// <para>
+    /// #205: <see cref="LifecycleStatus"/> stays <c>draft</c> - "not yet judged". The ingestion seam,
+    /// which has run all four gates before it writes, passes <see cref="ValidatedLifecycleStatus"/>
+    /// instead: that record <em>was</em> judged, and calling it a draft would be the false statement.
+    /// Neither is <c>active</c>; selection filters on that, so a gate pass is not a publication.
+    /// </para>
     /// </summary>
     internal const string ContentTier = "demo";
     internal const string LifecycleStatus = "draft";
+
+    /// <summary>
+    /// #205: the staged state - the four gates judged this record, and the audit has not cleared it.
+    /// CNT-42's <c>draft -> validated -> active</c>, where this is the middle one.
+    /// </summary>
+    internal const string ValidatedLifecycleStatus = "validated";
 
     /// <summary>
     /// The legacy category codes, mapped to the topic that measures the same construct.
@@ -450,7 +462,8 @@ internal static class PoolImport
         string? referenceKind,
         Stimulus? stimulus,
         string? batchTag,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        string? lifecycleStatus = null)
     {
         var item = new Item
         {
@@ -463,7 +476,11 @@ internal static class PoolImport
             ItemType = content.ItemType,
             PlacementEligible = content.PlacementEligible,
             ContentTier = ContentTier,
-            LifecycleStatus = LifecycleStatus,
+            // #205: `validated` when the four gates judged the record, `draft` when nothing did. The
+            // two are not interchangeable - `draft` means "not yet judged", and an import that has run
+            // gate one through gate four is past that. The default stays `draft`, because the exam
+            // importer's stock is bound to a paper the import deliberately does not promote (INV-6).
+            LifecycleStatus = lifecycleStatus ?? LifecycleStatus,
             BatchTag = batchTag is { Length: > 60 } ? batchTag[..60] : batchTag,
             CreatedAt = now,
         };

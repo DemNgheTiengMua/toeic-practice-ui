@@ -1,0 +1,225 @@
+@model WebMVC.Models.IngestionBatchDetailViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = $"Batch {Model.BatchId}";
+}
+
+@* #205 / S-02: one row per record. Accepted rows are present and distinguishable, not omitted: a list
+   of refusals alone would answer "what is wrong" and not "what landed". *@
+<div id="ingestion-csrf-holder" style="display:none;">
+  @Html.AntiForgeryToken()
+</div>
+
+@section Styles {
+  <link rel="stylesheet" href="~/css/admin/ingestion.css" asp-append-version="true" />
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+  <a href="/admin/ingestion" class="breadcrumbs__item">Ingestion</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+  <span class="breadcrumbs__item" aria-current="page">Batch @Model.BatchId</span>
+</nav>
+
+<div class="row row--between row--wrap ingestion-head">
+  <div>
+    <h1 class="ingestion-head__title">Batch @Model.BatchId</h1>
+    <p class="text-sm text-muted ingestion-head__lede">
+      <span class="ingestion-file">@Model.SourceName</span> submitted by
+      <strong>@Model.UploadedBy</strong> on <span class="font-mono">@Model.CreatedAt</span>.
+      @if (Model.CompletedAt is not null)
+      {
+        <text>Finished <span class="font-mono">@Model.CompletedAt</span>.</text>
+      }
+    </p>
+  </div>
+
+  <div class="ingestion-tally" role="status">
+    <span class="ingestion-tally__item ingestion-tally__item--ok">
+      <span class="ingestion-tally__value font-mono" id="ingestion-accepted-count">@Model.AcceptedCount</span>
+      <span class="ingestion-tally__label">accepted</span>
+    </span>
+    <span class="ingestion-tally__item ingestion-tally__item--bad">
+      <span class="ingestion-tally__value font-mono" id="ingestion-rejected-count">@Model.RejectedCount</span>
+      <span class="ingestion-tally__label">refused</span>
+    </span>
+  </div>
+</div>
+
+@if (Model.Message is not null)
+{
+  <div class="alert alert--success" role="status">@Model.Message</div>
+}
+@if (Model.ErrorMessage is not null)
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@* ---- the verdict list: one row per record ------------------------------------------------ *@
+<section class="ingestion-verdicts" aria-labelledby="ingestion-verdicts-title">
+  <h2 class="ingestion-subhead" id="ingestion-verdicts-title">Record verdicts</h2>
+
+  @if (Model.Records.Count == 0)
+  {
+    <p class="ingestion-empty">This batch judged no records.</p>
+  }
+  else
+  {
+    <table class="ingestion-table ingestion-table--verdicts" id="ingestion-verdict-table">
+      <thead>
+        <tr>
+          <th scope="col" class="ingestion-table__num font-mono">Line</th>
+          <th scope="col" class="ingestion-table__num font-mono">Try</th>
+          <th scope="col">Verdict</th>
+          <th scope="col">What happened</th>
+          <th scope="col" class="ingestion-table__num font-mono">Item</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var record in Model.Records)
+        {
+          <tr class="ingestion-verdict @(record.Accepted ? "ingestion-verdict--accepted" : "ingestion-verdict--refused")"
+              data-line="@record.Line" data-accepted="@(record.Accepted ? "true" : "false")">
+            <td class="ingestion-table__num font-mono ingestion-verdict__line">@record.Line</td>
+            <td class="ingestion-table__num font-mono">@record.Attempt</td>
+            <td>
+              @if (record.Accepted)
+              {
+                <span class="ingestion-verdict__badge ingestion-verdict__badge--accepted">Staged</span>
+              }
+              else
+              {
+                <span class="ingestion-verdict__badge ingestion-verdict__badge--refused">Refused</span>
+              }
+            </td>
+            <td class="ingestion-verdict__message">
+              @if (record.Accepted)
+              {
+                <span>Passed every gate. Waiting for review.</span>
+              }
+              else
+              {
+                @* Every rule, not only the first: the gates report them in one pass, so correcting one
+                   and discovering the next on a second upload is work this page can save. *@
+                <ul class="ingestion-verdict__refusals">
+                  @foreach (var refusal in record.Refusals)
+                  {
+                    <li class="ingestion-verdict__refusal">
+                      <span class="ingestion-verdict__rule font-mono">@refusal.Rule</span>
+                      <span class="ingestion-verdict__text">@refusal.Message</span>
+                    </li>
+                  }
+                </ul>
+              }
+            </td>
+            <td class="ingestion-table__num font-mono">
+              @if (record.ItemId is not null)
+              {
+                <span class="ingestion-verdict__item">@record.ItemId</span>
+              }
+            </td>
+          </tr>
+
+          @* A refused record carries its own text, so it can be corrected where it stands. An
+             accepted one has nothing to fix, and a blank box under it would invite an edit that
+             the copy-on-write rule would refuse. *@
+          @if (!record.Accepted && record.RecordJson is not null)
+          {
+            <tr class="ingestion-correct-row" data-correct-for="@record.Line">
+              <td colspan="5">
+                <form class="ingestion-correct" method="post"
+                      action="/admin/ingestion/@Model.BatchId/records/@record.Line">
+                  @Html.AntiForgeryToken()
+                  <label class="ingestion-label" for="record-@record.Line">
+                    Correct line @record.Line and judge it again
+                  </label>
+                  <textarea class="ingestion-textarea" id="record-@record.Line" name="record"
+                            rows="10" spellcheck="false">@record.RecordJson</textarea>
+                  <p class="ingestion-hint">
+                    The four gates run again on this record in its own group - the passage and its
+                    siblings are the ones the first judgement used. A correction that still breaks a
+                    rule is refused here, not accepted.
+                  </p>
+                  <button class="btn btn--primary ingestion-correct__submit" type="submit">
+                    Judge this record again
+                  </button>
+                </form>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  }
+</section>
+
+@* ---- staged items: what this batch produced, and what it is waiting for ---------------- *@
+<section class="ingestion-staged" aria-labelledby="ingestion-staged-title">
+  <h2 class="ingestion-subhead" id="ingestion-staged-title">Items this batch produced</h2>
+
+  @if (Model.Staged.Count == 0)
+  {
+    <p class="ingestion-empty">No record was accepted, so no item was written.</p>
+  }
+  else
+  {
+    <p class="ingestion-hint">
+      A staged item has passed the four gates and is <strong>not live</strong>: practice and exam
+      selection read <code>active</code> items only, so nothing here reaches a learner until a
+      reviewer clears it. The review is the act that promotes, not the upload.
+    </p>
+
+    <table class="ingestion-table" id="ingestion-staged-table">
+      <thead>
+        <tr>
+          <th scope="col" class="ingestion-table__num font-mono">Item</th>
+          <th scope="col">Topic</th>
+          <th scope="col" class="font-mono">Level</th>
+          <th scope="col">Skill</th>
+          <th scope="col" class="ingestion-table__num font-mono">Version</th>
+          <th scope="col">State</th>
+          @if (Model.CanClear)
+          {
+            <th scope="col">Review</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var item in Model.Staged)
+        {
+          <tr class="ingestion-staged-row" data-item-id="@item.ItemId"
+              data-lifecycle="@item.LifecycleStatus">
+            <td class="ingestion-table__num font-mono">@item.ItemId</td>
+            <td class="font-mono">@item.TopicCode</td>
+            <td class="font-mono">@item.CefrLevel</td>
+            <td>@item.Modality</td>
+            <td class="ingestion-table__num font-mono">@item.VersionNumber</td>
+            <td>
+              @* The label distinguishes staged from live in words, not only in colour. *@
+              <span class="ingestion-state @(item.IsStaged ? "ingestion-state--staged" : "ingestion-state--live")">
+                @item.StateLabel
+              </span>
+            </td>
+            @if (Model.CanClear)
+            {
+              <td>
+                @if (item.IsStaged)
+                {
+                  <form method="post" action="/admin/ingestion/@Model.BatchId/items/@item.ItemId/clear">
+                    @Html.AntiForgeryToken()
+                    <button class="btn btn--sm ingestion-clear" type="submit">Clear for service</button>
+                  </form>
+                }
+                else
+                {
+                  <span class="ingestion-hint">Already reviewed.</span>
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

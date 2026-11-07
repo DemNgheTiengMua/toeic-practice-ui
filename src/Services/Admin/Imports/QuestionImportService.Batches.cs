@@ -55,7 +55,10 @@ public sealed partial class QuestionImportService
 
     private static AdminImportBatchListItemDto ToDto(BatchRow row) => new(
         row.Batch.BatchId,
-        row.Batch.CertId,
+        // #205: a pool batch names no certificate. The exam import's list is the one this DTO was
+        // written for, and it always has one; a pool row reaching here renders 0 rather than throwing,
+        // because the workbench has its own read path that never asks this question.
+        row.Batch.CertId ?? 0,
         row.CertCode,
         row.Batch.SourceName,
         EnumCodes.Parse<ImportBatchStatus>(row.Batch.Status).MapTo<ImportBatchStatusDto>(),

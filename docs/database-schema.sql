@@ -3802,3 +3802,57 @@ BEGIN
     THROW 50080, 'ADM-02: an account cannot claim, adjudicate or clear a review sample for a batch or item it uploaded or last modified. This refusal does not read permissions, so it holds for an account that holds all five namespaces.', 1;
 END;
 GO
+
+-- ============ #205: the ingestion and staging workbench ============
+--
+-- Two changes. Neither adds a table: ImportBatches already carries the batch, the uploader and the
+-- timestamp, and ImportLog already carries the line and the message. What is missing is the three
+-- things this page cannot say without.
+--
+-- 1. A POOL UPLOAD HAS NO CERTIFICATE. ImportBatches.CertId was NOT NULL because the only importer
+--    was the exam one, which always names a paper's certificate - and that importer still always
+--    writes one. Pool stock does not name one: CNT-01 makes it certificate-agnostic, and domain22
+--    inserts Items, ItemVersions and Stimuli with zero certificates in the database. #198's seam
+--    therefore could not record its own batch at all, which its own doc comment says, so "who
+--    submitted what, and when" had nowhere to land. Nullable is the honest shape: the column means
+--    "the certificate this upload was for", and a pool upload is for none. The batch projection
+--    left-joins Certificates, so a NULL renders as an empty code rather than dropping the row.
+--
+-- 2. ImportLog gains the verdict's own three facts, and ImportBatches the document they came from:
+--
+--      * RuleCode - the gate's machine code (criterion 1, "the failing rule"). Message is prose; a
+--        page that recovered the rule by parsing a sentence would break the first time one was
+--        reworded, and the codes are already a stable vocabulary (GateOneRules, GateTwoRules,
+--        IngestionRules). Named RuleCode rather than Rule because RULE is a reserved word in T-SQL
+--        and the unquoted form refuses to parse.
+--      * ItemId - the item an accepted record became (criterion 2). Without it, "staged" could only
+--        be joined on Items.BatchTag, which is the FILE's own tag (CNT-03) rather than the batch:
+--        two uploads of one file collide on it, and a file declaring none matches nothing.
+--      * SourceDocument - the upload verbatim, once per batch (criterion 3). Re-judging a corrected
+--        record needs its GROUP, not only the record: gate two profiles the shared passage and gate
+--        four's span rule is about siblings. A corrected record judged without them would be judged
+--        by a weaker check and reported as the same one. The same document also supplies the record
+--        text back to the correction form, so no second copy per row is needed - and a copy per row
+--        would store the shared passage two to four times.
+--
+--    RowNo already separates the two kinds of row this table will now hold: a verdict names the line
+--    it judged, a batch-level note names none. That is what makes "one row per record" a query
+--    rather than a convention, and the read path below depends on it.
+--
+--    Attempt is why a re-submitted record keeps its history without the list growing: a re-judge
+--    writes new verdicts at Attempt + 1 for the lines it judged, and the read path takes the highest
+--    attempt per line. Deleting the old rows instead would have been one line of code and would have
+--    erased the record of the rejection that was corrected - the very thing a workbench exists to
+--    keep.
+ALTER TABLE ImportBatches ALTER COLUMN CertId INT NULL;
+GO
+ALTER TABLE ImportBatches ADD SourceDocument NVARCHAR(MAX) NULL;
+GO
+ALTER TABLE ImportLog ADD RuleCode VARCHAR(40) NULL;
+GO
+ALTER TABLE ImportLog ADD Attempt INT NOT NULL CONSTRAINT DF_ImportLog_Attempt DEFAULT 1;
+GO
+ALTER TABLE ImportLog ADD ItemId INT NULL
+  CONSTRAINT FK_ImportLog_Item REFERENCES Items(ItemId) ON DELETE SET NULL;
+GO
+

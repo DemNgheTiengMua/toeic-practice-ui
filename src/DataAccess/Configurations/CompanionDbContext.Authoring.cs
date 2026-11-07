@@ -584,6 +584,11 @@ public partial class CompanionDbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.Status).HasDefaultValue("pending");
 
+            // #205: a pool upload names no certificate (CNT-01). The exam importer still always writes
+            // one, so the optional shape costs it nothing.
+            entity.Property(e => e.CertId).IsRequired(false);
+            entity.Property(e => e.SourceDocument);
+
             entity.HasOne(d => d.Cert).WithMany(p => p.ImportBatches)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__ImportBat__CertI__4D5F7D71");
@@ -600,6 +605,16 @@ public partial class CompanionDbContext
             entity.HasKey(e => e.LogId).HasName("PK__ImportLo__5E548648FBF92143");
 
             entity.Property(e => e.LoggedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+
+            // #205: the verdict's own facts. Attempt defaults to 1 in the database so a row written
+            // without it is the first judgement rather than an error.
+            entity.Property(e => e.Attempt).HasDefaultValue(1);
+            entity.Property(e => e.RuleCode).HasMaxLength(40).IsUnicode(false);
+
+            entity.HasOne<Item>().WithMany()
+                .HasForeignKey(e => e.ItemId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_ImportLog_Item");
 
             entity.HasOne(d => d.Batch).WithMany(p => p.ImportLogs)
                 .OnDelete(DeleteBehavior.ClientSetNull)

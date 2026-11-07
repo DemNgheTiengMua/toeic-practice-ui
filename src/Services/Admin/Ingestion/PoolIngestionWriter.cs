@@ -31,7 +31,8 @@ internal static class PoolIngestionWriter
     internal static Written WriteBundle(
         CompanionDbContext db,
         BundleVerdict verdict,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        string lifecycleStatus = PoolImport.LifecycleStatus)
     {
         var stimulus = verdict.Stimulus!.CarriesContent
             ? PoolImport.BuildStimulus(verdict.Stimulus, verdict.StimulusLevel!.Value, displayOrder: 0)
@@ -50,7 +51,8 @@ internal static class PoolIngestionWriter
                 referenceKind: null,
                 stimulus,
                 verdict.Bundle.Group.BatchTag,
-                now);
+                now,
+                lifecycleStatus);
 
             db.Items.Add(item);
             db.ItemVersions.Add(version);
