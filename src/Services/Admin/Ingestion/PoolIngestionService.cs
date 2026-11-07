@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
 using BusinessObjects.Entities;
+using Contracts;
 using DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -65,11 +66,36 @@ public sealed class PoolIngestionService(
         ArgumentNullException.ThrowIfNull(content);
         ArgumentException.ThrowIfNullOrWhiteSpace(skill);
 
-        var skillCode = skill.Trim().ToLowerInvariant();
-
         using var buffer = new MemoryStream();
         await content.CopyToAsync(buffer, cancellationToken);
-        var bytes = buffer.ToArray();
+
+        return await IngestCoreAsync(skill, buffer.ToArray(), sourceName, cancellationToken);
+    }
+
+    /// <summary>
+    /// The same upload, over bytes already in hand.
+    /// <para>
+    /// The workbench has to record the batch row before it judges, because an upload the reader cannot
+    /// parse must still leave a row naming who sent it. That is what this overload is for: the judgement
+    /// and the write are the same as <see cref="IngestAsync(string, Stream, string, CancellationToken)"/>,
+    /// so a pool record reaches the pool through one implementation.
+    /// </para>
+    /// </summary>
+    public async Task<SkillContentPoolIngestionResult> IngestAsync(
+        string skill,
+        byte[] bytes,
+        CancellationToken cancellationToken = default) =>
+        await IngestCoreAsync(skill, bytes, sourceName: null, cancellationToken);
+
+    private async Task<SkillContentPoolIngestionResult> IngestCoreAsync(
+        string skill,
+        byte[] bytes,
+        string? sourceName,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(skill);
+
+        var skillCode = skill.Trim().ToLowerInvariant();
 
         // ---- the file gates, before any record is judged or written ----
         SkillContentPoolFile file;
@@ -146,13 +172,22 @@ public sealed class PoolIngestionService(
         // ---- write only the bundles that passed ----
         var items = 0;
         var versions = 0;
+        // #205: which item each accepted record became, kept as the ENTITY rather than its id: EF
+        // assigns the identity on save, so a dictionary of ints populated here would hold zeroes.
+        var itemByLine = new Dictionary<int, Item>();
         foreach (var verdict in verdicts)
         {
             if (verdict.Accepted)
             {
-                var bundle = PoolIngestionWriter.WriteBundle(db, verdict, clock.GetUtcNow());
+                var bundle = PoolIngestionWriter.WriteBundle(
+                    db, verdict, clock.GetUtcNow(), PoolImport.ValidatedLifecycleStatus);
                 items += bundle.Items.Count;
                 versions += bundle.Versions.Count;
+
+                for (var index = 0; index < verdict.Bundle.Items.Count && index < bundle.Items.Count; index++)
+                {
+                    itemByLine[verdict.Bundle.Items[index].Line] = bundle.Items[index];
+                }
             }
         }
 
@@ -164,7 +199,12 @@ public sealed class PoolIngestionService(
         var records = new List<IngestionRecordResult>();
         foreach (var verdict in verdicts)
         {
-            records.AddRange(verdict.Records);
+            foreach (var record in verdict.Records)
+            {
+                records.Add(itemByLine.TryGetValue(record.Line, out var item)
+                    ? record with { ItemId = item.ItemId }
+                    : record);
+            }
         }
 
         records.Sort((left, right) => left.Line.CompareTo(right.Line));
@@ -173,10 +213,74 @@ public sealed class PoolIngestionService(
         {
             log.LogWarning(
                 "Ingestion for {Skill} ({Source}): {Accepted} record(s) accepted, {Rejected} refused, {Items} item(s) written.",
-                skillCode, sourceName, records.Count(r => r.Accepted), records.Count(r => !r.Accepted), items);
+                skillCode, sourceName ?? "(unknown)", records.Count(r => r.Accepted), records.Count(r => !r.Accepted), items);
         }
 
         return new SkillContentPoolIngestionResult(skillCode, file.BatchTag, records, items, versions);
+    }
+
+    /// <summary>
+    /// #205: judges one record again, in its own group, and writes it if it now passes.
+    /// <para>
+    /// <b>Why the group and not the record.</b> Gate two profiles the shared passage and gate four's
+    /// span rule is a statement about siblings; a corrected record judged alone would be judged by a
+    /// weaker check and reported as the same one. <paramref name="recordId"/> names the record, and
+    /// <paramref name="originalLine"/> is where it sits in the <em>uploaded</em> file - the rebuilt
+    /// group is re-serialised, so its own line numbers are not the file's and must not be reported.
+    /// </para>
+    /// <para>
+    /// <b>What is written.</b> Only the corrected record's own bundle, and only when the whole bundle
+    /// passes - a sibling that cites overlapping evidence still refuses the group, exactly as it did
+    /// on upload. Nothing already in the pool is rewritten.
+    /// </para>
+    /// </summary>
+    public async Task<IngestionRecordResult> RejudgeOneAsync(
+        string skill,
+        string correctedFileJson,
+        string recordId,
+        int originalLine,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(correctedFileJson);
+        var skillCode = skill.Trim().ToLowerInvariant();
+
+        var file = SkillContentPoolReader.Read(System.Text.Encoding.UTF8.GetBytes(correctedFileJson));
+        var bundle = file.Bundles.FirstOrDefault()
+            ?? throw new AdminItemException(
+                ApiError.Codes.Validation, "The corrected record's group carries no stimulus group.", 400);
+
+        var topics = await TopicCatalog.LoadAsync(db, cancellationToken);
+        var verdict = await gates.JudgeBundleAsync(skillCode, bundle, topics, cancellationToken);
+
+        var record = verdict.Records
+            .FirstOrDefault(r => string.Equals(r.RecordId, recordId, StringComparison.Ordinal))
+            ?? throw new AdminItemException(
+                ApiError.Codes.Validation, $"The corrected group holds no record '{recordId}'.", 400);
+
+        // The file's line, not the rebuilt group's. A verdict that named a line the author cannot find
+        // in their own upload would be worse than no line at all.
+        record = record with { Line = originalLine };
+
+        if (!verdict.Accepted)
+        {
+            return record;
+        }
+
+        var written = PoolIngestionWriter.WriteBundle(
+            db, verdict, clock.GetUtcNow(), PoolImport.ValidatedLifecycleStatus);
+        await db.SaveChangesAsync(cancellationToken);
+
+        var index = verdict.Children
+            .Select((child, position) => (child, position))
+            .Where(entry => string.Equals(entry.child.RecordId, recordId, StringComparison.Ordinal))
+            .Select(entry => entry.position)
+            .DefaultIfEmpty(-1)
+            .First();
+
+        // Read AFTER the save: EF assigns the identity during it, so the id before the save is zero.
+        var itemId = index >= 0 && index < written.Items.Count ? written.Items[index].ItemId : (int?)null;
+
+        return record with { ItemId = itemId };
     }
 
     /// <summary>

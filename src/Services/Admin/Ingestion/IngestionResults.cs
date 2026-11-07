@@ -28,12 +28,17 @@ public static class IngestionRules
 /// <summary>
 /// #198: one record's verdict. <see cref="Line"/> is where the record opens in the uploaded file,
 /// because "record 247 is wrong" is not actionable in a 300-record document and "line 812" is.
+/// <para>
+/// #205: <see cref="ItemId"/> is the item an accepted record became, or null when it was refused or
+/// has not been written yet. It is what lets a workbench show which staged row a verdict produced.
+/// </para>
 /// </summary>
 public sealed record IngestionRecordResult(
     int Line,
     string RecordId,
     bool Accepted,
-    IReadOnlyList<IngestionRefusal> Refusals)
+    IReadOnlyList<IngestionRefusal> Refusals,
+    int? ItemId = null)
 {
     /// <summary>
     /// The sentence a workbench shows in one table row: the first rule that failed, or an empty string.

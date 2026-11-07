@@ -45,7 +45,7 @@ public sealed partial class QuestionImportService
             {
                 // #189: the legacy shape first. Its rows are what a paper renders, and the
                 // pool write below needs their ids to bind the pool's versions back onto the paper.
-                (exam, var writtenQuestions) = await WriteExamAsync(batch.CertId, plan, stored, cancellationToken);
+                (exam, var writtenQuestions) = await WriteExamAsync(batch.CertId!.Value, plan, stored, cancellationToken);
                 var pool = await WritePoolAsync(batch, writtenQuestions, exam, cancellationToken);
 
                 db.ImportLogs.Add(NewLog(batch.BatchId, null, ImportLogLevel.Info,

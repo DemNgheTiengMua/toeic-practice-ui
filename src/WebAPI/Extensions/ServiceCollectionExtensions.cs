@@ -78,6 +78,10 @@ public static class ServiceCollectionExtensions
         // skill, tier prefix, record shape - need no model at all.
         services.AddScoped<PoolIngestionGates>();
         services.AddScoped<PoolIngestionService>();
+        // #205: the staging workbench - the batch, its verdicts, one re-submitted record, and the
+        // audit's clearance. A thin adapter so the endpoints speak DTOs.
+        services.AddScoped<IngestionWorkbenchService>();
+        services.AddScoped<IAdminIngestionService, AdminIngestionService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         services.AddScoped<IPlacementService, PlacementService>();
         services.AddScoped<ICalibrationService, CalibrationService>();

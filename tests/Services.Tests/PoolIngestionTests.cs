@@ -52,12 +52,21 @@ public sealed class PoolIngestionTests(DatabaseFixture database)
     /// </summary>
     private async Task ClearIngestedAsync()
     {
+        // #205: an accepted record now lands in `validated`, and CNT-43 refuses the hard delete of
+        // anything that has left draft - which is the invariant working, not a defect. A test catalog
+        // is the one place it may be stepped around, and PackageServiceTests sets the precedent. The
+        // rows must go rather than be retired, because gate one counts every item in a cell whatever
+        // its lifecycle: a retired leftover would skew the balance the next test asserts.
         await database.SqlAsync("""
             DELETE FROM ExamItems
             WHERE ItemId IN (SELECT ItemId FROM Items WHERE BatchTag IN ('ingest-198', 'gate1-cell'));
+            DELETE FROM ImportLog
+            WHERE ItemId IN (SELECT ItemId FROM Items WHERE BatchTag IN ('ingest-198', 'gate1-cell'));
             DELETE FROM ItemVersions
             WHERE ItemId IN (SELECT ItemId FROM Items WHERE BatchTag IN ('ingest-198', 'gate1-cell'));
+            ALTER TABLE Items DISABLE TRIGGER trg_Items_NoHardDelete;
             DELETE FROM Items WHERE BatchTag IN ('ingest-198', 'gate1-cell');
+            ALTER TABLE Items ENABLE TRIGGER trg_Items_NoHardDelete;
             """);
     }
 

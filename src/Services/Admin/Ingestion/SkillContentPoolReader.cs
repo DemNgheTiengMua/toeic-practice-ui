@@ -5,8 +5,17 @@ using System.Text.Json;
 
 namespace Services;
 
-/// <summary>One item as the file wrote it, with the line its object opens on.</summary>
-internal sealed record SkillContentPoolRecord(int Line, SkillContentPoolItem Item);
+/// <summary>
+/// One item as the file wrote it, with the line its object opens on and, when it came from an upload,
+/// its own JSON.
+/// <para>
+/// <see cref="RawJson"/> is what the correction form shows and what a re-judge reads, so it must be the
+/// file's text rather than a re-serialisation: the reader does not declare every member a real file
+/// carries, and <c>verification_audit.author_model</c> is one of gate three's own inputs. The studios
+/// build their records in memory from a typed request and have no file text, so it is empty for them.
+/// </para>
+/// </summary>
+internal sealed record SkillContentPoolRecord(int Line, SkillContentPoolItem Item, string RawJson = "");
 
 /// <summary>One stimulus group: the shared text plus its children, each with its own line.</summary>
 internal sealed record SkillContentPoolBundle(
@@ -176,9 +185,16 @@ internal static class SkillContentPoolReader
                     while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                     {
                         var line = scanner.LineAt(reader.TokenStartIndex);
-                        var item = JsonSerializer.Deserialize<SkillContentPoolItem>(ref reader, options)
+
+                        // The raw slice, kept because re-judging a corrected record must read what the
+                        // file said: re-serialising the parsed record drops every member the reader does
+                        // not declare, and verification_audit.author_model is one of gate three's own
+                        // inputs. ParseValue consumes the object and hands back its exact text.
+                        using var document = JsonDocument.ParseValue(ref reader);
+                        var raw = document.RootElement.GetRawText();
+                        var item = JsonSerializer.Deserialize<SkillContentPoolItem>(raw, options)
                             ?? new SkillContentPoolItem();
-                        items.Add(new SkillContentPoolRecord(line, item));
+                        items.Add(new SkillContentPoolRecord(line, item, raw));
                     }
 
                     break;
