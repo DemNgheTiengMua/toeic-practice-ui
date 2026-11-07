@@ -1,0 +1,512 @@
+/* #203 / S-05: the stimulus-and-children studio.
+   "Bảng hiệu phòng thi": flat painted fields, no radius, no shadow, no gradient, no blur. Depth is the
+   keyline - 2px ink for a panel frame, 1px soft rule for an interior divider. Every figure is IBM Plex
+   Mono with tabular figures; every label is Plex Sans Condensed, uppercase and tracked. Selection
+   inverts to solid ink with white lettering and never to a tint. */
+
+.studio-head { align-items: flex-start; gap: var(--space-4); }
+
+.studio-head__title {
+  margin: 0;
+  font-family: var(--font-sign);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+
+.studio-head__lede { margin: var(--space-2) 0 0; max-width: 62ch; }
+
+/* ---- the skill switch: two placards, the active one inverted ----------- */
+
+.studio-skill-switch {
+  display: inline-flex;
+  border: 2px solid var(--ink);
+  background: var(--color-surface);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.studio-skill-switch__item {
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-sign);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-caps-sm);
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+  border-radius: 0;
+}
+
+.studio-skill-switch__item + .studio-skill-switch__item { border-left: 1px solid var(--rule-soft); }
+
+/* Inversion, not a wash: "selected" is unmistakable at a glance (D0.5 / UI-3). */
+.studio-skill-switch__item.is-selected {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.studio-skill-switch__item:focus-visible {
+  outline: 2px solid var(--sign-blue);
+  outline-offset: 2px;
+}
+
+/* ---- the split canvas ------------------------------------------------- */
+
+.studio-canvas {
+  display: grid;
+  grid-template-columns: minmax(360px, 5fr) minmax(420px, 6fr);
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .studio-canvas { grid-template-columns: 1fr; }
+}
+
+.studio-pane {
+  border: 2px solid var(--ink);
+  background: var(--color-surface);
+  border-radius: 0;
+  box-shadow: none;
+  padding: var(--space-4);
+}
+
+/* The stimulus is pinned: it stays beside its questions while the stack scrolls. */
+.studio-pane--stimulus { position: sticky; top: var(--space-4); }
+
+.studio-pane__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: var(--space-4);
+}
+
+.studio-pane__title {
+  margin: 0;
+  font-family: var(--font-sign);
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-sm);
+}
+
+.studio-pane__code,
+.studio-pane__count {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.studio-subhead {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-sign);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---- fields ---------------------------------------------------------- */
+
+.studio-field { margin-bottom: var(--space-4); }
+
+.studio-field--row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.studio-label {
+  display: block;
+  font-family: var(--font-sign);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.studio-label--inline { margin-bottom: 0; }
+
+.studio-select,
+.studio-input,
+.studio-textarea {
+  width: 100%;
+  border: 1px solid var(--rule-soft);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--color-surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  padding: var(--space-2);
+}
+
+.studio-select--sm { font-size: var(--text-xs); padding: var(--space-1) var(--space-2); }
+
+.studio-textarea { font-family: var(--font-sans); line-height: 1.6; resize: vertical; }
+
+.studio-textarea--sm { font-size: var(--text-xs); }
+
+.studio-select:focus-visible,
+.studio-input:focus-visible,
+.studio-textarea:focus-visible {
+  outline: 2px solid var(--sign-blue);
+  outline-offset: 0;
+  border-color: var(--sign-blue);
+}
+
+.studio-hint {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---- the level control: six placards, never a dropdown --------------- */
+
+.studio-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border: 2px solid var(--ink);
+  background: var(--color-surface);
+  border-radius: 0;
+}
+
+.studio-level {
+  flex: 1 1 auto;
+  min-width: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-right: 1px solid var(--rule-soft);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.studio-level:last-child { border-right: 0; }
+
+.studio-level:hover { background: var(--color-surface-soft); }
+
+/* Inversion again: the chosen band is a solid ink block. */
+.studio-level.is-selected,
+.studio-level[aria-checked="true"] {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.studio-level:focus-visible {
+  outline: 2px solid var(--sign-blue);
+  outline-offset: -2px;
+}
+
+/* ---- gauges ---------------------------------------------------------- */
+
+.studio-gauges {
+  border: 1px solid var(--rule-soft);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.studio-gauge-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+  background: var(--rule-soft);
+}
+
+.studio-gauge {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2);
+  background: var(--color-surface);
+}
+
+.studio-gauge__label {
+  font-family: var(--font-sign);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-sm);
+  color: var(--color-text-muted);
+}
+
+.studio-gauge__value,
+.studio-gauge__target {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.studio-gauge__target { color: var(--color-text-muted); }
+
+/* The gauge's own state is carried by a left keyline and the target's text, so the colour is a second
+   layer. Green is "inside", red is "outside", and neither stands alone. */
+.studio-gauge--inside { border-left: 3px solid var(--sign-green); }
+.studio-gauge--outside { border-left: 3px solid var(--sign-red); }
+.studio-gauge--unbounded { border-left: 3px solid var(--rule-soft); }
+.studio-gauge--outside .studio-gauge__value { color: var(--color-danger); }
+
+.studio-verdict {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-sm);
+  padding: var(--space-2);
+  border: 1px solid var(--rule-soft);
+  border-radius: 0;
+}
+
+/* The verdict states a fact, not a judgement: gold when the bands disagree, plain when they agree. */
+.studio-verdict[data-state="mismatch"] {
+  border-color: var(--sign-gold);
+  background: var(--color-warning-soft);
+}
+
+/* ---- child slots ----------------------------------------------------- */
+
+.studio-slots { display: grid; gap: var(--space-4); }
+
+.studio-empty {
+  margin: 0;
+  padding: var(--space-5);
+  border: 1px dashed var(--rule-soft);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  border-radius: 0;
+}
+
+.studio-slot {
+  border: 2px solid var(--ink);
+  background: var(--color-surface);
+  padding: var(--space-3);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Each child owns a colour, used for its swatch and its highlight in the passage. The four are drawn
+   from the signage palette's hues so a highlighted span still reads as this product. */
+.studio-slot[data-colour="1"] { --slot-tint: var(--sign-blue); }
+.studio-slot[data-colour="2"] { --slot-tint: var(--sign-green); }
+.studio-slot[data-colour="3"] { --slot-tint: #6b3fa0; }
+.studio-slot[data-colour="4"] { --slot-tint: #b35c00; }
+
+.studio-slot__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.studio-slot__number {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  min-width: 1.6em;
+  text-align: center;
+  background: var(--ink);
+  color: #ffffff;
+  padding: 0 var(--space-1);
+}
+
+.studio-slot__swatch {
+  width: 14px;
+  height: 14px;
+  background: var(--slot-tint, var(--ink));
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  flex: 0 0 auto;
+}
+
+.studio-options { display: grid; gap: var(--space-2); margin-bottom: var(--space-3); }
+
+.studio-option {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.studio-option__key { display: inline-flex; align-items: center; gap: var(--space-1); cursor: pointer; }
+
+.studio-option__key input { position: absolute; opacity: 0; pointer-events: none; }
+
+.studio-option__badge {
+  display: inline-block;
+  min-width: 24px;
+  padding: 2px 4px;
+  text-align: center;
+  border: 1px solid var(--ink);
+  font-size: var(--text-xs);
+}
+
+/* The key inverts, exactly as a selected row does. */
+.studio-option__key input:checked + .studio-option__badge {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.studio-option__key input:focus-visible + .studio-option__badge {
+  outline: 2px solid var(--sign-blue);
+  outline-offset: 2px;
+}
+
+.studio-input--option,
+.studio-input--rationale { font-size: var(--text-xs); }
+
+.studio-input--rationale { color: var(--color-text-muted); }
+
+.studio-span { display: inline-flex; align-items: center; gap: var(--space-1); }
+
+.studio-input--num { width: 88px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.studio-span__unit,
+.studio-span__dash { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+.studio-slot__refusals {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+}
+
+.studio-slot__refusals:empty { display: none; }
+
+/* A child whose span is over the ceiling is outlined, and its refusals say why in words. */
+.studio-slot[data-conflict="true"] { border-color: var(--sign-red); }
+
+/* ---- the two live indicators ----------------------------------------- */
+
+.studio-indicators {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.studio-indicator {
+  border: 2px solid var(--ink);
+  padding: var(--space-3);
+  display: grid;
+  gap: 2px;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--color-surface);
+}
+
+.studio-indicator[hidden] { display: none; }
+
+.studio-indicator__label {
+  font-family: var(--font-sign);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-sm);
+  color: var(--color-text-muted);
+}
+
+.studio-indicator__value {
+  font-size: var(--text-lg, 1.5rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.studio-indicator__note { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+/* The ceiling is 0.15 (CNT-12). At or over it the field fills red and the note says the figure and the
+   word; below it the field stays painted white with a green keyline. Colour never carries alone. */
+.studio-indicator[data-state="clear"] { border-color: var(--sign-green); }
+.studio-indicator[data-state="clear"] .studio-indicator__value { color: var(--color-success); }
+
+.studio-indicator[data-state="warn"] { border-color: var(--sign-gold); }
+.studio-indicator[data-state="warn"] .studio-indicator__value { color: var(--color-warning); }
+
+.studio-indicator[data-state="over"] {
+  border-color: var(--sign-red);
+  background: var(--sign-red);
+  color: #ffffff;
+}
+
+.studio-indicator[data-state="over"] .studio-indicator__label,
+.studio-indicator[data-state="over"] .studio-indicator__note { color: var(--color-on-band-danger); }
+
+.studio-indicator[data-state="over"] .studio-indicator__value { color: #ffffff; }
+
+/* ---- save row and refusals ------------------------------------------- */
+
+.studio-save-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 2px solid var(--ink);
+}
+
+.studio-save-status { margin: 0; font-size: var(--text-sm); color: var(--color-text-muted); }
+
+.studio-save-status[data-state="ready"] { color: var(--color-success); }
+
+.studio-save-status[data-state="blocked"] { color: var(--color-danger); }
+
+.studio-refusals { margin-top: var(--space-3); display: grid; gap: var(--space-2); }
+
+.studio-refusal {
+  border-left: 3px solid var(--sign-red);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border-top: 1px solid var(--rule-soft);
+  border-right: 1px solid var(--rule-soft);
+  border-bottom: 1px solid var(--rule-soft);
+  border-radius: 0;
+}
+
+.studio-refusal__gate {
+  display: block;
+  font-family: var(--font-sign);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-sm);
+  color: var(--color-danger);
+}
+
+.studio-refusal__message { font-size: var(--text-xs); }
+
+/* A check that did not run is not a refusal: it is a gold notice, because it blocks nothing and the
+   bundle is saved as a draft. Its keyline is gold and its label says "not run". */
+.studio-notice {
+  border-left: 3px solid var(--sign-gold);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-warning-soft);
+  border-radius: 0;
+}
+
+.studio-notice__gate {
+  display: block;
+  font-family: var(--font-sign);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-sm);
+  color: var(--color-warning);
+}
+
+.studio-notice__message { font-size: var(--text-xs); }
+
+/* ---- the bound spans, painted on the passage ------------------------ */
+
+.studio-mark {
+  border-bottom: 3px solid var(--slot-tint, var(--ink));
+  background: transparent;
+  cursor: pointer;
+}
