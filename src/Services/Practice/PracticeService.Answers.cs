@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
+using Contracts;
 using DataAccess;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
@@ -62,7 +63,9 @@ public sealed partial class PracticeService
         // skip mastery - so the session and the mastery row described two different answers, and a
         // miss could be turned into a hit after the fact. The interface already disables an answered
         // question; this is the server saying the same thing.
-        if (answer.IsCorrect.HasValue)
+        // #253: "answered" is content, not a grade. A productive pool answer is stored ungraded, so
+        // testing IsCorrect alone let a second submission overwrite a response that already exists.
+        if (IsAnswerRecorded(answer))
         {
             throw new PracticeException(
                 PracticeException.AlreadyAnswered,
@@ -224,9 +227,21 @@ public sealed partial class PracticeService
             .CountAsync(pa => pa.SessionId == sessionId && pa.IsCorrect == true, cancellationToken);
         answer.Session.CorrectCount = correctCount;
 
-        // Check if all questions in the session have been evaluated
-        var hasRemaining = await db.PracticeAnswers
-            .AnyAsync(pa => pa.SessionId == sessionId && pa.AnswerId != answer.AnswerId && pa.SelectedOptionId == null && pa.SelectedLabel == null && pa.IsCorrect == null, cancellationToken);
+        // Check if all questions in the session have content. #253: this asks "is every row answered",
+        // not "is every row graded". A pool productive answer is stored ungraded forever, so reading
+        // IsCorrect here made hasRemaining permanently true: the session never reached Finished, its
+        // FinishedAt stayed null, and its learning-path step never closed.
+        //
+        // The siblings are read once and tested in memory: a session holds at most one answer per item,
+        // and EF cannot translate the shared method into SQL - a copied four-column test in a LINQ
+        // predicate is exactly the second definition this ticket exists to delete.
+        var siblings = await db.PracticeAnswers
+            .AsNoTracking()
+            .Where(pa => pa.SessionId == sessionId && pa.AnswerId != answer.AnswerId)
+            .OrderBy(pa => pa.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        var hasRemaining = siblings.Any(pa => !IsAnswerRecorded(pa));
         var isLast = !hasRemaining;
         if (isLast)
         {
@@ -297,17 +312,12 @@ public sealed partial class PracticeService
         int? nextDisplayOrder = null;
         if (!isLast)
         {
-            var nextUnanswered = await db.PracticeAnswers
-                .Where(pa => pa.SessionId == sessionId && pa.AnswerId != answer.AnswerId && pa.DisplayOrder > answer.DisplayOrder && pa.SelectedOptionId == null && pa.SelectedLabel == null && pa.IsCorrect == null)
-                .OrderBy(pa => pa.DisplayOrder)
-                .Select(pa => (int?)pa.DisplayOrder)
-                .FirstOrDefaultAsync(cancellationToken);
+            // The same in-memory siblings the completion check read: "next unanswered" and "anything
+            // unanswered" are two orders over one list, not two copies of the test.
+            var unanswered = siblings.Where(pa => !IsAnswerRecorded(pa)).ToList();
 
-            nextDisplayOrder = nextUnanswered ?? await db.PracticeAnswers
-                .Where(pa => pa.SessionId == sessionId && pa.AnswerId != answer.AnswerId && pa.SelectedOptionId == null && pa.SelectedLabel == null && pa.IsCorrect == null)
-                .OrderBy(pa => pa.DisplayOrder)
-                .Select(pa => (int?)pa.DisplayOrder)
-                .FirstOrDefaultAsync(cancellationToken);
+            nextDisplayOrder = unanswered.FirstOrDefault(pa => pa.DisplayOrder > answer.DisplayOrder)?.DisplayOrder
+                ?? unanswered.FirstOrDefault()?.DisplayOrder;
 
             nextDisplayOrder ??= (answer.DisplayOrder < answer.Session.QuestionCount ? answer.DisplayOrder + 1 : 1);
         }
@@ -331,6 +341,14 @@ public sealed partial class PracticeService
             answer.SelectedOptionIdsJson,
             savedQuestionId);
     }
+
+    /// <summary>
+    /// #253: "this row already holds an answer", which is not the same as "it has been graded" — see
+    /// <see cref="AnswerContent.IsAnswered"/>. A pool productive answer is answered and ungraded.
+    /// </summary>
+    private static bool IsAnswerRecorded(PracticeAnswer answer) =>
+        AnswerContent.IsAnswered(
+            answer.SelectedOptionId, answer.SelectedLabel, answer.ResponseText, answer.SelectedOptionIdsJson);
 
     /// <summary>
     /// #187: one graded answer, one mastery writer. A legacy answer moves its question's history and

@@ -220,7 +220,10 @@ public sealed partial class AiInsightService
             .Include(tb => tb.ScoreBand)
             .FirstOrDefaultAsync(tb => tb.UserId == insight.UserId && tb.CertId == insight.CertId, cancellationToken);
 
-        var answeredCount = answers.Count(a => a.SelectedOptionId.HasValue || a.IsCorrect.HasValue);
+        // #253: one definition. This counted an answered writing response as skipped, because it read
+        // the ungraded IsCorrect as "no answer".
+        var answeredCount = answers.Count(a =>
+            AnswerContent.IsAnswered(a.SelectedOptionId, a.SelectedLabel, a.ResponseText, a.SelectedOptionIdsJson));
         var correctCount = answers.Count(a => a.IsCorrect == true);
         var errorFingerprints = ExtractErrorFingerprints(answers, allOptions, catAccuracyRows);
         var writingEvidences = await ExtractWritingEvidenceAsync(attempt.AttemptId, cancellationToken);

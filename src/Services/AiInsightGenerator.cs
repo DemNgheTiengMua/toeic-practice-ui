@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
+using Contracts;
 
 namespace Services;
 
@@ -40,9 +41,11 @@ public partial class FakeAiInsightGenerator : IAiInsightGenerator
                 Recommendations: Array.Empty<GeneratedRecommendation>()));
         }
 
+        // #253: same definition as the services. This fallback only runs for a scope whose request did
+        // not carry a count; the read model has no response text, so its own two answer columns decide.
         var totalAnswered = request.AnsweredCount > 0
             ? request.AnsweredCount
-            : request.Questions.Count(q => q.SelectedOptionId.HasValue || q.IsCorrect.HasValue);
+            : request.Questions.Count(q => AnswerContent.IsAnswered(q.SelectedOptionId, q.SelectedOptionLabel, null, null));
 
         var totalCorrect = request.CorrectCount;
         var accuracyPct = totalAnswered > 0 ? (int)Math.Round((double)totalCorrect / totalAnswered * 100) : 0;

@@ -78,7 +78,7 @@ public sealed class PracticeController(
             {
                 if (displayOrder <= 0)
                 {
-                    question = questions.FirstOrDefault(x => x.SelectedOptionId == null && x.IsCorrect == null)
+                    question = questions.FirstOrDefault(x => !IsAnswered(x))
                                ?? questions[0];
                 }
                 else
@@ -96,7 +96,7 @@ public sealed class PracticeController(
             var navigator = questions.Select(item => new PracticeNavigatorItemDto(
                 item.QuestionId,
                 item.DisplayOrder,
-                item.SelectedOptionId.HasValue || item.IsCorrect.HasValue,
+                IsAnswered(item),
                 item.IsCorrect,
                 item.IsSaved,
                 item.DisplayOrder == question.DisplayOrder,
@@ -217,6 +217,11 @@ public sealed class PracticeController(
     private bool IsAjaxRequest() =>
         Request.Headers.Accept.ToString().Contains("application/json")
         || string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>#253: the DTO's answer columns through the one shared definition.</summary>
+    private static bool IsAnswered(PracticeQuestionDto question) =>
+        AnswerContent.IsAnswered(
+            question.SelectedOptionId, null, question.ResponseText, question.SelectedOptionIdsJson);
 
     /// <summary>#156: the calibration view is an addition to a page, never a precondition: a failure
     /// to read it must not hide the summary the learner just earned.</summary>

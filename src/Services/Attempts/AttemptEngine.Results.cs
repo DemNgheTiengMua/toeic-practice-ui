@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
 using BusinessObjects.Entities;
+using Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Services;
@@ -223,7 +224,12 @@ public sealed partial class AttemptEngine
                 ? ans?.SelectedOptionId
                 : SelectedPoolOptionId(pinnedVersion.ItemVersionId, ans);
             bool isFlagged = ans?.IsFlagged ?? false;
-            bool isAnswered = selectedOptionId.HasValue;
+            // #253: answered is "carries content", not "chose an option". A productive answer has no
+            // option id at all, so reading only selectedOptionId reported a graded writing answer as
+            // unanswered and, because isCorrect is derived from this flag, hid a grade that exists.
+            bool isAnswered = ans is not null
+                && AnswerContent.IsAnswered(
+                    ans.SelectedOptionId, ans.SelectedLabel, ans.ResponseText, ans.SelectedOptionIdsJson);
             bool? isCorrect = isAnswered ? ans?.IsCorrect : null;
             var audio = ResolveGroupAudio(q.Group, sectionMasterAudio);
 
