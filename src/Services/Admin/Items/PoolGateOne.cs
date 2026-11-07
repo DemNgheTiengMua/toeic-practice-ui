@@ -18,8 +18,8 @@ namespace Services;
 /// than the one it found. Including it would let an item's own key vouch for its own balance.
 /// </para>
 /// <para>
-/// Each sibling contributes its latest version's key: an item keyed B in version 1 and C in version 2
-/// is one key, and it is C.
+/// The cell and "which version is the live one" are <see cref="GateContext"/>'s, so this gate and the
+/// ingestion seam cannot come to disagree about either.
 /// </para>
 /// </summary>
 public static class PoolGateOne
@@ -40,33 +40,36 @@ public static class PoolGateOne
                 Passage = i.Stimulus == null ? null : i.Stimulus.Passage,
                 Transcript = i.Stimulus == null ? null : i.Stimulus.Transcript,
                 PromptCopy = i.Stimulus == null ? null : i.Stimulus.PromptCopy,
-                Version = i.ItemVersions.OrderByDescending(v => v.VersionNumber).FirstOrDefault(),
+                // One item's own versions - a handful, so reading them all and asking GateContext which
+                // is live costs nothing and keeps the ordering in the one place that states it.
+                Versions = i.ItemVersions.ToList(),
             })
             .SingleOrDefaultAsync(cancellationToken);
 
-        if (row?.Version is null)
+        var version = row is null ? null : GateContext.Newest(row.Versions, v => v.VersionNumber);
+        if (row is null || version is null)
         {
             // No item, or an item with nothing authored yet: gate one has nothing to judge, and
             // inventing a refusal for an empty row would refuse every item at creation time.
             return new GateOneVerdict([], []);
         }
 
-        var cell = await CellAsync(db, row.TopicId, row.CefrLevel, exceptItemId: itemId, cancellationToken);
+        var cell = await GateContext.CellAsync(db, row.TopicId, row.CefrLevel, itemId, cancellationToken);
 
         return GateOne.Review(
             new GateOneItem(
-                row.Version.Stem,
-                row.Passage ?? row.Transcript ?? row.PromptCopy,
-                row.Version.OptionA,
-                row.Version.OptionB,
-                row.Version.OptionC,
-                row.Version.OptionD,
-                row.Version.KeyLabel,
-                row.Version.Explanation,
-                row.Version.RationaleA,
-                row.Version.RationaleB,
-                row.Version.RationaleC,
-                row.Version.RationaleD),
+                version.Stem,
+                GateContext.TextOf(row.Passage, row.Transcript, row.PromptCopy),
+                version.OptionA,
+                version.OptionB,
+                version.OptionC,
+                version.OptionD,
+                version.KeyLabel,
+                version.Explanation,
+                version.RationaleA,
+                version.RationaleB,
+                version.RationaleC,
+                version.RationaleD),
             cell);
     }
 
@@ -79,40 +82,5 @@ public static class PoolGateOne
         int topicId,
         CefrLevel level,
         CancellationToken cancellationToken = default) =>
-        GateOne.ReviewCell(await CellAsync(db, topicId, level, exceptItemId: null, cancellationToken));
-
-    /// <summary>
-    /// The keys already stored in one cell, excluding the item being judged. <c>internal</c> because
-    /// #198's ingestion seam judges items that are not rows yet: it passes the bundle's own content to
-    /// <see cref="GateOne.Review"/> and needs the same cell count this class uses. A second copy of
-    /// the cell query in the seam would answer "what is in this cell" differently from the gate.
-    /// </summary>
-    internal static async Task<GateOneCell> CellAsync(
-        CompanionDbContext db,
-        int topicId,
-        CefrLevel level,
-        int? exceptItemId,
-        CancellationToken cancellationToken)
-    {
-        if (level.IsReportableFloor)
-        {
-            throw new ArgumentException(
-                $"'{level.Code}' is the reportable floor; content is authored at A1-C2 only.", nameof(level));
-        }
-
-        // Two columns and the newest key per item: small enough to finish in memory, and a correlated
-        // first-per-group is the one shape EF translates differently on every provider.
-        var versions = await db.ItemVersions.AsNoTracking()
-            .Where(v => v.Item.TopicId == topicId
-                        && v.Item.CefrLevel == level
-                        && (exceptItemId == null || v.ItemId != exceptItemId))
-            .Select(v => new { v.ItemId, v.VersionNumber, v.KeyLabel })
-            .ToListAsync(cancellationToken);
-
-        var latestKeys = versions
-            .GroupBy(v => v.ItemId)
-            .Select(siblings => siblings.OrderByDescending(v => v.VersionNumber).First().KeyLabel);
-
-        return GateOneCell.FromLabels(latestKeys);
-    }
+        GateOne.ReviewCell(await GateContext.CellAsync(db, topicId, level, exceptItemId: null, cancellationToken));
 }

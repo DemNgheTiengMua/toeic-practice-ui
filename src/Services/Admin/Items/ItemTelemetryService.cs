@@ -67,7 +67,7 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
         var versionsByItem = (await db.ItemVersions
                 .AsNoTracking()
                 .Where(v => itemIds.Contains(v.ItemId))
-                .Select(v => new { v.ItemId, v.ItemVersionId, v.KeyLabel, v.OptionA })
+                .Select(v => new { v.ItemId, v.ItemVersionId, v.VersionNumber, v.KeyLabel, v.OptionA })
                 .ToListAsync(cancellationToken))
             .GroupBy(v => v.ItemId)
             .ToDictionary(g => g.Key, g => g.ToList());
@@ -103,7 +103,7 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
             // An item's key is the same across its versions unless the item was re-versioned with a new
             // key, which is a copy-on-write event and therefore a different item in every sense that
             // matters here. The newest version's key is what the live item is.
-            var keyLabel = versions.OrderByDescending(v => v.ItemVersionId).First().KeyLabel;
+            var keyLabel = GateContext.Newest(versions, v => v.VersionNumber)!.KeyLabel;
 
             var observations = practice.GetValueOrDefault(item.ItemId, [])
                 .Concat(attempts.GetValueOrDefault(item.ItemId, []))

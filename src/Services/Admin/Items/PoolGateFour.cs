@@ -58,9 +58,7 @@ public static class PoolGateFour
             })
             .ToListAsync(cancellationToken);
 
-        var children = versions
-            .GroupBy(v => v.ItemId)
-            .Select(siblings => siblings.OrderByDescending(v => v.VersionNumber).First())
+        var children = GateContext.NewestPerItem(versions, v => v.ItemId, v => v.VersionNumber)
             .OrderBy(v => v.ItemId)
             .ToList();
 
