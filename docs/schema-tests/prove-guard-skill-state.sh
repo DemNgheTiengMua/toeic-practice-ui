@@ -212,11 +212,11 @@ run_patch "the registry covering learner_skill_state" \
   "$DOMAIN27"
 
 # 12. the covered count. A fact that was covered without the count moving is the registry claiming one
-#     thing and doing another; this is the assertion that pins 4/2/1 rather than "seven".
-run_patch "the 4/2/1 split in domain27 (covered count pinned at 4)" \
-  "the covered set is not the four tables that exist today" \
-  "IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 4" \
-  "IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 3" \
+#     thing and doing another; this is the assertion that pins the split rather than "nine".
+run_patch "the covered count in domain27 (pinned at 6)" \
+  "the covered set is not the six tables that exist today" \
+  "IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 6" \
+  "IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 5" \
   "$DOMAIN27" "$DOMAIN27"
 
 # ---------------------------------------------------------------------------------------------

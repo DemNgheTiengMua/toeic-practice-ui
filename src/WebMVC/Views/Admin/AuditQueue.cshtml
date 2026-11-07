@@ -1,0 +1,250 @@
+@model WebMVC.Models.AuditQueueViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = $"Audit batch {Model.BatchId}";
+}
+
+@* #206 / S-03: the stratified audit. The screen's order is the rule: solve, then read the key, then
+   judge. The authored key is not on this page at all - it arrives on its own page, from a call the API
+   refuses until a solve is stored. *@
+<div id="audit-csrf-holder" style="display:none;">
+  @Html.AntiForgeryToken()
+</div>
+
+@section Styles {
+  <link rel="stylesheet" href="~/css/admin/audit.css" asp-append-version="true" />
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+  <a href="/admin/ingestion" class="breadcrumbs__item">Ingestion</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+  <a href="/admin/ingestion/@Model.BatchId" class="breadcrumbs__item">Batch @Model.BatchId</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+  <span class="breadcrumbs__item" aria-current="page">Audit</span>
+</nav>
+
+<div class="row row--between row--wrap audit-head">
+  <div>
+    <h1 class="audit-head__title">Stratified audit of batch @Model.BatchId</h1>
+    <p class="text-sm text-muted audit-head__lede">
+      <span class="audit-file">@Model.SourceName</span> is <strong>@Model.StatusLabel</strong>.
+      Every cell of this batch is audited; none can be skipped by sampling.
+    </p>
+  </div>
+
+  <div class="audit-tally" role="status">
+    <span class="audit-tally__item audit-tally__item--sampled">
+      <span class="audit-tally__value font-mono" id="audit-sampled-total">@Model.SampledTotal</span>
+      <span class="audit-tally__label">reviewed</span>
+    </span>
+    <span class="audit-tally__item audit-tally__item--unsampled">
+      <span class="audit-tally__value font-mono" id="audit-unsampled-total">@Model.UnsampledTotal</span>
+      <span class="audit-tally__label">unreviewed</span>
+    </span>
+  </div>
+</div>
+
+@if (Model.Message is not null)
+{
+  <div class="alert alert--success" role="status">@Model.Message</div>
+}
+@if (Model.ErrorMessage is not null)
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@* The sentence D17's "Promotion scope" spends a paragraph on. It is rendered from the same counts the
+   table shows, so the page cannot claim a scope the data does not have. *@
+<section class="audit-scope" aria-labelledby="audit-scope-title">
+  <h2 class="audit-subhead" id="audit-scope-title">Promotion scope</h2>
+  <p class="audit-scope__sentence" id="audit-promotion-sentence">@Model.PromotionSentence</p>
+  <p class="audit-hint">
+    A reviewer solves each sampled item blind, then reads the authored key, then records a verdict.
+    One confirmed key error quarantines the entire stratum; so does a non-key defect rate above
+    <span class="font-mono">5%</span>. The decision is taken from the verdicts, so there is no button
+    that approves a stratum containing a key error.
+  </p>
+</section>
+
+@if (Model.Strata.Count == 0)
+{
+  <section class="audit-empty-panel">
+    <p class="audit-empty">No sample has been drawn for this batch yet.</p>
+    <form method="post" action="/admin/audit/@Model.BatchId/draw">
+      @Html.AntiForgeryToken()
+      <button class="btn btn--primary" type="submit" id="audit-draw">Draw the stratified sample</button>
+    </form>
+    <p class="audit-hint">
+      Every cell of the batch contributes at least one item, and a tenth of each cell besides - a cell
+      with one item still samples that one, so a C1 or C2 cell cannot be missed.
+    </p>
+  </section>
+}
+else
+{
+  @foreach (var stratum in Model.Strata)
+  {
+    <section class="audit-stratum audit-stratum--@stratum.Status"
+             aria-labelledby="audit-stratum-@stratum.StratumId"
+             data-stratum-id="@stratum.StratumId" data-status="@stratum.Status">
+      <div class="audit-stratum__header">
+        <h2 class="audit-stratum__title" id="audit-stratum-@stratum.StratumId">
+          <span class="font-mono">@stratum.TopicCode</span>
+          <span class="font-mono audit-stratum__level">@stratum.CefrLevel</span>
+          <span class="audit-stratum__modality">@stratum.Modality</span>
+        </h2>
+        <span class="audit-state audit-state--@stratum.Status">@stratum.StatusLabel</span>
+      </div>
+
+      <dl class="audit-stratum__counts">
+        <div class="audit-count">
+          <dt class="audit-count__label">In cell</dt>
+          <dd class="audit-count__value font-mono">@stratum.ItemCount</dd>
+        </div>
+        <div class="audit-count">
+          <dt class="audit-count__label">Sampled</dt>
+          <dd class="audit-count__value font-mono">@stratum.Sampled</dd>
+        </div>
+        <div class="audit-count">
+          <dt class="audit-count__label">Unsampled</dt>
+          <dd class="audit-count__value font-mono">@stratum.Unsampled</dd>
+        </div>
+      </dl>
+
+      @if (stratum.QuarantineReasonLabel is not null)
+      {
+        <p class="audit-stratum__reason">@stratum.QuarantineReasonLabel</p>
+      }
+      @if (stratum.DecidedAt is not null)
+      {
+        <p class="audit-hint">Decided <span class="font-mono">@stratum.DecidedAt</span>.</p>
+      }
+
+      @* ---- the sample, in the order a reviewer works through it ------------------------------ *@
+      <table class="audit-table" id="audit-table-@stratum.StratumId">
+        <caption class="visually-hidden">
+          Sampled items of @stratum.TopicCode @stratum.CefrLevel, longest first
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" class="audit-table__num font-mono">Item</th>
+            <th scope="col">Stem</th>
+            <th scope="col">State</th>
+            <th scope="col" class="audit-table__num font-mono">Solve</th>
+            <th scope="col">Next step</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var item in stratum.Items)
+          {
+            <tr class="audit-sample" data-sample-id="@item.SampleItemId"
+                data-item-id="@item.ItemId" data-solved="@(item.IsSolved ? "true" : "false")"
+                data-key-revealed="@(item.KeyRevealed ? "true" : "false")">
+              <td class="audit-table__num font-mono">@item.ItemId</td>
+              <td class="audit-sample__stem">@item.Stem</td>
+              <td>
+                <span class="audit-sample__state">@item.StateLabel</span>
+              </td>
+              <td class="audit-table__num font-mono">
+                @if (item.SolvedLabel is not null)
+                {
+                  <span class="audit-sample__solve">@item.SolvedLabel</span>
+                }
+                else
+                {
+                  <span class="audit-sample__solve audit-sample__solve--none">-</span>
+                }
+              </td>
+              <td class="audit-sample__actions">
+                @if (!item.IsSolved)
+                {
+                  @* Step 1: the reviewer's own answer. The key is not on this page, so this cannot be
+                     an anchoring hint - it is the only thing they have seen. *@
+                  <form class="audit-solve" method="post"
+                        action="/admin/audit/@Model.BatchId/samples/@item.SampleItemId/solve">
+                    @Html.AntiForgeryToken()
+                    <fieldset class="audit-solve__set">
+                      <legend class="audit-solve__legend">Solve blind before reading the key</legend>
+                      @foreach (var option in new[] { "A", "B", "C", "D" })
+                      {
+                        <label class="audit-solve__option">
+                          <input type="radio" name="label" value="@option" required />
+                          <span class="font-mono">@option</span>
+                          <span class="audit-solve__text">
+                            @(option == "A" ? item.OptionA
+                                : option == "B" ? item.OptionB
+                                : option == "C" ? item.OptionC
+                                : item.OptionD)
+                          </span>
+                        </label>
+                      }
+                      <button class="btn btn--sm btn--primary" type="submit">Record my answer</button>
+                    </fieldset>
+                  </form>
+                }
+                else if (!item.KeyRevealed)
+                {
+                  @* Step 2: the key. Only reachable because a solve exists; the API refuses it
+                     otherwise, so this form is a rendering of that rule rather than the rule. *@
+                  <form method="post"
+                        action="/admin/audit/@Model.BatchId/strata/@stratum.StratumId/samples/@item.SampleItemId/reveal">
+                    @Html.AntiForgeryToken()
+                    <button class="btn btn--sm" type="submit">Read the authored key</button>
+                  </form>
+                }
+                else if (!item.IsJudged)
+                {
+                  @* Step 3: the comparison. Three verdicts, because "defective" is not one fact:
+                     a wrong key and a weak distractor quarantine for different reasons. *@
+                  <form class="audit-verdict" method="post"
+                        action="/admin/audit/@Model.BatchId/samples/@item.SampleItemId/verdict">
+                    @Html.AntiForgeryToken()
+                    <button class="btn btn--sm" type="submit" name="verdict" value="correct">
+                      Key correct
+                    </button>
+                    <button class="btn btn--sm audit-verdict__key-error" type="submit"
+                            name="verdict" value="key_error">
+                      Key error
+                    </button>
+                    <button class="btn btn--sm audit-verdict__defect" type="submit"
+                            name="verdict" value="non_key_defect">
+                      Non-key defect
+                    </button>
+                  </form>
+                }
+                else
+                {
+                  <span class="audit-hint">Judged: @item.Verdict</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (Model.CanDecide && stratum.IsPending)
+      {
+        <div class="audit-stratum__decide">
+          @* The label names both halves of what the button does. A button reading "approve sample"
+             is the defect D17 warns about, so the count is in the label itself. *@
+          <form method="post" action="/admin/audit/@Model.BatchId/strata/@stratum.StratumId/decide">
+            @Html.AntiForgeryToken()
+            <button class="btn btn--primary audit-decide" type="submit"
+                    id="audit-decide-@stratum.StratumId" disabled="@(!stratum.IsDecidable)">
+              @stratum.ApproveLabel
+            </button>
+          </form>
+          @if (!stratum.IsDecidable)
+          {
+            <p class="audit-hint">
+              Judge every sampled item before the cell is decided. The button refuses until then,
+              because a decision on a fraction of the sample is not a decision about the cell.
+            </p>
+          }
+        </div>
+      }
+    </section>
+  }
+}

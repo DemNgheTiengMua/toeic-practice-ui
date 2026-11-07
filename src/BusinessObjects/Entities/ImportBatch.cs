@@ -49,6 +49,10 @@ public partial class ImportBatch
     [InverseProperty("Batch")]
     public virtual ICollection<ImportLog> ImportLogs { get; set; } = new List<ImportLog>();
 
+    /// <summary>#206: the cells this batch's staged stock was audited in.</summary>
+    [InverseProperty("Batch")]
+    public virtual ICollection<ReviewStratum> Strata { get; set; } = new List<ReviewStratum>();
+
     [ForeignKey("UploadedBy")]
     [InverseProperty("ImportBatches")]
     public virtual User UploadedByNavigation { get; set; } = null!;

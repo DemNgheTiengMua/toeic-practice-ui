@@ -41,6 +41,14 @@ public static class DerivedFactWriters
     /// </summary>
     public const string PlacementSkillResult = "AttemptEngine";
 
+    /// <summary>
+    /// #206: the audit's outcome for one stratum of one batch, <c>ReviewStrata</c>. The status is
+    /// derived from the sample verdicts - one key error or a non-key defect rate above 5% quarantines -
+    /// so a second service setting it would be a second answer to "was this batch promoted". Drawing
+    /// the sample derives nothing and declares nothing.
+    /// </summary>
+    public const string StratumDecision = "StratifiedAuditService";
+
     // ---- awaiting a table ----
 
     /// <summary>Topic capability: awaiting the per-cell mastery table (#232).</summary>

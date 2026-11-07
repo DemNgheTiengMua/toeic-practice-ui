@@ -82,6 +82,10 @@ public static class ServiceCollectionExtensions
         // audit's clearance. A thin adapter so the endpoints speak DTOs.
         services.AddScoped<IngestionWorkbenchService>();
         services.AddScoped<IAdminIngestionService, AdminIngestionService>();
+        // #206: the stratified audit. The service owns the sample, the blind-solve order and the
+        // stratum decision; the adapter speaks DTOs and keeps the key out of every list.
+        services.AddScoped<StratifiedAuditService>();
+        services.AddScoped<IAdminAuditService, AdminAuditService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         services.AddScoped<IPlacementService, PlacementService>();
         services.AddScoped<ICalibrationService, CalibrationService>();

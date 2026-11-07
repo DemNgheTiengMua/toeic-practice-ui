@@ -255,6 +255,12 @@ public partial class CompanionDbContext : DbContext
     /// <summary>#201 / ADM-02: who decided what about a review sample, which the trigger reads.</summary>
     public virtual DbSet<ReviewSampleDecision> ReviewSampleDecisions { get; set; }
 
+    /// <summary>#206: the cells one batch's staged stock is audited in.</summary>
+    public virtual DbSet<ReviewStratum> ReviewStrata { get; set; }
+
+    /// <summary>#206: the drawn items of a stratum, their blind solve and their verdict.</summary>
+    public virtual DbSet<ReviewSampleItem> ReviewSampleItems { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ConfigureAuth(modelBuilder);

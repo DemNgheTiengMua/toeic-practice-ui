@@ -43,6 +43,7 @@ public interface ICompanionApiClient :
     IProductiveStudioClient,
     IAdminCoverageClient,
     IAdminIngestionClient,
+    IAdminAuditClient,
     IAdminImportsClient,
     IAdminLessonsClient,
     IAdminCertificatesClient
@@ -110,6 +111,20 @@ public sealed partial class CompanionApiClient(HttpClient http) : ICompanionApiC
         using var message = new HttpRequestMessage(HttpMethod.Post, path);
         AttachBearer(message, bearerToken);
         message.Content = JsonContent.Create(body, options: Json);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<TResponse>(Json, cancellationToken))!;
+    }
+
+    /// <summary>
+    /// A POST with no body. #206's draw and decide verbs carry every input in the route, so an empty JSON
+    /// object would be a request shape with nothing in it - and a body is a place an approval could be
+    /// slipped into by a later caller.
+    /// </summary>
+    private async Task<TResponse> PostAuthorizedAsync<TResponse>(string path, string bearerToken, CancellationToken cancellationToken)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, path);
+        AttachBearer(message, bearerToken);
         using var response = await http.SendAsync(message, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
         return (await response.Content.ReadFromJsonAsync<TResponse>(Json, cancellationToken))!;

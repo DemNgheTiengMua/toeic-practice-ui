@@ -48,6 +48,8 @@ INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable, 
    N'#232 replaces UserCategoryMasteries with per-cell mastery; guarding the table it deletes is waste.'),
   ('step_closure',           'PathStepCompletion', 'covered',        'LearnerPathSteps',
    N'One place closes a step, so the unlock rule cannot drift from the closure.'),
+  ('stratum_decision',       'StratifiedAuditService', 'covered',     'ReviewStrata',
+   N'#206: the audit outcome is derived from the sample verdicts, not typed beside them, so one service states it.'),
   ('window_synthesis',       'PathWindowSynthesizer', 'awaiting_table', NULL,
    N'#212 creates the window rows; a synthesised week has no table yet.'),
   ('credit_movement',        'CreditLedger',       'exempt',         NULL,
@@ -4097,5 +4099,197 @@ ALTER TABLE ImportLog ADD Attempt INT NOT NULL CONSTRAINT DF_ImportLog_Attempt D
 GO
 ALTER TABLE ImportLog ADD ItemId INT NULL
   CONSTRAINT FK_ImportLog_Item REFERENCES Items(ItemId) ON DELETE SET NULL;
+GO
+
+-- ============ #206: the stratified audit and quarantine queue ============
+--
+-- CNT-42's `validated -> active` edge and `validated -> quarantined` edge already exist. What did not
+-- exist is the thing that decides between them, and decides it over a SAMPLE rather than item by item.
+-- #205 cleared one item at a time, deliberately: it promoted nothing the reviewer did not name. That is
+-- the wrong shape for a batch, because a batch is 90% unreviewed by construction (story 29) and a
+-- per-item clearance leaves the pool stalled at 10% of target volume (D17 "Promotion scope").
+--
+-- A STRATUM IS A CELL OF ONE BATCH: (BatchId, TopicId, CefrLevel).
+--
+--   * Scoped to the batch, not to the cell globally. A cell spans every upload that ever filled it, and
+--     a decision taken over stock from another author's file is a decision nobody made. It also makes
+--     "a stratum must not straddle two certificate banks" structural rather than a rule: a batch names
+--     at most one certificate (ImportBatches.CertId, NULL for pool stock), so one stratum cannot hold
+--     items from two papers' banks.
+--   * The batch is carried on the sample row as well (BatchId, below) so the composite foreign key
+--     pins a sample item to the stratum's OWN batch. Without that column the FK would prove the stratum
+--     exists and say nothing about which batch the item came in.
+CREATE TABLE ReviewStrata (
+  StratumId         INT IDENTITY(1,1) PRIMARY KEY,
+  BatchId           INT NOT NULL CONSTRAINT FK_ReviewStrata_Batch REFERENCES ImportBatches(BatchId),
+  TopicId           INT NOT NULL CONSTRAINT FK_ReviewStrata_Topic REFERENCES Topics(TopicId),
+  CefrLevel         VARCHAR(10) NOT NULL
+    CONSTRAINT CK_ReviewStrata_Level CHECK (CefrLevel IN ('A1','A2','B1','B2','C1','C2')),
+  -- How many staged items the cell held when the sample was drawn, and how many of them were drawn.
+  -- Frozen at draw time: a re-submitted record that lands later does not silently enlarge the sample
+  -- its decision was taken from.
+  ItemCount         INT NOT NULL CONSTRAINT CK_ReviewStrata_ItemCount CHECK (ItemCount > 0),
+  -- At least one item, always. A 10% floor rounded DOWN to zero is how a C1 or C2 cell with one item
+  -- disappears from the audit entirely - the failure story 29 names.
+  SampleSize        INT NOT NULL,
+  Status            VARCHAR(12) NOT NULL CONSTRAINT DF_ReviewStrata_Status DEFAULT 'pending'
+    CONSTRAINT CK_ReviewStrata_Status CHECK (Status IN ('pending','approved','quarantined')),
+  -- Why it was refused. A quarantined stratum that cannot say which rule it broke sends the author
+  -- back to re-review 100 items to find one key error.
+  QuarantineReason  VARCHAR(24) NULL
+    CONSTRAINT CK_ReviewStrata_Reason CHECK
+      (QuarantineReason IN ('key_error','non_key_defect_rate')),
+  DecidedAt         DATETIMEOFFSET NULL,
+  -- ADR-0012: the outcome is derived from the sample verdicts, never typed beside them. No foreign key,
+  -- for the reason the registry gives: OwnedService is not unique (AttemptEngine owns two facts), and a
+  -- mistyped name is refused by the trigger comparing it against the registry row anyway.
+  WrittenByService  VARCHAR(64) NULL,
+  ProjectionVersion INT NOT NULL CONSTRAINT DF_ReviewStrata_Version DEFAULT 0,
+  CONSTRAINT UQ_ReviewStrata_Batch_Cell UNIQUE (BatchId, TopicId, CefrLevel),
+  -- Composite target for the sample rows: (StratumId, BatchId) is the pair a sample item pins.
+  CONSTRAINT UQ_ReviewStrata_Id_Batch UNIQUE (StratumId, BatchId),
+  -- The sample is a sample of this stratum, never more than it holds. Table-level because a column
+  -- CHECK may not name a second column.
+  CONSTRAINT CK_ReviewStrata_SampleSize CHECK (SampleSize >= 1 AND SampleSize <= ItemCount),
+  -- The two ways a decision can contradict itself.
+  CONSTRAINT CK_ReviewStrata_QuarantineNamesItsReason CHECK
+      ((Status =  'quarantined' AND QuarantineReason IS NOT NULL)
+    OR (Status <> 'quarantined' AND QuarantineReason IS NULL)),
+  CONSTRAINT CK_ReviewStrata_DecisionIsStamped CHECK
+      ((Status =  'pending' AND DecidedAt IS NULL)
+    OR (Status <> 'pending' AND DecidedAt IS NOT NULL))
+);
+GO
+CREATE INDEX IX_ReviewStrata_Batch ON ReviewStrata(BatchId);
+GO
+-- One row per drawn item. The blind solve and the verdict live here because they are per item; the
+-- sample's size lives on the stratum because it is one number for the whole cell.
+CREATE TABLE ReviewSampleItems (
+  SampleItemId   INT IDENTITY(1,1) PRIMARY KEY,
+  StratumId      INT NOT NULL,
+  BatchId        INT NOT NULL,
+  ItemId         INT NOT NULL CONSTRAINT FK_ReviewSampleItems_Item REFERENCES Items(ItemId),
+  -- The version whose key was solved. Pinned, because a new version is a new key and a verdict about
+  -- version 1 says nothing about version 2.
+  ItemVersionId  INT NOT NULL,
+  -- W-01 / story 30: the reviewer's own answer, recorded before the key is read.
+  SolvedLabel    VARCHAR(1) NULL
+    CONSTRAINT CK_ReviewSampleItems_SolvedLabel CHECK (SolvedLabel IN ('A','B','C','D')),
+  SolvedAt       DATETIMEOFFSET NULL,
+  SolvedBy       INT NULL CONSTRAINT FK_ReviewSampleItems_Solver REFERENCES Users(UserId),
+  -- Set by the ONE read that returns the authored key. Kept so "the key was visible when they solved"
+  -- is answerable after the fact rather than asserted by whoever wrote the screen.
+  KeyRevealedAt  DATETIMEOFFSET NULL,
+  Verdict        VARCHAR(20) NULL
+    CONSTRAINT CK_ReviewSampleItems_Verdict CHECK (Verdict IN ('correct','key_error','non_key_defect')),
+  VerdictAt      DATETIMEOFFSET NULL,
+  VerdictBy      INT NULL CONSTRAINT FK_ReviewSampleItems_VerdictBy REFERENCES Users(UserId),
+  CONSTRAINT UQ_ReviewSampleItems_Stratum_Item UNIQUE (StratumId, ItemId),
+  CONSTRAINT FK_ReviewSampleItems_Stratum FOREIGN KEY (StratumId, BatchId)
+    REFERENCES ReviewStrata(StratumId, BatchId),
+  -- The version must belong to the item: (version, item) is the pair ExamItems pins, and the same
+  -- composite target UQ_ItemVersions_Id_Item exists for exactly this.
+  CONSTRAINT FK_ReviewSampleItems_VersionItem FOREIGN KEY (ItemVersionId, ItemId)
+    REFERENCES ItemVersions(ItemVersionId, ItemId),
+  -- A half-filled solve or verdict is not a fact, it is a form posted halfway.
+  CONSTRAINT CK_ReviewSampleItems_SolveIsWhole CHECK
+      ((SolvedLabel IS NULL AND SolvedAt IS NULL AND SolvedBy IS NULL)
+    OR (SolvedLabel IS NOT NULL AND SolvedAt IS NOT NULL AND SolvedBy IS NOT NULL)),
+  CONSTRAINT CK_ReviewSampleItems_VerdictIsWhole CHECK
+      ((Verdict IS NULL AND VerdictAt IS NULL AND VerdictBy IS NULL)
+    OR (Verdict IS NOT NULL AND VerdictAt IS NOT NULL AND VerdictBy IS NOT NULL)),
+  -- A verdict judges a solve. Adjudicating an item nobody solved is the self-review the whole ticket
+  -- exists to prevent, and saying so in a CHECK makes it unstorable rather than merely unsent.
+  CONSTRAINT CK_ReviewSampleItems_VerdictFollowsSolve CHECK (Verdict IS NULL OR SolvedLabel IS NOT NULL)
+);
+GO
+CREATE INDEX IX_ReviewSampleItems_Stratum ON ReviewSampleItems(StratumId);
+GO
+-- ADR-0012 / D14: the stratum's OUTCOME is the derived fact - status, reason and decision time - and
+-- it is a column set rather than a row, exactly as ExamAttempts' score is. A `pending` row derives
+-- nothing (it states that no verdict exists yet), so drawing the sample needs no declaration and the
+-- guard cannot become a blanket refusal on the table the queue reads.
+--
+-- PRN-01: the writer is a column on this write, never sp_set_session_context.
+CREATE TRIGGER trg_ReviewStrata_SingleWriter
+ON ReviewStrata AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @owner VARCHAR(64) =
+    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'stratum_decision');
+
+  DECLARE @touched TABLE (StratumId INT NOT NULL PRIMARY KEY, WasVersion INT NOT NULL);
+  INSERT INTO @touched (StratumId, WasVersion)
+    SELECT i.StratumId, ISNULL(d.ProjectionVersion, 0)
+    FROM inserted i
+    LEFT JOIN deleted d ON d.StratumId = i.StratumId
+    WHERE i.Status <> 'pending'
+      AND (d.StratumId IS NULL
+        OR i.Status <> d.Status
+        OR ISNULL(i.QuarantineReason, '') <> ISNULL(d.QuarantineReason, '')
+        OR ISNULL(i.DecidedAt, '0001-01-01') <> ISNULL(d.DecidedAt, '0001-01-01')
+        OR i.ProjectionVersion <> d.ProjectionVersion);
+
+  IF NOT EXISTS (SELECT 1 FROM @touched) RETURN;
+
+  -- The declaration must be in THIS statement: a second writer that changes only Status leaves the
+  -- previous owner's name in the column, so a value-only check passes it. UPDATE() is that half.
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN @touched t ON t.StratumId = i.StratumId
+    WHERE ISNULL(i.WrittenByService, '') <> @owner
+       OR (EXISTS (SELECT 1 FROM deleted d WHERE d.StratumId = i.StratumId)
+           AND NOT UPDATE(WrittenByService))
+  )
+    THROW 50090, 'A stratum decision has exactly one writer, StratifiedAuditService. A write declaring another writer (or none) is refused.', 1;
+
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN @touched t ON t.StratumId = i.StratumId
+    WHERE i.ProjectionVersion <= t.WasVersion
+  )
+    THROW 50091, 'The stratum decision projection version must be newer than the stored one; a re-run cannot rewrite a decision that was already taken.', 1;
+END;
+GO
+-- W-01 / story 30, at the boundary where it can actually be violated. The service refuses a solve
+-- posted after the key was read, and this refuses a solve RECORDED after a key was read - which is what
+-- a second writer, a raw fixture or a future endpoint would produce. Both orders are therefore closed:
+-- read-then-solve, and solve-then-read-then-re-solve.
+--
+-- Reachability, stated honestly: with StratifiedAuditService.RevealKeyAsync requiring a solve first,
+-- the service cannot produce a row this refuses. That is the point of a database guard - it holds for
+-- writes the service does not make.
+CREATE TRIGGER trg_ReviewSampleItems_SolveIsBlind
+ON ReviewSampleItems AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    LEFT JOIN deleted d ON d.SampleItemId = i.SampleItemId
+    WHERE i.SolvedLabel IS NOT NULL
+      AND i.KeyRevealedAt IS NOT NULL
+      AND (d.SampleItemId IS NULL OR ISNULL(d.SolvedLabel, '') <> i.SolvedLabel)
+  )
+    THROW 50092, 'W-01: a blind solve must be recorded before the authored key is revealed. This row records a solve against a sample whose key had already been read.', 1;
+END;
+GO
+-- A stratum holds items that arrived in ITS batch, and nothing else. ImportLog is the only record of
+-- which item a record became (#205 added ItemId for exactly that), so it is the only join available.
+-- This is what stops a sample being pointed at stock from another author's file, and - through the
+-- batch's own CertId - at another certificate bank.
+CREATE TRIGGER trg_ReviewSampleItems_ItemIsInItsBatch
+ON ReviewSampleItems AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    WHERE NOT EXISTS (
+      SELECT 1 FROM ImportLog l
+      WHERE l.BatchId = i.BatchId AND l.ItemId = i.ItemId)
+  )
+    THROW 50093, 'A stratum may only sample items that arrived in its own batch; an item with no verdict in this batch is not this audit''s to decide.', 1;
+END;
 GO
 

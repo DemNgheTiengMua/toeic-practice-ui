@@ -170,6 +170,16 @@
       reviewer clears it. The review is the act that promotes, not the upload.
     </p>
 
+    @* #206: one item at a time is the wrong shape for a batch. The stratified audit promotes the
+       whole cell, and says so before the reviewer commits. *@
+    <p class="ingestion-audit-link">
+      <a class="btn btn--sm" href="/admin/audit/@Model.BatchId">Audit this batch by stratum</a>
+      <span class="ingestion-hint">
+        A stratified sample of every cell, solved blind. Approving a stratum promotes its reviewed
+        sample and the unsampled remainder together.
+      </span>
+    </p>
+
     <table class="ingestion-table" id="ingestion-staged-table">
       <thead>
         <tr>

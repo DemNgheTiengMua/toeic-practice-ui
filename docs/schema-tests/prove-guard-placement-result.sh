@@ -144,8 +144,9 @@ run_patch "the monotonic comparison (per-skill result, <= weakened to <)" \
   )
     THROW 50077"
 
-# 10. the registry's honest coverage count, which #212 moved from 4/2/1 to 5/2/1. Demoting the new fact
-#     in the SCHEMA is what the count exists to catch: a table that is guarded but not registered.
+# 10. the registry's honest coverage count, which #212 moved from 4/2/1 to 5/2/1 and #206 to 6/2/1.
+#     Demoting the new fact in the SCHEMA is what the count exists to catch: a table that is guarded but
+#     not registered.
 run_patch "the registry covers the per-skill result" \
   "is not registered as a covered fact owned by AttemptEngine" \
   "  ('placement_skill_result', 'AttemptEngine',      'covered',        'PlacementSkillResults'," \

@@ -41,5 +41,9 @@ public partial class Topic
     /// <summary>#232: the path steps drilled at this topic.</summary>
     [InverseProperty("Topic")]
     public virtual ICollection<LearnerPathStep> LearnerPathSteps { get; set; } = new List<LearnerPathStep>();
+
+    /// <summary>#206: the audit strata drawn from this topic's cells.</summary>
+    [InverseProperty("Topic")]
+    public virtual ICollection<ReviewStratum> ReviewStrata { get; set; } = new List<ReviewStratum>();
 }
 
