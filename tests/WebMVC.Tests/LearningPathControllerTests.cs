@@ -426,6 +426,7 @@ public sealed class LearningPathControllerTests
         }
 
         Task<PlacementCatalogViewDto> IPlacementClient.GetPlacementCatalogAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<PlacementPreflightViewDto> IPlacementClient.GetPlacementGateAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
         Task<PlacementTestInfoDto> IPlacementClient.StartPlacementTestAsync(StartPlacementTestRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
         Task<PreflightStatusDto> IPlacementClient.GetPlacementPreflightStatusAsync(int placementId, CancellationToken cancellationToken) => throw new NotSupportedException();
         Task<PlacementTakeViewDto> IPlacementClient.GetPlacementTakeAsync(int placementId, int? questionDisplayOrder, CancellationToken cancellationToken) => throw new NotSupportedException();

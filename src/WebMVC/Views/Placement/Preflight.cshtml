@@ -1,0 +1,195 @@
+@model PlacementPreflightPageViewModel
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "Placement preflight";
+    var gate = Model.Gate;
+    var reusable = gate.Offers.Count(o => o.CanReuse);
+}
+
+<div class="container stack">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/dashboard" class="breadcrumbs__item">Home</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <a href="/placement" class="breadcrumbs__item">Placement</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">Preflight</span>
+  </nav>
+
+  @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+  {
+    <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+  }
+
+  <div class="row row--between">
+    <div>
+      <h1 class="m-0 mb-1">Before you start</h1>
+      <p class="text-muted no-margin">
+        This is what the placement will measure for <strong>@gate.CertCode</strong>.
+        <strong>Free — no credit is deducted.</strong>
+      </p>
+    </div>
+    <span class="badge badge--success">Free</span>
+  </div>
+
+  @if (!gate.IsStartable)
+  {
+    <div class="alert alert--danger" role="alert">
+      <strong>A placement can be retaken every 24 hours.</strong>
+      @Model.CooldownMessage
+    </div>
+  }
+  else if (gate.CooldownWaived)
+  {
+    <div class="alert alert--info" role="status">
+      <strong>Your last sitting could not be graded.</strong>
+      The system failed to produce a result, so the 24-hour wait has been waived — that was not your fault.
+    </div>
+  }
+
+  <section class="card">
+    <div class="card__header"><strong>What will be measured</strong></div>
+    <div class="card__body">
+      <table class="table">
+        <caption class="visually-hidden">Each skill this certificate examines, and whether it can be carried over</caption>
+        <thead>
+          <tr>
+            <th scope="col">Skill</th>
+            <th scope="col">Carried over</th>
+            <th scope="col">Measured</th>
+            <th scope="col">Needs</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var offer in gate.Offers)
+          {
+            <tr>
+              <th scope="row">@offer.SkillName</th>
+              <td>
+                @if (offer.CanReuse)
+                {
+                  <span class="badge badge--info">Reused</span>
+                  <span class="font-mono">@Model.LevelAndPosition(offer)</span>
+                  <span class="text-sm text-muted">
+                    measured @Model.MeasuredOn(offer)
+                    @if (offer.IsAged)
+                    {
+                      <span class="badge badge--warning">Older than 60 days</span>
+                    }
+                  </span>
+                }
+                else if (offer.LevelCode is not null)
+                {
+                  @* shown, because it is still the learner's answer - but past D18's window it is not reusable *@
+                  <span class="text-sm text-muted">Expired — will be measured again</span>
+                }
+                else
+                {
+                  <span class="text-sm text-muted">Nothing to carry over</span>
+                }
+              </td>
+              <td>
+                @if (offer.CanReuse)
+                {
+                  <span class="text-sm text-muted">Not in this sitting</span>
+                }
+                else
+                {
+                  <span class="text-sm">Yes</span>
+                }
+              </td>
+              <td>
+                @if (offer.CanReuse)
+                {
+                  <span class="text-sm text-muted">—</span>
+                }
+                else if (offer.RequiresMicrophone)
+                {
+                  <span class="text-sm">Microphone</span>
+                }
+                else if (offer.RequiresAudio)
+                {
+                  <span class="text-sm">Headphones</span>
+                }
+                else
+                {
+                  <span class="text-sm text-muted">Nothing extra</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <p class="text-sm text-muted mt-3">
+        Only the skills @gate.CertCode examines are listed. A skill this certificate does not examine is
+        never asked for and never shown.
+      </p>
+    </div>
+  </section>
+
+  @if (gate.IsStartable)
+  {
+    <section class="card">
+      <div class="card__header"><strong>Your choice</strong></div>
+      <div class="card__body stack">
+        @if (reusable > 0)
+        {
+          <p class="no-margin">
+            <strong>@reusable of @gate.Offers.Count</strong> skill@(reusable == 1 ? "" : "s")
+            can be carried over from your last sitting, with the date you actually measured
+            @(reusable == 1 ? "it" : "them"). You can keep those and measure only what is missing, or
+            measure everything again. The choice is yours.
+          </p>
+
+          <form method="post" action="/placement/start" class="no-margin">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="examId" value="@gate.ExamId" />
+            <input type="hidden" name="reuseValidSkills" value="true" />
+            <button type="submit" class="btn btn--primary btn--lg">Keep my @reusable valid result@(reusable == 1 ? "" : "s") and measure the rest</button>
+          </form>
+
+          <form method="post" action="/placement/start" class="no-margin">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="examId" value="@gate.ExamId" />
+            <input type="hidden" name="reuseValidSkills" value="false" />
+            <button type="submit" class="btn btn--ghost btn--lg">Measure everything again</button>
+          </form>
+        }
+        else
+        {
+          <p class="no-margin">
+            Nothing can be carried over — no skill has a measurement inside the 90-day window.
+            This sitting measures every skill @gate.CertCode examines.
+          </p>
+
+          <form method="post" action="/placement/start" class="no-margin">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="examId" value="@gate.ExamId" />
+            <input type="hidden" name="reuseValidSkills" value="false" />
+            <button type="submit" class="btn btn--primary btn--lg">Start the placement</button>
+          </form>
+        }
+
+        @if (gate.RequiresMicrophone || gate.RequiresAudio)
+        {
+          <p class="text-sm text-muted no-margin">
+            This sitting needs
+            @if (gate.RequiresAudio)
+            {
+              <text>working audio output</text>
+            }
+            @if (gate.RequiresAudio && gate.RequiresMicrophone)
+            {
+              <text> and </text>
+            }
+            @if (gate.RequiresMicrophone)
+            {
+              <text>a working microphone</text>
+            }
+            . You will be asked to check both before the timer starts.
+          </p>
+        }
+      </div>
+    </section>
+  }
+</div>

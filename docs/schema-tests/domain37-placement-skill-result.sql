@@ -47,7 +47,7 @@ INSERT INTO @required (ColumnName) VALUES
   ('PlacementId'), ('SkillId'), ('CertId'),
   ('ResultStatus'), ('CefrLevel'), ('PositionInBand'), ('ContinuousCoordinate'),
   ('ProjectedBandCode'), ('ProjectedScore'), ('CutScoreTableVersion'),
-  ('IsEstimatedFromOneTask'), ('IsTruncated'), ('FailureReason'),
+  ('IsEstimatedFromOneTask'), ('IsTruncated'), ('ReusedFromPrior'), ('FailureReason'),
   ('MeasuredAt'), ('ExpiresAt'), ('WrittenByService'), ('ProjectionVersion');
 IF EXISTS (
   SELECT 1 FROM @required r
@@ -76,7 +76,7 @@ BEGIN
     + N' extra) - a stored overall is a second writer of the fact the rows already state';
   THROW 50000, @msg, 1;
 END
-PRINT 'PlacementSkillResults carries the seventeen columns the fact is made of, and no stored overall';
+PRINT 'PlacementSkillResults carries the eighteen columns the fact is made of, and no stored overall';
 
 -- ---------------------------------------------------------------------------------------------
 -- 2. the fixtures

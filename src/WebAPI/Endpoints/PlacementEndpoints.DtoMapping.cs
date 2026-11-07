@@ -36,6 +36,33 @@ public static partial class PlacementEndpoints
             info.RemainingSeconds,
             info.IsAutoSubmitted);
 
+    private static PlacementPreflightViewDto ToPlacementPreflightViewDto(PlacementPreflightView view) =>
+        new(
+            view.CertId,
+            view.CertCode,
+            view.ExamId,
+            view.Offers.Select(o => new PlacementSkillOfferDto(
+                o.SkillId,
+                o.SkillCode,
+                o.SkillName,
+                o.Modality,
+                o.RequiresMicrophone,
+                o.RequiresAudio,
+                // A level CODE, never a band code: PRN-03 forbids carrying the certificate's own scale
+                // into a level. The screen decides how to render it; the wire stays a level.
+                o.Level?.Code,
+                o.PositionInBand,
+                o.MeasuredAt,
+                o.ExpiresAt,
+                o.CanReuse,
+                o.IsAged(DateTimeOffset.UtcNow))).ToList(),
+            view.CooldownUntil,
+            view.CooldownWaived,
+            view.HasReusableSkills,
+            view.IsStartable,
+            view.RequiresMicrophone,
+            view.RequiresAudio);
+
     private static PlacementTakeViewDto ToPlacementTakeViewDto(PlacementTakeView take)
     {
         var currentQ = new AttemptQuestionDto(
@@ -253,5 +280,19 @@ public static partial class PlacementEndpoints
             result.GradedFreeResponseCount,
             result.FailedFreeResponseCount,
             result.ScoreDisplayFactor,
-            result.IsGraded);
+            result.IsGraded,
+            // #213 / story 55: per skill, with the original measurement date, so the result screen can
+            // badge a carried-over number rather than saying "something here is old".
+            result.SkillResults?
+                .Select(r => new PlacementSkillResultInfoDto(
+                    r.SkillId,
+                    r.SkillCode,
+                    r.SkillName,
+                    r.Status.ToString(),
+                    r.Level?.Code,
+                    r.PositionInBand,
+                    r.MeasuredAt,
+                    r.ReusedFromPrior,
+                    r.FailureReason))
+                .ToList() ?? []);
 }

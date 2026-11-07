@@ -2301,6 +2301,11 @@ CREATE TABLE PlacementTests (
     CONSTRAINT CK_Placement_CompletionFailure
     CHECK (CompletionFailureReason IS NULL
            OR CompletionFailureReason IN ('candidate_skipped','inactivity_timeout','ai_grading_failed')),
+  -- #213 / story 52: the learner chose, at the preflight, to carry over the skills whose stored result
+  -- is still inside D18's window rather than re-measure everything. The choice belongs to the sitting -
+  -- the result writer reads it to decide which skills are carried - and it is NOT a stored result: the
+  -- per-skill rows still say, per skill, whether this sitting measured it or reused it.
+  ReusesPriorResults BIT NOT NULL CONSTRAINT DF_Placement_ReusesPriorResults DEFAULT 0,
   -- M-2: the placement exam must belong to the same certificate (NULL stays legal, MATCH SIMPLE)
   CONSTRAINT FK_Placement_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
   -- UI-3: and must be a placement exam, not a mock
@@ -2375,6 +2380,11 @@ CREATE TABLE PlacementSkillResults (
   -- PLC-28/D15: a non-monotonic result truncates to the highest contiguous pass run, and the anomaly is
   -- recorded rather than silently accepted.
   IsTruncated          BIT NOT NULL CONSTRAINT DF_PSR_Truncated DEFAULT 0,
+  -- #213 / D18: this result was CARRIED OVER from an earlier sitting rather than measured in this one,
+  -- so the screen badges it and prints the original measurement date. It is a fact about provenance,
+  -- not a restatement of the level: a row that says measured + today's date while claiming reuse is
+  -- the re-stamping defect, and only this column distinguishes the two rows.
+  ReusedFromPrior      BIT NOT NULL CONSTRAINT DF_PSR_Reused DEFAULT 0,
   -- The three reasons a skill ends up not measured. Null for every other status: "grading" is not a
   -- failure yet, and saying it failed while the job is queued is the mirror of the defect being fixed.
   FailureReason        VARCHAR(24) NULL

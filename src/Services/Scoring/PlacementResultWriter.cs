@@ -135,6 +135,17 @@ public sealed class PlacementResultWriter(
             .Where(r => r.PlacementId == placementId)
             .ToDictionaryAsync(r => r.SkillId, cancellationToken);
 
+        // #213 / D18: the skills a preflight chose to carry over. The window is the STORED one: a state
+        // whose ExpiresAt has passed is not reusable, and a state that is still valid is copied verbatim -
+        // including its original MeasuredAt, which is what the badge on the result screen prints.
+        var reusable = placement.ReusesPriorResults
+            ? await db.LearnerSkillStates
+                .AsNoTracking()
+                .Where(s => s.UserId == placement.UserId && s.CertId == placement.CertId
+                    && s.ExpiresAt > now)
+                .ToDictionaryAsync(s => s.SkillId, cancellationToken)
+            : [];
+
         // Nothing attempted and nothing queued on an auto-submitted sitting is a timeout, not a skip:
         // the distinction is the whole reason the failure reason exists.
         var sittingTimedOut = attempt.IsAutoSubmitted
@@ -146,9 +157,6 @@ public sealed class PlacementResultWriter(
 
         foreach (var skillId in skills)
         {
-            var status = DeriveStatus(
-                skillId, scored, answeredBySkill, gradingsBySkill, sittingTimedOut, out var failureReason);
-
             var row = rows.GetValueOrDefault(skillId);
             var isNew = row is null;
             if (isNew)
@@ -157,13 +165,7 @@ public sealed class PlacementResultWriter(
                 db.PlacementSkillResults.Add(row);
             }
 
-            var projected = projectionsBySkill.GetValueOrDefault(skillId);
-            var measuredNow = status is PlacementResultStatus.Measured
-                or PlacementResultStatus.EstimatedFromOneTask;
-
             row!.CertId = placement.CertId;
-            row.ResultStatus = status;
-            row.IsEstimatedFromOneTask = status == PlacementResultStatus.EstimatedFromOneTask;
 
             // The declaration is set BEFORE anything that can save this row. SkillStateWriter's
             // RecordAsync calls SaveChanges on the shared context, and that flush would persist a row
@@ -172,6 +174,45 @@ public sealed class PlacementResultWriter(
             row.WrittenByService = DerivedFactWriters.PlacementSkillResult;
             db.Entry(row).Property(r => r.WrittenByService).IsModified = true;
             row.ProjectionVersion = isNew ? 1 : row.ProjectionVersion + 1;
+
+            // #213 / story 51-55: a carried skill FILLS A GAP, it does not overwrite evidence. It applies
+            // only where this sitting did not measure the skill itself - a paper that does not reach it,
+            // or one the learner stopped before. Carrying over a skill that was actually measured would
+            // discard the fresh result and leave LearnerSkillStates stale, which is a silent data loss.
+            //
+            // Its dates are the STORED ones, copied verbatim: re-stamping MeasuredAt would move the
+            // measurement to today (and CK_PSR_Expiry refuses it), which is the defect the badge exists
+            // to make visible. Nothing is written back to LearnerSkillStates - reuse derives no new fact,
+            // so the single writer of that table must not be called.
+            var status = DeriveStatus(
+                skillId, scored, answeredBySkill, gradingsBySkill, sittingTimedOut, out var failureReason);
+
+            var projected = projectionsBySkill.GetValueOrDefault(skillId);
+            var measuredNow = status is PlacementResultStatus.Measured
+                or PlacementResultStatus.EstimatedFromOneTask;
+
+            if (!measuredNow && reusable.TryGetValue(skillId, out var carried))
+            {
+                row.ResultStatus = PlacementResultStatus.Measured;
+                row.IsEstimatedFromOneTask = false;
+                row.CefrLevel = carried.CefrLevel;
+                row.PositionInBand = carried.PositionInBand;
+                row.ContinuousCoordinate = carried.ContinuousCoordinate;
+                row.ProjectedBandCode = null;
+                row.ProjectedScore = null;
+                row.CutScoreTableVersion = null;
+                row.MeasuredAt = carried.MeasuredAt;
+                row.ExpiresAt = carried.ExpiresAt;
+                row.FailureReason = null;
+                row.IsTruncated = false;
+                row.ReusedFromPrior = true;
+                measured++;
+                continue;
+            }
+
+            row.ResultStatus = status;
+            row.IsEstimatedFromOneTask = status == PlacementResultStatus.EstimatedFromOneTask;
+            row.ReusedFromPrior = false;
 
             if (measuredNow)
             {

@@ -4,6 +4,10 @@ public interface IPlacementClient
 {
     Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(CancellationToken cancellationToken = default);
     Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(string bearerToken, CancellationToken cancellationToken = default) => GetPlacementCatalogAsync(cancellationToken);
+
+    /// <summary>#213 / SCR-PL-01: what will be measured, what may be carried over, and the cooldown.</summary>
+    Task<PlacementPreflightViewDto> GetPlacementGateAsync(CancellationToken cancellationToken = default);
+    Task<PlacementPreflightViewDto> GetPlacementGateAsync(string bearerToken, CancellationToken cancellationToken = default) => GetPlacementGateAsync(cancellationToken);
     Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, CancellationToken cancellationToken = default);
     Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) => StartPlacementTestAsync(request, cancellationToken);
     Task<PreflightStatusDto> GetPlacementPreflightStatusAsync(int placementId, CancellationToken cancellationToken = default);

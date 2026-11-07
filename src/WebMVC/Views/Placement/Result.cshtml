@@ -102,6 +102,52 @@
     }
   </div>
 
+  @* #213 / story 55: the per-skill level, its position, and WHEN it was measured. A carried-over
+     result is badged here, beside its own number, with the date it actually came from - "always know
+     how old each number is" is a claim about each number, not about the page. *@
+  @if (Model.SkillResults.Count > 0)
+  {
+    <section class="card">
+      <div class="card__header"><strong>Your level, per skill</strong></div>
+      <div class="card__body">
+        <table class="table">
+          <caption class="visually-hidden">Each examined skill, its level and position, and when that was measured</caption>
+          <thead>
+            <tr>
+              <th scope="col">Skill</th>
+              <th scope="col">Level</th>
+              <th scope="col">Measured</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var skill in Model.SkillResults)
+            {
+              <tr>
+                <th scope="row">@skill.SkillName</th>
+                <td class="font-mono">@Model.LevelAndPosition(skill)</td>
+                <td>
+                  @if (skill.ReusedFromPrior)
+                  {
+                    <span class="badge badge--warning">Carried over</span>
+                    <span class="font-mono text-sm">@Model.CarriedOverLabel(skill)</span>
+                  }
+                  else if (skill.MeasuredAt is not null)
+                  {
+                    <span class="font-mono text-sm text-muted">Measured on @Model.MeasuredOn(skill)</span>
+                  }
+                  else
+                  {
+                    <span class="text-sm text-muted">Not measured in this sitting</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
   @if (result.IsGraded && !string.IsNullOrEmpty(result.WeakerSkillName))
   {
     <div class="alert alert--info">

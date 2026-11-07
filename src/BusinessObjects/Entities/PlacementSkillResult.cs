@@ -73,6 +73,14 @@ public partial class PlacementSkillResult
     /// <summary>PLC-28: the awarded level was truncated to the highest contiguous passing run.</summary>
     public bool IsTruncated { get; set; }
 
+    /// <summary>
+    /// #213 / D18: this row was carried over from an earlier sitting rather than measured in this one.
+    /// <see cref="MeasuredAt"/> and <see cref="ExpiresAt"/> are the EARLIER measurement's, copied
+    /// verbatim - a reused result is not re-stamped, or the badge would describe today instead of the
+    /// day the learner actually sat the skill.
+    /// </summary>
+    public bool ReusedFromPrior { get; set; }
+
     /// <summary>One of <see cref="PlacementFailureReason"/>, exactly when the status is not_measured.</summary>
     [MaxLength(24)]
     [Unicode(false)]

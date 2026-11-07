@@ -11,12 +11,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Services;
 
-public sealed class PlacementService(
+public sealed partial class PlacementService(
     CompanionDbContext db,
     ILearnerService learners,
-    IAttemptEngine? attemptEngine = null) : IPlacementService
+    IAttemptEngine? attemptEngine = null,
+    TimeProvider? clock = null) : IPlacementService
 {
     private readonly IAttemptEngine _attemptEngine = attemptEngine ?? new AttemptEngine(db);
+
+    /// <summary>#213: the cooldown is a wall-clock rule, so the clock is injected rather than assumed.</summary>
+    private readonly TimeProvider _clock = clock ?? TimeProvider.System;
 
     private static PlacementException MapPlacementException(AttemptEngineException ex) => ex.Code switch
     {
@@ -105,6 +109,21 @@ public sealed class PlacementService(
 
     public async Task<PlacementTestInfo> StartPlacementTestAsync(int userId, int examId, CancellationToken cancellationToken = default)
     {
+        return await StartPlacementInternalAsync(userId, examId, PlacementReuseChoice.Remeasure, cancellationToken);
+    }
+
+    public async Task<PlacementTestInfo> StartPlacementTestAsync(
+        int userId, int examId, PlacementReuseChoice reuse, CancellationToken cancellationToken = default)
+    {
+        return await StartPlacementInternalAsync(userId, examId, reuse, cancellationToken);
+    }
+
+    private async Task<PlacementTestInfo> StartPlacementInternalAsync(
+        int userId,
+        int examId,
+        PlacementReuseChoice reuse,
+        CancellationToken cancellationToken)
+    {
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
         var exam = await db.Exams
             .Where(e => e.ExamId == examId && e.CertId == certId && e.Purpose == ExamPurpose.Placement.ToCode() && e.Status == ExamStatus.Published.ToCode() && !e.IsDeleted)
@@ -141,6 +160,12 @@ public sealed class PlacementService(
             }
         }
 
+        // #213 / PLC-07: the retake cooldown. It reads the most recent FINISHED sitting and nothing else,
+        // so there is no lifetime cap anywhere in this rule. A resume of the sitting already in progress
+        // returned above and is never refused by it - a cooldown that blocked a resume would strand a
+        // learner halfway through a paper.
+        await EnsureCooldownElapsedAsync(userId, certId, cancellationToken);
+
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
 
         // Abandon any other in-progress placement test for this certificate and its linked attempt
@@ -170,6 +195,8 @@ public sealed class PlacementService(
             TakenAt = attempt.StartedAt,
             TotalScore = null,
             ResultBandCode = null,
+            // The choice lives on the sitting; the result writer reads it per skill.
+            ReusesPriorResults = reuse == PlacementReuseChoice.ReuseValid,
         };
 
         db.PlacementTests.Add(placement);
@@ -963,6 +990,27 @@ public sealed class PlacementService(
                 resultBandCode));
         }
 
+        // #213 / story 55: the per-skill rows are READ, not derived here. They are the one writer's
+        // product, and they are the only place a carried-over result exists: its skill has no
+        // AttemptSkillScore (it was never sat), so a page built only from the scores above would omit
+        // the very number the learner is being shown.
+        var skillResults = await db.PlacementSkillResults
+            .AsNoTracking()
+            .Where(r => r.PlacementId == placement.PlacementId)
+            .Join(db.Skills.AsNoTracking(), r => r.SkillId, s => s.SkillId, (r, s) => new { r, s })
+            .OrderBy(x => x.s.DisplayOrder).ThenBy(x => x.s.SkillId)
+            .Select(x => new PlacementSkillResultInfo(
+                x.r.SkillId,
+                x.s.Code,
+                x.s.Name,
+                x.r.ResultStatus,
+                x.r.CefrLevel,
+                x.r.PositionInBand,
+                x.r.MeasuredAt,
+                x.r.ReusedFromPrior,
+                x.r.FailureReason))
+            .ToListAsync(cancellationToken);
+
         // Weaker section analysis: compare percentage of raw scores
         string? weakerSkillName = null;
         if (skillInfos.Count >= 2)
@@ -1033,7 +1081,10 @@ public sealed class PlacementService(
             gradedFreeResponseCount,
             failedFreeResponseCount,
             scoreDisplayFactor,
-            isGraded);
+            isGraded)
+        {
+            SkillResults = skillResults,
+        };
     }
     private async Task<(int Total, int Graded, int Failed, bool IsGraded)> GetAttemptGradingCountsAsync(
         int attemptId,

@@ -35,12 +35,20 @@ public sealed class PlacementController(
 
     [HttpPost("/placement/start")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Start([FromForm] int examId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Start(
+        [FromForm] int examId, CancellationToken cancellationToken, [FromForm] bool reuseValidSkills = false)
     {
         try
         {
-            var response = await api.StartPlacementTestAsync(new StartPlacementTestRequest(examId), cancellationToken);
+            var response = await api.StartPlacementTestAsync(
+                new StartPlacementTestRequest(examId, reuseValidSkills), cancellationToken);
             return RedirectToAction(nameof(Take), new { placementId = response.PlacementId });
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.PlacementCooldown)
+        {
+            logger.LogInformation(ex, "Placement retake refused inside the 24-hour cooldown");
+            TempData["ErrorMessage"] = ex.Detail ?? "A placement can be retaken every 24 hours.";
+            return RedirectToAction(nameof(Index));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.ExamNotFound)
         {
@@ -52,6 +60,26 @@ public sealed class PlacementController(
         {
             logger.LogError(ex, "Failed to start placement test for exam {ExamId}", examId);
             TempData["ErrorMessage"] = ex.Detail ?? "Could not start placement test. Please try again.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    /// <summary>
+    /// #213 / SCR-PL-01: the preflight. It is a read — it does not start a sitting — so a learner can
+    /// look at what will be measured and what would be carried over before committing to either.
+    /// </summary>
+    [HttpGet("/placement/preflight")]
+    public async Task<IActionResult> Preflight(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var gate = await api.GetPlacementGateAsync(cancellationToken);
+            return View(new PlacementPreflightPageViewModel(gate, TempData["ErrorMessage"] as string));
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to load the placement preflight");
+            TempData["ShellError"] = "Could not load the placement checklist. Please try again.";
             return RedirectToAction(nameof(Index));
         }
     }

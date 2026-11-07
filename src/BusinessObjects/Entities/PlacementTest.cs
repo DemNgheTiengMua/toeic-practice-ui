@@ -57,6 +57,14 @@ public partial class PlacementTest
     public string? CompletionFailureReason { get; set; }
 
     /// <summary>
+    /// #213: the learner chose "carry over my valid skills" at the preflight, so a skill whose stored
+    /// state is still inside D18's 90-day window is carried into this sitting's result instead of being
+    /// re-measured. The choice is on the placement because it is a fact about this sitting, and the
+    /// result writer — the one writer of the per-skill rows — is what reads it.
+    /// </summary>
+    public bool ReusesPriorResults { get; set; }
+
+    /// <summary>
     /// #212: the per-skill results, one per skill the sitting touched. The placement is done when at
     /// least one of these is <see cref="PlacementResultStatus.Measured"/> or
     /// <see cref="PlacementResultStatus.EstimatedFromOneTask"/>, or when
