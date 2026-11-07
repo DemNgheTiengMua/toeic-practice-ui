@@ -21,8 +21,6 @@ namespace BusinessObjects.Entities;
 /// stable identity a past attempt can point at.
 /// </para>
 /// </summary>
-[Index("TopicId", "CefrLevel", Name = "IX_Items_Cell")]
-[Index("LifecycleStatus", "ContentTier", Name = "IX_Items_Selection")]
 public partial class Item
 {
     [Key]

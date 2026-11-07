@@ -84,9 +84,6 @@ public partial class CompanionDbContext
             // reads a partly-nullable composite key as required, refusing a pool answer's save with
             // "the value of QuestionId is unknown". MATCH SIMPLE skips each exactly when its nullable
             // column is null, which is the pool shape.
-            entity.HasOne(d => d.Session).WithMany(p => p.PracticeAnswerSessions)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__PracticeA__Sessi__6BE40491");
 
             // #187: the answered version must be a version of the answered item - the same composite
             // idiom ExamItems and AttemptAnswers use.

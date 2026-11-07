@@ -15,7 +15,6 @@ namespace BusinessObjects.Entities;
 /// re-versioned or retired item unable to change a finished session's summary.
 /// </para>
 /// </summary>
-[Index("QuestionId", Name = "IX_PracticeAnswers_Question")]
 [Index("SessionId", "QuestionId", Name = "UQ_PracticeAnswers_Question", IsUnique = true)]
 [Index("SessionId", "ItemVersionId", Name = "UQ_PracticeAnswers_Version", IsUnique = true)]
 public partial class PracticeAnswer

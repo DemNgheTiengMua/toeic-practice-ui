@@ -27,7 +27,6 @@ namespace BusinessObjects.Entities;
 /// OUTPUT clause.
 /// </para>
 /// </summary>
-[Index("ExamId", "SectionId", "DisplayOrder", Name = "UQ_ExamItems_Exam_Section_Order", IsUnique = true)]
 public partial class ExamItem
 {
     [Key]

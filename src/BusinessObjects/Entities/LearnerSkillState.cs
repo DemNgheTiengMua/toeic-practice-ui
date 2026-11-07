@@ -22,7 +22,6 @@ namespace BusinessObjects.Entities;
 /// taken under the old rule; pinning it to the measurement means the two can never disagree.
 /// </para>
 /// </summary>
-[Index("UserId", "CertId", Name = "IX_LSS_UserCert")]
 public partial class LearnerSkillState
 {
     public int UserId { get; set; }

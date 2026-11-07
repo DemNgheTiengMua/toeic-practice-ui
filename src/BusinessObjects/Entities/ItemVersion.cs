@@ -18,7 +18,6 @@ namespace BusinessObjects.Entities;
 /// declaration fails every save on the OUTPUT clause.
 /// </para>
 /// </summary>
-[Index("ItemId", "VersionNumber", Name = "UQ_ItemVersions_Item_Number", IsUnique = true)]
 public partial class ItemVersion
 {
     [Key]

@@ -14,7 +14,6 @@ namespace BusinessObjects.Entities;
 /// per-certificate and unlevelled, which is why twelve of its fifteen buckets held no items.
 /// </summary>
 [Index("Modality", "Code", Name = "UQ_Topics_Modality_Code", IsUnique = true)]
-[Index("TopicId", "Modality", Name = "UQ_Topics_Id_Modality", IsUnique = true)]
 public partial class Topic
 {
     [Key]

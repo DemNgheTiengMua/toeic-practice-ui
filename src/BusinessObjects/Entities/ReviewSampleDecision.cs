@@ -19,7 +19,6 @@ namespace BusinessObjects.Entities;
 /// and the account, because that is the fact ADM-02 reads.
 /// </para>
 /// </summary>
-[Index("BatchId", "ItemId", Name = "IX_RSD_Batch_Item")]
 public partial class ReviewSampleDecision
 {
     [Key]

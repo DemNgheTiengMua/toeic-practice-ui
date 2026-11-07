@@ -9,7 +9,6 @@ namespace BusinessObjects.Entities;
 /// <summary>#155: one learner's mastery of one category. The row is the whole state of the scheduler:
 /// counters that prove a threshold, and the date the category may next be drilled. There is no
 /// "untested" row - absence of a row is <see cref="MasteryState.Untested"/>.</summary>
-[Index("UserId", "CertId", "NextReviewDueAt", Name = "IX_UCM_User_Due")]
 public partial class UserCategoryMastery
 {
     [Key]
