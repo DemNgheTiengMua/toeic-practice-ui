@@ -212,9 +212,12 @@ public sealed class DynamicPathGenerationTests(DatabaseFixture database)
         var order = 1;
         foreach (var itemId in items)
         {
+            // #254: "newest" is the authored order, measured the same way every reader measures it.
             var versionId = await db.ItemVersions
                 .Where(v => v.ItemId == itemId)
-                .MaxAsync(v => v.ItemVersionId);
+                .OrderByDescending(v => v.VersionNumber)
+                .Select(v => v.ItemVersionId)
+                .FirstAsync();
 
             db.PracticeAnswers.Add(new PracticeAnswer
             {

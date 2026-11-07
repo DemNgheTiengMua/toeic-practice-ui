@@ -55,12 +55,17 @@ public sealed partial class PracticeService
             .ToListAsync(cancellationToken);
 
         var itemIds = items.Select(i => i.ItemId).ToList();
-        var latestVersions = await db.ItemVersions
+        // #254: "newest" is the authored order (VersionNumber), and GateContext states it once. Asking
+        // the highest ItemVersionId here made the drill serve a different row than gate one judged
+        // whenever a version was inserted out of order.
+        var versions = await db.ItemVersions
             .AsNoTracking()
             .Where(v => itemIds.Contains(v.ItemId))
-            .GroupBy(v => v.ItemId)
-            .Select(g => new { ItemId = g.Key, ItemVersionId = g.Max(v => v.ItemVersionId) })
-            .ToDictionaryAsync(v => v.ItemId, v => v.ItemVersionId, cancellationToken);
+            .Select(v => new { v.ItemId, v.VersionNumber, v.ItemVersionId })
+            .ToListAsync(cancellationToken);
+
+        var latestVersions = GateContext.NewestPerItem(versions, v => v.ItemId, v => v.VersionNumber)
+            .ToDictionary(v => v.ItemId, v => v.ItemVersionId);
 
         return items
             .Where(i => latestVersions.ContainsKey(i.ItemId))

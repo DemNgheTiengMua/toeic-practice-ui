@@ -747,6 +747,11 @@ GO
 CREATE TABLE ItemVersions (
   ItemVersionId  INT IDENTITY(1,1) PRIMARY KEY,
   ItemId         INT NOT NULL CONSTRAINT FK_ItemVersions_Item REFERENCES Items(ItemId),
+  -- #254: the ordering is NOT constrained to rise. "Newest" is the highest VersionNumber, and
+  -- GateContext.Newest is its only reader, so a lower number written after a higher one cannot make
+  -- two readers disagree. A trigger refusing it was considered and skipped: correcting data - the
+  -- issue's own rollback-and-reapply - needs to write a lower number, and a guard that blocked the
+  -- repair would be worse than the latent divergence it prevents.
   VersionNumber  INT NOT NULL CONSTRAINT CK_ItemVersions_Number CHECK (VersionNumber > 0),
   Stem           NVARCHAR(MAX) NOT NULL,
   -- CNT-06: four options, one key, a 25% guessing floor. A productive task is the other legal shape
