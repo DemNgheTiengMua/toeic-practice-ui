@@ -16,13 +16,18 @@ public interface IAdminIngestionService
 {
     Task<IngestionBatchListDto> GetBatchesAsync(CancellationToken cancellationToken = default);
 
-    Task<IngestionBatchDetailDto> GetBatchAsync(int batchId, CancellationToken cancellationToken = default);
+    Task<IngestionBatchDetailDto> GetBatchAsync(
+        int batchId, string? rule = null, CancellationToken cancellationToken = default);
 
     Task<IngestionUploadResultDto> UploadAsync(
         string skill, Stream content, string fileName, int uploadedBy, CancellationToken cancellationToken = default);
 
     Task<IngestionRecordDto> ResubmitAsync(
         int batchId, int line, string correctedRecordJson, int submittedBy, CancellationToken cancellationToken = default);
+
+    /// <summary>#207 AC3: withdraw one refused record, leaving the accepted ones and their items alone.</summary>
+    Task DiscardAsync(
+        int batchId, int line, string? reason, int discardedBy, CancellationToken cancellationToken = default);
 
     Task ClearAsync(int batchId, int itemId, int clearedBy, CancellationToken cancellationToken = default);
 }
@@ -42,9 +47,10 @@ public sealed class AdminIngestionService(IngestionWorkbenchService workbench) :
         return new IngestionBatchListDto(batches);
     }
 
-    public async Task<IngestionBatchDetailDto> GetBatchAsync(int batchId, CancellationToken cancellationToken = default)
+    public async Task<IngestionBatchDetailDto> GetBatchAsync(
+        int batchId, string? rule = null, CancellationToken cancellationToken = default)
     {
-        var detail = await workbench.GetBatchAsync(batchId, cancellationToken);
+        var detail = await workbench.GetBatchAsync(batchId, rule, cancellationToken);
 
         var records = new List<IngestionRecordDto>(detail.Records.Count);
         foreach (var row in detail.Records)
@@ -56,7 +62,14 @@ public sealed class AdminIngestionService(IngestionWorkbenchService workbench) :
             }
 
             records.Add(new IngestionRecordDto(
-                row.Line, row.Attempt, row.Accepted, row.ItemId, refusals, row.RecordJson));
+                row.Line, row.Attempt, row.Accepted, row.ItemId, refusals, row.RecordJson,
+                row.Discarded, row.Note));
+        }
+
+        var groups = new List<IngestionRuleGroupDto>(detail.RuleGroups.Count);
+        foreach (var group in detail.RuleGroups)
+        {
+            groups.Add(new IngestionRuleGroupDto(group.Rule, group.Records));
         }
 
         var staged = new List<IngestionStagedItemDto>(detail.Staged.Count);
@@ -66,7 +79,7 @@ public sealed class AdminIngestionService(IngestionWorkbenchService workbench) :
                 item.ItemId, item.TopicCode, item.CefrLevel, item.Modality, item.LifecycleStatus, item.VersionNumber));
         }
 
-        return new IngestionBatchDetailDto(ToDto(detail.Batch), records, staged);
+        return new IngestionBatchDetailDto(ToDto(detail.Batch), records, groups, staged);
     }
 
     public async Task<IngestionUploadResultDto> UploadAsync(
@@ -102,6 +115,10 @@ public sealed class AdminIngestionService(IngestionWorkbenchService workbench) :
     public Task ClearAsync(int batchId, int itemId, int clearedBy, CancellationToken cancellationToken = default) =>
         workbench.ClearForServiceAsync(batchId, itemId, clearedBy, cancellationToken);
 
+    public async Task DiscardAsync(
+        int batchId, int line, string? reason, int discardedBy, CancellationToken cancellationToken = default) =>
+        await workbench.DiscardAsync(batchId, line, reason, discardedBy, cancellationToken);
+
     private static IngestionBatchSummaryDto ToDto(WorkbenchBatchSummary batch) => new(
         batch.BatchId,
         batch.SourceName,
@@ -111,5 +128,6 @@ public sealed class AdminIngestionService(IngestionWorkbenchService workbench) :
         batch.CreatedAt,
         batch.CompletedAt,
         batch.Records,
-        batch.Accepted);
+        batch.Accepted,
+        batch.Discarded);
 }

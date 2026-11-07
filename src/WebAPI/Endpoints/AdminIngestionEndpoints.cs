@@ -31,11 +31,11 @@ public static class AdminIngestionEndpoints
             Results.Ok(await service.GetBatchesAsync(cancellationToken)));
 
         author.MapGet("/{batchId:int}", async (
-            int batchId, IAdminIngestionService service, CancellationToken cancellationToken) =>
+            int batchId, string? rule, IAdminIngestionService service, CancellationToken cancellationToken) =>
         {
             try
             {
-                return Results.Ok(await service.GetBatchAsync(batchId, cancellationToken));
+                return Results.Ok(await service.GetBatchAsync(batchId, rule, cancellationToken));
             }
             catch (AdminItemException ex)
             {
@@ -114,6 +114,34 @@ public static class AdminIngestionEndpoints
             }
         });
 
+        // #207 AC3: withdrawing a refused record is authoring, not review - it publishes nothing and
+        // touches no item. The accepted records and their staged items are untouched by construction:
+        // the write is one ImportLog row for one line.
+        author.MapPost("/{batchId:int}/records/{line:int}/discard", async (
+            int batchId,
+            int line,
+            IngestionDiscardRequest request,
+            IAdminIngestionService service,
+            IActingStaffAccount acting,
+            CancellationToken cancellationToken) =>
+        {
+            if (acting.UserId is not int discardedBy)
+            {
+                return Problem(StatusCodes.Status401Unauthorized, "The acting staff account is unknown.",
+                    ApiError.Codes.Unauthenticated);
+            }
+
+            try
+            {
+                await service.DiscardAsync(batchId, line, request.Reason, discardedBy, cancellationToken);
+                return Results.NoContent();
+            }
+            catch (AdminItemException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
         // Clearing is review, and it is the act that makes staged content live.
         review.MapPost("/{batchId:int}/items/{itemId:int}/clear", async (
             int batchId,
@@ -143,3 +171,6 @@ public static class AdminIngestionEndpoints
 
 /// <summary>#205: the corrected record, exactly as the author edited it.</summary>
 public sealed record IngestionResubmitRequest(string? Record);
+
+/// <summary>#207: why a record was withdrawn. Optional, because refusing a discard for a blank reason would make staff invent one.</summary>
+public sealed record IngestionDiscardRequest(string? Reason);

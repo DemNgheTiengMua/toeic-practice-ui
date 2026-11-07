@@ -51,6 +51,20 @@ public sealed class IngestionWorkbenchTests(DatabaseFixture database)
         ]
         """;
 
+    /// <summary>
+    /// The four options with one option's rationale removed. Two records using this helper with
+    /// different letters break <c>gate1.feedback.rationale</c> with <b>different sentences</b>, which
+    /// is the input that tells a grouping on the rule code from a grouping on the prose.
+    /// </summary>
+    private static string OptionsMissing(string label) => $$"""
+        [
+          { "key": "A", "text": "The night ledger.", "distractor_rationale": {{(label == "A" ? "null" : "\"Correct: the notice names the ledger.\"")}} },
+          { "key": "B", "text": "The depot shutter.", "distractor_rationale": {{(label == "B" ? "null" : "\"The passage never mentions a shutter.\"")}} },
+          { "key": "C", "text": "The depot supervisor.", "distractor_rationale": {{(label == "C" ? "null" : "\"No supervisor appears in the passage.\"")}} },
+          { "key": "D", "text": "The office doorway.", "distractor_rationale": {{(label == "D" ? "null" : "\"A door is not what the notice requires.\"")}} }
+        ]
+        """;
+
     private static string File(string groups) => $$"""
         {
           "schema_version": "2.0.0",
@@ -68,10 +82,11 @@ public sealed class IngestionWorkbenchTests(DatabaseFixture database)
         bool withRationales = true,
         int spanStart = 4,
         int spanEnd = 21,
-        string level = "B1")
+        string level = "B1",
+        string? optionsJson = null)
     {
         var stem = index == 0 ? "What time does the depot open?" : $"Which notice is posted at gate {index}?";
-        var options = withRationales ? OptionsJson : OptionsWithoutRationaleJson;
+        var options = optionsJson ?? (withRationales ? OptionsJson : OptionsWithoutRationaleJson);
         var explanation = withExplanation
             ? "\"The first sentence states the opening time.\""
             : "null";
@@ -561,5 +576,443 @@ public sealed class IngestionWorkbenchTests(DatabaseFixture database)
                     .Where(i => i.ItemId == draft.ItemId)
                     .Select(i => i.LifecycleStatus)
                     .SingleAsync());
+        });
+
+    // ---- #207 AC1: refusals grouped by rule code ---------------------------------------------
+
+    /// <summary>
+    /// #207 AC1. Three refused records, two of them breaking the same rule, and the grouping says so:
+    /// two records under one rule and one under another.
+    /// <para>
+    /// <b>Which guard could this pass while being wrong:</b> a grouping on <c>Message</c> rather than
+    /// <c>RuleCode</c>. The message is prose with the option letters interpolated, so the fixture makes
+    /// the two rationale-broken records break the rule for <em>different</em> options - one is missing
+    /// A's rationale, one is missing C's - so their sentences differ while their rule code does not.
+    /// A grouping on prose reports two groups of one here.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public Task The_rejections_are_grouped_by_rule_code_and_two_records_with_one_rule_share_a_group() =>
+        InFreshDatabaseAsync("RuleGroups", async connStr =>
+        {
+            await using var db = DbContextFactory.Create(connStr);
+            var (uploaderId, _) = await SeedAccountsAsync(db);
+            var (one, two, classifier) = AgreeingGates();
+            var bench = Bench(db, one, two, classifier);
+
+            // Two different sentences, one rule code: one record is missing A's rationale, the other
+            // is missing C's.
+            var missingA = Group(
+                "stim_demo_rulegroup00001", 0,
+                Child(0, optionsJson: OptionsMissing("A")),
+                Child(1, optionsJson: OptionsMissing("C"), spanStart: 64, spanEnd: 81));
+            // And a third record breaking a different rule of the same gate.
+            var noExplanation = Group(
+                "stim_demo_rulegroup00002", 10,
+                Child(10, withExplanation: false, spanStart: 4, spanEnd: 21));
+
+            var uploaded = await bench.UploadAsync(
+                "reading", Utf8(File($"[{missingA},{noExplanation}]")), "rules.json", uploaderId);
+
+            var detail = await bench.GetBatchAsync(uploaded.BatchId);
+            Assert.Equal(3, detail.Records.Count);
+
+            var rationale = Assert.Single(detail.RuleGroups, g => g.Rule == GateOneRules.OptionRationale);
+            var explanation = Assert.Single(detail.RuleGroups, g => g.Rule == GateOneRules.Explanation);
+
+            // Two distinct records break the rationale rule; one breaks the explanation rule.
+            Assert.Equal(2, rationale.Records);
+            Assert.Equal(1, explanation.Records);
+
+            // The prose really does differ inside the larger group - which is what makes this a
+            // grouping on the code rather than on the sentence.
+            var messages = detail.Records
+                .Where(r => r.Refusals.Any(x => x.Rule == GateOneRules.OptionRationale))
+                .Select(r => r.Refusals.First(x => x.Rule == GateOneRules.OptionRationale).Message)
+                .Distinct()
+                .Count();
+            Assert.True(messages > 1, "the fixture is meant to give one rule different sentences");
+
+            // And no group is keyed on an empty code.
+            Assert.DoesNotContain(detail.RuleGroups, g => g.Rule == string.Empty);
+        });
+
+    /// <summary>
+    /// #207 AC1's second half: the reviewer can narrow the list to one rule's records, and every row
+    /// that comes back breaks that rule.
+    /// <para>
+    /// <b>Which guard could this pass while being wrong:</b> a filter that ignores its argument and
+    /// returns the whole batch. The assertion is that the filtered list is strictly shorter than the
+    /// unfiltered one, and that every returned row names the rule.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public Task The_batch_can_be_read_for_one_rule_s_only() =>
+        InFreshDatabaseAsync("RuleFilter", async connStr =>
+        {
+            await using var db = DbContextFactory.Create(connStr);
+            var (uploaderId, _) = await SeedAccountsAsync(db);
+            var (one, two, classifier) = AgreeingGates();
+            var bench = Bench(db, one, two, classifier);
+
+            var missingA = Group(
+                "stim_demo_rulefilter0001", 0,
+                Child(0, optionsJson: OptionsMissing("A")),
+                Child(1, optionsJson: OptionsMissing("C"), spanStart: 64, spanEnd: 81));
+            var noExplanation = Group(
+                "stim_demo_rulefilter0002", 10,
+                Child(10, withExplanation: false, spanStart: 4, spanEnd: 21));
+
+            var uploaded = await bench.UploadAsync(
+                "reading", Utf8(File($"[{missingA},{noExplanation}]")), "filter.json", uploaderId);
+
+            var all = await bench.GetBatchAsync(uploaded.BatchId);
+            var filtered = await bench.GetBatchAsync(uploaded.BatchId, GateOneRules.Explanation);
+
+            Assert.True(filtered.Records.Count < all.Records.Count,
+                "filtering to one rule returned every record, so the filter was ignored");
+            Assert.NotEmpty(filtered.Records);
+            Assert.All(filtered.Records, r =>
+                Assert.Contains(r.Refusals, refusal => refusal.Rule == GateOneRules.Explanation));
+
+            // The counts stay the batch's, not the filtered view's: the other group is still there.
+            Assert.Equal(all.RuleGroups.Count, filtered.RuleGroups.Count);
+        });
+
+    // ---- #207 AC3: discard one record -------------------------------------------------------
+
+    /// <summary>
+    /// #207 AC3. One refused record is withdrawn; the records that were accepted, and the items they
+    /// produced, are exactly as they were.
+    /// <para>
+    /// <b>Which guard could this pass while being wrong:</b> a discard implemented as
+    /// <c>DELETE FROM ImportLog</c> for the line - the audit trail goes with it. This asserts that the
+    /// refusal rows are still there <em>and</em> that a new row was appended, so a delete fails the
+    /// second assertion while passing the first.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public Task Discarding_one_record_keeps_its_refusal_history_and_leaves_the_accepted_records_alone() =>
+        InFreshDatabaseAsync("Discard", async connStr =>
+        {
+            await using var db = DbContextFactory.Create(connStr);
+            var (uploaderId, reviewerId) = await SeedAccountsAsync(db);
+            var (one, two, classifier) = AgreeingGates();
+            var bench = Bench(db, one, two, classifier);
+
+            var good = TwoChildGroup("stim_demo_discardgood001", 0);
+            var bad = Group(
+                "stim_demo_discardbad0001", 10,
+                Child(10, withExplanation: false, spanStart: 4, spanEnd: 21),
+                Child(11, spanStart: 64, spanEnd: 81));
+
+            var uploaded = await bench.UploadAsync(
+                "reading", Utf8(File($"[{good},{bad}]")), "discard.json", uploaderId);
+            Assert.Equal(2, uploaded.Accepted.Count);
+            Assert.Equal(2, uploaded.Rejected.Count);
+
+            await using var before = DbContextFactory.Create(connStr);
+            var itemsBefore = await before.Items.Select(i => i.ItemId).OrderBy(id => id).ToListAsync();
+            var logsBefore = await before.ImportLogs.AsNoTracking()
+                .Where(l => l.BatchId == uploaded.BatchId)
+                .Select(l => l.LogId)
+                .ToListAsync();
+
+            var line = uploaded.Rejected.Single(r => r.RecordId.EndsWith("00000010", StringComparison.Ordinal)).Line;
+
+            await bench.DiscardAsync(uploaded.BatchId, line, "stock withdrawn by the author", reviewerId);
+
+            await using var read = DbContextFactory.Create(connStr);
+
+            // The items the batch produced are the same rows: a discard writes no item table.
+            Assert.Equal(itemsBefore, await read.Items.Select(i => i.ItemId).OrderBy(id => id).ToListAsync());
+            Assert.Empty(await read.ReviewSampleDecisions.AsNoTracking().ToListAsync());
+
+            // The refusal history is intact - every row that was there is still there...
+            var logsAfter = await read.ImportLogs.AsNoTracking()
+                .Where(l => l.BatchId == uploaded.BatchId)
+                .ToListAsync();
+            Assert.All(logsBefore, id => Assert.Contains(logsAfter, l => l.LogId == id));
+
+            // ...and a new verdict was appended for the line, at attempt 2.
+            var discard = Assert.Single(logsAfter, l =>
+                l.RowNo == line && l.RuleCode == IngestionWorkbenchService.DiscardRule);
+            Assert.Equal(2, discard.Attempt);
+            Assert.Equal("warn", discard.Level);
+            Assert.Contains("stock withdrawn by the author", discard.Message, StringComparison.Ordinal);
+
+            // The refusal rows at attempt 1 are still readable beside it.
+            Assert.Contains(
+                logsAfter, l => l.RowNo == line && l.Attempt == 1 && l.Level == "error");
+
+            // And the read path shows the line as discarded rather than refused, still one row.
+            var detail = await bench.GetBatchAsync(uploaded.BatchId);
+            Assert.Equal(4, detail.Records.Count);
+            var row = detail.Records.Single(r => r.Line == line);
+            Assert.True(row.Discarded);
+            Assert.False(row.Accepted);
+            Assert.Empty(row.Refusals);
+            Assert.Contains("stock withdrawn", row.Note!, StringComparison.Ordinal);
+
+            // A discarded record is no longer one of the batch's outstanding refusals, so it drops out
+            // of the rule groups it was counted in.
+            Assert.DoesNotContain(detail.RuleGroups, g => g.Rule == GateOneRules.Explanation);
+        });
+
+    /// <summary>
+    /// #207: an accepted record cannot be discarded. Its item is already staged and may already be
+    /// referenced, so removing it is a lifecycle decision, not a remediation one.
+    /// <para>
+    /// <b>Which guard could this pass while being wrong:</b> a discard that only checked "the line
+    /// exists". Appending a discard row over an accepted line would report the batch as having
+    /// withdrawn a record whose item is still servable - the item and its verdict would then disagree
+    /// about whether the record landed.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public Task An_accepted_record_cannot_be_discarded() =>
+        InFreshDatabaseAsync("DiscardAccepted", async connStr =>
+        {
+            await using var db = DbContextFactory.Create(connStr);
+            var (uploaderId, _) = await SeedAccountsAsync(db);
+            var (one, two, classifier) = AgreeingGates();
+            var bench = Bench(db, one, two, classifier);
+
+            var uploaded = await bench.UploadAsync(
+                "reading", Utf8(File($"[{TwoChildGroup("stim_demo_discardacc0001", 0)}]")),
+                "accepted.json", uploaderId);
+
+            var accepted = uploaded.Accepted[0].Line;
+
+            var refused = await Assert.ThrowsAsync<AdminItemException>(() =>
+                bench.DiscardAsync(uploaded.BatchId, accepted, null, uploaderId));
+            Assert.Contains("accepted", refused.Message, StringComparison.OrdinalIgnoreCase);
+
+            await using var read = DbContextFactory.Create(connStr);
+            Assert.Empty(await read.ImportLogs.AsNoTracking()
+                .Where(l => l.BatchId == uploaded.BatchId && l.RuleCode == IngestionWorkbenchService.DiscardRule)
+                .ToListAsync());
+        });
+
+    /// <summary>
+    /// #207: one discard per record. A second discard would record a withdrawal nobody made and would
+    /// count the record twice in the batch's discarded total.
+    /// <para>
+    /// <b>Which guard could this pass while being wrong:</b> a service that appends unconditionally.
+    /// The second call would succeed; this asserts it is refused and that exactly one discard row
+    /// exists.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public Task A_record_cannot_be_discarded_twice() =>
+        InFreshDatabaseAsync("DiscardTwice", async connStr =>
+        {
+            await using var db = DbContextFactory.Create(connStr);
+            var (uploaderId, _) = await SeedAccountsAsync(db);
+            var (one, two, classifier) = AgreeingGates();
+            var bench = Bench(db, one, two, classifier);
+
+            var bad = Group(
+                "stim_demo_discardtwice01", 10,
+                Child(10, withExplanation: false, spanStart: 4, spanEnd: 21),
+                Child(11, spanStart: 64, spanEnd: 81));
+
+            var uploaded = await bench.UploadAsync(
+                "reading", Utf8(File($"[{bad}]")), "twice.json", uploaderId);
+            var line = uploaded.Rejected[0].Line;
+
+            await bench.DiscardAsync(uploaded.BatchId, line, "gone", uploaderId);
+
+            var refused = await Assert.ThrowsAsync<AdminItemException>(() =>
+                bench.DiscardAsync(uploaded.BatchId, line, "gone again", uploaderId));
+            Assert.Contains("already discarded", refused.Message, StringComparison.OrdinalIgnoreCase);
+
+            await using var read = DbContextFactory.Create(connStr);
+            Assert.Single(await read.ImportLogs.AsNoTracking()
+                .Where(l => l.BatchId == uploaded.BatchId
+                    && l.RowNo == line
+                    && l.RuleCode == IngestionWorkbenchService.DiscardRule)
+                .ToListAsync());
+        });
+
+    // ---- #207 AC4: the batch's status follows the remediation --------------------------------
+
+    /// <summary>
+    /// #207 AC4. A batch that ended <c>failed</c> because every record was refused becomes
+    /// <c>done</c> once the last refusal is corrected - the defect this ticket exists for.
+    /// <para>
+    /// <b>Which guard could this pass while being wrong:</b> a re-submission that clears the line but
+    /// leaves the status at its upload value. That is exactly the bug: <c>UploadAsync</c> set the
+    /// status and <c>ResubmitAsync</c> never did, so a fully repaired batch still read "Nothing
+    /// accepted". The assertion is on the stored <c>ImportBatches.Status</c>, not on the verdict.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public Task A_failed_batch_becomes_done_when_its_last_refusal_is_corrected() =>
+        InFreshDatabaseAsync("StatusFixed", async connStr =>
+        {
+            await using var db = DbContextFactory.Create(connStr);
+            var (uploaderId, _) = await SeedAccountsAsync(db);
+            var (one, two, classifier) = AgreeingGates();
+            var bench = Bench(db, one, two, classifier);
+
+            // Two independent bundles, each with one broken child. Two bundles rather than one with two
+            // broken children on purpose: re-judging a group re-reads the group's STORED siblings, so a
+            // bundle with two broken children can never be repaired one at a time - correcting the
+            // second one finds the first one's original text again. That is #205's limitation and it is
+            // reported, not worked around by rewriting resubmit here.
+            var first = Group(
+                "stim_demo_statusfixed0001", 0,
+                Child(0, withExplanation: false, spanStart: 4, spanEnd: 21));
+            var second = Group(
+                "stim_demo_statusfixed0002", 10,
+                Child(10, withExplanation: false, spanStart: 4, spanEnd: 21));
+
+            var uploaded = await bench.UploadAsync(
+                "reading", Utf8(File($"[{first},{second}]")), "statusfixed.json", uploaderId);
+            Assert.Equal("failed", uploaded.Status);
+            Assert.Equal(2, uploaded.Rejected.Count);
+
+            // Correcting one record is not enough: the batch still has an outstanding refusal.
+            var firstLine = uploaded.Rejected.Single(r => r.RecordId.EndsWith("00000000", StringComparison.Ordinal)).Line;
+            var firstVerdict = await bench.ResubmitAsync(
+                uploaded.BatchId, firstLine, Child(0, spanStart: 4, spanEnd: 21), uploaderId);
+            Assert.True(firstVerdict.Accepted, string.Join("; ", firstVerdict.Refusals.Select(r => r.Message)));
+
+            await using (var mid = DbContextFactory.Create(connStr))
+            {
+                Assert.Equal("failed",
+                    await mid.ImportBatches.AsNoTracking()
+                        .Where(b => b.BatchId == uploaded.BatchId)
+                        .Select(b => b.Status)
+                        .SingleAsync());
+            }
+
+            // Correcting the last refusal settles the batch.
+            var secondLine = uploaded.Rejected.Single(r => r.RecordId.EndsWith("00000010", StringComparison.Ordinal)).Line;
+            var verdict = await bench.ResubmitAsync(
+                uploaded.BatchId, secondLine, Child(10, spanStart: 4, spanEnd: 21), uploaderId);
+            Assert.True(verdict.Accepted, string.Join("; ", verdict.Refusals.Select(r => r.Message)));
+
+            await using var read = DbContextFactory.Create(connStr);
+            Assert.Equal("done",
+                await read.ImportBatches.AsNoTracking()
+                    .Where(b => b.BatchId == uploaded.BatchId)
+                    .Select(b => b.Status)
+                    .SingleAsync());
+        });
+
+    /// <summary>
+    /// #207 AC4 at the other half: withdrawing the last outstanding refusal also settles the batch.
+    /// <para>
+    /// <b>Which guard could this pass while being wrong:</b> a status rule wired into the re-submission
+    /// only. The discard path would then leave a settled batch reading "Nothing accepted" forever.
+    /// This test calls only <see cref="IngestionWorkbenchService.DiscardAsync"/>.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public Task A_failed_batch_becomes_done_when_its_last_refusal_is_discarded() =>
+        InFreshDatabaseAsync("StatusDiscard", async connStr =>
+        {
+            await using var db = DbContextFactory.Create(connStr);
+            var (uploaderId, _) = await SeedAccountsAsync(db);
+            var (one, two, classifier) = AgreeingGates();
+            var bench = Bench(db, one, two, classifier);
+
+            var bad = Group(
+                "stim_demo_statusdisc00001", 10,
+                Child(10, withExplanation: false, spanStart: 4, spanEnd: 21),
+                Child(11, spanStart: 64, spanEnd: 81));
+
+            var uploaded = await bench.UploadAsync(
+                "reading", Utf8(File($"[{bad}]")), "statusdisc.json", uploaderId);
+            Assert.Equal("failed", uploaded.Status);
+
+            foreach (var record in uploaded.Rejected)
+            {
+                await bench.DiscardAsync(uploaded.BatchId, record.Line, "withdrawn", uploaderId);
+            }
+
+            await using var read = DbContextFactory.Create(connStr);
+            Assert.Equal("done",
+                await read.ImportBatches.AsNoTracking()
+                    .Where(b => b.BatchId == uploaded.BatchId)
+                    .Select(b => b.Status)
+                    .SingleAsync());
+
+            // And "done" does not pretend the batch produced anything: nothing was accepted.
+            var detail = await bench.GetBatchAsync(uploaded.BatchId);
+            Assert.Equal(2, detail.Batch.Discarded);
+            Assert.Equal(0, detail.Batch.Accepted);
+            Assert.Equal(0, detail.Batch.Rejected);
+        });
+
+    /// <summary>
+    /// #207 AC4's trap, pinned: <c>done</c> means <b>no record is still refused</b>, so a batch that
+    /// accepted some records and still holds a refusal is <b>not</b> <c>done</c>. The label on the
+    /// screen says "Refusals remain", not "Nothing accepted", because the latter would be a lie about a
+    /// file that mostly landed.
+    /// <para>
+    /// <b>Which guard could this pass while being wrong:</b> a rule that sets <c>done</c> as soon as
+    /// <em>any</em> record settles - the shape #205's upload formula had ("failed only if every record
+    /// was refused"). A file of 2 accepted and 2 refused records read "done" and hid the rejections.
+    /// This fixture is that file, and it asserts the status is <c>failed</c> until the last refusal is
+    /// settled.
+    /// </para>
+    /// <para>
+    /// The three-value column (<c>pending</c>/<c>done</c>/<c>failed</c>) cannot say "partly landed",
+    /// so <c>failed</c> here means "refusals remain" rather than "nothing landed". The accepted count
+    /// is its own column on the list, so nothing is hidden by the word.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public Task A_batch_with_a_refusal_left_is_not_done_even_after_some_records_were_accepted() =>
+        InFreshDatabaseAsync("StatusMixed", async connStr =>
+        {
+            await using var db = DbContextFactory.Create(connStr);
+            var (uploaderId, _) = await SeedAccountsAsync(db);
+            var (one, two, classifier) = AgreeingGates();
+            var bench = Bench(db, one, two, classifier);
+
+            var good = TwoChildGroup("stim_demo_statusmixed01", 0);
+            var bad = Group(
+                "stim_demo_statusmixed02", 10,
+                Child(10, withExplanation: false, spanStart: 4, spanEnd: 21),
+                Child(11, spanStart: 64, spanEnd: 81));
+
+            var uploaded = await bench.UploadAsync(
+                "reading", Utf8(File($"[{good},{bad}]")), "mixed.json", uploaderId);
+
+            // Two landed, two refused - so refusals remain and the batch is not done.
+            Assert.Equal(2, uploaded.Accepted.Count);
+            Assert.Equal(2, uploaded.Rejected.Count);
+            Assert.Equal("failed", uploaded.Status);
+
+            // Re-submitting a still-broken correction changes nothing: no new rejection was added, and
+            // a refusal was already there. The status must stay where it is rather than drift.
+            var line = uploaded.Rejected.Single(r => r.RecordId.EndsWith("00000010", StringComparison.Ordinal)).Line;
+            var verdict = await bench.ResubmitAsync(
+                uploaded.BatchId, line, Child(10, withExplanation: false), uploaderId);
+            Assert.False(verdict.Accepted);
+
+            await using var read = DbContextFactory.Create(connStr);
+            Assert.Equal("failed",
+                await read.ImportBatches.AsNoTracking()
+                    .Where(b => b.BatchId == uploaded.BatchId)
+                    .Select(b => b.Status)
+                    .SingleAsync());
+
+            // And once both refusals are withdrawn, nothing remains and the batch settles - while the
+            // two accepted records and their items are still exactly where they were.
+            foreach (var record in uploaded.Rejected)
+            {
+                await bench.DiscardAsync(uploaded.BatchId, record.Line, "withdrawn", uploaderId);
+            }
+
+            var detail = await bench.GetBatchAsync(uploaded.BatchId);
+            Assert.Equal("done", detail.Batch.Status);
+            Assert.Equal(2, detail.Batch.Accepted);
+            Assert.Equal(2, detail.Batch.Discarded);
+            Assert.Empty(detail.RuleGroups);
         });
 }

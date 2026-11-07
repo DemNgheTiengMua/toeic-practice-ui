@@ -55,17 +55,24 @@ public sealed class AdminIngestionController(
     /// <summary>
     /// The verdict list. This is the screen the ticket is about: one row per record, the line it opened
     /// on, the rule that refused it, and the record itself so it can be corrected where it stands.
+    /// <para>
+    /// #207: <c>rule</c> narrows the list to one rule's records, and the rule groups above it are
+    /// counted over the whole batch - so filtering to gate one does not make the other groups read
+    /// zero.
+    /// </para>
     /// </summary>
     [HttpGet("{batchId:int}")]
-    public async Task<IActionResult> Batch(int batchId, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Batch(
+        int batchId, [FromQuery] string? rule, CancellationToken cancellationToken = default)
     {
         try
         {
-            var detail = await api.GetWorkbenchBatchAsync(batchId, cancellationToken);
+            var detail = await api.GetWorkbenchBatchAsync(batchId, rule, cancellationToken);
             return View("~/Views/Admin/IngestionBatch.cshtml",
                 IngestionPresentation.FromDetail(
                     detail,
                     CurrentUser.HasPermission(Permissions.ContentReview),
+                    rule,
                     message: TempData["Success"] as string,
                     error: TempData["Error"] as string));
         }
@@ -148,6 +155,32 @@ public sealed class AdminIngestionController(
         {
             Logger!.LogWarning(ex, "Could not re-judge line {Line} of batch {BatchId}", line, batchId);
             TempData["Error"] = ex.Detail ?? "The correction was refused.";
+        }
+
+        return RedirectToAction(nameof(Batch), new { batchId });
+    }
+
+    /// <summary>
+    /// #207 AC3: withdraw one refused record. Authoring, not review - it publishes nothing and removes
+    /// no item, so the account that uploaded the file may do it.
+    /// </summary>
+    [HttpPost("{batchId:int}/records/{line:int}/discard")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Discard(
+        int batchId,
+        int line,
+        [FromForm] string? reason,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await api.DiscardWorkbenchRecordAsync(batchId, line, reason, cancellationToken);
+            TempData["Success"] = $"Line {line} was discarded. The records that were accepted are untouched.";
+        }
+        catch (ApiException ex)
+        {
+            Logger!.LogWarning(ex, "Could not discard line {Line} of batch {BatchId}", line, batchId);
+            TempData["Error"] = ex.Detail ?? "The discard was refused.";
         }
 
         return RedirectToAction(nameof(Batch), new { batchId });

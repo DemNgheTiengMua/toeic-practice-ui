@@ -41,7 +41,14 @@ public sealed record WorkbenchBatchResult(
     }
 }
 
-/// <summary>#205: one batch, as a list shows it. <see cref="Accepted"/> is how many of its records passed.</summary>
+/// <summary>
+/// #205: one batch, as a list shows it. <see cref="Accepted"/> is how many of its records passed.
+/// <para>
+/// #207: <see cref="Discarded"/> is the third outcome, because a withdrawn record is neither accepted
+/// nor refused: counting it as a refusal would leave a batch of settled records reading "refused"
+/// forever, which is the same mistake the status rule exists to stop.
+/// </para>
+/// </summary>
 public sealed record WorkbenchBatchSummary(
     int BatchId,
     string SourceName,
@@ -51,10 +58,21 @@ public sealed record WorkbenchBatchSummary(
     DateTimeOffset CreatedAt,
     DateTimeOffset? CompletedAt,
     int Records,
-    int Accepted)
+    int Accepted,
+    int Discarded = 0)
 {
-    public int Rejected => Records - Accepted;
+    public int Rejected => Records - Accepted - Discarded;
 }
+
+/// <summary>
+/// #207: one broken rule and how many records broke it, so a reviewer can see that 40 of 50 failures
+/// are one rule rather than reading 50 rows.
+/// <para>
+/// Keyed on <c>ImportLog.RuleCode</c>, never on <c>Message</c>: a message is prose with interpolated
+/// values, so every row would be its own group and the count would say nothing.
+/// </para>
+/// </summary>
+public sealed record WorkbenchRuleGroup(string Rule, int Records);
 
 public sealed record WorkbenchBatchList(IReadOnlyList<WorkbenchBatchSummary> Batches);
 
@@ -73,7 +91,9 @@ public sealed record WorkbenchRecordRow(
     bool Accepted,
     int? ItemId,
     IReadOnlyList<IngestionRefusal> Refusals,
-    string? RecordJson)
+    string? RecordJson,
+    bool Discarded = false,
+    string? Note = null)
 {
     public string Message => Refusals.Count == 0 ? string.Empty : Refusals[0].Message;
 
@@ -100,6 +120,7 @@ public sealed record WorkbenchStagedItem(
 public sealed record WorkbenchBatchDetail(
     WorkbenchBatchSummary Batch,
     IReadOnlyList<WorkbenchRecordRow> Records,
+    IReadOnlyList<WorkbenchRuleGroup> RuleGroups,
     IReadOnlyList<WorkbenchStagedItem> Staged)
 {
     /// <summary>

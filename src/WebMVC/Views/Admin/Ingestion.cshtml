@@ -88,6 +88,7 @@
           <th scope="col">Submitted</th>
           <th scope="col" class="ingestion-table__num font-mono">Records</th>
           <th scope="col" class="ingestion-table__num font-mono">Accepted</th>
+          <th scope="col" class="ingestion-table__num font-mono">Discarded</th>
         </tr>
       </thead>
       <tbody>
@@ -107,6 +108,7 @@
             <td class="font-mono">@batch.CreatedAt</td>
             <td class="ingestion-table__num font-mono">@batch.Records</td>
             <td class="ingestion-table__num font-mono">@batch.Accepted</td>
+            <td class="ingestion-table__num font-mono">@batch.Discarded</td>
           </tr>
         }
       </tbody>

@@ -7,6 +7,10 @@ namespace Contracts;
 /// #205: one batch's summary. <see cref="UploadedByEmail"/> and <see cref="CreatedAt"/> are criterion
 /// 4 - "a later review can find who submitted what" - and <see cref="Accepted"/> is the count the list
 /// shows so an author knows whether to open it.
+/// <para>
+/// #207: <see cref="Discarded"/> is the third outcome. A withdrawn record is neither accepted nor
+/// refused, and counting it as a refusal would leave a settled batch reading "refused" forever.
+/// </para>
 /// </summary>
 public sealed record IngestionBatchSummaryDto(
     int BatchId,
@@ -17,7 +21,8 @@ public sealed record IngestionBatchSummaryDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset? CompletedAt,
     int Records,
-    int Accepted);
+    int Accepted,
+    int Discarded = 0);
 
 public sealed record IngestionBatchListDto(IReadOnlyList<IngestionBatchSummaryDto> Batches);
 
@@ -28,7 +33,9 @@ public sealed record IngestionRecordDto(
     bool Accepted,
     int? ItemId,
     IReadOnlyList<IngestionRefusalDto> Refusals,
-    string? RecordJson)
+    string? RecordJson,
+    bool Discarded = false,
+    string? Note = null)
 {
     /// <summary>The sentence the list shows: the first rule that failed, or empty when accepted.</summary>
     public string Message => Refusals.Count == 0 ? string.Empty : Refusals[0].Message;
@@ -38,6 +45,9 @@ public sealed record IngestionRecordDto(
 }
 
 public sealed record IngestionRefusalDto(string Rule, string Message);
+
+/// <summary>#207: one broken rule and how many records broke it. Keyed on the rule code, never on prose.</summary>
+public sealed record IngestionRuleGroupDto(string Rule, int Records);
 
 /// <summary>#205: an item the batch staged, and the state it is actually in.</summary>
 public sealed record IngestionStagedItemDto(
@@ -57,6 +67,7 @@ public sealed record IngestionStagedItemDto(
 public sealed record IngestionBatchDetailDto(
     IngestionBatchSummaryDto Batch,
     IReadOnlyList<IngestionRecordDto> Records,
+    IReadOnlyList<IngestionRuleGroupDto> RuleGroups,
     IReadOnlyList<IngestionStagedItemDto> Staged);
 
 /// <summary>#205: what an upload produced, as the redirect to the batch needs it.</summary>

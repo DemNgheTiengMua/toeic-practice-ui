@@ -46,6 +46,13 @@ public sealed class IngestionWorkbenchService(
     {
         WriteIndented = true,
     };
+
+    /// <summary>
+    /// #207: the rule code a discarded record's verdict carries. A discard is a verdict like any other
+    /// - it is appended at the next attempt rather than deleting the refusal it replaces - so it needs a
+    /// code the page can recognise and the grouping can exclude.
+    /// </summary>
+    public const string DiscardRule = "workbench.discarded";
     // ---- uploading ---------------------------------------------------------------------------
 
     /// <summary>
@@ -53,8 +60,10 @@ public sealed class IngestionWorkbenchService(
     /// accepted record as <c>validated</c>.
     /// <para>
     /// A partly valid file is the normal shape, not an error: the accepted records are written and the
-    /// refused ones are listed. The batch's status says which happened, and a file whose every record
-    /// was refused is <c>failed</c> rather than <c>done</c> - a distinction the author acts on.
+    /// refused ones are listed. The batch's status says which happened, and #207 makes that a single
+    /// derived rule rather than this method's private one: <c>done</c> only when <b>no record is still
+    /// refused</b>, so a mixed file is <c>failed</c> too - the difference between "nothing landed" and
+    /// "some landed, some refused" is the accepted count, not the word.
     /// </para>
     /// </summary>
     public async Task<WorkbenchBatchResult> UploadAsync(
@@ -95,7 +104,11 @@ public sealed class IngestionWorkbenchService(
         await RecordVerdictsAsync(batch.BatchId, judged.Records, attempt: 1, cancellationToken);
 
         batch.CompletedAt = clock.GetUtcNow();
-        batch.Status = judged.Records.Count > 0 && judged.Records.All(r => !r.Accepted) ? "failed" : "done";
+
+        // #207: the status is derived from the record verdicts in one place, so an upload, a
+        // re-submission and a discard cannot disagree about what state the batch is in.
+        await RecomputeStatusAsync(batch, cancellationToken);
+
         await db.SaveChangesAsync(cancellationToken);
 
         log?.LogInformation(
@@ -165,6 +178,11 @@ public sealed class IngestionWorkbenchService(
         // so it is recorded on the batch rather than left to the log.
         batch.LastModifiedBy = submittedBy;
 
+        // #207 AC4: a batch that ended `failed` because every record was refused stops being `failed`
+        // once its last refusal is corrected. The status is derived, never assigned by the caller, so
+        // the re-submission cannot forget it the way it did before.
+        await RecomputeStatusAsync(batch, cancellationToken);
+
         await db.SaveChangesAsync(cancellationToken);
 
         log?.LogInformation(
@@ -172,6 +190,102 @@ public sealed class IngestionWorkbenchService(
             batchId, line, submittedBy, attempt, verdict.Accepted ? "accepted" : "refused");
 
         return verdict;
+    }
+
+    // ---- discarding one record ---------------------------------------------------------------
+
+    /// <summary>
+    /// #207 AC3: withdraw one refused record from the batch without touching anything else.
+    /// <para>
+    /// <b>What a discard is.</b> A record is a line of the batch's stored document and a verdict is an
+    /// <c>ImportLog</c> row. Discarding appends one more verdict - at <c>Attempt + 1</c>, like a
+    /// re-submission - saying the record was withdrawn by this account. It is <em>not</em> a delete:
+    /// the refusals that led here stay readable, because they are the audit trail of why the record
+    /// was dropped, and <c>trg_ReviewSampleDecisions_NoSelfApproval</c> refuses deletes for exactly
+    /// this reason. Nothing in the stored document is rewritten either, so the file the batch judged
+    /// remains the file it judged.
+    /// </para>
+    /// <para>
+    /// <b>What it never touches.</b> Accepted records and the staged items they produced. A discard
+    /// names one line, and an accepted line is refused here rather than withdrawn quietly: its item is
+    /// already staged and may already be referenced, so removing it is a lifecycle decision
+    /// (<c>retired</c>), not a remediation one. A discarded line names no item, so the item tables are
+    /// not written at all.
+    /// </para>
+    /// </summary>
+    public async Task<IngestionRecordResult> DiscardAsync(
+        int batchId,
+        int line,
+        string? reason,
+        int discardedBy,
+        CancellationToken cancellationToken = default)
+    {
+        var batch = await db.ImportBatches
+            .FirstOrDefaultAsync(b => b.BatchId == batchId, cancellationToken)
+            ?? throw new AdminItemException(ApiError.Codes.Validation, $"Import batch {batchId} not found.", 404);
+
+        var latest = await LatestVerdictAsync(batchId, line, cancellationToken)
+            ?? throw new AdminItemException(
+                ApiError.Codes.Validation,
+                $"Batch {batchId} holds no record at line {line}.", 404);
+
+        if (string.Equals(latest.RuleCode, DiscardRule, StringComparison.Ordinal))
+        {
+            throw new AdminItemException(
+                ApiError.Codes.Validation,
+                $"The record at line {line} was already discarded. Discarding it again would record a "
+                + "second withdrawal nobody made.", 409);
+        }
+
+        if (string.Equals(latest.Level, "info", StringComparison.Ordinal))
+        {
+            throw new AdminItemException(
+                ApiError.Codes.Validation,
+                $"The record at line {line} was accepted, so it has no rejection to discard. Its staged "
+                + "item is withdrawn through the item's lifecycle, not by discarding the record.", 409);
+        }
+
+        // The reason is kept in the message rather than in a column of its own: a discard is one row
+        // of the same audit trail, and a nullable `DiscardReason` would be a second place a verdict
+        // lives. The rule it was refused under is carried along so the page can still say why.
+        var refusedUnder = await db.ImportLogs.AsNoTracking()
+            .Where(l => l.BatchId == batchId && l.RowNo == line && l.Attempt == latest.Attempt && l.Level == "error")
+            .OrderBy(l => l.LogId)
+            .Select(l => l.RuleCode)
+            .ToListAsync(cancellationToken);
+
+        var note = string.IsNullOrWhiteSpace(reason)
+            ? "Record discarded by staff; no reason given."
+            : $"Record discarded by staff: {reason.Trim()}";
+
+        db.ImportLogs.Add(new ImportLog
+        {
+            BatchId = batchId,
+            RowNo = line,
+            Level = "warn",
+            Message = Clip(
+                refusedUnder.Count == 0
+                    ? note
+                    : $"{note} (refused under {string.Join(", ", refusedUnder)}.)",
+                1000),
+            RuleCode = DiscardRule,
+            Attempt = latest.Attempt + 1,
+            ItemId = null,
+            LoggedAt = clock.GetUtcNow(),
+        });
+
+        batch.LastModifiedBy = discardedBy;
+
+        // #207 AC4: withdrawing the last outstanding refusal settles the batch, and the same derivation
+        // is what a re-submission uses. A discard must not leave `failed` behind.
+        await db.SaveChangesAsync(cancellationToken);
+        await RecomputeStatusAsync(batch, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+
+        log?.LogInformation(
+            "Batch {BatchId} line {Line} discarded by account {DiscardedBy}.", batchId, line, discardedBy);
+
+        return new IngestionRecordResult(line, string.Empty, Accepted: false, Refusals: []);
     }
 
     // ---- the audit's clearance ---------------------------------------------------------------
@@ -241,30 +355,12 @@ public sealed class IngestionWorkbenchService(
     /// <summary>The pool batches this workbench writes, newest first.</summary>
     public async Task<WorkbenchBatchList> GetBatchesAsync(CancellationToken cancellationToken = default)
     {
-        var rows = await db.ImportBatches.AsNoTracking()
+        var batches = db.ImportBatches.AsNoTracking()
             .Where(b => b.CertId == null)
             .OrderByDescending(b => b.BatchId)
-            .Take(50)
-            .Select(b => new
-            {
-                b.BatchId,
-                b.SourceName,
-                b.Status,
-                b.UploadedBy,
-                b.UploadedByNavigation.Email,
-                b.CreatedAt,
-                b.CompletedAt,
-                // Counted at the latest attempt so a re-submitted record is not counted twice.
-                Records = b.ImportLogs.Count(l => l.RowNo != null && l.Attempt == 1),
-                Accepted = b.ImportLogs.Count(l => l.RowNo != null && l.Attempt == 1 && l.Level == "info"),
-            })
-            .ToListAsync(cancellationToken);
+            .Take(50);
 
-        return new WorkbenchBatchList(rows
-            .Select(r => new WorkbenchBatchSummary(
-                r.BatchId, r.SourceName, r.Status, r.UploadedBy, r.Email,
-                r.CreatedAt, r.CompletedAt, r.Records, r.Accepted))
-            .ToList());
+        return new WorkbenchBatchList(await SummariesAsync(batches, cancellationToken));
     }
 
     /// <summary>
@@ -276,17 +372,20 @@ public sealed class IngestionWorkbenchService(
     /// of the same filter - which is what makes this a rule rather than a convention a page follows by
     /// accident.
     /// </para>
+    /// <para>
+    /// #207 AC1: <see cref="WorkbenchBatchDetail.RuleGroups"/> counts refusals per
+    /// <c>RuleCode</c>, across every record's <b>latest</b> verdict, so "40 of 50 failures are one
+    /// rule" is one number rather than fifty rows read by eye. Discarded records and accepted ones
+    /// contribute nothing: a record that was withdrawn is not still failing a rule.
+    /// </para>
     /// </summary>
-    public async Task<WorkbenchBatchDetail> GetBatchAsync(int batchId, CancellationToken cancellationToken = default)
+    public async Task<WorkbenchBatchDetail> GetBatchAsync(
+        int batchId,
+        string? rule = null,
+        CancellationToken cancellationToken = default)
     {
-        var batch = await db.ImportBatches.AsNoTracking()
-            .Where(b => b.BatchId == batchId)
-            .Select(b => new WorkbenchBatchSummary(
-                b.BatchId, b.SourceName, b.Status, b.UploadedBy, b.UploadedByNavigation.Email,
-                b.CreatedAt, b.CompletedAt,
-                b.ImportLogs.Count(l => l.RowNo != null && l.Attempt == 1),
-                b.ImportLogs.Count(l => l.RowNo != null && l.Attempt == 1 && l.Level == "info")))
-            .SingleOrDefaultAsync(cancellationToken)
+        var batches = db.ImportBatches.AsNoTracking().Where(b => b.BatchId == batchId);
+        var batch = (await SummariesAsync(batches, cancellationToken)).SingleOrDefault()
             ?? throw new AdminItemException(ApiError.Codes.Validation, $"Import batch {batchId} not found.", 404);
 
         var rows = await db.ImportLogs.AsNoTracking()
@@ -314,19 +413,43 @@ public sealed class IngestionWorkbenchService(
                     .ToList());
 
         var source = string.IsNullOrWhiteSpace(batch.SourceName) ? null : await SourceDocumentAsync(batchId, cancellationToken);
-        var records = latest.Select(row =>
-        {
-            var accepted = string.Equals(row.Level, "info", StringComparison.Ordinal);
-            return new WorkbenchRecordRow(
-                row.RowNo!.Value,
-                row.Attempt,
-                accepted,
-                row.ItemId,
-                accepted
-                    ? []
-                    : refusals.GetValueOrDefault((row.RowNo!.Value, row.Attempt)) ?? [],
-                source is null ? null : RecordTextAt(source, row.RowNo!.Value));
-        }).ToList();
+
+        // #207 AC1: every record's latest-verdict refusals, counted by rule code. This is computed over
+        // the whole batch before the `rule` filter below, so the counts a reviewer reads are the counts
+        // of the batch and do not shrink to whatever they are currently looking at. Counted by record,
+        // not by refusal row: "40 records break gate one" is the fact a reviewer acts on.
+        var groups = latest
+            .Where(row => !IsDiscard(row))
+            .SelectMany(row => (refusals.GetValueOrDefault((row.RowNo!.Value, row.Attempt)) ?? [])
+                .Select(refusal => (Line: row.RowNo!.Value, refusal.Rule)))
+            .Where(entry => entry.Rule.Length > 0)
+            .GroupBy(entry => entry.Rule, StringComparer.Ordinal)
+            .Select(group => new WorkbenchRuleGroup(group.Key, group.Select(e => e.Line).Distinct().Count()))
+            .OrderByDescending(group => group.Records)
+            .ThenBy(group => group.Rule, StringComparer.Ordinal)
+            .ToList();
+
+        var records = latest
+            .Where(row => rule is null
+                || (refusals.GetValueOrDefault((row.RowNo!.Value, row.Attempt)) ?? [])
+                    .Any(refusal => string.Equals(refusal.Rule, rule, StringComparison.Ordinal)))
+            .Select(row =>
+            {
+                var discarded = IsDiscard(row);
+                var accepted = string.Equals(row.Level, "info", StringComparison.Ordinal);
+                return new WorkbenchRecordRow(
+                    row.RowNo!.Value,
+                    row.Attempt,
+                    accepted,
+                    row.ItemId,
+                    accepted || discarded
+                        ? []
+                        : refusals.GetValueOrDefault((row.RowNo!.Value, row.Attempt)) ?? [],
+                    source is null ? null : RecordTextAt(source, row.RowNo!.Value),
+                    discarded,
+                    discarded ? row.Message : null);
+            })
+            .ToList();
 
         var staged = await db.Items.AsNoTracking()
             .Where(i => db.ImportLogs.Any(l => l.BatchId == batchId && l.ItemId == i.ItemId))
@@ -340,8 +463,61 @@ public sealed class IngestionWorkbenchService(
                 db.ItemVersions.Where(v => v.ItemId == i.ItemId).Max(v => v.VersionNumber)))
             .ToListAsync(cancellationToken);
 
-        return new WorkbenchBatchDetail(batch, records, staged);
+        return new WorkbenchBatchDetail(batch, records, groups, staged);
     }
+
+    /// <summary>
+    /// #207 AC4: the batch's status, derived from its records rather than assigned by whichever write
+    /// path remembered to set it.
+    /// <para>
+    /// <b>The rule, stated as an invariant rather than a transition.</b> A record is accepted,
+    /// discarded, or still refused at its latest attempt. <c>done</c> means <b>no record is still
+    /// refused</b> - every one is either accepted or withdrawn. <c>failed</c> means at least one is
+    /// still refused. <c>pending</c> means nothing has been judged.
+    /// </para>
+    /// <para>
+    /// <b>Why the rule is an invariant and not "re-run the upload's formula".</b> #205 assigned
+    /// <c>done</c> unless <em>every</em> record was refused, so a failed file with one child corrected
+    /// would read <c>done</c> while its sibling was still refused - the exact flip this ticket warns
+    /// about. Deriving from the set makes that unrepresentable: no refusal, <c>done</c>; a refusal,
+    /// not <c>done</c>.
+    /// </para>
+    /// <para>
+    /// <b>A batch already <c>done</c> cannot gain a rejection.</b> A re-submission writes a verdict for
+    /// a line that already exists and that was already refused (correcting an accepted line is not
+    /// offered), and a discard only lowers the refusal count. The one write that adds a rejection is a
+    /// fresh upload, which starts <c>pending</c>. If one were ever added anyway, this derivation would
+    /// flip the batch back to <c>failed</c> rather than leave a stale <c>done</c>: the status is a
+    /// function of the verdicts, never a latch.
+    /// </para>
+    /// </summary>
+    private async Task RecomputeStatusAsync(ImportBatch batch, CancellationToken cancellationToken)
+    {
+        var rows = await db.ImportLogs.AsNoTracking()
+            .Where(l => l.BatchId == batch.BatchId && l.RowNo != null)
+            .ToListAsync(cancellationToken);
+
+        var latest = rows
+            .GroupBy(l => l.RowNo!.Value)
+            .Select(group => group.OrderByDescending(l => l.Attempt).ThenByDescending(l => l.LogId).First())
+            .ToList();
+
+        batch.Status = latest.Count == 0
+            ? "pending"
+            : latest.Any(IsRefusal) ? "failed" : "done";
+    }
+
+    /// <summary>
+    /// A record is still failing when its latest verdict is an error under a rule: a discard is a
+    /// <c>warn</c> under <see cref="DiscardRule"/>, and an acceptance is an <c>info</c>.
+    /// </summary>
+    private static bool IsRefusal(ImportLog row) =>
+        string.Equals(row.Level, "error", StringComparison.Ordinal) && !IsDiscard(row);
+
+    /// <summary>A withdrawn record: the newest verdict says so, under the workbench's own rule code.</summary>
+    private static bool IsDiscard(ImportLog row) =>
+        string.Equals(row.RuleCode, DiscardRule, StringComparison.Ordinal);
+
 
     // ---- recording ---------------------------------------------------------------------------
 
@@ -416,6 +592,78 @@ public sealed class IngestionWorkbenchService(
             .MaxAsync(l => (int?)l.Attempt, cancellationToken);
         return (highest ?? 0) + 1;
     }
+
+    /// <summary>
+    /// The batch as the list and the detail both read it: <b>one</b> projection, because two would
+    /// eventually report different counts for one batch.
+    /// <para>
+    /// <b>#207 fixes the two counts #205 got wrong.</b> Both were taken at <c>Attempt = 1</c>, which
+    /// the comment called "the latest attempt" and is the opposite: a record refused at attempt 1 and
+    /// corrected at attempt 2 was counted as refused forever, so a fully remediated batch still read
+    /// "0 accepted". And <c>Records</c> counted rows at attempt 1, so a record that broke two rules
+    /// contributed two rows to a "records" count. The count is now per <c>RowNo</c> at its highest
+    /// attempt, which is the same definition the verdict list uses.
+    /// </para>
+    /// </summary>
+    private async Task<IReadOnlyList<WorkbenchBatchSummary>> SummariesAsync(
+        IQueryable<ImportBatch> batches, CancellationToken cancellationToken)
+    {
+        var batchIds = await batches.Select(b => b.BatchId).ToListAsync(cancellationToken);
+        if (batchIds.Count == 0)
+        {
+            return [];
+        }
+
+        var headers = await db.ImportBatches.AsNoTracking()
+            .Where(b => batchIds.Contains(b.BatchId))
+            .Select(b => new
+            {
+                b.BatchId,
+                b.SourceName,
+                b.Status,
+                b.UploadedBy,
+                b.UploadedByNavigation.Email,
+                b.CreatedAt,
+                b.CompletedAt,
+            })
+            .ToListAsync(cancellationToken);
+
+        // The latest verdict per record, in memory: the winner is per line, and a GROUP BY with a
+        // window function over a second table is not something to make EF translate.
+        var verdicts = await db.ImportLogs.AsNoTracking()
+            .Where(l => batchIds.Contains(l.BatchId) && l.RowNo != null)
+            .Select(l => new { l.BatchId, l.RowNo, l.Attempt, l.LogId, l.Level, l.RuleCode })
+            .ToListAsync(cancellationToken);
+
+        var latest = verdicts
+            .GroupBy(v => (v.BatchId, v.RowNo))
+            .Select(group => group.OrderByDescending(v => v.Attempt).ThenByDescending(v => v.LogId).First())
+            .GroupBy(v => v.BatchId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        return headers
+            .OrderByDescending(h => h.BatchId)
+            .Select(h =>
+            {
+                var records = latest.GetValueOrDefault(h.BatchId) ?? [];
+                return new WorkbenchBatchSummary(
+                    h.BatchId, h.SourceName, h.Status, h.UploadedBy, h.Email,
+                    h.CreatedAt, h.CompletedAt,
+                    records.Count,
+                    records.Count(r => string.Equals(r.Level, "info", StringComparison.Ordinal)),
+                    records.Count(r => string.Equals(r.RuleCode, DiscardRule, StringComparison.Ordinal)));
+            })
+            .ToList();
+    }
+
+
+    /// <summary>The record's own latest verdict, or null when the batch holds no such line.</summary>
+    private Task<ImportLog?> LatestVerdictAsync(int batchId, int line, CancellationToken cancellationToken) =>
+        db.ImportLogs.AsNoTracking()
+            .Where(l => l.BatchId == batchId && l.RowNo == line)
+            .OrderByDescending(l => l.Attempt)
+            .ThenByDescending(l => l.LogId)
+            .FirstOrDefaultAsync(cancellationToken);
 
     private Task<string?> SourceDocumentAsync(int batchId, CancellationToken cancellationToken) =>
         db.ImportBatches.AsNoTracking()
