@@ -17,6 +17,15 @@ public static partial class AdminEndpoints
             IFileStore fileStore,
             CancellationToken cancellationToken) =>
         {
+            // The imports route beside this one has always checked the name; this one did not, so the
+            // exams path accepted anything the route could carry. The store's own traversal guard is
+            // the real defence, but a route that names the shape it serves costs one line and stops a
+            // hostile name before it reaches the filesystem.
+            if (!IsGeneratedName(fileName))
+            {
+                return Results.NotFound();
+            }
+
             var info = await fileStore.GetMediaAsync($"exams/{examId}/{fileName}", cancellationToken);
             return info is null
                 ? Results.NotFound()

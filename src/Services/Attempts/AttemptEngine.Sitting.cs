@@ -19,6 +19,29 @@ public sealed partial class AttemptEngine
         int? DurationMinutes,
         bool LockNavigationOneWay);
 
+    /// <summary>
+    /// The one guard a sitting write passes through: the attempt must exist, belong to the caller when
+    /// one is named, and still be in progress. The caller supplies the query because two callers need
+    /// the exam navigation loaded; the two refusals and their messages are the contract, not the query.
+    /// </summary>
+    private async Task<ExamAttempt> LoadSittingAttemptAsync(
+        IQueryable<ExamAttempt> attempts,
+        int attemptId,
+        int? userId,
+        CancellationToken cancellationToken)
+    {
+        var attempt = await attempts
+            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && (userId == null || a.UserId == userId), cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
+
+        if (attempt.Status != AttemptStatus.InProgress.ToCode())
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Exam attempt is not in progress.");
+        }
+
+        return attempt;
+    }
+
     /// <summary>Studio-uploaded master track per section of the exam (ExamSectionAudio).</summary>
     private Task<Dictionary<int, string>> LoadSectionMasterAudioAsync(int examId, CancellationToken cancellationToken) =>
         db.ExamSectionAudios

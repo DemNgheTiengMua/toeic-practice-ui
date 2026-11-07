@@ -99,11 +99,18 @@ public class LocalFileStore : IFileStore
             return null;
         }
 
-        // Prevent path traversal
+        // Prevent path traversal. The separator on the base is load-bearing: without it
+        // `C:\srv\media` also prefix-matches `C:\srv\media-secret\...`, so a sibling directory whose
+        // name merely starts with the base was readable through `../media-secret/leak.txt`.
+        // Proved by experiment before this line existed.
         var normalized = relativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
         var fullPath = Path.GetFullPath(Path.Combine(_baseDirectory, normalized));
 
-        if (!fullPath.StartsWith(_baseDirectory, StringComparison.OrdinalIgnoreCase))
+        var baseWithSeparator = _baseDirectory.EndsWith(Path.DirectorySeparatorChar)
+            ? _baseDirectory
+            : _baseDirectory + Path.DirectorySeparatorChar;
+
+        if (!fullPath.StartsWith(baseWithSeparator, StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }

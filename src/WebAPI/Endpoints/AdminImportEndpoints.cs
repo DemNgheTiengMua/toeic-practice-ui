@@ -17,12 +17,8 @@ public static partial class AdminImportEndpoints
         MapMedia(app);
     }
 
-    /// <summary>32 hex characters and an allow-listed extension, as LocalFileStore.SaveImportMediaAsync names them.</summary>
-    private static bool IsGeneratedName(string fileName)
-    {
-        var dot = fileName.IndexOf('.');
-        return dot == 32
-            && fileName[..dot].All(Uri.IsHexDigit)
-            && fileName[dot..] is ".mp3" or ".wav" or ".jpg" or ".jpeg" or ".png";
-    }
+    /// <summary>Imported media is named by the importer: 32 hex characters and an allow-listed extension.
+    /// The check itself lives in <see cref="EndpointHelpers.IsGeneratedName"/> so the exams route can use
+    /// the same rule rather than growing a second, weaker copy.</summary>
+    private static bool IsGeneratedName(string fileName) => EndpointHelpers.IsGeneratedName(fileName);
 }
