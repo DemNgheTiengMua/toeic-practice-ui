@@ -111,7 +111,20 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
         var body = await client.GetStringAsync("/placement/target-band");
 
         Assert.Contains("no target band yet", body, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("B2", body);
+
+        // The claim is about the band picker, not the whole document. Reading the whole body made a
+        // random anti-forgery token containing "B2" fail the test about one run in twenty (#252), and
+        // a test that also fails for an unrelated reason cannot be trusted when it does fail.
+        // Every band the page offers is a `value="..."` on a TargetBandCode radio; none of them may
+        // be B2, because a DEMO certificate has D1-D4 and no B2.
+        var targetBands = Regex.Matches(
+                body,
+                @"name=""TargetBandCode""\s*value=""(?<code>[^""]+)""")
+            .Select(m => m.Groups["code"].Value)
+            .ToList();
+
+        Assert.NotEmpty(targetBands);
+        Assert.DoesNotContain("B2", targetBands);
     }
 
     [Fact]
