@@ -68,6 +68,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAdminItemService, AdminItemService>();
         services.AddScoped<IStimulusStudioService, StimulusStudioService>();
         services.AddScoped<IProductiveStudioService, ProductiveStudioService>();
+        // #208: the rubric and calibration studio. It needs the grading seam to run the ladder, which is
+        // why the ladder is not a pure function: seven responses are graded by a model.
+        services.AddScoped<IRubricStudioService, RubricStudioService>();
         services.AddScoped<IAdminCoverageService, AdminCoverageService>();
         services.AddScoped<IExamQuickIngestService, ExamQuickIngestService>();
         services.AddScoped<IQuestionImportService, QuestionImportService>();

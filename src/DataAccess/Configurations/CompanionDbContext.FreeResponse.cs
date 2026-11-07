@@ -214,6 +214,10 @@ public partial class CompanionDbContext
 
             entity.Property(e => e.SkillId).ValueGeneratedNever();
             entity.Property(e => e.LockedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+            // #208: the ladder verdict. NULL is "not run", which the lock trigger refuses, so the
+            // column needs no default and no non-null constraint to be safe.
+            entity.Property(e => e.LadderOutcome).HasMaxLength(20);
+            entity.Property(e => e.LadderReason).HasMaxLength(400);
 
             entity.HasOne(d => d.Skill).WithOne(p => p.RubricLock)
                 .HasPrincipalKey<Skill>(p => new { p.SkillId, p.CertId })

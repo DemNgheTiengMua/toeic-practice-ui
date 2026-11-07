@@ -32,6 +32,10 @@ public static partial class AdminEndpoints
         MapItems(Capability(app, Permissions.ContentAuthor));
         MapStimulusStudio(Capability(app, Permissions.ContentAuthor));
         MapProductiveStudio(Capability(app, Permissions.ContentAuthor));
+        // #208: the rubric and calibration studio. A rubric is part of the blueprint an author writes,
+        // and it is also what the grader reads, so it sits under the authoring capability beside the two
+        // content studios rather than under blueprint design (which is certificate scoring shape).
+        MapRubricStudio(Capability(app, Permissions.ContentAuthor));
         MapCoverage(Capability(app, Permissions.ContentAuthor));
         MapQuickIngest(Capability(app, Permissions.ContentAuthor));
         MapStudio(Capability(app, Permissions.ContentAuthor));

@@ -178,8 +178,10 @@ END TRY BEGIN CATCH
   PRINT 'rejected a lock naming a certificate the skill does not belong to (FK_GradingRubricLocks_SkillCert)';
 END CATCH
 
--- accept: the complete canonical four locks
-INSERT INTO GradingRubricLocks (SkillId,CertId) VALUES (@wr,@c);
+-- accept: the complete canonical four locks. #208: a lock also carries the ladder's verdict - a
+-- complete grid is the rubric's shape, and the ladder is the evidence that its bands separate.
+INSERT INTO GradingRubricLocks (SkillId,CertId,LadderOutcome,LadderReason,LadderRunAt)
+  VALUES (@wr,@c,'accepted',N'The ladder separated every adjacent band.',SYSDATETIMEOFFSET());
   EXEC ExpectFixtureRows N'domain27-descriptors.sql: the lock row';
 PRINT 'accepted a complete, canonical, seven-band rubric lock';
 
