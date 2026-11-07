@@ -61,6 +61,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IScoreConversionService, ScoreConversionService>();
         services.AddScoped<ICefrProjectionService, CefrProjectionService>();
         services.AddScoped<ISkillStateWriter, SkillStateWriter>();
+        // #222: the mock result read and the explicit sync are one service with two methods, so the
+        // read path and the write path are visible in one place and the read cannot reach the writer.
+        services.AddScoped<IMockResultSyncService, MockResultSyncService>();
         services.AddScoped<IAdminExamService, AdminExamService>();
         services.AddScoped<IAdminItemService, AdminItemService>();
         services.AddScoped<IStimulusStudioService, StimulusStudioService>();

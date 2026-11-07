@@ -19,5 +19,12 @@ public sealed record ExamResultViewModel(
     public int TotalQuestions { get; init; }
     public int AccuracyPercent { get; init; }
     public IReadOnlyList<ExamSkillScoreViewModel> Skills { get; init; } = [];
+
+    /// <summary>
+    /// #222: the separately labelled projected level. Never folded into <see cref="TotalScoreDisplay"/>
+    /// — the certificate score and the projection are two quantities on two axes.
+    /// </summary>
+    public MockProjectionViewModel Projection { get; init; } = new();
+
     public AiInsightPanelViewModel InsightPanel { get; init; } = new("attempt", Result.AttemptId, Insight);
 }

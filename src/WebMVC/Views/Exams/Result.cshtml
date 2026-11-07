@@ -37,6 +37,11 @@
   <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
 }
 
+@if (TempData["ShellSuccess"] is string syncSuccess)
+{
+  <div class="alert alert--success" role="status">@syncSuccess</div>
+}
+
 @if (res.IsAutoSubmitted)
 {
   <div class="alert alert--warning" role="status">
@@ -103,16 +108,105 @@
 @if (Model.IsGraded && !string.IsNullOrEmpty(res.BandCode))
 {
   <div class="card">
-    <div class="card__header"><strong>Proficiency Level / Score Band</strong></div>
+    <div class="card__header"><strong>Band on this certificate's own scale</strong></div>
     <div class="card__body">
       <div class="cefr">
         <div class="cefr__head">
           @* The band's own name, never its code: "below_A1" is a database key, and printing it put
-             an underscore in front of a learner. The band table already carries the readable name. *@
+             an underscore in front of a learner. The band table already carries the readable name.
+             #222 / PRN-03: this is a certificate band, NOT a CEFR level. *@
           <span class="cefr__current">@(string.IsNullOrWhiteSpace(res.BandName) ? res.BandCode : res.BandName)</span>
-          <span class="text-sm text-muted">@res.CertName</span>
+          <span class="text-sm text-muted">@res.CertName band for a score of @Model.TotalScoreDisplay</span>
         </div>
       </div>
+    </div>
+  </div>
+}
+
+@* #222: the projected level, separately labelled and deliberately beside the certificate score rather
+   than merged into it. A certificate band is not a CEFR level (PRN-03), so the two placards say which
+   quantity each one is. *@
+@if (Model.IsGraded && Model.Projection.Available)
+{
+  <div class="card mt-4">
+    <div class="card__header"><strong>Projected level from this paper</strong></div>
+    <div class="card__body">
+      @if (Model.Projection.Historical)
+      {
+        <p class="text-sm no-margin">@Model.Projection.CannotJudgeText</p>
+      }
+      else if (Model.Projection.CannotJudgeText is not null)
+      {
+        <p class="text-sm no-margin">@Model.Projection.CannotJudgeText</p>
+        <p class="text-xs text-muted mt-2 no-margin">@Model.Projection.ScopeNote</p>
+      }
+      else
+      {
+        @if (Model.Projection.WeakestProjectedText is not null)
+        {
+          <div class="cefr">
+            <div class="cefr__head">
+              <span class="cefr__current">@Model.Projection.WeakestProjectedText</span>
+              <span class="text-sm text-muted">weakest projected skill on this paper</span>
+            </div>
+          </div>
+        }
+
+        <table class="table table--striped mt-3">
+          <thead>
+            <tr>
+              <th scope="col">Skill</th>
+              <th scope="col">Certificate score</th>
+              <th scope="col">Projected level</th>
+              <th scope="col">Outcome</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var row in Model.Projection.Skills)
+            {
+              <tr>
+                <td><strong>@row.SkillName</strong></td>
+                <td>@row.ScoreDisplay</td>
+                <td>
+                  @if (row.LevelLabel is not null)
+                  {
+                    <strong>@row.LevelLabel</strong>
+                  }
+                  else
+                  {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+                <td><span class="badge @row.OutcomeClass">@row.OutcomeLabel</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        <p class="text-xs text-muted mt-2">@Model.Projection.ScopeNote</p>
+
+        <div class="mt-3" style="border-top: 1px solid var(--color-border); padding-top: var(--space-3);">
+          <p class="text-sm no-margin">@Model.Projection.StoredStateText</p>
+
+          @if (Model.Projection.SyncOffered)
+          {
+            <form method="post" action="/exams/result/@res.AttemptId/projection/sync" class="mt-3 no-margin">
+              @Html.AntiForgeryToken()
+              <p class="text-sm no-margin mb-2">
+                This paper projects a different level for: <strong>@Model.Projection.SyncSummaryText</strong>.
+                Syncing replaces your stored level with this paper's projection.
+              </p>
+              <button type="submit" class="btn btn--primary">Sync my level to this paper</button>
+            </form>
+          }
+          else
+          {
+            <p class="text-xs text-muted no-margin">
+              This paper projects the same level you already have stored, so there is nothing to sync.
+            </p>
+          }
+        </div>
+      }
     </div>
   </div>
 }

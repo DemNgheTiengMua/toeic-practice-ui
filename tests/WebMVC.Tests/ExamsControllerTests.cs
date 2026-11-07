@@ -651,6 +651,24 @@ public sealed class ExamsControllerTests
         public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<AttemptReviewDto>(ExceptionToThrow) : Task.FromResult(ReviewDto!);
 
+        public MockResultProjectionDto? ProjectionDto { get; set; }
+        public bool SyncProjectionCalled { get; private set; }
+
+        public Task<MockResultProjectionDto> GetMockProjectionAsync(int attemptId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null
+                ? Task.FromException<MockResultProjectionDto>(ExceptionToThrow)
+                // No stubbed projection is the real shape for an older attempt: the result page must
+                // still render its certificate score without the placard.
+                : Task.FromResult(ProjectionDto ?? new MockResultProjectionDto(
+                    attemptId, 1, 0, null, null, 1, [], null, null, null, null, true, [], false, false));
+
+        public Task<MockSyncResultDto> SyncMockProjectionAsync(int attemptId, CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow != null) return Task.FromException<MockSyncResultDto>(ExceptionToThrow);
+            SyncProjectionCalled = true;
+            return Task.FromResult(new MockSyncResultDto(1, "B1", 1, "READ", []));
+        }
+
         public Task<AiInsightDto> GetExamInsightAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<AiInsightDto>(ExceptionToThrow) : Task.FromResult(InsightDto!);
 

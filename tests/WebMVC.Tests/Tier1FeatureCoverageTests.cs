@@ -444,6 +444,8 @@ public sealed class Tier1FeatureCoverageTests
         public Task<AttemptResultDto> GetAttemptResultAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<ExamHistoryDto> GetExamHistoryAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<MockResultProjectionDto> GetMockProjectionAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<MockSyncResultDto> SyncMockProjectionAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<AiInsightDto> GetExamInsightAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task RetryExamInsightAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();

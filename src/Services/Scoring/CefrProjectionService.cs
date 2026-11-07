@@ -25,7 +25,7 @@ namespace Services;
 /// about a total.
 /// </para>
 /// </summary>
-public sealed class CefrProjectionService(CompanionDbContext db) : ICefrProjectionService
+public sealed partial class CefrProjectionService(CompanionDbContext db) : ICefrProjectionService
 {
     public async Task<CertificateProjection> ProjectAsync(
         int certId,

@@ -34,6 +34,14 @@ public interface IMockExamsClient
     Task<ExamHistoryDto> GetExamHistoryAsync(string bearerToken, CancellationToken cancellationToken = default) => GetExamHistoryAsync(cancellationToken);
     Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, CancellationToken cancellationToken = default);
     Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => GetAttemptReviewAsync(attemptId, cancellationToken);
+
+    /// <summary>#222: the mock result's certificate score and projected level. A read; writes nothing.</summary>
+    Task<MockResultProjectionDto> GetMockProjectionAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<MockResultProjectionDto> GetMockProjectionAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => GetMockProjectionAsync(attemptId, cancellationToken);
+
+    /// <summary>#222: the explicit one-click sync. The only call on this path that writes state.</summary>
+    Task<MockSyncResultDto> SyncMockProjectionAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<MockSyncResultDto> SyncMockProjectionAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => SyncMockProjectionAsync(attemptId, cancellationToken);
     Task<AiInsightDto> GetExamInsightAsync(int attemptId, CancellationToken cancellationToken = default);
     Task<AiInsightDto> GetExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => GetExamInsightAsync(attemptId, cancellationToken);
     Task RetryExamInsightAsync(int attemptId, CancellationToken cancellationToken = default);
