@@ -111,7 +111,7 @@ public sealed class RubricStudioService(
         {
             var postedCriterion = posted.Single(p => p.CriterionId == criterion.CriterionId);
             await ReplaceCellsAsync(criterion.CriterionId, postedCriterion.Cells ?? [], cancellationToken);
-            await ReplaceAnchorsAsync(criterion.CriterionId, postedCriterion.Anchors ?? [], cancellationToken);
+            await ReplaceAnchorRowsAsync(criterion.CriterionId, postedCriterion.Anchors ?? [], cancellationToken);
         }
 
         // EF SaveChanges, never ExecuteSqlRaw: StaffAccountStampInterceptor stamps LastWrittenBy and
@@ -335,81 +335,27 @@ public sealed class RubricStudioService(
     }
 
     /// <summary>
-    /// The grid as posted is the grid stored, on the same rule #192 chose for the wizard: bands the
-    /// request omits are deleted, not merged, so a seven-band grid cannot keep an eighth row from an
-    /// earlier save. The caller has already refused an incomplete grid, so "omits" here means "was never
-    /// there", not "the author left it blank".
+    /// The grid as posted is the grid stored, on the same rule #192 chose for the wizard. The caller has
+    /// already refused an incomplete grid, so "omits" here means "was never there", not "the author left
+    /// it blank". <see cref="RubricGridWriter"/> is the one writer both doors use.
     /// </summary>
-    private async Task ReplaceCellsAsync(
-        int criterionId, IReadOnlyList<RubricCellDto> cells, CancellationToken cancellationToken)
-    {
-        var existing = await db.GradingCriterionDescriptors
-            .Where(d => d.CriterionId == criterionId)
-            .ToListAsync(cancellationToken);
-
-        var incoming = cells
-            .GroupBy(c => c.Band)
-            .Select(g => g.First())
-            .ToDictionary(c => c.Band);
-
-        db.GradingCriterionDescriptors.RemoveRange(existing.Where(d => !incoming.ContainsKey(d.Band)));
-        foreach (var band in incoming.Values.OrderBy(c => c.Band))
-        {
-            var row = existing.FirstOrDefault(d => d.Band == band.Band);
-            if (row is null)
-            {
-                db.GradingCriterionDescriptors.Add(new GradingCriterionDescriptor
-                {
-                    CriterionId = criterionId,
-                    Band = band.Band,
-                    Descriptor = band.Descriptor.Trim(),
-                    BinaryGates = band.BinaryGates.Trim(),
-                });
-            }
-            else
-            {
-                row.Descriptor = band.Descriptor.Trim();
-                row.BinaryGates = band.BinaryGates.Trim();
-            }
-        }
-    }
+    private Task ReplaceCellsAsync(
+        int criterionId, IReadOnlyList<RubricCellDto> cells, CancellationToken cancellationToken) =>
+        RubricGridWriter.ReplaceCellsAsync(
+            db, criterionId,
+            cells.Select(c => new RubricGridWriter.Cell(c.Band, c.Descriptor, c.BinaryGates)).ToList(),
+            cancellationToken);
 
     /// <summary>
     /// The anchors, on the same rule. Only bands 2, 3 and 4 are storable at all (CK_GCA_Band), so a
     /// posted anchor at any other band is refused by the table rather than silently kept.
     /// </summary>
-    private async Task ReplaceAnchorsAsync(
-        int criterionId, IReadOnlyList<RubricAnchorDto> anchors, CancellationToken cancellationToken)
-    {
-        var existing = await db.GradingCriterionAnchors
-            .Where(a => a.CriterionId == criterionId)
-            .ToListAsync(cancellationToken);
-
-        var incoming = anchors
-            .Where(a => !string.IsNullOrWhiteSpace(a.ResponseText))
-            .GroupBy(a => a.Band)
-            .Select(g => g.First())
-            .ToDictionary(a => a.Band);
-
-        db.GradingCriterionAnchors.RemoveRange(existing.Where(a => !incoming.ContainsKey(a.Band)));
-        foreach (var band in incoming.Values.OrderBy(a => a.Band))
-        {
-            var row = existing.FirstOrDefault(a => a.Band == band.Band);
-            if (row is null)
-            {
-                db.GradingCriterionAnchors.Add(new GradingCriterionAnchor
-                {
-                    CriterionId = criterionId,
-                    Band = band.Band,
-                    ResponseText = band.ResponseText.Trim(),
-                });
-            }
-            else
-            {
-                row.ResponseText = band.ResponseText.Trim();
-            }
-        }
-    }
+    private Task ReplaceAnchorRowsAsync(
+        int criterionId, IReadOnlyList<RubricAnchorDto> anchors, CancellationToken cancellationToken) =>
+        RubricGridWriter.ReplaceAnchorsAsync(
+            db, criterionId,
+            anchors.Select(a => new RubricGridWriter.Anchor(a.Band, a.ResponseText)).ToList(),
+            cancellationToken);
 
     private async Task<bool> IsLockedAsync(int skillId, CancellationToken cancellationToken) =>
         await db.GradingRubricLocks.AnyAsync(l => l.SkillId == skillId, cancellationToken);

@@ -529,36 +529,11 @@ public sealed partial class CertificateService
     /// locked, which is why authoring happens before the lock.
     /// </summary>
     private async Task ReplaceAnchorsAsync(
-        int criterionId, IReadOnlyList<SaveGradingCriterionAnchorDto> anchors, CancellationToken cancellationToken)
-    {
-        var existing = await db.GradingCriterionAnchors
-            .Where(a => a.CriterionId == criterionId)
-            .ToListAsync(cancellationToken);
-
-        var incoming = anchors
-            .GroupBy(a => a.Band)
-            .Select(g => g.First())
-            .ToDictionary(a => a.Band);
-
-        db.GradingCriterionAnchors.RemoveRange(existing.Where(a => !incoming.ContainsKey(a.Band)));
-        foreach (var band in incoming.Values.OrderBy(a => a.Band))
-        {
-            var row = existing.FirstOrDefault(a => a.Band == band.Band);
-            if (row is null)
-            {
-                db.GradingCriterionAnchors.Add(new GradingCriterionAnchor
-                {
-                    CriterionId = criterionId,
-                    Band = band.Band,
-                    ResponseText = band.ResponseText.Trim()
-                });
-            }
-            else
-            {
-                row.ResponseText = band.ResponseText.Trim();
-            }
-        }
-    }
+        int criterionId, IReadOnlyList<SaveGradingCriterionAnchorDto> anchors, CancellationToken cancellationToken) =>
+        await RubricGridWriter.ReplaceAnchorsAsync(
+            db, criterionId,
+            anchors.Select(a => new RubricGridWriter.Anchor(a.Band, a.ResponseText)).ToList(),
+            cancellationToken);
 
     /// <summary>
     /// #192: the grid as posted is the grid stored - bands the request omits are deleted, not merged.
@@ -566,38 +541,11 @@ public sealed partial class CertificateService
     /// counts as a defect. The trigger refuses this outright once the rubric is locked.
     /// </summary>
     private async Task ReplaceBandsAsync(
-        int criterionId, IReadOnlyList<SaveGradingCriterionBandDto> bands, CancellationToken cancellationToken)
-    {
-        var existing = await db.GradingCriterionDescriptors
-            .Where(d => d.CriterionId == criterionId)
-            .ToListAsync(cancellationToken);
-
-        var incoming = bands
-            .GroupBy(b => b.Band)
-            .Select(g => g.First())
-            .ToDictionary(b => b.Band);
-
-        db.GradingCriterionDescriptors.RemoveRange(existing.Where(d => !incoming.ContainsKey(d.Band)));
-        foreach (var band in incoming.Values.OrderBy(b => b.Band))
-        {
-            var row = existing.FirstOrDefault(d => d.Band == band.Band);
-            if (row is null)
-            {
-                db.GradingCriterionDescriptors.Add(new GradingCriterionDescriptor
-                {
-                    CriterionId = criterionId,
-                    Band = band.Band,
-                    Descriptor = band.Descriptor.Trim(),
-                    BinaryGates = band.BinaryGates.Trim()
-                });
-            }
-            else
-            {
-                row.Descriptor = band.Descriptor.Trim();
-                row.BinaryGates = band.BinaryGates.Trim();
-            }
-        }
-    }
+        int criterionId, IReadOnlyList<SaveGradingCriterionBandDto> bands, CancellationToken cancellationToken) =>
+        await RubricGridWriter.ReplaceCellsAsync(
+            db, criterionId,
+            bands.Select(b => new RubricGridWriter.Cell(b.Band, b.Descriptor, b.BinaryGates)).ToList(),
+            cancellationToken);
 
     private static string FormatUpperSnakeCase(string input)
     {
