@@ -196,12 +196,15 @@ public sealed partial class LearningPathService
         }
 
         var itemIds = eligible.Select(i => i.ItemId).ToList();
-        var latestVersions = await db.ItemVersions
+        // #254: the same ordering the drill and gate one read - GateContext's, not a second one.
+        var versions = await db.ItemVersions
             .AsNoTracking()
             .Where(v => itemIds.Contains(v.ItemId))
-            .GroupBy(v => v.ItemId)
-            .Select(g => new { ItemId = g.Key, ItemVersionId = g.Max(v => v.ItemVersionId) })
-            .ToDictionaryAsync(v => v.ItemId, v => v.ItemVersionId, cancellationToken);
+            .Select(v => new { v.ItemId, v.VersionNumber, v.ItemVersionId })
+            .ToListAsync(cancellationToken);
+
+        var latestVersions = GateContext.NewestPerItem(versions, v => v.ItemId, v => v.VersionNumber)
+            .ToDictionary(v => v.ItemId, v => v.ItemVersionId);
 
         return eligible
             .Where(i => latestVersions.ContainsKey(i.ItemId))
