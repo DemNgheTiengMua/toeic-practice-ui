@@ -69,6 +69,9 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string AttemptNotFound = "ATTEMPT_NOT_FOUND";
         public const string AttemptNotActive = "ATTEMPT_NOT_ACTIVE";
         public const string AttemptNotFinished = "ATTEMPT_NOT_FINISHED";
+
+        /// <summary>#222: the mock projection sync had nothing legitimate to write.</summary>
+        public const string NothingToSync = "NOTHING_TO_SYNC";
         public const string PreflightRequired = "preflight_required";
 
         public const string ScoreConversionInvalid = "SCORE_CONVERSION_INVALID";

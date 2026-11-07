@@ -137,6 +137,18 @@ public sealed partial class CompanionApiClient
     public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<AttemptReviewDto>($"api/learner/attempts/{attemptId}/review", bearerToken, cancellationToken);
 
+    public Task<MockResultProjectionDto> GetMockProjectionAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<MockResultProjectionDto>($"api/learner/attempts/{attemptId}/projection", bearerToken, cancellationToken);
+
+    public async Task<MockSyncResultDto> SyncMockProjectionAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/projection/sync");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<MockSyncResultDto>(Json, cancellationToken))!;
+    }
+
     public Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<PreflightStatusDto>($"api/learner/attempts/{attemptId}/preflight", bearerToken, cancellationToken);
 
@@ -219,6 +231,12 @@ public sealed partial class CompanionApiClient
 
     public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
         GetAttemptReviewAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<MockResultProjectionDto> GetMockProjectionAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        GetMockProjectionAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<MockSyncResultDto> SyncMockProjectionAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        SyncMockProjectionAsync(attemptId, string.Empty, cancellationToken);
 
     public Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, CancellationToken cancellationToken = default) =>
         GetPreflightStatusAsync(attemptId, string.Empty, cancellationToken);

@@ -14,5 +14,9 @@ public class MockExamException(string code, string message) : Exception(message)
     public const string AttemptNotFinished = "attempt_not_finished";
     public const string PreflightRequired = "preflight_required";
 
+    /// <summary>#222: the sync had nothing legitimate to write - a historical attempt, a
+    /// cannot-judge projection, or a state that already matches.</summary>
+    public const string NothingToSync = "nothing_to_sync";
+
     public string Code { get; } = code;
 }

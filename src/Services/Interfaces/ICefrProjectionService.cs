@@ -57,4 +57,19 @@ public interface ICefrProjectionService
         IReadOnlyDictionary<int, (CefrLevel Level, int PositionInBand)> coordinates,
         int? tableVersion = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #222: the same table read the other way - a paper's per-skill scaled scores back to the level
+    /// each score sits in. Used by the mock result, which owns a certificate score and needs a
+    /// separately labelled projected level beside it.
+    /// </summary>
+    /// <param name="certId">The certificate whose scale and cut scores are read.</param>
+    /// <param name="scaledScores">One scored value per skill. A skill absent from this map is not
+    /// looked up and not reported.</param>
+    /// <param name="tableVersion">The cut-score version to read. Null reads the newest.</param>
+    Task<ScaledScoreProjection> ProjectScoresAsync(
+        int certId,
+        IReadOnlyDictionary<int, int> scaledScores,
+        int? tableVersion = null,
+        CancellationToken cancellationToken = default);
 }

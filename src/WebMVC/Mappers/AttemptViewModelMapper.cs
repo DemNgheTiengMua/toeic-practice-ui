@@ -1,4 +1,6 @@
 using Contracts;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using WebMVC.Models;
 using DisplayDates = WebMVC.Formatters.DateTimeFormatter;
 
@@ -6,7 +8,7 @@ namespace WebMVC.Mappers;
 
 internal static class AttemptViewModelMapper
 {
-    public static ExamResultViewModel Result(AttemptResultDto result, DisplayDates dates, string? error, AiInsightDto? insight)
+    public static ExamResultViewModel Result(AttemptResultDto result, DisplayDates dates, string? error, AiInsightDto? insight, MockResultProjectionDto? projection = null, ILogger? logger = null)
     {
         var raw = result.SkillScores.Sum(s => s.RawScore);
         var count = result.SkillScores.Sum(s => s.TotalQuestions);
@@ -21,8 +23,10 @@ internal static class AttemptViewModelMapper
             TotalScoreDisplay = result.Status == AttemptStatusDto.Graded
                 ? ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor)
                 : "—",
+            // #222 / PRN-03: this label says "certificate score" and never "level". The projection is a
+            // separate placard with its own label, because TOEIC 785-940 is not CEFR B2.
             TotalScoreLabel = result.Status == AttemptStatusDto.Graded
-                ? $"Total scaled score · {result.CertCode}"
+                ? $"Certificate score · {result.CertCode}"
                 : "Composite score pending AI grading",
             ScoreDeltaDisplay = result.ScoreDelta is int delta
                 ? (delta >= 0 ? "+" : "") + ScoreDisplay.Format(delta, result.ScoreDisplayFactor)
@@ -34,7 +38,8 @@ internal static class AttemptViewModelMapper
             TotalRawScore = raw,
             TotalQuestions = count,
             AccuracyPercent = Percent(raw, count),
-            Skills = result.SkillScores.Select(s => new ExamSkillScoreViewModel(s, Percent(s.RawScore, s.TotalQuestions), result.ScoreDisplayFactor)).ToList()
+            Skills = result.SkillScores.Select(s => new ExamSkillScoreViewModel(s, Percent(s.RawScore, s.TotalQuestions), result.ScoreDisplayFactor)).ToList(),
+            Projection = MockProjectionViewModelMapper.Map(projection, result.SkillScores, result.ScoreDisplayFactor, logger ?? NullLogger.Instance)
         };
     }
 

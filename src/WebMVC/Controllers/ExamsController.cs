@@ -492,7 +492,23 @@ public sealed class ExamsController(
                 }
             }
 
-            return View(AttemptViewModelMapper.Result(result, dates, TempData["ErrorMessage"] as string, insight));
+            // #222: the projected level is fetched on the result READ and writes nothing. A failure here
+            // must not take the certificate score down with it: the page still renders without the
+            // placard, and the mapper says so by leaving Projection.Available false.
+            MockResultProjectionDto? projection = null;
+            if (result.Status == AttemptStatusDto.Graded)
+            {
+                try
+                {
+                    projection = await api.GetMockProjectionAsync(attemptId, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Could not load the projected level for attempt {AttemptId}", attemptId);
+                }
+            }
+
+            return View(AttemptViewModelMapper.Result(result, dates, TempData["ErrorMessage"] as string, insight, projection, logger));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.AttemptNotFound)
         {
@@ -558,6 +574,35 @@ public sealed class ExamsController(
         catch (ApiException ex)
         {
             return StatusCode(ex.Status, new { code = ex.Code, message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// #222: the one-click sync. <b>This is the only action on the mock result path that writes the
+    /// learner's per-skill state</b> - <see cref="Result"/> reads and cannot write. Anti-forgery
+    /// protected, and forwarded through the cookie token like every other learner action (§1.2).
+    /// </summary>
+    [HttpPost("/exams/result/{attemptId:int}/projection/sync")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SyncProjection(int attemptId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var standing = await api.SyncMockProjectionAsync(attemptId, cancellationToken);
+            TempData["ShellSuccess"] = "Your stored level now matches this paper's projected level.";
+            return RedirectToAction(nameof(Result), new { attemptId });
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.NothingToSync)
+        {
+            logger.LogInformation("No mock projection to sync for attempt {AttemptId}", attemptId);
+            TempData["ErrorMessage"] = ex.Detail ?? "There was nothing to sync.";
+            return RedirectToAction(nameof(Result), new { attemptId });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to sync the projection for attempt {AttemptId}", attemptId);
+            TempData["ErrorMessage"] = ex.Detail ?? "Could not sync the projected level. Please try again.";
+            return RedirectToAction(nameof(Result), new { attemptId });
         }
     }
 
