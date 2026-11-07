@@ -47,6 +47,13 @@
     </div>
   }
 
+  @* #223: what the mentor receives. Derived at read time, so a booking made before this payload
+     existed renders it too - there is nothing stored on the booking to migrate. *@
+  @if (Model.Standing is { } standing)
+  {
+    <partial name="_MentorStanding" model="standing" />
+  }
+
   @if (isPending)
   {
     <div class="stack">

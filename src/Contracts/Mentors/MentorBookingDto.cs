@@ -20,4 +20,11 @@ public sealed record MentorBookingDto(
     DateTimeOffset CreatedAt,
     int? AttemptId = null,
     string? RedirectUrl = null,
-    MentorReviewDto? Review = null);
+    MentorReviewDto? Review = null,
+    /// <summary>
+    /// #223 / D21: the learner's standing in this mentor's certificate, derived at read time from
+    /// <c>LearnerSkillStates</c>. Null only for a certificate or learner that cannot be described at
+    /// all; it is never omitted because nothing was measured - that state is
+    /// <see cref="MentorLearnerStandingDto.HasNoMeasurement"/>.
+    /// </summary>
+    MentorLearnerStandingDto? Standing = null);
