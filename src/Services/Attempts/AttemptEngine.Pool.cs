@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
 using BusinessObjects.Entities;
+using Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Services;
@@ -250,10 +251,13 @@ public sealed partial class AttemptEngine
             ? SelectedPoolOptionId(versionId, answer)
             : answer?.SelectedOptionId;
 
+    /// <summary>
+    /// #253: the row-shaped adapter over <see cref="AnswerContent.IsAnswered"/>, the solution's one
+    /// definition. The definition lives in Contracts because the review, the sitting and the practice
+    /// drill all read the same four columns and only disagree when one of them re-invents the test.
+    /// </summary>
     private static bool IsAnswered(AttemptAnswer? answer) =>
         answer is not null
-        && (answer.SelectedOptionId.HasValue
-            || !string.IsNullOrWhiteSpace(answer.SelectedLabel)
-            || !string.IsNullOrWhiteSpace(answer.ResponseText)
-            || !string.IsNullOrWhiteSpace(answer.SelectedOptionIdsJson));
+        && AnswerContent.IsAnswered(
+            answer.SelectedOptionId, answer.SelectedLabel, answer.ResponseText, answer.SelectedOptionIdsJson);
 }

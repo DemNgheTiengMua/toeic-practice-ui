@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
+using Contracts;
 using DataAccess;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
@@ -83,11 +84,15 @@ public sealed partial class PracticeService
         PracticeAnswer? answer;
         if (displayOrder <= 0)
         {
-            answer = await query
-                .Where(pa => pa.SelectedOptionId == null && pa.SelectedLabel == null && pa.IsCorrect == null)
-                .OrderBy(pa => pa.DisplayOrder)
-                .FirstOrDefaultAsync(cancellationToken)
-                ?? await query.OrderBy(pa => pa.DisplayOrder).FirstOrDefaultAsync(cancellationToken);
+            // #253: "unanswered" is "carries no content", not "has no grade" - a productive pool
+            // answer is stored ungraded and would otherwise be served as the next question forever.
+            // Ordered rows then filtered in memory, so the shared method stays the only definition.
+            answer = (await query.OrderBy(pa => pa.DisplayOrder).ToListAsync(cancellationToken))
+                .FirstOrDefault(pa => !IsAnswerRecorded(pa));
+            if (answer is null)
+            {
+                answer = await query.OrderBy(pa => pa.DisplayOrder).FirstOrDefaultAsync(cancellationToken);
+            }
         }
         else
         {
@@ -133,9 +138,9 @@ public sealed partial class PracticeService
     {
         var q = answer.Question;
         var (_, sectionName) = ScopeLabels(session);
-        var isAnswered = answer.SelectedOptionId.HasValue
-            || answer.SelectedLabel is not null
-            || answer.IsCorrect.HasValue;
+        // #253: one definition, so the pool's ungraded productive answer reads as answered here too.
+        var isAnswered = AnswerContent.IsAnswered(
+            answer.SelectedOptionId, answer.SelectedLabel, answer.ResponseText, answer.SelectedOptionIdsJson);
 
         IReadOnlyList<PracticeQuestionOption> options;
         int? selectedOptionId;
@@ -257,6 +262,14 @@ public sealed partial class PracticeService
             savedQuestionId);
     }
 
+    /// <summary>
+    /// #253: the projection carries no raw label — a pool answer's label is already decoded into
+    /// <see cref="PracticeQuestionView.SelectedOptionId"/> — so the four answerable columns reduce to
+    /// three here and the one shared definition still decides.
+    /// </summary>
+    private static bool IsAnsweredView(PracticeQuestionView question) =>
+        AnswerContent.IsAnswered(question.SelectedOptionId, null, question.ResponseText, question.SelectedOptionIdsJson);
+
     /// <summary>The stimuli the pinned versions point at, keyed by item, so a passage is read once.</summary>
     private async Task<Dictionary<int, Stimulus>> LoadStimuliAsync(
         IEnumerable<ItemVersion> versions, CancellationToken cancellationToken)
@@ -292,13 +305,13 @@ public sealed partial class PracticeService
         }
         else
         {
-            currentQuestion = questions.FirstOrDefault(q => q.SelectedOptionId == null && q.IsCorrect == null) ?? questions[0];
+            currentQuestion = questions.FirstOrDefault(q => !IsAnsweredView(q)) ?? questions[0];
         }
 
         var navigator = questions.Select(item => new PracticeNavigatorItem(
             item.QuestionId,
             item.DisplayOrder,
-            item.SelectedOptionId.HasValue || item.IsCorrect.HasValue,
+            IsAnsweredView(item),
             item.IsCorrect,
             item.IsSaved,
             item.DisplayOrder == currentQuestion.DisplayOrder,

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
+using Contracts;
 using DataAccess;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
@@ -174,9 +175,13 @@ public sealed partial class PracticeService
 
         foreach (var inProg in existingInProgress)
         {
-            // #187: a pool answer records a label rather than an option id, so both count as an answer.
-            var hasAnswers = await db.PracticeAnswers
-                .AnyAsync(pa => pa.SessionId == inProg.SessionId && (pa.SelectedOptionId != null || pa.SelectedLabel != null || pa.IsCorrect != null), cancellationToken);
+            // #253: "has content", not "has a grade" - a pool productive answer is ungraded forever, so
+            // this check used to delete a session the learner had already written into.
+            var answers = await db.PracticeAnswers
+                .AsNoTracking()
+                .Where(pa => pa.SessionId == inProg.SessionId)
+                .ToListAsync(cancellationToken);
+            var hasAnswers = answers.Any(IsAnswerRecorded);
 
             if (!hasAnswers)
             {

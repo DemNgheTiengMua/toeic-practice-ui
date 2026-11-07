@@ -245,7 +245,9 @@ public sealed partial class AiInsightService
             .Include(tb => tb.ScoreBand)
             .FirstOrDefaultAsync(tb => tb.UserId == insight.UserId && tb.CertId == insight.CertId, cancellationToken);
 
-        var answeredCount = answers.Count(a => a.SelectedOptionId.HasValue || a.SelectedLabel is not null || a.IsCorrect.HasValue);
+        // #253: the one definition, so an ungraded pool answer is not reported to the mentor as skipped.
+        var answeredCount = answers.Count(a =>
+            AnswerContent.IsAnswered(a.SelectedOptionId, a.SelectedLabel, a.ResponseText, a.SelectedOptionIdsJson));
         var correctCount = answers.Count(a => a.IsCorrect == true);
         var hintUsedCount = answers.Count(a => a.HintUsed);
         var correctWithHintCount = answers.Count(a => a.HintUsed && a.IsCorrect == true);

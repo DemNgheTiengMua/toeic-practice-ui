@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
+using Contracts;
 using DataAccess;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
@@ -119,9 +120,14 @@ public sealed partial class PracticeService
 
         var (code, name) = ScopeLabels(session);
         var total = answers.Count;
-        var answered = answers.Count(a => a.SelectedOptionId.HasValue || a.SelectedLabel is not null || a.IsCorrect.HasValue);
+        // #253: the same definition the review screen and the take page use, so the summary's
+        // answered count and the navigator cannot disagree about one attempt.
+        var answered = answers.Count(a =>
+            AnswerContent.IsAnswered(a.SelectedOptionId, a.SelectedLabel, a.ResponseText, a.SelectedOptionIdsJson));
         var correct = answers.Count(a => a.IsCorrect == true);
-        var incorrect = answered - correct;
+        // An answered-but-ungraded pool answer is neither correct nor incorrect yet; counting it as
+        // incorrect would report a miss the learner never made.
+        var incorrect = answers.Count(a => a.IsCorrect == false);
         var skipped = total - answered;
         var accuracy = answered > 0 ? (int)Math.Round((double)correct / answered * 100) : 0;
         var hintUsedTotal = answers.Count(a => a.HintUsed);

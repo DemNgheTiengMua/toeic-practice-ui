@@ -205,22 +205,24 @@ public sealed partial class LearningPathService
             return [];
         }
 
+        // The rows of this learner's drills at the certificate, one query, so the per-item statistics
+        // below are computed from one list.
         var stats = await db.PracticeAnswers
             .AsNoTracking()
             .Where(pa => pa.Session.UserId == userId
                 && pa.Session.CertId == certId
-                && pa.ItemId != null
-                && (pa.SelectedLabel != null || pa.IsCorrect != null))
-            .GroupBy(pa => pa.ItemId!.Value)
-            .Select(g => new
-            {
-                ItemId = g.Key,
-                Answered = g.Count(),
-                Correct = g.Count(a => a.IsCorrect == true),
-            })
+                && pa.ItemId != null)
             .ToListAsync(cancellationToken);
 
-        var byItem = stats.ToDictionary(s => s.ItemId);
+        // Accuracy is computed over judged answers only. An unjudged answer (a productive pool drill is
+        // ungraded forever) is not a miss: counting it would deflate the cell the planner picks its next
+        // step from. #253 changed what "answered" means; it did not make an unjudged answer wrong.
+        var graded = stats.Where(pa => pa.IsCorrect.HasValue).ToList();
+
+        var byItem = graded.Count == 0
+            ? []
+            : graded.GroupBy(pa => pa.ItemId!.Value)
+                .ToDictionary(g => g.Key, g => (Answered: g.Count(), Correct: g.Count(a => a.IsCorrect == true)));
         var topics = cellItems
             .GroupBy(i => i.TopicId)
             .Select(g =>

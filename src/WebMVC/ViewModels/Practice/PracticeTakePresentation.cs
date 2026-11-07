@@ -12,7 +12,7 @@ public sealed class PracticeTakePresentation
         Question = question;
         Questions = questions ?? [question];
         Navigator = navigator ?? Questions.Select(x => new PracticeNavigatorItemDto(x.QuestionId, x.DisplayOrder,
-            x.SelectedOptionId.HasValue || x.IsCorrect.HasValue, x.IsCorrect, x.IsSaved, x.DisplayOrder == question.DisplayOrder,
+            IsAnswered(x), x.IsCorrect, x.IsSaved, x.DisplayOrder == question.DisplayOrder,
             x.ItemVersionId, x.SavedQuestionId)).ToList();
         IsFinished = session.Status == PracticeStatusDto.Finished;
         NavigatorCells = Navigator.Select(item => new PracticeNavigatorCellViewModel(item,
@@ -22,16 +22,16 @@ public sealed class PracticeTakePresentation
             $"Question {item.DisplayOrder}" + (item.IsCorrect == true ? " · Correct" : item.IsCorrect == false ? " · Incorrect" : "")
                 + (item.IsSaved ? " · Saved" : ""))).ToList();
         TotalCount = Questions.Count;
-        AnsweredCount = Questions.Count(x => x.SelectedOptionId.HasValue || x.IsCorrect.HasValue);
+        AnsweredCount = Questions.Count(IsAnswered);
         CorrectCount = Questions.Count(x => x.IsCorrect == true);
         IncorrectCount = Questions.Count(x => x.IsCorrect == false);
-        SkippedCount = Questions.Count(x => IsFinished && !x.SelectedOptionId.HasValue && !x.IsCorrect.HasValue);
+        SkippedCount = Questions.Count(x => IsFinished && !IsAnswered(x));
         UnansweredCount = Math.Max(0, TotalCount - AnsweredCount);
         SavedCount = Questions.Count(x => x.IsSaved);
         AccuracyPercent = AnsweredCount > 0 ? (int)Math.Round((double)CorrectCount / AnsweredCount * 100) : 0;
         ProgressPercent = TotalCount > 0 ? (int)Math.Round((double)AnsweredCount / TotalCount * 100) : 0;
         HasListening = session.Modality == ModalityDto.Listening || Questions.Any(x => !string.IsNullOrEmpty(x.AudioPath));
-        IsCurrentAnswered = question.SelectedOptionId.HasValue || question.IsCorrect.HasValue;
+        IsCurrentAnswered = IsAnswered(question);
         IsCurrentSkipped = IsFinished && !IsCurrentAnswered;
         Options = question.Options.Select(option => new PracticeOptionViewModel(option,
             option.OptionId == question.SelectedOptionId, option.OptionId == question.CorrectOptionId,
@@ -68,4 +68,10 @@ public sealed class PracticeTakePresentation
     public bool IsCurrentAnswered { get; }
     public bool IsCurrentSkipped { get; }
     public string QuestionsJson { get; }
+
+    /// <summary>#253: one definition for every count on this page — the navigator, the topbar and
+    /// the summary must agree about one attempt.</summary>
+    private static bool IsAnswered(PracticeQuestionDto question) =>
+        AnswerContent.IsAnswered(
+            question.SelectedOptionId, null, question.ResponseText, question.SelectedOptionIdsJson);
 }
