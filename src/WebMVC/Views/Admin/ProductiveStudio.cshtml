@@ -1,0 +1,253 @@
+@model WebMVC.Models.ProductiveStudioViewModel
+@using WebMVC.Models
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = $"Productive studio — {Model.SkillLabel}";
+}
+
+@* #204 / S-07: the prompt pinned left, its parts stacked right. A two-part writing task is one task
+   with two budgets, so the envelope above them belongs to the task rather than to either part. *@
+<div id="productive-csrf-holder" style="display:none;">
+  @Html.AntiForgeryToken()
+</div>
+
+@section Styles {
+  <link rel="stylesheet" href="~/css/admin/productive-studio.css" asp-append-version="true" />
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+  <span class="breadcrumbs__item" aria-current="page">Productive studio</span>
+</nav>
+
+<div class="row row--between row--wrap studio-head">
+  <div>
+    <h1 class="studio-head__title">Writing prompt and speaking task</h1>
+    <p class="text-sm text-muted studio-head__lede">
+      One prompt, and the parts a rubric scores. Nothing is written until the whole task passes:
+      the prompt and its parts enter the pool together, as drafts.
+    </p>
+  </div>
+
+  <div class="studio-skill-switch" role="group" aria-label="Skill">
+    @foreach (var skill in new[] { ("writing", "Writing"), ("speaking", "Speaking") })
+    {
+      <a href="/admin/studio/productive?skill=@skill.Item1"
+         class="studio-skill-switch__item @(Model.SkillCode == skill.Item1 ? "is-selected" : string.Empty)"
+         aria-current="@(Model.SkillCode == skill.Item1 ? "page" : "false")">@skill.Item2</a>
+    }
+  </div>
+</div>
+
+@if (Model.ErrorMessage is not null)
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (Model.HasOptions)
+{
+  <div class="studio-config" id="productive-config"
+       data-configuration="@Model.ConfigurationJson" data-skill="@Model.SkillCode"></div>
+
+  <div class="studio-canvas">
+
+    @* ---------------- left: the task, pinned ---------------- *@
+    <section class="studio-pane studio-pane--stimulus" aria-labelledby="studio-task-title">
+      <div class="studio-pane__head">
+        <h2 id="studio-task-title" class="studio-pane__title">The task</h2>
+        <span class="studio-pane__code font-mono" id="studio-task-scope">draft</span>
+      </div>
+
+      <div class="studio-field">
+        <label class="studio-label" for="studio-level">Level</label>
+        @* ADM-08's control shape: the six bands are painted placards, and the active one inverts to
+           solid ink rather than taking a tint. *@
+        <div class="studio-levels" role="radiogroup" aria-label="Level">
+          @foreach (var level in Model.Levels)
+          {
+            <button type="button" class="studio-level" role="radio" aria-checked="false"
+                    data-level="@level.Code" value="@level.Code">@level.Label</button>
+          }
+        </div>
+        <input type="hidden" id="studio-level" name="level" value="" />
+      </div>
+
+      <div class="studio-field">
+        <label class="studio-label" for="studio-topic">Topic</label>
+        <select class="studio-select" id="studio-topic" name="topicCode">
+          @foreach (var topic in Model.Topics)
+          {
+            <option value="@topic.Code">@topic.Code · @topic.Name</option>
+          }
+        </select>
+        <p class="studio-hint">
+          One topic for the whole task. A two-part task whose parts sat on different topics would report
+          mastery against two cells for one sitting.
+        </p>
+      </div>
+
+      <div class="studio-field">
+        <label class="studio-label" for="studio-domain">Domain context</label>
+        <select class="studio-select" id="studio-domain" name="domainContext">
+          <option value="general">General</option>
+          <option value="workplace">Workplace</option>
+          <option value="academic">Academic</option>
+        </select>
+      </div>
+
+      <div class="studio-field">
+        <label class="studio-label" for="studio-prompt">Prompt</label>
+        <textarea class="studio-textarea" id="studio-prompt" name="promptCopy" rows="8"
+                  aria-describedby="studio-prompt-hint"></textarea>
+        <p class="studio-hint" id="studio-prompt-hint">
+          The instruction the learner reads above the parts. D0.4 gives each type its own length for
+          this copy; the parts below carry their own word range and budget.
+        </p>
+      </div>
+
+      @* The visual stimulus. A synthesis type is a table or chart and cannot be authored without one;
+         the other types never show an image, so the field says which it is rather than hiding. *@
+      <div class="studio-field studio-field--image" id="studio-image-field" data-state="hidden">
+        <span class="studio-label">Visual stimulus</span>
+        <p class="studio-hint" id="studio-image-note">This type shows no image.</p>
+        <div class="studio-field--row">
+          <div>
+            <label class="studio-label studio-label--inline" for="studio-image">Image path</label>
+            <input class="studio-input" type="text" id="studio-image" name="imagePath"
+                   placeholder="img/chart-2.svg" />
+          </div>
+          <div>
+            <label class="studio-label studio-label--inline" for="studio-image-alt">Alt text</label>
+            <input class="studio-input" type="text" id="studio-image-alt" name="imageAlt"
+                   placeholder="A bar chart of quarterly revenue." />
+          </div>
+        </div>
+      </div>
+
+      @* AC4: the placement state and the cap, shown before the work rather than at the save. *@
+      <div class="studio-field studio-field--placement">
+        <label class="studio-toggle">
+          <input type="checkbox" id="studio-placement" name="placementEligible" />
+          <span class="studio-toggle__box" aria-hidden="true"></span>
+          <span class="studio-toggle__text">Placement may draw this task</span>
+        </label>
+
+        <div class="studio-cap" id="studio-placement-cap" data-state="off" role="status" aria-live="polite">
+          <span class="studio-cap__label">Placement scope</span>
+          <span class="studio-cap__value font-mono" id="studio-placement-cap-value">Not a placement task</span>
+          <span class="studio-cap__note" id="studio-placement-cap-note">
+            Placement tasks are bounded so conditions are equal across candidates.
+          </span>
+        </div>
+      </div>
+
+      <div class="studio-gauges" id="studio-word-ranges" role="status" aria-live="polite">
+        <h3 class="studio-subhead">Word range</h3>
+        <ul class="studio-gauge-list" id="studio-word-range-list">
+          <li class="studio-gauge studio-gauge--unmeasured">
+            <span class="studio-gauge__label">Pick a level and a type</span>
+            <span class="studio-gauge__value font-mono">—</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    @* ---------------- right: the parts, stacked ---------------- *@
+    <section class="studio-pane studio-pane--children" aria-labelledby="studio-parts-title">
+      <div class="studio-pane__head">
+        <h2 id="studio-parts-title" class="studio-pane__title">Parts</h2>
+        <span class="studio-pane__count font-mono" id="studio-part-count" data-count="1">1 part</span>
+      </div>
+
+      <div class="studio-slots" id="studio-parts" aria-live="polite"></div>
+
+      <div class="studio-field studio-field--add">
+        <button type="button" class="btn btn--secondary btn--sm" id="studio-add-part">
+          Add a second part
+        </button>
+        <p class="studio-hint" id="studio-add-part-note">
+          A writing task may be one part, or the two a two-task sitting is weighted for — Task 2 counts
+          twice Task 1, so each part carries its own range and budget.
+        </p>
+      </div>
+
+      <div class="studio-save-row">
+        <p class="studio-save-status" id="studio-save-status" role="status" aria-live="polite">
+          Nothing to save yet.
+        </p>
+        <button type="button" class="btn btn--primary" id="studio-save" disabled>Save task</button>
+      </div>
+
+      <div class="studio-refusals" id="studio-refusals" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <template id="studio-part-template">
+    <article class="studio-slot" data-part>
+      <header class="studio-slot__head">
+        <span class="studio-slot__number font-mono" data-part-number>1</span>
+        <label class="studio-label studio-label--inline">
+          <span class="visually-hidden">Task type</span>
+          <select class="studio-select studio-select--sm" data-part-type>
+            @foreach (var type in Model.Types)
+            {
+              <option value="@type.Code">@type.Label</option>
+            }
+          </select>
+        </label>
+      </header>
+
+      <div class="studio-field">
+        <label class="studio-label">Instruction</label>
+        <textarea class="studio-textarea studio-textarea--sm" rows="3" data-part-prompt></textarea>
+      </div>
+
+      <div class="studio-field studio-field--row">
+        <div>
+          <label class="studio-label">Word range</label>
+          <div class="studio-span">
+            <input class="studio-input studio-input--num font-mono" type="number" data-part-min
+                   placeholder="min" min="1" />
+            <span class="studio-span__dash" aria-hidden="true">–</span>
+            <input class="studio-input studio-input--num font-mono" type="number" data-part-max
+                   placeholder="max" min="1" />
+            <span class="studio-span__unit font-mono" data-part-words-unit>words</span>
+          </div>
+          <p class="studio-hint studio-hint--range" data-part-range-hint></p>
+        </div>
+      </div>
+
+      <div class="studio-field studio-field--row">
+        <div>
+          <label class="studio-label">Preparation</label>
+          <input class="studio-input studio-input--num font-mono" type="number" data-part-prep
+                 placeholder="seconds" min="1" />
+          <p class="studio-hint" data-part-prep-hint></p>
+        </div>
+        <div>
+          <label class="studio-label" data-part-response-label>Recording</label>
+          <input class="studio-input studio-input--num font-mono" type="number" data-part-response
+                 placeholder="seconds" min="1" />
+          <p class="studio-hint" data-part-response-hint></p>
+        </div>
+      </div>
+
+      <div class="studio-field">
+        <label class="studio-label">Explanation</label>
+        <textarea class="studio-textarea studio-textarea--sm" rows="2" data-part-explanation></textarea>
+        <p class="studio-hint">What the answer should have contained. Required on every item.</p>
+      </div>
+
+      <button type="button" class="btn btn--ghost btn--sm studio-part-remove" data-part-remove hidden>
+        Remove this part
+      </button>
+
+      <p class="studio-slot__refusals" data-part-refusals></p>
+    </article>
+  </template>
+}
+
+@section Scripts {
+  <script src="~/js/admin/productive-studio.js" asp-append-version="true"></script>
+}
