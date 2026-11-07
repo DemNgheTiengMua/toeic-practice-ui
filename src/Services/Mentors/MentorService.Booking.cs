@@ -158,7 +158,9 @@ public sealed partial class MentorService
         int? attemptId = attemptInfo?.AttemptId;
         string? redirectUrl = attemptInfo != null ? $"/speaking/take/{attemptInfo.AttemptId}" : null;
 
-        return ToBookingDto(booking, mentor, slot, attemptId, redirectUrl);
+        var standing = await BuildStandingAsync(userId, mentor.CertId, cancellationToken);
+
+        return ToBookingDto(booking, mentor, slot, attemptId, redirectUrl, standing: standing);
     }
 
     private static string GenerateMeetLink()

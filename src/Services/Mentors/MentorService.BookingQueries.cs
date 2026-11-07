@@ -34,7 +34,9 @@ public sealed partial class MentorService
                 review.CreatedAt)
             : null;
 
-        return ToBookingDto(booking, booking.Mentor, booking.Slot, review: reviewDto);
+        var standing = await BuildStandingAsync(booking.UserId, booking.Mentor.CertId, cancellationToken);
+
+        return ToBookingDto(booking, booking.Mentor, booking.Slot, review: reviewDto, standing: standing);
     }
 
     public async Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(int userId, CancellationToken cancellationToken = default)
@@ -50,6 +52,8 @@ public sealed partial class MentorService
             .OrderByDescending(b => b.CreatedAt)
             .ToListAsync(cancellationToken);
 
+        var standings = await BuildStandingsAsync(bookings, cancellationToken);
+
         return bookings.Select(b =>
         {
             var review = b.Reviews.FirstOrDefault();
@@ -61,11 +65,12 @@ public sealed partial class MentorService
                     review.User?.FullName ?? b.User?.FullName ?? "Anonymous",
                     review.CreatedAt)
                 : null;
-            return ToBookingDto(b, b.Mentor, b.Slot, review: reviewDto);
+            standings.TryGetValue((b.UserId, b.Mentor.CertId), out var standing);
+            return ToBookingDto(b, b.Mentor, b.Slot, review: reviewDto, standing: standing);
         }).ToList();
     }
 
-    private static MentorBookingDto ToBookingDto(Booking b, MentorProfile mentor, MentorSlot? slot, int? attemptId = null, string? redirectUrl = null, MentorReviewDto? review = null) =>
+    private static MentorBookingDto ToBookingDto(Booking b, MentorProfile mentor, MentorSlot? slot, int? attemptId = null, string? redirectUrl = null, MentorReviewDto? review = null, MentorLearnerStandingDto? standing = null) =>
         new(
             b.BookingId,
             b.UserId,
@@ -84,5 +89,6 @@ public sealed partial class MentorService
             b.CreatedAt,
             attemptId,
             redirectUrl,
-            review);
+            review,
+            standing);
 }

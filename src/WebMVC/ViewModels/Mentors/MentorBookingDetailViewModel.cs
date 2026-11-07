@@ -8,6 +8,9 @@ public sealed record MentorBookingDetailViewModel(
     string? SuccessMessage = null,
     string? ErrorMessage = null)
 {
+    /// <summary>#223 / D21: the standing block, or null when this certificate cannot be described at all.</summary>
+    public MentorStandingViewModel? Standing => Booking.Standing is { } standing ? new(standing) : null;
+
     public IReadOnlyDictionary<DateTimeOffset, FormattedDateViewModel> Dates { get; private set; } = new Dictionary<DateTimeOffset, FormattedDateViewModel>();
     public MentorBookingDetailViewModel PrepareDates(DateTimeFormatter formatter)
     {
