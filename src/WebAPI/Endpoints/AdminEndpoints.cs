@@ -30,6 +30,7 @@ public static partial class AdminEndpoints
         MapExams(Capability(app, Permissions.ContentAuthor));
         MapQuestions(Capability(app, Permissions.ContentAuthor));
         MapItems(Capability(app, Permissions.ContentAuthor));
+        MapStimulusStudio(Capability(app, Permissions.ContentAuthor));
         MapCoverage(Capability(app, Permissions.ContentAuthor));
         MapQuickIngest(Capability(app, Permissions.ContentAuthor));
         MapStudio(Capability(app, Permissions.ContentAuthor));

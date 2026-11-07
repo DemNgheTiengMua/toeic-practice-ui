@@ -65,6 +65,13 @@ public sealed class PoolIngestionGates(
     public const string UnnamedAuthorFamily = "unattributed";
 
     /// <summary>
+    /// Whether this deployment wired gate three at all. Gate three is the only gate with no pure half,
+    /// so a caller that reports its state has to ask rather than infer it from refusals: with no models
+    /// the gate refuses every record, and a refuSAL is not the same fact as "the check never ran".
+    /// </summary>
+    public bool HasNoVerifiers => verifierOne is null || verifierTwo is null;
+
+    /// <summary>
     /// Judges one bundle and returns one result per child, in file order. Gate two runs once for the
     /// stimulus; gates one and three run per child; gate four runs per child for the level claim and
     /// once over the bundle for span independence.
@@ -298,6 +305,14 @@ public sealed class PoolIngestionGates(
     /// CNT-10 and CNT-12 over the bundle's children. A listening bundle is judged on time, a reading
     /// one on overlap against the passage's length; the choice is the skill's, because a second-based
     /// span has no "whole passage" quantity and a character span has no audio order.
+    /// <para>
+    /// <b>The children are passed in their served order, never sorted into evidence order.</b> CNT-10
+    /// is a rule about the order the items are <em>served</em> in, so sorting by
+    /// <c>SpanStart</c> before judging rewrites the input the rule exists to check - and
+    /// <see cref="GateFour.ReviewAudio"/>'s <c>AudioOrder</c> refusal can then never fire from any
+    /// caller. It did not fire: #203 found the sort here, which is why the studio's chronological-order
+    /// requirement had no enforcement behind it.
+    /// </para>
     /// </summary>
     private static IEnumerable<IngestionRefusal> SpanRefusals(
         string skill,
@@ -307,8 +322,7 @@ public sealed class PoolIngestionGates(
         if (string.Equals(skill, "listening", StringComparison.Ordinal))
         {
             var ordered = children
-                .OrderBy(c => c.SpanStart)
-                .ThenBy(c => c.Ordinal)
+                .OrderBy(c => c.Ordinal)
                 .Select((c, index) => new GateFourAudioChild(index + 1, c.TopicCode, c.SpanStart, c.SpanEnd, c.SpanUnit))
                 .ToList();
 

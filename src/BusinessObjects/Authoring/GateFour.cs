@@ -195,6 +195,50 @@ public static class GateFour
     /// it, and a loop over sorted neighbours never sees that pair.
     /// </para>
     /// </summary>
+    /// <summary>
+    /// The pair's overlap, as CNT-12 defines it: intersection over the two spans' union.
+    /// <para>
+    /// Public because #203's studio shows the figure while the author drags a span, and a screen that
+    /// computed its own IoU would eventually disagree with the rule that refuses the save. Units that
+    /// differ, or a span whose end is not after its start, are <c>null</c>: there is no number, and
+    /// returning <c>0</c> would paint "independent" over a pair nobody could measure.
+    /// </para>
+    /// </summary>
+    public static decimal? SpanOverlap(GateFourSpan first, GateFourSpan second)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(second);
+
+        if (!Same(first.Unit, second.Unit)
+            || first.End <= first.Start
+            || second.End <= second.Start)
+        {
+            return null;
+        }
+
+        var intersection = Math.Min(first.End, second.End) - Math.Max(first.Start, second.Start);
+        if (intersection <= 0)
+        {
+            return 0m;
+        }
+
+        var union = (first.End - first.Start) + (second.End - second.Start) - intersection;
+        return (decimal)intersection / union;
+    }
+
+    /// <summary>
+    /// CNT-10's gap: the seconds between the end of the earlier item's evidence and the start of the
+    /// later one - the time the learner has before the next cue is spoken. Public for the same reason
+    /// as <see cref="SpanOverlap"/>: the studio's gap badge and the rule that refuses a short gap must
+    /// be one number.
+    /// </summary>
+    public static decimal GapSeconds(GateFourAudioChild earlier, GateFourAudioChild later)
+    {
+        ArgumentNullException.ThrowIfNull(earlier);
+        ArgumentNullException.ThrowIfNull(later);
+        return later.Start - earlier.End;
+    }
+
     public static IReadOnlyList<GateFourRefusal> ReviewSpans(
         IReadOnlyList<GateFourSpan> spans,
         int? stimulusLength)
@@ -242,8 +286,7 @@ public static class GateFour
                     continue;
                 }
 
-                var union = (first.End - first.Start) + (second.End - second.Start) - intersection;
-                var overlap = (decimal)intersection / union;
+                var overlap = SpanOverlap(first, second)!.Value;
                 if (overlap < MaximumSpanOverlap)
                 {
                     continue;
@@ -369,7 +412,7 @@ public static class GateFour
                 continue;
             }
 
-            var gap = later.Start - earlier.End;
+            var gap = GapSeconds(earlier, later);
             if (gap < MinimumAudioGapSeconds)
             {
                 refusals.Add(new GateFourRefusal(

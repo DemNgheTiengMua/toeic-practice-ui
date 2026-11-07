@@ -150,9 +150,9 @@ public sealed class PoolIngestionService(
         {
             if (verdict.Accepted)
             {
-                var (writtenItems, writtenVersions) = WriteBundle(verdict);
-                items += writtenItems;
-                versions += writtenVersions;
+                var bundle = PoolIngestionWriter.WriteBundle(db, verdict, clock.GetUtcNow());
+                items += bundle.Items.Count;
+                versions += bundle.Versions.Count;
             }
         }
 
@@ -202,39 +202,5 @@ public sealed class PoolIngestionService(
         }
 
         return new SkillContentPoolIngestionResult(skill, batchTag, records, 0, 0);
-    }
-
-    /// <summary>
-    /// Adds one accepted bundle's rows. Nothing here decides anything: the gates already did. The
-    /// stimulus is written once per group and shared by its children, because that is what a passage is
-    /// (CNT-12), and both rows of every item go into the same change tracker so the single save either
-    /// carries all of them or none.
-    /// </summary>
-    private (int Items, int Versions) WriteBundle(BundleVerdict verdict)
-    {
-        var stimulus = verdict.Stimulus!.CarriesContent
-            ? PoolImport.BuildStimulus(verdict.Stimulus, verdict.StimulusLevel!.Value, displayOrder: 0)
-            : null;
-
-        var written = 0;
-        foreach (var child in verdict.Children)
-        {
-            var (item, version) = PoolImport.BuildItem(
-                child.TopicId,
-                child.Content,
-                child.Stem,
-                child.Explanation,
-                referenceText: null,
-                referenceKind: null,
-                stimulus,
-                verdict.Bundle.Group.BatchTag,
-                clock.GetUtcNow());
-
-            db.Items.Add(item);
-            db.ItemVersions.Add(version);
-            written++;
-        }
-
-        return (written, written);
     }
 }

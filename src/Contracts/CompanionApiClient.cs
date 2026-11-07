@@ -39,6 +39,7 @@ public interface ICompanionApiClient :
     IAdminComplaintsClient,
     IAdminExamsClient,
     IAdminItemsClient,
+    IStimulusStudioClient,
     IAdminCoverageClient,
     IAdminImportsClient,
     IAdminLessonsClient,

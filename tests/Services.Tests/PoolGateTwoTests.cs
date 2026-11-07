@@ -80,7 +80,7 @@ public sealed class PoolGateTwoTests(DatabaseFixture database)
     /// A listening item whose script passes gate two and whose audio an honest transcript matches.
     /// Nothing but the transcription may be able to refuse it.
     /// </summary>
-    private const string B1Script =
+    public const string B1Script =
         "Good morning, and thank you for calling the city library. "
         + "The library opens at nine and it closes at six on most days. "
         + "Because the main room is being painted, the reading area is upstairs this week. "
