@@ -62,6 +62,19 @@ public partial class Item
 
     public DateTimeOffset CreatedAt { get; set; }
 
+    /// <summary>
+    /// #201 / ADM-03 / #255: the lifecycle is guarded, so a write to this table declares who made it.
+    /// NULL means a seed, a fixture or a migration, which names no account. Stamped by
+    /// <c>StaffAccountStampInterceptor</c>.
+    /// <para>
+    /// #255: this column was in the schema and in the interceptor's guarded-type list but had no
+    /// entity property, so the stamp threw for every <see cref="Item"/> write that had an acting
+    /// account, and <c>trg_Items_TriageCannotWrite</c> refused the promotion on a strict catalog for
+    /// declaring nobody. The lifecycle transition depends on this property existing.
+    /// </para>
+    /// </summary>
+    public int? LastWrittenBy { get; set; }
+
     [ForeignKey("StimulusId")]
     [InverseProperty("Items")]
     public virtual Stimulus? Stimulus { get; set; }

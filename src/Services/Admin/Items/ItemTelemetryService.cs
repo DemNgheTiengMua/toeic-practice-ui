@@ -38,7 +38,16 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
 {
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
 
-    /// <summary>The one state selection reads. A quarantined item is never evaluated again.</summary>
+    /// <summary>
+    /// The one state selection reads. A quarantined item is never evaluated again.
+    /// <para>
+    /// #255 item 4, stated rather than left implied: this filter stays <c>active</c>-only, and that is
+    /// correct. Telemetry's question is "how did learners do on the stock we serve", so it has nothing
+    /// to say about a <c>validated</c> item - nobody was served it, and an evaluation over zero
+    /// administrations would be a row claiming evidence it does not have. The edge that acts on that
+    /// question is <c>active -> quarantined</c>, which also only means something once an item is live.
+    /// </para>
+    /// </summary>
     private const string ActiveLifecycle = "active";
     private const string QuarantinedLifecycle = "quarantined";
 

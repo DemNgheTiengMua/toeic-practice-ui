@@ -4935,6 +4935,21 @@ GO
 --      canonical-twenty insert at step 6b is guarded by "Topics is empty", so on a database where a
 --      test has already created a topic the twenty are absent - and this block must not be the thing
 --      that discovers it. Falling back keeps the seed re-runnable in either state.
+--
+--      #255: THESE TWO ITEMS ARE WRITTEN DIRECTLY AS 'active', AND THAT IS A SEED-ONLY CONVENIENCE.
+--      It is the reason this ticket was filed: before #255 the seed was the ONLY path to servable
+--      content, because nothing in src/ wrote 'active' at all. That is no longer true -
+--      IngestionWorkbenchService.ClearForServiceAsync performs the real validated -> active
+--      transition, with an ADM-02 ReviewSampleDecision - and
+--      tests/Services.Tests/ItemPromotionTests.An_imported_item_reaches_a_pool_drill_only_after_it_is_promoted
+--      drives import -> promote -> a pool drill selecting the item.
+--
+--      The demo seed does not call that service, and must not pretend to: the promotion refuses an
+--      item that did not arrive in the batch it is cleared under, and it records a decision naming a
+--      reviewer. A seed has no upload, no batch and no second account to act as the reviewer, so
+--      routing it through the promotion would mean fabricating all three - a fake audit that reads
+--      like a real one. Writing the state directly is honest about what this block is: demo stock
+--      curated by hand, not stock that passed the pipeline.
 -- ============================================================================
 DECLARE @poolVstep INT = (SELECT CertId FROM Certificates WHERE Code = 'VSTEP');
 DECLARE @poolVstepMock INT = (SELECT ExamId FROM Exams WHERE CertId = @poolVstep AND Name = N'VSTEP Sample Test 1');

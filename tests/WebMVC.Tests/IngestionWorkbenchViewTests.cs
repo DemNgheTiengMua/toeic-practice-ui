@@ -343,6 +343,29 @@ public sealed class IngestionWorkbenchViewTests : IClassFixture<IngestionWorkben
     }
 
     /// <summary>
+    /// #255 AC2's second half: a triage-only account is never offered the promotion. The route needs
+    /// <c>pool.content.author</c> to reach the batch at all and <c>pool.content.review</c> to see the
+    /// control, and triage holds neither - so the screen refuses the account before any button could
+    /// be rendered.
+    /// <para>
+    /// <b>Which guard could this pass while being wrong:</b> a page that rendered the clearance for
+    /// anyone who could <em>read</em> the batch. Triage's whole purpose is to inspect content, so a
+    /// read-based gate would look right and hand the publishing act to the one role ADM-03 names as
+    /// barred. The assertion is the refusal of the route itself, not the absence of a string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task A_triage_only_account_is_refused_the_ingestion_screen_entirely()
+    {
+        using var client = site.CreateClientForStaff(Permissions.SupportTriage);
+
+        var response = await client.GetAsync("/admin/ingestion/7");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("/auth/denied", response.Headers.Location!.OriginalString, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// The real WebMVC host. Only the outbound API is answered, and only for the calls these pages
     /// make - an unexpected call fails loudly rather than rendering an empty page that would pass.
     /// </summary>
