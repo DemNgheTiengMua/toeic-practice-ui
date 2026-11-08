@@ -51,6 +51,120 @@ public static partial class LearningPathPlanner
     }
 
     /// <summary>
+    /// #233: one week on its own, for the far end of a window's slide.
+    /// <para>
+    /// A slide appends <b>one</b> week and must not regenerate the three it keeps, so it asks for one
+    /// week rather than taking a four-week plan and discarding three quarters of it. The arithmetic is
+    /// <see cref="Plan"/>'s — <see cref="WeekSteps"/> over <see cref="AllocateWeek"/> — so a synthesised
+    /// week and a freshly generated one cannot be sized differently.
+    /// </para>
+    /// <para>
+    /// <paramref name="requeueTopicIds"/> are the topics the closing week left unmastered. They are
+    /// moved to the front of each block's topic order, which is the same mechanism
+    /// <see cref="FirstWeekTopicOrder"/> uses for a placement hint: a re-queue <b>reorders</b> the topics
+    /// the block can actually serve, it never adds a topic the block has no stock for. A re-queued topic
+    /// that does appear in the new week is asserted by the caller's test.
+    /// </para>
+    /// </summary>
+    public static IReadOnlyList<PlannedPathStep> PlanWeek(
+        int weekNumber,
+        WeeklyPacing pacing,
+        IReadOnlyList<SkillPlanBlock> blocks,
+        IReadOnlyList<int>? requeueTopicIds = null)
+    {
+        var budget = WeeklyBudgetMinutes(pacing);
+        var plannedBlocks = blocks.Where(b => b.TopicIds.Count > 0).ToList();
+        if (budget <= 0 || plannedBlocks.Count == 0)
+        {
+            return [];
+        }
+
+        plannedBlocks = RequeueFirst(plannedBlocks, requeueTopicIds ?? []).ToList();
+
+        var steps = WeekSteps(weekNumber, AllocateWeek(weekNumber, budget, plannedBlocks), plannedBlocks);
+        var sequenced = steps.Select((s, i) => s with { WeekSequence = i + 1 }).ToList();
+
+        // #233: the re-queued topics LEAD the new week. Reordering the block alone is not enough —
+        // `TopicFor` offsets into the block's order, so a topic moved to the front can still fall
+        // outside the week's few sittings and never appear. The ticket's trap names exactly this: a
+        // topic re-queued but never planned is a row written somewhere and a hole in the week.
+        return requeueTopicIds is { Count: > 0 } ? LeadWithRequeued(sequenced, requeueTopicIds, plannedBlocks) : sequenced;
+    }
+
+    /// <summary>
+    /// #233: the far-end week's drill steps, re-pointed at the closing week's unmastered topics first.
+    /// A drill step is the only shape that can be re-pointed — a lesson names its own topic and a mock
+    /// names its exam — so only selector-driven steps are touched, and the week's minutes, count and
+    /// sequence are left exactly as the allocation produced them.
+    /// </summary>
+    private static IReadOnlyList<PlannedPathStep> LeadWithRequeued(
+        IReadOnlyList<PlannedPathStep> week,
+        IReadOnlyList<int> requeueTopicIds,
+        IReadOnlyList<SkillPlanBlock> blocks)
+    {
+        var pending = new Queue<int>(requeueTopicIds);
+        var result = new List<PlannedPathStep>(week.Count);
+
+        foreach (var step in week)
+        {
+            if (pending.Count == 0
+                || !LearningPathPlanner.StepTypesFor(StepRoute.ItemSelector).Contains(step.StepType))
+            {
+                result.Add(step);
+                continue;
+            }
+
+            var block = blocks.FirstOrDefault(b => b.SkillId == step.SkillId);
+            var topic = pending.Peek();
+
+            // A re-queued topic can only be drilled by a block that holds stock at that cell. A block
+            // that cannot serve it keeps its planned topic, and the topic stays pending for the next
+            // step rather than being dropped into a cell with nothing behind it.
+            if (block is null || !block.TopicIds.Contains(topic))
+            {
+                result.Add(step);
+                continue;
+            }
+
+            pending.Dequeue();
+            result.Add(step with { TopicId = topic });
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// #233: the closing week's unmastered topics, moved to the front of each block that can serve
+    /// them. A topic absent from every block is dropped, for <see cref="FirstWeekTopicOrder"/>'s
+    /// reason: the week must never name a cell with nothing to serve.
+    /// </summary>
+    private static IEnumerable<SkillPlanBlock> RequeueFirst(
+        IReadOnlyList<SkillPlanBlock> blocks, IReadOnlyList<int> requeueTopicIds)
+    {
+        if (requeueTopicIds.Count == 0)
+        {
+            return blocks;
+        }
+
+        var requeued = requeueTopicIds.ToHashSet();
+        return blocks.Select(b =>
+        {
+            if (!b.TopicIds.Any(requeued.Contains))
+            {
+                return b;
+            }
+
+            // The block's own position is the tie-break, the same rule FirstWeekTopicOrder keeps, so
+            // two slides on the same data plan the same week.
+            var position = b.TopicIds.Select((t, i) => (t, i)).ToDictionary(x => x.t, x => x.i);
+            return b with
+            {
+                TopicIds = b.TopicIds.OrderByDescending(requeued.Contains).ThenBy(t => position[t]).ToList(),
+            };
+        });
+    }
+
+    /// <summary>
     /// #234: the plan for a goal that states only a pace. Kept so a caller that has no remaining-hours
     /// figure yet plans the learner's own pace rather than nothing — the one branch that invents no
     /// number, because the learner already supplied it.

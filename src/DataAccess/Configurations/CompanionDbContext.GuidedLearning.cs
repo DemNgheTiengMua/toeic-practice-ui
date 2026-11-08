@@ -21,6 +21,15 @@ public partial class CompanionDbContext
             entity.Property(e => e.StartedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.Status).HasDefaultValue("active");
 
+            // #233: `WindowStartDate` and `ActiveWeek` carry DEFAULTS in the schema so the demo seed and
+            // the diagnostic benchmark keep loading without naming them. Declaring the same defaults
+            // here makes EF treat them as store-generated on insert, so an unnamed value is omitted and
+            // the database fills it, instead of a CLR default `0001-01-01` being sent explicitly.
+            entity.Property(e => e.WindowStartDate)
+                .HasDefaultValueSql("(CAST(SYSDATETIMEOFFSET() AS DATE))");
+            entity.Property(e => e.ActiveWeek).HasDefaultValue(1);
+            entity.Property(e => e.WindowSlides).HasDefaultValue(0);
+
             entity.HasOne(d => d.Cert).WithMany(p => p.LearnerPaths)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__LearnerPa__CertI__26CFC035");
@@ -84,6 +93,25 @@ public partial class CompanionDbContext
         });
 
 
+
+        // #233 / D10: the archived week. HasTrigger is required or every insert fails on the OUTPUT
+        // clause, exactly as it does on the five other guarded tables.
+        modelBuilder.Entity<LearnerPathWeek>(entity =>
+        {
+            entity.HasKey(e => e.LearnerPathWeekId);
+            entity.ToTable(tb => tb.HasTrigger("trg_LearnerPathWeeks_SingleWriter"));
+
+            entity.HasIndex(e => new { e.LearnerPathId, e.WeekNumber }, "UQ_PathWeeks_Path_Week").IsUnique();
+
+            entity.Property(e => e.ArchivedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+            entity.Property(e => e.ProjectionVersion).HasDefaultValue(0);
+
+            entity.HasOne(d => d.LearnerPath).WithMany(p => p.LearnerPathWeeks)
+                .HasPrincipalKey(p => new { p.LearnerPathId, p.CertId })
+                .HasForeignKey(d => new { d.LearnerPathId, d.CertId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PathWeeks_PathCert");
+        });
 
         modelBuilder.Entity<LearnerLessonProgress>(entity =>
         {

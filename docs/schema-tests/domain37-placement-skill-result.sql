@@ -31,16 +31,16 @@ IF NOT EXISTS (
     AND CoveredTable = 'PlacementSkillResults')
   THROW 50000, 'EXPECT_REJECT FAILED: the per-skill placement result is not registered as a covered fact owned by AttemptEngine', 1;
 
--- The split moved 4/2/1 -> 5/2/1 in #212 and 6/2/1 in #206, and only in that direction: a fact leaving
--- `awaiting_table` for `covered`. The three counts are asserted separately, so a swap that kept the sum
--- would still fail.
-IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 6
-  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the six tables that exist today (#206 added the stratum decision)', 1;
-IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'awaiting_table') <> 2
-  THROW 50000, 'EXPECT_REJECT FAILED: the awaiting-table set is not the two facts no ticket has given a table', 1;
+-- The split moved 4/2/1 -> 5/2/1 in #212, 6/2/1 in #206 and 7/1/1 in #233, and only in that
+-- direction: a fact leaving `awaiting_table` for `covered`. The three counts are asserted separately,
+-- so a swap that kept the sum would still fail.
+IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 7
+  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the seven tables that exist today (#233 added the archived week)', 1;
+IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'awaiting_table') <> 1
+  THROW 50000, 'EXPECT_REJECT FAILED: the awaiting-table set is not the one fact no ticket has given a table', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'exempt') <> 1
   THROW 50000, 'EXPECT_REJECT FAILED: the exempt set is not the one fact that already carries its own guard', 1;
-PRINT 'the registry names ten facts: seven covered now, two awaiting a table, one exempt';
+PRINT 'the registry names ten facts: eight covered now, one awaiting a table, one exempt';
 
 DECLARE @required TABLE (ColumnName SYSNAME NOT NULL PRIMARY KEY);
 INSERT INTO @required (ColumnName) VALUES

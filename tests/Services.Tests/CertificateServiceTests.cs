@@ -118,7 +118,9 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // #226: two more, 57 -> 59 - trg_ExamPublishAudits_SingleWriter (ADM-11's pass has one writer)
         // and trg_Exams_PublishRequiresAudit (the door: a paper is never created published, and only
         // moves into published with a pass at least as new as its last edit).
-        Assert.Equal(59, triggerCount);
+        // #233: one more, 59 -> 60 - trg_LearnerPathWeeks_SingleWriter, the seventh covered derived fact
+        // and the archive's immutability guard.
+        Assert.Equal(60, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
@@ -155,10 +157,11 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
                      "trg_ReviewStrata_SingleWriter",
                      "trg_ReviewSampleItems_SolveIsBlind",
                      "trg_ReviewSampleItems_ItemIsInItsBatch",
-                     // #226 / ADM-11: the publish door and the pass's single writer. "Publishing is one
-                     // door" was true of the service and false of the database until these existed.
+                     // #226: ADM-11's pass has one writer, and the door itself.
                      "trg_ExamPublishAudits_SingleWriter",
                      "trg_Exams_PublishRequiresAudit",
+                     // #233: the seventh covered derived fact, and the archive's immutability guard.
+                     "trg_LearnerPathWeeks_SingleWriter",
                  })
         {
             var present = await db.Database

@@ -134,12 +134,25 @@ public static class PathStepCompletion
         // activity. PracticeService calls this by bare step id from a session that can still be open
         // when the learner resets the path; without this the reset path's step goes done and
         // UnlockNextAsync can flip the whole path to "completed" - a path the learner never finished.
-        var pathStatus = await db.LearnerPaths
+        var path = await db.LearnerPaths
             .Where(p => p.LearnerPathId == step.LearnerPathId)
-            .Select(p => p.Status)
+            .Select(p => new { p.Status, p.ActiveWeek })
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (pathStatus != LearnerPathStatus.Active.ToCode())
+        if (path is null || path.Status != LearnerPathStatus.Active.ToCode())
+        {
+            return step.StepId;
+        }
+
+        // #233 / D10: a week that has closed is history, and history is immutable. A session left open
+        // when its week's boundary passed finishes late - and without this check it would rewrite the
+        // step's status, score and accuracy on a week that is already archived. The answers the learner
+        // gave still count toward capability (they are PracticeAnswers rows, untouched), but the step
+        // can no longer be closed: the week it belonged to has been recorded as it actually ended.
+        //
+        // shortcut: the archived week's *snapshot* is frozen by its own trigger; this covers the step
+        // rows. Upgrade if a ticket makes the archive re-derivable, at which point the two must agree.
+        if (!PathWindow.IsLive(step.WeekNumber, path.ActiveWeek))
         {
             return step.StepId;
         }
@@ -168,26 +181,44 @@ public static class PathStepCompletion
     /// Unlocks the first step still locked, in plan order, and marks the path complete when nothing
     /// is left. Re-read from the database rather than trusted from a caller's list, because two
     /// activities can finish close together.
+    /// <para>
+    /// #233: only a step inside the <b>live window</b> can be opened. A week that has closed keeps its
+    /// unfinished steps locked forever — that is what "archived rather than carried forward" means —
+    /// so including them here would hand the learner a step on a week that is already history.
+    /// </para>
     /// </summary>
     public static async Task UnlockNextAsync(
         CompanionDbContext db, int learnerPathId, CancellationToken cancellationToken = default)
     {
-        var next = await db.LearnerPathSteps
+        var activeWeek = await db.LearnerPaths
+            .Where(p => p.LearnerPathId == learnerPathId)
+            .Select(p => p.ActiveWeek)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var locked = await db.LearnerPathSteps
             .Where(s => s.LearnerPathId == learnerPathId && s.Status == "locked")
             .OrderBy(s => s.WeekNumber ?? 0)
             .ThenBy(s => s.WeekSequence)
             .ThenBy(s => s.StepId)
-            .FirstOrDefaultAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
 
+        var next = locked.FirstOrDefault(s => PathWindow.IsLive(s.WeekNumber, activeWeek));
         if (next is not null)
         {
             next.Status = "available";
         }
 
-        // The path is complete when no step is left undone. Asking this after the unlock, and asking
-        // the database rather than the caller's list, is what makes the last step close the path.
-        var remaining = await db.LearnerPathSteps
-            .CountAsync(s => s.LearnerPathId == learnerPathId && s.Status != "done", cancellationToken);
+        // The path is complete when no <b>live</b> step is left undone. Asking this after the unlock,
+        // and asking the database rather than the caller's list, is what makes the last step close the
+        // path. #233: an unfinished step on an archived week is excluded — history that can never be
+        // finished again, so counting it would make completion unreachable after any partial archive.
+        var liveSteps = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == learnerPathId)
+            .Select(s => new { s.Status, s.WeekNumber })
+            .ToListAsync(cancellationToken);
+
+        var remaining = liveSteps
+            .Count(s => s.Status != "done" && PathWindow.IsLive(s.WeekNumber, activeWeek));
 
         if (remaining == 0)
         {
