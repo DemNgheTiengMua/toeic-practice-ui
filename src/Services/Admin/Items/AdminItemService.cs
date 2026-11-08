@@ -106,6 +106,11 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
             TopicId = topic.TopicId,
             CefrLevel = level,
             ItemType = request.ItemType.Trim(),
+            // #250: the widget. The request names it when the author chose one; otherwise the
+            // modality decides, which is the only value a productive item can legally take.
+            RenderFormat = string.IsNullOrWhiteSpace(request.RenderFormat)
+                ? PoolImport.DefaultRenderFormat(modality)
+                : request.RenderFormat.Trim(),
             PlacementEligible = request.PlacementEligible,
             // Demo and draft are the schema defaults on purpose: an unreviewed item must not reach a
             // paid paper (INV-6), so neither is a request field an author can flip.

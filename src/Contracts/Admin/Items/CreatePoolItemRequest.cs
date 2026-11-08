@@ -41,7 +41,14 @@ public sealed record CreatePoolItemRequest(
     CreatePoolStimulusRequest? Stimulus = null,
     // The other half of that sentence: a later child joins the stimulus the first one created, so a
     // 2-4-child passage is one stimulus and several children rather than several copies of the text.
-    int? StimulusId = null);
+    int? StimulusId = null,
+    /// <summary>
+    /// #250: the render format. Optional, and appended rather than inserted among the positional
+    /// parameters so no existing caller shifts. When absent the modality decides - a productive item
+    /// is always a free response - because a reading item may be drawn as a radio group, a checkbox
+    /// list, a select or a drag target and only the author knows which.
+    /// </summary>
+    string? RenderFormat = null);
 
 /// <summary>#188: the shared passage or audio a set of items hangs off. Pool-owned, no cert.</summary>
 public sealed record CreatePoolStimulusRequest(

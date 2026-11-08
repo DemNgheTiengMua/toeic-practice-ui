@@ -558,8 +558,8 @@ public sealed class ExamPublishInvariantTests(DatabaseFixture database)
 
             -- One bound essay on that skill, so INV-4's anchor half has a task to judge.
             DECLARE @topic INT = (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'writing' ORDER BY TopicId);
-            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus)
-            VALUES ('writing', @topic, 'B1', 'persuasive_essay', 'demo', 'active');
+            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, RenderFormat)
+            VALUES ('writing', @topic, 'B1', 'persuasive_essay', 'demo', 'active', 'free_response');
             DECLARE @item INT = SCOPE_IDENTITY();
             INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, MinWords, MaxWords, ResponseSeconds)
             VALUES (@item, 1, N'Write an essay.', 100, 200, 1800);

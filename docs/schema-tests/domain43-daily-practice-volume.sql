@@ -98,8 +98,8 @@ PRINT 'a repeated cell moves the volume only';
 
 -- 6. A productive answer counts as a productive task. Writing is a different modality, so its own item.
 INSERT INTO Topics (Modality, Code, Name) VALUES ('writing', 'W-ARG', N'Argument'); DECLARE @w INT = SCOPE_IDENTITY();
-INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, BatchTag)
-VALUES ('writing', @w, 'B1', 'persuasive_essay', 'production', 'active', 'vol-w');
+INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, BatchTag, RenderFormat)
+VALUES ('writing', @w, 'B1', 'persuasive_essay', 'production', 'active', 'vol-w', 'free_response');
 DECLARE @iw INT = (SELECT ItemId FROM Items WHERE BatchTag = 'vol-w');
 -- A productive version is the other legal shape: all four options NULL and no key.
 INSERT INTO ItemVersions (ItemId, VersionNumber, Stem)

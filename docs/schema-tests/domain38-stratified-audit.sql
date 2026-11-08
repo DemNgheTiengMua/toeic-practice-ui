@@ -371,9 +371,16 @@ END CATCH
 PRINT 'refuse: an equal projection version on a taken stratum decision';
 
 -- The two ways a decision can contradict itself.
+--
+-- #250: each row below is crafted to violate exactly ONE of the two constraints. It previously
+-- violated both at once (a quarantined row with no reason ALSO has no DecidedAt), so which message
+-- SQL Server reported depended on CHECK-constraint evaluation order - and adding an unrelated
+-- constraint earlier in the schema shifted that order and broke the assertion. A test whose verdict
+-- depends on constraint ids is not testing the guard it names. Supplying DecidedAt leaves
+-- CK_ReviewStrata_QuarantineNamesItsReason as the only violated rule.
 BEGIN TRY
-  INSERT INTO ReviewStrata (BatchId, TopicId, CefrLevel, ItemCount, SampleSize, Status, QuarantineReason)
-  VALUES (@batch, @otherTopic, 'B1', 2, 2, 'quarantined', NULL);
+  INSERT INTO ReviewStrata (BatchId, TopicId, CefrLevel, ItemCount, SampleSize, Status, QuarantineReason, DecidedAt)
+  VALUES (@batch, @otherTopic, 'B1', 2, 2, 'quarantined', NULL, SYSDATETIMEOFFSET());
   THROW 50000, 'EXPECT_REJECT FAILED: a quarantined stratum without a reason was accepted', 1;
 END TRY
 BEGIN CATCH

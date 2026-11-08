@@ -32,8 +32,8 @@ VALUES ('B1', N'Write an essay answering the question above.', 'general');
 SET @stim = SCOPE_IDENTITY();
 
 DECLARE @item INT;
-INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus)
-VALUES (@stim, 'writing', @topic, 'B1', 'persuasive_essay', 'demo', 'draft');
+INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, RenderFormat)
+VALUES (@stim, 'writing', @topic, 'B1', 'persuasive_essay', 'demo', 'draft', 'free_response');
 SET @item = SCOPE_IDENTITY();
 
 DECLARE @v INT;

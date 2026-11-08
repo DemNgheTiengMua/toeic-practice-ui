@@ -43,6 +43,21 @@ public partial class Item
     [Unicode(false)]
     public string ItemType { get; set; } = null!;
 
+    /// <summary>
+    /// #250: which widget the sitting draws - the render format, a different axis from
+    /// <see cref="ItemType"/>. <c>mcq_3</c> is a render shape; <c>passage_comprehension</c> is a
+    /// semantic type. One column serving both would make "which widget" and "what skill" the same
+    /// question.
+    /// <para>
+    /// It sits on the item rather than the version because the widget is the authored shape of the
+    /// item; option count and selection limits, which do vary per version, live on
+    /// <see cref="ItemVersion"/>.
+    /// </para>
+    /// </summary>
+    [StringLength(30)]
+    [Unicode(false)]
+    public string RenderFormat { get; set; } = "mcq";
+
     /// <summary>Whether placement may draw this item. Placement-eligible stock is a third of the pool.</summary>
     public bool PlacementEligible { get; set; }
 

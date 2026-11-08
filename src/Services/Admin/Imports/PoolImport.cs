@@ -131,14 +131,22 @@ internal static class PoolImport
     };
 
     /// <summary>
+    /// #250: the render format a modality implies when the caller names none. A productive item's only
+    /// legal widget is a free response (CK_Items_Modality_RenderFormat), and an objective item's
+    /// common one is the four-option radio group. Naming it here rather than defaulting to 'mcq' in
+    /// the column is what stops a writing task being written as a radio group by omission.
+    /// </summary>
+    internal static string DefaultRenderFormat(string modality) =>
+        modality is "speaking" or "writing" ? "free_response" : "mcq";
+
+    /// <summary>
     /// D0.4's fourteen types, derived where the content determines the type and required where it
     /// does not. A reading group with no passage is D0.4's standalone <c>sentence_cloze</c>; one with a
     /// passage is <c>passage_comprehension</c>. A listening stimulus's type turns on its speaker and
     /// turn counts, which no manifest carries, and a productive task's type is a choice rather than a
     /// reading of its text - so those must be named.
     /// </summary>
-    internal static bool TryResolveItemType(
-        string modality,
+    internal static bool TryResolveItemType(        string modality,
         string? declared,
         bool hasPassage,
         out string itemType,
@@ -288,7 +296,8 @@ internal static class PoolImport
         string? evidenceQuote,
         out PoolContent? content,
         out string reason,
-        ProductiveOutput? subTask = null)
+        ProductiveOutput? subTask = null,
+        string? renderFormat = null)
     {
         content = null;
 
@@ -379,6 +388,10 @@ internal static class PoolImport
             level,
             itemType,
             placementEligible,
+            // #250: which widget this item renders as. The caller may know it exactly (the exam
+            // importer reads the legacy QuestionType, which IS the render format); otherwise it is
+            // derived from the modality, which is the only value a productive item can legally take.
+            renderFormat ?? DefaultRenderFormat(modality),
             a, b, c, d, key,
             rationaleA, rationaleB, rationaleC, rationaleD,
             evidenceStart,
@@ -474,6 +487,7 @@ internal static class PoolImport
             TopicId = topicId,
             CefrLevel = content.Level,
             ItemType = content.ItemType,
+            RenderFormat = content.RenderFormat,
             PlacementEligible = content.PlacementEligible,
             ContentTier = ContentTier,
             // #205: `validated` when the four gates judged the record, `draft` when nothing did. The
@@ -703,6 +717,11 @@ internal sealed record PoolContent(
     CefrLevel Level,
     string ItemType,
     bool PlacementEligible,
+    /// <summary>
+    /// #250: the widget the sitting draws. A second axis beside <see cref="ItemType"/>: the importer
+    /// knows it from the file's own question type, and everything else derives it from the modality.
+    /// </summary>
+    string RenderFormat,
     string? OptionA,
     string? OptionB,
     string? OptionC,

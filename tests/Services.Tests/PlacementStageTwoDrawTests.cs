@@ -77,6 +77,9 @@ public sealed class PlacementStageTwoDrawTests(DatabaseFixture database)
             TopicId = topicId,
             CefrLevel = level,
             ItemType = modality == "listening" ? "short_exchange" : "passage_comprehension",
+            // #250: this fixture only authors objective items; a productive one would be a free
+            // response and is never built here.
+            RenderFormat = "mcq",
             PlacementEligible = placementEligible,
             ContentTier = contentTier,
             LifecycleStatus = lifecycle,
@@ -85,6 +88,9 @@ public sealed class PlacementStageTwoDrawTests(DatabaseFixture database)
         if (modality == "writing")
         {
             item.ItemType = "transactional_correspondence";
+            // #250: the override above makes this a productive item, so the widget must follow. A
+            // writing item drawn as 'mcq' is exactly what CK_Items_Modality_RenderFormat refuses.
+            item.RenderFormat = "free_response";
         }
 
         db.Items.Add(item);
