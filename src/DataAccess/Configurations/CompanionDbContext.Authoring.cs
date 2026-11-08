@@ -198,10 +198,13 @@ public partial class CompanionDbContext
             // #185: the second trigger on this table. INV-6 must fire when an exam is promoted too,
             // not only when a binding is written - a rule that fires on the child alone is bypassed by
             // editing the parent.
+            // #226: the third. ADM-11's publish door - a paper cannot be created published, and may
+            // only move into 'published' with a readiness pass at least as new as its last edit.
             entity.ToTable(tb =>
             {
                 tb.HasTrigger("trg_Exams_PurposeKeepsContent");
                 tb.HasTrigger("trg_Exams_TierKeepsContent");
+                tb.HasTrigger("trg_Exams_PublishRequiresAudit");
             });
 
             entity.HasIndex(e => new { e.CertId, e.Purpose, e.Status }, "IX_Exams_Cert_Status").HasFilter("([IsDeleted]=(0))");
@@ -221,6 +224,26 @@ public partial class CompanionDbContext
             entity.HasOne(d => d.Cert).WithMany(p => p.Exams)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Exams__CertId__160F4887");
+        });
+
+
+
+        modelBuilder.Entity<ExamPublishAudit>(entity =>
+        {
+            entity.HasKey(e => e.ExamId).HasName("PK_ExamPublishAudits");
+
+            // HasTrigger: #226 / ADM-11 refuses a pass declared by a service other than the audit's
+            // own writer. Without the declaration every save on this table fails on the OUTPUT clause.
+            entity.ToTable(tb => tb.HasTrigger("trg_ExamPublishAudits_SingleWriter"));
+
+            entity.Property(e => e.WrittenByService).HasMaxLength(64).IsUnicode(false);
+
+            // One-to-one with the paper, and the FK is the primary key: a second row for one exam would
+            // be a second verdict, which is the shape ADR-0012 refuses.
+            entity.HasOne(d => d.Exam).WithOne(p => p.PublishAudit)
+                .HasForeignKey<ExamPublishAudit>(d => d.ExamId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ExamPublishAudits_Exam");
         });
 
 
@@ -374,8 +397,7 @@ public partial class CompanionDbContext
         // EF cannot infer those from conventions, and inferring them wrongly would make certificate
         // isolation a convention instead of a constraint.
         modelBuilder.Entity<ExamItem>(entity =>
-        {
-            entity.HasKey(e => e.ExamItemId).HasName("PK_ExamItems");
+        {            entity.HasKey(e => e.ExamItemId).HasName("PK_ExamItems");
 
             entity.ToTable(tb =>
             {

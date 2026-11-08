@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Xunit;
 
@@ -149,5 +150,47 @@ public sealed class StudioAuthoringControlsTests
         Assert.Contains("setSliceStatus(groupId, 'End must come after start", script);
         Assert.Contains("input.value = String(ms)", script);
         Assert.Contains("endInput.value = String(endMs)", script);
+    }
+
+    /// <summary>
+    /// #226 / ADM-12 / ADM-13: the rail shows the six invariants as six named rows, and the live
+    /// refresh redraws them. The expected-wrong input this catches: a rail that shows one "cannot
+    /// publish", or a debounced refresh that replaces the issue list with only the item-level issues -
+    /// the six would then be visible until the first keystroke and vanish after it, which reads as
+    /// "nothing is wrong".
+    /// </summary>
+    [Fact]
+    public void The_publish_rail_renders_six_named_invariant_rows_and_the_live_refresh_redraws_them()
+    {
+        var audit = Read("_StudioAudit.cshtml");
+        var script = File.ReadAllText(Path.Combine(TestPathHelper.FindRepoRoot(),
+            "src", "WebMVC", "wwwroot", "js", "admin", "exam-studio.js"));
+
+        // The server-rendered rail: one row per invariant, keyed by its code so the refresh can find
+        // it, and a route to the first deficit rather than a bare count.
+        Assert.Contains("id=\"audit-invariant-@inv.Code\"", audit);
+        Assert.Contains("data-invariant=\"@inv.Code\"", audit);
+        Assert.Contains("Jump to the first deficit", audit);
+
+        // The live refresh: same six rows, from the same DTO. A refresh that only redrew `issues`
+        // would drop them.
+        Assert.Contains("(audit.invariants || []).forEach", script);
+        Assert.Contains("'audit-invariant-' + inv.code", script);
+        Assert.Contains("inv.firstElementTarget", script);
+    }
+
+    /// <summary>
+    /// #226 / ADM-11: "the status field is absent from every request shape". The create and update
+    /// contracts are what the browser posts, so the absence is asserted on the types rather than on a
+    /// view: a field added back would let a form post publish an unaudited paper.
+    /// </summary>
+    [Fact]
+    public void Neither_exam_request_shape_carries_a_status_field()
+    {
+        var create = typeof(Contracts.CreateAdminExamRequest).GetProperties().Select(p => p.Name).ToList();
+        var update = typeof(Contracts.UpdateAdminExamRequest).GetProperties().Select(p => p.Name).ToList();
+
+        Assert.DoesNotContain("Status", create);
+        Assert.DoesNotContain("Status", update);
     }
 }

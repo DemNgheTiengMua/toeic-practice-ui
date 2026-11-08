@@ -40,7 +40,7 @@ IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'awaiting_table') <>
   THROW 50000, 'EXPECT_REJECT FAILED: the awaiting-table set is not the two facts no ticket has given a table', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'exempt') <> 1
   THROW 50000, 'EXPECT_REJECT FAILED: the exempt set is not the one fact that already carries its own guard', 1;
-PRINT 'the registry names nine facts: six covered now, two awaiting a table, one exempt';
+PRINT 'the registry names ten facts: seven covered now, two awaiting a table, one exempt';
 
 DECLARE @required TABLE (ColumnName SYSNAME NOT NULL PRIMARY KEY);
 INSERT INTO @required (ColumnName) VALUES

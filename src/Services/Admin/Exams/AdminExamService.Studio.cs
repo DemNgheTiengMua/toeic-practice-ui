@@ -75,7 +75,7 @@ public sealed partial class AdminExamService
             .Where(sc => sections.Select(s => s.SectionId).Contains(sc.SectionId))
             .ToListAsync(cancellationToken);
 
-        var audit = AuditExamPublishReadinessInternal(exam, sections, sectionAudios, groups, sectionCriteria);
+        var audit = await AuditExamPublishReadinessInternal(exam, sections, sectionAudios, groups, sectionCriteria, cancellationToken);
 
         var sectionDtos = new List<ExamStudioSectionDto>();
         foreach (var sec in sections)

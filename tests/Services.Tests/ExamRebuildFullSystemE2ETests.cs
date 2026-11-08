@@ -275,6 +275,37 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                 MaxScore = 5.0m
             });
             await dbSetup.SaveChangesAsync();
+
+            // #226 / INV-4: an enabled productive skill needs a LOCKED rubric before its paper may
+            // publish, and every criterion needs three anchors. This fixture published a writing paper
+            // against an unlocked rubric, which is the state the invariant exists to refuse - the exam
+            // went live with a free response that had no calibrated standard behind it.
+            //
+            // The lock's own trigger demands the canonical four criteria and a 4x7 grid, so this is the
+            // real shape rather than a token row: renaming TASK_RESP to W_TR and adding the other three.
+            await database.SqlAsync($"""
+                UPDATE GradingCriteria SET Code = 'W_TR' WHERE CriterionId = {criterion.CriterionId};
+
+                INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder) VALUES
+                  ({certId}, {skillWritId}, 'W_CC', N'Coherence and cohesion', N'x', 5.0, 1.0, 2),
+                  ({certId}, {skillWritId}, 'W_LR', N'Lexical resource', N'x', 5.0, 1.0, 3),
+                  ({certId}, {skillWritId}, 'W_GR', N'Grammatical range', N'x', 5.0, 1.0, 4);
+
+                INSERT INTO GradingCriterionDescriptors (CriterionId, Band, Descriptor, BinaryGates)
+                  SELECT c.CriterionId, b.Band,
+                         N'Band ' + CAST(b.Band AS NVARCHAR(2)) + N' descriptor.',
+                         N'Binary gate at band ' + CAST(b.Band AS NVARCHAR(2)) + N'.'
+                    FROM GradingCriteria c CROSS JOIN (VALUES (0),(1),(2),(3),(4),(5),(6)) AS b(Band)
+                   WHERE c.SkillId = {skillWritId};
+
+                INSERT INTO GradingCriterionAnchors (CriterionId, Band, ResponseText)
+                  SELECT c.CriterionId, b.Band, N'Anchor response at band ' + CAST(b.Band AS NVARCHAR(2)) + N'.'
+                    FROM GradingCriteria c CROSS JOIN (VALUES (2),(3),(4)) AS b(Band)
+                   WHERE c.SkillId = {skillWritId};
+
+                INSERT INTO GradingRubricLocks (SkillId, CertId, LadderOutcome, LadderReason, LadderRunAt)
+                VALUES ({skillWritId}, {certId}, 'accepted', N'Separated.', SYSDATETIMEOFFSET());
+                """);
         }
 
         // =========================================================================

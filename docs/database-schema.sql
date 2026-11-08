@@ -4472,3 +4472,97 @@ CREATE UNIQUE INDEX UQ_PracticeAnswers_Card ON PracticeAnswers(SessionId, CardId
   WHERE CardId IS NOT NULL;
 GO
 
+-- ============ Domain 41: #226 the publish door ============
+-- ADM-11: "publishing is one door. A single action after an audit, never a status field." Before this
+-- block that was true of `AdminExamService` and false of the database: `Exams.Status` was a plain
+-- column, so a migration, a seed, an admin script or a future endpoint could set `published` without
+-- running a single one of the six invariants. The demo seed does exactly that, for all seventeen of its
+-- papers, and every one of them predates the audit - ETS 2024 declares 219 questions across its
+-- sections and holds 9. The service door was never the constraint; the comment beside
+-- `CreateExamAsync` was a convention, and ADR-0012 records what conventions are worth here.
+--
+-- THE VERDICT IS PERSISTED, NOT RECOMPUTED, for the reason #208 recorded about the rubric ladder: the
+-- six invariants are C# - gate four's envelope, span and audio rules are pure functions that must not
+-- be re-implemented in T-SQL - so a trigger cannot run them. What a trigger can do is refuse to believe
+-- a claim nobody recorded. `ExamPublishAudits` is that record: one row per paper, written by the only
+-- service allowed to write it, and the Exams trigger refuses a transition into `published` when no pass
+-- exists that is at least as new as the paper's last edit.
+--
+-- WHY THE PASS MUST BE NEWER THAN THE LAST EDIT. Without that clause a publish followed by an edit
+-- that breaks an invariant, followed by a raw UPDATE, would sail through on the first publish's row -
+-- which is the same "stale snapshot" defect the audit exists to prevent. Every structural write already
+-- bumps `Exams.UpdatedAt`, so the comparison is against a value the database maintains rather than one
+-- this trigger has to trust.
+--
+-- NOT IN `DerivedFactOwners`, deliberately, and #208 set the precedent. That registry's `covered` set
+-- is audited by domain27 for a `ProjectionVersion` column as well as `WrittenByService`, because its
+-- facts are projections that a stale callback could overwrite. A publish pass has neither a callback
+-- nor a race: `PassedAt` against `Exams.UpdatedAt` is the currency test, and a second monotonic counter
+-- beside it would be a second answer to one question. `trg_ExamPublishAudits_SingleWriter` states the
+-- owner instead, which is the half the registry would have supplied.
+--
+-- A FIXTURE CATALOG IS EXEMPT, on the same rule and for the same reason as the five #201 write guards:
+-- a catalog that holds only disposable test data has no production paper to protect, and every
+-- `UPDATE Exams SET Status='published'` in the suite depends on writing one directly. `fn_IsFixtureCatalog`
+-- is a boolean about the CATALOG, never an identity, so it cannot impersonate anyone; a strict catalog
+-- (production-like, or a manual-test run) gets both refusals, and domain41 proves both halves by
+-- flipping the flag.
+CREATE TABLE ExamPublishAudits (
+  ExamId           INT NOT NULL
+    CONSTRAINT PK_ExamPublishAudits PRIMARY KEY
+    CONSTRAINT FK_ExamPublishAudits_Exam REFERENCES Exams(ExamId),
+  -- When the six invariants last all held. Compared against Exams.UpdatedAt, so a pass that predates
+  -- the paper's newest edit does not unlock the door.
+  PassedAt         DATETIMEOFFSET NOT NULL,
+  -- ADR-0012: the verdict is derived from the six checks, never typed beside them. No foreign key, for
+  -- the registry's own reason: OwningService is not unique, and a mistyped name is refused by the
+  -- trigger comparing it against the registry row anyway.
+  WrittenByService VARCHAR(64) NOT NULL
+);
+GO
+CREATE TRIGGER trg_ExamPublishAudits_SingleWriter
+ON ExamPublishAudits AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  -- #208's precedent for the rubric lock, for the same reason: the verdict is derived from a
+  -- computation the database cannot run, so the owner is a constant here and the registry keeps its
+  -- nine facts. Registering it would have demanded a ProjectionVersion on a row that is already
+  -- one-per-exam, which is a second answer to "is this pass current" beside the PassedAt/UpdatedAt
+  -- comparison the publish trigger actually makes.
+  IF EXISTS (SELECT 1 FROM inserted i WHERE ISNULL(i.WrittenByService, '') <> 'AdminExamService')
+    THROW 50102, 'A publish pass has exactly one writer, AdminExamService. A write declaring another writer (or none) is refused: a pass nobody can attribute is a pass nobody took.', 1;
+END;
+GO
+-- The door itself, on both halves: a paper is never CREATED published, and a paper may only MOVE into
+-- published with a pass at least as new as its last edit. Both arms are needed - the first closes
+-- `INSERT ... 'published'`, the second closes `UPDATE ... SET Status='published'`.
+CREATE TRIGGER trg_Exams_PublishRequiresAudit
+ON Exams AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  -- Fixture catalogs hold disposable data (see the block comment above).
+  IF dbo.fn_IsFixtureCatalog() = 1 RETURN;
+
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    LEFT JOIN deleted d ON d.ExamId = i.ExamId
+    WHERE d.ExamId IS NULL AND i.Status = 'published'
+  )
+    THROW 50100, 'ADM-11: an exam is created as a draft. Publishing is one door - POST /{id}/publish runs the six readiness invariants - so a paper cannot be inserted already published.', 1;
+
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN deleted d ON d.ExamId = i.ExamId
+    WHERE i.Status = 'published'
+      AND d.Status <> 'published'
+      AND NOT EXISTS (
+        SELECT 1 FROM ExamPublishAudits a
+         WHERE a.ExamId = i.ExamId
+           AND a.PassedAt >= ISNULL(d.UpdatedAt, d.CreatedAt))
+  )
+    THROW 50101, 'ADM-11: publishing is one door. This exam has no recorded readiness pass newer than its last edit, so the status is being set without the six invariants. Publish through POST /{id}/publish, which runs the audit and records the pass.', 1;
+END;
+GO
+

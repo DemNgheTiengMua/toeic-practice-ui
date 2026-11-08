@@ -1272,6 +1272,25 @@
 
         if (issuesList) {
           issuesList.innerHTML = '';
+          // #226 / ADM-12: the six invariants first, as six named rows. A refresh that dropped them
+          // would leave "cannot publish" with no statement of WHICH invariant failed, which is the
+          // failure ADM-13 forbids.
+          (audit.invariants || []).forEach(function(inv) {
+            var li = document.createElement('li');
+            li.className = 'audit-item ' + (inv.satisfied ? 'audit-item--success' : 'audit-item--error');
+            li.id = 'audit-invariant-' + inv.code;
+            li.setAttribute('data-invariant', inv.code);
+            li.setAttribute('data-satisfied', inv.satisfied ? 'true' : 'false');
+            var jump = !inv.satisfied && inv.firstElementTarget
+              ? '<span class="audit-jump-link" onclick="jumpToAuditElement(\'' + inv.firstElementTarget + '\')">Jump to the first deficit &rarr;</span>'
+              : '';
+            var detail = inv.satisfied
+              ? ''
+              : '<div class="text-sm">' + inv.deficitCount + ' deficit(s).</div>';
+            li.innerHTML = '<span class="audit-item__mark">' + (inv.satisfied ? 'PASSED' : 'BLOCK') + '</span>'
+              + '<div><div><strong>' + inv.code + '</strong> &mdash; ' + inv.title + '</div>' + detail + jump + '</div>';
+            issuesList.appendChild(li);
+          });
           if (audit.issues.length === 0 && audit.canPublish) {
             issuesList.innerHTML = '<li class="audit-item audit-item--success"><span class="audit-item__mark">PASSED</span><div>All certificate invariants satisfied. Ready to publish!</div></li>';
           } else {
