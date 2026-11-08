@@ -228,6 +228,8 @@ public sealed partial class AiInsightService
         var errorFingerprints = ExtractErrorFingerprints(answers, allOptions, catAccuracyRows);
         var writingEvidences = await ExtractWritingEvidenceAsync(attempt.AttemptId, cancellationToken);
 
+        var facts = await BuildFactsAsync(insight.UserId, insight.CertId, targetBand, cancellationToken);
+
         return new AiInsightGenerationRequest(
             insight.UserId,
             insight.CertId,
@@ -250,6 +252,7 @@ public sealed partial class AiInsightService
             categoryAccuracies,
             attemptCount,
             ErrorFingerprints: errorFingerprints,
-            WritingEvidences: writingEvidences);
+            WritingEvidences: writingEvidences,
+            Facts: facts);
     }
 }

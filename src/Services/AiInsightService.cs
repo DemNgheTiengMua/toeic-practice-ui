@@ -21,8 +21,10 @@ public sealed partial class AiInsightService(
     CompanionDbContext db,
     IAiInsightGenerator generator,
     ILogger<AiInsightService> logger,
-    ILearnerService? learners = null) : IAiInsightService
+    ILearnerService? learners = null,
+    ISkillStateWriter? skillStates = null) : IAiInsightService
 {
     private static readonly ConcurrentDictionary<int, int> RetryCounts = new();
     private readonly ILearnerService _learners = learners ?? new LearnerService(db);
+    private readonly ISkillStateWriter _skillStates = skillStates ?? new SkillStateWriter(db);
 }

@@ -168,6 +168,8 @@ public sealed partial class AiInsightService
             .Where(p => p.PlacementId == path.PlacementId)
             .FirstOrDefaultAsync(cancellationToken);
 
+        var facts = await BuildFactsAsync(insight.UserId, insight.CertId, targetBand, cancellationToken);
+
         return new AiInsightGenerationRequest(
             insight.UserId,
             insight.CertId,
@@ -189,6 +191,7 @@ public sealed partial class AiInsightService
             sectionAccuracies,
             categoryAccuracies,
             attemptCount,
-            LearnerPathId: path.LearnerPathId);
+            LearnerPathId: path.LearnerPathId,
+            Facts: facts);
     }
 }
