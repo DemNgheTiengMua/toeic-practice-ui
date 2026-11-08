@@ -15,9 +15,14 @@ public sealed record LearnerDashboard(
     int AttemptCount,
     int PracticeCount,
     RecentAttempt? UnfinishedAttempt = null,
-    RecentPractice? UnfinishedPractice = null)
+    RecentPractice? UnfinishedPractice = null,
+    StandingSummary? Standing = null)
 {
     /// <summary>No attempt and no practice yet for this certificate: the hero says "start here"
     /// rather than inventing a weakness the learner has no history for.</summary>
     public bool IsNew => AttemptCount == 0 && PracticeCount == 0;
+
+    /// <summary>#241 / LRN-13: nothing has been measured, so the page owes the learner a placement and
+    /// a sentence, not a grid of empty figures.</summary>
+    public bool IsUnplaced => Standing is null || Standing.HasNoMeasurement;
 }

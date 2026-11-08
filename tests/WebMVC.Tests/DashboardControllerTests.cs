@@ -27,6 +27,7 @@ public sealed class DashboardControllerTests
             "Start practice",
             "/practice",
             "warning",
+            "free_drill",
             "READ · 58%"),
         new GoalStandingDto(
             CurrentBandCode: "B1",
@@ -43,7 +44,14 @@ public sealed class DashboardControllerTests
             TotalPathSteps: 5,
             CurrentWeekNumber: 2,
             WeekPlannedMinutes: 120,
-            WeekCompletedMinutes: 45),
+            WeekCompletedMinutes: 45,
+            // #241: the fixture is a PLACED learner, so the block list is all three. The stored
+            // verdict and ΔH are what block 2 prints.
+            RequiredTotalHours: 120,
+            OverallLevelCode: "B1",
+            LimitingSkillCode: "LIST",
+            LimitingSkillName: "Listening",
+            HasNoMeasurement: false),
         Skills:
         [
             new SkillCardDto(1, "LIST", "Listening", ModalityDto.Listening, 380, 495, []),
@@ -92,13 +100,19 @@ public sealed class DashboardControllerTests
         var model = Assert.IsType<DashboardViewModel>(viewResult.Model);
         Assert.Equal("TOEIC", model.Dashboard.Certificate.Code);
 
-        // #159: the hero carries one action, the goal block carries the standing, and one card per
+        // #159: the hero carries one action, the goal block carries the standing, and one column per
         // skill. Nothing else reaches the page.
         Assert.Equal("/practice", model.Dashboard.NextAction.ActionUrl);
         Assert.Equal("B1", model.Dashboard.Goal.CurrentBandCode);
         Assert.Equal(2, model.Dashboard.Skills.Count);
         Assert.False(model.ShowVerificationReminder);
-    }
+
+        // #241: the block list is the page's shape, and this fixture is a placed learner, so it is
+        // all three. A fourth block fails here before it fails in a browser.
+        Assert.Equal(DashboardBlocks.Placed, model.Blocks);
+        Assert.Equal(3, model.Blocks.Count);
+        // Block 3's column count follows the certificate: two skills here.
+        Assert.Equal(2, model.Skills.ColumnCount);    }
 
     [Fact]
     public async Task Index_still_renders_when_the_verification_status_cannot_be_read()

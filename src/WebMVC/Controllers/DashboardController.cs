@@ -35,7 +35,8 @@ public sealed class DashboardController(
 
         return View(new DashboardViewModel(CurrentUser, dashboard, emailVerified, activation)
         {
-            Presentation = new DashboardPresentation(dashboard, Dates)
+            Presentation = new DashboardPresentation(dashboard, Dates),
+            Skills = SkillStandingTable.From(dashboard.Skills),
         });
     }
 

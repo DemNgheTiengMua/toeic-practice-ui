@@ -22,7 +22,10 @@ public static partial class LearnerEndpoints
                     dashboard.NextAction.ActionLabel,
                     dashboard.NextAction.ActionUrl,
                     dashboard.NextAction.Severity,
+                    dashboard.NextAction.CascadeStep,
                     dashboard.NextAction.MetaLabel),
+                // #241: the stored ΔH, the overall floor and its limiting skill all travel as the
+                // service produced them. The API maps; it never recomputes a level or a verdict.
                 new GoalStandingDto(
                     dashboard.Goal.CurrentBandCode,
                     dashboard.Goal.CurrentBandName,
@@ -39,7 +42,14 @@ public static partial class LearnerEndpoints
                     dashboard.Goal.CurrentWeekNumber,
                     dashboard.Goal.WeekPlannedMinutes,
                     dashboard.Goal.WeekCompletedMinutes,
-                    dashboard.Goal.ScoreDisplayFactor),
+                    dashboard.Goal.ScoreDisplayFactor,
+                    dashboard.Goal.RequiredTotalHours,
+                    dashboard.Standing?.Overall?.Code,
+                    dashboard.Standing?.LimitingSkillCode,
+                    dashboard.Standing?.LimitingSkillName,
+                    dashboard.IsUnplaced),
+                // #241 / #211: a skill's level is null when nothing measured it. It is never filled
+                // with the bottom band here - this mapping has no opinion about a level at all.
                 dashboard.Skills.Select(s => new SkillCardDto(
                     s.SkillId,
                     s.Code,
@@ -49,7 +59,11 @@ public static partial class LearnerEndpoints
                     s.MaxScaledScore,
                     s.WeakestCategories.Select(c => new SkillCategoryDto(
                         c.Code, c.Name, c.AccuracyPercent, c.Answered)).ToList(),
-                    s.ScoreDisplayFactor)).ToList(),
+                    s.ScoreDisplayFactor,
+                    s.Standing?.Level?.Code,
+                    s.Standing?.PositionInBand,
+                    s.Standing?.MeasuredAt,
+                    s.Standing?.IsStale ?? false)).ToList(),
                 dashboard.AttemptCount,
                 dashboard.PracticeCount,
                 dashboard.UnfinishedAttempt is { } ua

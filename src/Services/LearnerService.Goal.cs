@@ -11,6 +11,7 @@ public sealed partial class LearnerService
     private async Task<GoalStanding> BuildGoalStandingAsync(
         int userId,
         int certId,
+        LearnerStanding? standing,
         CancellationToken cancellationToken)
     {
         // The standing is the newest of the latest graded mock and the latest done placement: a
@@ -73,6 +74,10 @@ public sealed partial class LearnerService
                 t.TargetDate,
                 t.WeeklyStudyHours,
                 t.FeasibilityStatus,
+                // #241: D21a's "remaining guided hours" is the stored ΔH, not a fresh calculation.
+                // #234's no-proration rule means a certificate whose bands carry no study hours has
+                // no ΔH at all, so this stays NULL rather than being estimated.
+                t.RequiredTotalHours,
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -140,6 +145,7 @@ public sealed partial class LearnerService
             CurrentWeekNumber: currentWeek,
             WeekPlannedMinutes: thisWeek.Sum(s => s.Minutes),
             WeekCompletedMinutes: thisWeek.Where(s => s.IsDone).Sum(s => s.Minutes),
-            ScoreDisplayFactor: await ScoreDisplayFactorAsync(certId, cancellationToken));
+            ScoreDisplayFactor: await ScoreDisplayFactorAsync(certId, cancellationToken),
+            RequiredTotalHours: target?.RequiredTotalHours);
     }
 }

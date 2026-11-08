@@ -13,10 +13,19 @@ namespace Services;
 /// resolves the active certificate here first and filters on its id, so a later slice adding a
 /// screen calls <see cref="GetActiveCertIdAsync"/> rather than trusting a certificate from the
 /// request.</summary>
-public sealed partial class LearnerService(CompanionDbContext db, ICreditLedger? creditLedger = null) : ILearnerService
+public sealed partial class LearnerService(
+    CompanionDbContext db,
+    ICreditLedger? creditLedger = null,
+    ISkillStateWriter? skillStates = null) : ILearnerService
 {
     private const int RecentCount = 5;
     private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db);
+
+    // #241 / #211: the ONE reader of a learner's per-skill state. Defaulted rather than required,
+    // following this file's own `creditLedger ?? new CreditLedger(db)` convention: every existing
+    // caller passes a context and nothing else, and the container's registration is what a host that
+    // wants its own clock substitutes.
+    private readonly ISkillStateWriter _skillStates = skillStates ?? new SkillStateWriter(db);
 
     public async Task<LearnerContext> GetContextAsync(int userId, CancellationToken cancellationToken = default)
     {
@@ -76,13 +85,31 @@ public sealed partial class LearnerService(CompanionDbContext db, ICreditLedger?
         var attemptCount = await attempts.CountAsync(cancellationToken);
         var practiceCount = await practice.CountAsync(cancellationToken);
 
+        // #241 / #211: the per-skill vector is read ONCE, from its one reader, and every block that
+        // prints a level reads this. A second read is how the hero and the skill rows come to
+        // disagree about one learner's band in the same page load.
+        var standing = await _skillStates.ReadAsync(userId, certId, cancellationToken);
+
         // #159: each number the three blocks print is measured once here. The blocks never derive a
         // second opinion - a hero that guesses its own "next" is how the page grew two of them.
-        var skills = await BuildSkillCardsAsync(userId, certId, cancellationToken);
-        var goal = await BuildGoalStandingAsync(userId, certId, cancellationToken);
+        var skills = await BuildSkillCardsAsync(userId, certId, standing, cancellationToken);
+        var goal = await BuildGoalStandingAsync(userId, certId, standing, cancellationToken);
+
+        // #235 / D12: the ceiling is derived from the answer rows, so one read here is what lets the
+        // cascade see it without either recomputing or reading the view a second time. The view's day
+        // is the UTC day (PracticeAnswers.AnsweredAt is UTC), which is why today is read the same way.
+        var utcToday = DateTime.UtcNow.Date;
+        var today = await db.vw_DailyPracticeVolumes
+            .AsNoTracking()
+            .Where(v => v.UserId == userId && v.PractisedOn == utcToday)
+            .FirstOrDefaultAsync(cancellationToken);
+        var ceilingReached = today is not null
+            && (today.AnsweredCount >= FreeDrillState.DailyObjectiveCeiling || today.ProductiveTaskCount >= 4);
+
         var nextAction = await BuildNextActionAsync(
             userId, certId, certificates.Single(c => c.CertId == certId).Option,
-            attemptCount + practiceCount == 0, skills, goal, unfinishedAttempt, unfinishedPractice, cancellationToken);
+            attemptCount + practiceCount == 0, skills, goal, standing, ceilingReached,
+            unfinishedAttempt, unfinishedPractice, cancellationToken);
 
         return new LearnerDashboard(
             certificates.Single(c => c.CertId == certId).Option,
@@ -92,7 +119,12 @@ public sealed partial class LearnerService(CompanionDbContext db, ICreditLedger?
             attemptCount,
             practiceCount,
             unfinishedAttempt,
-            unfinishedPractice);
+            unfinishedPractice,
+            new StandingSummary(
+                standing?.Overall,
+                standing?.LimitingSkillCode,
+                skills.FirstOrDefault(s => s.SkillId == standing?.LimitingSkillId)?.Name,
+                standing is null || standing.HasNoMeasurement));
     }
 
     public async Task<int> GetActiveCertIdAsync(int userId, CancellationToken cancellationToken = default) =>

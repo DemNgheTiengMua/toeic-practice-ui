@@ -1,98 +1,76 @@
-@model DashboardPresentation
+@model DashboardViewModel
 @{
-    var cards = Model.Dashboard.Skills;
+    var table = Model.Skills;
     var cert = Model.Dashboard.Certificate;
 }
 
-@* #159: block 3 of 3. One card per skill of the certificate, in its own order (#149's rule). A
-   certificate that names its skills Comprehension and Expression gets those two cards - never a
-   fixed Listening/Reading pair under headings it does not use. *@
+@* #241 / D21a block 3 of 3: per-skill standing, one column per EXAMINED SKILL.
+
+   The column count is the certificate's own (Model.Skills.ColumnCount), rendered as a class so CSS
+   has no fixed four-track template. A two-skill certificate is two columns; it is never a
+   four-column grid with two empty cells. That is why this is a table and not a card grid: a
+   `repeat(auto-fit, minmax(...))` grid silently accepts a fourth track, and a table's header is the
+   certificate's own list, so a skill the paper does not examine has no column to leave empty.
+
+   LRN-18: an unmeasured skill is attention (sign gold), never a low band and never grey. #211 keeps
+   it absent from the stored vector rather than present at A1, and this renders that absence as a
+   sentence - "not measured yet" - not as a figure. *@
 <section class="dashboard-skills" aria-labelledby="dashboard-skills-title">
   <header class="dashboard-skills__header">
-    <h2 class="dashboard-skills__title" id="dashboard-skills-title">Skill Cards · @cert.Code</h2>
-    <span class="badge badge--muted font-mono">@cards.Count @(cards.Count == 1 ? "SKILL" : "SKILLS")</span>
+    <h2 class="dashboard-skills__title" id="dashboard-skills-title">Per-Skill Standing Â· @cert.Code</h2>
+    <span class="badge badge--muted font-mono">@table.ColumnCount @(table.ColumnCount == 1 ? "SKILL" : "SKILLS")</span>
   </header>
 
-  @if (cards.Count == 0)
+  @if (table.IsEmpty)
   {
     <p class="text-muted no-margin dashboard-skills__empty">
       @cert.Name has no skills configured yet, so there is nothing to show here.
-      <a href="@Model.CertificateUrl">See what @cert.Code tests</a>
+      <a href="@Model.Presentation.CertificateUrl">See what @cert.Code tests</a>
     </p>
   }
   else
   {
-    <div class="dashboard-skills__grid">
-      @foreach (var skill in cards)
-      {
-        <article class="dashboard-skill" aria-labelledby="skill-@skill.SkillId">
-          <header class="dashboard-skill__header">
-            <h3 class="dashboard-skill__name" id="skill-@skill.SkillId">@skill.Name</h3>
-            <span class="badge badge--muted font-mono">@skill.Code</span>
-          </header>
-
-          <div class="dashboard-skill__score">
-            @if (skill.LatestScaledScore.HasValue)
-            {
-              @* Divide by the certificate's display factor - see _DashboardGoal.cshtml. *@
-              <span class="dashboard-skill__figure font-mono">@ScoreDisplay.Format(skill.LatestScaledScore.Value, skill.ScoreDisplayFactor)</span>
-              @if (skill.MaxScaledScore.HasValue)
+    <table class="@Model.Presentation.SkillsGridClass" id="skill-standing">
+      <thead>
+        <tr>
+          @foreach (var column in table.Columns)
+          {
+            <th scope="col" class="skill-standing__head">
+              <span class="skill-standing__code font-mono">@column.Code</span>
+              <span class="skill-standing__name">@column.Name</span>
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          @foreach (var column in table.Columns)
+          {
+            <td class="@column.RowClass" data-skill-id="@column.SkillId">
+              @if (column.IsMeasured)
               {
-                <span class="dashboard-skill__ceiling font-mono">/ @ScoreDisplay.Format(skill.MaxScaledScore.Value, skill.ScoreDisplayFactor)</span>
-              }
-              <span class="dashboard-skill__label">latest graded</span>
-            }
-            else
-            {
-              <span class="dashboard-skill__figure dashboard-skill__figure--empty">—</span>
-              <span class="dashboard-skill__label">No graded exam on this skill yet</span>
-            }
-          </div>
-
-          <div class="dashboard-skill__categories">
-            <div class="dashboard-skill__eyebrow">Weakest topics</div>
-            @if (skill.WeakestCategories.Count == 0)
-            {
-              <p class="text-sm text-muted no-margin">
-                No answers yet, so no weak topic can be named. Any practice session on @skill.Name starts the record.
-              </p>
-            }
-            else
-            {
-              <ul class="dashboard-skill__list">
-                @foreach (var category in skill.WeakestCategories)
+                <span class="skill-standing__level font-mono tabular">@column.Level</span>
+                @* LRN-19: a position, never a bare percentage - crossing a band resets it downward. *@
+                <span class="skill-standing__position font-mono tabular">@column.PositionText</span>
+                @if (column.HasMeasurementDate)
                 {
-                  var tier = category.AccuracyPercent < 50 ? "badge--danger"
-                      : category.AccuracyPercent < 65 ? "badge--warning"
-                      : category.AccuracyPercent < 80 ? "badge--info" : "badge--success";
-                  <li class="dashboard-skill__row">
-                    <span class="dashboard-skill__category">@category.Name</span>
-                    <span class="badge @tier font-mono text-xs">@category.AccuracyPercent%</span>
-                    <span class="dashboard-skill__count font-mono">@category.Answered answered</span>
-                  </li>
+                  <span class="skill-standing__date">measured @column.MeasuredAt!.Value.ToString("d MMM yyyy")</span>
                 }
-              </ul>
-            }
-          </div>
-
-          <footer class="dashboard-skill__footer">
-            @* #159: the card is the door. A spoken answer cannot be typed, so Speaking opens the
-               recorded flow; Writing opens its own; every other skill opens the free drill. *@
-            @switch (skill.Modality)
-            {
-              case ModalityDto.Speaking:
-                <a class="btn btn--primary btn--sm" href="/speaking">Practise speaking</a>
-                break;
-              case ModalityDto.Writing:
-                <a class="btn btn--primary btn--sm" href="/writing">Practise writing</a>
-                break;
-              default:
-                <a class="btn btn--primary btn--sm" href="/practice">Practice @skill.Name</a>
-                break;
-            }
-          </footer>
-        </article>
-      }
-    </div>
+                @if (column.IsStale)
+                {
+                  <span class="badge badge--warning font-mono text-xs">Needs re-measuring</span>
+                }
+              }
+              else
+              {
+                @* Never "A1", never a dash. The words are the state. *@
+                <span class="skill-standing__unmeasured">Not measured yet</span>
+                <a class="skill-standing__action" href="/placement">Measure @column.Name</a>
+              }
+            </td>
+          }
+        </tr>
+      </tbody>
+    </table>
   }
 </section>
