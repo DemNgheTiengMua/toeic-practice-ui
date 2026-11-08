@@ -68,7 +68,6 @@ public sealed partial class AdminExamService
             {
                 i.ItemId,
                 i.Modality,
-                i.TopicId,
                 topicCode = i.Topic.Code,
                 i.CefrLevel,
                 i.ItemType,
