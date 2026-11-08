@@ -131,11 +131,24 @@
     sitting.activeRecordingStartedAt = Date.now();
     sitting.activeAudioChunks = [];
 
-    var streamPromise = (navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
-      ? navigator.mediaDevices.getUserMedia({ audio: true })
-      : Promise.reject(new Error('MediaDevices unavailable'));
+    // #221 / D18: this is a timed sitting, so it must never raise a permission dialog over the
+    // clock. `EeAudioGate.acquire` only calls getUserMedia when the permission is ALREADY granted;
+    // otherwise it reports the state and lets the pacer say which pre-sitting screen fixes it.
+    var capture = (window.EeAudioGate && typeof window.EeAudioGate.acquire === "function")
+      ? window.EeAudioGate.acquire(true)
+      : Promise.reject(new Error("EeAudioGate is unavailable"));
 
-    streamPromise.then(function (stream) {
+    capture.then(function (result) {
+      if (!result.ok) {
+        sitting.speakingPacerCaptureBlocked = result;
+        if (levelText) levelText.textContent = result.reason === "permission"
+          ? "Microphone permission was not granted before this sitting. Finish this sitting, then enable it on the instructions page."
+          : "Microphone unavailable.";
+        if (levelContainer) levelContainer.style.display = "block";
+        return;
+      }
+
+      var stream = result.stream;
       sitting.activeRecordingStream = stream;
       try {
         var AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -455,9 +468,24 @@
 
     startButton.disabled = true;
     sitting.isSpeakingPreparing = true;
-    status.textContent = 'Requesting microphone access…';
+    status.textContent = 'Preparing microphone…';
     try {
-      sitting.activeRecordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // #221 / D18: no prompt inside a sitting. `acquire` calls getUserMedia only when the
+      // permission is already granted; otherwise it reports the state, which nobody here can fix
+      // without leaving the sitting.
+      var capture = (window.EeAudioGate && typeof window.EeAudioGate.acquire === "function")
+        ? await window.EeAudioGate.acquire(true)
+        : { ok: false, reason: "unsupported" };
+      if (!capture.ok) {
+        sitting.isSpeakingPreparing = false;
+        startButton.disabled = false;
+        status.textContent = capture.reason === "permission"
+          ? 'Microphone permission was not granted before this sitting. Finish it, then enable the microphone on the instructions page.'
+          : 'This browser does not support audio recording.';
+        return;
+      }
+
+      sitting.activeRecordingStream = capture.stream;
       var prepSeconds = Number(q.prepSeconds) || 0;
       if (prepSeconds > 0) {
         var remainingPrep = prepSeconds;

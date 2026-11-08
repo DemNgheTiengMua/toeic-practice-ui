@@ -137,9 +137,18 @@
     updateSpeakUI();
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: window.EeAudio ? window.EeAudio.inputConstraints() : true
-      });
+      // #221 / D18: this page is a timed sitting, so it must never raise a permission dialog over
+      // the clock. `EeAudioGate.acquire` calls getUserMedia only when the permission is already
+      // granted, and reports the state otherwise.
+      if (!window.EeAudioGate) throw new Error('The audio gate is unavailable.');
+      const capture = await window.EeAudioGate.acquire(true);
+      if (!capture.ok) {
+        showPermissionBlocked(capture);
+        showState('prepare');
+        return;
+      }
+
+      const stream = capture.stream;
       mediaRecorder = new MediaRecorder(stream);
       mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
       mediaRecorder.onstop = () => {
@@ -166,6 +175,23 @@
     } catch (err) {
       alert("Microphone permission was not granted or microphone is not available. Please allow microphone access.");
       showState('prepare');
+    }
+  }
+
+  /**
+   * #221 / D18: a sitting cannot ask, so the refusal says where the remedy lives. This is a plain
+   * banner rather than an alert(): the state is a fact about this browser, and the learner needs
+   * to be able to read it again after dismissing the browser's own dialog.
+   */
+  function showPermissionBlocked(capture) {
+    const banner = document.getElementById('permission-blocked-banner');
+    if (!banner) return;
+    banner.classList.remove('d-none');
+    const detail = banner.querySelector('[data-permission-detail]');
+    if (detail) {
+      detail.textContent = capture && capture.reason === 'unsupported'
+        ? 'This browser cannot record audio at all. Use a current version of Chrome, Edge, Firefox or Safari.'
+        : 'The microphone was not allowed before this sitting started. Enable it on the instructions page for this exam, then open the sitting again. This screen cannot ask — a dialog over a running clock is exactly what the sitting rules forbid.';
     }
   }
 

@@ -915,6 +915,67 @@ dialog:not([open]) {
 .audio-equipment--compact {
   margin: 0;
 }
+/* #221 / D18: the permission states. Three blocks, one visible at a time; each carries its own
+   copy and its own remedy, so the state is legible in text and not only in colour. Flat painted
+   fields and keylines only: no radius, no shadow, no gradient. */
+.audio-equipment__permission {
+  display: grid;
+  gap: var(--space-2);
+}
+.audio-equipment__perm-box {
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+}
+.audio-equipment__perm-text {
+  display: block;
+  margin-top: var(--space-1);
+}
+.audio-equipment__remedy {
+  border: 1px solid var(--sign-red);
+  background: var(--color-danger-soft);
+  padding: var(--space-3);
+  border-radius: 0;
+}
+.audio-equipment__remedy-lead {
+  text-transform: uppercase;
+  font-family: var(--font-sign);
+  letter-spacing: var(--tracking-sign);
+}
+.audio-equipment__browser {
+  border-left: 2px solid var(--sign-red);
+  padding-left: var(--space-3);
+  margin-top: var(--space-2);
+}
+.audio-equipment__browser[hidden] {
+  display: none !important;
+}
+.audio-equipment__sitting-note {
+  border-left: 2px solid var(--sign-gold);
+  padding-left: var(--space-2);
+}
+.audio-equipment[data-audio-blocked="true"] [data-audio-action="mic-check"],
+.audio-equipment[data-audio-blocked="true"] [data-audio-action="echo-test"] {
+  /* A silent microphone blocks by default; the override below is the only way past it. */
+  opacity: 0.5;
+}
+.audio-equipment__override {
+  border: 2px solid var(--sign-red);
+  padding: var(--space-3);
+  border-radius: 0;
+  background: var(--color-surface);
+}
+.audio-equipment__override-choice {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  cursor: pointer;
+  font-size: var(--text-sm);
+}
+.audio-equipment__override-choice input {
+  margin-top: 0.2em;
+  accent-color: var(--sign-blue);
+}
 .audio-equipment-dialog {
   max-width: 680px;
 }

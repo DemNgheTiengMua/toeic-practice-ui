@@ -58,7 +58,9 @@ public sealed record ExamTakePresentation
             Navigator = take.Navigator.Select(ExamTakeNavigatorPresentation.Create).ToArray(),
             Phases = phases.Select(phase => new ExamTakePhasePresentation(phase.SkillCode, phase.SkillName,
                 q.SkillCode == phase.SkillCode ? "step" : "false")).ToArray(),
-            AudioEquipment = hasListening || hasSpeaking ? new AudioEquipmentCheckModel(ShowInput: hasSpeaking, ShowOutput: hasListening) : null,
+            AudioEquipment = hasListening || hasSpeaking
+                ? new AudioEquipmentCheckModel(ShowInput: hasSpeaking, ShowOutput: hasListening, Sitting: true)
+                : null,
             // #161: the player is titled with the section the question belongs to, not the literal
             // "Listening Audio" - audio is not the exclusive property of a listening section.
             InitialAudio = !string.IsNullOrEmpty(q.AudioPath) ? new ExamAudioPlayerModel(

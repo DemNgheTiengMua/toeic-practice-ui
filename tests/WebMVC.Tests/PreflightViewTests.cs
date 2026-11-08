@@ -103,7 +103,10 @@ public sealed class PreflightViewTests
         Assert.Contains("state.audioBuffered && state.micVerified", script);
         Assert.Contains("micVerified: !requiresMic || isAlreadyVerified", script);
         Assert.Contains("new MediaRecorder(micStream)", script);
-        Assert.Contains("navigator.mediaDevices.getUserMedia(constraints)", script);
+        // #221 / D18: the pre-sitting screen may prompt, but only through the gate - calling
+        // getUserMedia directly here is what the ticket removes, so this asserts the new seam.
+        Assert.Contains("EeAudioGate.ask(constraints)", script);
+        Assert.DoesNotContain("navigator.mediaDevices.getUserMedia(", script);
         Assert.Contains("state.micVerified = true", script);
         Assert.Contains("state.micVerified = false", script);
         Assert.Contains("await bufferSingleAudio(url)", script);

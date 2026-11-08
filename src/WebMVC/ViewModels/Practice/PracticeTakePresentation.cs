@@ -47,7 +47,7 @@ public sealed class PracticeTakePresentation
     public IReadOnlyList<PracticeOptionViewModel> Options { get; }
     public ExamAudioPlayerModel Audio { get; }
     public ExamAudioPlayerModel AudioTemplate { get; } = new("", Mode: "study", TemplateOnly: true);
-    public AudioEquipmentCheckModel AudioCheck { get; } = new(ShowInput: false, ShowOutput: true);
+    public AudioEquipmentCheckModel AudioCheck { get; } = new(ShowInput: false, ShowOutput: true, Sitting: true);
     public string TopbarAccuracyDisplay => AnsweredCount > 0 ? $"{AccuracyPercent}%" : "--%";
     public string SidebarAccuracyDisplay => $"{AccuracyPercent}% ({CorrectCount}/{AnsweredCount})";
     public PracticeSessionDto Session { get; }

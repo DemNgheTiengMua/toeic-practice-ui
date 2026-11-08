@@ -191,5 +191,13 @@
         }
       </div>
     </section>
+
+    @* #221 / D18: the permission is obtained HERE, before the sitting exists, because a system
+       dialog over a running clock is an interruption the learner cannot control. Null on a
+       paper that needs neither audio nor microphone, to a reading-only certificate never asks. *@
+    @if (Model.AudioEquipment is not null)
+    {
+      <partial name="_AudioEquipmentCheck" model="Model.AudioEquipment" />
+    }
   }
 </div>
