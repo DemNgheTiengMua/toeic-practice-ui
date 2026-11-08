@@ -110,5 +110,14 @@ internal static class LearnerLabels
             ("manual", "Saved by you"),
             ("incorrect", "Wrong answer"),
         ]);
+
+        // #238 / #237: a cell's mastery, read by a learner on the practice hub. Four states, and the
+        // words say what the learner should do rather than naming the state machine.
+        LabelFamily.Add<PracticeCellMasteryDto>(families, "Mastery not reported", [
+            ("untested", "Not started"),
+            ("learning", "Learning"),
+            ("reviewing", "Coming back to"),
+            ("mastered", "Mastered"),
+        ]);
     }
 }
