@@ -209,6 +209,9 @@ public partial class CompanionDbContext
                 // rule, band grid, cut-score version - so a review of a historical attempt never
                 // re-derives the numbers it was scored with.
                 tb.HasTrigger("trg_Exams_PublishFreezesEdition");
+                // Triage cannot write this table. Declared or every EF save fails on the OUTPUT
+                // clause (ADR-0001); the guard itself is the table's, not the service's.
+                tb.HasTrigger("trg_Exams_TriageCannotWrite");
             });
 
             entity.HasIndex(e => new { e.CertId, e.Purpose, e.Status }, "IX_Exams_Cert_Status").HasFilter("([IsDeleted]=(0))");
@@ -367,6 +370,9 @@ public partial class CompanionDbContext
             {
                 tb.HasTrigger("trg_Items_LifecycleTransitions");
                 tb.HasTrigger("trg_Items_NoHardDelete");
+                // #255: triage cannot write this table. Declared or every EF save fails on the
+                // OUTPUT clause (ADR-0001).
+                tb.HasTrigger("trg_Items_TriageCannotWrite");
             });
 
             entity.Property(e => e.CefrLevel)
