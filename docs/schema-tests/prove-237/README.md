@@ -27,6 +27,17 @@ Mutates `MasteryCellMachine.cs` / `MasteryService.cs`, runs
 | `mastered-arm-consults-the-estimate` | the rule that a mastered cell holds unless it lapses | six lapse/review-window tests |
 | `entering-mastered-from-untested-allowed` | the refusal to master an unmeasured cell | `Mastered_is_never_reached_from_untested_without_answers` |
 
+## `prove-guard-237-recompute.py`
+
+Restores the pre-#237 body of `LearningPathService.LoadCellMasteryAsync` — which counted answers and
+applied the legacy 85%/10 thresholds — and confirms that
+
+`DynamicPathGenerationTests.A_stored_mastered_cell_sizes_its_step_short_where_a_recomputed_percentage_sees_nothing`
+
+goes red. That test is the TRN-13 identity-5 guard: the cell is stored mastered with **no**
+`PracticeAnswers` rows, which is the shape after session pruning. The old reader sees nothing and sizes
+the step `developing`; the stored fact sizes it `mastered`.
+
 ## `prove-guard-237-schema.py`
 
 Mutates `docs/schema-changes-237.sql`, runs `domain45-mastery.sql` on a scratch catalog.

@@ -252,46 +252,29 @@ public sealed partial class LearningPathService
     }
 
     /// <summary>
-    /// The measured mastery of one (topic, level) cell, from the learner's answers at that cell.
+    /// The measured mastery of one (topic, level) cell, read from the stored capability record.
     /// <para>
-    /// This is a <b>read</b> of what the learner has done, not a second mastery store: re-keying mastery
-    /// to the cell is #237's job and writing a mastery row here would be a second writer of one fact.
-    /// The thresholds are <see cref="MasterySchedule"/>'s existing constants, not new ones.
+    /// <b>#237 replaced the recomputation this method used to do.</b> It counted answers and applied
+    /// thresholds, which after #237 is a second mastery rule beside <c>UserCellMasteries</c> - two
+    /// answers to one question, and TRN-13 identity 5 ("every mastery figure comes from the capability
+    /// record, not from a recomputed percentage") forbids it. The row is the source of truth; this
+    /// method returns it verbatim and computes nothing.
+    /// </para>
+    /// <para>
+    /// A cell with no row is <see cref="MasteryState.Untested"/>, which is what "no evidence" means -
+    /// never <c>Learning</c> because a caller happened to count zero answers.
     /// </para>
     /// </summary>
     private async Task<MasteryState> LoadCellMasteryAsync(
-        int userId, int certId, int topicId, CefrLevel level, CancellationToken cancellationToken)
+        int userId, int topicId, CefrLevel level, CancellationToken cancellationToken)
     {
-        var counts = await db.PracticeAnswers
+        var state = await db.UserCellMasteries
             .AsNoTracking()
-            .Where(pa => pa.Session.UserId == userId
-                && pa.Session.CertId == certId
-                && pa.IsCorrect != null
-                // #240: a lesson micro-check is evidence of this cell too. Its answer names a card and
-                // no item, so it is attributed through the lesson sitting's own (topic, level) - a
-                // lesson is pitched at exactly the cell it teaches.
-                && ((pa.ItemId != null
-                        && db.Items.Any(i => i.ItemId == pa.ItemId
-                            && i.TopicId == topicId && i.CefrLevel == level))
-                    || (pa.CardId != null
-                        && pa.Session.TopicId == topicId
-                        && pa.Session.CefrLevel == level)))
-            .GroupBy(pa => 1)
-            .Select(g => new { Answered = g.Count(), Correct = g.Count(a => a.IsCorrect == true) })
+            .Where(m => m.UserId == userId && m.TopicId == topicId && m.CefrLevel == level)
+            .Select(m => m.State)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (counts is null || counts.Answered == 0)
-        {
-            return MasteryState.Untested;
-        }
-
-        var accuracy = (int)Math.Round((double)counts.Correct / counts.Answered * 100);
-
-        return accuracy >= MasterySchedule.MinAccuracyToMastered && counts.Answered >= MasterySchedule.MinAnswersToMastered
-            ? MasteryState.Mastered
-            : accuracy >= MasterySchedule.MinAccuracyToReviewing && counts.Answered >= MasterySchedule.MinAnswersToReviewing
-                ? MasteryState.Reviewing
-                : MasteryState.Learning;
+        return state is null ? MasteryState.Untested : EnumCodes.Parse<MasteryState>(state);
     }
 
     /// <summary>

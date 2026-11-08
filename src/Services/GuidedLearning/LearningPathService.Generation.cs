@@ -299,7 +299,7 @@ public sealed partial class LearningPathService
                 continue;
             }
 
-            var mastery = await LoadCellMasteryAsync(userId, certId, topics[0], level, cancellationToken);
+            var mastery = await LoadCellMasteryAsync(userId, topics[0], level, cancellationToken);
             // #240: the lesson is looked up at this skill's own level, and its topic comes back with it,
             // so a lesson step's coordinate is the lesson's own cell.
             var lesson = await LoadLessonForLevelAsync(certId, skill.SkillId, level, cancellationToken);
