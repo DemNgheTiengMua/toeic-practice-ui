@@ -778,9 +778,15 @@ CREATE TABLE Stimuli (
   CONSTRAINT CK_Stimuli_ImageAlt CHECK (ImagePath IS NULL OR ImageAlt IS NOT NULL),
   -- #250: a slice with one end missing, or an inverted one, is a window nobody can play. Both NULL is
   -- "the whole track", which is not the same fact as a zero-length slice.
+  --
+  -- Written with explicit IS NULL tests rather than ISNULL on a comparison: a CHECK whose expression
+  -- evaluates to UNKNOWN is satisfied, so `(AudioStartMs >= 0 AND AudioEndMs > AudioStartMs)` with a
+  -- NULL end is not false - it is unknown, and the row is accepted. That exact hole was found by
+  -- domain45 before this comment existed.
   CONSTRAINT CK_Stimuli_AudioSlice CHECK (
        (AudioStartMs IS NULL AND AudioEndMs IS NULL)
-    OR (AudioStartMs >= 0 AND AudioEndMs > AudioStartMs)
+    OR (AudioStartMs IS NOT NULL AND AudioEndMs IS NOT NULL
+        AND AudioStartMs >= 0 AND AudioEndMs > AudioStartMs)
   )
 );
 GO
