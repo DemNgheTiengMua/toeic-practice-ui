@@ -159,6 +159,13 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<ExamItem> ExamItems { get; set; }
 
 
+    /// <summary>
+    /// #226 / ADM-11: the recorded verdict that a paper's six publish invariants all held, and when.
+    /// The Exams trigger refuses a publish with no pass at least as new as the paper's last edit.
+    /// </summary>
+    public virtual DbSet<ExamPublishAudit> ExamPublishAudits { get; set; }
+
+
     /// <summary>#199 / D0.7: one item's stored-answer verdict at one administration checkpoint.</summary>
     public virtual DbSet<ItemTelemetryEvaluation> ItemTelemetryEvaluations { get; set; }
 

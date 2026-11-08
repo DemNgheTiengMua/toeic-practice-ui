@@ -17,6 +17,13 @@ public sealed class ExamStudioViewModel
     public IReadOnlyDictionary<int, string?> GroupImageUrls { get; }
     public IReadOnlyDictionary<int, string> GroupSliceReadouts { get; }
     public IReadOnlyList<StudioAuditIssueViewModel> AuditIssues { get; }
+
+    /// <summary>
+    /// #226 / ADM-12: the six publish invariants as six rows. The rows are never collapsed into one -
+    /// ADM-13 wants the unmet invariant named, and a rail showing a single "cannot publish" sends the
+    /// author hunting.
+    /// </summary>
+    public IReadOnlyList<ExamInvariantDto> Invariants => Detail.Audit.Invariants ?? [];
     public string AuditStatusText => Detail.Audit.CanPublish ? "PASSED" : $"{Detail.Audit.BlockingErrorCount} BLOCKS";
     public string AuditBadgeStyle => Detail.Audit.CanPublish ? "background: #e6f1ea; color: #0a6b3c;" : "background: #fbe9e9; color: #b31217;";
 

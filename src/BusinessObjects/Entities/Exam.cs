@@ -60,6 +60,13 @@ public partial class Exam
 
     public DateTimeOffset? UpdatedAt { get; set; }
 
+    /// <summary>
+    /// #201 / ADM-03: exam structure is guarded, so a write to this table declares who made it. NULL
+    /// means a seed, a fixture or a migration, which names no account. Stamped by
+    /// <c>StaffAccountStampInterceptor</c>.
+    /// </summary>
+    public int? LastWrittenBy { get; set; }
+
     [ForeignKey("CertId")]
     [InverseProperty("Exams")]
     public virtual Certificate Cert { get; set; } = null!;
@@ -89,6 +96,10 @@ public partial class Exam
 
     [InverseProperty("Exam")]
     public virtual ICollection<QuestionGroup> QuestionGroups { get; set; } = new List<QuestionGroup>();
+
+    /// <summary>#226: the recorded readiness pass that unlocks the publish door. At most one row.</summary>
+    [InverseProperty("Exam")]
+    public virtual ExamPublishAudit? PublishAudit { get; set; }
 
     [InverseProperty("Exam")]
     public virtual ICollection<ScoreScale> ScoreScales { get; set; } = new List<ScoreScale>();

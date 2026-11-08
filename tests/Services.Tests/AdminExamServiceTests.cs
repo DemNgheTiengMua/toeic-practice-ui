@@ -40,11 +40,14 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             DECLARE @cert INT = SCOPE_IDENTITY();
             DECLARE @certStr VARCHAR(10) = CAST(@cert AS VARCHAR(10));
 
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
-              (@cert, 'L_' + @certStr, N'Listening', 'listening', 1),
-              (@cert, 'R_' + @certStr, N'Reading', 'reading', 2),
-              (@cert, 'S_' + @certStr, N'Speaking', 'speaking', 3),
-              (@cert, 'W_' + @certStr, N'Writing', 'writing', 4);
+            -- #226: a duration is required. INV-5 sums the served skills' durations and compares against
+            -- the paper's DurationMinutes, because AttemptEngine.BuildAttemptPhases allocates the
+            -- sitting's phases from exactly these values. A skill with none cannot sum to anything.
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes) VALUES
+              (@cert, 'L_' + @certStr, N'Listening', 'listening', 1, 15),
+              (@cert, 'R_' + @certStr, N'Reading', 'reading', 2, 15),
+              (@cert, 'S_' + @certStr, N'Speaking', 'speaking', 3, 15),
+              (@cert, 'W_' + @certStr, N'Writing', 'writing', 4, 15);
 
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'L_' + @certStr);
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'R_' + @certStr);
@@ -277,6 +280,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var (certId, secL, secR, secS, secW) = await SeedCertificateWithSectionsAsync($"PUB_{Guid.NewGuid():N}"[..18]);
         var service = CreateService();
 
+        // #226: four sections × 15 minutes each. The exam declares 60 so INV-5's sum matches.
         var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
             certId,
             $"Publish Test {Guid.NewGuid():N}"[..25],
@@ -346,7 +350,46 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
                 ], CefrLevelCode: "B1"));
         }
 
-        // 5. Now exam is complete -> publish succeeds!
+        // 5. #226 / INV-4: a paper that ENABLES a productive skill needs that skill's rubric locked,
+        // with its criteria anchored at bands 2, 3 and 4. This fixture has always published a speaking
+        // and a writing section, so the invariant names both until their rubrics exist - which is the
+        // gate doing its job rather than a setup problem. Lock them the way the rubric studio does.
+        int speakSkillId, writeSkillId;
+        await using (var dbSkills = DbContextFactory.Create(database.ConnectionString))
+        {
+            speakSkillId = await dbSkills.Sections.Where(s => s.SectionId == secS).Select(s => s.SkillId).SingleAsync();
+            writeSkillId = await dbSkills.Sections.Where(s => s.SectionId == secW).Select(s => s.SkillId).SingleAsync();
+        }
+
+        await database.SqlAsync($"""
+            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder) VALUES
+              ({certId}, {speakSkillId}, 'S_FC', N'Fluency and coherence', N'x', 6, 1.0, 1),
+              ({certId}, {speakSkillId}, 'S_PR', N'Pronunciation', N'x', 6, 1.0, 2),
+              ({certId}, {speakSkillId}, 'S_LR', N'Lexical resource', N'x', 6, 1.0, 3),
+              ({certId}, {speakSkillId}, 'S_GR', N'Grammatical range', N'x', 6, 1.0, 4),
+              ({certId}, {writeSkillId}, 'W_TR', N'Task response', N'x', 6, 1.0, 1),
+              ({certId}, {writeSkillId}, 'W_CC', N'Coherence and cohesion', N'x', 6, 1.0, 2),
+              ({certId}, {writeSkillId}, 'W_LR', N'Lexical resource', N'x', 6, 1.0, 3),
+              ({certId}, {writeSkillId}, 'W_GR', N'Grammatical range', N'x', 6, 1.0, 4);
+
+            INSERT INTO GradingCriterionDescriptors (CriterionId, Band, Descriptor, BinaryGates)
+              SELECT c.CriterionId, b.Band,
+                     N'Band ' + CAST(b.Band AS NVARCHAR(2)) + N' descriptor.',
+                     N'Binary gate at band ' + CAST(b.Band AS NVARCHAR(2)) + N'.'
+                FROM GradingCriteria c CROSS JOIN (VALUES (0),(1),(2),(3),(4),(5),(6)) AS b(Band)
+               WHERE c.SkillId IN ({speakSkillId}, {writeSkillId});
+
+            INSERT INTO GradingCriterionAnchors (CriterionId, Band, ResponseText)
+              SELECT c.CriterionId, b.Band, N'Anchor response at band ' + CAST(b.Band AS NVARCHAR(2)) + N'.'
+                FROM GradingCriteria c CROSS JOIN (VALUES (2),(3),(4)) AS b(Band)
+               WHERE c.SkillId IN ({speakSkillId}, {writeSkillId});
+
+            INSERT INTO GradingRubricLocks (SkillId, CertId, LadderOutcome, LadderReason, LadderRunAt) VALUES
+              ({speakSkillId}, {certId}, 'accepted', N'Separated.', SYSDATETIMEOFFSET()),
+              ({writeSkillId}, {certId}, 'accepted', N'Separated.', SYSDATETIMEOFFSET());
+            """);
+
+        // 6. Now exam is complete -> publish succeeds!
         var publishResult = await service.PublishExamAsync(exam.ExamId);
         Assert.True(publishResult.Success);
 
@@ -1349,7 +1392,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         db.Certificates.Add(cert);
         await db.SaveChangesAsync();
 
-        var skill = new Skill { CertId = cert.CertId, Code = $"SK_{cert.CertId}", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
+        var skill = new Skill { CertId = cert.CertId, Code = $"SK_{cert.CertId}", Name = "Reading", Modality = "reading", DisplayOrder = 1, DurationMinutes = 60 };
         db.Skills.Add(skill);
         await db.SaveChangesAsync();
 

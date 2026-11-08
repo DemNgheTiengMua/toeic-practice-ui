@@ -188,8 +188,8 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
             DECLARE @cert INT = SCOPE_IDENTITY();
             DECLARE @certStr VARCHAR(10) = CAST(@cert AS VARCHAR(10));
 
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
-              (@cert, 'R_' + @certStr, N'Reading', 'reading', 1);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
+            VALUES (@cert, 'R_' + @certStr, N'Reading', 'reading', 1, 60);
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert);
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES

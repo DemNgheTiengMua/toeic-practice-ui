@@ -115,7 +115,10 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // #206: three more, 54 -> 57 - trg_ReviewStrata_SingleWriter (the sixth covered derived fact,
         // W-01's blind-solve order on ReviewSampleItems, and the batch-scope rule that stops a stratum
         // sampling another author's stock).
-        Assert.Equal(57, triggerCount);
+        // #226: two more, 57 -> 59 - trg_ExamPublishAudits_SingleWriter (ADM-11's pass has one writer)
+        // and trg_Exams_PublishRequiresAudit (the door: a paper is never created published, and only
+        // moves into published with a pass at least as new as its last edit).
+        Assert.Equal(59, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
@@ -152,6 +155,10 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
                      "trg_ReviewStrata_SingleWriter",
                      "trg_ReviewSampleItems_SolveIsBlind",
                      "trg_ReviewSampleItems_ItemIsInItsBatch",
+                     // #226 / ADM-11: the publish door and the pass's single writer. "Publishing is one
+                     // door" was true of the service and false of the database until these existed.
+                     "trg_ExamPublishAudits_SingleWriter",
+                     "trg_Exams_PublishRequiresAudit",
                  })
         {
             var present = await db.Database

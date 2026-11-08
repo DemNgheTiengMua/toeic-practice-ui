@@ -32,6 +32,29 @@
     </div>
 
     <ul class="studio-audit-dock__issues" id="audit-issues-list">
+      @* #226 / ADM-12: the six invariants as six named rows, before the item-level issues. An author
+         reading one "cannot publish" has to guess which invariant is unmet; six rows name it, and a
+         failing row carries the route to its first deficit. *@
+      @foreach (var inv in Model.Invariants)
+      {
+        <li class="audit-item @(inv.Satisfied ? "audit-item--success" : "audit-item--error")"
+            id="audit-invariant-@inv.Code"
+            data-invariant="@inv.Code"
+            data-satisfied="@(inv.Satisfied ? "true" : "false")">
+          <span class="audit-item__mark">@(inv.Satisfied ? "PASSED" : "BLOCK")</span>
+          <div>
+            <div><strong>@inv.Code</strong> &mdash; @inv.Title</div>
+            @if (!inv.Satisfied)
+            {
+              <div class="text-sm">@inv.DeficitCount deficit(s).</div>
+              @if (!string.IsNullOrEmpty(inv.FirstElementTarget))
+              {
+                <span class="audit-jump-link" onclick="jumpToAuditElement('@inv.FirstElementTarget')">Jump to the first deficit &rarr;</span>
+              }
+            }
+          </div>
+        </li>
+      }
       @if (Model.AuditIssues.Count == 0 && Model.Detail.Audit.CanPublish)
       {
         <li class="audit-item audit-item--success">

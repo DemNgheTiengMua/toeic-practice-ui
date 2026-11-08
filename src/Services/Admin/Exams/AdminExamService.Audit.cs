@@ -54,15 +54,16 @@ public sealed partial class AdminExamService
             .Where(sc => sectionIds.Contains(sc.SectionId))
             .ToListAsync(cancellationToken);
 
-        return AuditExamPublishReadinessInternal(exam, sections, sectionAudios, groups, sectionCriteria);
+        return await AuditExamPublishReadinessInternal(exam, sections, sectionAudios, groups, sectionCriteria, cancellationToken);
     }
 
-    private static ExamAuditResultDto AuditExamPublishReadinessInternal(
+    private async Task<ExamAuditResultDto> AuditExamPublishReadinessInternal(
         Exam exam,
         List<Section> sections,
         List<ExamSectionAudio> sectionAudios,
         List<QuestionGroup> groups,
-        List<SectionCriterion> sectionCriteria)
+        List<SectionCriterion> sectionCriteria,
+        CancellationToken cancellationToken)
     {
         var issues = new List<ExamAuditIssueDto>();
         var missingItems = new List<string>();
@@ -486,6 +487,17 @@ public sealed partial class AdminExamService
 
         var blockingCount = issues.Count(i => i.Severity == "error");
         var warningCount = issues.Count(i => i.Severity == "warning");
+
+        // #226 / ADM-12: the six publish invariants, as six rows. They judge a different question from
+        // the ~26 checks above - whether a paper assembled from the warehouse may go live - so they are
+        // added here rather than folded into that list, and each one is counted and named separately
+        // because ADM-13 wants the unmet invariant named, not "cannot publish".
+        var (invariantIssues, invariants) = await EvaluateInvariantsAsync(exam, sections, cancellationToken);
+        issues.AddRange(invariantIssues);
+
+        blockingCount = issues.Count(i => i.Severity == "error");
+        warningCount = issues.Count(i => i.Severity == "warning");
+
         var canPublish = blockingCount == 0 && totalQuestions > 0;
 
         return new ExamAuditResultDto(
@@ -495,6 +507,7 @@ public sealed partial class AdminExamService
             BlockingErrorCount: blockingCount,
             WarningCount: warningCount,
             Issues: issues,
-            MissingItems: missingItems);
+            MissingItems: missingItems,
+            Invariants: invariants);
     }
 }
