@@ -131,6 +131,19 @@ public sealed partial class CompanionApiClient(HttpClient http) : ICompanionApiC
         return (await response.Content.ReadFromJsonAsync<TResponse>(Json, cancellationToken))!;
     }
 
+    /// <summary>
+    /// A POST that answers 204. Needed because a JSON read of an empty body throws, and "abandon" is a
+    /// lifecycle act with nothing to say back: inventing a response shape for it would be a body that
+    /// carries no information.
+    /// </summary>
+    private async Task PostAuthorizedNoContentAsync(string path, string bearerToken, CancellationToken cancellationToken)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, path);
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     private static void AttachBearer(HttpRequestMessage request, string? bearerToken)
     {
         if (!string.IsNullOrEmpty(bearerToken))

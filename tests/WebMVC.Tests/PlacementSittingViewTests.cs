@@ -304,7 +304,9 @@ public sealed class PlacementSittingViewTests
         var script = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "js", "placement", "take.js"));
         Assert.Contains("JSON.parse(dataIsland().textContent)", script);
         Assert.Contains("/placement/take/${config.placementId}/draft", script);
-        Assert.Contains("/placement/take/${config.placementId}/answers/${config.questionId}", script);
+        // #216: an answer is posted per QUEUED question, not per current one - the queue can hold an
+        // answer given before the learner moved on, and posting it to the current item would misfile it.
+        Assert.Contains("/placement/take/${config.placementId}/answers/${item.questionId}", script);
         Assert.Contains("RequestVerificationToken: token", script);
         Assert.Contains("responseText: text", script);
         Assert.Contains("await saveDraftNow()", script);

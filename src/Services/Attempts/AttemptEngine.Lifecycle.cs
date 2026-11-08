@@ -39,6 +39,10 @@ public sealed partial class AttemptEngine
             var runsAClock = purpose is null || PlacementSitting.HasCountdown(purpose);
             var expiresAt = runsAClock
                 ? now.AddMinutes(durationMinutes)
+                // #216 / PLC-13: min(last_activity + 48 h, started_at + 72 h). Nothing has been
+                // written yet, so the inactivity arm is measured from the start - which is why a
+                // placement opens with 48 hours, not 72. The 72-hour arm is the cap every later
+                // stamp is clamped against, never a deadline of its own.
                 : PlacementSitting.ExpiresAt(now);
             var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(examId, cancellationToken);
             var requiresPreflight = requiresAudio || requiresMic;
@@ -242,6 +246,7 @@ public sealed partial class AttemptEngine
         }
 
         int savedCount = 0;
+        var writesPosition = false;
         if (request.Answers != null && request.Answers.Count > 0)
         {
             foreach (var ans in request.Answers)
@@ -263,11 +268,13 @@ public sealed partial class AttemptEngine
         if (request.LastAudioOffsetMs.HasValue && request.LastAudioOffsetMs.Value >= 0)
         {
             attempt.LastAudioOffsetMs = request.LastAudioOffsetMs.Value;
+            writesPosition = true;
         }
 
         if (request.CandidateNotesJson != null)
         {
             attempt.CandidateNotesJson = request.CandidateNotesJson;
+            writesPosition = true;
         }
 
         if (request.LastQuestionId.HasValue)
@@ -296,8 +303,17 @@ public sealed partial class AttemptEngine
                 if (!isBackwardInAudio)
                 {
                     attempt.LastQuestionId = request.LastQuestionId.Value;
+                    writesPosition = true;
                 }
             }
+        }
+
+        // #216 / PLC-13: only a write that actually carried something moves the inactivity clock. An
+        // empty sync - what a poll or a reload sends - moves nothing, because a read must never
+        // extend a sitting; refreshing would then be a way to keep a dead one alive.
+        if (savedCount > 0 || writesPosition)
+        {
+            await MarkPlacementActivityAsync(attempt, cancellationToken);
         }
 
         await db.SaveChangesAsync(cancellationToken);

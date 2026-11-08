@@ -143,11 +143,17 @@ public sealed class PlacementSittingHasNoCountdownTests : IAsyncLifetime
         var attempt = await read.ExamAttempts.SingleAsync(a => a.AttemptId == attemptId);
         var exam = await read.Exams.SingleAsync(e => e.ExamId == fixture.ExamId);
 
-        // The exam says 30 minutes; the attempt says 72 hours. `Exams.DurationMinutes` is a mock's wall
+        // The exam says 30 minutes; the attempt says 48 hours. `Exams.DurationMinutes` is a mock's wall
         // clock, and reusing it here is exactly the countdown PLC-12 forbids. Asserting both is what
-        // stops a "72 hours" that came from a 72-minute exam.
+        // stops a "48 hours" that came from a 48-minute exam.
+        //
+        // #216 supersedes #214's fixed 72-hour expectation: PLC-13 is
+        // min(last_activity + 48 h, started_at + 72 h), and a sitting nothing has been written to yet
+        // is measured from its start, so it opens at 48 h with 72 h as the cap a later stamp is
+        // clamped against.
         Assert.Equal(30, exam.DurationMinutes);
-        Assert.Equal(PlacementSitting.MaxLifetime, attempt.ExpiresAt - attempt.StartedAt);
+        Assert.Equal(PlacementSitting.Inactivity, attempt.ExpiresAt - attempt.StartedAt);
+        Assert.True(attempt.ExpiresAt - attempt.StartedAt < PlacementSitting.MaxLifetime);
         Assert.Null(attempt.PhaseDeadlineAt);
     }
 
@@ -191,7 +197,10 @@ public sealed class PlacementSittingHasNoCountdownTests : IAsyncLifetime
         await using var read = Db();
         var attempt = await read.ExamAttempts.SingleAsync(a => a.AttemptId == attemptId);
         Assert.NotNull(attempt.PreflightVerifiedAt);
-        Assert.Equal(PlacementSitting.MaxLifetime, attempt.ExpiresAt - attempt.StartedAt);
+        // #216: the gate re-stamps the deadline to now + 48 h (PLC-13's shorter window), never to the
+        // exam's 30-minute clock - and it never past the 72-hour cap.
+        Assert.Equal(PlacementSitting.Inactivity, attempt.ExpiresAt - attempt.StartedAt);
+        Assert.True(attempt.ExpiresAt - attempt.StartedAt <= PlacementSitting.MaxLifetime);
         Assert.Null(attempt.PhaseDeadlineAt);
     }
 

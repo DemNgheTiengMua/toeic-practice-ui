@@ -26,6 +26,9 @@ public partial class CompanionDbContext
             entity.Property(e => e.Status).HasDefaultValue("pending_ai");
             entity.Property(e => e.SubmittedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.SubmittedAt).ValueGeneratedNever();
+            // #216 / PLC-15: the retry count and the token that makes one interruption count once.
+            entity.Property(e => e.RecordingInterruptions).HasDefaultValue(0);
+            entity.Property(e => e.RecordingSessionToken).HasMaxLength(64);
 
             entity.HasOne(d => d.Attempt).WithMany(p => p.FreeResponseAttempts)
                 .OnDelete(DeleteBehavior.ClientSetNull)

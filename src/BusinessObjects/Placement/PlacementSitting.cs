@@ -14,16 +14,20 @@ namespace BusinessObjects;
 /// Listening budget expiring ended the whole sitting.
 /// </para>
 /// <para>
-/// The outer bound is the second half of PLC-13's expiry - <c>started_at + 72 h</c> - because a
-/// half-sitting must not linger forever. The first half (<c>last_activity + 48 h</c>) needs a
-/// last-activity stamp the attempt table does not carry yet; that window and its "shorter of the two"
-/// rule are #216's, and this type deliberately does not invent a second one.
+/// <b>The deadline is the shorter of two windows</b> (PLC-13, #216): <c>min(last_activity + 48 h,
+/// started_at + 72 h)</c>. The outer bound stops a half-sitting lingering forever; the inactivity arm
+/// lets a 60-minute four-skill sitting fit around a working day and then ends a sitting nobody came
+/// back to. It is <i>stamped by a write and never by a read</i>: a reload that moved the clock would
+/// make refreshing a way to keep a dead sitting alive (and, with the countdown, a free skip).
 /// </para>
 /// </summary>
 public static class PlacementSitting
 {
     /// <summary>PLC-13: the outer bound, <c>started_at + 72 h</c>.</summary>
     public static readonly TimeSpan MaxLifetime = TimeSpan.FromHours(72);
+
+    /// <summary>PLC-13: the inactivity window, <c>last_activity + 48 h</c>.</summary>
+    public static readonly TimeSpan Inactivity = TimeSpan.FromHours(48);
 
     /// <summary>
     /// Whether this purpose runs a countdown and a phase clock. Every paper does, except a placement.
@@ -33,6 +37,13 @@ public static class PlacementSitting
     public static bool HasCountdown(string? examPurpose) =>
         !string.Equals(examPurpose, ExamPurpose.Placement.ToCode(), StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>The deadline a placement attempt gets: the cap, never the exam's own duration.</summary>
-    public static DateTimeOffset ExpiresAt(DateTimeOffset startedAt) => startedAt + MaxLifetime;
+    /// <summary>
+    /// The deadline a placement attempt carries: the shorter of the two windows PLC-13 names.
+    /// <paramref name="lastActivityAt"/> is null until the sitting's first write, so a sitting that has
+    /// not been touched since it opened is measured from its start.
+    /// </summary>
+    public static DateTimeOffset ExpiresAt(DateTimeOffset startedAt, DateTimeOffset? lastActivityAt = null) =>
+        Min(startedAt + MaxLifetime, (lastActivityAt ?? startedAt) + Inactivity);
+
+    private static DateTimeOffset Min(DateTimeOffset a, DateTimeOffset b) => a < b ? a : b;
 }

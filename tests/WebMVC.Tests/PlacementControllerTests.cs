@@ -888,6 +888,37 @@ public sealed class PlacementControllerTests
         public Task<SavePlacementDraftResponseDto> SavePlacementDraftAsync(int placementId, SavePlacementDraftRequestDto request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SavePlacementDraftResponseDto>(ExceptionToThrow) : Task.FromResult(new SavePlacementDraftResponseDto(placementId, request.QuestionId, DateTimeOffset.UtcNow, request.ResponseText?.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length ?? 0));
 
+        // #216: resume, abandon and the recording retry. Each records that it was asked, so the tests
+        // can assert what the controller did rather than what a default happened to return.
+        public PlacementResumeViewDto? PlacementResume { get; set; }
+        public bool ResumeRequested { get; private set; }
+        public bool AbandonRequested { get; private set; }
+        public RecordingInterruptionRequest? LastInterruptionRequest { get; private set; }
+
+        public Task<PlacementResumeViewDto> GetPlacementResumeAsync(int placementId, CancellationToken cancellationToken = default)
+        {
+            ResumeRequested = true;
+            if (ExceptionToThrow != null) return Task.FromException<PlacementResumeViewDto>(ExceptionToThrow);
+            return Task.FromResult(PlacementResume ?? new PlacementResumeViewDto(
+                placementId, 100, "Placement exam", "TOEIC", DateTimeOffset.UnixEpoch,
+                DateTimeOffset.UnixEpoch.AddHours(48), [], null, null, null, 0, 0, 0, null));
+        }
+
+        public Task AbandonPlacementAsync(int placementId, CancellationToken cancellationToken = default)
+        {
+            AbandonRequested = true;
+            return ExceptionToThrow != null ? Task.FromException(ExceptionToThrow) : Task.CompletedTask;
+        }
+
+        public Task<RecordingDecisionDto> RecordPlacementRecordingInterruptionAsync(
+            int placementId, RecordingInterruptionRequest request, CancellationToken cancellationToken = default)
+        {
+            LastInterruptionRequest = request;
+            return ExceptionToThrow != null
+                ? Task.FromException<RecordingDecisionDto>(ExceptionToThrow)
+                : Task.FromResult(new RecordingDecisionDto(1, "retry", null));
+        }
+
         public Task<PlacementGradingStatusDto> GetPlacementGradingStatusAsync(int placementId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PlacementGradingStatusDto>(ExceptionToThrow) : Task.FromResult(new PlacementGradingStatusDto(placementId, 1, true, 0, 0, 0, 800, "B2", "Vantage", Array.Empty<PlacementSkillScoreInfoDto>(), "Complete"));
 

@@ -11,3 +11,20 @@
 .take-gap-3 { gap: var(--space-3); }
 
 .navigator__cell.is-locked { cursor: not-allowed; opacity: 0.55; }
+
+/* #216 / PLC-17: the offline banner and the sync placard. Signage palette, flat fields, no radius
+   and no shadow - the same two colours the sitting already uses for refusal and success. */
+.placement-offline-banner { border: 2px solid #b31217; border-radius: 0; box-shadow: none; padding: var(--space-3); margin-bottom: var(--space-4); font-family: "IBM Plex Sans Condensed", sans-serif; text-transform: uppercase; letter-spacing: 0.02em; }
+.placement-offline-banner strong { color: #b31217; }
+.placement-offline-banner p { margin: var(--space-1) 0 0; text-transform: none; font-family: "IBM Plex Sans", sans-serif; }
+.save-status--pending { color: #14181d; }
+.save-status--offline { color: #b31217; font-family: "IBM Plex Mono", monospace; }
+
+/* #216 / PLC-14: the resume screen's facts and per-skill rows. Words carry the state; colour is the
+   second layer, exactly as _TakePhases does. */
+.resume-facts { display: grid; gap: var(--space-2); margin: 0; }
+.resume-facts__row { display: grid; grid-template-columns: 12rem 1fr; gap: var(--space-3); padding-bottom: var(--space-2); border-bottom: 1px solid #ccd2d6; }
+.resume-facts__row dt { font-family: "IBM Plex Sans Condensed", sans-serif; text-transform: uppercase; }
+.resume-facts__row dd { margin: 0; }
+.resume-skill--done th { color: #0a6b3c; }
+.resume-skill--active th { color: #0b4ea2; }

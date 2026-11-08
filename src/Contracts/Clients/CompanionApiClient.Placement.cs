@@ -64,6 +64,26 @@ public sealed partial class CompanionApiClient
     public Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder, CancellationToken cancellationToken = default) =>
         GetPlacementTakeAsync(placementId, questionDisplayOrder, string.Empty, cancellationToken);
 
+    // #216 / PLC-14, PLC-15.
+    public Task<PlacementResumeViewDto> GetPlacementResumeAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<PlacementResumeViewDto>($"api/learner/placement/take/{placementId}/resume", bearerToken, cancellationToken);
+
+    public Task<PlacementResumeViewDto> GetPlacementResumeAsync(int placementId, CancellationToken cancellationToken = default) =>
+        GetPlacementResumeAsync(placementId, string.Empty, cancellationToken);
+
+    public Task AbandonPlacementAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedNoContentAsync($"api/learner/placement/take/{placementId}/abandon", bearerToken, cancellationToken);
+
+    public Task AbandonPlacementAsync(int placementId, CancellationToken cancellationToken = default) =>
+        AbandonPlacementAsync(placementId, string.Empty, cancellationToken);
+
+    public Task<RecordingDecisionDto> RecordPlacementRecordingInterruptionAsync(int placementId, RecordingInterruptionRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<RecordingInterruptionRequest, RecordingDecisionDto>(
+            $"api/learner/placement/take/{placementId}/recording-interruptions", request, bearerToken, cancellationToken);
+
+    public Task<RecordingDecisionDto> RecordPlacementRecordingInterruptionAsync(int placementId, RecordingInterruptionRequest request, CancellationToken cancellationToken = default) =>
+        RecordPlacementRecordingInterruptionAsync(placementId, request, string.Empty, cancellationToken);
+
     public Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default) =>
         SavePlacementAnswerAsync(placementId, questionId, request, string.Empty, cancellationToken);
 
