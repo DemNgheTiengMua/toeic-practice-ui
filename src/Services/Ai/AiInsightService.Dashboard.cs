@@ -246,6 +246,8 @@ public sealed partial class AiInsightService
         var totalAnswered = sectionAccuracies.Sum(s => s.Answered);
         var totalCorrect = sectionAccuracies.Sum(s => s.Correct);
 
+        var facts = await BuildFactsAsync(insight.UserId, insight.CertId, targetBand, cancellationToken);
+
         return new AiInsightGenerationRequest(
             insight.UserId,
             insight.CertId,
@@ -267,6 +269,7 @@ public sealed partial class AiInsightService
             sectionAccuracies,
             categoryAccuracies,
             attemptCount,
-            PreviousInsight: prevSummary);
+            PreviousInsight: prevSummary,
+            Facts: facts);
     }
 }

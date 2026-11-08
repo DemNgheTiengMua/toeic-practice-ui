@@ -67,7 +67,31 @@ public sealed partial class AiInsightService
 
                 var result = await generator.GenerateInsightAsync(request, cancellationToken);
 
-                if (result.Success && !string.IsNullOrWhiteSpace(result.Narrative))
+                // #244 / NFI-10: a narrative that cites a value the payload does not hold is a failed
+                // generation, not a stylistic choice. Checked here, once, so every generator - live,
+                // fake, or a custom one in a test - passes through the same gate before anything is
+                // stored. Rejecting the whole narrative rather than the offending sentence is argued in
+                // InsightNarrativeGuard: the sentences argue with each other, and rewriting the rest
+                // would make this service a second author.
+                //
+                // The recommendations are held to the same rule because they reach the same learner as
+                // prose. A directive quoting an invented figure is the same failure one block down.
+                var rejection = result.Success
+                    ? InsightNarrativeGuard.Rejection(request, result.Narrative) ??
+                      result.Recommendations
+                          .Select(reco => InsightNarrativeGuard.Rejection(request, reco.Text))
+                          .FirstOrDefault(reason => reason is not null)
+                    : null;
+
+                if (rejection is not null)
+                {
+                    logger.LogWarning(
+                        "Refused AI insight {InsightId}: {Rejection}", insight.InsightId, rejection);
+                    insight.Status = AiInsightStatus.Failed.ToCode();
+                    insight.FailureReason = Truncate($"Narrative rejected: {rejection}", 400);
+                    insight.CompletedAt = DateTimeOffset.UtcNow;
+                }
+                else if (result.Success && !string.IsNullOrWhiteSpace(result.Narrative))
                 {
                     insight.Status = AiInsightStatus.Done.ToCode();
                     insight.Narrative = result.Narrative;

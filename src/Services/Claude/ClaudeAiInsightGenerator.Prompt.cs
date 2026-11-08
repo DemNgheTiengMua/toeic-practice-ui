@@ -26,6 +26,17 @@ public sealed partial class ClaudeAiInsightGenerator
         prompt.AppendLine($"Overall Accuracy: {request.CorrectCount} correct out of {request.AnsweredCount} answered ({overallAccuracy}%) across {request.TotalQuestions} questions");
         prompt.AppendLine();
 
+        // #244 / D21: the payload the narrative is allowed to describe. It replaces a band string, so
+        // the model reads levels, not a score range that happens to be spelled like a level.
+        if (request.Facts is { } facts)
+        {
+            prompt.AppendLine("[STORED FACTS - THE ONLY LEVELS, SKILLS AND FIGURES YOU MAY NAME]");
+            prompt.AppendLine(facts.Describe());
+            prompt.AppendLine("A skill marked 'not measured' has no level. Never give it one, never call it strong or weak, and never make it your weakest skill.");
+            prompt.AppendLine("Never name a skill or modality that is absent from the list above - this certificate does not examine it.");
+            prompt.AppendLine();
+        }
+
         if (request.CategoryAccuracies is { Count: > 0 })
         {
             var sortedCats = request.CategoryAccuracies.OrderBy(c => c.AccuracyPercentage).ToList();
@@ -92,7 +103,7 @@ public sealed partial class ClaudeAiInsightGenerator
 
         prompt.AppendLine("Return a strictly valid JSON object with the following schema:");
         prompt.AppendLine("{");
-        prompt.AppendLine("  \"narrative\": \"<3 to 4 detailed sentences: (1) Current standing and concrete score gap to target band; (2) Top strength category/section cited by name with accuracy; (3) Primary vulnerability category cited with exact error rate and diagnosed linguistic root cause; (4) Immediate tactical focus module to drill next>\",");
+        prompt.AppendLine("  \"narrative\": \"<3 to 4 detailed sentences: (1) Current standing and concrete score gap to target band; (2) Top strength category/section cited by name with accuracy; (3) Primary vulnerability category cited with exact error rate and diagnosed linguistic root cause; (4) Immediate tactical focus module to drill next>. Every number must appear in the STORED FACTS or the accuracy lines above; never estimate, round to a new figure, or invent one.\",");
         prompt.AppendLine("  \"trend\": \"Improving\" | \"Steady\" | \"Declining\",");
         prompt.AppendLine("  \"recommendations\": [");
         prompt.AppendLine("    {");

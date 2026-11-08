@@ -32,5 +32,6 @@ public record AiInsightGenerationRequest(
     PreviousInsightSummary? PreviousInsight = null,
     int? LearnerPathId = null,
     IReadOnlyList<ErrorFingerprint>? ErrorFingerprints = null,
-    IReadOnlyList<WritingEvidence>? WritingEvidences = null
+    IReadOnlyList<WritingEvidence>? WritingEvidences = null,
+    InsightFacts? Facts = null
 );

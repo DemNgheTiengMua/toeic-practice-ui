@@ -18,6 +18,11 @@ public partial class FakeAiInsightGenerator : IAiInsightGenerator
     public const string DefaultModel = "fake-ai-insight-v1";
     public const string SimulateFailMarker = "[simulate_fail]";
 
+    /// <summary>#244: the prior-accuracy line below which a correct answer is narrated as a lucky guess.
+    /// Named so the narrative guard can allow the threshold it states as a rule, and so the two places
+    /// that apply it cannot disagree.</summary>
+    public const int WeakCategoryAccuracyThreshold = 45;
+
     /// <summary>
     /// Global or instance override to simulate AI insight generation failure in automated tests.
     /// </summary>
@@ -67,7 +72,7 @@ public partial class FakeAiInsightGenerator : IAiInsightGenerator
         // Distinguish solid competence from hint-assisted and fortuitous guesses on historically weak categories
         var luckyCategoryQuestions = request.Questions
             .Where(q => q.IsCorrect == true && !q.HintUsed && q.CategoryId.HasValue &&
-                        request.CategoryAccuracies.Any(ca => ca.CategoryId == q.CategoryId.Value && ca.Answered >= 2 && ca.AccuracyPercentage < 45))
+                        request.CategoryAccuracies.Any(ca => ca.CategoryId == q.CategoryId.Value && ca.Answered >= 2 && ca.AccuracyPercentage < WeakCategoryAccuracyThreshold))
             .ToList();
 
         var luckyGuessCount = luckyCategoryQuestions.Count;
@@ -76,7 +81,7 @@ public partial class FakeAiInsightGenerator : IAiInsightGenerator
         string luckAnalysis;
         if (correctWithHint > 0 && luckyGuessCount > 0)
         {
-            luckAnalysis = $"Of your {totalCorrect} correct answers, {solidCompetenceCount} reflect genuine unassisted competence. However, {correctWithHint} correct answers relied on hints, and {luckyGuessCount} occurred in historically challenging question categories (under 45% prior accuracy), pointing to fortunate guesses rather than durable mastery.";
+            luckAnalysis = $"Of your {totalCorrect} correct answers, {solidCompetenceCount} reflect genuine unassisted competence. However, {correctWithHint} correct answers relied on hints, and {luckyGuessCount} occurred in historically challenging question categories (under {WeakCategoryAccuracyThreshold}% prior accuracy), pointing to fortunate guesses rather than durable mastery.";
         }
         else if (correctWithHint > 0)
         {
@@ -84,7 +89,7 @@ public partial class FakeAiInsightGenerator : IAiInsightGenerator
         }
         else if (luckyGuessCount > 0)
         {
-            luckAnalysis = $"You answered {totalCorrect} questions correctly ({solidCompetenceCount} solid competence). {luckyGuessCount} correct answers were on question types where your historical accuracy is below 45%, suggesting fortunate guessing that needs further reinforcement.";
+            luckAnalysis = $"You answered {totalCorrect} questions correctly ({solidCompetenceCount} solid competence). {luckyGuessCount} correct answers were on question types where your historical accuracy is below {WeakCategoryAccuracyThreshold}%, suggesting fortunate guessing that needs further reinforcement.";
         }
         else if (totalCorrect > 0)
         {

@@ -252,6 +252,8 @@ public sealed partial class AiInsightService
         var hintUsedCount = answers.Count(a => a.HintUsed);
         var correctWithHintCount = answers.Count(a => a.HintUsed && a.IsCorrect == true);
 
+        var facts = await BuildFactsAsync(insight.UserId, insight.CertId, targetBand, cancellationToken);
+
         return new AiInsightGenerationRequest(
             insight.UserId,
             insight.CertId,
@@ -272,6 +274,7 @@ public sealed partial class AiInsightService
             questionDetails,
             sectionAccuracies,
             categoryAccuracies,
-            attemptCount);
+            attemptCount,
+            Facts: facts);
     }
 }
