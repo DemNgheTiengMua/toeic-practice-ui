@@ -73,25 +73,89 @@ internal static class AttemptViewModelMapper
                 + (n.IsCorrect == true ? " · Correct" : n.IsCorrect == false ? " · Incorrect" : ""))).ToList()
     };
 
-    public static PlacementResultViewModel PlacementResult(PlacementResultViewDto result, DisplayDates dates, string? error, AiInsightDto? insight) => new(result, error, insight)
+    public static PlacementResultViewModel PlacementResult(PlacementResultViewDto result, DisplayDates dates,
+        string? error, AiInsightDto? insight, ILogger? logger = null)
     {
-        TakenAtDisplay = dates.FormatCustom(result.TakenAt, "d MMMM yyyy"),
-        IsAwaitingGrading = !result.IsGraded,
-        // #152: same rule as the mock result — stored tenths are divided at the edge.
-        TotalScoreDisplay = result.IsGraded ? ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor) : "—",
-        ScoreSummary = result.IsGraded
-            ? $"{ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor)} points · {result.ResultBandName} level"
-            : "Composite score pending AI grading",
-        MaximumScore = result.CefrBands.Count > 0
-            ? ScoreDisplay.Format(result.CefrBands.Max(b => b.MaxTotal), result.ScoreDisplayFactor)
-            // #161: no bands means no declared ceiling. The page says so; inventing 990 made every
-            // certificate without band data look like a TOEIC paper scored out of 990.
-            : "",
-        Skills = result.SkillScores,
-        SkillResults = result.SkillResults ?? [],
-        Dates = dates,
-        RetryUrl = $"/placement/result/{result.PlacementId}/retry"
-    };
+        var log = logger ?? NullLogger.Instance;
+        var bands = result.CefrBands
+            .OrderBy(b => b.MinTotal)
+            .Select(b => new PlacementBandColumnViewModel(b.Code, b.Name, b.MinTotal, b.MaxTotal))
+            .ToList();
+        var rows = PlacementHorizon.Build(result, bands, dates, log);
+
+        return new(result, error, insight)
+        {
+            TakenAtDisplay = dates.FormatCustom(result.TakenAt, "d MMMM yyyy"),
+            IsAwaitingGrading = !result.IsGraded,
+            // #152: same rule as the mock result — stored tenths are divided at the edge.
+            TotalScoreDisplay = result.IsGraded ? ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor) : "—",
+            ScoreSummary = result.IsGraded
+                ? $"{ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor)} points · {result.ResultBandName} level"
+                : "Composite score pending AI grading",
+            MaximumScore = result.CefrBands.Count > 0
+                ? ScoreDisplay.Format(result.CefrBands.Max(b => b.MaxTotal), result.ScoreDisplayFactor)
+                // #161: no bands means no declared ceiling. The page says so; inventing 990 made every
+                // certificate without band data look like a TOEIC paper scored out of 990.
+                : "",
+            Skills = result.SkillScores,
+            SkillResults = result.SkillResults ?? [],
+            Bands = bands,
+            Rows = rows,
+            MeasuredRows = rows.Where(r => r.IsMeasured).ToList(),
+            Floor = Floor(rows, bands, rows.Any(r => r.State == "grading")),
+            Dates = dates,
+            RetryUrl = $"/placement/result/{result.PlacementId}/retry"
+        };
+    }
+
+    /// <summary>
+    /// #218 / LRN-17: the overall is the weakest MEASURED skill, and the placard says so in words —
+    /// naming the skill that holds it down and the one that reached highest. An unmeasured skill is
+    /// excluded and named as excluded, never treated as a zero (that zero was the #217 defect).
+    /// </summary>
+    private static PlacementFloorViewModel Floor(IReadOnlyList<PlacementSkillRowViewModel> rows,
+        IReadOnlyList<PlacementBandColumnViewModel> bands, bool anyGrading)
+    {
+        var measured = rows.Where(r => r.IsMeasured).ToList();
+        if (measured.Count == 0) return new PlacementFloorViewModel();
+
+        // Ranked by the certificate's own band order, then by position inside the band. A measured row
+        // whose level matches no band column still ranks (index null sorts last) rather than vanishing.
+        var ordered = measured
+            .OrderBy(r => r.BandIndex ?? int.MaxValue)
+            .ThenBy(r => r.PositionInBand ?? 0)
+            .ToList();
+        var floor = ordered[0];
+        var ceiling = ordered[^1];
+        var band = floor.BandIndex is int at && at < bands.Count ? bands[at].Label : floor.Coordinate;
+
+        var excluded = rows.Where(r => r.State == "not-measured").Select(r => r.SkillName).ToList();
+        // "Uneven" is a claim about the numbers, so it is only made when they actually differ. A tie
+        // printed as "uneven" is the kind of sentence a learner stops trusting the page over.
+        var differs = measured.Count > 1 && ceiling.Coordinate != floor.Coordinate;
+
+        return new PlacementFloorViewModel
+        {
+            HasFloor = true,
+            Coordinate = floor.Coordinate,
+            BandName = band,
+            IsProvisional = anyGrading,
+            // The tether names the limiting skill whenever the overall is a choice between skills.
+            LimitingSkillText = measured.Count > 1 ? $"{floor.SkillName} holds this floor." : string.Empty,
+            ReasonText = measured.Count == 1
+                ? $"Only {floor.SkillName} was measured in this sitting, so the overall is that one measurement."
+                : differs
+                    ? $"Your skills are uneven: {ceiling.SkillName} reached {ceiling.Coordinate}, while "
+                      + $"{floor.SkillName} is at {floor.Coordinate}. The overall is anchored to the lowest "
+                      + "measured skill, so this floor is what your path works on first."
+                    : $"Every measured skill is at {floor.Coordinate}, so the overall is that level rather "
+                      + "than an average that could read higher than any skill actually reached.",
+            ExcludedText = excluded.Count == 0
+                ? string.Empty
+                : $"{string.Join(" and ", excluded)} {(excluded.Count == 1 ? "was" : "were")} not measured, so "
+                  + $"{(excluded.Count == 1 ? "it is" : "they are")} excluded from this floor — not counted as zero.",
+        };
+    }
 
     public static TargetBandViewModel TargetBand(TargetBandViewDto view, string? error, string? success)
     {

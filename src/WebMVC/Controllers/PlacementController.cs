@@ -355,7 +355,7 @@ public sealed class PlacementController(
                 }
             }
 
-            return View(AttemptViewModelMapper.PlacementResult(result, dates, TempData["ErrorMessage"] as string, insight));
+            return View(AttemptViewModelMapper.PlacementResult(result, dates, TempData["ErrorMessage"] as string, insight, logger));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.PlacementNotFinished)
         {

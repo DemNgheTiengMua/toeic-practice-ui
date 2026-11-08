@@ -94,11 +94,27 @@ public sealed class PlacementResultReuseBadgeTests
     /// The one table row whose header cell is <paramref name="skillName"/>. Splitting on the row boundary
     /// is what makes "this skill is badged" different from "this page mentions a badge somewhere", and
     /// keying on the row header keeps a skill mentioned elsewhere on the page out of the match.
+    /// <para>
+    /// #218 added a class to the row header so the signboard can style it, which is why the match allows
+    /// attributes on the <c>th</c>. The claim is unchanged: the row's header cell must name the skill.
+    /// </para>
     /// </summary>
     private static string Row(string html, string skillName)
     {
-        var marker = $"<th scope=\"row\">{skillName}</th>";
-        var at = html.IndexOf(marker, StringComparison.Ordinal);
+        var marker = $"<th scope=\"row\"";
+        var at = -1;
+        for (var i = html.IndexOf(marker, StringComparison.Ordinal); i >= 0;
+             i = html.IndexOf(marker, i + marker.Length, StringComparison.Ordinal))
+        {
+            var close = html.IndexOf('>', i);
+            if (close > 0 && html.IndexOf(skillName, close, StringComparison.Ordinal) is var nameAt
+                && nameAt > 0 && nameAt - close < 120)
+            {
+                at = i;
+                break;
+            }
+        }
+
         Assert.True(at >= 0, $"no row header names {skillName}");
 
         var start = html.LastIndexOf("<tr", at, StringComparison.Ordinal);

@@ -5,6 +5,10 @@
     var result = Model.Result;
 }
 
+@section Styles {
+  <link rel="stylesheet" href="~/css/placement/result.css" asp-append-version="true">
+}
+
 <div class="context-bar">
   <div class="context-bar__item">
     <span class="context-bar__label">Certificate:</span>
@@ -15,8 +19,8 @@
     <span class="context-bar__value">Free · no credits used</span>
   </div>
   <div class="context-bar__item">
-    <span class="context-bar__label">Next step:</span>
-    <span class="context-bar__value">Set your target level</span>
+    <span class="context-bar__label">Sitting:</span>
+    <span class="context-bar__value font-mono">@Model.TakenAtDisplay</span>
   </div>
 </div>
 
@@ -38,7 +42,7 @@
     <div>
       <h1 class="m-0 mb-1">Your placement result</h1>
       <p class="text-muted no-margin">
-        Taken @Model.TakenAtDisplay · @result.TotalQuestions questions · @result.DurationMinutes minutes
+        Taken @Model.TakenAtDisplay · @result.TotalQuestions questions · <span class="font-mono">@result.DurationMinutes</span> minutes
       </p>
     </div>
     <span class="badge badge--success">Free</span>
@@ -67,93 +71,9 @@
     </section>
   }
 
-  <div class="card">
-    <div class="card__body stack">
-      <div class="cefr">
-        <div class="cefr__head">
-          <span class="cefr__current font-mono">@(result.IsGraded ? result.ResultBandCode : "—")</span>
-          <span>@Model.ScoreSummary</span>
-        </div>
-        <partial name="_BandStrip" model="Model.BandStrip" />
-        @if (result.IsGraded && !string.IsNullOrEmpty(result.BandNote))
-        {
-          <p class="cefr__note">
-            @result.BandNote
-          </p>
-        }
-      </div>
-    </div>
-  </div>
-
-  <div class="grid-3">
-    <div class="stat">
-      <div class="stat__label">Total score</div>
-      <div class="stat__value font-mono">@Model.TotalScoreDisplay</div>
-      <div class="stat__hint font-mono text-muted">@(string.IsNullOrEmpty(Model.MaximumScore) ? "no scale configured" : $"out of {Model.MaximumScore}")</div>
-    </div>
-    @* #152: one card per skill of the certificate, named by the skill itself. *@
-    @foreach (var skill in Model.Skills)
-    {
-      <div class="stat">
-        <div class="stat__label">@skill.SkillName</div>
-        <div class="stat__value font-mono">@Model.SkillScoreDisplay(skill)</div>
-        <div class="stat__hint font-mono text-muted">@skill.RawScore of @skill.TotalQuestions correct</div>
-      </div>
-    }
-  </div>
-
-  @* #213 / story 55: the per-skill level, its position, and WHEN it was measured. A carried-over
-     result is badged here, beside its own number, with the date it actually came from - "always know
-     how old each number is" is a claim about each number, not about the page.
-     #217 / PLC-19: a `not_measured` row stays in the table WITH its reason. Omitting it would make a
-     partial result look complete, and printing "A1" or "0" would be the fabricated bottom band
-     PLC-35 refuses. *@
-  @if (Model.SkillResults.Count > 0)
-  {
-    <section class="card">
-      <div class="card__header"><strong>Your level, per skill</strong></div>
-      <div class="card__body">
-        <table class="table">
-          <caption class="visually-hidden">Each examined skill, its level and position, and when that was measured</caption>
-          <thead>
-            <tr>
-              <th scope="col">Skill</th>
-              <th scope="col">Level</th>
-              <th scope="col">Measured</th>
-            </tr>
-          </thead>
-          <tbody>
-            @foreach (var skill in Model.SkillResults)
-            {
-              <tr>
-                <th scope="row">@skill.SkillName</th>
-                <td class="font-mono">@Model.LevelCell(skill)</td>
-                <td>
-                  @if (skill.ReusedFromPrior)
-                  {
-                    <span class="badge badge--warning">Carried over</span>
-                    <span class="font-mono text-sm">@Model.CarriedOverLabel(skill)</span>
-                  }
-                  else if (skill.MeasuredAt is not null)
-                  {
-                    <span class="font-mono text-sm text-muted">Measured on @Model.MeasuredOn(skill)</span>
-                  }
-                  else if (PlacementResultViewModel.IsGrading(skill))
-                  {
-                    <span class="text-sm text-muted">Still being graded — this fills in on its own.</span>
-                  }
-                  else
-                  {
-                    <span class="text-sm text-muted">@PlacementResultViewModel.NotMeasuredReason(skill.FailureReason)</span>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    </section>
-  }
+  @* #218 / LRN-16: one signboard, not four cards. The floor placard, the shared-axis horizon, the
+     provenance strip and the single primary action all live inside this partial. *@
+  <partial name="_Signboard" model="Model" />
 
   @* #217 / PLC-19: a partial result names what is missing rather than presenting a whole one. The
      overall is the weakest MEASURED skill; an unmeasured skill contributes nothing to it, which is
@@ -166,61 +86,48 @@
     </div>
   }
 
-  @* #217 / PLC-35: the retry a failed grading is offered. It re-queues the same tasks and writes no
-     ledger row, so the page says so; a learner who believed it cost credits would not press it. *@
-  @if (Model.CanRetryGrading)
-  {
-    <div class="card" id="placement-retry-card">
-      <div class="card__body row row--between row--middle">
-        <div>
-          <strong>A task could not be graded.</strong>
-          <p class="text-sm text-muted no-margin">Retrying is free — no credits are used.</p>
-        </div>
-        <form method="post" action="@Model.RetryUrl" class="no-margin">
-          @Html.AntiForgeryToken()
-          <button type="submit" class="btn btn--primary" id="btn-retry-grading">Retry grading</button>
-        </form>
-      </div>
-    </div>
-  }
-
-  @if (result.IsGraded && !string.IsNullOrEmpty(result.WeakerSkillName))
-  {
-    <div class="alert alert--info">
-      <strong>@result.WeakerSkillName is your weaker section.</strong>
-      Your learning path will focus on areas where you have the largest score opportunity.
-    </div>
-  }
-
-  <!-- Day-1 Quick-Win Challenge CTA -->
-  <div class="card card--callout">
-    <div class="card__body stack">
-      <div class="row row--between row--middle">
-        <div>
-          <h2 class="h3 m-0 mb-1">Your Diagnostic Baseline is Ready</h2>
-          <p class="text-muted no-margin">Kickstart your personalized remediation loop with a quick 5-minute targeted drill based on your placement weak areas.</p>
-        </div>
-        <a href="/learning-path" class="btn btn--primary btn--lg" id="day-1-challenge-cta">Start 5-Minute Challenge</a>
-      </div>
-    </div>
-  </div>
-
   @if (result.IsGraded && Model.Insight != null)
   {
     <partial name="_AiInsightPanel" model="Model.InsightPanel" />
   }
 
   <div class="card">
-    <div class="card__header"><strong>Where this puts you</strong></div>
+    <div class="card__header"><strong>Certificate score behind the horizon</strong></div>
+    <div class="card__body stack">
+      @* #222 / PRN-03: the certificate score is its own quantity with its own label. It is never
+         labelled a level, because TOEIC 785-940 is not CEFR B2. *@
+      <div class="row row--between row--middle">
+        <div>
+          <div class="stat__label">Certificate score · @result.CertCode</div>
+          <div class="stat__value font-mono">@Model.TotalScoreDisplay</div>
+          <div class="stat__hint font-mono text-muted">
+            @(string.IsNullOrEmpty(Model.MaximumScore) ? "no scale configured" : $"out of {Model.MaximumScore}")
+          </div>
+        </div>
+        <div>
+          <div class="stat__label">Certificate band</div>
+          <div class="stat__value">@(string.IsNullOrWhiteSpace(result.ResultBandName) ? result.ResultBandCode : result.ResultBandName)</div>
+          <div class="stat__hint text-muted">Read from this certificate's own band table.</div>
+        </div>
+      </div>
+      @if (result.IsGraded && !string.IsNullOrEmpty(result.BandNote))
+      {
+        <p class="text-sm text-muted no-margin">@result.BandNote</p>
+      }
+      @if (!result.IsGraded)
+      {
+        <p class="text-sm text-muted no-margin">The composite figure fills in when grading finishes.</p>
+      }
+    </div>
     <div class="card__body">
       <table class="table">
-        <caption class="visually-hidden">Section results from your placement test</caption>
+        <caption class="visually-hidden">Raw evidence behind each skill's position</caption>
         <thead>
           <tr>
-            <th scope="col">Section</th>
+            <th scope="col">Skill</th>
             <th scope="col">Correct</th>
-            <th scope="col">Score</th>
-            <th scope="col">Band</th>
+            <th scope="col">Certificate score</th>
+            <th scope="col">Measured</th>
           </tr>
         </thead>
         <tbody>
@@ -230,17 +137,11 @@
               <th scope="row">@s.SkillName</th>
               <td class="font-mono">@s.RawScore / @s.TotalQuestions</td>
               <td class="font-mono">@Model.SkillScoreDisplay(s)</td>
-              <td><span class="badge badge--muted font-mono">@(s.BandCode ?? (result.IsGraded ? result.ResultBandCode : "Pending"))</span></td>
+              <td class="font-mono text-sm">@Model.MeasuredOnFor(s.SkillId)</td>
             </tr>
           }
         </tbody>
       </table>
-    </div>
-    <div class="card__footer">
-      <div class="row" style="gap: var(--space-3);">
-        <a href="/placement/target-band" class="btn btn--primary">Set your target level</a>
-        <a href="/practice" class="btn">Practice a section first</a>
-      </div>
     </div>
   </div>
 </div>
