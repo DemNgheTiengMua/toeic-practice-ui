@@ -70,29 +70,25 @@ public sealed record PlacementTakeViewModel(
 
         return current.NavigationMode == "HYBRID_GROUP_LOCKED" && next.GroupId != current.GroupId
             ? "You are about to finish this question group. You cannot return to it or change its answers "
-              + "afterwards, and its remaining time does not carry over. Continue?"
+              + "afterwards. Continue?"
             : null;
     }
 
-    // The phase strip shows each skill's clock, as the mock exam's does: a finished skill reads
-    // 00:00, the current one counts down from the sitting's remaining time (take.js keeps it
-    // ticking), and a later one shows its allowance, never more than the sitting has left.
+    // #214 / PLC-12: a placement has no countdown, so the strip states where each skill stands rather
+    // than how long is left. A finished skill is closed for good; the current one is being answered; a
+    // later one opens when the learner reaches it.
     private static IReadOnlyList<PhaseDisplay> BuildPhases(PlacementTakeViewDto take)
     {
         var phases = take.Phases ?? [];
         var active = phases.ToList().FindIndex(phase => phase.SkillCode == take.CurrentQuestion.SkillCode);
-        var remaining = Math.Max(0, take.RemainingSeconds);
         return phases.Select((phase, index) => new PhaseDisplay(
             phase.SkillCode,
             phase.SkillName,
             index == active ? "step" : "false",
-            FormatClock(index < active ? 0
-                : index == active ? remaining
-                : Math.Min(Math.Max(0, phase.DurationSeconds), remaining)))).ToArray();
+            index < active ? "Closed"
+                : index == active ? "In progress"
+                : "Not started")).ToArray();
     }
-
-    // Same mm:ss shape as formatTime in placement/take.js, so the first tick does not jump.
-    private static string FormatClock(int seconds) => $"{seconds / 60:00}:{seconds % 60:00}";
 
     private static ExamAudioPlayerModel? BuildAudioPlayer(AttemptQuestionDto question) =>
         string.IsNullOrEmpty(question.AudioPath) ? null : new ExamAudioPlayerModel(
@@ -136,12 +132,12 @@ public sealed record PlacementTakeViewModel(
             + (question.AudioStartMs.HasValue || question.AudioEndMs.HasValue
                 ? $":{question.AudioStartMs ?? 0}-{question.AudioEndMs ?? 0}" : "");
         // The default JSON encoder escapes HTML delimiters before this enters a script data island.
+        // #214 / PLC-12: no remainingSeconds - there is no countdown to feed.
         return JsonSerializer.Serialize(new
         {
             placementId = take.PlacementId,
             questionId = question.QuestionId,
             displayOrder = question.DisplayOrder,
-            remainingSeconds = take.RemainingSeconds,
             isFlagged = question.IsFlagged,
             totalQuestions = take.TotalQuestions,
             answeredCount = take.AnsweredCount,
@@ -150,7 +146,7 @@ public sealed record PlacementTakeViewModel(
         });
     }
 
-    public sealed record PhaseDisplay(string SkillCode, string SkillName, string AriaCurrent, string TimerText);
+    public sealed record PhaseDisplay(string SkillCode, string SkillName, string AriaCurrent, string StateText);
     public sealed record OptionDisplay(int OptionId, string Label, string Text, bool IsSelected, string CssClass);
     public sealed record NavigatorGroupDisplay(
         string Title, string RangeLabel, string AriaLabel, IReadOnlyList<NavigatorCellDisplay> Items);

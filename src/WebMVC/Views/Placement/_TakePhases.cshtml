@@ -6,7 +6,9 @@
     {
       <div class="phase-progress__item" data-phase-skill="@phase.SkillCode" aria-current="@phase.AriaCurrent">
         <strong>@phase.SkillName</strong>
-        <span class="phase-progress__timer" data-phase-timer="@phase.SkillCode">@phase.TimerText</span>
+        @* #214 / PLC-12: placement has no clock, so a phase says where it stands, never how long is
+           left. Colour is the second layer; the word is the first. *@
+        <span class="phase-progress__state" data-phase-state="@phase.SkillCode">@phase.StateText</span>
       </div>
     }
   </section>

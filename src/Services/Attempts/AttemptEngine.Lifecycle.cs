@@ -25,7 +25,21 @@ public sealed partial class AttemptEngine
         try
         {
             var now = DateTimeOffset.UtcNow;
-            var expiresAt = now.AddMinutes(durationMinutes);
+            // #214 / PLC-12: a placement has no clock. Its deadline is the spec's outer bound
+            // (started_at + 72 h), not the exam's own duration, and it runs no phase clock - the
+            // per-skill deadline is what ended a placement when its first Listening budget ran out.
+            //
+            // FirstOrDefault, not Single: an unknown exam must still fail on the foreign key below,
+            // as it always has. A Single here raised "Sequence contains no elements" first and changed
+            // which exception the boundary test - and any caller - sees.
+            var purpose = await db.Exams.AsNoTracking()
+                .Where(e => e.ExamId == examId)
+                .Select(e => e.Purpose)
+                .FirstOrDefaultAsync(cancellationToken);
+            var runsAClock = purpose is null || PlacementSitting.HasCountdown(purpose);
+            var expiresAt = runsAClock
+                ? now.AddMinutes(durationMinutes)
+                : PlacementSitting.ExpiresAt(now);
             var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(examId, cancellationToken);
             var requiresPreflight = requiresAudio || requiresMic;
 
@@ -41,7 +55,7 @@ public sealed partial class AttemptEngine
 
             // #186: resolve the paper's bindings before anything is written. A binding whose position
             // holds no question is refused here rather than creating an attempt the learner cannot sit
-            // to completion — and because this runs before the transaction's first insert, a refusal
+            // to completion � and because this runs before the transaction's first insert, a refusal
             // leaves no attempt, no answer and no free-response draft behind.
             var bindings = await LoadPaperBindingsAsync(examId, cancellationToken);
             EnsureBindingsRender(questions, bindings);
@@ -64,7 +78,12 @@ public sealed partial class AttemptEngine
             }
 
             DateTime? phaseDeadlineAt = null;
-            if (firstSection != null && string.Equals(firstSection.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase) && firstGroup?.ResponseSeconds.HasValue == true)
+            if (!runsAClock)
+            {
+                // #214 / PLC-12: no overall countdown, so no phase clock either. The outer bound is the
+                // only deadline, and it is enforced where every engine deadline is.
+            }
+            else if (firstSection != null && string.Equals(firstSection.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase) && firstGroup?.ResponseSeconds.HasValue == true)
             {
                 phaseDeadlineAt = now.UtcDateTime.AddSeconds(firstGroup.ResponseSeconds.Value);
             }
