@@ -47,6 +47,10 @@ public interface IAdminExamsClient
 
     Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, CancellationToken cancellationToken = default);
     Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) => GetAdminExamStudioAsync(examId, cancellationToken);
+
+    /// <summary>#225 / S-09: the assembly workbench — declared against servable supply, per section.</summary>
+    Task<ExamAssemblyDto> GetAdminExamAssemblyAsync(int examId, CancellationToken cancellationToken = default);
+    Task<ExamAssemblyDto> GetAdminExamAssemblyAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) => GetAdminExamAssemblyAsync(examId, cancellationToken);
     Task<ExamAuditResultDto> GetAdminExamAuditAsync(int examId, CancellationToken cancellationToken = default);
     Task<ExamAuditResultDto> GetAdminExamAuditAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) => GetAdminExamAuditAsync(examId, cancellationToken);
     Task ReorderAdminSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default);

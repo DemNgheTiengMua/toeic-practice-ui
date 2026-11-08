@@ -25,6 +25,7 @@ public sealed class PoolAuthoringRoutesTests : IClassFixture<PoolAuthoringRoutes
     [InlineData("POST", "api/admin/items")]
     [InlineData("PUT", "api/admin/items/{itemId:int}")]
     [InlineData("POST", "api/admin/exams/{examId:int}/bindings")]
+    [InlineData("GET", "api/admin/exams/{examId:int}/assembly")]
     [InlineData("GET", "api/admin/ingestion/{batchId:int}")]
     [InlineData("POST", "api/admin/ingestion/{batchId:int}/records/{line:int}/resubmit")]
     [InlineData("POST", "api/admin/ingestion/{batchId:int}/records/{line:int}/discard")]

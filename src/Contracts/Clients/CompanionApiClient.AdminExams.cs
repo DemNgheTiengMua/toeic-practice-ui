@@ -76,6 +76,12 @@ public sealed partial class CompanionApiClient
     public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<ExamStudioDetailDto>($"api/admin/exams/{examId}/studio", bearerToken, cancellationToken);
 
+    public Task<ExamAssemblyDto> GetAdminExamAssemblyAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<ExamAssemblyDto>($"api/admin/exams/{examId}/assembly", bearerToken, cancellationToken);
+
+    public Task<ExamAssemblyDto> GetAdminExamAssemblyAsync(int examId, CancellationToken cancellationToken = default) =>
+        GetAdminExamAssemblyAsync(examId, string.Empty, cancellationToken);
+
     public Task<ExamAuditResultDto> GetAdminExamAuditAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<ExamAuditResultDto>($"api/admin/exams/{examId}/audit", bearerToken, cancellationToken);
 

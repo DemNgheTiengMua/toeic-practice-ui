@@ -17,7 +17,8 @@ public sealed class AdminExamsController(
     IAdminExamsClient api,
     CurrentUser currentUser,
     ILogger<AdminExamsController> logger,
-    IAdminImportsClient? importsClient = null) : AdminControllerBase(currentUser, logger)
+    IAdminImportsClient? importsClient = null,
+    IAdminItemsClient? itemsClient = null) : AdminControllerBase(currentUser, logger)
 {
     private const long MaxUploadBytes = 101L * 1024 * 1024;
 
@@ -529,6 +530,77 @@ public sealed class AdminExamsController(
             TempData["Error"] = ex.Detail ?? ex.Message;
             return RedirectToAction(nameof(Index));
         }
+    }
+
+    /// <summary>
+    /// #225 / S-09: the assembly workbench — the certificate's sections, what each declares and what
+    /// the pool can supply, with the positions the paper already holds.
+    /// <para>
+    /// Everything the page prints is a column of <see cref="ExamAssemblyDto"/>; this action groups and
+    /// forwards, as the other studios do. A screen that subtracted declared from supply would be a
+    /// second arithmetic path over the same stock.
+    /// </para>
+    /// </summary>
+    [HttpGet("{id:int}/assembly")]
+    public async Task<IActionResult> Assembly(int id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var assembly = await api.GetAdminExamAssemblyAsync(id, cancellationToken);
+            return View("~/Views/Admin/ExamAssembly.cshtml",
+                ExamAssemblyPresentation.From(
+                    assembly,
+                    code => CefrLevelLabels.LabelForCode(code, logger),
+                    code => ModalityLabels.LabelForCode(code, logger)));
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Could not load the assembly workbench for exam {ExamId}", id);
+            TempData["Error"] = ex.Detail ?? ex.Message;
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    /// <summary>
+    /// The bind. One position at a time, because a paper's position is what the binding decides — a
+    /// bulk endpoint would have to invent the positions it was not told.
+    /// <para>
+    /// <b>This forwards; it does not judge.</b> The demo-into-production refusal is
+    /// <c>trg_ExamItems_ProductionBindsProduction</c> (INV-6) and the skill refusal is
+    /// <c>FK_ExamItems_ItemSkill</c>, both enforced in the database and both surfaced by
+    /// <c>BindItemAsync</c> as a sentence. Adding a second check here would give one rule two
+    /// authorities, and the two eventually disagree.
+    /// </para>
+    /// </summary>
+    [HttpPost("{id:int}/assembly/bind")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Bind(
+        int id,
+        [FromForm] BindItemFormModel model,
+        CancellationToken cancellationToken = default)
+    {
+        if (itemsClient is null)
+        {
+            throw new InvalidOperationException("IAdminItemsClient is not configured.");
+        }
+
+        try
+        {
+            var binding = await itemsClient.BindAdminItemAsync(
+                id,
+                new BindPoolItemRequest(model.SectionId, model.ItemVersionId, model.DisplayOrder, model.UnitNumber),
+                cancellationToken);
+
+            TempData["Success"] =
+                $"Bound version {binding.ItemVersionId} at position {binding.DisplayOrder} of section {model.SectionCode}, unit {binding.UnitNumber}.";
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Could not bind an item to exam {ExamId}", id);
+            TempData["Error"] = ex.Detail ?? ex.Message;
+        }
+
+        return RedirectToAction(nameof(Assembly), new { id });
     }
 
     [HttpPost("{id:int}/reorder")]

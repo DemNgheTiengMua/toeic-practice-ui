@@ -52,4 +52,10 @@ public interface IAdminExamService
     /// only way one reaches a sitting, and it is where #157's structure lock and INV-6 apply.
     /// </summary>
     Task<ExamItemBindingDto> BindItemAsync(int examId, BindPoolItemRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #225 / S-09: the assembly workbench — per section, what the certificate declares against how
+    /// much servable stock the pool can supply, plus the positions the paper already holds.
+    /// </summary>
+    Task<ExamAssemblyDto> GetExamAssemblyAsync(int examId, CancellationToken cancellationToken = default);
 }

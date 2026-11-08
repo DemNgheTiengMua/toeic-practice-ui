@@ -1129,6 +1129,11 @@ public sealed class AdminExamsControllerTests
         public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, CancellationToken cancellationToken = default) =>
             Task.FromResult(SampleStudioDetail(examId));
 
+        public Task<ExamAssemblyDto> GetAdminExamAssemblyAsync(int examId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(AssemblyToReturn ?? SampleAssembly(examId));
+
+        public ExamAssemblyDto? AssemblyToReturn { get; set; }
+
         public ExamPreviewTakeDto? PreviewToReturn { get; set; }
         public int? LastPreviewExamId { get; private set; }
         public int? LastPreviewQuestionOrder { get; private set; }
@@ -1222,5 +1227,17 @@ public sealed class AdminExamsControllerTests
                 ],
                 [], [],
                 new ExamAuditResultDto(true, 1, 1, 0, 0, [], []));
+
+        /// <summary>#225: one section that declares more than the pool can supply, which is the screen's point.</summary>
+        private static ExamAssemblyDto SampleAssembly(int examId) =>
+            new(examId, "Mock Test", "TOEIC", "demo", 120, 0,
+            [
+                new ExamAssemblySectionDto(
+                    1, "P1", "Photographs", ModalityDto.Listening, 1, DeclaredCount: 6, BoundCount: 1, SupplyCount: 2, Shortfall: 4,
+                    [new ExamAssemblyPositionDto(1, true, 200, "R-DET", "B1", 1),
+                     new ExamAssemblyPositionDto(2, true, null, null, null, 1)],
+                    [new ExamAssemblyCandidateDto(1, 200, 1, "L-DET", "B1", "short_exchange", "demo", "Photo stem")],
+                    1)
+            ]);
     }
 }
