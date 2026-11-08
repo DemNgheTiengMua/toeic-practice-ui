@@ -36,14 +36,30 @@ IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_Questions_Diffic
   THROW 50000, 'EXPECT_REJECT FAILED: CK_Questions_Difficulty still exists; it went with the column', 1;
 PRINT 'Questions carries no difficulty and no 1-5 CHECK';
 
--- 3. #232: PathModuleItems is gone, so a column lookup against it would find nothing and report the
---    table clean while it is absent for a different reason. Assert the drop itself, and that the level
---    requirement has a home: a step's own TargetCefr, with its authored-level CHECK. A lookup that
---    found nothing would pass this check on a database with no path steps at all, so the CHECK is
---    required to exist by name rather than merely not to be contradicted.
+-- 3. #232 / #236: the template scaffolding is gone, so a column lookup against it would find nothing
+--    and report the table clean while it is absent for a different reason. Assert each drop itself,
+--    and that the level requirement has a home: a step's own TargetCefr, with its authored-level
+--    CHECK. A lookup that found nothing would pass this check on a database with no path steps at
+--    all, so the CHECK is required to exist by name rather than merely not to be contradicted.
+--
+--    All four tables are named, not one. Asserting only PathModuleItems would let PathTemplates come
+--    back and "no code reads a template" would still pass, because the code stays deleted while the
+--    table waits for a new reader.
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'PathTemplates')
+  THROW 50000, 'EXPECT_REJECT FAILED: PathTemplates still exists; D10 dropped the template scaffolding', 1;
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'PathModules')
+  THROW 50000, 'EXPECT_REJECT FAILED: PathModules still exists; D10 dropped the template scaffolding', 1;
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'PathModuleItems')
   THROW 50000, 'EXPECT_REJECT FAILED: PathModuleItems still exists; D10 dropped the template scaffolding', 1;
-PRINT 'PathModuleItems is dropped';
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'PathModuleTopics')
+  THROW 50000, 'EXPECT_REJECT FAILED: PathModuleTopics still exists; D10 dropped the template scaffolding', 1;
+IF EXISTS (
+  SELECT 1 FROM sys.columns c
+  JOIN sys.tables t ON t.object_id = c.object_id
+  WHERE t.name = 'LearnerPaths' AND c.name = 'TemplateId'
+)
+  THROW 50000, 'EXPECT_REJECT FAILED: LearnerPaths.TemplateId still exists; a path is synthesised, not looked up', 1;
+PRINT 'the four template tables and LearnerPaths.TemplateId are dropped';
 
 IF NOT EXISTS (
   SELECT 1 FROM sys.columns c

@@ -27,10 +27,8 @@ public static partial class LearningPathEndpoints
             {
                 return Problem(StatusCodes.Status409Conflict, "Learning path already active", ApiError.Codes.LearningPathAlreadyActive, ex.Message);
             }
-            catch (LearningPathException ex) when (ex.Code == LearningPathException.TemplateNotFound)
-            {
-                return Problem(StatusCodes.Status404NotFound, "Path template not found", ApiError.Codes.LearningPathTemplateNotFound, ex.Message);
-            }
+            // #236: the TemplateNotFound catch is gone with the templates. A path is synthesised from
+            // current capability, so nothing can report a missing template any more.
             // #153: an Unrealistic goal is a refusal with reasons, not a server fault. 422 carries the
             // service's message — which names the hours needed and the hours available — to the screen.
             catch (LearningPathException ex) when (ex.Code == LearningPathException.GoalUnrealistic)
