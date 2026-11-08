@@ -155,12 +155,12 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
 
             -- Pool items: each paper position binds one, so the answer pins a real topic and band.
             INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('B1', N'S'), ('B1', N'S'), ('B2', N'S'), ('B1', N'S'), ('B1', N'S');
-            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus) VALUES
-              ('reading', @rInf, 'B1', 'passage_comprehension', 1, 'demo', 'active'),
-              ('reading', @rInf, 'B1', 'passage_comprehension', 1, 'demo', 'active'),
-              ('reading', @rAtt, 'B2', 'passage_comprehension', 1, 'demo', 'active'),
-              ('writing', @wArg, 'B1', 'persuasive_essay', 1, 'demo', 'active'),
-              ('writing', @wArg, 'B1', 'persuasive_essay', 1, 'demo', 'active');
+            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus, RenderFormat) VALUES
+              ('reading', @rInf, 'B1', 'passage_comprehension', 1, 'demo', 'active', 'mcq'),
+              ('reading', @rInf, 'B1', 'passage_comprehension', 1, 'demo', 'active', 'mcq'),
+              ('reading', @rAtt, 'B2', 'passage_comprehension', 1, 'demo', 'active', 'mcq'),
+              ('writing', @wArg, 'B1', 'persuasive_essay', 1, 'demo', 'active', 'free_response'),
+              ('writing', @wArg, 'B1', 'persuasive_essay', 1, 'demo', 'active', 'free_response');
             INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
               SELECT i.ItemId, 1, N'Stem', N'A', N'B', N'C', N'D', 'A'
               FROM Items i WHERE i.ItemType = 'passage_comprehension';

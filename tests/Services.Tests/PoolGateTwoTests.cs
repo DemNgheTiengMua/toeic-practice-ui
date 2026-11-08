@@ -117,6 +117,9 @@ public sealed class PoolGateTwoTests(DatabaseFixture database)
             TopicId = topicId,
             CefrLevel = level,
             ItemType = itemType,
+            // #250: a productive item's only legal widget is a free response; this fixture's is
+            // objective, but deriving it from the modality keeps the helper honest for both.
+            RenderFormat = modality is "speaking" or "writing" ? "free_response" : "mcq",
             ContentTier = "demo",
             LifecycleStatus = "draft",
             Stimulus = stimulus,

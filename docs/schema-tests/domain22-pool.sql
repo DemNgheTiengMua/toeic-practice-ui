@@ -260,26 +260,69 @@ END TRY BEGIN CATCH
 END CATCH
 
 -- ---------------------------------------------------------------------------------------------
--- 8. a version is all four options and a key, or none of them. Three options measures nothing.
+-- 8. #250: two to four options, filled contiguously from A, with a key naming a filled option.
+--
+-- This test previously asserted "three options measures nothing" and refused a three-option keyed
+-- version. #250 overturns that: the paper's own seed contains 17 three-option 'mcq' items and one
+-- 'mcq_3', and criterion 3 (all seven render formats representable and rendering identically) cannot
+-- be met while the pool demands exactly four. What must still be refused is a row the sitting cannot
+-- render - a gap, or a key pointing at an option that does not exist - and that is what replaces it.
+--
+-- Each refusal names the guard, because "three options was rejected" would now be the WRONG result.
 -- ---------------------------------------------------------------------------------------------
+INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, KeyLabel)
+VALUES (@item, 3, N'A three-option item.', N'a', N'b', N'c', 'B');
+PRINT 'accepted a three-option keyed version (mcq_3 and the seed''s 3-option mcq)';
+
+-- a gap: D set without C. Refused, because the sitting would render a leader to a missing option.
 BEGIN TRY
-  INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, KeyLabel)
-  VALUES (@item, 3, N'A half-filled item.', N'a', N'b', N'c', 'A');
-  THROW 50000, 'EXPECT_REJECT FAILED: a version with three options and a key was accepted', 1;
+  INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionD, KeyLabel)
+  VALUES (@item, 5, N'A gapped item.', N'a', N'b', N'd', 'A');
+  THROW 50000, 'EXPECT_REJECT FAILED: a version with options A,B,D (a gap) was accepted', 1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   IF ERROR_MESSAGE() NOT LIKE '%CK_ItemVersions_OptionsComplete%'
   BEGIN
-    SET @guardWrong = N'EXPECT_REJECT FAILED: the half-filled version was refused by the wrong guard: ' + ERROR_MESSAGE();
+    SET @guardWrong = N'EXPECT_REJECT FAILED: the gapped version was refused by the wrong guard: ' + ERROR_MESSAGE();
     THROW 50000, @guardWrong, 1;
   END
-  PRINT 'rejected three options with a key, by CK_ItemVersions_OptionsComplete';
+  PRINT 'rejected a gapped version (A,B,D), by CK_ItemVersions_OptionsComplete';
+END CATCH
+
+-- a key naming an option the row does not have: refused, or it renders a choice nobody can pick
+BEGIN TRY
+  INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, KeyLabel)
+  VALUES (@item, 6, N'A phantom key.', N'a', N'b', N'c', 'D');
+  THROW 50000, 'EXPECT_REJECT FAILED: a key naming an absent option D was accepted', 1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_MESSAGE() NOT LIKE '%CK_ItemVersions_OptionsComplete%'
+  BEGIN
+    SET @guardWrong = N'EXPECT_REJECT FAILED: the phantom key was refused by the wrong guard: ' + ERROR_MESSAGE();
+    THROW 50000, @guardWrong, 1;
+  END
+  PRINT 'rejected a key naming an option the row does not carry, by CK_ItemVersions_OptionsComplete';
+END CATCH
+
+-- options with no key at all: refused, because there is nothing to score against
+BEGIN TRY
+  INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB)
+  VALUES (@item, 7, N'Keyless options.', N'a', N'b');
+  THROW 50000, 'EXPECT_REJECT FAILED: options with no key were accepted', 1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_MESSAGE() NOT LIKE '%CK_ItemVersions_OptionsComplete%'
+  BEGIN
+    SET @guardWrong = N'EXPECT_REJECT FAILED: keyless options were refused by the wrong guard: ' + ERROR_MESSAGE();
+    THROW 50000, @guardWrong, 1;
+  END
+  PRINT 'rejected options with no key, by CK_ItemVersions_OptionsComplete';
 END CATCH
 
 -- a productive task is the other legal shape: no options, no key
 DECLARE @itemW INT;
-INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier)
-VALUES ('writing', (SELECT TopicId FROM Topics WHERE Code = 'W-ARG'), 'B2', 'persuasive_essay', 'production');
+INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, RenderFormat)
+VALUES ('writing', (SELECT TopicId FROM Topics WHERE Code = 'W-ARG'), 'B2', 'persuasive_essay', 'production', 'free_response');
 SET @itemW = SCOPE_IDENTITY();
 INSERT INTO ItemVersions (ItemId, VersionNumber, Stem) VALUES (@itemW, 1, N'Argue for or against a congestion charge.');
 PRINT 'accepted a productive version with no options and no key';
@@ -403,12 +446,67 @@ END TRY BEGIN CATCH
   PRINT 'rejected a version with no item, by FK_ItemVersions_Item';
 END CATCH
 
+-- 12. #250: the render vocabulary is an axis of its own, and a productive skill renders only as one
+--     free response. Each refusal names the guard.
+-- ---------------------------------------------------------------------------------------------
+IF NOT EXISTS (
+  SELECT 1 FROM sys.check_constraints
+  WHERE name = 'CK_Items_RenderFormat' AND definition LIKE '%''mcq_3''%' AND definition LIKE '%''drag_drop''%'
+)
+  THROW 50000, 'EXPECT_REJECT FAILED: CK_Items_RenderFormat is missing or does not name the seven formats', 1;
+PRINT 'the seven render formats are a closed vocabulary on Items';
+
+-- a writing item left at the default 'mcq' is refused: a productive skill is never drawn as radios
+BEGIN TRY
+  INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType)
+  VALUES ('writing', (SELECT TopicId FROM Topics WHERE Code = 'W-ARG'), 'B2', 'persuasive_essay');
+  THROW 50000, 'EXPECT_REJECT FAILED: a writing item with the default render format was accepted', 1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_MESSAGE() NOT LIKE '%CK_Items_Modality_RenderFormat%'
+  BEGIN
+    SET @guardWrong = N'EXPECT_REJECT FAILED: the writing/default pair was refused by the wrong guard: ' + ERROR_MESSAGE();
+    THROW 50000, @guardWrong, 1;
+  END
+  PRINT 'rejected a writing item left at render format mcq, by CK_Items_Modality_RenderFormat';
+END CATCH
+
+-- a reading item drawn as a free response is refused: a keyed section has no text area to grade
+BEGIN TRY
+  INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, RenderFormat)
+  VALUES ('reading', (SELECT TopicId FROM Topics WHERE Code = 'R-DET'), 'B1', 'sentence_cloze', 'free_response');
+  THROW 50000, 'EXPECT_REJECT FAILED: a reading item with a free-response render format was accepted', 1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_MESSAGE() NOT LIKE '%CK_Items_Modality_RenderFormat%'
+  BEGIN
+    SET @guardWrong = N'EXPECT_REJECT FAILED: the reading/free_response pair was refused by the wrong guard: ' + ERROR_MESSAGE();
+    THROW 50000, @guardWrong, 1;
+  END
+  PRINT 'rejected a reading item rendered as a free response, by CK_Items_Modality_RenderFormat';
+END CATCH
+
+-- a render code outside the seven is refused
+BEGIN TRY
+  INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, RenderFormat)
+  VALUES ('reading', (SELECT TopicId FROM Topics WHERE Code = 'R-DET'), 'B1', 'sentence_cloze', 'essay_grid');
+  THROW 50000, 'EXPECT_REJECT FAILED: render format ''essay_grid'' was accepted', 1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_MESSAGE() NOT LIKE '%CK_Items_RenderFormat%'
+  BEGIN
+    SET @guardWrong = N'EXPECT_REJECT FAILED: the unknown render format was refused by the wrong guard: ' + ERROR_MESSAGE();
+    THROW 50000, @guardWrong, 1;
+  END
+  PRINT 'rejected an unknown render format, by CK_Items_RenderFormat';
+END CATCH
+
 -- ---------------------------------------------------------------------------------------------
 -- 11. and the whole point, once more, at the end: nothing in the old shape was needed
 -- ---------------------------------------------------------------------------------------------
 IF EXISTS (SELECT 1 FROM Certificates) OR EXISTS (SELECT 1 FROM Skills)
    OR EXISTS (SELECT 1 FROM Exams) OR EXISTS (SELECT 1 FROM Sections)
   THROW 50000, 'EXPECT_REJECT FAILED: the pool created a certificate, skill, exam or section', 1;
-IF (SELECT COUNT(*) FROM Items) <> 2 OR (SELECT COUNT(*) FROM ItemVersions) <> 3
+IF (SELECT COUNT(*) FROM Items) <> 2 OR (SELECT COUNT(*) FROM ItemVersions) <> 4
   THROW 50000, 'EXPECT_REJECT FAILED: the refusal tests above left rows behind, so the database is not in the state this file claims', 1;
 PRINT 'the pool stands with no certificate, skill, exam or section in the database';

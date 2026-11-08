@@ -72,8 +72,8 @@ PRINT 'stored four options with a rationale beside each';
 --    distractor rationale on it explains nothing.
 -- ---------------------------------------------------------------------------------------------
 DECLARE @itemW INT;
-INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier)
-VALUES ('writing', @writingTopic, 'B2', 'persuasive_essay', 'demo');
+INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, RenderFormat)
+VALUES ('writing', @writingTopic, 'B2', 'persuasive_essay', 'demo', 'free_response');
 SET @itemW = SCOPE_IDENTITY();
 IF @itemW IS NULL
   THROW 50000, 'EXPECT_REJECT FAILED: the productive-task fixture item was not inserted', 1;

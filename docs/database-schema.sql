@@ -755,6 +755,12 @@ CREATE TABLE Stimuli (
     CONSTRAINT CK_Stimuli_Level CHECK (CefrLevel IN ('A1','A2','B1','B2','C1','C2')),
   Passage      NVARCHAR(MAX) NULL,       -- a reading stimulus
   AudioPath    NVARCHAR(400) NULL,       -- a listening stimulus
+  -- #250: the group's slice of the section's master track. UI-6's exam-review "Replay this question"
+  -- and the sitting both play a section's upload cut to this window; without it a pool paper can only
+  -- replay a whole Part. Migrated from QuestionGroups.AudioStartMs/AudioEndMs, which is where the
+  -- concept lived. Both NULL means "the whole track", which is why the CHECK is a pair.
+  AudioStartMs INT NULL,
+  AudioEndMs   INT NULL,
   Transcript   NVARCHAR(MAX) NULL,       -- the audio script, shown after the sitting
   -- PRN: workplace / academic / general. Orthogonal to the construct: it varies register, never what
   -- the item measures (LVL-09), so it lives on the stimulus rather than on the item.
@@ -769,7 +775,13 @@ CREATE TABLE Stimuli (
   ResponseSeconds INT NULL CONSTRAINT CK_Stimuli_Response CHECK (ResponseSeconds IS NULL OR ResponseSeconds > 0),
   DisplayOrder INT NOT NULL DEFAULT 0,
   CreatedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-  CONSTRAINT CK_Stimuli_ImageAlt CHECK (ImagePath IS NULL OR ImageAlt IS NOT NULL)
+  CONSTRAINT CK_Stimuli_ImageAlt CHECK (ImagePath IS NULL OR ImageAlt IS NOT NULL),
+  -- #250: a slice with one end missing, or an inverted one, is a window nobody can play. Both NULL is
+  -- "the whole track", which is not the same fact as a zero-length slice.
+  CONSTRAINT CK_Stimuli_AudioSlice CHECK (
+       (AudioStartMs IS NULL AND AudioEndMs IS NULL)
+    OR (AudioStartMs >= 0 AND AudioEndMs > AudioStartMs)
+  )
 );
 GO
 -- A topic is addressed by (TopicId, Modality): TopicId is already the primary key, so this constraint
@@ -794,6 +806,27 @@ CREATE TABLE Items (
   -- the vocabulary is 13 codes and 14 (modality, type) rows. A CHECK on ItemType alone could not say
   -- that, and would let a reading item be authored as a persuasive essay.
   ItemType         VARCHAR(40) NOT NULL,
+  -- #250: the render format - which widget the sitting draws. This is a SECOND axis, not a rename of
+  -- ItemType. ItemType answers "what does this item measure" (one of D0.4's fourteen semantic types,
+  -- e.g. 'passage_comprehension'); RenderFormat answers "how is it drawn" (radio, checkbox, select,
+  -- drag target, blank, text area). They are not interchangeable: 'mcq_3' and 'dropdown' carry the
+  -- same three options and one key but render as a radio group versus a select, while two
+  -- 'passage_comprehension' items can render as 'mcq' and 'multi_select'. Collapsing the two would
+  -- make "which widget" and "what skill" the same question and lose seven of the seven seed formats
+  -- (only two ItemTypes appear in the seed but all seven render formats do).
+  --
+  -- It lives on Items, not ItemVersions, because the widget is the authored shape of the item - the
+  -- same reason ItemType does - and a change of widget is re-authoring rather than the cosmetic
+  -- correction copy-on-write exists for. Option COUNT and MaxSelections, which do vary by version,
+  -- live on the version below.
+  --
+  -- The default is 'mcq' because it is the common authored shape. A productive item that names no
+  -- widget is the trap this column exists to prevent, and CK_Items_Modality_RenderFormat below is
+  -- what turns that omission into a loud failure instead of a writing task drawn as a radio group.
+  RenderFormat     VARCHAR(30) NOT NULL
+    CONSTRAINT DF_Items_RenderFormat DEFAULT 'mcq'
+    CONSTRAINT CK_Items_RenderFormat CHECK (RenderFormat IN
+      ('mcq','mcq_3','multi_select','inline_completion','dropdown','drag_drop','free_response')),
   PlacementEligible BIT NOT NULL CONSTRAINT DF_Items_PlacementEligible DEFAULT 0,
   -- D0.5/CNT-03. Defaults to 'demo' because a new item is not production until it passes its gates:
   -- the wrong default here lets an unreviewed item into a paid paper (INV-6).
@@ -817,6 +850,17 @@ CREATE TABLE Items (
     OR (Modality = 'reading'   AND ItemType IN ('sentence_cloze','passage_comprehension','text_insertion_cohesion'))
     OR (Modality = 'speaking'  AND ItemType IN ('descriptive_monologue','situational_negotiation','argumentative_monologue','visual_data_synthesis'))
     OR (Modality = 'writing'   AND ItemType IN ('transactional_correspondence','visual_data_synthesis','persuasive_essay','analytical_evaluation_essay'))
+  ),
+  -- #250: a productive skill renders as a free response and nothing else - a writing task drawn as a
+  -- radio group measures nothing. The pairing is checked here for the same reason Modality/ItemType is:
+  -- it is a fact about the authored shape, and a CHECK is what stops the DF below turning "an author
+  -- forgot the widget" into a productive item silently labelled 'mcq'. The default is 'mcq' because it
+  -- is the common shape; an objective-only default plus this CHECK means an unspecified productive item
+  -- fails loudly at insert instead of rendering wrong.
+  CONSTRAINT CK_Items_Modality_RenderFormat CHECK (
+       (Modality IN ('listening','reading')
+        AND RenderFormat IN ('mcq','mcq_3','multi_select','inline_completion','dropdown','drag_drop'))
+    OR (Modality IN ('speaking','writing') AND RenderFormat = 'free_response')
   )
 );
 GO
@@ -939,15 +983,55 @@ CREATE TABLE ItemVersions (
   MaxWords        INT NULL,
   PrepSeconds     INT NULL,   -- planning (writing) or preparation (speaking)
   ResponseSeconds INT NULL,   -- composition budget (writing) or recording window (speaking)
+  -- #250: the answer-shape facts the paper used to keep on Questions. They live on the version for
+  -- the same reason MinWords does, and they are scored for the same reason: the sitting renders the
+  -- hint, enforces the selection count and grades the blank from these columns, so an in-place change
+  -- would rewrite what a past attempt shows or was marked against. The trigger below compares them.
+  --
+  -- They are NOT on Items because they vary with the version: correcting a multi_select from "two
+  -- answers" to "three" is a new version of the same item, not a different item.
+  --
+  -- MaxSelections: multi_select's "select TWO". NULL is "exactly one key", the four-option shape.
+  MaxSelections  INT NULL
+    CONSTRAINT CK_ItemVersions_MaxSelections CHECK (MaxSelections IS NULL OR MaxSelections > 1),
+  -- AllowNumber: inline_completion's "may the blank hold a digit". Defaults to 1 to match the legacy
+  -- column's default, because a blank that silently stopped accepting "15" would change the answer.
+  AllowNumber    BIT NOT NULL CONSTRAINT DF_ItemVersions_AllowNumber DEFAULT 1,
+  -- inline_completion's accepted answer set, a JSON array of strings ("[\"15\",\"fifteen\"]"). The key
+  -- for a blank is a set rather than a label, which is why it is not KeyLabel.
+  AcceptedAnswersJson NVARCHAR(MAX) NULL,
+  -- free_response grading: the words a passing answer must contain. NULL is "no keyword requirement".
+  RequiredKeywords    NVARCHAR(MAX) NULL,
+  -- UI-42: the practice-take nudge. Explanation stays the after-answer why; the hint is shown before.
+  Hint           NVARCHAR(1000) NULL,
   CreatedAt      DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   CONSTRAINT UQ_ItemVersions_Item_Number UNIQUE (ItemId, VersionNumber),
   -- #185: composite target so a version's identity is (version, item). A binding carries both, so
   -- the version it pins cannot be a version of some other item than the one it names.
   CONSTRAINT UQ_ItemVersions_Id_Item UNIQUE (ItemVersionId, ItemId),
   CONSTRAINT CK_ItemVersions_OptionsComplete CHECK (
-       (OptionA IS NULL AND OptionB IS NULL AND OptionC IS NULL AND OptionD IS NULL AND KeyLabel IS NULL)
-    OR (OptionA IS NOT NULL AND OptionB IS NOT NULL AND OptionC IS NOT NULL AND OptionD IS NOT NULL
-        AND KeyLabel IS NOT NULL)
+       -- No options: a productive task (writing/speaking) or a blank (inline_completion, whose key is
+       -- AcceptedAnswersJson rather than a label). Both are legal no-option shapes, so this branch
+       -- constrains only the option columns.
+       (OptionA IS NULL AND OptionB IS NULL AND OptionC IS NULL AND OptionD IS NULL
+        AND KeyLabel IS NULL)
+    -- #250: two to four options, filled contiguously from A, with a key naming a filled option. The
+    -- pool previously demanded exactly four or none, which could not express the paper: the seed's
+    -- 17 three-option 'mcq' items and its 'mcq_3' item are real renderings, not defects. Widening is
+    -- not a convenience - criterion 3 (all seven render formats representable and rendering
+    -- identically) is unreachable without it.
+    --
+    -- The half-filled guard is kept, and made explicit rather than left to "the count is 3 or 4": D
+    -- cannot be set without C, and KeyLabel must name an option that actually exists. A row with
+    -- options A,B and key 'D' would otherwise parse as four-with-a-gap and render a leader to a
+    -- letter the learner can never pick.
+    OR (OptionA IS NOT NULL AND OptionB IS NOT NULL AND KeyLabel IS NOT NULL
+        AND (OptionC IS NOT NULL OR OptionD IS NULL)
+        AND (KeyLabel IN ('A','B')
+             OR (KeyLabel = 'C' AND OptionC IS NOT NULL)
+             OR (KeyLabel = 'D' AND OptionD IS NOT NULL))
+        -- a keyed item is not also a blank: AcceptedAnswersJson is inline_completion's answer set
+        AND AcceptedAnswersJson IS NULL)
   ),
   -- #194: a rationale explains an option, so it may exist only where its option does. A distractor
   -- rationale on a productive task has no option to render beside, and would reach review as copy
@@ -1014,6 +1098,14 @@ BEGIN
        OR ISNULL(i.MaxWords,        -1) <> ISNULL(d.MaxWords,        -1)
        OR ISNULL(i.PrepSeconds,     -1) <> ISNULL(d.PrepSeconds,     -1)
        OR ISNULL(i.ResponseSeconds, -1) <> ISNULL(d.ResponseSeconds, -1)
+       -- #250: the answer-shape facts moved off Questions. The sitting renders the hint, enforces
+       -- the selection count and grades the blank from them, so an in-place move rewrites a past
+       -- attempt exactly as a word-range edit does.
+       OR ISNULL(i.MaxSelections,   -1) <> ISNULL(d.MaxSelections,   -1)
+       OR i.AllowNumber <> d.AllowNumber
+       OR ISNULL(i.AcceptedAnswersJson, N'') <> ISNULL(d.AcceptedAnswersJson, N'')
+       OR ISNULL(i.RequiredKeywords,    N'') <> ISNULL(d.RequiredKeywords,    N'')
+       OR ISNULL(i.Hint,                N'') <> ISNULL(d.Hint,                N'')
   )
     THROW 50048, 'An ItemVersions scored field is immutable; a scored change requires a new version row (copy-on-write, CNT-43).', 1;
 END;

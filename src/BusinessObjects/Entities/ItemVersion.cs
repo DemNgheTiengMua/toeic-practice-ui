@@ -111,6 +111,39 @@ public partial class ItemVersion
     /// </summary>
     public int? ResponseSeconds { get; set; }
 
+    /// <summary>
+    /// #250: multi_select's "select TWO". NULL is "exactly one key", the keyed four-or-fewer shape.
+    /// Scored, like the options: the sitting enforces it. Moved from <c>Questions.MaxSelections</c>.
+    /// </summary>
+    public int? MaxSelections { get; set; }
+
+    /// <summary>
+    /// #250: whether an inline_completion blank may hold a digit. Defaults true to match the legacy
+    /// column's default. Moved from <c>Questions.AllowNumber</c>.
+    /// </summary>
+    public bool AllowNumber { get; set; } = true;
+
+    /// <summary>
+    /// #250: an inline_completion blank's accepted answers, as a JSON array of strings. The key for a
+    /// blank is a set rather than a label, which is why it is not <see cref="KeyLabel"/>. Scored: the
+    /// sitting grades from it. Moved from <c>Questions.AcceptedAnswersJson</c>.
+    /// </summary>
+    public string? AcceptedAnswersJson { get; set; }
+
+    /// <summary>
+    /// #250: the words a passing free-response answer must contain; NULL is no requirement. Moved
+    /// from <c>Questions.RequiredKeywords</c>.
+    /// </summary>
+    public string? RequiredKeywords { get; set; }
+
+    /// <summary>
+    /// #250: UI-42's pre-answer nudge, as distinct from <see cref="Explanation"/>, which is the
+    /// after-answer why. Scored for the same reason the explanation's sibling fields are: it is what
+    /// a past attempt rendered. Moved from <c>Questions.Hint</c>.
+    /// </summary>
+    [StringLength(1000)]
+    public string? Hint { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>

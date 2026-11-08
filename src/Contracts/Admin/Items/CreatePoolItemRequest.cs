@@ -14,6 +14,12 @@ public sealed record CreatePoolItemRequest(
     string CefrLevelCode,
     string ItemType,
     string Stem,
+    /// <summary>
+    /// #250: the render format. Optional: when absent the modality decides (a productive item is
+    /// always a free response). It is here because a reading item may be drawn as a radio group, a
+    /// checkbox list, a select or a drag target, and the author is the only one who knows which.
+    /// </summary>
+    string? RenderFormat = null,
     // CNT-06: four options and one key, or none at all for a productive task. ItemVersions stores
     // exactly these four columns, so the request mirrors them rather than inventing an option list
     // whose per-option rationale has nowhere to live.

@@ -30,6 +30,14 @@ public partial class Stimulus
     [StringLength(400)]
     public string? AudioPath { get; set; }
 
+    /// <summary>
+    /// #250: the group's slice of the section's master track, in milliseconds. Both NULL means "the
+    /// whole track". Migrated from <c>QuestionGroups.AudioStartMs/AudioEndMs</c>.
+    /// </summary>
+    public int? AudioStartMs { get; set; }
+
+    public int? AudioEndMs { get; set; }
+
     /// <summary>The audio script, shown after the sitting.</summary>
     public string? Transcript { get; set; }
 
