@@ -1,5 +1,5 @@
-SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
--- docs/schema-tests/domain46-section-accuracy-pool.sql
+﻿SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
+-- docs/schema-tests/domain47-section-accuracy-pool.sql
 -- #250 criterion 4: the weakness-analysis view returns the same numbers before and after.
 --
 -- A view rewritten "and it looks right" proves nothing. This file builds the SAME answer twice - once

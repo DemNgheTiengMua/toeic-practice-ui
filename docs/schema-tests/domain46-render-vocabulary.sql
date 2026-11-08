@@ -1,5 +1,5 @@
-SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
--- docs/schema-tests/domain45-render-vocabulary.sql
+﻿SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
+-- docs/schema-tests/domain46-render-vocabulary.sql
 -- #250 steps 1-2: the render vocabulary and the answer-shape fields.
 --
 -- The paper's content model now has two axes on the pool, and this file proves they stay two:
