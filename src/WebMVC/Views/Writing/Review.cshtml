@@ -199,10 +199,12 @@
                 </tr>
               </thead>
               <tbody>
-                @foreach (var span in q.ErrorSpans)
+                @for (var spanIndex = 0; spanIndex < q.ErrorSpans.Count; spanIndex++)
                 {
+                  var span = q.ErrorSpans[spanIndex];
                   <tr>
-                    <td class="font-mono text-xs">@span.Category</td>
+                    @* #220: the grader's category is a code; the cell a reader sees is its word. *@
+                    <td class="text-xs" data-category="@span.Category">@Model.ErrorCategoryLabels[q.QuestionId][spanIndex]</td>
                     <td><del>@span.OriginalSnippet</del></td>
                     <td><ins>@span.CorrectedSnippet</ins></td>
                     <td class="text-sm">@span.ExplanationVi</td>

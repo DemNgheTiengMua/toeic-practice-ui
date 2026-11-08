@@ -28,27 +28,8 @@
           </div>
           <div>
             <strong>Status:</strong>
-            @switch (selected.Order.Status)
-            {
-              case OrderStatusDto.Paid:
-                <span class="badge badge--success">Paid</span>
-                break;
-              case OrderStatusDto.Reconciling:
-                <span class="badge badge--warning">Reconciling</span>
-                break;
-              case OrderStatusDto.Pending:
-                <span class="badge">Pending</span>
-                break;
-              case OrderStatusDto.Failed:
-                <span class="badge badge--danger">Failed</span>
-                break;
-              case OrderStatusDto.Expired:
-                <span class="badge">Expired</span>
-                break;
-              default:
-                <span class="badge">@selected.Order.Status.ToWireCode()</span>
-                break;
-            }
+            @* #220: one registry owns the word; the switch here used to print a wire code by default. *@
+            <span class="@Model.StatusClasses[selected.Order.OrderId]">@Model.StatusLabels[selected.Order.OrderId]</span>
             <br>
             <strong>Created:</strong> @Model.Dates[selected.Order.CreatedAt].Full<br>
             @if (selected.Order.PaidAt.HasValue)
@@ -83,11 +64,13 @@
               {
                 <tr>
                   <td>@Model.Dates[ev.CreatedAt].Full</td>
-                  <td><code>@ev.Source</code></td>
+                  @* #220: a source is machine data only in data-/class=; in a text node a reader sees the
+                     word. The code stays in data-source so the row is still identifiable. *@
+                  <td data-source="@ev.Source.ToWireCode()">@Model.EventSourceLabels[ev.EventId]</td>
                   <td>
-                    @if (ev.ReportedStatus is not null)
+                    @if (Model.EventReportedStatusLabels[ev.EventId] is { } reported)
                     {
-                      <span class="badge">@ev.ReportedStatus</span>
+                      <span class="badge">@reported</span>
                     }
                     else
                     {

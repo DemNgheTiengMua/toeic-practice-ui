@@ -496,10 +496,15 @@ body[data-state="adjust"]  :is(.toolbar, .stepper).multi-state[data-show~="adjus
 /* An unrecognised ?state= falls back to the first state, and the fallback has to
    be legible as a fallback. Gold marks what you asked for and did not get; ink
    marks what is actually on screen. Without this the page just looks like the
-   state you typed. */
+   state you typed.
+   #220 decision: this rule used to add `box-shadow: inset 0 0 0 var(--keyline)
+   var(--sign-red)` on top of the red `border-color` below. An inset ring is not a
+   drop shadow, but it was a second painted ring identical to the border it sat
+   inside, so it bought nothing and made "no shadow" a rule with an exception. The
+   border paints the refusal; the inset is gone, and the stylesheet-wide test now
+   holds every box-shadow to `none`. */
 .state-switcher--unknown {
   border-color: var(--sign-red);
-  box-shadow: inset 0 0 0 var(--keyline) var(--sign-red);
 }
 .state-switcher__warn {
   flex: 1 0 100%;

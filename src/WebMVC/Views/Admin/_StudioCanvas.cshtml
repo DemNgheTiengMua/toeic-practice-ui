@@ -67,11 +67,12 @@
             }
             @if (!string.IsNullOrWhiteSpace(sec.NavigationMode))
             {
-              <div><strong>Navigation:</strong> <span class="blueprint-pill">@sec.NavigationMode</span></div>
+              @* #220: the CK-constrained navigation code reads as words; the code stays in data-. *@
+              <div data-navigation-mode="@sec.NavigationMode"><strong>Navigation:</strong> <span class="blueprint-pill">@Model.SectionStates[sec.SectionId].NavigationModeLabel</span></div>
             }
             @if (!string.IsNullOrWhiteSpace(sec.LayoutType))
             {
-              <div><strong>Layout:</strong> <span class="blueprint-pill">@sec.LayoutType</span></div>
+              <div data-layout-type="@sec.LayoutType"><strong>Layout:</strong> <span class="blueprint-pill">@Model.SectionStates[sec.SectionId].LayoutTypeLabel</span></div>
             }
           </div>
 

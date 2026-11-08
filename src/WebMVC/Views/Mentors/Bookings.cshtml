@@ -75,7 +75,8 @@
                   }
                   else
                   {
-                    <span class="badge badge--warning">@b.Status</span>
+                    @* #220: the fallback status still reads as a word, not as `b.Status`. *@
+                    <span class="badge badge--warning">@Model.StatusLabels[b.BookingId]</span>
                   }
                   <span class="badge badge--muted">@(b.MentorType == "ai" ? "AI Coach" : "Human")</span>
                 </div>

@@ -49,13 +49,8 @@ public sealed record MentorStandingRowViewModel(MentorSkillStandingDto Skill)
 
     public string SkillName => Skill.SkillName ?? Modality;
 
-    public string State => Skill.Status switch
-    {
-        MentorSkillStandingStatus.Measured => "Measured",
-        MentorSkillStandingStatus.NotMeasured => "Not measured yet",
-        MentorSkillStandingStatus.NotExamined => "Not examined by this certificate",
-        _ => "Not reported",
-    };
+    /// <summary>#220: the word comes from the registry, so a fourth standing cannot ship unlabelled.</summary>
+    public string State => DisplayLabels.LabelFor(Skill.Status, NullLog);
 
     /// <summary>The level and its position, as a position and never a percentage. Both are measured
     /// facts, so a row the certificate does not examine prints neither, even if a position arrived.</summary>

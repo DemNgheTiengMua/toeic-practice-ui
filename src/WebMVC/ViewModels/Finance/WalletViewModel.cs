@@ -22,6 +22,17 @@ public sealed record WalletViewModel(
     public WalletViewModel WithDates(DateTimeFormatter formatter) => this with { Dates = FormattedDateViewModel.Prepare(
         Wallet.Orders.Select(o => o.CreatedAt).Concat(Wallet.Ledger.Select(e => e.CreatedAt)), formatter) };
     public IReadOnlyDictionary<int, string> LedgerDeltaLabels { get; } = Wallet.Ledger.ToDictionary(e => e.TxnId, e => e.Delta > 0 ? $"+{e.Delta}" : e.Delta.ToString());
+
+    /// <summary>
+    /// #220: why a ledger row exists, in words. The column used to print <c>@item.Reason</c>, so a
+    /// learner reading their own wallet saw <c>mock_exam_start</c>.
+    /// </summary>
+    public IReadOnlyDictionary<int, string> LedgerReasonLabels { get; } = Wallet.Ledger.ToDictionary(
+        e => e.TxnId,
+        e => DisplayLabels.LabelFor(e.Reason, NullLog));
+
+    private static readonly Microsoft.Extensions.Logging.ILogger NullLog =
+        Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
     public IReadOnlyDictionary<int, string> LedgerDeltaClasses { get; } = Wallet.Ledger.ToDictionary(e => e.TxnId, e => e.Delta > 0 ? "text-success" : "text-danger");
 
 }

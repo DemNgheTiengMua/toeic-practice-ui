@@ -28,6 +28,12 @@ public static class ModalityLabels
     /// <summary>The codes this registry labels, for the drift test against the enum.</summary>
     public static IReadOnlyCollection<string> KnownCodes => ByCode.Keys;
 
+    /// <summary>
+    /// #220: the same words, for <see cref="DisplayLabels"/> to delegate to. Exposed rather than copied:
+    /// two maps of skill names would eventually disagree, and this type stays the only writer of them.
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> Mapping => ByCode;
+
     public static string LabelForCode(string? code, ILogger logger)
     {
         if (code is not null && ByCode.TryGetValue(code, out var label))

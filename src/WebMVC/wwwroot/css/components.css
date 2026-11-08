@@ -2107,6 +2107,11 @@ details > summary:focus-visible { outline: 3px solid var(--sign-blue); outline-o
   line-height: var(--leading-read); letter-spacing: var(--tracking-passage);
   color: var(--ink);
   background-color: var(--color-surface);
+  /* #220 decision: this is a `linear-gradient`, but it is a ruled line, not a wash - both
+     stops sit at the same position, so it paints 1px of rule and no fade. The sign system
+     bans a gradient you can see; a hard stop that draws the answer sheet's rule is the same
+     ink as a border, drawn on the leading. DesignTokenTests asserts every gradient in the
+     stylesheet is a hard stop, so a real wash cannot arrive behind this one. */
   background-image: linear-gradient(to bottom, transparent calc(1lh - 1px), var(--line-soft) calc(1lh - 1px));
   background-size: 100% 1lh;
   background-position: 0 var(--space-3);
