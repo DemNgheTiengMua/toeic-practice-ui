@@ -87,4 +87,27 @@ public sealed partial class CompanionApiClient
 
     public Task<PracticeSummaryDto> GetPracticeSummaryAsync(int sessionId, CancellationToken cancellationToken = default) =>
         GetPracticeSummaryAsync(sessionId, string.Empty, cancellationToken);
+
+    /// <summary>#235: free drilling's lock state and the plan's three prioritised coordinates.</summary>
+    public Task<FreeDrillStateDto> GetFreeDrillStateAsync(
+        int? topicId, string? cefrLevelCode, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var query = new List<string>();
+        if (topicId is { } topic)
+        {
+            query.Add($"topicId={topic}");
+        }
+
+        if (!string.IsNullOrEmpty(cefrLevelCode))
+        {
+            query.Add($"cefrLevelCode={Uri.EscapeDataString(cefrLevelCode)}");
+        }
+
+        var path = "api/learner/practice/free-drill" + (query.Count > 0 ? "?" + string.Join("&", query) : "");
+        return GetAuthorizedAsync<FreeDrillStateDto>(path, bearerToken, cancellationToken);
+    }
+
+    public Task<FreeDrillStateDto> GetFreeDrillStateAsync(
+        int? topicId = null, string? cefrLevelCode = null, CancellationToken cancellationToken = default) =>
+        GetFreeDrillStateAsync(topicId, cefrLevelCode, string.Empty, cancellationToken);
 }

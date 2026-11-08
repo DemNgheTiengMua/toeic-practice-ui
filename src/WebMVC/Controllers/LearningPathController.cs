@@ -126,6 +126,16 @@ public sealed class LearningPathController(
         try
         {
             var result = await api.StartLearningPathStepAsync(stepId, cancellationToken);
+
+            // #235 / PLC-60: a step whose cell was cooling is served from a sibling topic, and the
+            // learner is told which — a silent substitution reads as "the plan ignored my topic".
+            if (result.SubstitutedFromTopicId is not null)
+            {
+                TempData["SuccessMessage"] =
+                    "Your step's own topic is resting today, so these items come from a related topic in the same band. "
+                    + "Your path has not changed.";
+            }
+
             return Redirect(result.RedirectUrl);
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.LearningPathStepLocked)

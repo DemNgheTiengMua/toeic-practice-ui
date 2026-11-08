@@ -70,6 +70,12 @@ public partial class CompanionDbContext
         {
             entity.ToView("vw_CoverageMatrix");
         });
+
+        // #235: the daily ceiling's own arithmetic, so no service recomputes it (D12 / NFI-05).
+        modelBuilder.Entity<vw_DailyPracticeVolume>(entity =>
+        {
+            entity.ToView("vw_DailyPracticeVolume");
+        });
     }
 
 }

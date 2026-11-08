@@ -3943,6 +3943,45 @@ CREATE VIEW vw_CoverageMatrix AS
     GROUP BY TopicId, CefrLevel
   ) x ON x.TopicId = t.TopicId AND x.CefrLevel = q.CefrLevel;
 GO
+-- ============ #235: daily practice volume, derived and never counted ============
+-- D12 / PLC-64 / NFI-05: the daily ceiling is one session per (topic, level) cell per day and 50-60
+-- objective items or 4 productive tasks overall. Both halves are DERIVED here from the answer rows, so
+-- there is no counter column to drift and no service that can disagree with the database about how much
+-- a learner has done today.
+--
+-- What counts as "done today" is an ANSWER, not a session row: a session is written with all of its
+-- answers blank at the moment it starts, so counting rows would charge a learner for a drill they never
+-- opened. The four columns of `AnswerContent.IsAnswered` are the SPOT: the same four the practice screen
+-- asks, so "answered" cannot mean one thing here and another there.
+--
+-- The day is the UTC day of `PracticeAnswers.AnsweredAt`. That column is a legacy DATETIME2 written with
+-- DateTime.UtcNow, so it holds UTC; a row with no AnsweredAt (written before #156) cannot be dated and
+-- contributes to no day rather than to an invented one.
+--
+-- `DistinctCells` counts the pool cells actually answered in, which is what makes "one session per cell
+-- per day" checkable from the same read. A section drill names no cell, so it contributes 0 to that
+-- count and still contributes to the volume. The CASE returns NULL for a section drill on purpose:
+-- COUNT(DISTINCT ...) skips NULL, whereas CONCAT over two NULLs would yield ':' and count as one cell.
+CREATE VIEW vw_DailyPracticeVolume AS
+  SELECT ps.UserId,
+         CAST(pa.AnsweredAt AS DATE) AS PractisedOn,
+         COUNT(*) AS AnsweredCount,
+         SUM(CASE WHEN i.Modality IN ('speaking','writing')
+                    OR s.Modality IN ('speaking','writing') THEN 1 ELSE 0 END) AS ProductiveTaskCount,
+         COUNT(DISTINCT CASE WHEN ps.TopicId IS NULL OR ps.CefrLevel IS NULL THEN NULL
+                             ELSE CONCAT(CONVERT(VARCHAR(11), ps.TopicId), ':', ps.CefrLevel)
+                        END) AS DistinctCells
+  FROM PracticeAnswers pa
+  JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
+  LEFT JOIN Sections s     ON s.SectionId = COALESCE(pa.SectionId, ps.SectionId)
+  LEFT JOIN Items i        ON i.ItemId = pa.ItemId
+  WHERE pa.AnsweredAt IS NOT NULL
+    AND (pa.SelectedOptionId IS NOT NULL
+      OR pa.SelectedLabel IS NOT NULL
+      OR pa.ResponseText IS NOT NULL
+      OR pa.SelectedOptionIdsJson IS NOT NULL)
+  GROUP BY ps.UserId, CAST(pa.AnsweredAt AS DATE);
+GO
 -- ============ #199: telemetry quarantine ============
 -- D0.7 / CNT-44: one row per (item, administration checkpoint) where an active item's stored answers
 -- were evaluated. Nothing here is a counter the platform maintains: AdministrationCount and every

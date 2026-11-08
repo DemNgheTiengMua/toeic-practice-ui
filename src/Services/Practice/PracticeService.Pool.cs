@@ -14,66 +14,25 @@ namespace Services;
 public sealed partial class PracticeService
 {
     /// <summary>
-    /// #190: the one state selection reads. The other five are excluded by name rather than by "not
-    /// this", so a state added to <c>CK_Items_Lifecycle</c> cannot start being served by default.
-    /// </summary>
-    private const string ActiveLifecycle = "active";
-
-    /// <summary>
-    /// #187: the latest version of every active item in one cell, so a drill serves what the pool
-    /// currently says. Ordered least-recently-answered first, then by item, so a repeated draw is a
-    /// reproducible choice rather than whatever the storage engine returns.
+    /// #235 / D11: a free drill and a path step draw through <b>the same selector</b>
+    /// (<see cref="ItemSelector"/>), so the plan and the practice can no longer contradict each other.
+    /// The cell, the tier, the cooldowns and the ordering all live there; this method only turns the
+    /// draw into the (item, version) pairs a session stores.
     /// <para>
-    /// #190: selection filters on lifecycle <b>and</b> tier (CNT-42). The tier is not decoration: the
-    /// two tiers share every cell by construction, so a selector that omitted it would serve demo
-    /// stock into a production drill. Quarantined, retired and validated items are excluded by the
-    /// lifecycle column — the six states are the database's, and this is the one query that reads them.
-    /// </para>
-    /// <para>
-    /// #235 replaces this with the one selector shared by path and free drilling; until then the
-    /// ordering here is deliberately the minimum that never serves the same item twice in a row.
+    /// A drill is <b>unrestricted but honest about its size</b>: a cell holding fewer servable items than
+    /// a session returns what exists and the session's own question count is that number, never padded
+    /// with repeats.
     /// </para>
     /// </summary>
-    private async Task<IReadOnlyList<(int ItemId, int ItemVersionId)>> PlanPoolItemsAsync(
-        int userId, string modality, int topicId, CefrLevel level, string contentTier, CancellationToken cancellationToken)
+    private async Task<PoolSelection> PlanPoolItemsAsync(
+        int userId, int certId, string modality, int topicId, CefrLevel level, string contentTier,
+        CancellationToken cancellationToken)
     {
-        var now = _clock.GetUtcNow();
-        var items = await db.Items
-            .AsNoTracking()
-            .Where(i => i.TopicId == topicId
-                && i.Modality == modality
-                && i.CefrLevel == level
-                && i.LifecycleStatus == ActiveLifecycle
-                && i.ContentTier == contentTier)
-            .Select(i => new
-            {
-                i.ItemId,
-                LastAnsweredAt = db.PracticeAnswers
-                    .Where(pa => pa.ItemId == i.ItemId && pa.Session.UserId == userId)
-                    .Max(pa => (DateTime?)pa.AnsweredAt),
-            })
-            .ToListAsync(cancellationToken);
+        var selector = new ItemSelector(db, _clock);
 
-        var itemIds = items.Select(i => i.ItemId).ToList();
-        // #254: "newest" is the authored order (VersionNumber), and GateContext states it once. Asking
-        // the highest ItemVersionId here made the drill serve a different row than gate one judged
-        // whenever a version was inserted out of order.
-        var versions = await db.ItemVersions
-            .AsNoTracking()
-            .Where(v => itemIds.Contains(v.ItemId))
-            .Select(v => new { v.ItemId, v.VersionNumber, v.ItemVersionId })
-            .ToListAsync(cancellationToken);
-
-        var latestVersions = GateContext.NewestPerItem(versions, v => v.ItemId, v => v.VersionNumber)
-            .ToDictionary(v => v.ItemId, v => v.ItemVersionId);
-
-        return items
-            .Where(i => latestVersions.ContainsKey(i.ItemId))
-            .OrderBy(i => i.LastAnsweredAt ?? DateTime.MinValue)
-            .ThenBy(i => i.ItemId)
-            .Take(SmartPracticePlanner.SessionSize)
-            .Select(i => (i.ItemId, latestVersions[i.ItemId]))
-            .ToList();
+        return await selector.SelectAsync(
+            userId, certId, skillIds: [], modality, topicId, level, contentTier,
+            SmartPracticePlanner.SessionSize, cancellationToken);
     }
 
     /// <summary>

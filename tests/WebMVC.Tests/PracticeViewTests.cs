@@ -148,4 +148,44 @@ public sealed class PracticeViewTests
         Assert.Contains("id=\"explanation-container\"", html);
         Assert.Contains("accordion-explanation", html);
     }
+
+    /// <summary>
+    /// #235 / PLC-62 / PLC-64: the locked state is printed as the service wrote it. The input that would
+    /// pass a weaker test while being wrong is a page that renders a lock badge and no reason — the
+    /// brief names that as the most hostile state in the product — so the assertion is that the notice
+    /// property is what reaches the page, and that the page offers the way on.
+    /// </summary>
+    [Fact]
+    public void The_free_drill_lock_prints_its_sentence_and_offers_a_way_on()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var index = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "Views", "Practice", "Index.cshtml"));
+
+        Assert.Contains("FreeDrillLockNotice", index);
+        Assert.Contains("/learning-path", index);
+        Assert.Contains("/lessons", index);
+
+        // #235 / PLC-61: the highlighted coordinates are rendered, and they are labelled as a hint.
+        Assert.Contains("PriorityLabels", index);
+        Assert.Contains("not required", index);
+
+        // #235 / D12: the day's volume comes from the view and is printed as two numbers.
+        Assert.Contains("AnsweredToday", index);
+        Assert.Contains("DailyItemCeiling", index);
+    }
+
+    /// <summary>
+    /// #235 / PLC-60: when a step's own cell was cooling, the controller tells the learner the draw came
+    /// from a related topic. The input that would pass while being wrong is forwarding the redirect with
+    /// no message, which reads as "the plan ignored my topic".
+    /// </summary>
+    [Fact]
+    public void A_substituted_step_start_is_announced()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var controller = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "Controllers", "LearningPathController.cs"));
+
+        Assert.Contains("SubstitutedFromTopicId", controller);
+        Assert.Contains("TempData[\"SuccessMessage\"]", controller);
+    }
 }

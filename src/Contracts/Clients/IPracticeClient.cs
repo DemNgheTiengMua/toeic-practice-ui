@@ -22,6 +22,13 @@ public interface IPracticeClient
     Task<PracticeSummaryDto> GetPracticeSummaryAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) => GetPracticeSummaryAsync(sessionId, cancellationToken);
     Task<AiInsightDto> GetPracticeInsightAsync(int sessionId, CancellationToken cancellationToken = default);
     Task<AiInsightDto> GetPracticeInsightAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) => GetPracticeInsightAsync(sessionId, cancellationToken);
+
+    /// <summary>#235: the free drill's lock state and the plan's three prioritised coordinates.</summary>
+    Task<FreeDrillStateDto> GetFreeDrillStateAsync(int? topicId = null, string? cefrLevelCode = null, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new FreeDrillStateDto(true, [], 0, [], false, false, 0, 0, null));
+
+    Task<FreeDrillStateDto> GetFreeDrillStateAsync(int? topicId, string? cefrLevelCode, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetFreeDrillStateAsync(topicId, cefrLevelCode, cancellationToken);
     Task RetryPracticeInsightAsync(int sessionId, CancellationToken cancellationToken = default);
     Task RetryPracticeInsightAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) => RetryPracticeInsightAsync(sessionId, cancellationToken);
 }

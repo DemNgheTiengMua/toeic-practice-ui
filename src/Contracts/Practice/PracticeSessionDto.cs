@@ -17,4 +17,11 @@ public sealed record PracticeSessionDto(
     DateTimeOffset StartedAt,
     DateTimeOffset? FinishedAt,
     int? TopicId = null,
-    string? CefrLevelCode = null);
+    string? CefrLevelCode = null)
+{
+    /// <summary>
+    /// #235: a pool drill holding fewer items than a session asks for is short. Derived on both sides of
+    /// the wire from the same two facts, so the page cannot claim a size the draw did not deliver.
+    /// </summary>
+    public bool IsShort => SectionId is null && TopicId is not null && QuestionCount < 10;
+}

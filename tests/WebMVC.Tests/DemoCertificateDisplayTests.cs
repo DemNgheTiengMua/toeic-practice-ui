@@ -258,6 +258,11 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
                 OtherSections: [Section(2, "EXPR", "Expression", ModalityDto.Writing, "E1", "First task")],
                 WeakestSection: null)),
 
+            // #235: the free-drill state is an addition to the page, and this fixture answers it as the
+            // service would for a learner with no path: unrestricted, with nothing highlighted.
+            nameof(IPracticeClient.GetFreeDrillStateAsync) =>
+                Task.FromResult(new FreeDrillStateDto(true, [], 0, [], false, false, 0, 60, null)),
+
             nameof(IPlacementClient.GetPlacementResultAsync) => Task.FromResult(PlacementResult()),
             nameof(IPlacementClient.GetTargetBandViewAsync) => Task.FromResult(TargetBand()),
             nameof(IMockExamsClient.GetExamHistoryAsync) => Task.FromResult(ExamHistory()),

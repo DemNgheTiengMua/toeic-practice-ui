@@ -670,8 +670,14 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// #232: a drill whose cell is empty has nothing to serve, so the step refuses with the same code the
+    /// #232: a drill whose band is empty has nothing to serve, so the step refuses with the same code the
     /// practice service uses. A step that opened an empty session would look like a broken screen.
+    /// <para>
+    /// #235 narrows what "empty" means: a cooling or empty <b>cell</b> is no longer a refusal, because
+    /// PLC-60 substitutes a sibling topic of the same band. The refusal is therefore reserved for a band
+    /// with no active item at all, so the fixture retires the whole band rather than only the step's
+    /// topic — retiring one topic would (correctly) be served from its siblings now.
+    /// </para>
     /// </summary>
     [Fact]
     public async Task StartStepAsync_WhenNoItemsAvailable_ThrowsNoQuestionsAvailableException()
@@ -687,12 +693,13 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             .FirstAsync();
         await OpenStepAsync(db, drill.StepId);
 
-        // Empty the step's own cell by retiring its items. Deleting them would fight foreign keys from
+        // Empty the whole band by retiring its items. Deleting them would fight foreign keys from
         // attempts and saved questions that already reference the pool rows; retirement is the pool's
         // own disposal path and selection filters it out.
         await database.SqlAsync($"""
             UPDATE Items SET LifecycleStatus = 'retired'
-            WHERE TopicId = {drill.TopicId} AND CefrLevel = 'B2' AND LifecycleStatus = 'active';
+            WHERE Modality = '{drill.Modality}' AND CefrLevel = '{drill.TargetCefr}'
+              AND LifecycleStatus = 'active';
             """);
 
         var ex = await Assert.ThrowsAsync<LearningPathException>(() => service.StartStepAsync(userId, drill.StepId));

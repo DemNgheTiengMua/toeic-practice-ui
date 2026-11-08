@@ -53,6 +53,11 @@ public sealed record LearningPathWeekSummary(
 /// <summary>
 /// #232: where a step opens. The step type decides the route, which is what makes D10's three bindings
 /// three bindings rather than one shared label.
+/// <para>
+/// #235 / PLC-60: <paramref name="SubstitutedFromTopicId"/> is set when the step's own cell was cooling
+/// and sibling topics supplied the draw. It is the step's own topic id, so the screen can say "these
+/// items come from a related topic while yours rests" rather than silently serving a different topic.
+/// </para>
 /// </summary>
 public sealed record StartStepResult(
     int StepId,
@@ -60,4 +65,7 @@ public sealed record StartStepResult(
     StepRoute Route,
     string RedirectUrl,
     int? SessionId,
-    int? AttemptId);
+    int? AttemptId)
+{
+    public int? SubstitutedFromTopicId { get; init; }
+}

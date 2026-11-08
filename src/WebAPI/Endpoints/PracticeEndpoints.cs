@@ -19,5 +19,6 @@ public static partial class PracticeEndpoints
         MapQuestions(practice);
         MapAnswers(practice);
         MapResults(practice);
+        MapFreeDrill(practice);
     }
 }

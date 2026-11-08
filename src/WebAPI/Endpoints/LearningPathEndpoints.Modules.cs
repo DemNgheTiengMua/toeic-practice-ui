@@ -44,7 +44,8 @@ public static partial class LearningPathEndpoints
                     result.Route.MapTo<StepRouteDto>(),
                     result.RedirectUrl,
                     result.SessionId,
-                    result.AttemptId));
+                    result.AttemptId,
+                    result.SubstitutedFromTopicId));
             }
             catch (LearningPathException ex) when (ex.Code == LearningPathException.StepNotFound)
             {

@@ -55,17 +55,18 @@ public sealed partial class LearningPathService
     }
 
     /// <summary>
-    /// A drill runs through the item selector (D11). It draws from <c>(cert, skill, topic, level)</c>,
-    /// excluding placement-eligible items, ordered least-seen first.
+    /// A drill runs through the one selector (D11) — the same draw a free drill makes, so the plan and
+    /// the practice cannot contradict each other (PLC-57). It draws from
+    /// <c>(cert, skill, topic, level)</c>, excluding placement-eligible items, ordered least-seen first.
     /// <para>
     /// <b>Resume is at the exact unsubmitted item.</b> A step already holding a session hands back the
     /// same session; the practice screen's own "first unanswered" rule then lands on the exact item the
     /// learner left.
     /// </para>
     /// <para>
-    /// shortcut: this is the path's own draw, not yet the one selector #235 collapses into
-    /// SmartPracticePlanner. Upgrade when #235 lands — this file then calls that one selector and the
-    /// two origins cannot disagree.
+    /// <b>A step is never blocked by a cooldown</b> (PLC-60). The selector routes around cooling items
+    /// within the topic and substitutes a sibling topic, and the session's own scope rows record what it
+    /// actually drew so the screen can say so.
     /// </para>
     /// </summary>
     private async Task<StartStepResult> StartDrillStepAsync(
@@ -88,14 +89,20 @@ public sealed partial class LearningPathService
             ? parsed
             : throw new InvalidOperationException($"Step {step.StepId} carries an unauthorable level '{step.TargetCefr}'.");
 
-        var selected = await DrawDrillItemsAsync(step, level, cancellationToken);
+        var draw = await DrawDrillItemsAsync(step, level, cancellationToken);
+        var selected = draw.Items;
 
         if (selected.Count == 0)
         {
             throw new LearningPathException(
                 LearningPathException.NoQuestionsAvailable,
-                $"No items are available for this step's topic at {step.TargetCefr}. Its cell is empty or every item is cooling down.");
+                $"No items are available for this step's band at {step.TargetCefr}. Its cell and every sibling topic in the band are empty.");
         }
+
+        // A substituted draw is written on the step itself: the session's TopicId stays the step's own
+        // coordinate, and this column is what says a sibling topic supplied part of it (PLC-60's "say
+        // so"). It is a placement on the step's own fact, not a second copy of the plan.
+        var substituted = draw.Outcome == StepDrawOutcome.SubstitutedSiblingTopic;
 
         var session = new PracticeSession
         {
@@ -142,78 +149,28 @@ public sealed partial class LearningPathService
         step.PlannedItemCount = selected.Count;
         await db.SaveChangesAsync(cancellationToken);
 
-        return new StartStepResult(step.StepId, stepType, StepRoute.ItemSelector, $"/practice/{session.SessionId}", session.SessionId, null);
+        return new StartStepResult(
+            step.StepId, stepType, StepRoute.ItemSelector, $"/practice/{session.SessionId}", session.SessionId, null)
+        {
+            SubstitutedFromTopicId = substituted ? step.TopicId : null,
+        };
     }
 
     /// <summary>
-    /// D11's selection order, applied to the step's own cell: least seen, then least recently seen,
-    /// then item id — so a repeated draw is a reproducible choice rather than whatever the storage
-    /// engine returns. Items still cooling down are excluded, and the step is never blocked: what is
-    /// left is what the step gets.
+    /// D11 / PLC-60, through the one selector: what this step's own cell serves, and — when the cell is
+    /// cooling — the sibling-topic fill that keeps the step executable. The selector owns the rule; this
+    /// only hands it the step's coordinate.
     /// </summary>
-    private async Task<List<(int ItemId, int ItemVersionId)>> DrawDrillItemsAsync(
+    private async Task<StepDraw> DrawDrillItemsAsync(
         LearnerPathStep step, CefrLevel level, CancellationToken cancellationToken)
     {
-        var now = DateTimeOffset.UtcNow;
         var wanted = step.PlannedItemCount
             ?? LearningPathPlanner.ItemCountFor(EnumCodes.Parse<SizingTier>(step.SizingTier), availableInCell: null);
 
-        var items = await db.Items
-            .AsNoTracking()
-            .Where(i => i.Modality == step.Modality
-                && i.TopicId == step.TopicId
-                && i.CefrLevel == level
-                && i.LifecycleStatus == ActiveItemLifecycle
-                && i.PlacementEligible == DrillPlacementEligible)
-            .Select(i => new
-            {
-                i.ItemId,
-                TimesSeen = db.PracticeAnswers.Count(pa => pa.ItemId == i.ItemId && pa.Session.UserId == step.LearnerPath.UserId),
-                LastSeenAt = db.PracticeAnswers
-                    .Where(pa => pa.ItemId == i.ItemId && pa.Session.UserId == step.LearnerPath.UserId)
-                    .Max(pa => (DateTimeOffset?)pa.AnsweredAt),
-                // A pool item cools from its own answers, not from `UserQuestionHistories`: that table
-                // is keyed by the legacy `QuestionId`, so comparing one to an `ItemId` matched the
-                // wrong rows (item 12 inherited question 12's cooldown) and no pool answer ever wrote
-                // one, making the rule a no-op for every drill. Same 24-hour wrong-answer rule as
-                // `PracticeService.RecordQuestionHistoryAsync`, read from the pool's own ledger.
-                LastWrongAt = db.PracticeAnswers
-                    .Where(pa => pa.ItemId == i.ItemId
-                        && pa.Session.UserId == step.LearnerPath.UserId
-                        && pa.IsCorrect == false)
-                    .Max(pa => (DateTimeOffset?)pa.AnsweredAt),
-            })
-            .ToListAsync(cancellationToken);
-
-        var eligible = items
-            .Where(i => i.LastWrongAt is null || i.LastWrongAt + MasterySchedule.WrongAnswerCooldown <= now)
-            .Where(i => i.LastSeenAt is null || i.LastSeenAt <= now)
-            .ToList();
-
-        if (eligible.Count == 0)
-        {
-            return [];
-        }
-
-        var itemIds = eligible.Select(i => i.ItemId).ToList();
-        // #254: the same ordering the drill and gate one read - GateContext's, not a second one.
-        var versions = await db.ItemVersions
-            .AsNoTracking()
-            .Where(v => itemIds.Contains(v.ItemId))
-            .Select(v => new { v.ItemId, v.VersionNumber, v.ItemVersionId })
-            .ToListAsync(cancellationToken);
-
-        var latestVersions = GateContext.NewestPerItem(versions, v => v.ItemId, v => v.VersionNumber)
-            .ToDictionary(v => v.ItemId, v => v.ItemVersionId);
-
-        return eligible
-            .Where(i => latestVersions.ContainsKey(i.ItemId))
-            .OrderBy(i => i.TimesSeen)
-            .ThenBy(i => i.LastSeenAt ?? DateTimeOffset.MinValue)
-            .ThenBy(i => i.ItemId)
-            .Take(wanted)
-            .Select(i => (i.ItemId, latestVersions[i.ItemId]))
-            .ToList();
+        var selector = new ItemSelector(db);
+        return await selector.DrawForStepAsync(
+            step.LearnerPath.UserId, step.CertId, [step.SkillId], step.Modality, step.TopicId, level, wanted,
+            cancellationToken);
     }
 
     /// <summary>A lesson step opens the reader at its own lesson and module. The reader keeps its own

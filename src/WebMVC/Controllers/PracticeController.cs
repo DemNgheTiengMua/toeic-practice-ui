@@ -19,8 +19,22 @@ public sealed class PracticeController(
         try
         {
             var catalog = await api.GetPracticeCatalogAsync(cancellationToken);
+
+            // #235: the lock is an addition to the page, never a precondition — a failure to read it
+            // must not hide the drills the learner can start.
+            FreeDrillStateDto? freeDrill = null;
+            try
+            {
+                freeDrill = await api.GetFreeDrillStateAsync(null, null, cancellationToken);
+            }
+            catch (ApiException ex)
+            {
+                logger.LogWarning(ex, "Could not read the free-drill state");
+            }
+
             return View(new PracticeCatalogViewModel(catalog, TempData["ErrorMessage"] as string)
             {
+                FreeDrill = freeDrill,
                 UnfinishedStartedAtDisplay = catalog.UnfinishedSession is { } unfinished ? dates.FormatDate(unfinished.StartedAt) : "",
                 // Every card that shows a cooldown needs its instant in the learner's own zone. The
                 // view used to print it as UTC, which is 7 hours wrong for a Vietnamese learner.

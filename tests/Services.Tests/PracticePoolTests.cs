@@ -39,6 +39,9 @@ public sealed class PracticePoolTests(DatabaseFixture database)
     private PracticeService CreateService() =>
         new(DbContextFactory.Create(database.ConnectionString), new LearnerService(DbContextFactory.Create(database.ConnectionString)));
 
+    private PracticeService CreateService(TimeProvider clock) =>
+        new(DbContextFactory.Create(database.ConnectionString), new LearnerService(DbContextFactory.Create(database.ConnectionString)), null, clock);
+
     /// <summary>
     /// One certificate (so a learner has an active one), one reading topic, and two active B1 pool
     /// items with a version each. Nothing here names an exam: that is the whole point of AC1.
@@ -299,6 +302,12 @@ public sealed class PracticePoolTests(DatabaseFixture database)
     /// AC3: existing practice behaviour still holds on the pool path. A missed item is served last in
     /// the next draw rather than repeated in this one, and a cell with fewer items than a session is
     /// short rather than padded.
+    /// <para>
+    /// #235 changes one thing: PLC-64 allows one session per cell per day, so the second draw happens
+    /// tomorrow rather than straight away. The clock is moved instead of the rule being weakened — the
+    /// cooldown this test is about is the 24-hour wrong-answer one, which has also expired by then, so
+    /// the missed item really is eligible and the ordering is what decides its place.
+    /// </para>
     /// </summary>
     [Fact]
     public async Task A_pool_session_is_short_rather_than_padded_and_serves_a_missed_item_last()
@@ -306,16 +315,22 @@ public sealed class PracticePoolTests(DatabaseFixture database)
         var certCode = Unique("POOL");
         var cell = await SeedCellAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
-        var practice = CreateService();
+        var clock = new ManualTimeProvider(DateTimeOffset.UtcNow);
+        var practice = CreateService(clock);
 
         var first = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(cell.TopicId, cell.Level));
         Assert.Equal(2, first.QuestionCount); // the whole cell, honestly short
+        // #235 / D11: and it says so, derived rather than stored — a caller that assumed ten would
+        // otherwise claim a size the draw never delivered.
+        Assert.True(first.IsShort);
 
         await practice.SubmitAnswerAsync(
             userId, first.SessionId, cell.FirstVersionId, new SubmitPracticeAnswerInput(OptionId(cell.FirstVersionId, 'A')));
 
-        // A session started straight away draws what the cell holds. The missed item is still in the
-        // pool - a pool drill is not blocked by a cooldown - but it goes last, never first.
+        // A session started the next day draws what the cell holds. The missed item is still in the
+        // pool - a pool drill is not blocked by a cooldown - but it goes last, never first. The clock
+        // clears both the 24-hour wrong-answer cooldown (PLC-59) and the one-session-per-cell day.
+        clock.Advance(TimeSpan.FromHours(25));
         var second = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(cell.TopicId, cell.Level));
         var secondQuestions = await practice.GetSessionQuestionsAsync(userId, second.SessionId);
 
