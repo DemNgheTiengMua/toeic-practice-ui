@@ -239,6 +239,10 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<UserCategoryMastery> UserCategoryMasteries { get; set; }
 
 
+    /// <summary>#237: one row per learner per cell — the unit of mastery (D4).</summary>
+    public virtual DbSet<UserCellMastery> UserCellMasteries { get; set; }
+
+
     public virtual DbSet<UserQuestionHistory> UserQuestionHistories { get; set; }
 
 
@@ -289,6 +293,7 @@ public partial class CompanionDbContext : DbContext
         ConfigureCalibration(modelBuilder);
         ConfigurePractice(modelBuilder);
         ConfigureSkillState(modelBuilder);
+        ConfigureCellMastery(modelBuilder);
         ConfigurePlacementSkillResults(modelBuilder);
         ConfigureFreeResponse(modelBuilder);
         ConfigureGuidedLearning(modelBuilder);

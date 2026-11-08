@@ -41,7 +41,7 @@ break the product.
 
 ## Coverage, stated honestly
 
-Eight facts are registered. Five have a table today and are enforced:
+Nine facts are registered with a table and enforced:
 
 | Fact | Owner | Table |
 |---|---|---|
@@ -50,14 +50,26 @@ Eight facts are registered. Five have a table today and are enforced:
 | Attempt score and band | `AttemptEngine` | `ExamAttempts` |
 | Step closure | `PathStepCompletion` | `LearnerPathSteps` |
 | Learner per-skill state | `SkillStateWriter` | `LearnerSkillStates` |
+| Stratum decision | `StratifiedAuditService` | `ReviewStrata` |
+| Window synthesis | `PathWindowSynthesizer` | `LearnerPathWeeks` |
+| Exam edition snapshot | `ExamEditionFreeze` | `ExamEditions` |
+| Topic capability | `CapabilityWriter` | `UserCellMasteries` |
 
-Two are waiting on a table another ticket creates, and the registry says `awaiting_table` so the gap
-is data rather than a missing promise:
+Topic capability was the last fact waiting on another ticket. #237 created `UserCellMasteries`, so the
+registry's `awaiting_table` set is now empty and this table is asserted at **9 / 0 / 1**.
 
-| Fact | Owner | Waiting on |
-|---|---|---|
-| Topic capability | `CapabilityWriter` | #232, per-cell mastery |
-| Window synthesis | `PathWindowSynthesizer` | the window rows (not #212, which this table claims) |
+**Topic capability is a service-owned projection, and that is a deliberate exception.** Every other
+enforced fact here is written by a service from rows that already hold the derived value. Per-cell
+mastery is different: its value is a recency-weighted Beta-Binomial probability with a prior
+(`p_m = (α0 + k·Σw·c) / (α0 + β0 + n)`, SRS PLC-67), which SQL Server cannot express as a computed
+column because the weight is a power and the state is a function of *events*, not of the value. So
+`MasteryService` is the writer — but the arithmetic it calls is a pure function in
+`MasteryCellMachine`/`MasteryEstimate`, and **every read returns the stored row verbatim**. There is no
+recomputation at read time; a reader that re-derived the state would be a second writer in disguise.
+
+The `awaiting_table` set is empty as of #237. The registry still carries the column, and the CHECK that
+makes "covered but names no table" unstorable still holds, so a later fact cannot be registered as
+covered without a table to guard.
 
 One is exempt on purpose:
 

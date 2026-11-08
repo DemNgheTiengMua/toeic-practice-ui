@@ -357,20 +357,43 @@ public sealed partial class PracticeService
     /// #187: one graded answer, one mastery writer. A legacy answer moves its question's history and
     /// its category's mastery, exactly as before.
     /// <para>
-    /// A pool answer moves neither yet: <c>UserCategoryMasteries</c> is keyed by a legacy
-    /// <c>QuestionCategories</c> id that a topic is not, and writing a topic id into that column
-    /// would be a second meaning for one key. #237 re-keys mastery to the cell (topic, level); until
-    /// it lands a pool answer is recorded, graded and counted, and the scheduler does not see it.
+    /// #237: a pool answer moves its <b>cell's</b> mastery, which is the unit the specification defines
+    /// (PLC-66). The cell is the item's own (topic, level) — never the session's, because a substituted
+    /// sibling-topic draw serves an item from a different cell and crediting the session's cell would
+    /// mark a topic the learner did not practise.
     /// </para>
     /// <para>
-    /// shortcut: a pool drill does not move mastery until #237. Upgrade when UserCellMasteries exists.
+    /// A productive pool answer is stored ungraded (<c>IsCorrect</c> null) and moves neither: an
+    /// unjudged answer is not evidence.
     /// </para>
     /// </summary>
-    private Task RecordPracticeAnswerAsync(
-        int userId, Question? question, PracticeAnswer answer, ItemVersion? pinned, CancellationToken cancellationToken) =>
-        answer.IsCorrect is { } correct && pinned is null
-            ? RecordAnswerAsync(userId, question!, answer.Session.CertId, correct, cancellationToken)
-            : Task.CompletedTask;
+    private async Task RecordPracticeAnswerAsync(
+        int userId, Question? question, PracticeAnswer answer, ItemVersion? pinned, CancellationToken cancellationToken)
+    {
+        if (answer.IsCorrect is not { } correct)
+        {
+            return;
+        }
+
+        if (pinned is not null)
+        {
+            var cell = await db.Items
+                .AsNoTracking()
+                .Where(i => i.ItemId == answer.ItemId)
+                .Select(i => new { i.TopicId, i.CefrLevel })
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if (cell is not null)
+            {
+                await new MasteryService(db, _clock).RecordAnswerAsync(
+                    userId, cell.TopicId, cell.CefrLevel, correct, cancellationToken);
+            }
+
+            return;
+        }
+
+        await RecordAnswerAsync(userId, question!, answer.Session.CertId, correct, cancellationToken);
+    }
 
     /// <summary>#150: the explanation a learner sees for a free-response answer - evaluated from the
     /// stored response against the question's own floor and keywords, so re-reading question or summary

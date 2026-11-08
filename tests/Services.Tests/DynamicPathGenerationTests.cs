@@ -253,6 +253,62 @@ public sealed class DynamicPathGenerationTests(DatabaseFixture database)
             .ToListAsync();
 
     [Fact]
+    public async Task A_stored_mastered_cell_sizes_its_step_short_where_a_recomputed_percentage_sees_nothing()
+    {
+        // #237 / TRN-13 identity 5: "every mastery figure comes from the capability record, not from a
+        // recomputed percentage". Before #237 this method counted answers and applied the legacy
+        // 85%/10 thresholds - a SECOND mastery rule beside UserCellMasteries.
+        //
+        // THE INPUT THAT PASSES THE OLD IMPLEMENTATION WHILE BEING WRONG: a learner whose cell is stored
+        // mastered but whose practice sessions have been pruned (FIFO, 20 per certificate) so there are
+        // no answers left to count. The recompute sees zero answers and returns `untested`, sizing the
+        // step `developing`; the store says `mastered`, so the step must be `mastered`. That is exactly
+        // why the sufficient statistic is stored rather than re-read from the evidence.
+        var certCode = Unique("MSTR");
+        var (certId, _, topics, _, _) = await SeedCertAsync(certCode);
+        var userId = await SeedLearnerAsync(certId);
+
+        // The planner sizes a skill's block from `topics[0]`, its weakest drillable cell. With no answers
+        // that is the lowest TopicId, so master that one: the assertion is about the READER, not about
+        // which topic happens to sort first.
+        var topicId = topics.Values.Min();
+
+        await using (var seedDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            // The fact, earned through the one writer. NO PracticeAnswers rows are written: the cell's
+            // evidence is the row, and a reader that needs the answers is the defect.
+            var mastery = new MasteryService(DbContextFactory.Create(database.ConnectionString));
+            for (var i = 0; i < 12; i++)
+            {
+                await mastery.RecordAnswerAsync(userId, topicId, CefrLevel.B2, isCorrect: true);
+            }
+
+            var row = await seedDb.UserCellMasteries
+                .AsNoTracking()
+                .SingleAsync(m => m.UserId == userId && m.TopicId == topicId
+                    && m.CefrLevel == CefrLevel.B2);
+            Assert.Equal(MasteryState.Mastered.ToCode(), row.State);
+
+            // There is genuinely nothing for the old rule to count.
+            Assert.Empty(await seedDb.PracticeAnswers
+                .Where(pa => pa.Session.UserId == userId)
+                .ToListAsync());
+        }
+
+        var (paths, _, _, _, db) = CreateServices();
+        var summary = await paths.GeneratePathAsync(userId);
+
+        var stepAtTheCell = (await db.LearnerPathSteps
+                .AsNoTracking()
+                .Where(s => s.LearnerPathId == summary.LearnerPathId)
+                .ToListAsync())
+            .FirstOrDefault(s => s.TopicId == topicId);
+
+        Assert.NotNull(stepAtTheCell);
+        Assert.Equal(SizingTier.Mastered.ToCode(), stepAtTheCell.SizingTier);
+    }
+
+    [Fact]
     public async Task Two_learners_with_the_same_band_pair_get_paths_that_drill_different_topics()
     {
         var certCode = Unique("DIV");
