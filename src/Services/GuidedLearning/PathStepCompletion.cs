@@ -51,7 +51,8 @@ public static class PathStepCompletion
         int referenceId,
         decimal? score,
         decimal? accuracyPct,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? lessonModule = null)
     {
         // The step types a route owns, taken from the planner so the two cannot disagree about which
         // type belongs to which surface. A lesson closes a lesson step; a mock closes a mock step; a
@@ -83,7 +84,13 @@ public static class PathStepCompletion
 
         var step = activity switch
         {
-            Activity.Lesson => candidates.FirstOrDefault(s => s.RefLessonId == referenceId),
+            // #240: a remedial step is closed by the remedial module, not by finishing the primary one.
+            // Without this the primary module's completion would tick off a lesson the learner has not
+            // read in its remedial form.
+            Activity.Lesson => candidates.FirstOrDefault(s =>
+                s.RefLessonId == referenceId
+                && (lessonModule is null
+                    || s.StepType == StepTypeForLessonModule(lessonModule).ToCode())),
             Activity.MockSection => candidates.FirstOrDefault(s => s.RefExamId == referenceId),
             _ => candidates.FirstOrDefault(),
         };
@@ -95,6 +102,16 @@ public static class PathStepCompletion
 
         return await CloseStepAsync(db, step, score, accuracyPct, cancellationToken);
     }
+
+    /// <summary>
+    /// #240: the step type that reads one module. The primary module belongs to a concept lesson; the
+    /// remedial module to an expanded remedial step. This is the mapping D10's table states, and it is
+    /// stated once here so the reader and the closure cannot disagree about which module a step means.
+    /// </summary>
+    public static PathStepType StepTypeForLessonModule(string lessonModule) =>
+        string.Equals(lessonModule, LessonModule.Remedial, StringComparison.OrdinalIgnoreCase)
+            ? PathStepType.ExpandedRemedial
+            : PathStepType.ConceptLesson;
 
     /// <summary>Closes one step and unlocks the next. Public so a caller that already holds the step
     /// (the practice session path) does not have to look it up again.</summary>

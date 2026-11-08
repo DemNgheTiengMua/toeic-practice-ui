@@ -138,6 +138,12 @@
             correctAnswerLine.textContent = "Correct answer: (" + result.correctOption + ")";
           }
           if (explanation) explanation.style.display = "block";
+          if (result.explanation) {
+            var reason = document.getElementById("microCheckReason");
+            var reasonText = document.getElementById("microCheckReasonText");
+            if (reasonText) reasonText.textContent = result.explanation;
+            if (reason) reason.style.display = "block";
+          }
           if (btnFinish) btnFinish.style.display = "inline-block";
         }).catch(function (err) {
           // Leave the button live so the learner can try again rather than being stuck mid-lesson.

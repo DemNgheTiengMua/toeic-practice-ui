@@ -16,6 +16,7 @@ public sealed partial class AdminLessonService
     {
         var lesson = await db.Lessons.AsNoTracking()
             .Include(l => l.Skill)
+            .Include(l => l.Topic)
             .Include(l => l.Category)
             .Include(l => l.LessonCards)
             .FirstOrDefaultAsync(l => l.LessonId == lessonId, cancellationToken);
@@ -39,7 +40,8 @@ public sealed partial class AdminLessonService
                 c.OptionD,
                 c.CorrectOption,
                 c.Explanation,
-                c.Rationale))
+                c.Rationale,
+                c.Module))
             .ToList();
 
         var item = new LessonManifestItemDto(
@@ -49,7 +51,10 @@ public sealed partial class AdminLessonService
             lesson.Summary,
             lesson.EstimatedMinutes,
             lesson.DisplayOrder,
-            cards);
+            cards,
+            lesson.Modality,
+            lesson.Topic?.Code,
+            lesson.CefrLevel.Code);
 
         return new LessonManifestDto(new[] { item });
     }
@@ -95,8 +100,10 @@ public sealed partial class AdminLessonService
                         Explanation: "The prompt 'Please quiet down' indicates an action taking place at the present moment, requiring the present continuous tense ('is conducting').",
                         Rationale: "Option A is simple present (habitual, not in-progress). Options C and D are past and perfect tenses, which do not fit the urgent immediate context."
                     )
-                }
-            )
+                },
+                Modality: "reading",
+                TopicCode: "R-GRAM",
+                CefrLevel: "B1")
         });
     }
 }

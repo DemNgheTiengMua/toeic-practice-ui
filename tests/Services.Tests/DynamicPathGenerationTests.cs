@@ -100,8 +100,11 @@ public sealed class DynamicPathGenerationTests(DatabaseFixture database)
             INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
             VALUES (@grp, @exam, (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5'), @sR, N'One question', 'B1', 'mcq', 1);
 
-            INSERT INTO Lessons (CertId, SkillId, Title, EstimatedMinutes, DisplayOrder)
-            VALUES (@cert, @sR, N'Grammar Foundations', 8, 1);
+            -- #240: a lesson is addressed by (skill, topic, level), so the fixture names the cell.
+            INSERT INTO Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, EstimatedMinutes, DisplayOrder)
+            VALUES (@cert, @sR, 'reading',
+                    (SELECT TopicId FROM Topics WHERE Modality = 'reading' AND Code = 'R-GRAM'),
+                    'B2', N'Grammar Foundations', 8, 1);
             DECLARE @lesson INT = SCOPE_IDENTITY();
 
             INSERT INTO LessonCards (LessonId, CertId, CardType, Title, ContentMarkdown, DisplayOrder)

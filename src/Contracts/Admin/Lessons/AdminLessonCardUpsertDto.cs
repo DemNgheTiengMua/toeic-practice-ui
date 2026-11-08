@@ -14,4 +14,5 @@ public sealed record AdminLessonCardUpsertDto(
     string? CorrectOption = null,
     string? Explanation = null,
     string? Rationale = null,
-    int DisplayOrder = 0);
+    int DisplayOrder = 0,
+    string Module = LessonModuleCodes.Primary);

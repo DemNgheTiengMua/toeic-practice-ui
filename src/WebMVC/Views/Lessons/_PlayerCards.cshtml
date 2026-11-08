@@ -87,18 +87,15 @@
           <button type="button" class="btn btn--primary" id="btnCheckAnswer">Check answer</button>
         </div>
 
-        @* #155: the correct option is not in this markup any more - it used to be a data-correct
-           attribute the browser graded against, which meant the answer never counted. The reply to
-           /lessons/{id}/cards/{cardId}/micro-check is what reveals it now, and what records mastery. *@
+        @* #155 / #240: neither the key nor the explanation is in this markup. The explanation names the
+           right option in the seeded content, so rendering it behind display:none was still shipping
+           the answer to the browser. The graded reply is what reveals both. *@
         <div class="micro-check-explanation" id="microCheckExplanation" style="display: none;">
           <strong id="microCheckVerdict"></strong>
           <p class="text-sm mt-1 mb-0" id="microCheckCorrectAnswer"></p>
-          @if (!string.IsNullOrWhiteSpace(card.Explanation))
-          {
-            <p class="text-sm mt-1 mb-0">
-              <strong>Explanation:</strong> @card.Explanation
-            </p>
-          }
+          <p class="text-sm mt-1 mb-0" id="microCheckReason" style="display: none;">
+            <strong>Explanation:</strong> <span id="microCheckReasonText"></span>
+          </p>
         </div>
       }
       else

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace BusinessObjects.Entities;
 
 [Table("LearnerLessonProgress")]
-[Index("UserId", "LessonId", Name = "UQ_LLP_UserLesson", IsUnique = true)]
+[Index("UserId", "LessonId", "Module", Name = "UQ_LLP_UserLessonModule", IsUnique = true)]
 public partial class LearnerLessonProgress
 {
     [Key]
@@ -24,6 +24,13 @@ public partial class LearnerLessonProgress
     public int CardsCompleted { get; set; }
 
     public int TotalCards { get; set; }
+
+    /// <summary>#240: progress is per learner per lesson PER MODULE, so a remedial visit has its own
+    /// place to resume and its own "complete". One row per lesson would let a finished primary module
+    /// tick off an unread remedial one.</summary>
+    [StringLength(10)]
+    [Unicode(false)]
+    public string Module { get; set; } = LessonModule.Primary;
 
     public bool IsCompleted { get; set; }
 

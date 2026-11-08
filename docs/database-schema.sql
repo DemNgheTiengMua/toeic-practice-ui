@@ -4383,4 +4383,92 @@ BEGIN
     THROW 50093, 'A stratum may only sample items that arrived in its own batch; an item with no verdict in this batch is not this audit''s to decide.', 1;
 END;
 GO
+-- ============ Domain 40: #240 The leveled lesson ============
+-- A lesson is addressed by (skill, topic, level), and it carries the level itself. Before this block a
+-- lesson had a skill and a legacy question-category and no level at all, so "which lesson do I read at
+-- R-DET B1" had no answer: the path picked whichever lesson of the skill sorted first and pitched it
+-- at a level the row did not hold. D0.5's 120 lessons are one per cell, indexed by exactly these three.
+--
+-- TopicId and Modality arrive together, the same idiom Items already uses: Modality is carried down so
+-- a reading lesson cannot sit on a listening topic, and so a lesson sitting (PracticeSessions, below)
+-- can name its cell without re-reading the skill.
+ALTER TABLE Lessons ADD
+  Modality  VARCHAR(10) NOT NULL
+    CONSTRAINT CK_Lessons_Modality CHECK (Modality IN ('listening','reading','speaking','writing')),
+  TopicId   INT NOT NULL,
+  CefrLevel VARCHAR(10) NOT NULL
+    CONSTRAINT CK_Lessons_Level CHECK (CefrLevel IN ('A1','A2','B1','B2','C1','C2'));
+GO
+ALTER TABLE Lessons ADD CONSTRAINT FK_Lessons_SkillModality
+  FOREIGN KEY (SkillId, Modality) REFERENCES Skills(SkillId, Modality);
+GO
+ALTER TABLE Lessons ADD CONSTRAINT FK_Lessons_TopicModality
+  FOREIGN KEY (TopicId, Modality) REFERENCES Topics(TopicId, Modality);
+GO
+-- The cell lookup the reader and the path both use. Not UNIQUE: the demo seed legitimately holds more
+-- than one lesson for one cell today, and the lookup's tie-break (DisplayOrder, then LessonId) is what
+-- makes "which of them" a reproducible answer rather than the storage engine's.
+CREATE INDEX IX_Lessons_Cell ON Lessons(CertId, SkillId, TopicId, CefrLevel);
+GO
+-- D0.5: every lesson carries two sub-modules - module_primary (the rule and worked examples) and
+-- module_remedial (distractor anatomy, or the band k-1 -> k comparison). They are separate because a
+-- second attempt at the same cell must not re-read identical instruction, so a module is a set of card
+-- ROWS with its own content, never a flag on one set of cards.
+--
+-- The default is 'primary', and it is not a lie: every card authored before this block IS primary
+-- content. A remedial card opts in.
+ALTER TABLE LessonCards ADD Module VARCHAR(10) NOT NULL
+  CONSTRAINT DF_LessonCards_Module DEFAULT 'primary'
+  CONSTRAINT CK_LessonCards_Module CHECK (Module IN ('primary','remedial'));
+GO
+-- Progress is per learner per lesson PER MODULE: a remedial visit has its own place to resume and its
+-- own "complete", otherwise a learner who finished the primary module would find the remedial one
+-- already ticked off without reading it - which is criterion 5's trap.
+ALTER TABLE LearnerLessonProgress ADD Module VARCHAR(10) NOT NULL
+  CONSTRAINT DF_LLP_Module DEFAULT 'primary'
+  CONSTRAINT CK_LLP_Module CHECK (Module IN ('primary','remedial'));
+GO
+ALTER TABLE LearnerLessonProgress DROP CONSTRAINT UQ_LLP_UserLesson;
+GO
+ALTER TABLE LearnerLessonProgress ADD CONSTRAINT UQ_LLP_UserLessonModule
+  UNIQUE (UserId, LessonId, Module);
+GO
+-- #240 criterion 3: a micro-check answer must leave the same evidence a drill answer leaves, which is
+-- a PracticeAnswers row - a private counter is invisible to vw_UserCategoryAccuracy and to the cell
+-- mastery the path sizes its steps from. A lesson sitting is therefore an ordinary pool-shaped
+-- PracticeSessions row (SectionId NULL, TopicId + CefrLevel from the lesson) that names its lesson,
+-- and one answer names its card.
+--
+-- LessonId is deliberately NOT mapped as an EF navigation: it composes a nullable column with the
+-- non-nullable CertId, and EF reads a partly-nullable composite key as required, which would make
+-- every ordinary drill session fail to save. The constraint still holds server-side (MATCH SIMPLE).
+ALTER TABLE PracticeSessions ADD LessonId INT NULL;
+GO
+ALTER TABLE PracticeSessions ADD CONSTRAINT FK_Practice_LessonCert
+  FOREIGN KEY (LessonId, CertId) REFERENCES Lessons(LessonId, CertId);
+GO
+-- One OPEN sitting per learner per lesson: two would leave "where did I stop" with two answers. The
+-- filter is on the status, not on LessonId alone, so a finished sitting is history and a later visit
+-- starts a new one.
+CREATE UNIQUE INDEX UX_Practice_OneLessonSitting ON PracticeSessions(UserId, LessonId)
+  WHERE LessonId IS NOT NULL AND Status = 'in_progress';
+GO
+ALTER TABLE PracticeAnswers ADD CardId INT NULL REFERENCES LessonCards(CardId);
+GO
+-- A third shape, beside the legacy question shape and the pool item shape: a lesson micro-check names
+-- its card and nothing else. Written as a drop-and-re-add so the three arms are read in one place.
+ALTER TABLE PracticeAnswers DROP CONSTRAINT CK_PracticeAnswers_Shape;
+GO
+ALTER TABLE PracticeAnswers ADD CONSTRAINT CK_PracticeAnswers_Shape CHECK (
+     (QuestionId IS NOT NULL AND SectionId IS NOT NULL
+        AND ItemId IS NULL AND ItemVersionId IS NULL AND CardId IS NULL)
+  OR (QuestionId IS NULL AND SectionId IS NULL
+        AND ItemId IS NOT NULL AND ItemVersionId IS NOT NULL AND CardId IS NULL)
+  OR (QuestionId IS NULL AND SectionId IS NULL
+        AND ItemId IS NULL AND ItemVersionId IS NULL AND CardId IS NOT NULL)
+);
+GO
+CREATE UNIQUE INDEX UQ_PracticeAnswers_Card ON PracticeAnswers(SessionId, CardId)
+  WHERE CardId IS NOT NULL;
+GO
 

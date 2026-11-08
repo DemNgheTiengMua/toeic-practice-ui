@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text.Json;
+using BusinessObjects;
 using Contracts;
 using DataAccess;
 using BusinessObjects.Entities;
@@ -153,6 +154,9 @@ public sealed partial class AdminLessonService
         var skills = await db.Skills.Where(s => s.CertId == certId).ToListAsync(cancellationToken);
         var categories = await db.QuestionCategories.Where(qc => qc.CertId == certId).ToListAsync(cancellationToken);
         var existingLessons = await db.Lessons.Where(l => l.CertId == certId).ToListAsync(cancellationToken);
+        // #240: a lesson names its cell, and the topic is looked up by code so a manifest survives a
+        // reseeded database.
+        var topics = await db.Topics.ToListAsync(cancellationToken);
 
         var errors = new List<string>();
 
@@ -169,6 +173,25 @@ public sealed partial class AdminLessonService
             else if (item.Title.Length > 160)
             {
                 errors.Add($"{prefix}: Title exceeds maximum 160 characters.");
+            }
+
+            // #240: the cell is required, and a band code is not a level.
+            if (!CefrLevel.TryParseAuthored(item.CefrLevel, out _))
+            {
+                errors.Add($"{prefix}: CefrLevel must be one of A1, A2, B1, B2, C1 or C2.");
+            }
+
+            var topicMatch = string.IsNullOrWhiteSpace(item.TopicCode)
+                ? null
+                : topics.FirstOrDefault(t => string.Equals(t.Code, item.TopicCode, StringComparison.OrdinalIgnoreCase));
+
+            if (topicMatch is null)
+            {
+                errors.Add($"{prefix}: TopicCode '{item.TopicCode}' is not one of the twenty canonical topics.");
+            }
+            else if (!string.Equals(topicMatch.Modality, item.Modality, StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add($"{prefix}: TopicCode '{item.TopicCode}' is a {topicMatch.Modality} topic, so the lesson cannot be {item.Modality}.");
             }
 
             if (string.IsNullOrWhiteSpace(item.Skill))
@@ -328,6 +351,12 @@ public sealed partial class AdminLessonService
             {
                 lesson = existing;
                 lesson.SkillId = skill.SkillId;
+                lesson.Modality = item.Modality.ToLowerInvariant();
+                lesson.TopicId = topics.First(t =>
+                    string.Equals(t.Code, item.TopicCode, StringComparison.OrdinalIgnoreCase)).TopicId;
+                lesson.CefrLevel = CefrLevel.TryParseAuthored(item.CefrLevel, out var overwriteLevel)
+                    ? overwriteLevel
+                    : lesson.CefrLevel;
                 lesson.CategoryId = categoryId;
                 lesson.Summary = string.IsNullOrWhiteSpace(item.Summary) ? null : item.Summary.Trim();
                 lesson.EstimatedMinutes = item.EstimatedMinutes > 0 ? item.EstimatedMinutes : 5;
@@ -351,6 +380,12 @@ public sealed partial class AdminLessonService
                 {
                     CertId = certId,
                     SkillId = skill.SkillId,
+                    Modality = item.Modality.ToLowerInvariant(),
+                    TopicId = topics.First(t =>
+                        string.Equals(t.Code, item.TopicCode, StringComparison.OrdinalIgnoreCase)).TopicId,
+                    CefrLevel = CefrLevel.TryParseAuthored(item.CefrLevel, out var newLevel)
+                        ? newLevel
+                        : CefrLevel.B1,
                     CategoryId = categoryId,
                     Title = item.Title.Trim(),
                     Summary = string.IsNullOrWhiteSpace(item.Summary) ? null : item.Summary.Trim(),
@@ -382,7 +417,8 @@ public sealed partial class AdminLessonService
                     cardDto.CorrectOption,
                     cardDto.Explanation,
                     cardDto.Rationale,
-                    i));
+                    i,
+                    cardDto.Module));
             }
 
             totalCardsImported += item.Cards.Count;

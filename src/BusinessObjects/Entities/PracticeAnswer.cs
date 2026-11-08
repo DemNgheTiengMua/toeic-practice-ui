@@ -17,6 +17,7 @@ namespace BusinessObjects.Entities;
 /// </summary>
 [Index("SessionId", "QuestionId", Name = "UQ_PracticeAnswers_Question", IsUnique = true)]
 [Index("SessionId", "ItemVersionId", Name = "UQ_PracticeAnswers_Version", IsUnique = true)]
+[Index("SessionId", "CardId", Name = "UQ_PracticeAnswers_Card", IsUnique = true)]
 public partial class PracticeAnswer
 {
     [Key]
@@ -35,6 +36,18 @@ public partial class PracticeAnswer
 
     /// <summary>#187: the exact version answered, so a later correction cannot change this session.</summary>
     public int? ItemVersionId { get; set; }
+
+    /// <summary>
+    /// #240: the micro-check card answered, for a lesson sitting. NULL for a question answer and for a
+    /// pool answer.
+    /// <para>
+    /// This is what makes a micro-check reach mastery: the answer is an ordinary <c>PracticeAnswers</c>
+    /// row, in the ledger a drill writes, so <c>vw_UserCategoryAccuracy</c> and the cell mastery the
+    /// path sizes its steps from both see it. A private counter beside the ledger would satisfy the
+    /// ticket on paper and be invisible to both.
+    /// </para>
+    /// </summary>
+    public int? CardId { get; set; }
 
     /// <summary>
     /// #187: which of the pinned version's four options was picked. An <see cref="ItemVersion"/>

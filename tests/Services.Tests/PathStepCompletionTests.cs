@@ -110,8 +110,10 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
               (@q, 'mcq', 'A', N'Right', 1),
               (@q, 'mcq', 'B', N'Wrong', 0);
 
-            INSERT INTO Lessons (CertId, SkillId, Title, EstimatedMinutes, DisplayOrder)
-            VALUES (@cert, @sR, N'Grammar Foundations', 8, 1);
+            INSERT INTO Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, EstimatedMinutes, DisplayOrder)
+            VALUES (@cert, @sR, 'reading',
+                    (SELECT TopicId FROM Topics WHERE Modality = 'reading' AND Code = 'R-GRAM'),
+                    'B2', N'Grammar Foundations', 8, 1);
             DECLARE @lesson INT = SCOPE_IDENTITY();
 
             INSERT INTO LessonCards (LessonId, CertId, CardType, Title, ContentMarkdown, DisplayOrder)

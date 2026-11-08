@@ -94,11 +94,15 @@ public sealed class AdminLessonsController(
             LessonId = 0,
             CertId = selectedCertId,
             SkillId = defaultSkillId,
+            Modality = formOptions.Skills.FirstOrDefault(s => s.SkillId == defaultSkillId)?.Modality ?? "reading",
+            TopicId = 0,
+            CefrLevel = "B1",
             EstimatedMinutes = 5,
             DisplayOrder = 0,
             Certificates = certificates,
             Skills = formOptions.Skills,
             Categories = formOptions.Categories,
+            Topics = formOptions.Topics ?? Array.Empty<AdminLessonTopicOptionDto>(),
             Cards = new List<AdminLessonCardEditViewModel>
             {
                 new()
@@ -138,6 +142,9 @@ public sealed class AdminLessonsController(
             CertCode = lesson.CertCode,
             SkillId = lesson.SkillId,
             SkillCode = lesson.SkillCode,
+            Modality = lesson.Modality,
+            TopicId = lesson.TopicId,
+            CefrLevel = string.IsNullOrEmpty(lesson.CefrLevel) ? "B1" : lesson.CefrLevel,
             CategoryId = lesson.CategoryId,
             CategoryCode = lesson.CategoryCode,
             Title = lesson.Title,
@@ -147,6 +154,7 @@ public sealed class AdminLessonsController(
             Certificates = certificates,
             Skills = formOptions.Skills,
             Categories = formOptions.Categories,
+            Topics = formOptions.Topics ?? Array.Empty<AdminLessonTopicOptionDto>(),
             Cards = lesson.Cards.Select((c, idx) => new AdminLessonCardEditViewModel
             {
                 CardId = c.CardId,
@@ -161,6 +169,7 @@ public sealed class AdminLessonsController(
                 CorrectOption = c.CorrectOption,
                 Explanation = c.Explanation,
                 Rationale = c.Rationale,
+                Module = c.Module,
                 DisplayOrder = idx
             }).ToList()
         };
@@ -169,11 +178,24 @@ public sealed class AdminLessonsController(
     }
 
     [HttpGet("{id:int}/preview")]
-    public async Task<IActionResult> Preview(int id, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Preview(int id, CancellationToken cancellationToken = default, [FromQuery] string? module = null)
     {
         try
         {
             var lesson = await api.GetAdminLessonByIdAsync(id, cancellationToken);
+            var effectiveModule = string.Equals(module, LessonModuleCodes.Remedial, StringComparison.OrdinalIgnoreCase)
+                ? LessonModuleCodes.Remedial
+                : LessonModuleCodes.Primary;
+
+            // #240: the preview shows one module, exactly as a learner's reader does. A preview that
+            // showed both would be a surface no learner ever sees.
+            var moduleCards = lesson.Cards.Where(c => c.Module == effectiveModule).ToList();
+            var previewModule = moduleCards.Count > 0 ? effectiveModule : LessonModuleCodes.Primary;
+            if (moduleCards.Count == 0)
+            {
+                moduleCards = lesson.Cards.Where(c => c.Module == LessonModuleCodes.Primary).ToList();
+            }
+
             var lessonDetail = new LessonDetailDto(
                 lesson.LessonId,
                 lesson.Title,
@@ -181,7 +203,7 @@ public sealed class AdminLessonsController(
                 lesson.SkillId,
                 lesson.CategoryId,
                 lesson.EstimatedMinutes,
-                lesson.Cards.Select(c => new LessonCardDto(
+                moduleCards.Select(c => new LessonCardDto(
                     c.CardId,
                     c.CardType,
                     c.Title,
@@ -194,16 +216,25 @@ public sealed class AdminLessonsController(
                     c.CorrectOption,
                     c.Explanation,
                     c.DisplayOrder,
-                    c.Rationale)).ToList());
+                    c.Rationale,
+                    c.Module)).ToList(),
+                lesson.TopicId,
+                lesson.TopicCode,
+                "",
+                lesson.CefrLevel,
+                previewModule,
+                lesson.Cards.Any(c => c.Module == LessonModuleCodes.Remedial));
 
             var progress = new LessonProgressDto(
                 CardsCompleted: 0,
-                TotalCards: lesson.Cards.Count,
+                TotalCards: moduleCards.Count,
                 IsCompleted: false,
                 LastViewedCardId: null,
                 FirstOpenedAt: null,
                 CompletedAt: null,
-                UpdatedAt: null);
+                UpdatedAt: null,
+                ResumeCardIndex: 1,
+                Module: previewModule);
 
             ViewData["AdminLessonId"] = id;
             var model = new LessonViewModel(lessonDetail, progress);
@@ -232,6 +263,7 @@ public sealed class AdminLessonsController(
             vm.Certificates = formOptions.Certificates.Count > 0 ? formOptions.Certificates : await LoadCertificatesAsync(cancellationToken);
             vm.Skills = formOptions.Skills;
             vm.Categories = formOptions.Categories;
+            vm.Topics = formOptions.Topics ?? Array.Empty<AdminLessonTopicOptionDto>();
             return View("~/Views/Admin/Lessons/Edit.cshtml", vm);
         }
 
@@ -248,7 +280,8 @@ public sealed class AdminLessonsController(
             c.CorrectOption,
             c.Explanation,
             c.Rationale,
-            idx
+            idx,
+            string.IsNullOrWhiteSpace(c.Module) ? LessonModuleCodes.Primary : c.Module
         )).ToList();
 
         var request = new AdminLessonUpsertDto(
@@ -259,7 +292,10 @@ public sealed class AdminLessonsController(
             vm.Summary,
             vm.EstimatedMinutes,
             vm.DisplayOrder,
-            cardsDto
+            cardsDto,
+            vm.Modality,
+            vm.TopicId,
+            vm.CefrLevel
         );
 
         try
@@ -285,6 +321,7 @@ public sealed class AdminLessonsController(
             vm.Certificates = formOptions.Certificates.Count > 0 ? formOptions.Certificates : await LoadCertificatesAsync(cancellationToken);
             vm.Skills = formOptions.Skills;
             vm.Categories = formOptions.Categories;
+            vm.Topics = formOptions.Topics ?? Array.Empty<AdminLessonTopicOptionDto>();
             return View("~/Views/Admin/Lessons/Edit.cshtml", vm);
         }
         catch (Exception ex)
@@ -295,6 +332,7 @@ public sealed class AdminLessonsController(
             vm.Certificates = formOptions.Certificates.Count > 0 ? formOptions.Certificates : await LoadCertificatesAsync(cancellationToken);
             vm.Skills = formOptions.Skills;
             vm.Categories = formOptions.Categories;
+            vm.Topics = formOptions.Topics ?? Array.Empty<AdminLessonTopicOptionDto>();
             return View("~/Views/Admin/Lessons/Edit.cshtml", vm);
         }
     }

@@ -252,6 +252,9 @@ public sealed partial class LearningPathService
             }
 
             var mastery = await LoadCellMasteryAsync(userId, certId, topics[0], level, cancellationToken);
+            // #240: the lesson is looked up at this skill's own level, and its topic comes back with it,
+            // so a lesson step's coordinate is the lesson's own cell.
+            var lesson = await LoadLessonForLevelAsync(certId, skill.SkillId, level, cancellationToken);
 
             // #219: the placement's weak topics for THIS skill at THIS level. A hint from a different
             // level is not a hint about this cell, and keeping it would let the plan order week one
@@ -264,9 +267,10 @@ public sealed partial class LearningPathService
                 level,
                 mastery,
                 topics,
-                await LoadLessonForSkillAsync(certId, skill.SkillId, cancellationToken),
+                lesson?.LessonId,
                 await LoadMockExamForSkillAsync(certId, skill.SkillId, cancellationToken),
-                weakAtLevel));
+                weakAtLevel,
+                lesson?.TopicId));
         }
 
         // Weakest first: a cell marked Low outranks Developing, which outranks Mastered. Ties keep the

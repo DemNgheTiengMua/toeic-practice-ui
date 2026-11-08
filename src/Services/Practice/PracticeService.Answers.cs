@@ -49,9 +49,12 @@ public sealed partial class PracticeService
                 .ThenInclude(q => q!.QuestionOptionQuestionNavigations)
             .Where(pa => pa.SessionId == sessionId
                 && pa.Session.UserId == userId
+                // #240: a lesson sitting's rows are graded by SubmitLessonMicroCheckAsync, which is the
+                // only writer of a card answer. A drill submission addressing one would be graded from
+                // a question or a version that row does not have.
+                && pa.Session.LessonId == null
                 && (pa.QuestionId == questionId || (pa.QuestionId == null && pa.ItemVersionId == questionId)))
-            .SingleOrDefaultAsync(cancellationToken)
-            ?? throw new PracticeException(PracticeException.QuestionNotFound, $"Question {questionId} was not found in session {sessionId}.");
+            .SingleOrDefaultAsync(cancellationToken)            ?? throw new PracticeException(PracticeException.QuestionNotFound, $"Question {questionId} was not found in session {sessionId}.");
 
         if (answer.Session.Status != PracticeStatus.InProgress.ToCode())
         {

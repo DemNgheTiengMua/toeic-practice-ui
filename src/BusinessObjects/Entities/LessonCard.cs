@@ -49,6 +49,19 @@ public partial class LessonCard
 
     public int DisplayOrder { get; set; }
 
+    /// <summary>
+    /// #240 / D0.5: which of the lesson's two sub-modules this card belongs to. The default is
+    /// <c>primary</c> because every card authored before this column IS primary content; a remedial
+    /// card opts in.
+    /// <para>
+    /// The two modules are separate card ROWS, never one set of cards with a flag: the whole point is
+    /// that a second attempt at the same cell does not re-read identical instruction.
+    /// </para>
+    /// </summary>
+    [StringLength(10)]
+    [Unicode(false)]
+    public string Module { get; set; } = LessonModule.Primary;
+
     [InverseProperty("LastViewedCard")]
     public virtual ICollection<LearnerLessonProgress> LearnerLessonProgresses { get; set; } = new List<LearnerLessonProgress>();
 

@@ -18,10 +18,28 @@ public sealed class LessonServiceTests(DatabaseFixture database)
         return new LessonService(db);
     }
 
-    private async Task<(int certId, int skillId, int categoryId, int lessonId, int card1Id, int card2Id, int card3Id, int card4Id)> SeedLessonFixtureAsync()
+    private async Task<(int certId, int skillId, int categoryId, int topicId, int lessonId, int card1Id, int card2Id, int card3Id, int card4Id)> SeedLessonFixtureAsync()
     {
         var certCode = $"CERT{Guid.NewGuid():N}"[..10];
         await database.SqlAsync($"""
+            -- #240: a lesson is addressed by (skill, topic, level), so the fixture names a canonical
+            -- reading topic.
+            INSERT INTO Topics (Modality, Code, Name)
+            SELECT v.Modality, v.Code, v.Name
+            FROM (VALUES
+              ('listening','L-GIST',N'Global gist'), ('listening','L-DET',N'Detail'),
+              ('listening','L-INF',N'Inference'), ('listening','L-ATT',N'Attitude'),
+              ('listening','L-FUNC',N'Function'), ('listening','L-ORG',N'Organisation'),
+              ('reading','R-GIST',N'Global thesis'), ('reading','R-DET',N'Local detail'),
+              ('reading','R-INF',N'Bridging inference'), ('reading','R-ATT',N'Authorial stance'),
+              ('reading','R-COH',N'Cohesion'), ('reading','R-GRAM',N'Grammar'),
+              ('speaking','S-DESC',N'Description'), ('speaking','S-INT',N'Interaction'),
+              ('speaking','S-ARG',N'Argument'), ('speaking','S-SYN',N'Synthesis'),
+              ('writing','W-CORR',N'Correspondence'), ('writing','W-DATA',N'Data'),
+              ('writing','W-ARG',N'Argument'), ('writing','W-DISC',N'Discourse')
+            ) v(Modality, Code, Name)
+            WHERE NOT EXISTS (SELECT 1 FROM Topics t WHERE t.Modality = v.Modality AND t.Code = v.Code);
+
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Test Cert', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
@@ -33,8 +51,10 @@ public sealed class LessonServiceTests(DatabaseFixture database)
             VALUES (@cert, 'GRAMMAR', N'Grammar Test');
             DECLARE @cat INT = SCOPE_IDENTITY();
 
-            INSERT INTO Lessons (CertId, SkillId, CategoryId, Title, Summary, EstimatedMinutes, DisplayOrder)
-            VALUES (@cert, @skill, @cat, N'Present Simple', N'Learn present simple tense', 5, 1);
+            DECLARE @topic INT = (SELECT TopicId FROM Topics WHERE Modality = 'reading' AND Code = 'R-GRAM');
+
+            INSERT INTO Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, CategoryId, Title, Summary, EstimatedMinutes, DisplayOrder)
+            VALUES (@cert, @skill, 'reading', @topic, 'B1', @cat, N'Present Simple', N'Learn present simple tense', 5, 1);
             DECLARE @lesson INT = SCOPE_IDENTITY();
 
             INSERT INTO LessonCards (LessonId, CertId, CardType, Title, ContentMarkdown, DisplayOrder) VALUES
@@ -67,7 +87,7 @@ public sealed class LessonServiceTests(DatabaseFixture database)
         var lesson = await db.Lessons.FirstAsync(l => l.CertId == cert.CertId);
         var cards = await db.LessonCards.Where(lc => lc.LessonId == lesson.LessonId).OrderBy(lc => lc.DisplayOrder).ToListAsync();
 
-        return (cert.CertId, skill.SkillId, category.CategoryId, lesson.LessonId, cards[0].CardId, cards[1].CardId, cards[2].CardId, cards[3].CardId);
+        return (cert.CertId, skill.SkillId, category.CategoryId, lesson.TopicId, lesson.LessonId, cards[0].CardId, cards[1].CardId, cards[2].CardId, cards[3].CardId);
     }
 
     private record FixtureResult(int CertId, int SkillId, int CategoryId, int LessonId, int Card1Id, int Card2Id, int Card3Id, int Card4Id);

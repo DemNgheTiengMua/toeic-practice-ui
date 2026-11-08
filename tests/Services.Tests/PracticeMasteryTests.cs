@@ -535,10 +535,44 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
     private async Task<(int LessonId, int MicroCheckCardId, string RightOption, string WrongOption)> SeedLessonWithMicroCheckAsync(int certId, int categoryId)
     {
         await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        // #240: a lesson is addressed by (skill, topic, level). The micro-check's answer is attributed
+        // to the lesson sitting's own cell, so this fixture must sit on a real topic of the skill's
+        // modality.
+        var skill = await db.Skills.Where(s => s.CertId == certId).FirstAsync();
+        // #240: the canonical twenty are the only topics that exist (the trigger refuses a
+        // twenty-first), so this fixture seeds them rather than inventing one.
+        await database.SqlAsync("""
+            INSERT INTO Topics (Modality, Code, Name)
+            SELECT v.Modality, v.Code, v.Name
+            FROM (VALUES
+              ('listening','L-GIST',N'Global gist'), ('listening','L-DET',N'Detail'),
+              ('listening','L-INF',N'Inference'), ('listening','L-ATT',N'Attitude'),
+              ('listening','L-FUNC',N'Function'), ('listening','L-ORG',N'Organisation'),
+              ('reading','R-GIST',N'Global thesis'), ('reading','R-DET',N'Local detail'),
+              ('reading','R-INF',N'Bridging inference'), ('reading','R-ATT',N'Authorial stance'),
+              ('reading','R-COH',N'Cohesion'), ('reading','R-GRAM',N'Grammar'),
+              ('speaking','S-DESC',N'Description'), ('speaking','S-INT',N'Interaction'),
+              ('speaking','S-ARG',N'Argument'), ('speaking','S-SYN',N'Synthesis'),
+              ('writing','W-CORR',N'Correspondence'), ('writing','W-DATA',N'Data'),
+              ('writing','W-ARG',N'Argument'), ('writing','W-DISC',N'Discourse')
+            ) v(Modality, Code, Name)
+            WHERE NOT EXISTS (SELECT 1 FROM Topics t WHERE t.Modality = v.Modality AND t.Code = v.Code);
+            """);
+
+        var topicId = await db.Topics
+            .Where(t => t.Modality == skill.Modality)
+            .OrderBy(t => t.TopicId)
+            .Select(t => t.TopicId)
+            .FirstAsync();
+
         var lesson = new Lesson
         {
             CertId = certId,
-            SkillId = await db.Skills.Where(s => s.CertId == certId).Select(s => s.SkillId).FirstAsync(),
+            SkillId = skill.SkillId,
+            Modality = skill.Modality,
+            TopicId = topicId,
+            CefrLevel = CefrLevel.B1,
             CategoryId = categoryId,
             Title = "Tense drill",
             EstimatedMinutes = 5,

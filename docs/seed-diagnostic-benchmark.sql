@@ -34,6 +34,12 @@ BEGIN TRY
     SELECT @toeicRead = SkillId FROM dbo.Skills WHERE CertId = @toeicCert AND Code = 'READ';
     SELECT @toeicWrit = SkillId FROM dbo.Skills WHERE CertId = @toeicCert AND Code = 'WRIT';
 
+    -- #240: a lesson is addressed by (skill, topic, level), so these four name their cell.
+    DECLARE @tRGramDiag INT = (SELECT TopicId FROM dbo.Topics WHERE Modality = 'reading' AND Code = 'R-GRAM');
+    DECLARE @tLFuncDiag INT = (SELECT TopicId FROM dbo.Topics WHERE Modality = 'listening' AND Code = 'L-FUNC');
+    DECLARE @tWCorrDiag INT = (SELECT TopicId FROM dbo.Topics WHERE Modality = 'writing' AND Code = 'W-CORR');
+    DECLARE @tRInfDiag INT = (SELECT TopicId FROM dbo.Topics WHERE Modality = 'reading' AND Code = 'R-INF');
+
     -- 0.3. Tra cứu các Sections của TOEIC
     SELECT @secP1 = SectionId FROM dbo.Sections WHERE CertId = @toeicCert AND Code = N'P1';
     SELECT @secP2 = SectionId FROM dbo.Sections WHERE CertId = @toeicCert AND Code = N'P2';
@@ -1260,9 +1266,9 @@ Essay Guidelines:
     -- LESSON 1
     IF NOT EXISTS (SELECT 1 FROM dbo.Lessons WHERE CertId = @toeicCert AND Title = N'Tense & Aspect Mastery in Business Contexts')
     BEGIN
-        INSERT INTO dbo.Lessons (CertId, SkillId, Title, Summary, EstimatedMinutes, DisplayOrder)
+        INSERT INTO dbo.Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, Summary, EstimatedMinutes, DisplayOrder)
         VALUES (
-            @toeicCert, @toeicRead,
+            @toeicCert, @toeicRead, 'reading', @tRGramDiag, 'B1',
             N'Tense & Aspect Mastery in Business Contexts',
             N'Phương pháp 3 giây nhận diện dấu hiệu phối hợp thì (Time Markers) và phân biệt chủ động - bị động trong Part 5.',
             15, 1
@@ -1341,9 +1347,9 @@ Essay Guidelines:
     -- LESSON 2
     IF NOT EXISTS (SELECT 1 FROM dbo.Lessons WHERE CertId = @toeicCert AND Title = N'Eliminating Auditory Traps & Mastering Indirect Responses')
     BEGIN
-        INSERT INTO dbo.Lessons (CertId, SkillId, Title, Summary, EstimatedMinutes, DisplayOrder)
+        INSERT INTO dbo.Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, Summary, EstimatedMinutes, DisplayOrder)
         VALUES (
-            @toeicCert, @toeicList,
+            @toeicCert, @toeicList, 'listening', @tLFuncDiag, 'B1',
             N'Eliminating Auditory Traps & Mastering Indirect Responses',
             N'Kỹ thuật loại trừ đáp án lặp âm/lặp từ và nhận diện các mẫu câu trả lời gián tiếp đạt điểm tuyệt đối Part 2.',
             15, 2
@@ -1419,9 +1425,9 @@ Essay Guidelines:
     -- LESSON 3
     IF NOT EXISTS (SELECT 1 FROM dbo.Lessons WHERE CertId = @toeicCert AND Title = N'High-Scoring Business Email Architecture (Writing W2)')
     BEGIN
-        INSERT INTO dbo.Lessons (CertId, SkillId, Title, Summary, EstimatedMinutes, DisplayOrder)
+        INSERT INTO dbo.Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, Summary, EstimatedMinutes, DisplayOrder)
         VALUES (
-            @toeicCert, @toeicWrit,
+            @toeicCert, @toeicWrit, 'writing', @tWCorrDiag, 'B1',
             N'High-Scoring Business Email Architecture (Writing W2)',
             N'Khung sườn 4 bước viết email giải quyết sự cố thương mại trong 10 phút với văn phong trang trọng chuẩn ETS.',
             20, 3
@@ -1495,9 +1501,9 @@ Essay Guidelines:
     -- LESSON 4
     IF NOT EXISTS (SELECT 1 FROM dbo.Lessons WHERE CertId = @toeicCert AND Title = N'Cross-Text Inference in Multi-Passage Reading (Part 7)')
     BEGIN
-        INSERT INTO dbo.Lessons (CertId, SkillId, Title, Summary, EstimatedMinutes, DisplayOrder)
+        INSERT INTO dbo.Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, Summary, EstimatedMinutes, DisplayOrder)
         VALUES (
-            @toeicCert, @toeicRead,
+            @toeicCert, @toeicRead, 'reading', @tRInfDiag, 'B1',
             N'Cross-Text Inference in Multi-Passage Reading (Part 7)',
             N'Phương pháp tìm "Từ khóa cầu nối" (Bridge Keywords) để giải quyết câu hỏi suy luận chéo giữa Hóa đơn, Lịch trình và Email.',
             20, 4
