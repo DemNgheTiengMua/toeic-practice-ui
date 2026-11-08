@@ -188,4 +188,59 @@ public sealed class PracticeViewTests
         Assert.Contains("SubstitutedFromTopicId", controller);
         Assert.Contains("TempData[\"SuccessMessage\"]", controller);
     }
+
+    /// <summary>
+    /// #238 / SCR-PRAC-01: the hub renders the matrix, and a resting cell names the local time it
+    /// reopens. The input that would pass while being wrong is a view that prints the dim state but the
+    /// UTC instant, or one that renders only the mastery label and never the time.
+    /// </summary>
+    [Fact]
+    public void The_hub_renders_the_matrix_with_each_cells_state_and_reopen_time()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var index = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "Views", "Practice", "Index.cshtml"));
+
+        Assert.Contains("Model.Matrix", index);
+        Assert.Contains("cell.CssClass", index);
+        Assert.Contains("data-state=\"@cell.MasteryState\"", index);
+        Assert.Contains("data-resting", index);
+        Assert.Contains("cell.StatusLine", index);
+        Assert.Contains("cell.MasteryLabel", index);
+        Assert.Contains("cell.IsPrioritised", index);
+        // The dim state is announced, not only coloured: a visually-hidden sentence carries it.
+        Assert.Contains("visually-hidden", index);
+        Assert.Contains("cell.AccessibleLabel", index);
+
+        // The stylesheet is the page's own, and defines the resting plate and the ink inversion.
+        var css = File.ReadAllText(Path.Combine(
+            repoRoot, "src", "WebMVC", "wwwroot", "css", "practice", "matrix.css"));
+        Assert.Contains(".matrix__cell.is-resting", css);
+        Assert.Contains(".matrix__cell.is-prioritised", css);
+        Assert.Contains("background: var(--ink)", css);
+        Assert.DoesNotContain("border-radius", css);
+        Assert.DoesNotContain("box-shadow", css);
+    }
+
+    /// <summary>
+    /// #238 / U18: the take page reveals the level after the lock, and binds the explanation to the
+    /// option it explains. The payload suppression is asserted on the DTO separately
+    /// (<c>PracticeObjectiveSessionTests</c>); this is the markup that consumes it.
+    /// </summary>
+    [Fact]
+    public void The_take_page_reveals_the_level_and_names_the_option_the_explanation_explains()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var explanation = File.ReadAllText(Path.Combine(
+            repoRoot, "src", "WebMVC", "Views", "Practice", "_TakeExplanation.cshtml"));
+
+        Assert.Contains("RevealedLevelCode", explanation);
+        Assert.Contains("revealed-level", explanation);
+        Assert.Contains("ExplanationSubjectLabel", explanation);
+        Assert.Contains("ExplanationSubjectText", explanation);
+
+        var question = File.ReadAllText(Path.Combine(
+            repoRoot, "src", "WebMVC", "Views", "Practice", "_TakeQuestion.cshtml"));
+        Assert.Contains("ShortNotice", question);
+        Assert.Contains("question-level-badge", question);
+    }
 }

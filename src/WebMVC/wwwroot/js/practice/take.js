@@ -61,7 +61,10 @@
           explanation: q.explanation,
           transcript: q.transcript,
           correctOptionId: q.correctOptionId,
-          correctOptionIds: q.correctOptionIds ? q.correctOptionIds.slice() : []
+          correctOptionIds: q.correctOptionIds ? q.correctOptionIds.slice() : [],
+          // #238 / U18: the payload strips the level from an unanswered question, so this is null
+          // until the answer locks and the reply hands it back.
+          cefrLevelCode: q.cefrLevelCode != null ? q.cefrLevelCode : null
         };
       });
 
@@ -272,6 +275,24 @@
 
         if (hintMetaBadge) {
           hintMetaBadge.style.display = s.hintUsed ? "" : "none";
+        }
+
+        // #238 / U18: the level badge appears only once the question is locked and the reply carried
+        // a level. It mirrors the manifest, which omits the level while answering.
+        var questionLevelBadge = document.getElementById("question-level-badge");
+        if (questionLevelBadge) {
+          if (s.isAnswered && s.cefrLevelCode) {
+            questionLevelBadge.style.display = "";
+            questionLevelBadge.innerHTML = "";
+            questionLevelBadge.appendChild(document.createTextNode("Item level · "));
+            var levelCodeSpan = document.createElement("span");
+            levelCodeSpan.className = "font-mono";
+            levelCodeSpan.textContent = s.cefrLevelCode;
+            questionLevelBadge.appendChild(levelCodeSpan);
+          } else {
+            questionLevelBadge.style.display = "none";
+            questionLevelBadge.textContent = "";
+          }
         }
 
         // Save button
@@ -803,11 +824,37 @@
           bodyDiv.className = "accordion-explanation__body";
           bodyDiv.id = "explanation-body";
 
+          // #238 / U18: the level is revealed here, after the lock, and only when the reply supplied
+          // it. The manifest omits it for an unanswered question, so this cannot render early.
+          if (s.cefrLevelCode) {
+            var levelLine = document.createElement("div");
+            levelLine.id = "revealed-level";
+            levelLine.className = "mb-2";
+            var levelBadge = document.createElement("span");
+            levelBadge.className = "badge badge--muted";
+            levelBadge.textContent = "Item level · ";
+            var levelCode = document.createElement("span");
+            levelCode.className = "font-mono";
+            levelCode.textContent = s.cefrLevelCode;
+            levelBadge.appendChild(levelCode);
+            levelLine.appendChild(levelBadge);
+            bodyDiv.appendChild(levelLine);
+          }
+
           if (s.explanation) {
+            // #238: "bound to its evidence" — the heading names the option the rationale explains,
+            // so the paragraph is not free-floating. A free response names no option.
+            var correctOpt = (q.options || []).filter(function (o) {
+              return s.correctOptionId != null && o.optionId === s.correctOptionId;
+            })[0];
+            var isFreeResponse = (s.questionType || '').toLowerCase() === 'free_response';
+
             var expTitle = document.createElement("div");
             expTitle.className = "font-sign uppercase text-xs mb-1";
             expTitle.style.fontWeight = "700";
-            expTitle.textContent = "Giải thích chi tiết / Rationale:";
+            expTitle.textContent = (!isFreeResponse && correctOpt)
+              ? "Why " + correctOpt.label + " is correct — " + correctOpt.text
+              : "Giải thích chi tiết / Rationale:";
             bodyDiv.appendChild(expTitle);
 
             var expP = document.createElement("p");
@@ -1010,6 +1057,8 @@
           s.explanation = data.explanation;
           s.transcript = data.transcript;
           s.acceptedAnswersJson = data.acceptedAnswersJson;
+          // #238 / U18: the lock is what releases the level; before this reply it was absent.
+          if (data.cefrLevelCode != null) s.cefrLevelCode = data.cefrLevelCode;
           if (data.isSaved) s.isSaved = true;
           if (data.savedQuestionId != null) s.savedQuestionId = data.savedQuestionId;
           if (data.isSessionFinished) isSessionFinished = true;

@@ -22,20 +22,33 @@ public static partial class PracticeEndpoints
             {
                 var take = await practiceService.GetSessionTakeAsync(CurrentUserId(http), sessionId, q, cancellationToken);
                 static PracticeOptionDto ToOptionDto(PracticeQuestionOption o) => new(o.OptionId, o.Label, o.Text);
-                static PracticeQuestionDto ToQuestionDto(PracticeQuestionView qv) => new(
+
+                // #238 / U18: a question's level travels only once the learner has answered it. The cell
+                // the drill was drawn from supplies it, so an unanswered question leaves it null and the
+                // suppression is in the payload rather than in a CSS rule.
+                string? LevelFor(PracticeQuestionView qv) =>
+                    AnswerContent.IsAnswered(qv.SelectedOptionId, null, qv.ResponseText, qv.SelectedOptionIdsJson)
+                        ? take.Session.CefrLevel?.Code
+                        : null;
+
+                PracticeQuestionDto ToQuestionDto(PracticeQuestionView qv) => new(
                     qv.SessionId, qv.SectionName, qv.QuestionId, qv.DisplayOrder, qv.TotalQuestions,
                     qv.Stem, qv.CategoryName, qv.Hint, qv.HintUsed, qv.Options.Select(ToOptionDto).ToList(),
                     qv.SelectedOptionId, qv.IsCorrect, qv.CorrectOptionId, qv.Explanation, qv.Transcript,
                     qv.Passage, qv.AudioPath, qv.ImagePath, qv.ImageAlt, qv.IsSaved, qv.AudioStartMs, qv.AudioEndMs,
                     qv.QuestionType, qv.MaxSelections, qv.AllowNumber, qv.AcceptedAnswersJson, qv.RequiredKeywords,
-                    qv.MinWords, qv.MaxWords, qv.ResponseText, qv.SelectedOptionIds, qv.SelectedOptionIdsJson, qv.CorrectOptionIds, qv.ItemVersionId, qv.SavedQuestionId);
+                    qv.MinWords, qv.MaxWords, qv.ResponseText, qv.SelectedOptionIds, qv.SelectedOptionIdsJson,
+                    qv.CorrectOptionIds, qv.ItemVersionId, qv.SavedQuestionId, LevelFor(qv));
 
                 return Results.Ok(new PracticeSessionTakeDto(
                     new PracticeSessionDto(
                         take.Session.SessionId, take.Session.SectionId, take.Session.SectionCode, take.Session.SectionName,
                         take.Session.Modality.MapTo<ModalityDto>(), take.Session.QuestionCount, take.Session.Status.MapTo<PracticeStatusDto>(),
                         take.Session.CorrectCount, take.Session.QuestionSource.MapTo<QuestionSourceDto>(),
-                        take.Session.StartedAt, take.Session.FinishedAt),
+                        take.Session.StartedAt, take.Session.FinishedAt,
+                        // #238: the drilled cell, so the take page can reveal its level after the answer
+                        // locks. Omitted endpoints left both null and the reveal had nothing to show.
+                        take.Session.TopicId, take.Session.CefrLevel?.Code),
                     ToQuestionDto(take.Question),
                     take.Questions.Select(ToQuestionDto).ToList(),
                     take.Navigator.Select(n => new PracticeNavigatorItemDto(n.QuestionId, n.DisplayOrder, n.IsAnswered, n.IsCorrect, n.IsSaved, n.IsCurrent, n.ItemVersionId, n.SavedQuestionId)).ToList()));

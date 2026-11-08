@@ -11,6 +11,21 @@ public static partial class PracticeEndpoints
     private static void MapCatalog(RouteGroupBuilder practice)
     {
 
+        // #238: the objective practice matrix. A read — it draws nothing, so it is not a second
+        // selection path. The plan's top-three are marked as prioritised here, from the one service
+        // that computes them, rather than by whatever order the matrix rows come back in.
+        practice.MapGet("/matrix", async (
+            HttpContext http, ILearnerService learners, IPracticeService practiceService,
+            PracticeMatrixService matrix, CancellationToken cancellationToken) =>
+        {
+            var userId = CurrentUserId(http);
+            var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
+            var cells = await matrix.GetMatrixAsync(userId, activeCertId, cancellationToken);
+            var priorities = await practiceService.GetPrioritisedCoordinatesAsync(userId, cancellationToken);
+
+            return Results.Ok(MarkPrioritised(cells, priorities));
+        });
+
         practice.MapGet("/catalog", async (HttpContext http, IPracticeService practiceService, CancellationToken cancellationToken) =>
         {
             var view = await practiceService.GetPracticeSectionsAsync(CurrentUserId(http), cancellationToken);
@@ -34,5 +49,23 @@ public static partial class PracticeEndpoints
                 (view.Speaking ?? []).Select(ToSectionDto).ToList(),
                 view.SpeakingPracticeExamId));
         });
+    }
+
+    /// <summary>
+    /// #238: mark the cells the plan's own top-three point at. Compared by <c>(topic, level)</c> only —
+    /// a plan coordinate is a topic at a level, and two skills pointing at one cell still highlight that
+    /// one cell. <b>Not</b> the first three rows: the priority is the plan's set, so a cell that sorts
+    /// fifth is still highlighted and a cell that sorts first is not.
+    /// </summary>
+    public static IReadOnlyList<PracticeCellDto> MarkPrioritised(
+        IReadOnlyList<PracticeCellDto> cells, IReadOnlyList<PrioritisedCoordinate> priorities)
+    {
+        var priorityCells = priorities
+            .Select(p => (p.TopicId, p.Level.Code))
+            .ToHashSet();
+
+        return cells
+            .Select(c => c with { IsPrioritised = priorityCells.Contains((c.TopicId, c.LevelCode)) })
+            .ToList();
     }
 }

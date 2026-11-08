@@ -32,6 +32,19 @@ public sealed class PracticeController(
                 logger.LogWarning(ex, "Could not read the free-drill state");
             }
 
+            // #238: the objective practice matrix. A failure to read it is an addition to the page, never
+            // a precondition — the drill the learner can start must not disappear because the matrix
+            // could not be counted.
+            IReadOnlyList<PracticeCellDto> cells = [];
+            try
+            {
+                cells = await api.GetPracticeMatrixAsync(cancellationToken);
+            }
+            catch (ApiException ex)
+            {
+                logger.LogWarning(ex, "Could not read the objective practice matrix");
+            }
+
             return View(new PracticeCatalogViewModel(catalog, TempData["ErrorMessage"] as string)
             {
                 FreeDrill = freeDrill,
@@ -42,7 +55,19 @@ public sealed class PracticeController(
                     .Concat(catalog.ReadingSections)
                     .Concat(catalog.OtherSections)
                     .Where(s => s.NextReviewDueAt is not null)
-                    .ToDictionary(s => s.SectionId, s => dates.FormatCustom(s.NextReviewDueAt!.Value, "HH:mm dd MMM"))
+                    .ToDictionary(s => s.SectionId, s => dates.FormatCustom(s.NextReviewDueAt!.Value, "HH:mm dd MMM")),
+                // #238: a resting cell's reopen instant is converted here, in the learner's zone, so the
+                // matrix never repeats #235's UTC-boundary error. The DST-less offset (UTC+7) is exact;
+                // see the report for the zone this does and does not cover.
+                Matrix = cells.Select(c => new PracticeMatrixRowViewModel(
+                    c.TopicCode,
+                    c.TopicName,
+                    CefrLevelLabels.LabelForCode(c.LevelCode, logger),
+                    c.Mastery.ToString(),
+                    PracticeMatrixRowViewModel.LabelFor(c.Mastery.ToString()),
+                    c.IsPrioritised,
+                    c.IsRestingNow,
+                    c.ReopensAt is { } reopens ? dates.FormatCustom(reopens, "HH:mm dd MMM") : null)).ToList()
             });
         }
         catch (ApiException ex)

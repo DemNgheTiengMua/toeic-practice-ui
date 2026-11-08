@@ -110,4 +110,17 @@ public sealed partial class CompanionApiClient
     public Task<FreeDrillStateDto> GetFreeDrillStateAsync(
         int? topicId = null, string? cefrLevelCode = null, CancellationToken cancellationToken = default) =>
         GetFreeDrillStateAsync(topicId, cefrLevelCode, string.Empty, cancellationToken);
+
+    /// <summary>#238: the objective practice matrix — one plate per (topic, level) cell.</summary>
+    public async Task<IReadOnlyList<PracticeCellDto>> GetPracticeMatrixAsync(
+        string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var list = await GetAuthorizedAsync<List<PracticeCellDto>>(
+            "api/learner/practice/matrix", bearerToken, cancellationToken);
+        return list ?? (IReadOnlyList<PracticeCellDto>)[];
+    }
+
+    public Task<IReadOnlyList<PracticeCellDto>> GetPracticeMatrixAsync(
+        CancellationToken cancellationToken = default) =>
+        GetPracticeMatrixAsync(string.Empty, cancellationToken);
 }

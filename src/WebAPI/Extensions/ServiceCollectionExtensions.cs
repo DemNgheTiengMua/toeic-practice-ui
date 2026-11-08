@@ -51,6 +51,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILearnerService, LearnerService>();
         services.AddScoped<ICreditLedger, CreditLedger>();
         services.AddScoped<IPracticeService, PracticeService>();
+        // #238: the read-only objective practice matrix. A read, so it draws nothing and is not a
+        // second selection path.
+        services.AddScoped<PracticeMatrixService>();
         services.AddScoped<ISavedQuestionService, SavedQuestionService>();
         services.AddScoped<IWeaknessAnalysisService, WeaknessAnalysisService>();
         services.AddScoped<IPackageService, PackageService>();

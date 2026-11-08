@@ -27,6 +27,13 @@ public interface IPracticeClient
     Task<FreeDrillStateDto> GetFreeDrillStateAsync(int? topicId = null, string? cefrLevelCode = null, CancellationToken cancellationToken = default) =>
         Task.FromResult(new FreeDrillStateDto(true, [], 0, [], false, false, 0, 0, null));
 
+    /// <summary>#238: the objective practice matrix — one plate per (topic, level) cell.</summary>
+    Task<IReadOnlyList<PracticeCellDto>> GetPracticeMatrixAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<PracticeCellDto>>([]);
+
+    Task<IReadOnlyList<PracticeCellDto>> GetPracticeMatrixAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetPracticeMatrixAsync(cancellationToken);
+
     Task<FreeDrillStateDto> GetFreeDrillStateAsync(int? topicId, string? cefrLevelCode, string bearerToken, CancellationToken cancellationToken = default) =>
         GetFreeDrillStateAsync(topicId, cefrLevelCode, cancellationToken);
     Task RetryPracticeInsightAsync(int sessionId, CancellationToken cancellationToken = default);
