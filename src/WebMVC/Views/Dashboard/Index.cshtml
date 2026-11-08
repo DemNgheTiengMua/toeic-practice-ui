@@ -3,15 +3,35 @@
     Layout = "_LearnerLayout";
     ViewData["Title"] = "Dashboard";
     ViewData["Description"] = "What to do next, where you stand, and how each skill is going.";
-    var presentation = Model.Presentation;
-    var dashboard = Model.Dashboard;
-    var cert = dashboard.Certificate;
+    var certificate = Model.Dashboard.Certificate;
 }
 
 <link rel="stylesheet" href="~/css/dashboard/dashboard.css" asp-append-version="true" />
 
-<partial name="_DashboardHero" model="Model" />
+@* #241 / LRN-11, LRN-12, LRN-13: EXACTLY THREE BLOCKS, AND NO FOURTH.
 
-<partial name="_DashboardGoal" model="presentation" />
+   The block list is data (Model.Blocks, from DashboardBlocks), so the page is one loop and "exactly
+   three" is an assertion on a list rather than a count of partial tags. The three are:
+     1. next action with this week's execution   (_DashboardHero)
+     2. goal standing and feasibility            (_DashboardGoal)
+     3. per-skill standing                       (_DashboardSkills)
 
-<partial name="_DashboardSkills" model="presentation" />
+   LRN-13 collapses it to ONE block when nothing has been measured: the action, and a sentence saying
+   what placement is and how long it takes. No ghost blocks, no dashes, no empty figures - a new
+   learner seeing a grid of empty numbers reads a broken product. *@
+<div class="dashboard-blocks" data-block-count="@Model.Blocks.Count">
+  @foreach (var block in Model.Blocks)
+  {
+    <partial name="@block" model="Model" />
+  }
+
+  @if (Model.IsUnplaced)
+  {
+    @* The one sentence LRN-13 requires. The hero above already carries the action and says how long
+       the sitting takes; this says what placement IS and why the page shows no bands. *@
+    <p class="dashboard-placement-notice" id="placement-notice">
+      Placement is a free sitting that measures your level in every skill @certificate.Code examines.
+      Until you take it there is no band to show, so this page shows none rather than empty figures.
+    </p>
+  }
+</div>

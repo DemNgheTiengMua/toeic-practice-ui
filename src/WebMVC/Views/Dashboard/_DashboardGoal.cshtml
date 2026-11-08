@@ -1,115 +1,67 @@
-@model DashboardPresentation
+@model DashboardViewModel
 @{
+    var presentation = Model.Presentation;
     var goal = Model.Dashboard.Goal;
     var cert = Model.Dashboard.Certificate;
-    var hasTarget = !string.IsNullOrEmpty(goal.TargetBandCode);
-    var hasStanding = goal.CurrentScore.HasValue || !string.IsNullOrEmpty(goal.CurrentBandCode);
 }
 
-@* #159: block 2 of 3. "Where do I stand against the goal I set?" - the band pair, the date, and this
-   week's planned-vs-done minutes. Every figure is stored; nothing here recomputes a score or a plan. *@
+@* #241 / D21a block 2 of 3: goal standing and feasibility, as FOUR TABULAR CELLS and no progress
+   bars. The cells are current level against target, remaining guided hours, pacing comparison and
+   the stored verdict. Every figure was measured by the service that owns it; this block prints it.
+
+   #241 removed the "this week" cell's progress bar. The week's execution now lives in block 1, where
+   D21a puts it, stated as two numbers - so this block is exactly the four cells and has no fifth. *@
 <section class="dashboard-goal" aria-labelledby="dashboard-goal-title">
   <header class="dashboard-goal__header">
-    <h2 class="dashboard-goal__title" id="dashboard-goal-title">Goal Standing · @cert.Code</h2>
-    @if (!string.IsNullOrEmpty(Model.GoalStatusLabel))
+    <h2 class="dashboard-goal__title" id="dashboard-goal-title">Goal Standing Â· @cert.Code</h2>
+    @* #211: the overall is the weakest measured skill, and the skill that produced it is named
+       beside it. An overall with no name lets a learner read a low number and guess. *@
+    @if (Model.OverallLevelCode is { } overall)
     {
-      <span class="badge @Model.GoalStatusBadge font-mono">@Model.GoalStatusLabel</span>
+      <span class="badge badge--muted font-mono">
+        OVERALL @overall@(string.IsNullOrEmpty(Model.LimitingSkillName) ? "" : $" Â· {Model.LimitingSkillName}")
+      </span>
     }
   </header>
 
-  <dl class="dashboard-goal__facts">
-    <div class="dashboard-goal__fact">
-      <dt>Current band</dt>
-      <dd>
-        @if (hasStanding)
-        {
-          <span class="dashboard-goal__figure">@(goal.CurrentBandCode ?? "—")</span>
-          @if (goal.CurrentScore.HasValue)
+  <table class="dashboard-goal__cells">
+    <tbody>
+      <tr>
+        <th scope="row">Level against target</th>
+        <td class="font-mono tabular">@presentation.LevelCell</td>
+      </tr>
+      <tr>
+        <th scope="row">Remaining guided hours</th>
+        <td class="font-mono tabular">@presentation.RemainingHoursCell</td>
+      </tr>
+      <tr>
+        <th scope="row">Pacing</th>
+        <td class="font-mono tabular">@presentation.PacingCell</td>
+      </tr>
+      <tr>
+        <th scope="row">Verdict</th>
+        <td class="tabular">
+          @* LRN-15 / U22: the exam date as a date normally, a gold countdown inside 14 days. *@
+          @if (goal.TargetDate is not null)
           {
-            @* The stored integer is not the number the learner reads: a half-step certificate keeps
-               its marks in tenths, so IELTS 8.5 is stored 85. #159 review. *@
-            <span class="dashboard-goal__sub font-mono">@ScoreDisplay.Format(goal.CurrentScore.Value, goal.ScoreDisplayFactor) pts</span>
+            <span class="dashboard-goal__date@(presentation.IsCountdown ? " dashboard-goal__date--countdown" : "")"
+                  id="exam-date">@presentation.TargetDateDisplay</span>
           }
-          @if (!string.IsNullOrEmpty(goal.CurrentBandName))
+          else
           {
-            <span class="dashboard-goal__sub">@goal.CurrentBandName</span>
+            <span class="dashboard-goal__date dashboard-goal__date--none" id="exam-date">No exam date set</span>
           }
-          @if (goal.CurrentSource == "placement")
-          {
-            <span class="badge badge--muted text-xs">placement</span>
-          }
-        }
-        else
-        {
-          <span class="dashboard-goal__figure">—</span>
-          <span class="dashboard-goal__sub">Not placed yet. <a href="/placement">Take the free placement test</a></span>
-        }
-      </dd>
-    </div>
+          <span class="badge @presentation.VerdictBadge font-mono" id="feasibility-verdict">@presentation.VerdictLabel</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 
-    <div class="dashboard-goal__fact">
-      <dt>Target band</dt>
-      <dd>
-        @if (hasTarget)
-        {
-          <span class="dashboard-goal__figure">@goal.TargetBandCode</span>
-          @if (goal.TargetMinScore.HasValue)
-          {
-            <span class="dashboard-goal__sub font-mono">@goal.TargetMinScore+ pts</span>
-          }
-          @if (!string.IsNullOrEmpty(goal.TargetBandName))
-          {
-            <span class="dashboard-goal__sub">@goal.TargetBandName</span>
-          }
-          <a class="dashboard-goal__link" href="/placement/target-band">Change</a>
-        }
-        else
-        {
-          <span class="dashboard-goal__figure">NOT SET</span>
-          <a class="dashboard-goal__link" href="/placement/target-band">Set your target band</a>
-        }
-      </dd>
-    </div>
-
-    <div class="dashboard-goal__fact">
-      <dt>Exam date</dt>
-      <dd>
-        @if (goal.TargetDate is not null)
-        {
-          <span class="dashboard-goal__figure">@Model.TargetDateDisplay</span>
-          @if (goal.WeeklyStudyHours.HasValue)
-          {
-            <span class="dashboard-goal__sub font-mono">@goal.WeeklyStudyHours h/week</span>
-          }
-        }
-        else
-        {
-          <span class="dashboard-goal__figure">NO DATE</span>
-          <span class="dashboard-goal__sub">A date is what makes the plan measurable.</span>
-        }
-      </dd>
-    </div>
-
-    <div class="dashboard-goal__fact">
-      <dt>This week</dt>
-      <dd>
-        <span class="dashboard-goal__figure font-mono">@Model.WeekPaceText</span>
-        @if (goal.WeekPlannedMinutes > 0)
-        {
-          <div class="progress dashboard-goal__progress" role="progressbar"
-               aria-label="Minutes done this week" aria-valuenow="@Model.WeekProgressValue"
-               aria-valuemin="0" aria-valuemax="100">
-            <div class="progress__bar" style="width: @Model.WeekProgressPercent;"></div>
-          </div>
-        }
-        @if (goal.TotalPathSteps > 0)
-        {
-          <span class="dashboard-goal__sub font-mono">@goal.CompletedPathSteps / @goal.TotalPathSteps path steps done</span>
-        }
-        <a class="dashboard-goal__link" href="/learning-path">
-          @(goal.TotalPathSteps > 0 ? "Open your learning path" : "Build a learning path")
-        </a>
-      </dd>
-    </div>
-  </dl>
+  <footer class="dashboard-goal__footer">
+    <a class="dashboard-goal__link" href="/placement/target-band">@(goal.TargetBandCode is null ? "Set your target band" : "Change your goal")</a>
+    @if (goal.TotalPathSteps > 0)
+    {
+      <a class="dashboard-goal__link" href="/learning-path">Open your learning path</a>
+    }
+  </footer>
 </section>

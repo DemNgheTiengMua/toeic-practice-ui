@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 using Contracts;
 using WebMVC.Models;
 using Xunit;
-
 namespace WebMVC.Tests;
 
 /// <summary>
@@ -35,9 +34,29 @@ public sealed class DashboardThreeBlocksTests
     {
         var index = DashboardView();
 
-        Assert.Contains("dashboard-hero", index);
-        Assert.Contains("dashboard-goal", index);
-        Assert.Contains("dashboard-skills", index);
+        Assert.Contains("_DashboardHero", index);
+        Assert.Contains("_DashboardGoal", index);
+        Assert.Contains("_DashboardSkills", index);
+    }
+
+    /// <summary>
+    /// #241 replaced the fixed three includes with a loop over <c>Model.Blocks</c>, which is what makes
+    /// "exactly three" testable rather than aspirational: there is no place to put a fourth partial
+    /// tag, because the view has exactly one.
+    /// </summary>
+    [Fact]
+    public void The_three_block_partials_are_named_in_the_block_list()
+    {
+        var index = DashboardView();
+
+        Assert.Contains("Model.Blocks", index);
+        Assert.Contains("data-block-count", index);
+        // The partials are named in the list, not in the view: one loop renders whatever the list
+        // says, so a fourth block is an entry here and a count test rather than a stray tag.
+        Assert.Equal(
+            ["_DashboardHero", "_DashboardGoal", "_DashboardSkills"],
+            DashboardBlocks.Placed);
+        Assert.Equal(["_DashboardHero"], DashboardBlocks.Unplaced);
     }
 
     [Theory]
@@ -75,28 +94,38 @@ public sealed class DashboardThreeBlocksTests
     [Fact]
     public void The_dashboard_has_no_fourth_block()
     {
-        // "Exactly three blocks" is the ticket. Counted across every include form, so a block that
-        // arrives as Html.PartialAsync cannot slip past a count of <partial> alone.
+        // "Exactly three blocks" is the ticket. #241 moved the count out of the view and onto a list,
+        // so this counts what the page RENDERS (the list it loops) rather than how many `<partial>`
+        // strings a view happens to contain - and the view has exactly one partial tag, which renders
+        // whatever the list holds.
         var index = View(Path.Combine("Dashboard", "Index.cshtml"));
-        var includes = Regex.Matches(index, @"<partial\s+name=""_Dashboard|PartialAsync\(""_Dashboard").Count;
+        var tags = Regex.Matches(index, @"<partial\s+name=""@block""").Count;
 
-        Assert.Equal(3, includes);
+        Assert.Equal(1, tags);
+        Assert.Equal(3, DashboardBlocks.Placed.Count);
+        Assert.Equal(1, DashboardBlocks.Unplaced.Count);
+        // The three are distinct partials, so "three blocks" cannot be one block rendered thrice.
+        Assert.Equal(3, DashboardBlocks.Placed.Distinct(StringComparer.Ordinal).Count());
     }
 
     [Fact]
     public async Task Skill_cards_render_one_card_per_skill_of_the_certificate()
     {
-        // #149's rule, applied to the dashboard: the cards are Cert.Skills, never a fixed pair. Each
-        // card is named from the skill the service sent, so a certificate that calls its skills
-        // Comprehension and Expression gets those two cards, not Listening/Reading.
+        // #149's rule, applied to the dashboard: the rows are Cert.Skills, never a fixed pair. Each
+        // row is named from the skill the service sent, so a certificate that calls its skills
+        // Comprehension and Expression gets those two columns, not Listening/Reading.
+        // #241: this is now a table whose COLUMN COUNT is the certificate's count, so the assertion is
+        // on Model.Skills.Columns - one column per examined skill - and never on a fixed grid.
         var card = Markup(View(Path.Combine("Dashboard", "_DashboardSkills.cshtml")));
 
-        Assert.Contains("Model.Dashboard.Skills", card);
-        Assert.Contains("@skill.Name", card);
+        Assert.Contains("table.Columns", card);
+        Assert.Contains("@column.Name", card);
         // Only the two skill names the ticket names as the defect; the modality switch may still
         // mention Speaking/Writing because those open their own flow.
         Assert.DoesNotContain("Listening", card);
         Assert.DoesNotContain("Reading", card);
+        // #241: no fixed four-track template, and no auto-fit that would silently invent a fourth.
+        Assert.DoesNotContain("auto-fit", card);
     }
 
     [Fact]

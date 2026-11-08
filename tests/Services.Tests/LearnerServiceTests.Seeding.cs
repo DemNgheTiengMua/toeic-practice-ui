@@ -36,10 +36,36 @@ public sealed partial class LearnerServiceTests
               SET Status = 'done', ResultBandCode = '{band}', TotalScore = {total},
                   WrittenByService = 'AttemptEngine', ProjectionVersion = 1
             WHERE PlacementId = @plc;
+
+            -- #241 / #211: a completed placement ALSO writes the learner's per-skill state, which is
+            -- the record every screen reads a level from (PlacementResultWriter calls
+            -- SkillStateWriter.RecordAsync per measured skill). Writing only PlacementSkillResults
+            -- left the fixture in a state the real writer never produces, and the cascade then read
+            -- it as nothing-measured. One row per examined skill, so a clean sitting measures the
+            -- whole vector. ExpiresAt is MeasuredAt + 90 days exactly, per CK_LSS_Expiry.
+            INSERT INTO LearnerSkillStates
+              (UserId, CertId, SkillId, CefrLevel, PositionInBand, ContinuousCoordinate,
+               Source, MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
+            SELECT {userId}, @cert, s.SkillId, 'B1', 50, 3.50,
+                   'placement', '{takenAt}', DATEADD(DAY, 90, CAST('{takenAt}' AS DATETIMEOFFSET)),
+                   'SkillStateWriter', 1
+            FROM Skills s
+            WHERE s.CertId = @cert
+              AND NOT EXISTS (SELECT 1 FROM LearnerSkillStates l
+                              WHERE l.UserId = {userId} AND l.CertId = @cert AND l.SkillId = s.SkillId);
             """);
 
-    private Task SeedSetTargetBandAsync(int userId, string certCode, string targetBandCode) =>
+    /// <summary>A published placement paper, so "how long it takes" has a stored duration to state
+    /// rather than an invented one (LRN-13).</summary>
+    private Task SeedPlacementExamAsync(string certCode, int minutes) =>
         database.SqlAsync($"""
+            DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
+            IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @cert AND Purpose = 'placement')
+              INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
+              VALUES (@cert, N'Placement {certCode}', 'published', {minutes}, 'placement');
+            """);
+
+    private Task SeedSetTargetBandAsync(int userId, string certCode, string targetBandCode) =>        database.SqlAsync($"""
             DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
             MERGE TargetBands AS tgt
             USING (SELECT {userId} AS UserId, @cert AS CertId) AS src
@@ -60,10 +86,23 @@ public sealed partial class LearnerServiceTests
         database.SqlAsync($"""
             DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
             DECLARE @skill INT = (SELECT TOP 1 SkillId FROM Skills WHERE CertId = @cert);
-            -- #232: the step's topic coordinate. A test fixture may create the topic it needs, because
-            -- the canonical twenty are a closed set the shared database already holds only in the seed.
-            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading')
-              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Detail');
+            -- #241: the step's modality comes from the skill it practises, not from a hardcoded
+            -- 'reading'. FK_Steps_SkillModality is (SkillId, Modality), so a fixture that assumed the
+            -- first skill was reading failed on any certificate whose first skill is listening - a
+            -- fixture defect that looked like a service defect.
+            DECLARE @mod VARCHAR(10) = (SELECT Modality FROM Skills WHERE SkillId = @skill);
+            -- #232 / #183: the canonical twenty are a CLOSED set with a trigger refusing an invented
+            -- code, so a fixture may not mint one. This picks the first canonical topic for the skill's
+            -- own modality - R-DET for reading, L-DET for listening - and the WHERE NOT EXISTS keeps a
+            -- repeat call from growing the set.
+            DECLARE @code VARCHAR(10) = CASE @mod
+                WHEN 'listening' THEN 'L-DET'
+                WHEN 'reading' THEN 'R-DET'
+                WHEN 'speaking' THEN 'S-DESC'
+                ELSE 'W-CORR' END;
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = @mod AND Code = @code)
+              INSERT INTO Topics (Modality, Code, Name)
+              VALUES (@mod, @code, N'Fixture topic');
 
             MERGE TargetBands AS tgt
             USING (SELECT {userId} AS UserId, @cert AS CertId) AS src
@@ -87,13 +126,74 @@ public sealed partial class LearnerServiceTests
             INSERT INTO LearnerPathSteps (LearnerPathId, CertId, SkillId, Modality, TopicId, TargetCefr, StepType, SizingTier,
                                           Status, WeekNumber, WeekSequence, EstimatedMinutes,
                                           WrittenByService, ProjectionVersion)
-            VALUES (@path, @cert, @skill, 'reading',
-                    (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'reading'),
+            VALUES (@path, @cert, @skill, @mod,
+                    (SELECT TOP 1 TopicId FROM Topics WHERE Modality = @mod),
                     'B1', 'focus_practice', 'developing',
                     '{(s.Done ? "done" : "available")}',
                     {(s.Week is null ? "NULL" : s.Week.Value.ToString())}, {i + 1}, {s.Minutes},
                     {(s.Done ? "'PathStepCompletion'" : "NULL")}, {(s.Done ? 1 : 0)});
             """)));
+
+    /// <summary>Records one skill's measured state, as the placement writer does. Used by tests that
+    /// need a PARTIAL vector: #241's cascade treats an unmeasured skill as a task, so a fixture with
+    /// three measured skills and one not is the only way to prove step 2 fires above step 3.</summary>
+    private Task SeedSkillStateAsync(
+        int userId, string certCode, string skillCode, string level, int position, decimal coordinate,
+        string measuredAt) =>
+        database.SqlAsync($"""
+            DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
+            DECLARE @skill INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = '{skillCode}');
+            MERGE LearnerSkillStates AS tgt
+            USING (SELECT {userId} AS UserId, @cert AS CertId, @skill AS SkillId) AS src
+            ON tgt.UserId = src.UserId AND tgt.CertId = src.CertId AND tgt.SkillId = src.SkillId
+            WHEN MATCHED THEN UPDATE SET
+                CefrLevel = '{level}', PositionInBand = {position},
+                ContinuousCoordinate = {coordinate.ToString(System.Globalization.CultureInfo.InvariantCulture)},
+                Source = 'placement', MeasuredAt = '{measuredAt}',
+                ExpiresAt = DATEADD(DAY, 90, CAST('{measuredAt}' AS DATETIMEOFFSET)),
+                WrittenByService = 'SkillStateWriter', ProjectionVersion = tgt.ProjectionVersion + 1
+            WHEN NOT MATCHED THEN INSERT
+                (UserId, CertId, SkillId, CefrLevel, PositionInBand, ContinuousCoordinate,
+                 Source, MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
+                VALUES ({userId}, @cert, @skill, '{level}', {position},
+                        {coordinate.ToString(System.Globalization.CultureInfo.InvariantCulture)},
+                        'placement', '{measuredAt}',
+                        DATEADD(DAY, 90, CAST('{measuredAt}' AS DATETIMEOFFSET)),
+                        'SkillStateWriter', 1);
+            """);
+
+    /// <summary>A finished practice session with answers, which is what the daily-ceiling view counts.
+    /// The cascade reads it, so a test that needs "the day is full" seeds it rather than a stored
+    /// counter - there is none (D12).</summary>
+    private Task SeedAnsweredTodayAsync(int userId, string certCode, int sectionId, int count) =>
+        database.SqlAsync($"""
+            DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
+            DECLARE @skill INT = (SELECT SkillId FROM Sections WHERE SectionId = {sectionId});
+            DECLARE @mod VARCHAR(10) = (SELECT Modality FROM Sections WHERE SectionId = {sectionId});
+            DECLARE @exam INT = (SELECT TOP 1 ExamId FROM Exams WHERE CertId = @cert AND Purpose = 'mock');
+            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, {sectionId}, 1);
+            DECLARE @grp INT = SCOPE_IDENTITY();
+            INSERT INTO PracticeSessions (UserId, CertId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
+            VALUES ({userId}, @cert, {sectionId}, @mod, {count}, 'finished', 0, SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET());
+            DECLARE @sess INT = SCOPE_IDENTITY();
+            DECLARE @i INT = 1;
+            WHILE @i <= {count}
+            BEGIN
+              INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+              VALUES (@grp, @exam, {sectionId}, @skill, CONCAT(N'Stem ', @i), 'B1', 'mcq', @i);
+              DECLARE @q INT = SCOPE_IDENTITY();
+              INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+                (@q, 'mcq', 'A', N'Right', 1), (@q, 'mcq', 'B', N'Wrong', 0);
+              -- #241: UTC, not local. vw_DailyPracticeVolume groups on CAST(AnsweredAt AS DATE) and the
+              -- service compares that against the UTC day, so a local-offset timestamp would land on
+              -- tomorrow for a learner east of Greenwich and the ceiling would read as not reached.
+              INSERT INTO PracticeAnswers (SessionId, QuestionId, SectionId, SelectedOptionId, IsCorrect, DisplayOrder, AnsweredAt)
+              VALUES (@sess, @q, {sectionId},
+                      (SELECT OptionId FROM QuestionOptions WHERE QuestionId = @q AND IsCorrect = 0),
+                      0, @i, SYSUTCDATETIME());
+              SET @i = @i + 1;
+            END
+            """);
 
     /// <summary>A practice session whose answers carry a category, so the category accuracy view has
     /// a row and the skill card has a weak topic to name.</summary>

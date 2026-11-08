@@ -17,11 +17,19 @@ public sealed partial class LearnerService
     /// Accuracy is read from <c>vw_UserCategoryAccuracy</c> - the same view the weakness analysis page
     /// uses - so the card and that page cannot disagree.
     /// </summary>
+    /// <param name="standing">
+    /// #241: #211's stored per-skill state, read once by the caller and passed in. This method only
+    /// <b>joins</b> it to the certificate's skill list - it never derives a level, because a second
+    /// derivation is how two screens come to disagree about one learner's band. A skill absent from
+    /// <paramref name="standing"/> is <see cref="SkillStandingLevel.NotMeasured"/>, never A1.
+    /// </param>
     private async Task<IReadOnlyList<SkillCard>> BuildSkillCardsAsync(
         int userId,
         int certId,
+        LearnerStanding? standing,
         CancellationToken cancellationToken)
     {
+        var measured = standing?.Skills.ToDictionary(s => s.SkillId) ?? [];
         var skills = await db.Skills
             .AsNoTracking()
             .Where(s => s.CertId == certId)
@@ -119,7 +127,10 @@ public sealed partial class LearnerService
                         .Take(WeakestCategoriesPerSkill)
                         .ToList()
                     : [],
-                factor))
+                factor,
+                measured.TryGetValue(s.SkillId, out var state)
+                    ? new SkillStandingLevel(state.Level, state.PositionInBand, state.MeasuredAt, state.IsStale)
+                    : null))
             .ToList();
     }
 
