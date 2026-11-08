@@ -81,6 +81,11 @@ _Avoid_: Exam wizard, question creator, test uploader
 The interactive text/JSON staging interface where exam content is parsed, validated, and reviewed prior to database persistence.
 _Avoid_: Manual import, bulk paste, raw uploader
 
+**Validated item**:
+An item the four ingestion gates judged and the audit has not cleared. It is staged, never live:
+selection reads `active` only. Clearing it (`validated -> active`) is the review act, not the upload.
+_Avoid_: Approved, published, live
+
 **Publish Readiness Audit**:
 The pre-flight inspection checklist that validates question counts, answer keys, media assets, and rubric associations before an exam can transition from draft to published status.
 _Avoid_: Pre-publish check, exam validation, publish verification

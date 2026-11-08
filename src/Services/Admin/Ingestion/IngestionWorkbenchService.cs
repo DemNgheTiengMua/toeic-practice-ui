@@ -291,19 +291,34 @@ public sealed class IngestionWorkbenchService(
     // ---- the audit's clearance ---------------------------------------------------------------
 
     /// <summary>
-    /// AC2's second half: the transition the staging criterion depends on.
+    /// AC2's second half: <c>validated -> active</c>, the transition that makes an imported item
+    /// servable.
     /// <para>
-    /// <b>Why this had to exist.</b> Nothing in <c>src/</c> moved an item out of <c>validated</c>
-    /// before this. A workbench that shows "staged" and offers no way to clear it is a page that parks
-    /// content forever while staff believe it is queued - worse than no page, because it reports a
-    /// queue that never drains.
+    /// <b>What the two states mean.</b> <c>draft</c> is "not yet judged by the four gates";
+    /// <c>validated</c> is "the gates passed and the audit has not cleared it"; <c>active</c> is the
+    /// one state every pool selector reads. CNT-42 names the path, and this is its only application
+    /// caller - so an item reaches a learner here or nowhere.
+    /// </para>
+    /// <para>
+    /// <b>Why a draft cannot be cleared.</b> Only <c>validated</c> proves the gates ran. Accepting any
+    /// other state would make <c>draft</c> reachable to learners, which is the defect this method
+    /// exists to close rather than to move.
+    /// </para>
+    /// <para>
+    /// <b>Why the batch must be the item's own.</b> The decision names (batch, item) and ADM-02 reads
+    /// the batch's uploader; clearing an item that arrived in some other batch would let a reviewer
+    /// publish stock nobody sampled, under a decision whose batch says otherwise. The link is the
+    /// verdict row the ingestion seam wrote, which is the only durable record of "this item came from
+    /// that upload".
     /// </para>
     /// <para>
     /// <b>The permission is <c>pool.content.review</c>, at the route</b>; the invariant ADM-02 is
     /// enforced here and in the database: the row is a <see cref="ReviewSampleDecision"/> with the
     /// <c>clear</c> verb, and <c>trg_ReviewSampleDecisions_NoSelfApproval</c> refuses the batch's
     /// uploader or last modifier. A rule that lived only in a controller would be bypassed by the next
-    /// endpoint someone writes (ADM-04).
+    /// endpoint someone writes (ADM-04). A triage-only account is refused by
+    /// <c>trg_Items_TriageCannotWrite</c> (error 50081) on the item write itself, and holds no review
+    /// namespace, so no route offers it either.
     /// </para>
     /// </summary>
     public async Task ClearForServiceAsync(
@@ -321,6 +336,18 @@ public sealed class IngestionWorkbenchService(
                 ApiError.Codes.Validation,
                 $"Item {itemId} is '{item.LifecycleStatus}', not 'validated'. Only a staged item can be "
                 + "cleared: a draft was never judged by the gates, and an active one is already live.", 409);
+        }
+
+        var arrivedInThisBatch = await db.ImportLogs
+            .AsNoTracking()
+            .AnyAsync(l => l.BatchId == batchId && l.ItemId == itemId, cancellationToken);
+
+        if (!arrivedInThisBatch)
+        {
+            throw new AdminItemException(
+                ApiError.Codes.Validation,
+                $"Item {itemId} did not arrive in batch {batchId}, so that batch's records do not cover "
+                + "it. Clear it under the upload it came from.", 409);
         }
 
         item.LifecycleStatus = "active";

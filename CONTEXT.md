@@ -12,6 +12,16 @@ report, and the learning path are free.
 An English qualification the product prepares for (TOEIC, IELTS, VSTEP), defined entirely by data.
 _Avoid_: Exam type, test
 
+**Item lifecycle**:
+The six states an item moves through, named by CNT-42: `draft`, `validated`, `active`,
+`quarantined`, `retired`, `retired_defective`. `draft` means **not yet judged** by the four ingestion
+gates; **`validated` means gates passed, awaiting audit** - the intermediate state, and the only one
+promotion may come from; `active` is **in service**, the one state every pool selector reads.
+Promotion is `validated -> active`, performed by `IngestionWorkbenchService.ClearForServiceAsync`
+under `pool.content.review`, and recorded as an ADM-02 decision. `draft -> active` is not a named
+transition and is not reachable: an item nobody judged cannot become servable.
+_Avoid_: Published (for items), live (unqualified), approved (it names no state)
+
 **Skill**:
 One assessed ability within a certificate, with exactly one modality (listening, reading, speaking, writing).
 
