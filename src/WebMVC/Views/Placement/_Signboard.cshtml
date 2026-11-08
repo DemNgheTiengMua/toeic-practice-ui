@@ -1,0 +1,225 @@
+@model PlacementResultViewModel
+@*
+  #218 / LRN-16: the result as ONE signboard. Four separate cards invite the learner to average them in
+  their head, which is exactly what the overall exists to prevent, so the floor placard and every skill
+  row live in one frame: the placard is tethered to the limiting skill by its own words, and each row
+  sits on the same certificate axis.
+
+  The axis is the certificate's own band table, never a fixed A1-C2 ladder: TOEIC's 785-940 is labelled
+  "B2" internally and is not CEFR B2 (PRN-03), so the columns are whatever this certificate publishes.
+
+  Why a table rather than divs: one <colgroup> is the structural proof of "one shared axis". Every row
+  is a <tr> in the same <tbody> against the same columns, so a per-row scale would need a second table -
+  it is not merely undocumented, it is not expressible. A state row spans those columns and therefore
+  occupies no band at all (LRN-18).
+*@
+@{
+    var floor = Model.Floor;
+    var fractions = Model.ColumnFractions;
+    var bandRegion = "calc(100% - 17rem)";
+}
+
+<section class="signboard" id="placement-signboard" aria-labelledby="placement-signboard-title">
+  <h2 class="visually-hidden" id="placement-signboard-title">Your placement result</h2>
+
+  @* ---- the floor placard: the number, and its reason in words (LRN-17) ---- *@
+  @if (floor.HasFloor)
+  {
+    <div class="signboard__floor@(floor.IsProvisional ? " signboard__floor--provisional" : "")">
+      <div class="signboard__floor-cell">
+        <span class="signboard__floor-label">@floor.Label</span>
+        <span class="signboard__floor-value" id="placement-floor-coordinate">@floor.Coordinate</span>
+        <span class="signboard__floor-band">@floor.BandName</span>
+      </div>
+      <div class="signboard__floor-cell">
+        @if (!string.IsNullOrEmpty(floor.LimitingSkillText))
+        {
+          <p class="signboard__floor-tether" id="placement-floor-tether">@floor.LimitingSkillText</p>
+        }
+        @if (!string.IsNullOrEmpty(floor.ReasonText))
+        {
+          <p class="signboard__floor-reason" id="placement-floor-reason">@floor.ReasonText</p>
+        }
+        @if (!string.IsNullOrEmpty(floor.ExcludedText))
+        {
+          <p class="signboard__floor-reason text-muted" id="placement-floor-excluded">@floor.ExcludedText</p>
+        }
+        <p class="signboard__floor-caption">@floor.Caption</p>
+      </div>
+    </div>
+  }
+
+  @* ---- the horizon: every examined skill, one shared axis ---- *@
+  <table class="signboard__horizon">
+    <caption class="visually-hidden">
+      Each examined skill as a row on this certificate's own band scale, with the position inside its band
+    </caption>
+    <colgroup>
+      <col class="signboard__col-skill">
+      @foreach (var fraction in fractions)
+      {
+        <col style="width: calc(@bandRegion * @(fraction.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)));">
+      }
+    </colgroup>
+    @if (Model.Bands.Count > 0)
+    {
+      <thead>
+        <tr>
+          <td class="signboard__corner"></td>
+          @foreach (var band in Model.Bands)
+          {
+            <th scope="col" class="font-mono" title="@band.Code">@band.Label</th>
+          }
+        </tr>
+      </thead>
+    }
+    <tbody>
+      @for (var i = 0; i < Model.Rows.Count; i++)
+      {
+        var row = Model.Rows[i];
+        var rowId = $"placement-row-{i}";
+        <tr id="@rowId" data-skill-state="@row.State">
+          <th scope="row" class="signboard__row-label">
+            @row.SkillName
+            @* A state row's words live in the panel beside it; printing the coordinate here too would
+               say "Not measured" twice, which reads like two separate findings. *@
+            @if (!row.IsStatePanel)
+            {
+              <span class="signboard__row-coordinate">@row.Coordinate</span>
+            }
+            @if (!string.IsNullOrEmpty(row.BandName) && row.BandName != row.Coordinate)
+            {
+              <span class="signboard__row-meta" data-band-name>@row.BandName band</span>
+            }
+            @if (row.IsCarriedOver && !string.IsNullOrEmpty(row.CarriedOverText))
+            {
+              <span class="signboard__row-meta">
+                <span class="badge badge--warning" data-badge="carried-over">Carried over</span>
+                @row.CarriedOverText
+              </span>
+            }
+            else if (!string.IsNullOrEmpty(row.MeasuredOnText))
+            {
+              <span class="signboard__row-meta" data-measured-on>@row.MeasuredOnText</span>
+            }
+            @if (row.IsAiEstimated)
+            {
+              <span class="signboard__row-meta">
+                <span class="badge badge--info" data-label="ai-estimated">AI-estimated</span>
+                from one graded task; the second task failed.
+              </span>
+            }
+            else if (!string.IsNullOrEmpty(row.AttemptText))
+            {
+              <span class="signboard__row-meta">@row.AttemptText</span>
+            }
+          </th>
+
+          @if (row.IsStatePanel)
+          {
+            @* A state, not a low band: no marker, no column, no number. Spanned across every band,
+               so nothing can be drawn in one. *@
+            <td colspan="@Model.BandSpan" class="signboard__state-cell">
+              <div class="signboard__state@(row.State == "grading" ? " signboard__state--grading" : "")"
+                   role="status" data-state-panel>
+                <span class="signboard__state-title" data-state-label>
+                  @if (row.State == "grading")
+                  {
+                    @:Grading — not measured yet
+                  }
+                  else if (row.State == "exempt")
+                  {
+                    @:Exempt — not measured
+                  }
+                  else
+                  {
+                    @:Not measured
+                  }
+                </span>
+                <p class="signboard__state-reason" data-state-reason>
+                  @(row.Note ?? PlacementResultViewModel.NotMeasuredReason(row.FailureReason))
+                </p>
+                @if (row.CanRetry)
+                {
+                  <p class="signboard__state-reason">Retrying is free — no credits are used.</p>
+                  <form method="post" action="@Model.RetryUrl" class="signboard__state-form">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn--sm" data-action="retry-grading">
+                      Retry grading
+                    </button>
+                  </form>
+                }
+              </div>
+            </td>
+          }
+          else if (row.HasMarker)
+          {
+            <td colspan="@Model.BandSpan" class="signboard__track-cell">
+              <div class="signboard__track" role="img" aria-label="@row.TrackAriaLabel"
+                   style="--band-count: @Model.Bands.Count; --band-columns: @Model.ColumnTemplate;">
+                @for (var b = 0; b < Model.Bands.Count; b++)
+                {
+                  var state = b < (row.BandIndex ?? 0) ? " is-reached"
+                      : b == row.BandIndex ? " is-current" : "";
+                  @* #218: the attribute is written `@(state)` because Razor treats `cell@state` as an
+                     email address and emits the literal text instead of the class. That bug painted no
+                     band at all while every structural assertion still passed. *@
+                  <span class="signboard__cell@(state)">
+                    @if (b == row.BandIndex && row.PositionInBand is { } position)
+                    {
+                      <span class="signboard__fill" style="width: @(position)%;"></span>
+                    }
+                  </span>
+                }
+                <span class="signboard__marker"
+                      style="left: @(Model.TrackOffset(row).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%;"></span>
+              </div>
+            </td>
+          }
+          else
+          {
+            @* Measured, but this certificate publishes no band of that name: PRN-03's honest gap. *@
+            <td colspan="@Model.BandSpan" class="signboard__state-cell">
+              <div class="signboard__state" data-state-panel data-state-label="no-band">
+                <span class="signboard__state-title">Level recorded, no band column</span>
+                <p class="signboard__state-reason" data-state-reason>@row.NoBandNote</p>
+              </div>
+            </td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  @* ---- the provenance strip (LRN-20): the published rule, and each number's age ---- *@
+  <div class="signboard__strip">
+    <p class="signboard__rule" id="placement-pass-rule">
+      <span class="signboard__rule-label">How a band is awarded.</span>
+      @Model.PassRule
+    </p>
+    <ul class="signboard__provenance" aria-label="When each figure was measured">
+      @foreach (var row in Model.MeasuredRows)
+      {
+        <li>
+          <strong>@row.SkillName</strong>
+          <span class="signboard__date">
+            @(row.IsCarriedOver && !string.IsNullOrEmpty(row.CarriedOverText)
+                ? row.CarriedOverText
+                : row.MeasuredOnText ?? "measurement date not recorded")
+          </span>
+        </li>
+      }
+    </ul>
+  </div>
+
+  @* ---- exactly one primary action (LRN-21) ---- *@
+  <div class="signboard__cta">
+    <p class="signboard__cta-text">
+      Your learning path starts from these per-skill levels, not from the overall, so a strong skill is
+      not dragged down to the weakest one.
+    </p>
+    <a href="/learning-path" class="btn btn--primary btn--lg" id="placement-primary-action">
+      Start my learning path
+    </a>
+  </div>
+</section>

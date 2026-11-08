@@ -80,9 +80,13 @@ public sealed class PlacementPartialResultViewTests
         // the banner names the exclusion in words, and the retry form posts to the model's URL
         Assert.Contains("This is a partial result", view);
         Assert.Contains("left out of your overall", view);
-        Assert.Contains("Model.RetryUrl", view);
-        Assert.Contains("Html.AntiForgeryToken()", view);
-        Assert.Contains("Retrying is free", view);
+        // #218 moved the retry into the signboard partial, beside the row it belongs to. The assertion
+        // follows the code rather than being dropped: the form must still post the model's URL with a
+        // token, and it must still say the retry is free.
+        var signboard = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "Views", "Placement", "_Signboard.cshtml"));
+        Assert.Contains("Model.RetryUrl", signboard);
+        Assert.Contains("Html.AntiForgeryToken()", signboard);
+        Assert.Contains("Retrying is free", signboard);
     }
 
     private static PlacementResultViewModel Model(params PlacementSkillResultInfoDto[] results) =>
