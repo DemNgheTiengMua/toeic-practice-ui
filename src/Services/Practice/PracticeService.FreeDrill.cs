@@ -97,7 +97,8 @@ public sealed partial class PracticeService
 
         var ceiling = await LoadDailyVolumeAsync(userId, cancellationToken);
         var ceilingReached = ceiling is { } v
-            && (v.AnsweredCount >= FreeDrillState.DailyObjectiveCeiling || v.ProductiveTaskCount >= 4);
+            && (v.AnsweredCount >= FreeDrillState.DailyObjectiveCeiling
+                || v.ProductiveTaskCount >= FreeDrillState.DailyProductiveCeiling);
 
         var cellUsedToday = topicId is { } topic
             && level is { } lvl
