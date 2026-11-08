@@ -262,6 +262,9 @@ public partial class CompanionDbContext : DbContext
     /// <summary>#202: one row per coverage cell, always all 120 of them.</summary>
     public virtual DbSet<vw_CoverageMatrix> vw_CoverageMatrices { get; set; }
 
+    /// <summary>#235: the daily ceiling, derived from answers (D12).</summary>
+    public virtual DbSet<vw_DailyPracticeVolume> vw_DailyPracticeVolumes { get; set; }
+
     /// <summary>#201 / ADM-02: who decided what about a review sample, which the trigger reads.</summary>
     public virtual DbSet<ReviewSampleDecision> ReviewSampleDecisions { get; set; }
 

@@ -18,5 +18,9 @@ public class PracticeException(string code, string message) : Exception(message)
     public const string SessionAlreadyFinished = "session_already_finished";
     public const string AlreadyAnswered = "already_answered";
 
+    /// <summary>#235: a free drill refused by the plan, the cell's day, or the daily ceiling. The
+    /// message names what is missing and what to do instead — never a bare "locked".</summary>
+    public const string FreeDrillLocked = "free_drill_locked";
+
     public string Code { get; } = code;
 }

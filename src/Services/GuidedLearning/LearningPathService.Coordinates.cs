@@ -23,7 +23,12 @@ namespace Services;
 public sealed partial class LearningPathService
 {
     /// <summary>The lifecycle state selection reads. Named, so a state added to
-    /// <c>CK_Items_Lifecycle</c> cannot start being served by "not this".</summary>
+    /// <c>CK_Items_Lifecycle</c> cannot start being served by "not this".
+    /// <para>
+    /// #235: this is <b>planning's</b> read of stock ("does this cell hold anything at all"), not a
+    /// second selector. What a drill actually serves is <see cref="ItemSelector"/>'s alone.
+    /// </para>
+    /// </summary>
     private const string ActiveItemLifecycle = "active";
 
     /// <summary>A drill never draws a placement item: placement stock is an occupancy problem (D8) and

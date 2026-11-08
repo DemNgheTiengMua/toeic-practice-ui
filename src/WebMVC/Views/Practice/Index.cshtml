@@ -37,12 +37,62 @@
   <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
 }
 
+@if (!string.IsNullOrEmpty(Model.FreeDrillLockNotice))
+{
+  @* #235 / PLC-62 / PLC-64: the lock names the incomplete steps and their remaining minutes, and the
+     ceiling notice offers review or lessons instead. A lock with no explanation is the most hostile
+     state in the product, so the sentence comes from the service and is printed verbatim. *@
+  <div class="alert alert--warning" role="status">
+    <strong>Free drilling is resting.</strong>
+    <div>@Model.FreeDrillLockNotice</div>
+    <div class="row row--wrap mt-2">
+      <a class="btn btn--sm" href="/learning-path">Go to my path</a>
+      <a class="btn btn--sm" href="/lessons">Review a lesson</a>
+    </div>
+  </div>
+}
+
+@if (Model.PriorityLabels.Count > 0)
+{
+  @* #235 / PLC-61: "the three coordinates the plan currently prioritises are highlighted". These are a
+     hint — every section below stays drillable, which is the point (free drilling is unrestricted). *@
+  <div class="card">
+    <div class="card__body">
+      <h2 class="h4 m-0 mb-1">Your plan is pointing at</h2>
+      <p class="text-sm text-muted no-margin">
+        Highlighted, not required: you can drill anything below.
+      </p>
+      <ul class="mt-2">
+        @foreach (var label in Model.PriorityLabels)
+        {
+          <li><span class="font-mono">@label</span></li>
+        }
+      </ul>
+    </div>
+  </div>
+}
+
+@if (Model.FreeDrill is { } freeDrill && freeDrill.AnsweredToday > 0)
+{
+  <p class="text-sm text-muted">
+    Today: <span class="font-mono">@freeDrill.AnsweredToday</span> of
+    <span class="font-mono">@freeDrill.DailyItemCeiling</span> items practised.
+  </p>
+}
+
 @if (catalog.UnfinishedSession is { } unfinished)
 {
   <div class="alert alert--info row row--between row--middle row--wrap" role="status">
     <div>
       <strong>Unfinished practice:</strong> You have an in-progress session in <strong>@unfinished.SectionName</strong> started @Model.UnfinishedStartedAtDisplay.
-      <div class="text-sm text-muted">@unfinished.CorrectCount of @unfinished.QuestionCount questions answered so far.</div>
+      <div class="text-sm text-muted">
+        @unfinished.CorrectCount of @unfinished.QuestionCount questions answered so far.
+        @* #235: the draw is honest about a cell that could not fill a session. *@
+        @if (unfinished.IsShort)
+        {
+          <strong>This drill is short: your cell held fewer new items than a full session.</strong>
+        }
+      </div>
     </div>
     <a class="btn btn--primary btn--sm" href="/practice/@unfinished.SessionId">Resume drill <span aria-hidden="true">&rarr;</span></a>
   </div>

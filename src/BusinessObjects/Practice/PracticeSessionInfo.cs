@@ -21,4 +21,13 @@ public sealed record PracticeSessionInfo(
     DateTimeOffset StartedAt,
     DateTimeOffset? FinishedAt,
     int? TopicId = null,
-    CefrLevel? CefrLevel = null);
+    CefrLevel? CefrLevel = null)
+{
+    /// <summary>
+    /// #235 / D11: a pool drill whose cell held fewer servable items than a session asks for is
+    /// <b>short</b>, and the screen says so rather than letting ten look like the promised size. Derived
+    /// from the honest count against the one session size — never stored, so a reload cannot disagree
+    /// with the draw that produced it.
+    /// </summary>
+    public bool IsShort => SectionId is null && TopicId is not null && QuestionCount < SmartPracticePlanner.SessionSize;
+}

@@ -176,6 +176,7 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
             .SingleAsync();
         // #162: vw_LearnerPathIsPremium went with the premium-path feature, leaving eight views.
         // #202: vw_CoverageMatrix is the ninth - one row per coverage cell, always all 120 of them.
-        Assert.Equal(9, viewCount);
+        // #235: vw_DailyPracticeVolume is the tenth - the daily ceiling, derived from answers (D12).
+        Assert.Equal(10, viewCount);
     }
 }

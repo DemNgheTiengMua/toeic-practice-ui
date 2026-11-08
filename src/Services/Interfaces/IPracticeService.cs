@@ -29,4 +29,13 @@ public interface IPracticeService
 
     Task<IReadOnlyList<PracticeQuestionView>> GetSessionQuestionsAsync(int userId, int sessionId, CancellationToken cancellationToken = default);
     Task<PracticeSessionTake> GetSessionTakeAsync(int userId, int sessionId, int? displayOrder = null, CancellationToken cancellationToken = default);
+
+    /// <summary>#235 / PLC-61: the top three coordinates the path currently prioritises. A hint for the
+    /// free-drill screen, never a restriction.</summary>
+    Task<IReadOnlyList<PrioritisedCoordinate>> GetPrioritisedCoordinatesAsync(int userId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<PrioritisedCoordinate>>([]);
+
+    /// <summary>#235 / PLC-62..64: whether a free drill may start, and the sentence that says why not.</summary>
+    Task<FreeDrillState> GetFreeDrillStateAsync(int userId, int? topicId, CefrLevel? level, CancellationToken cancellationToken = default) =>
+        Task.FromResult(FreeDrillState.Unrestricted([], false, 0, false));
 }

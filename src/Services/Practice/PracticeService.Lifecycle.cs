@@ -16,9 +16,29 @@ public sealed partial class PracticeService
 
         var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
 
+        // #235 / PLC-62..64: these are the free drill's locks. A *path* step does not come through
+        // here — LearningPathService starts its own session — so a step is never blocked by the plan
+        // that scheduled it (PLC-60).
+        await EnforceFreeDrillLocksAsync(userId, input, cancellationToken);
+
         return input.TopicId is { } topicId
             ? await StartPoolSessionAsync(userId, activeCertId, topicId, input.CefrLevel!.Value, input.ContentTier, cancellationToken)
             : await StartSectionSessionAsync(userId, activeCertId, input.SectionId!.Value, cancellationToken);
+    }
+
+    /// <summary>
+    /// #235 / PLC-62 and PLC-64: the three things that stop a free drill, each with its own sentence and
+    /// each naming the way on. Throwing here means no session row is written, so a refused drill does
+    /// not count against the learner's day.
+    /// </summary>
+    private async Task EnforceFreeDrillLocksAsync(
+        int userId, StartPracticeSessionInput input, CancellationToken cancellationToken)
+    {
+        var state = await GetFreeDrillStateAsync(userId, input.TopicId, input.CefrLevel, cancellationToken);
+        if (!state.IsUnlocked)
+        {
+            throw new PracticeException(PracticeException.FreeDrillLocked, state.LockNotice!);
+        }
     }
 
     /// <summary>
@@ -42,7 +62,9 @@ public sealed partial class PracticeService
                 "Speaking is answered by voice, so it has no typed drill: open the recorded speaking practice, which is graded by AI.");
         }
 
-        var selected = await PlanPoolItemsAsync(userId, topic.Modality, topicId, level, contentTier, cancellationToken);
+        // #235 / PLC-62..64: a free drill is a reward for following the plan, and it stops at the day's
+        // ceiling. Path steps do not pass through here, so a step is never blocked by any of this.
+        var selected = (await PlanPoolItemsAsync(userId, certId, topic.Modality, topicId, level, contentTier, cancellationToken)).Items;
 
         if (selected.Count == 0)
         {

@@ -43,6 +43,19 @@ public sealed record PracticeCatalogViewModel(PracticeCatalogDto Catalog, string
             .Select(g => new PracticeSectionGroupViewModel(g.Key, g.ToList()))
             .ToList();
 
+    /// <summary>#235 / PLC-61..64: the free drill's own state — whether it is open, which three
+    /// coordinates the plan prioritises, and the sentence that names the lock. Null when the catalog was
+    /// read without it, so an older client still renders.</summary>
+    public FreeDrillStateDto? FreeDrill { get; init; }
+
+    /// <summary>The lock notice to print verbatim, or null when drilling is open.</summary>
+    public string? FreeDrillLockNotice => FreeDrill is { IsUnlocked: false } state ? state.LockNotice : null;
+
+    /// <summary>PLC-61: at most three highlighted coordinates, reduced to the label the screen prints.</summary>
+    public IReadOnlyList<string> PriorityLabels => (FreeDrill?.Priorities ?? [])
+        .Select(p => $"{p.TopicCode} · {p.LevelCode}")
+        .ToList();
+
     // The start form is meaningless without a section button in it: a Speaking-only certificate would
     // otherwise meet three dropdowns it can never submit.
     public bool HasDrillableSections => DrillableSectionGroups.Count > 0;
