@@ -274,4 +274,57 @@ public sealed class FreeDrillStateTests(DatabaseFixture database)
             await database.DropDatabaseAsync(fixture.DatabaseName);
         }
     }
+
+    /// <summary>
+    /// The three locks are computed independently, and the notice reports <b>every</b> one that fires.
+    /// <para>
+    /// <b>The wrong input that would pass:</b> a ternary chain that reports only the first lock. Both
+    /// flags are exposed separately, so a test asserting the flags passes - but the learner is told
+    /// about the week's steps and not that today's ceiling is also spent, so clearing the steps reveals
+    /// a second wall with no warning. That is the "lock with no exit" shape PLC-62 refuses.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task A_second_lock_is_reported_before_the_first_one_is_cleared()
+    {
+        var fixture = await SeedAsync($"EEFree_{Guid.NewGuid():N}"[..22]);
+        try
+        {
+            await using var db = DbContextFactory.Create(fixture.ConnectionString);
+
+            // Both locks at once: the path's steps are still open (the seed leaves them so), and the
+            // day's ceiling is spent.
+            await db.Database.ExecuteSqlRawAsync($"""
+                DECLARE @today DATETIME2 = CAST(SYSUTCDATETIME() AS DATE);
+                DECLARE @n INT = 1;
+                WHILE @n <= 60
+                BEGIN
+                  INSERT INTO PracticeSessions (UserId, CertId, TopicId, CefrLevel, Modality, QuestionCount, Status, QuestionSource)
+                  VALUES ({fixture.LearnerId}, {fixture.CertId}, {fixture.TopicId}, 'B1', 'reading', 1, 'finished', 'all');
+                  DECLARE @s INT = SCOPE_IDENTITY();
+                  INSERT INTO PracticeAnswers (SessionId, ItemId, ItemVersionId, SelectedLabel, IsCorrect, AnsweredAt, DisplayOrder)
+                  SELECT @s, i.ItemId, v.ItemVersionId, 'A', 1, DATEADD(MINUTE, @n, @today), 1
+                  FROM Items i JOIN ItemVersions v ON v.ItemId = i.ItemId
+                  WHERE i.BatchTag = 'free-a';
+                  SET @n = @n + 1;
+                END
+                """);
+
+            var state = await Service(fixture.ConnectionString)
+                .GetFreeDrillStateAsync(fixture.LearnerId, fixture.TopicId, CefrLevel.B1);
+
+            Assert.False(state.IsUnlocked);
+            Assert.True(state.DailyCeilingReached);
+            Assert.NotEmpty(state.IncompleteSteps);
+
+            Assert.NotNull(state.LockNotice);
+            // Both sentences, not just the first one the chain happened to reach.
+            Assert.Contains("step", state.LockNotice!, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("ceiling", state.LockNotice!, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(fixture.DatabaseName);
+        }
+    }
 }

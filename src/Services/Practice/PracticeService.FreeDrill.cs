@@ -107,16 +107,33 @@ public sealed partial class PracticeService
         var incomplete = await LoadIncompleteWeekStepsAsync(userId, activeCertId, cancellationToken);
         var remaining = incomplete.Sum(s => s.EstimatedMinutes);
 
-        string? notice = incomplete.Count > 0
-            ? $"Free drilling opens once this week's steps are done. {incomplete.Count} step(s) remain, about "
-              + $"{remaining} minute(s): " + string.Join("; ", incomplete.Select(s => $"{s.Title} ({s.EstimatedMinutes} min)"))
-            : ceilingReached
-                ? "You have reached today's practice ceiling. Spacing the rest overnight is what makes it stick — "
-                  + "review a completed lesson or read an explanation instead, and drilling reopens tomorrow."
-                : cellUsedToday
-                    ? "This topic and level have already had their session today. One session per cell per day keeps a "
-                      + "cell from being exhausted in one afternoon — it reopens tomorrow, or drill a different cell now."
-                    : null;
+        // The three are computed INDEPENDENTLY, and the notice reports EVERY lock that fires. Reporting
+        // only the first would leave a learner to discover the second one after clearing it, which is
+        // the "lock with no exit" shape this ticket refuses.
+        var notices = new List<string>(3);
+
+        if (incomplete.Count > 0)
+        {
+            notices.Add(
+                $"Free drilling opens once this week's steps are done. {incomplete.Count} step(s) remain, about "
+                + $"{remaining} minute(s): " + string.Join("; ", incomplete.Select(s => $"{s.Title} ({s.EstimatedMinutes} min)")));
+        }
+
+        if (ceilingReached)
+        {
+            notices.Add(
+                "You have reached today's practice ceiling. Spacing the rest overnight is what makes it stick — "
+                + "review a completed lesson or read an explanation instead, and drilling reopens tomorrow.");
+        }
+
+        if (cellUsedToday)
+        {
+            notices.Add(
+                "This topic and level have already had their session today. One session per cell per day keeps a "
+                + "cell from being exhausted in one afternoon — it reopens tomorrow, or drill a different cell now.");
+        }
+
+        var notice = notices.Count == 0 ? null : string.Join(" ", notices);
 
         return new FreeDrillState(
             IsUnlocked: notice is null,
