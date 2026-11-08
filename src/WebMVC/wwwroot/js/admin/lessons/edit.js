@@ -31,12 +31,44 @@ function confirmDeleteLesson() {
         catSelect.value = '';
       }
     }
+
+    onSkillChanged(skillSelect ? skillSelect.value : null);
+  }
+
+  /**
+   * #240: narrow the topic list to the selected skill's modality and keep the hidden Modality field
+   * in step with it. A reading lesson cannot sit on a listening topic, so the editor must not offer
+   * one - the API refuses it anyway, but offering it would be a wrong answer the form invites.
+   */
+  function onSkillChanged(skillId) {
+    const skillSelect = document.getElementById('SkillId');
+    const modalityEl = document.getElementById('Modality');
+    const topicSelect = document.getElementById('TopicId');
+    if (!skillSelect || !topicSelect) return;
+
+    const selected = Array.from(skillSelect.options).find(o => String(o.value) === String(skillId));
+    const modality = selected ? selected.getAttribute('data-modality') : null;
+    if (modalityEl && modality) modalityEl.value = modality;
+
+    let firstMatch = null;
+    Array.from(topicSelect.options).forEach(opt => {
+      const match = !modality || opt.getAttribute('data-modality') === modality;
+      opt.hidden = !match;
+      if (match && !firstMatch) firstMatch = opt;
+    });
+
+    if (firstMatch && (!topicSelect.selectedOptions[0] || topicSelect.selectedOptions[0].hidden)) {
+      topicSelect.value = firstMatch.value;
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     const certEl = document.getElementById('CertId');
     if (certEl && certEl.value) {
       onCertChanged(certEl.value);
+    } else {
+      const skillEl = document.getElementById('SkillId');
+      if (skillEl) onSkillChanged(skillEl.value);
     }
   });
 

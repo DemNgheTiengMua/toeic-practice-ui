@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text.Json;
+using BusinessObjects;
 using Contracts;
 using DataAccess;
 using BusinessObjects.Entities;
@@ -22,6 +23,9 @@ public sealed partial class AdminLessonService
         {
             CertId = request.CertId,
             SkillId = request.SkillId,
+            Modality = request.Modality,
+            TopicId = request.TopicId,
+            CefrLevel = ParseLevel(request.CefrLevel),
             CategoryId = request.CategoryId,
             Title = request.Title.Trim(),
             Summary = string.IsNullOrWhiteSpace(request.Summary) ? null : request.Summary.Trim(),
@@ -50,7 +54,8 @@ public sealed partial class AdminLessonService
                 cardDto.CorrectOption,
                 cardDto.Explanation,
                 cardDto.Rationale,
-                i));
+                i,
+                cardDto.Module));
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -78,6 +83,9 @@ public sealed partial class AdminLessonService
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
 
         lesson.SkillId = request.SkillId;
+        lesson.Modality = request.Modality;
+        lesson.TopicId = request.TopicId;
+        lesson.CefrLevel = ParseLevel(request.CefrLevel);
         lesson.CategoryId = request.CategoryId;
         lesson.Title = request.Title.Trim();
         lesson.Summary = string.IsNullOrWhiteSpace(request.Summary) ? null : request.Summary.Trim();
@@ -110,7 +118,8 @@ public sealed partial class AdminLessonService
                 cardDto.CorrectOption,
                 cardDto.Explanation,
                 cardDto.Rationale,
-                i));
+                i,
+                cardDto.Module));
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -181,6 +190,42 @@ public sealed partial class AdminLessonService
         if (!await db.Skills.AnyAsync(s => s.SkillId == request.SkillId && s.CertId == request.CertId, cancellationToken))
         {
             throw new AdminLessonException(ApiError.Codes.Validation, "Skill does not belong to the selected certificate.", 400);
+        }
+
+        // #240: a lesson is addressed by (skill, topic, level), so all three are required and the topic
+        // must be the skill's own modality - a reading lesson on a listening topic is the defect this
+        // refuses here and FK_Lessons_TopicModality refuses in the database.
+        if (!CefrLevel.TryParseAuthored(request.CefrLevel, out _))
+        {
+            throw new AdminLessonException(
+                ApiError.Codes.Validation,
+                "Level must be one of A1, A2, B1, B2, C1 or C2. A certificate band is not a level.",
+                400);
+        }
+
+        var topic = await db.Topics
+            .AsNoTracking()
+            .Where(t => t.TopicId == request.TopicId)
+            .Select(t => new { t.Modality, t.Code })
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new AdminLessonException(ApiError.Codes.Validation, "Topic was not found.", 400);
+
+        if (!string.Equals(topic.Modality, request.Modality, StringComparison.Ordinal))
+        {
+            throw new AdminLessonException(
+                ApiError.Codes.Validation,
+                $"Topic {topic.Code} is a {topic.Modality} topic, so a lesson on it cannot be {request.Modality}.",
+                400);
+        }
+
+        if (!await db.Skills.AnyAsync(
+                s => s.SkillId == request.SkillId && s.CertId == request.CertId && s.Modality == request.Modality,
+                cancellationToken))
+        {
+            throw new AdminLessonException(
+                ApiError.Codes.Validation,
+                $"Skill {request.SkillId} is not a {request.Modality} skill of this certificate.",
+                400);
         }
 
         if (request.CategoryId.HasValue &&
@@ -260,8 +305,7 @@ public sealed partial class AdminLessonService
         }
     }
 
-    private static LessonCard BuildLessonCard(
-        int lessonId,
+    private static LessonCard BuildLessonCard(        int lessonId,
         int certId,
         string cardType,
         string title,
@@ -274,12 +318,18 @@ public sealed partial class AdminLessonService
         string? correctOption,
         string? explanation,
         string? rationale,
-        int displayOrder) =>
+        int displayOrder,
+        string? module = null) =>
         new()
         {
             LessonId = lessonId,
             CertId = certId,
             CardType = cardType.Trim().ToLowerInvariant(),
+            // #240: an unknown module is dropped to primary rather than refused, so an older manifest
+            // still imports and the default matches the column's own.
+            Module = string.Equals(module, LessonModule.Remedial, StringComparison.OrdinalIgnoreCase)
+                ? LessonModule.Remedial
+                : LessonModule.Primary,
             Title = title.Trim(),
             ContentMarkdown = contentMarkdown.Trim(),
             QuestionPrompt = string.IsNullOrWhiteSpace(questionPrompt) ? null : questionPrompt.Trim(),
@@ -292,4 +342,10 @@ public sealed partial class AdminLessonService
             Rationale = string.IsNullOrWhiteSpace(rationale) ? null : rationale.Trim(),
             DisplayOrder = displayOrder,
         };
+
+    private static CefrLevel ParseLevel(string code) =>
+        CefrLevel.TryParseAuthored(code, out var level)
+            ? level
+            : throw new AdminLessonException(
+                ApiError.Codes.Validation, $"Level '{code}' is not an authored CEFR level (A1..C2).", 400);
 }

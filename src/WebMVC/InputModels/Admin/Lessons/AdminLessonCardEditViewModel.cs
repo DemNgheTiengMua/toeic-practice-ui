@@ -43,5 +43,9 @@ public sealed class AdminLessonCardEditViewModel
 
     public string? Rationale { get; set; }
 
+    /// <summary>#240: which sub-module the card belongs to. The two are separate card sets, so a
+    /// remedial visit is not the same lesson with a different title.</summary>
+    public string Module { get; set; } = LessonModuleCodes.Primary;
+
     public int DisplayOrder { get; set; }
 }

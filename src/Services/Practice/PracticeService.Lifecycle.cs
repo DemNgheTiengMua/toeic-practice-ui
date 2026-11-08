@@ -170,7 +170,10 @@ public sealed partial class PracticeService
     private async Task AbandonInProgressAsync(int userId, int certId, CancellationToken cancellationToken)
     {
         var existingInProgress = await db.PracticeSessions
-            .Where(s => s.UserId == userId && s.CertId == certId && s.Status == PracticeStatus.InProgress.ToCode() && s.LearnerPathStepId == null)
+            .Where(s => s.UserId == userId && s.CertId == certId && s.Status == PracticeStatus.InProgress.ToCode() && s.LearnerPathStepId == null
+                // #240: a lesson sitting is its own open item, with its own resume position. Starting a
+                // drill must not quietly abandon the lesson the learner is halfway through.
+                && s.LessonId == null)
             .ToListAsync(cancellationToken);
 
         foreach (var inProg in existingInProgress)
@@ -253,7 +256,11 @@ public sealed partial class PracticeService
     private async Task PruneOldSessionsAsync(int userId, int certId, CancellationToken cancellationToken)
     {
         var sessions = await db.PracticeSessions
-            .Where(s => s.UserId == userId && s.CertId == certId && s.LearnerPathStepId == null)
+            .Where(s => s.UserId == userId && s.CertId == certId
+                // #240: a lesson sitting is not one of the standalone drills this retention bound
+                // governs. Pruning it would delete the evidence a micro-check wrote.
+                && s.LearnerPathStepId == null
+                && s.LessonId == null)
             .OrderByDescending(s => s.StartedAt)
             .ThenByDescending(s => s.SessionId)
             .Select(s => s.SessionId)

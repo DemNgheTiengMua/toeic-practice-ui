@@ -12,4 +12,5 @@ public sealed record LessonManifestCardDto(
     string? OptionD = null,
     string? CorrectOption = null,
     string? Explanation = null,
-    string? Rationale = null);
+    string? Rationale = null,
+    string Module = LessonModuleCodes.Primary);

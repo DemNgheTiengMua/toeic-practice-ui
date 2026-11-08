@@ -14,4 +14,8 @@ public sealed record AdminLessonDetailDto(
     int EstimatedMinutes,
     int DisplayOrder,
     DateTimeOffset CreatedAt,
-    IReadOnlyList<LessonCardDto> Cards);
+    IReadOnlyList<LessonCardDto> Cards,
+    string Modality = "reading",
+    int TopicId = 0,
+    string TopicCode = "",
+    string CefrLevel = "");

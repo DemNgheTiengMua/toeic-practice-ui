@@ -262,8 +262,15 @@ public sealed partial class LearningPathService
             .Where(pa => pa.Session.UserId == userId
                 && pa.Session.CertId == certId
                 && pa.IsCorrect != null
-                && pa.ItemId != null
-                && db.Items.Any(i => i.ItemId == pa.ItemId && i.TopicId == topicId && i.CefrLevel == level))
+                // #240: a lesson micro-check is evidence of this cell too. Its answer names a card and
+                // no item, so it is attributed through the lesson sitting's own (topic, level) - a
+                // lesson is pitched at exactly the cell it teaches.
+                && ((pa.ItemId != null
+                        && db.Items.Any(i => i.ItemId == pa.ItemId
+                            && i.TopicId == topicId && i.CefrLevel == level))
+                    || (pa.CardId != null
+                        && pa.Session.TopicId == topicId
+                        && pa.Session.CefrLevel == level)))
             .GroupBy(pa => 1)
             .Select(g => new { Answered = g.Count(), Correct = g.Count(a => a.IsCorrect == true) })
             .FirstOrDefaultAsync(cancellationToken);
@@ -282,17 +289,28 @@ public sealed partial class LearningPathService
                 : MasteryState.Learning;
     }
 
-    /// <summary>The one lesson of this skill, lowest display order first, or null when the certificate
-    /// has none. A lesson step needs a leveled lesson, so the level is carried on the step and not
-    /// converted into a lesson's property: lessons are not leveled in this schema yet.</summary>
-    private async Task<int?> LoadLessonForSkillAsync(int certId, int skillId, CancellationToken cancellationToken) =>
-        await db.Lessons
+    /// <summary>The lesson of this skill at this level, lowest display order first, or null when the
+    /// certificate has none.
+    /// <para>
+    /// #240: a lesson now carries its own level and topic, so the path asks for the level it plans at
+    /// and takes the topic FROM the lesson - rather than naming a drill topic and hoping a lesson sits
+    /// there. Before this, the path took whichever lesson of the skill sorted first and the step stated
+    /// a level the row did not hold.
+    /// </para>
+    /// </summary>
+    private async Task<(int LessonId, int TopicId)?> LoadLessonForLevelAsync(
+        int certId, int skillId, CefrLevel level, CancellationToken cancellationToken)
+    {
+        var lesson = await db.Lessons
             .AsNoTracking()
-            .Where(l => l.CertId == certId && l.SkillId == skillId)
+            .Where(l => l.CertId == certId && l.SkillId == skillId && l.CefrLevel == level)
             .OrderBy(l => l.DisplayOrder)
             .ThenBy(l => l.LessonId)
-            .Select(l => (int?)l.LessonId)
+            .Select(l => new { l.LessonId, l.TopicId })
             .FirstOrDefaultAsync(cancellationToken);
+
+        return lesson is null ? null : (lesson.LessonId, lesson.TopicId);
+    }
 
     /// <summary>The published mock exam that covers this skill, or null. A mock section executes
     /// through <c>IAttemptEngine</c>, which serves a whole paper, so a certificate with no published

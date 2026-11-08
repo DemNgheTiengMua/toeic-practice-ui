@@ -2038,11 +2038,15 @@ DECLARE @secP6 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert A
 DECLARE @speaExam INT = (SELECT ExamId FROM Exams WHERE CertId = @toeicCert AND Name = N'ETS TOEIC Speaking Practice Exam 1');
 DECLARE @catTense INT = (SELECT CategoryId FROM QuestionCategories WHERE CertId = @toeicCert AND Code = 'grammar_tense');
 
+-- #240: a lesson is addressed by (skill, topic, level). This one is the reading skill's R-GRAM cell at
+-- B1, which is where the reading cut score puts the demo learner.
+DECLARE @tRGramLesson INT = (SELECT TopicId FROM Topics WHERE Modality = 'reading' AND Code = 'R-GRAM');
+
 -- Seed Guided Learning Lesson: Present Continuous Tense
 IF NOT EXISTS (SELECT 1 FROM Lessons WHERE CertId = @toeicCert AND Title = N'Present Continuous Tense')
 BEGIN
-  INSERT INTO Lessons (CertId, SkillId, CategoryId, Title, Summary, EstimatedMinutes, DisplayOrder)
-  VALUES (@toeicCert, @toeicRead, @catTense, N'Present Continuous Tense',
+  INSERT INTO Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, CategoryId, Title, Summary, EstimatedMinutes, DisplayOrder)
+  VALUES (@toeicCert, @toeicRead, 'reading', @tRGramLesson, 'B1', @catTense, N'Present Continuous Tense',
           N'Master the present continuous tense for temporary and ongoing actions in TOEIC Part 5.', 5, 1);
   DECLARE @lessonId INT = SCOPE_IDENTITY();
 
@@ -2586,6 +2590,13 @@ SET XACT_ABORT ON;
     SELECT @toeicList = SkillId FROM dbo.Skills WHERE CertId = @toeicCert AND Code = 'LIST';
     SELECT @toeicRead = SkillId FROM dbo.Skills WHERE CertId = @toeicCert AND Code = 'READ';
     SELECT @toeicWrit = SkillId FROM dbo.Skills WHERE CertId = @toeicCert AND Code = 'WRIT';
+
+    -- #240: these four lessons are addressed by (skill, topic, level). The topic is the one the lesson's
+    -- own skill and subject name, and B1 is where the seeded TOEIC cut scores put the demo learner.
+    DECLARE @tRGram INT = (SELECT TopicId FROM dbo.Topics WHERE Modality = 'reading' AND Code = 'R-GRAM');
+    DECLARE @tLFunc INT = (SELECT TopicId FROM dbo.Topics WHERE Modality = 'listening' AND Code = 'L-FUNC');
+    DECLARE @tWCorr INT = (SELECT TopicId FROM dbo.Topics WHERE Modality = 'writing' AND Code = 'W-CORR');
+    DECLARE @tRInf INT = (SELECT TopicId FROM dbo.Topics WHERE Modality = 'reading' AND Code = 'R-INF');
 
     -- 0.3. Tra cứu các Sections của TOEIC
     SELECT @secP1 = SectionId FROM dbo.Sections WHERE CertId = @toeicCert AND Code = N'P1';
@@ -3735,9 +3746,9 @@ Essay Guidelines:
     -- LESSON 1
     IF NOT EXISTS (SELECT 1 FROM dbo.Lessons WHERE CertId = @toeicCert AND Title = N'Tense & Aspect Mastery in Business Contexts')
     BEGIN
-        INSERT INTO dbo.Lessons (CertId, SkillId, Title, Summary, EstimatedMinutes, DisplayOrder)
+        INSERT INTO dbo.Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, Summary, EstimatedMinutes, DisplayOrder)
         VALUES (
-            @toeicCert, @toeicRead,
+            @toeicCert, @toeicRead, 'reading', @tRGram, 'B1',
             N'Tense & Aspect Mastery in Business Contexts',
             N'Phương pháp 3 giây nhận diện dấu hiệu phối hợp thì (Time Markers) và phân biệt chủ động - bị động trong Part 5.',
             15, 1
@@ -3816,9 +3827,9 @@ Essay Guidelines:
     -- LESSON 2
     IF NOT EXISTS (SELECT 1 FROM dbo.Lessons WHERE CertId = @toeicCert AND Title = N'Eliminating Auditory Traps & Mastering Indirect Responses')
     BEGIN
-        INSERT INTO dbo.Lessons (CertId, SkillId, Title, Summary, EstimatedMinutes, DisplayOrder)
+        INSERT INTO dbo.Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, Summary, EstimatedMinutes, DisplayOrder)
         VALUES (
-            @toeicCert, @toeicList,
+            @toeicCert, @toeicList, 'listening', @tLFunc, 'B1',
             N'Eliminating Auditory Traps & Mastering Indirect Responses',
             N'Kỹ thuật loại trừ đáp án lặp âm/lặp từ và nhận diện các mẫu câu trả lời gián tiếp đạt điểm tuyệt đối Part 2.',
             15, 2
@@ -3894,9 +3905,9 @@ Essay Guidelines:
     -- LESSON 3
     IF NOT EXISTS (SELECT 1 FROM dbo.Lessons WHERE CertId = @toeicCert AND Title = N'High-Scoring Business Email Architecture (Writing W2)')
     BEGIN
-        INSERT INTO dbo.Lessons (CertId, SkillId, Title, Summary, EstimatedMinutes, DisplayOrder)
+        INSERT INTO dbo.Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, Summary, EstimatedMinutes, DisplayOrder)
         VALUES (
-            @toeicCert, @toeicWrit,
+            @toeicCert, @toeicWrit, 'writing', @tWCorr, 'B1',
             N'High-Scoring Business Email Architecture (Writing W2)',
             N'Khung sườn 4 bước viết email giải quyết sự cố thương mại trong 10 phút với văn phong trang trọng chuẩn ETS.',
             20, 3
@@ -3970,9 +3981,9 @@ Essay Guidelines:
     -- LESSON 4
     IF NOT EXISTS (SELECT 1 FROM dbo.Lessons WHERE CertId = @toeicCert AND Title = N'Cross-Text Inference in Multi-Passage Reading (Part 7)')
     BEGIN
-        INSERT INTO dbo.Lessons (CertId, SkillId, Title, Summary, EstimatedMinutes, DisplayOrder)
+        INSERT INTO dbo.Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, Summary, EstimatedMinutes, DisplayOrder)
         VALUES (
-            @toeicCert, @toeicRead,
+            @toeicCert, @toeicRead, 'reading', @tRInf, 'B1',
             N'Cross-Text Inference in Multi-Passage Reading (Part 7)',
             N'Phương pháp tìm "Từ khóa cầu nối" (Bridge Keywords) để giải quyết câu hỏi suy luận chéo giữa Hóa đơn, Lịch trình và Email.',
             20, 4
@@ -4556,8 +4567,19 @@ BEGIN
   FROM @diagLessons WHERE SeedId=@diagLessonIndex;
 
   IF NOT EXISTS (SELECT 1 FROM Lessons WHERE CertId=@diagLessonCert AND Title=@diagLessonTitle)
-    INSERT INTO Lessons (CertId,SkillId,Title,Summary,EstimatedMinutes,DisplayOrder)
-    VALUES (@diagLessonCert,@diagLessonSkill,@diagLessonTitle,@diagLessonSummary,12,@diagModuleOrder);
+  BEGIN
+    -- #240: a lesson needs its cell, and the diagnostic lessons name a practice section whose skill
+    -- already says the modality. The topic is the lowest-id topic of that modality: these are demo
+    -- lessons, and the cell's exact topic is not what the placement sprint is about.
+    DECLARE @diagLessonModality VARCHAR(10) =
+      (SELECT s.Modality FROM Skills s WHERE s.SkillId=@diagLessonSkill);
+    DECLARE @diagLessonTopic INT =
+      (SELECT TOP 1 TopicId FROM Topics WHERE Modality=@diagLessonModality ORDER BY TopicId);
+
+    INSERT INTO Lessons (CertId,SkillId,Modality,TopicId,CefrLevel,Title,Summary,EstimatedMinutes,DisplayOrder)
+    VALUES (@diagLessonCert,@diagLessonSkill,@diagLessonModality,@diagLessonTopic,'B1',
+            @diagLessonTitle,@diagLessonSummary,12,@diagModuleOrder);
+  END
   SELECT @diagLessonId=LessonId FROM Lessons WHERE CertId=@diagLessonCert AND Title=@diagLessonTitle;
 
   INSERT INTO LessonCards

@@ -9,10 +9,11 @@ public static partial class LessonEndpoints
 
     private static async Task<IResult> GetLessonProgressAsync(
         int id,
+        string? module,
         HttpContext http,
         ILessonService lessons)
     {
-        var progress = await lessons.GetProgressAsync(CurrentUserId(http), id);
+        var progress = await lessons.GetProgressAsync(CurrentUserId(http), id, ModuleOrDefault(module));
         return Results.Ok(progress);
     }
 

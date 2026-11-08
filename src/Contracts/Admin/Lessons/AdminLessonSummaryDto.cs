@@ -16,4 +16,8 @@ public sealed record AdminLessonSummaryDto(
     int EstimatedMinutes,
     int DisplayOrder,
     int CardCount,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    int TopicId = 0,
+    string TopicCode = "",
+    string TopicName = "",
+    string CefrLevel = "");

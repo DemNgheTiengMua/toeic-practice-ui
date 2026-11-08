@@ -20,7 +20,7 @@ public sealed class GuidedLearningDisplayTests
     {
         var lesson = new LessonDetailDto(7, "Grammar", null, 1, null, 5,
             [Card(22, 2, "example", "<script>alert(1)</script>"), Card(11, 1, "rule", "**Rule**")]);
-        var progress = new LessonProgressDto(1, 2, false, 22, null, null, null);
+        var progress = new LessonProgressDto(1, 2, false, 22, null, null, null, ResumeCardIndex: 2);
         var model = new LessonViewModel(lesson, progress);
 
         Assert.Equal(new[] { 11, 22 }, model.Cards.Select(c => c.Card.CardId));
@@ -31,7 +31,9 @@ public sealed class GuidedLearningDisplayTests
         Assert.Equal("lesson-card--rule", model.Cards[0].CssClass);
         Assert.Equal("<p><strong>Rule</strong></p>", model.Cards[0].ContentHtml);
         Assert.DoesNotContain("<script", model.Cards[1].ContentHtml);
-        Assert.Equal(1, new LessonViewModel(lesson, progress with { LastViewedCardId = 999 }).InitialIndex);
+        // #240: the resume point is the service's computed card index, so a last-viewed card that no
+        // longer exists in the module arrives here already resolved to card one by the service.
+        Assert.Equal(1, new LessonViewModel(lesson, progress with { LastViewedCardId = 999, ResumeCardIndex = 1 }).InitialIndex);
     }
 
     [Fact]

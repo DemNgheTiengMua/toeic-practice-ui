@@ -216,16 +216,21 @@ public sealed partial class LearningPathService
             .ToList();
     }
 
-    /// <summary>A lesson step opens the reader at its own lesson. The reader keeps its own progress
-    /// row, so a partially read lesson resumes where it was.</summary>
+    /// <summary>A lesson step opens the reader at its own lesson and module. The reader keeps its own
+    /// progress row per module, so a partially read lesson resumes where it was rather than at card
+    /// one.</summary>
     private Task<StartStepResult> StartLessonStepAsync(
         LearnerPathStep step, PathStepType stepType, CancellationToken cancellationToken)
     {
         var lessonId = step.RefLessonId
             ?? throw new InvalidOperationException($"Lesson step {step.StepId} names no lesson.");
 
+        // #240: the step type says which module to read. An expanded_remedial step reads the remedial
+        // module; every other lesson step reads the primary one. D10's table states this pairing, and
+        // LessonService.ModuleForStepType is the one copy of it.
+        var module = LessonService.ModuleForStepType(stepType);
         return Task.FromResult(new StartStepResult(
-            step.StepId, stepType, StepRoute.LessonReader, $"/lessons/{lessonId}", null, null));
+            step.StepId, stepType, StepRoute.LessonReader, $"/lessons/{lessonId}?module={module}", null, null));
     }
 
     /// <summary>

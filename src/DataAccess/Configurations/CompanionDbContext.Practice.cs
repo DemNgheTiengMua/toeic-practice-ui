@@ -18,6 +18,10 @@ public partial class CompanionDbContext
             // #187: a pool drill is resumed and ceiling-checked by its cell, not by a section.
             entity.HasIndex(e => new { e.UserId, e.TopicId, e.CefrLevel, e.StartedAt }, "IX_Practice_Cell")
                 .HasFilter("([TopicId] IS NOT NULL)");
+            // #240: one OPEN lesson sitting per learner per lesson.
+            entity.HasIndex(e => new { e.UserId, e.LessonId }, "UX_Practice_OneLessonSitting")
+                .IsUnique()
+                .HasFilter("([LessonId] IS NOT NULL AND [Status] = 'in_progress')");
 
             entity.Property(e => e.QuestionSource).HasDefaultValue("all", "DF_Practice_Source");
             entity.Property(e => e.StartedAt).HasDefaultValueSql("(sysdatetimeoffset())");
@@ -64,6 +68,10 @@ public partial class CompanionDbContext
             // a legacy answer has no ItemVersionId. EF cannot express a filtered unique index from
             // conventions, so the names are declared here and dropped from the model as keys.
             entity.HasIndex(e => e.QuestionId, "IX_PracticeAnswers_Question").HasFilter("([QuestionId] IS NOT NULL)");
+            // #240: one micro-check graded once per sitting.
+            entity.HasIndex(e => new { e.SessionId, e.CardId }, "UQ_PracticeAnswers_Card")
+                .IsUnique()
+                .HasFilter("([CardId] IS NOT NULL)");
 
             entity.Property(e => e.ResponseText);
             entity.Property(e => e.SelectedOptionIdsJson);

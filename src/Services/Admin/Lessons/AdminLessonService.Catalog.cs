@@ -44,7 +44,11 @@ public sealed partial class AdminLessonService
                 l.EstimatedMinutes,
                 l.DisplayOrder,
                 l.LessonCards.Count,
-                l.CreatedAt))
+                l.CreatedAt,
+                l.TopicId,
+                l.Topic.Code,
+                l.Topic.Name,
+                l.CefrLevel.Code))
             .ToListAsync(cancellationToken);
     }
 
@@ -53,6 +57,7 @@ public sealed partial class AdminLessonService
         var lesson = await db.Lessons.AsNoTracking()
             .Include(l => l.Cert)
             .Include(l => l.Skill)
+            .Include(l => l.Topic)
             .Include(l => l.Category)
             .Include(l => l.LessonCards)
             .FirstOrDefaultAsync(l => l.LessonId == lessonId, cancellationToken);
@@ -78,7 +83,8 @@ public sealed partial class AdminLessonService
                 c.CorrectOption,
                 c.Explanation,
                 c.DisplayOrder,
-                c.Rationale))
+                c.Rationale,
+                c.Module))
             .ToList();
 
         return new AdminLessonDetailDto(
@@ -94,7 +100,11 @@ public sealed partial class AdminLessonService
             lesson.EstimatedMinutes,
             lesson.DisplayOrder,
             lesson.CreatedAt,
-            cards);
+            cards,
+            lesson.Modality,
+            lesson.TopicId,
+            lesson.Topic?.Code ?? "",
+            lesson.CefrLevel.Code);
     }
 
     public async Task<AdminLessonFormOptionsDto> GetFormOptionsAsync(int? certId = null, CancellationToken cancellationToken = default)
@@ -126,6 +136,14 @@ public sealed partial class AdminLessonService
             .Select(c => new AdminLessonCategoryOptionDto(c.CategoryId, c.CertId, c.Code, c.Name))
             .ToListAsync(cancellationToken);
 
-        return new AdminLessonFormOptionsDto(certs, skills, categories);
+        // #240: the topic axis a lesson is addressed on. All twenty are offered and the editor filters
+        // by the selected skill's modality, so a reading lesson is never offered a listening topic.
+        var topics = await db.Topics.AsNoTracking()
+            .OrderBy(t => t.Modality)
+            .ThenBy(t => t.Code)
+            .Select(t => new AdminLessonTopicOptionDto(t.TopicId, t.Modality, t.Code, t.Name))
+            .ToListAsync(cancellationToken);
+
+        return new AdminLessonFormOptionsDto(certs, skills, categories, topics);
     }
 }

@@ -23,10 +23,26 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
         return new AdminLessonService(db, store ?? new RecordingFileStore(), TimeProvider.System);
     }
 
-    private async Task<(int certId, int skillId, int categoryId)> SeedCertAndSkillAsync()
+    private async Task<(int certId, int skillId, int categoryId, int topicId)> SeedCertAndSkillAsync()
     {
         var certCode = $"AL{Guid.NewGuid():N}"[..10];
         await database.SqlAsync($"""
+            INSERT INTO Topics (Modality, Code, Name)
+            SELECT v.Modality, v.Code, v.Name
+            FROM (VALUES
+              ('listening','L-GIST',N'Global gist'), ('listening','L-DET',N'Detail'),
+              ('listening','L-INF',N'Inference'), ('listening','L-ATT',N'Attitude'),
+              ('listening','L-FUNC',N'Function'), ('listening','L-ORG',N'Organisation'),
+              ('reading','R-GIST',N'Global thesis'), ('reading','R-DET',N'Local detail'),
+              ('reading','R-INF',N'Bridging inference'), ('reading','R-ATT',N'Authorial stance'),
+              ('reading','R-COH',N'Cohesion'), ('reading','R-GRAM',N'Grammar'),
+              ('speaking','S-DESC',N'Description'), ('speaking','S-INT',N'Interaction'),
+              ('speaking','S-ARG',N'Argument'), ('speaking','S-SYN',N'Synthesis'),
+              ('writing','W-CORR',N'Correspondence'), ('writing','W-DATA',N'Data'),
+              ('writing','W-ARG',N'Argument'), ('writing','W-DISC',N'Discourse')
+            ) v(Modality, Code, Name)
+            WHERE NOT EXISTS (SELECT 1 FROM Topics t WHERE t.Modality = v.Modality AND t.Code = v.Code);
+
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Admin Lesson Cert', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
@@ -41,18 +57,42 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.FirstAsync(c => c.Code == certCode);
         var skill = await db.Skills.FirstAsync(s => s.CertId == cert.CertId);
-        var category = await db.QuestionCategories.FirstAsync(c => c.CertId == cert.CertId);
+        var category = await db.QuestionCategories.FirstAsync(qc => qc.CertId == cert.CertId);
+        // #240: the canonical R-DET cell, which is where a seeded reading lesson sits.
+        var topicId = await db.Topics
+            .Where(t => t.Modality == "reading" && t.Code == "R-DET")
+            .Select(t => t.TopicId)
+            .FirstAsync();
 
-        return (cert.CertId, skill.SkillId, category.CategoryId);
+        return (cert.CertId, skill.SkillId, category.CategoryId, topicId);
     }
+
+    /// <summary>
+    /// #240: every upsert in this file names the cell. This helper keeps the file's existing
+    /// positional shape, so each call site changes by one token rather than gaining four arguments.
+    /// </summary>
+    private static AdminLessonUpsertDto Upsert(
+        int certId,
+        int skillId,
+        int? categoryId,
+        string title,
+        string? summary,
+        int estimatedMinutes,
+        int displayOrder,
+        IReadOnlyList<AdminLessonCardUpsertDto> cards,
+        int topicId,
+        string modality = "reading",
+        string cefrLevel = "B1") =>
+        new(certId, skillId, categoryId, title, summary, estimatedMinutes, displayOrder, cards,
+            modality, topicId, cefrLevel);
 
     [Fact]
     public async Task CreateLessonAsync_SavesLessonAndCards_WithNormalizedContiguousDisplayOrder()
     {
-        var (certId, skillId, categoryId) = await SeedCertAndSkillAsync();
+        var (certId, skillId, categoryId, topicId) = await SeedCertAndSkillAsync();
         var service = CreateService();
 
-        var request = new AdminLessonUpsertDto(
+        var request = Upsert(
             certId,
             skillId,
             categoryId,
@@ -71,7 +111,8 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
                     Explanation: "Must is followed directly by the base verb without 'to'.",
                     Rationale: "Options B and C incorrectly include 'to'.",
                     DisplayOrder: 99)
-            }
+            },
+            topicId
         );
 
         var result = await service.CreateLessonAsync(request);
@@ -96,10 +137,10 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     [Fact]
     public async Task GetLessonsAsync_FiltersByCertIdAndSkillId()
     {
-        var (certId, skillId, categoryId) = await SeedCertAndSkillAsync();
+        var (certId, skillId, categoryId, topicId) = await SeedCertAndSkillAsync();
         var service = CreateService();
 
-        var created = await service.CreateLessonAsync(new AdminLessonUpsertDto(
+        var created = await service.CreateLessonAsync(Upsert(
             certId,
             skillId,
             categoryId,
@@ -110,7 +151,8 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
             new List<AdminLessonCardUpsertDto>
             {
                 new(null, "rule", "Rule", "Content", DisplayOrder: 0)
-            }
+            },
+            topicId
         ));
 
         var list = await service.GetLessonsAsync(certId, skillId);
@@ -136,7 +178,7 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     [Fact]
     public async Task GetFormOptionsAsync_ReturnsCertificatesSkillsAndCategories()
     {
-        var (certId, skillId, categoryId) = await SeedCertAndSkillAsync();
+        var (certId, skillId, categoryId, topicId) = await SeedCertAndSkillAsync();
         var service = CreateService();
 
         var options = await service.GetFormOptionsAsync(certId);
@@ -154,7 +196,7 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     public async Task CreateLessonAsync_ThrowsWhenCertNotFound()
     {
         var service = CreateService();
-        var request = new AdminLessonUpsertDto(
+        var request = Upsert(
             999999,
             1,
             null,
@@ -165,7 +207,9 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
             new List<AdminLessonCardUpsertDto>
             {
                 new(null, "rule", "R", "C", DisplayOrder: 0)
-            }
+            },
+            // The certificate check runs before the topic one, so this id never has to exist.
+            topicId: 1
         );
 
         var ex = await Assert.ThrowsAsync<AdminLessonException>(() => service.CreateLessonAsync(request));
@@ -176,11 +220,11 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     [Fact]
     public async Task CreateLessonAsync_ThrowsWhenSkillDoesNotBelongToCert()
     {
-        var (cert1, _, _) = await SeedCertAndSkillAsync();
-        var (_, skill2, _) = await SeedCertAndSkillAsync();
+        var (cert1, _, _, topic1) = await SeedCertAndSkillAsync();
+        var (_, skill2, _, _) = await SeedCertAndSkillAsync();
         var service = CreateService();
 
-        var request = new AdminLessonUpsertDto(
+        var request = Upsert(
             cert1,
             skill2, // Skill belongs to cert2!
             null,
@@ -191,7 +235,8 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
             new List<AdminLessonCardUpsertDto>
             {
                 new(null, "rule", "R", "C", DisplayOrder: 0)
-            }
+            },
+            topic1
         );
 
         var ex = await Assert.ThrowsAsync<AdminLessonException>(() => service.CreateLessonAsync(request));
@@ -202,10 +247,10 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     [Fact]
     public async Task CreateLessonAsync_ThrowsWhenCardTypeInvalid()
     {
-        var (certId, skillId, _) = await SeedCertAndSkillAsync();
+        var (certId, skillId, _, topicId) = await SeedCertAndSkillAsync();
         var service = CreateService();
 
-        var request = new AdminLessonUpsertDto(
+        var request = Upsert(
             certId,
             skillId,
             null,
@@ -216,7 +261,8 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
             new List<AdminLessonCardUpsertDto>
             {
                 new(null, "invalid_type", "Title", "Content", DisplayOrder: 0)
-            }
+            },
+            topicId
         );
 
         var ex = await Assert.ThrowsAsync<AdminLessonException>(() => service.CreateLessonAsync(request));
@@ -227,10 +273,10 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     [Fact]
     public async Task CreateLessonAsync_ThrowsWhenMicroCheckIncomplete()
     {
-        var (certId, skillId, _) = await SeedCertAndSkillAsync();
+        var (certId, skillId, _, topicId) = await SeedCertAndSkillAsync();
         var service = CreateService();
 
-        var request = new AdminLessonUpsertDto(
+        var request = Upsert(
             certId,
             skillId,
             null,
@@ -243,7 +289,8 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
                 new(null, "micro_check", "Check", "Content",
                     QuestionPrompt: null, OptionA: "A", OptionB: "B", OptionC: "C", OptionD: "D",
                     CorrectOption: "X", Explanation: null, DisplayOrder: 0)
-            }
+            },
+            topicId
         );
 
         var ex = await Assert.ThrowsAsync<AdminLessonException>(() => service.CreateLessonAsync(request));
@@ -254,10 +301,10 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     [Fact]
     public async Task UpdateLessonAsync_UpdatesMetadataAndReplacesCards_WhilePreservingLearnerProgress()
     {
-        var (certId, skillId, categoryId) = await SeedCertAndSkillAsync();
+        var (certId, skillId, categoryId, topicId) = await SeedCertAndSkillAsync();
         var service = CreateService();
 
-        var created = await service.CreateLessonAsync(new AdminLessonUpsertDto(
+        var created = await service.CreateLessonAsync(Upsert(
             certId,
             skillId,
             categoryId,
@@ -268,7 +315,8 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
             new List<AdminLessonCardUpsertDto>
             {
                 new(null, "rule", "Card 1", "Content 1", DisplayOrder: 0)
-            }
+            },
+            topicId
         ));
 
         // Seed a learner progress record pointing to this card
@@ -285,7 +333,7 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
             """);
 
         // Now update lesson with new cards
-        var updateRequest = new AdminLessonUpsertDto(
+        var updateRequest = Upsert(
             certId,
             skillId,
             categoryId,
@@ -297,7 +345,8 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
             {
                 new(null, "example", "New Example", "Ex content", DisplayOrder: 0),
                 new(null, "pitfall", "New Pitfall", "Trap content", DisplayOrder: 1)
-            }
+            },
+            topicId
         );
 
         var updated = await service.UpdateLessonAsync(created.LessonId, updateRequest);
@@ -318,10 +367,10 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     [Fact]
     public async Task DeleteLessonAsync_RemovesLessonAndCards()
     {
-        var (certId, skillId, categoryId) = await SeedCertAndSkillAsync();
+        var (certId, skillId, categoryId, topicId) = await SeedCertAndSkillAsync();
         var service = CreateService();
 
-        var created = await service.CreateLessonAsync(new AdminLessonUpsertDto(
+        var created = await service.CreateLessonAsync(Upsert(
             certId,
             skillId,
             categoryId,
@@ -332,7 +381,8 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
             new List<AdminLessonCardUpsertDto>
             {
                 new(null, "rule", "Card", "Content", DisplayOrder: 0)
-            }
+            },
+            topicId
         ));
 
         await service.DeleteLessonAsync(created.LessonId);
@@ -344,10 +394,10 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     [Fact]
     public async Task DeleteLessonAsync_BlockedWhenReferencedByAnActivePathStep()
     {
-        var (certId, skillId, categoryId) = await SeedCertAndSkillAsync();
+        var (certId, skillId, categoryId, topicId) = await SeedCertAndSkillAsync();
         var service = CreateService();
 
-        var created = await service.CreateLessonAsync(new AdminLessonUpsertDto(
+        var created = await service.CreateLessonAsync(Upsert(
             certId,
             skillId,
             categoryId,
@@ -358,7 +408,8 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
             new List<AdminLessonCardUpsertDto>
             {
                 new(null, "rule", "Card", "Content", DisplayOrder: 0)
-            }
+            },
+            topicId
         ));
 
         // #232: the reader reference lives on the step's coordinate, so an active path step is what
@@ -393,7 +444,7 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     [Fact]
     public async Task ImportLessonsAsync_JsonManifest_CreatesNewLessons()
     {
-        var (certId, _, _) = await SeedCertAndSkillAsync();
+        var (certId, _, _, topicId) = await SeedCertAndSkillAsync();
         var service = CreateService();
 
         var manifestJson = """
@@ -402,6 +453,7 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
                 {
                     "title": "JSON Import Lesson 1",
                     "skill": "reading",
+                    "topicCode": "R-DET",
                     "categoryCode": "GRAMMAR",
                     "summary": "Imported via JSON",
                     "estimatedMinutes": 8,
@@ -448,10 +500,10 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     [Fact]
     public async Task ImportLessonsAsync_FailsWhenDuplicateExistsAndOverwriteIsFalse()
     {
-        var (certId, skillId, categoryId) = await SeedCertAndSkillAsync();
+        var (certId, skillId, categoryId, topicId) = await SeedCertAndSkillAsync();
         var service = CreateService();
 
-        await service.CreateLessonAsync(new AdminLessonUpsertDto(
+        await service.CreateLessonAsync(Upsert(
             certId,
             skillId,
             categoryId,
@@ -462,7 +514,8 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
             new List<AdminLessonCardUpsertDto>
             {
                 new(null, "rule", "Card", "Content", DisplayOrder: 0)
-            }
+            },
+            topicId
         ));
 
         var manifestJson = """
@@ -471,6 +524,7 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
                 {
                     "title": "Existing Unique Title",
                     "skill": "reading",
+                    "topicCode": "R-DET",
                     "cards": [
                         { "type": "rule", "title": "R", "contentMarkdown": "C" }
                     ]
@@ -490,10 +544,10 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     [Fact]
     public async Task ImportLessonsAsync_UpdatesExistingWhenOverwriteIsTrue()
     {
-        var (certId, skillId, categoryId) = await SeedCertAndSkillAsync();
+        var (certId, skillId, categoryId, topicId) = await SeedCertAndSkillAsync();
         var service = CreateService();
 
-        var existing = await service.CreateLessonAsync(new AdminLessonUpsertDto(
+        var existing = await service.CreateLessonAsync(Upsert(
             certId,
             skillId,
             categoryId,
@@ -504,7 +558,8 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
             new List<AdminLessonCardUpsertDto>
             {
                 new(null, "rule", "Initial Card", "Old content", DisplayOrder: 0)
-            }
+            },
+            topicId
         ));
 
         var manifestJson = """
@@ -513,6 +568,7 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
                 {
                     "title": "Overwrite Target",
                     "skill": "reading",
+                    "topicCode": "R-DET",
                     "summary": "New Overwritten Summary",
                     "estimatedMinutes": 15,
                     "cards": [
@@ -543,7 +599,7 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     [Fact]
     public async Task ImportLessonsAsync_ZipPackage_ExtractsAndSavesMediaAndRewritesMarkdown()
     {
-        var (certId, _, _) = await SeedCertAndSkillAsync();
+        var (certId, _, _, topicId) = await SeedCertAndSkillAsync();
         var store = new RecordingFileStore();
         var service = CreateService(store);
 
@@ -553,6 +609,7 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
                 {
                     "title": "Zip Lesson With Media",
                     "skill": "reading",
+                    "topicCode": "R-DET",
                     "cards": [
                         {
                             "type": "example",
@@ -602,10 +659,10 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     [Fact]
     public async Task ExportLessonAsync_ProducesValidLessonManifestMatchingSchema()
     {
-        var (certId, skillId, categoryId) = await SeedCertAndSkillAsync();
+        var (certId, skillId, categoryId, topicId) = await SeedCertAndSkillAsync();
         var service = CreateService();
 
-        var created = await service.CreateLessonAsync(new AdminLessonUpsertDto(
+        var created = await service.CreateLessonAsync(Upsert(
             certId,
             skillId,
             categoryId,
@@ -619,7 +676,8 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
                 new(null, "micro_check", "Check Card", "Prompt text",
                     QuestionPrompt: "Which one?", OptionA: "Option 1", OptionB: "Option 2", OptionC: "Option 3", OptionD: "Option 4",
                     CorrectOption: "C", Explanation: "Expl", Rationale: "Rat", DisplayOrder: 1)
-            }
+            },
+            topicId
         ));
 
         var manifest = await service.ExportLessonAsync(created.LessonId);

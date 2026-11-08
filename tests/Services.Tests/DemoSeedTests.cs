@@ -178,6 +178,22 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
                 AND s.TargetCefr IN ('A1','A2','B1','B2','C1','C2')
                 """));
 
+            // #240: a lesson is addressed by (skill, topic, level). A seeded lesson that left any of the
+            // three unwritten would be unaddressable by the reader, and the NOT NULL columns would have
+            // to be relaxed to make the seed load - so the seed is asserted to name a real cell.
+            Assert.Equal(0, await CountAsync("""
+                SELECT COUNT(*) FROM Lessons l
+                WHERE l.TopicId IS NULL
+                   OR l.CefrLevel IS NULL
+                   OR l.Modality IS NULL
+                   OR l.CefrLevel NOT IN ('A1','A2','B1','B2','C1','C2')
+                """));
+            Assert.True(await CountAsync("""
+                SELECT COUNT(*) FROM Lessons l
+                JOIN Topics t ON t.TopicId = l.TopicId AND t.Modality = l.Modality
+                WHERE l.Title = N'Present Continuous Tense'
+                """) > 0, "the demo lesson names a real (topic, level) cell");
+
             // 1. Verify demo accounts
             await using (var cmd = conn.CreateCommand())
             {

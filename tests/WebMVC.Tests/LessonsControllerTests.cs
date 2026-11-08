@@ -63,11 +63,23 @@ public sealed class LessonsControllerTests
         public int? LastRecordedLessonId { get; set; }
         public int? LastRecordedCardId { get; set; }
 
-        public Task<LessonDetailDto> GetLessonAsync(int lessonId, CancellationToken cancellationToken = default) =>
+        public Task<LessonDetailDto> GetLessonModuleAsync(int lessonId, string module, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<LessonDetailDto>(ExceptionToThrow) : Task.FromResult(Lesson!);
 
-        public Task<LessonProgressDto> GetLessonProgressAsync(int lessonId, CancellationToken cancellationToken = default) =>
+        public Task<LessonDetailDto> GetLessonModuleAsync(int lessonId, string module, string bearerToken, CancellationToken cancellationToken = default) =>
+            GetLessonModuleAsync(lessonId, module, cancellationToken);
+
+        public Task<LessonDetailDto> GetLessonForCellAsync(int skillId, int topicId, string level, string module, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<LessonDetailDto>(ExceptionToThrow) : Task.FromResult(Lesson!);
+
+        public Task<LessonDetailDto> GetLessonForCellAsync(int skillId, int topicId, string level, string module, string bearerToken, CancellationToken cancellationToken = default) =>
+            GetLessonForCellAsync(skillId, topicId, level, module, cancellationToken);
+
+        public Task<LessonProgressDto> GetLessonProgressModuleAsync(int lessonId, string module, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<LessonProgressDto>(ExceptionToThrow) : Task.FromResult(Progress!);
+
+        public Task<LessonProgressDto> GetLessonProgressModuleAsync(int lessonId, string module, string bearerToken, CancellationToken cancellationToken = default) =>
+            GetLessonProgressModuleAsync(lessonId, module, cancellationToken);
 
         public Task RecordCardViewAsync(int lessonId, int cardId, CancellationToken cancellationToken = default)
         {
@@ -77,8 +89,14 @@ public sealed class LessonsControllerTests
             return Task.CompletedTask;
         }
 
+        public Task RecordCardViewAsync(int lessonId, int cardId, string bearerToken, CancellationToken cancellationToken = default) =>
+            RecordCardViewAsync(lessonId, cardId, cancellationToken);
+
         public Task<LessonDetailDto?> GetLessonByCategoryAsync(int categoryId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<LessonDetailDto?>(ExceptionToThrow) : Task.FromResult(Lesson);
+
+        public Task<LessonDetailDto?> GetLessonByCategoryAsync(int categoryId, string bearerToken, CancellationToken cancellationToken = default) =>
+            GetLessonByCategoryAsync(categoryId, cancellationToken);
 
         public MicroCheckResultDto? MicroCheckResult { get; set; }
         public string? LastSelectedOption { get; set; }
@@ -89,6 +107,9 @@ public sealed class LessonsControllerTests
             LastSelectedOption = selectedOption;
             return Task.FromResult(MicroCheckResult!);
         }
+
+        public Task<MicroCheckResultDto> SubmitMicroCheckAsync(int lessonId, int cardId, string selectedOption, string bearerToken, CancellationToken cancellationToken = default) =>
+            SubmitMicroCheckAsync(lessonId, cardId, selectedOption, cancellationToken);
 
         public Task<LearnerContextDto> GetLearnerContextAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new LearnerContextDto(new CertificateOptionDto("TOEIC", "TOEIC"), [], 10));

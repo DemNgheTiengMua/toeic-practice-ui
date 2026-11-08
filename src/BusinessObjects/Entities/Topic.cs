@@ -45,5 +45,9 @@ public partial class Topic
     /// <summary>#206: the audit strata drawn from this topic's cells.</summary>
     [InverseProperty("Topic")]
     public virtual ICollection<ReviewStratum> ReviewStrata { get; set; } = new List<ReviewStratum>();
+
+    /// <summary>#240: the leveled lessons teaching this cell's topic.</summary>
+    [InverseProperty("Topic")]
+    public virtual ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
 }
 

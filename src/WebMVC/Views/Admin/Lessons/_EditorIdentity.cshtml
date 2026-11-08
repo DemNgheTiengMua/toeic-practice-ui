@@ -29,16 +29,48 @@
 
         <div class="field">
           <label class="field__label" for="SkillId">Skill <span class="text-danger">*</span></label>
-          <select class="field__input" id="SkillId" name="SkillId" required>
+          <select class="field__input" id="SkillId" name="SkillId" required onchange="onSkillChanged(this.value)">
             @foreach (var skill in Model.Skills)
             {
               var isSelected = skill.SkillId == Model.SkillId;
-              <option value="@skill.SkillId" data-cert="@skill.CertId" selected="@isSelected">
+              <option value="@skill.SkillId" data-cert="@skill.CertId" data-modality="@skill.Modality" selected="@isSelected">
                 @skill.Name (@skill.Modality.ToUpperInvariant())
               </option>
             }
           </select>
+          @* #240: the modality travels with the cell so the API can refuse a reading lesson on a
+             listening topic before the database does. *@
+          <input type="hidden" id="Modality" name="Modality" value="@Model.Modality" />
           <div class="field__hint">Target skill modality (Listening, Reading, Speaking, or Writing).</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label class="field__label" for="TopicId">Topic <span class="text-danger">*</span></label>
+          @* #240: a lesson is addressed by (skill, topic, level). The topic list is narrowed to the
+             skill's own modality, so a reading lesson is never offered a listening topic. *@
+          <select class="field__input" id="TopicId" name="TopicId" required>
+            @foreach (var topic in (Model.Topics ?? Array.Empty<AdminLessonTopicOptionDto>()))
+            {
+              <option value="@topic.TopicId" data-modality="@topic.Modality" selected="@(topic.TopicId == Model.TopicId)">
+                @topic.Code &mdash; @topic.Name
+              </option>
+            }
+          </select>
+          <div class="field__hint">One of the twenty canonical topics. This is the cell the lesson teaches.</div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="CefrLevel">Level <span class="text-danger">*</span></label>
+          @* #240: the lesson's own level, not the step's and not the certificate's band. *@
+          <select class="field__input font-mono" id="CefrLevel" name="CefrLevel" required>
+            @foreach (var level in new[] { "A1", "A2", "B1", "B2", "C1", "C2" })
+            {
+              <option value="@level" selected="@(level == Model.CefrLevel)">@level</option>
+            }
+          </select>
+          <div class="field__hint">The CEFR level this lesson is written at. A certificate band is not a level.</div>
         </div>
       </div>
 

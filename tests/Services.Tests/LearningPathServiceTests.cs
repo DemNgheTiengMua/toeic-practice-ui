@@ -219,8 +219,11 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
               (@q1, 'mcq', 'A', N'Opt A', 1),
               (@q1, 'mcq', 'B', N'Opt B', 0);
 
-            INSERT INTO Lessons (CertId, SkillId, Title, EstimatedMinutes, DisplayOrder)
-            VALUES (@cert, @sR, N'Grammar Foundations', 8, 1);
+            -- #240: a lesson is addressed by (skill, topic, level), so the fixture names the cell.
+            INSERT INTO Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, EstimatedMinutes, DisplayOrder)
+            VALUES (@cert, @sR, 'reading',
+                    (SELECT TopicId FROM Topics WHERE Modality = 'reading' AND Code = 'R-GRAM'),
+                    'B2', N'Grammar Foundations', 8, 1);
             DECLARE @lesson INT = SCOPE_IDENTITY();
             INSERT INTO LessonCards (LessonId, CertId, CardType, Title, ContentMarkdown, DisplayOrder)
             VALUES (@lesson, @cert, 'rule', N'Rule', N'Text', 1);
@@ -465,7 +468,9 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
         Assert.Equal(PathStepType.ConceptLesson, result.StepType);
         Assert.Equal(StepRoute.LessonReader, result.Route);
-        Assert.Equal($"/lessons/{lessonId}", result.RedirectUrl);
+        // #240: the reader is opened on the module the step type names, so a concept lesson opens the
+        // primary module explicitly rather than leaving the reader to guess.
+        Assert.Equal($"/lessons/{lessonId}?module=primary", result.RedirectUrl);
         Assert.Null(result.SessionId);
         Assert.Equal(lessonId, lessonStep.RefLessonId);
     }

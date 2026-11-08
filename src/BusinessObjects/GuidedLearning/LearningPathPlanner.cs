@@ -39,6 +39,9 @@ public sealed record PlannedPathStep(
 /// no drill rather than inventing one.</param>
 /// <param name="LessonId">A leveled lesson for the skill, or null when the certificate has none.</param>
 /// <param name="MockExamId">A published mock exam for the skill's certificate, or null.</param>
+/// <param name="LessonTopicId">#240: the topic the lesson actually exists at. A lesson step names this
+/// topic rather than the block's first drill topic, so the step's cell and the lesson's own cell are
+/// the same one - otherwise the step would open a lesson pitched at a cell it does not name.</param>
 public sealed record SkillPlanBlock(
     int SkillId,
     Modality Modality,
@@ -46,7 +49,8 @@ public sealed record SkillPlanBlock(
     MasteryState Mastery,
     IReadOnlyList<int> TopicIds,
     int? LessonId,
-    int? MockExamId);
+    int? MockExamId,
+    int? LessonTopicId = null);
 
 /// <summary>
 /// #154/#232: the plan behind a four-week learning path. The shape (which step types, in what order, at
@@ -192,7 +196,10 @@ public static partial class LearningPathPlanner
                 WeekSequence: 0,
                 PathStepType.ConceptLesson,
                 lesson.SkillId,
-                lesson.TopicIds.Count > 0 ? lesson.TopicIds[0] : DefaultTopicId(lesson),
+                // #240: the lesson's OWN topic, which is the cell the lesson exists at. Falling back to
+                // the block's first drill topic would name a cell the lesson is not pitched at.
+                lesson.LessonTopicId
+                    ?? (lesson.TopicIds.Count > 0 ? lesson.TopicIds[0] : DefaultTopicId(lesson)),
                 lesson.TargetCefr,
                 tier,
                 // A lesson is sized in minutes, not items: the count belongs to the drills after it.

@@ -7,7 +7,7 @@ INSERT INTO Users (RoleId,Email,PasswordHash,ActiveCertId) VALUES (@r,'u@x.com',
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES (@c,'below_A1',N'Below A1',10,119,1), (@c,'A2',N'A2',225,549,3);
 INSERT INTO Topics (Modality,Code,Name) VALUES ('reading','R-DET',N'Detail'); DECLARE @tDet INT=SCOPE_IDENTITY();
 INSERT INTO Topics (Modality,Code,Name) VALUES ('reading','R-GRAM',N'Grammar'); DECLARE @tGram INT=SCOPE_IDENTITY();
-INSERT INTO Lessons (CertId,SkillId,Title,EstimatedMinutes,DisplayOrder) VALUES (@c,@sk,N'Lesson',10,1); DECLARE @les INT=SCOPE_IDENTITY();
+INSERT INTO Lessons (CertId,SkillId,Modality,TopicId,CefrLevel,Title,EstimatedMinutes,DisplayOrder) VALUES (@c,@sk,'reading',@tDet,'B1',N'Lesson',10,1); DECLARE @les INT=SCOPE_IDENTITY();
 INSERT INTO LearnerPaths (UserId,CertId,CurrentBandCode,Status) VALUES (@u,@c,'below_A1','active');
 DECLARE @lp INT=SCOPE_IDENTITY();
 PRINT 'valid path accepted';
@@ -112,7 +112,7 @@ INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQues
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c2,N'IELTS Exam','published',60); DECLARE @exam2 INT=SCOPE_IDENTITY();
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES (@c2,'below_A1',N'Below A1',10,119,1), (@c2,'A2',N'A2',225,549,3);
 INSERT INTO Topics (Modality,Code,Name) VALUES ('speaking','S-DESC',N'Describe'); DECLARE @tDesc INT=SCOPE_IDENTITY();
-INSERT INTO Lessons (CertId,SkillId,Title,EstimatedMinutes,DisplayOrder) VALUES (@c2,@sk2,N'IELTS Lesson',10,1); DECLARE @les2 INT=SCOPE_IDENTITY();
+INSERT INTO Lessons (CertId,SkillId,Modality,TopicId,CefrLevel,Title,EstimatedMinutes,DisplayOrder) VALUES (@c2,@sk2,'speaking',@tDesc,'B1',N'IELTS Lesson',10,1); DECLARE @les2 INT=SCOPE_IDENTITY();
 
 -- M-1: reject a step whose CertId is not its path's own. The path is this certificate's; the skill and
 -- topic below belong to the other one, so every carried-down key disagrees at once.

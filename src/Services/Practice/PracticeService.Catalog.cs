@@ -128,7 +128,9 @@ public sealed partial class PracticeService
             .Where(ps => ps.UserId == userId
                 && ps.CertId == activeCertId
                 && ps.Status == PracticeStatus.InProgress.ToCode()
-                && ps.LearnerPathStepId == null)
+                // #240: a lesson sitting resumes inside the reader, not from the practice catalog.
+                && ps.LearnerPathStepId == null
+                && ps.LessonId == null)
             .OrderByDescending(ps => ps.StartedAt)
             .ToListAsync(cancellationToken);
 

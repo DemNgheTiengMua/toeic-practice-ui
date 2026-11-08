@@ -89,6 +89,11 @@ public partial class CompanionDbContext
         {
             entity.HasKey(e => e.ProgressId).HasName("PK__LearnerL__BAE29CA5C616E5E3");
 
+            // #240: progress is per learner per lesson per module, so the key is (UserId, LessonId,
+            // Module). Asserted by domain40.
+            entity.HasIndex(e => new { e.UserId, e.LessonId, e.Module }, "UQ_LLP_UserLessonModule")
+                .IsUnique();
+
             entity.Property(e => e.FirstOpenedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
 
@@ -142,6 +147,21 @@ public partial class CompanionDbContext
                 .HasForeignKey(d => new { d.SkillId, d.CertId })
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Lessons_SkillCert");
+
+            // #240: the lesson's own cell. The level is stored by its code, never as an integer - the
+            // second scale #182 exists to prevent.
+            entity.Property(e => e.CefrLevel)
+                .HasConversion(v => v.Code, v => ParseAuthoredLevel(v))
+                .HasMaxLength(10)
+                .IsUnicode(false);
+
+            // #240: FK_Lessons_SkillModality and FK_Lessons_TopicModality are database guards, not EF
+            // navigations: each composes a carried-down column with another, and the plain Topic
+            // relationship below is what the app reads. The constraints still hold server-side.
+            entity.HasOne(d => d.Topic).WithMany(p => p.Lessons)
+                .HasForeignKey(d => d.TopicId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Lessons_TopicModality");
         });
 
 

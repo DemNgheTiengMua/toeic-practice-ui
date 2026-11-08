@@ -21,12 +21,19 @@ public sealed class LessonsController(
 {
     private readonly CurrentUser _currentUser = currentUser;
 
+    /// <summary>
+    /// #240: one module of one lesson. <paramref name="module"/> names which - an expanded remedial
+    /// step arrives with <c>?module=remedial</c> - and the page opens at the card the learner stopped
+    /// at in that module.
+    /// </summary>
     [HttpGet("/lessons/{id:int}")]
-    public async Task<IActionResult> Index(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(int id, CancellationToken cancellationToken, [FromQuery] string? module = null)
     {
+        var effectiveModule = NormaliseModule(module);
+
         if (User.IsStaff())
         {
-            return Redirect($"/admin/lessons/{id}/preview");
+            return Redirect($"/admin/lessons/{id}/preview?module={effectiveModule}");
         }
 
         try
@@ -44,8 +51,8 @@ public sealed class LessonsController(
                 }
             }
 
-            var lesson = await api.GetLessonAsync(id, cancellationToken);
-            var progress = await api.GetLessonProgressAsync(id, cancellationToken);
+            var lesson = await api.GetLessonModuleAsync(id, effectiveModule, cancellationToken);
+            var progress = await api.GetLessonProgressModuleAsync(id, lesson.Module, cancellationToken);
             var model = new LessonViewModel(lesson, progress);
             return View(model);
         }
@@ -138,4 +145,11 @@ public sealed class LessonsController(
             return StatusCode(ex.Status, new { error = ex.Message, code = ex.Code });
         }
     }
+
+    /// <summary>An unknown module reads the primary one, which every lesson has, rather than an empty
+    /// reader that looks broken.</summary>
+    private static string NormaliseModule(string? module) =>
+        string.Equals(module, LessonModuleCodes.Remedial, StringComparison.OrdinalIgnoreCase)
+            ? LessonModuleCodes.Remedial
+            : LessonModuleCodes.Primary;
 }

@@ -14,5 +14,6 @@ public sealed record LessonCardDto(
     string? CorrectOption,
     string? Explanation,
     int DisplayOrder,
-    string? Rationale = null
+    string? Rationale = null,
+    string Module = LessonModuleCodes.Primary
 );

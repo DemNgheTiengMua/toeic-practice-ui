@@ -4,18 +4,29 @@
     Layout = "_LearnerLayout";
     ViewData["Title"] = "Lesson: " + Model.Lesson.Title;
     var cards = Model.Cards;
-    var totalCards = cards.Count;
+    var totalCards = Model.TotalCards;
     var initialIndex = Model.InitialIndex;
     var finishUrl = Model.FinishUrl;
     var returnUrl = Model.ReturnUrl;
+    var isRemedial = Model.IsRemedial;
 }
 
 <link rel="stylesheet" href="~/css/lessons/player.css" asp-append-version="true" />
 
+@* #240: the lesson's own cell, not the step's. A B1 R-DET lesson says so on its own authority. *@
 <div class="row row--between" style="border: 2px solid var(--ink); background: var(--painted); padding: var(--space-3) var(--space-4); align-items: center;">
   <div>
-    <span class="text-xs uppercase text-muted">Lesson</span>
+    <span class="text-xs uppercase text-muted">
+      @Model.Lesson.TopicCode.ToUpperInvariant() &middot; level <span class="font-mono">@Model.Lesson.CefrLevel</span>
+    </span>
     <h1 class="h3 no-margin">@Model.Lesson.Title</h1>
+    <div class="text-sm text-muted">
+      <span class="badge @(isRemedial ? "badge--warning" : "badge--info")">@Model.ModuleTitle</span>
+      @if (Model.Lesson.HasRemedialModule)
+      {
+        <a class="text-sm" href="@Model.ModuleUrl(Model.OtherModule)">Switch to @Model.OtherModuleTitle.ToLowerInvariant()</a>
+      }
+    </div>
   </div>
   <div class="row" style="gap: var(--space-4); align-items: center;">
     <div>
@@ -35,31 +46,44 @@
 
 <nav class="breadcrumbs" aria-label="Breadcrumb">
   <a href="/dashboard" class="breadcrumbs__item">Home</a>
-  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__separator" aria-hidden="true">&rsaquo;</span>
   <a href="/learning-path" class="breadcrumbs__item">My learning path</a>
-  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__separator" aria-hidden="true">&rsaquo;</span>
   <span class="breadcrumbs__item" aria-current="page">@Model.Lesson.Title</span>
 </nav>
 
 @Html.AntiForgeryToken()
 
-<div class="lesson-deck" data-lesson-id="@Model.Lesson.LessonId" data-initial-index="@initialIndex" data-total-cards="@totalCards" data-completed="@(Model.Progress.IsCompleted ? "true" : "false")">
-  <div class="row row--between" style="align-items: center;">
-    <span class="badge badge--info" id="cardTypeBadge">CARD @initialIndex OF @totalCards</span>
-    <span class="text-sm text-muted font-mono" id="cardCounter">@initialIndex / @totalCards cards</span>
+@if (totalCards == 0)
+{
+  @* A module with no cards authored yet is a content gap, said plainly rather than shown as a
+     reader that has nothing in it. *@
+  <div class="card" style="border: 2px solid var(--ink); padding: var(--space-4); background: var(--painted);">
+    <p class="no-margin"><strong>This module has no cards yet.</strong></p>
+    <p class="text-sm text-muted">The @Model.ModuleTitle.ToLowerInvariant() for this cell has not been authored.</p>
+    <a href="/learning-path" class="btn btn--primary">Back to my path</a>
   </div>
+}
+else
+{
+  <div class="lesson-deck" data-lesson-id="@Model.Lesson.LessonId" data-module="@Model.Module" data-initial-index="@initialIndex" data-total-cards="@totalCards" data-completed="@(Model.Progress.IsCompleted ? "true" : "false")">
+    <div class="row row--between" style="align-items: center;">
+      <span class="badge badge--info" id="cardTypeBadge">CARD @initialIndex OF @totalCards</span>
+      <span class="text-sm text-muted font-mono" id="cardCounter">@initialIndex / @totalCards cards</span>
+    </div>
 
-  @await Html.PartialAsync("~/Views/Lessons/_PlayerCards.cshtml", Model)
+    @await Html.PartialAsync("~/Views/Lessons/_PlayerCards.cshtml", Model)
 
-  <!-- NAVIGATION -->
-  <div class="deck-navigation">
-    <button type="button" class="btn" id="btnPrev" @(initialIndex == 1 ? "disabled" : "")>Previous card</button>
-    <div class="row" style="gap: var(--space-2);">
-      <button type="button" class="btn btn--primary" id="btnNext" style="@(initialIndex == totalCards ? "display: none;" : "")">Next card</button>
-      <a href="@finishUrl" class="btn btn--success" id="btnFinish" style="@(initialIndex == totalCards && Model.Progress.IsCompleted ? "" : "display: none;")">Finish lesson & return to path</a>
+    <!-- NAVIGATION -->
+    <div class="deck-navigation">
+      <button type="button" class="btn" id="btnPrev" @(initialIndex == 1 ? "disabled" : "")>Previous card</button>
+      <div class="row" style="gap: var(--space-2);">
+        <button type="button" class="btn btn--primary" id="btnNext" style="@(initialIndex == totalCards ? "display: none;" : "")">Next card</button>
+        <a href="@finishUrl" class="btn btn--success" id="btnFinish" style="@(initialIndex == totalCards && Model.Progress.IsCompleted ? "" : "display: none;")">Finish lesson &amp; return to path</a>
+      </div>
     </div>
   </div>
-</div>
+}
 
 @section Scripts {
 <script src="~/js/lessons/player.js" asp-append-version="true"></script>

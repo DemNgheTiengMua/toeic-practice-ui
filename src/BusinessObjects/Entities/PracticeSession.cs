@@ -57,6 +57,17 @@ public partial class PracticeSession
 
     public int? LearnerPathStepId { get; set; }
 
+    /// <summary>
+    /// #240: the lesson this session reads, for a lesson sitting. NULL for an ordinary drill.
+    /// <para>
+    /// Deliberately not mapped as an EF navigation: it composes a nullable column with the
+    /// non-nullable <see cref="CertId"/>, and EF reads a partly-nullable composite key as required,
+    /// which would make every ordinary drill session fail to save. The constraint still holds
+    /// server-side (MATCH SIMPLE).
+    /// </para>
+    /// </summary>
+    public int? LessonId { get; set; }
+
     public DateTimeOffset StartedAt { get; set; }
 
     public DateTimeOffset? FinishedAt { get; set; }
