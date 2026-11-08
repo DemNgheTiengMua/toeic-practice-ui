@@ -7,6 +7,9 @@ _*.patch
 _*.diff
 .playwright-mcp/
 shot-*.png
+# Agents drop screenshots at the repo root by accident; three were committed in one
+# session. Anchored to the root so every tracked PNG under docs/ and src/ is unaffected.
+/*.png
 Architecture Review*
 stitch_*
 
