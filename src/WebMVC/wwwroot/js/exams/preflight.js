@@ -173,9 +173,53 @@
               micSelect.appendChild(opt);
             });
           }
+
+          // #221 / D18: two different failures. The permission decides whether labels exist at all;
+          // an granted permission with no input is a device to plug in. Saying "no devices found" for
+          // both is the state this replaces.
+          var permission = window.EeAudioGate ? await window.EeAudioGate.read() : null;
+          var anyLabel = audioInputs.some(function(d) { return !!d.label; });
+          var labelHint = document.querySelector('[data-audio-role="device-hint-labels"]');
+          var connectHint = document.querySelector('[data-audio-role="device-hint-connect"]');
+          if (labelHint) labelHint.hidden = !(!permission || permission.state !== "granted" || (audioInputs.length > 0 && !anyLabel));
+          if (connectHint) connectHint.hidden = !(permission && permission.state === "granted" && audioInputs.length === 0);
+          return permission;
         } catch (e) {
           console.warn("Could not enumerate audio inputs", e);
+          return null;
         }
+      }
+
+      /**
+       * #221 / D18: the permission states come from the browser, not from a failed getUserMedia.
+       * This screen may prompt - it is the pre-sitting screen - and the shared panel renders
+       * whichever of the three states the browser reports.
+       */
+      async function refreshMicPermission() {
+        if (!window.EeAudioGate) return null;
+        var panel = micCard.querySelector("[data-permission-gate]");
+        var result = await window.EeAudioGate.read();
+        if (panel) window.EeAudioGate.apply(panel, result.state, true);
+        return result;
+      }
+
+      /**
+       * #221: a silent microphone blocks by default, with a stated-cost override. The measurement is
+       * the analyser's peak over three seconds - not the length of the recording, because a muted
+       * microphone records three seconds of silence perfectly.
+       */
+      async function measureMicSignal(stream) {
+        if (!window.EeAudio) return { outcome: "unavailable", peakDb: null };
+        return window.EeAudio.measureSignal(micCard, stream, 3000);
+      }
+
+      function showSilentGate(measurement) {
+        var gate = micCard.querySelector('[data-audio-role="silent-gate"]');
+        if (!gate) return;
+        var override = micCard.querySelector('[data-audio-role="silent-override"]');
+        var blocked = measurement.outcome === "silent" && !(override && override.checked);
+        gate.hidden = measurement.outcome !== "silent";
+        micCard.setAttribute("data-audio-blocked", blocked ? "true" : "false");
       }
 
       function stopActiveStream() {
@@ -251,9 +295,30 @@
         var constraints = deviceId && deviceId !== "default" ? { audio: { deviceId: { exact: deviceId } } } : { audio: true };
 
         try {
-          micStream = await navigator.mediaDevices.getUserMedia(constraints);
+          // #221 / D18: this is the pre-sitting screen, so it MAY prompt - but through the gate, so
+          // the three states are read from the browser rather than guessed from an error name.
+          var opened = window.EeAudioGate ? await window.EeAudioGate.ask(constraints) : null;
+          if (!opened || !opened.stream) {
+            await refreshMicPermission();
+            await enumerateMics();
+            if (sampleStatusText) sampleStatusText.textContent = !opened
+              ? "Microphone support is unavailable in this browser. Use a current Chrome, Edge, Firefox or Safari."
+              : (opened.state === "denied"
+                ? "The browser is blocking the microphone. Fix it with the control path above, then try again."
+                : "The microphone was not granted. Enable it above, then try again.");
+            if (btnStartSample) btnStartSample.disabled = false;
+            return;
+          }
+
+          micStream = opened.stream;
+          await refreshMicPermission();
           await enumerateMics();
           await startLiveMeter(micStream);
+
+          // Measure signal before recording, so a muted microphone is reported as silence rather
+          // than as a recording that played back fine (it did - it was silence).
+          var measurement = await measureMicSignal(micStream);
+          showSilentGate(measurement);
 
           var mediaRecorder = new MediaRecorder(micStream);
           var chunks = [];
@@ -275,7 +340,13 @@
               btnStartSample.disabled = false;
               btnStartSample.textContent = "Record Again";
             }
-            if (sampleStatusText) sampleStatusText.textContent = "Recording finished. Playing back your sample...";
+            if (sampleStatusText) {
+              sampleStatusText.textContent = measurement.outcome === "silent"
+                ? "Recorded — but no signal was measured. A silent microphone blocks the sitting unless you accept the consequence below."
+                : (measurement.outcome === "unavailable"
+                  ? "Recorded. This browser cannot measure the level — that is a browser limit, not your microphone."
+                  : "Recording finished. Playing back your sample...");
+            }
             if (sampleReviewPanel) sampleReviewPanel.style.display = "block";
 
             // Automatically play back sample
@@ -336,6 +407,19 @@
 
       if (btnMicYes) {
         btnMicYes.addEventListener("click", function() {
+          // #221 / D18: a silent microphone blocks by default. The override in the panel is the only
+          // way past it, and it states the consequence before the box is ticked.
+          var override = micCard.querySelector('[data-audio-role="silent-override"]');
+          if (micCard.getAttribute("data-audio-blocked") === "true") {
+            var gate = micCard.querySelector('[data-audio-role="silent-gate"]');
+            if (gate) gate.hidden = false;
+            if (sampleStatusText) {
+              sampleStatusText.textContent = "No signal was measured. Read the consequence in the override panel and tick it to continue, or fix the microphone and record again.";
+            }
+            if (gate) gate.scrollIntoView({ block: "nearest" });
+            return;
+          }
+
           state.micVerified = true;
           if (micStatusBadge) {
             micStatusBadge.textContent = "MIC VERIFIED";
@@ -343,10 +427,45 @@
           }
           if (sampleReviewPanel) sampleReviewPanel.style.display = "none";
           if (micConfirmedSuccess) micConfirmedSuccess.style.display = "block";
-          if (sampleStatusText) sampleStatusText.textContent = "Microphone check confirmed clear.";
+          if (sampleStatusText) {
+            sampleStatusText.textContent = override && override.checked
+              ? "Confirmed with a silent microphone. The speaking skill may be reported as not measured."
+              : "Microphone check confirmed clear.";
+          }
           checkStartReadiness();
         });
       }
+
+      // The stated-cost override releases the gate; unticking it closes the gate again.
+      var silentOverride = micCard.querySelector('[data-audio-role="silent-override"]');
+      if (silentOverride) {
+        silentOverride.addEventListener("change", function() {
+          micCard.setAttribute("data-audio-blocked", silentOverride.checked ? "false" : "true");
+        });
+      }
+
+      // #221: the two permission controls in the shared panel. This screen may prompt, so both are
+      // live here - unlike a sitting, where the partial renders neither.
+      micCard.addEventListener("click", async function(event) {
+        var button = event.target.closest("[data-audio-action]");
+        if (!button || !micCard.contains(button)) return;
+        if (button.dataset.audioAction === "request-permission" || button.dataset.audioAction === "retry-permission") {
+          button.disabled = true;
+          var result = button.dataset.audioAction === "request-permission"
+            ? await window.EeAudioGate.ask(micSelect && micSelect.value !== "default" ? { audio: { deviceId: { exact: micSelect.value } } } : true)
+            : await window.EeAudioGate.read();
+          if (result.stream) result.stream.getTracks().forEach(function(t) { t.stop(); });
+          await refreshMicPermission();
+          await enumerateMics();
+          button.disabled = false;
+          if (result.state === "granted" && micSelect && micSelect.options.length <= 1) {
+            if (sampleStatusText) sampleStatusText.textContent = "Microphone enabled. No device is listed yet — plug one in, then record a sample.";
+          }
+        }
+      });
+
+      // Initial microphone enumeration
+      refreshMicPermission().then(enumerateMics);
 
       if (btnMicNo) {
         btnMicNo.addEventListener("click", function() {

@@ -15,6 +15,13 @@
             </div>
             <div class="card__body">
 
+              @* #221 / D18: a sitting never asks the browser for a permission. When it was not
+                 granted before the sitting, this banner says so and names where the remedy lives. *@
+              <div id="permission-blocked-banner" class="alert alert--danger d-none mb-3" role="alert">
+                <strong>Microphone blocked — this screen cannot ask.</strong>
+                <span data-permission-detail></span>
+              </div>
+
               <!-- PREPARE STATE -->
               <div class="state-block" id="block-prepare">
                 <div class="state-block__icon" aria-hidden="true">PREPARE</div>

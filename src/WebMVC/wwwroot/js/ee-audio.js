@@ -50,6 +50,56 @@
     });
   }
 
+  /* ---- #221 / D18: the microphone permission gate ------------------------- */
+
+  function gate() {
+    return window.EeAudioGate || null;
+  }
+
+  /** True when this surface may raise a browser prompt. False inside a timed or one-way sitting. */
+  function canPrompt(component) {
+    return component.getAttribute("data-permission-promptable") !== "false";
+  }
+
+  /**
+   * Switches the three permission blocks. The blocks are markup, not strings built here, because
+   * the copy per state is the criterion: a state whose only difference is a class name would pass
+   * a "state renders" assertion and tell the learner nothing.
+   */
+  function renderPermission(component, state) {
+    var api = gate();
+    if (!api) return;
+    api.apply(component, state, canPrompt(component));
+    var panel = component.querySelector("[data-permission-gate]");
+    if (panel) {
+      panel.setAttribute("data-permission-disabled", state === "granted" ? "false" : "true");
+    }
+  }
+
+  async function refreshPermission(component) {
+    var api = gate();
+    if (!api) return null;
+    var result = await api.read();
+    renderPermission(component, result.state);
+    return result;
+  }
+
+  /**
+   * The device-list split D18 calls "naming and availability are different failures": granted with
+   * an empty list means "plug one in"; labels withheld means "enable the microphone". Collapsing
+   * them into "no devices found" is the state this replaces.
+   */
+  function renderDeviceHint(component, devices, permissionState) {
+    var labels = component.querySelector('[data-audio-role="device-hint-labels"]');
+    var connect = component.querySelector('[data-audio-role="device-hint-connect"]');
+    if (!labels || !connect) return;
+    var inputs = (devices || []).filter(function (device) { return device.kind === "audioinput"; });
+    var anyLabel = inputs.some(function (device) { return !!device.label; });
+    var showLabelHint = permissionState !== "granted" || (inputs.length > 0 && !anyLabel);
+    labels.hidden = !showLabelHint;
+    connect.hidden = !(permissionState === "granted" && inputs.length === 0);
+  }
+
   function supportSetSinkId() {
     return typeof HTMLMediaElement !== "undefined" &&
       typeof HTMLMediaElement.prototype.setSinkId === "function";
@@ -79,6 +129,7 @@
     var devicesApi = navigator.mediaDevices;
     var fallback = component.querySelector('[data-audio-role="fallback"]');
     var error = component.querySelector('[data-audio-role="error"]');
+    var panel = component.querySelector("[data-permission-gate]");
     if (!devicesApi || typeof devicesApi.enumerateDevices !== "function") {
       if (fallback) {
         fallback.textContent = "Device selection is unavailable in this browser. Audio uses the system defaults.";
@@ -87,12 +138,15 @@
       return;
     }
 
+    var permission = panel ? await refreshPermission(component) : null;
+
     try {
       var devices = await devicesApi.enumerateDevices();
       var preferences = readPreferences();
       fillSelect(component.querySelector('[data-audio-role="input-device"]'), devices, "audioinput", preferences.inputDeviceId);
       fillSelect(component.querySelector('[data-audio-role="output-device"]'), devices, "audiooutput", preferences.outputDeviceId);
       if (error) error.hidden = true;
+      if (panel) renderDeviceHint(component, devices, permission ? permission.state : "never-asked");
     } catch (enumerationError) {
       console.error("Audio devices could not be enumerated:", enumerationError);
       if (fallback) {
@@ -266,13 +320,34 @@
   }
 
   async function openMicrophone(component) {
+    var api = gate();
+    var constraints = inputConstraints();
+
+    // On a sitting surface no control may prompt. `acquire` never calls getUserMedia unless the
+    // permission is already granted, so a refusal here is reported rather than raised as a dialog
+    // over a running clock.
+    if (api && !canPrompt(component)) {
+      var blocked = await api.acquire(constraints);
+      if (!blocked.ok) {
+        var refusal = new Error(
+          blocked.reason === "permission"
+            ? "The microphone is not allowed in this browser. Set it up on the instructions page before you start a sitting."
+            : "Microphone access is unavailable.");
+        refusal.name = blocked.reason === "permission" ? "NotAllowedError" : "NotSupportedError";
+        throw refusal;
+      }
+      return blocked.stream;
+    }
+
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       throw new Error("Microphone access is unavailable. Use a supported browser on a secure connection.");
     }
-    var constraints = inputConstraints();
     try {
-      return await navigator.mediaDevices.getUserMedia({ audio: constraints });
+      var stream = await navigator.mediaDevices.getUserMedia({ audio: constraints });
+      if (api) renderPermission(component, api.GRANTED);
+      return stream;
     } catch (error) {
+      if (api) refreshPermission(component);
       if (constraints !== true && (error.name === "NotFoundError" || error.name === "OverconstrainedError")) {
         savePreferences({ inputDeviceId: "default" });
         await enumerate(component);
@@ -280,6 +355,86 @@
       }
       throw error;
     }
+  }
+
+  /**
+   * #221 / D18: "the microphone test measures signal, not permission", and reports one of three
+   * outcomes - signal detected, no signal, or measurement unavailable. The third is evidence about
+   * the browser, not about the learner's hardware, so it never blocks: an analyser that cannot be
+   * built is not a broken headset.
+   *
+   * The peak is measured over real analyser samples, not over a duration. A muted microphone
+   * records a file of the right length containing silence, so "did we capture 3 seconds" answers a
+   * different question and would pass a muted headset.
+   */
+  function measureSignal(component, stream, milliseconds) {
+    var AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return Promise.resolve({ outcome: "unavailable", peakDb: null });
+
+    return new Promise(function (resolve) {
+      var context;
+      try {
+        context = new AudioCtx();
+        var analyser = context.createAnalyser();
+        analyser.fftSize = 1024;
+        context.createMediaStreamSource(stream).connect(analyser);
+        var samples = new Float32Array(analyser.fftSize);
+        var peak = -Infinity;
+        var deadline = Date.now() + (milliseconds || 3000);
+        var finished = false;
+
+        function finish(outcome) {
+          if (finished) return;
+          finished = true;
+          if (context.state !== "closed") context.close();
+          resolve({
+            outcome: outcome,
+            peakDb: Number.isFinite(peak) ? Math.round(peak) : null
+          });
+        }
+
+        function sample() {
+          analyser.getFloatTimeDomainData(samples);
+          for (var i = 0; i < samples.length; i++) {
+            var level = Math.abs(samples[i]);
+            if (level > 0) {
+              var db = 20 * Math.log10(level);
+              if (db > peak) peak = db;
+            }
+          }
+          // -45 dBFS is the same voice threshold the live meter prints, so the two agree.
+          if (peak > -45) return finish("signal");
+          if (Date.now() >= deadline) return finish("silent");
+          window.requestAnimationFrame(sample);
+        }
+
+        context.resume().then(sample, function () { finish("unavailable"); });
+      } catch (error) {
+        if (context && context.state !== "closed") context.close();
+        resolve({ outcome: "unavailable", peakDb: null });
+      }
+    });
+  }
+
+  /** The stated-cost override: a silent microphone blocks until the learner accepts the sentence. */
+  function showSilentGate(component, measurement) {
+    var card = component.querySelector('[data-audio-role="silent-gate"]');
+    if (!card) return;
+    var accepted = component.querySelector('[data-audio-role="silent-override"]');
+    if (measurement.outcome === "signal") {
+      card.hidden = true;
+      component.setAttribute("data-audio-blocked", "false");
+      return;
+    }
+    if (measurement.outcome === "unavailable") {
+      // The browser could not measure. Report it and do not block - that is a browser fact.
+      card.hidden = true;
+      component.setAttribute("data-audio-blocked", "false");
+      return;
+    }
+    card.hidden = false;
+    var blocked = !(accepted && accepted.checked);
+    component.setAttribute("data-audio-blocked", blocked ? "true" : "false");
   }
 
   async function runMicCheck(component, echoTest) {
@@ -306,13 +461,29 @@
       if (state.cancelled) return;
       savePreferences({ lastTestedAt: new Date().toISOString() });
       if (!echoTest) {
+        // #221: a silent microphone blocks by default, with a stated-cost override. Measuring the
+        // analyser for three seconds is what distinguishes silence from hardware that works, and
+        // "we recorded three seconds" cannot make that distinction.
+        if (help) help.textContent = "Listening for three seconds — speak normally.";
+        var measurement = await measureSignal(component, stream, 3000);
+        if (state.cancelled) return;
+        showSilentGate(component, measurement);
+        if (measurement.outcome === "unavailable") {
+          setStatus(component, "mic-status", "MEASUREMENT UNAVAILABLE", "badge--warning");
+          if (help) help.textContent = "This browser cannot measure the input level. That is a browser limit, not a problem with your microphone — the sitting is not blocked by it.";
+        } else if (measurement.outcome === "silent") {
+          setStatus(component, "mic-status", "NO SIGNAL DETECTED", "badge--danger");
+          if (help) help.textContent = "No signal was measured. Check that the microphone is not muted, is the selected device, and is plugged in.";
+        } else {
+          setStatus(component, "mic-status", "SIGNAL DETECTED", "badge--success");
+          if (help) help.textContent = "Signal detected on this microphone. Select Stop microphone check to release it.";
+        }
         if (button) {
           button.textContent = "Stop microphone check";
           button.disabled = false;
           button.dataset.running = "true";
         }
         keepMicrophoneOpen = true;
-        if (help) help.textContent = "Speak normally and watch the level. Select Stop microphone check to release microphone access.";
         return;
       }
       if (typeof MediaRecorder === "undefined") throw new Error("Audio recording is not supported in this browser.");
@@ -455,6 +626,42 @@
     }
   }
 
+  /** The explicit control D18 requires: it says what it does ("see device names"), and nothing else does. */
+  async function requestPermission(component, button) {
+    var api = gate();
+    if (!api) return;
+    if (button) button.disabled = true;
+    var result = await api.ask(inputConstraints());
+    if (result.stream) result.stream.getTracks().forEach(function (track) { track.stop(); });
+    renderPermission(component, result.state);
+    await enumerate(component);
+    if (button) button.disabled = false;
+    if (result.state === "granted") {
+      var help = component.querySelector('[data-audio-role="mic-help"]');
+      if (help) help.textContent = "Microphone enabled. The device list is now readable; run a check to measure it.";
+    }
+  }
+
+  /**
+   * Re-reads the permission after the learner says they changed it. Browsers usually need a reload
+   * before they re-read a permission they were told to forget; when the state is unchanged the
+   * panel must not claim success, so the copy goes back to the denied block rather than promising
+   * the change took.
+   */
+  async function retryPermission(component, button) {
+    var api = gate();
+    if (!api) return;
+    if (button) button.disabled = true;
+    var result = await api.read();
+    renderPermission(component, result.state);
+    await enumerate(component);
+    if (button) button.disabled = false;
+    if (result.state !== "granted") {
+      var help = component.querySelector('[data-audio-role="mic-help"]');
+      if (help) help.textContent = "Still blocked. The browser only re-reads the permission on a reload — change it, then reload this page.";
+    }
+  }
+
   function initComponent(component) {
     if (component.dataset.audioInitialized === "true") return;
     component.dataset.audioInitialized = "true";
@@ -474,6 +681,9 @@
       } else if (event.target.matches('[data-audio-role="volume"]')) {
         savePreferences({ volume: Number(event.target.value) / 100, muted: Number(event.target.value) === 0 });
         applyOutputToAll();
+      } else if (event.target.matches('[data-audio-role="silent-override"]')) {
+        // The override states its cost in the markup above the box; ticking it is the acceptance.
+        component.setAttribute("data-audio-blocked", event.target.checked ? "false" : "true");
       }
     });
     component.addEventListener("click", function (event) {
@@ -483,6 +693,10 @@
         var current = readPreferences();
         savePreferences({ muted: !current.muted });
         applyOutputToAll();
+      } else if (button.dataset.audioAction === "request-permission") {
+        requestPermission(component, button);
+      } else if (button.dataset.audioAction === "retry-permission") {
+        retryPermission(component, button);
       } else if (button.dataset.audioAction === "mic-check") {
         if (button.dataset.running === "true") {
           stopMicrophoneCheck(component);
@@ -563,6 +777,7 @@
     savePreferences: savePreferences,
     inputConstraints: inputConstraints,
     applyOutput: applyOutput,
+    measureSignal: measureSignal,
     refreshDevices: function () {
       return Promise.all(Array.from(document.querySelectorAll("[data-audio-equipment]"), enumerate));
     }

@@ -14,6 +14,13 @@
     </div>
   </div>
   <div class="preflight-panel-body card__body stack gap-3">
+    @* #221 / D18: this is the canonical pre-sitting screen, so the permission is obtained HERE,
+       before the sitting exists. The same three-state panel the settings screens use, with
+       prompting enabled: this is one of the two surfaces D18 allows to raise the dialog. *@
+    <div data-permission-gate data-permission-promptable="true">
+      <partial name="_AudioPermissionStates" model="true" />
+    </div>
+
     <!-- Positioning Guide -->
     <div class="preflight-mic-guide alert alert--info">
       <strong class="preflight-mic-guide-title font-sign">Microphone Positioning Guide:</strong>
@@ -29,6 +36,16 @@
       <select class="preflight-device field__input" id="mic-select">
         <option value="default">System default microphone</option>
       </select>
+    </div>
+
+    @* #221 / D18: the two device-list cases, next to the select they describe. *@
+    <div class="alert alert--warning" data-audio-role="device-hint-labels" hidden>
+      <strong>Device names are withheld until the microphone is enabled.</strong>
+      Enable the microphone above, then the list fills in.
+    </div>
+    <div class="alert alert--warning" data-audio-role="device-hint-connect" hidden>
+      <strong>No microphone is connected.</strong>
+      Plug in a headset or a microphone — the permission is fine, there is simply no device to record from.
     </div>
 
     <!-- Live Level Meter -->
@@ -91,6 +108,27 @@
 
         <div id="mic-confirmed-success" class="preflight-mic-success alert alert--success mt-2" role="status">
           <strong>Microphone Verified!</strong> Your sample audio is clear. The microphone check is complete.
+        </div>
+
+        @* #221 / D18: a silent microphone blocks by default, and the override states the cost before
+           the choice. The same sentence the settings surface carries, so the two cannot drift. *@
+        <div class="audio-equipment__silent mt-2" data-audio-role="silent-gate" hidden>
+          <div class="alert alert--danger" role="alert">
+            <strong>No signal was detected from this microphone.</strong>
+            A muted or unplugged microphone still produces a recording — of silence — so the sitting is
+            blocked rather than let you lose a speaking skill to a dead input.
+          </div>
+          <div class="audio-equipment__override mt-2">
+            <p class="text-sm no-margin">
+              <strong>If you continue without a working microphone:</strong> the speaking skill will very
+              likely be reported as <strong>not measured</strong>, and your overall result will be computed
+              from the remaining skills. This cannot be undone after you submit.
+            </p>
+            <label class="audio-equipment__override-choice mt-2">
+              <input type="checkbox" data-audio-role="silent-override">
+              I understand the speaking skill will very likely be unmeasured, and I choose to continue anyway.
+            </label>
+          </div>
         </div>
       </div>
     </div>

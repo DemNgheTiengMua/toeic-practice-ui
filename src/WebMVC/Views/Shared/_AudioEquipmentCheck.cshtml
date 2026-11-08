@@ -2,9 +2,12 @@
 @{
     var componentClass = Model.Compact ? "audio-equipment audio-equipment--compact" : "audio-equipment";
     var componentId = "audio-check-" + Guid.NewGuid().ToString("N");
+    // #221 / D18: only the microphone panel is gated. The output check answers a different
+    // question ("can you hear this?") and never asks for a permission.
+    var promptable = !Model.Sitting;
 }
 
-<section class="card @componentClass" data-audio-equipment data-show-input="@(Model.ShowInput ? "true" : "false")" data-show-output="@(Model.ShowOutput ? "true" : "false")">
+<section class="card @componentClass" data-audio-equipment data-show-input="@(Model.ShowInput ? "true" : "false")" data-show-output="@(Model.ShowOutput ? "true" : "false")" data-sitting="@(Model.Sitting ? "true" : "false")">
   <div class="card__header"><strong>@(Model.Title ?? "Audio & Equipment")</strong></div>
   <div class="card__body stack">
     <p class="text-sm text-muted no-margin">Device choices and volume are stored only in this browser. Equipment checks are advisory; you can continue if your browser cannot inspect a device.</p>
@@ -41,15 +44,33 @@
 
     @if (Model.ShowInput)
     {
-      <div class="audio-equipment__panel" data-audio-role="input-panel">
+      <div class="audio-equipment__panel" data-audio-role="input-panel" data-permission-gate data-permission-promptable="@(promptable ? "true" : "false")">
         <h3 class="audio-equipment__heading">Microphone check</h3>
-        <div class="field">
+
+        @* The three states are three blocks, never one block with a class swapped: the copy and the remedy differ, and a learner reading only the text must be able to tell them apart. Shared with the pre-sitting microphone panel so one screen cannot drift from the other. *@
+        <partial name="_AudioPermissionStates" model="promptable" />
+
+        @if (Model.Sitting)
+        {
+          <p class="text-xs text-muted no-margin audio-equipment__sitting-note">
+            A permission change cannot be made from this screen — it never interrupts a running sitting.
+            Set the microphone up on the instructions page before you start; this panel reports what the
+            browser already decided.
+          </p>
+        }
+
+        <div class="field mt-2">
           <label class="field__label" for="@(componentId)-input">Microphone device</label>
           <select class="field__input" id="@(componentId)-input" data-audio-role="input-device">
             <option value="default">System default</option>
           </select>
         </div>
-        <div class="audio-equipment__meter-wrap">
+
+        @* #221 / D18: names are withheld by the browser until permission is granted, so an empty list
+           means two different things. Both hints live in _AudioPermissionStates, next to the copy they
+           qualify. *@
+
+        <div class="audio-equipment__meter-wrap mt-2">
           <div class="audio-equipment__meter" role="meter" aria-label="Microphone input level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
             <span data-audio-role="meter-level"></span>
             <i class="audio-equipment__tick audio-equipment__tick--voice" aria-hidden="true"></i>
@@ -63,6 +84,27 @@
           <button type="button" class="btn btn--sm btn--secondary" data-audio-action="echo-test">3-second echo test</button>
         </div>
         <p class="text-xs text-muted no-margin" data-audio-role="mic-help">Microphone access starts only when you run a check. The stream is stopped when the check ends.</p>
+
+        @* A silent microphone blocks the sitting by default. The override is a sentence the learner
+           must read first, not a bare checkbox: it states the consequence before the choice is made. *@
+        <div class="audio-equipment__silent mt-2" data-audio-role="silent-gate" hidden>
+          <div class="alert alert--danger" role="alert">
+            <strong>No signal was detected from this microphone.</strong>
+            A muted or unplugged microphone still produces a recording — of silence — so the sitting is
+            blocked rather than let you lose a speaking skill to a dead input.
+          </div>
+          <div class="audio-equipment__override mt-2">
+            <p class="text-sm no-margin">
+              <strong>If you continue without a working microphone:</strong> the speaking skill will very
+              likely be reported as <strong>not measured</strong>, and your overall result will be computed
+              from the remaining skills. This cannot be undone after you submit.
+            </p>
+            <label class="audio-equipment__override-choice mt-2">
+              <input type="checkbox" data-audio-role="silent-override">
+              I understand the speaking skill will very likely be unmeasured, and I choose to continue anyway.
+            </label>
+          </div>
+        </div>
       </div>
     }
     @if (Model.Compact)

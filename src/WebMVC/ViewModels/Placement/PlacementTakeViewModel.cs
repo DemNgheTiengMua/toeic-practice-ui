@@ -42,6 +42,27 @@ public sealed record PlacementTakeViewModel(
     public string PageDataJson { get; } = BuildPageData(Take);
 
     /// <summary>
+    /// #221 / D18: the one labelled settings control, scoped to what this paper actually examines.
+    /// A reading-only placement gets <c>null</c> and therefore no audio control at all - the criterion
+    /// that a gate which always offers the microphone would fail while looking correct.
+    /// <para>
+    /// Derived from the paper's own questions, not from the certificate: a certificate that examines
+    /// speaking but places it in a separate paper must not put a microphone control on this one.
+    /// </para>
+    /// </summary>
+    public AudioEquipmentCheckModel? AudioEquipment { get; } = BuildAudioEquipment(Take);
+
+    private static AudioEquipmentCheckModel? BuildAudioEquipment(PlacementTakeViewDto take)
+    {
+        var questions = take.Questions ?? [take.CurrentQuestion];
+        var hasListening = questions.Any(q => q.Modality == ModalityDto.Listening);
+        var hasSpeaking = questions.Any(q => q.Modality == ModalityDto.Speaking);
+        return hasListening || hasSpeaking
+            ? new AudioEquipmentCheckModel(ShowInput: hasSpeaking, ShowOutput: hasListening, Sitting: true)
+            : null;
+    }
+
+    /// <summary>
     /// #217 / PLC-18: EVERY section of the sitting with its outstanding count, so the confirmation can
     /// name the count per section and the client can move each row's number as the learner answers
     /// without a second copy of the sitting in the page. A section with zero outstanding is present
