@@ -93,13 +93,12 @@ public sealed class PlacementStageTwoDrawService(CompanionDbContext db)
                 item.StimulusId,
                 item.TopicId,
                 item.PlacementEligible,
-                Newest = db.ItemVersions
-                    .Where(v => v.ItemId == item.ItemId)
-                    .OrderByDescending(v => v.VersionNumber)
-                    .Select(v => (int?)v.ItemVersionId)
-                    .FirstOrDefault(),
             })
             .ToListAsync(cancellationToken);
+
+        // #254: "newest" is the authored order (VersionNumber), stated once in GateContext. A
+        // hand-rolled ORDER BY here was a second definition of "which version is live".
+        var newestByItem = await LoadNewestVersionsAsync(items.Select(i => i.ItemId), cancellationToken);
 
         // "Seen" is this learner's own practice history and nothing else. A global count would let one
         // learner's drilling exhaust another learner's paper.
@@ -158,7 +157,6 @@ public sealed class PlacementStageTwoDrawService(CompanionDbContext db)
 
             var selection = PlacementStageTwoBlueprint.Select(candidates, route, preferredTopic);
 
-            var versions = items.ToDictionary(item => item.ItemId, item => item.Newest);
             plans.Add(new PlacementStageTwoSkillPlan(
                 skill.SkillId,
                 skill.Code,
@@ -170,7 +168,7 @@ public sealed class PlacementStageTwoDrawService(CompanionDbContext db)
                 selection.Items
                     .Select((item, index) => new PlacementStageTwoPlanItem(
                         item.ItemId,
-                        versions.GetValueOrDefault(item.ItemId),
+                        newestByItem.GetValueOrDefault(item.ItemId),
                         item.Level,
                         item.StimulusId,
                         item.TopicId,
@@ -180,6 +178,32 @@ public sealed class PlacementStageTwoDrawService(CompanionDbContext db)
         }
 
         return new PlacementStageTwoDraw(certId, contentTier, plans);
+    }
+
+    /// <summary>
+    /// The live version of each item this draw can serve, via <see cref="GateContext.Newest{T}"/> so the
+    /// ordering is stated once rather than restated per caller.
+    /// </summary>
+    private async Task<Dictionary<int, int?>> LoadNewestVersionsAsync(
+        IEnumerable<int> itemIds, CancellationToken cancellationToken)
+    {
+        var ids = itemIds.ToList();
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        var versions = await db.ItemVersions
+            .AsNoTracking()
+            .Where(v => ids.Contains(v.ItemId))
+            .Select(v => new { v.ItemId, v.VersionNumber, v.ItemVersionId })
+            .ToListAsync(cancellationToken);
+
+        return versions
+            .GroupBy(v => v.ItemId)
+            .ToDictionary(
+                group => group.Key,
+                group => (int?)GateContext.Newest(group, v => v.VersionNumber)?.ItemVersionId);
     }
 
     /// <summary>

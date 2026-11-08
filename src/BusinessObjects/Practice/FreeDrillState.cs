@@ -45,9 +45,20 @@ public sealed record FreeDrillState(
     int DailyItemCeiling,
     string? LockNotice)
 {
-    /// <summary>The day's ceiling on objective items (PLC-64: "50–60 items per day overall"). The
-    /// ticket names one number, so the ceiling is the top of the spec's own range.</summary>
+    /// <summary>
+    /// The day's ceiling on objective items. PLC-64 gives a <b>range</b>, "50–60 objective items or 4
+    /// productive tasks overall", and no ticket narrows it. The ceiling is the top of that range, so a
+    /// learner is never cut short inside the band the spec allows; the number lives here, once, because
+    /// it is the only place it is compared against.
+    /// <para>
+    /// <b>This is a product number, not a content quantity.</b> AGENTS.md §9 gives volume figures to
+    /// content data once the pool exists; when it does, this becomes a read and this constant goes.
+    /// </para>
+    /// </summary>
     public const int DailyObjectiveCeiling = 60;
+
+    /// <summary>PLC-64's productive half: "4 productive tasks overall". Same shape as the item ceiling.</summary>
+    public const int DailyProductiveCeiling = 4;
 
     public static FreeDrillState Unrestricted(
         IReadOnlyList<PrioritisedCoordinate> priorities, bool cellUsedToday, int answeredToday, bool ceilingReached) =>

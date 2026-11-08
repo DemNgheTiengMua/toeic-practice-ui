@@ -191,6 +191,12 @@ public sealed class AiGradingProcessor(
                     if (grading.FailureReason.Length > 400) grading.FailureReason = grading.FailureReason[..399] + "…";
                     grading.CompletedAt = DateTimeOffset.UtcNow;
                     ClearFeedback(grading);
+                    // #217 / PLC-35: settle on EVERY failure path, not only the grader's. Leaving the
+                    // response `pending_ai` keeps the attempt `submitted` forever, so the learner waits
+                    // for a result that never arrives and the sitting cannot record the honest
+                    // `not_measured`. This branch is a configuration fault an administrator can leave in
+                    // place for days, which makes it the one most likely to strand a learner.
+                    await SettleFreeResponseAsync(fr.FreeResponseId, cancellationToken);
                     await db.SaveChangesAsync(cancellationToken);
                     return false;
                 }
@@ -225,6 +231,10 @@ public sealed class AiGradingProcessor(
                     if (grading.FailureReason.Length > 400) grading.FailureReason = grading.FailureReason[..399] + "…";
                     grading.CompletedAt = DateTimeOffset.UtcNow;
                     ClearFeedback(grading);
+                    // #217 / PLC-35: settle here too. A rubric with a band missing its descriptor is a
+                    // configuration fault, not a transient one, so a learner can sit in `pending_ai` for
+                    // as long as nobody edits the rubric.
+                    await SettleFreeResponseAsync(fr.FreeResponseId, cancellationToken);
                     await db.SaveChangesAsync(cancellationToken);
                     return false;
                 }
@@ -397,6 +407,11 @@ public sealed class AiGradingProcessor(
             grading.FailureReason = (ex.InnerException?.Message ?? ex.Message);
             grading.CompletedAt = DateTimeOffset.UtcNow;
             ClearFeedback(grading);
+            // #217 / PLC-35: an unexpected fault settles the task as well. This is the last branch the
+            // learner can be stranded in, and it is the one nobody can predict: whatever threw, the
+            // answer is not going to be graded on this attempt, so the sitting has to be allowed to
+            // finish with an honest `not_measured` rather than stay `submitted` forever.
+            await SettleFreeResponseAsync(fr.FreeResponseId, cancellationToken);
             try
             {
                 await db.SaveChangesAsync(cancellationToken);

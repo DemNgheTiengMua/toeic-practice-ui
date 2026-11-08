@@ -440,8 +440,57 @@ public static class InsightNarrativeGuard
         return false;
     }
 
-    private static bool ContainsAny(string lowerSentence, IEnumerable<string> words) =>
-        words.Any(word => lowerSentence.Contains(word, StringComparison.Ordinal));
+    /// <summary>
+    /// True when the sentence contains <paramref name="phrase"/> as whole words.
+    /// <para>
+    /// <b>Why not <c>string.Contains</c>.</b> "aim" is inside <em>claim</em>, <em>claims</em> and
+    /// <em>reclaim</em>; "reach" is inside <em>reached</em>; "weak" is inside <em>weaker</em>. A sentence
+    /// saying "you can claim your result" was therefore read as naming the goal, which loosened the
+    /// level-attribution check this guard exists to tighten, and "you reached reading at B1" was read as
+    /// the goal rather than as a skill at a level.
+    /// </para>
+    /// <para>
+    /// Multi-word phrases ("holding you back", "working towards") are matched as consecutive tokens, so
+    /// the same rule covers both shapes.
+    /// </para>
+    /// </summary>
+    private static bool ContainsPhrase(string lowerSentence, string phrase) =>
+        HasTokenRun(Tokens(lowerSentence), Tokens(phrase));
+
+    private static bool ContainsAny(string lowerSentence, IEnumerable<string> phrases) =>
+        phrases.Any(phrase => ContainsPhrase(lowerSentence, phrase));
+
+    private static List<string> Tokens(string text) =>
+        WordBoundary.Matches(text).Select(m => m.Value).ToList();
+
+    private static bool HasTokenRun(List<string> sentence, List<string> phrase)
+    {
+        if (phrase.Count == 0 || phrase.Count > sentence.Count)
+        {
+            return false;
+        }
+
+        for (var start = 0; start <= sentence.Count - phrase.Count; start++)
+        {
+            var matched = true;
+            for (var offset = 0; offset < phrase.Count; offset++)
+            {
+                if (!string.Equals(sentence[start + offset], phrase[offset], StringComparison.Ordinal))
+                {
+                    matched = false;
+                    break;
+                }
+            }
+
+            if (matched)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 
     private static bool TryParse(string token, out decimal value) =>
         decimal.TryParse(token.Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out value);

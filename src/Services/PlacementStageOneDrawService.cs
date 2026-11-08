@@ -80,14 +80,13 @@ public sealed class PlacementStageOneDrawService(CompanionDbContext db)
                 item.CefrLevel,
                 item.StimulusId,
                 item.TopicId,
-                // #254: "newest" is the authored order, and GateContext states it once.
-                Newest = db.ItemVersions
-                    .Where(v => v.ItemId == item.ItemId)
-                    .OrderByDescending(v => v.VersionNumber)
-                    .Select(v => (int?)v.ItemVersionId)
-                    .FirstOrDefault(),
             })
             .ToListAsync(cancellationToken);
+
+        // #254: "newest" is the authored order (VersionNumber), and GateContext states it once. A
+        // hand-rolled ORDER BY here was a second definition of "which version is live", so a version
+        // inserted out of order would have served a different row than gate one judged.
+        var newestByItem = await LoadNewestVersionsAsync(items.Select(i => i.ItemId), cancellationToken);
 
         var plans = new List<PlacementStageOneSkillPlan>(objective.Count);
         foreach (var skill in objective)
@@ -99,7 +98,6 @@ public sealed class PlacementStageOneDrawService(CompanionDbContext db)
                 .ToList();
 
             var selection = PlacementStageOneBlueprint.Select(candidates);
-            var versions = items.ToDictionary(item => item.ItemId, item => item.Newest);
 
             plans.Add(new PlacementStageOneSkillPlan(
                 skill.SkillId,
@@ -110,7 +108,7 @@ public sealed class PlacementStageOneDrawService(CompanionDbContext db)
                 selection.Items
                     .Select((candidate, index) => new PlacementStageOneItem(
                         candidate.ItemId,
-                        versions.GetValueOrDefault(candidate.ItemId),
+                        newestByItem.GetValueOrDefault(candidate.ItemId),
                         candidate.Level,
                         candidate.StimulusId,
                         index + 1))
@@ -118,6 +116,32 @@ public sealed class PlacementStageOneDrawService(CompanionDbContext db)
         }
 
         return new PlacementStageOneDraw(certId, contentTier, plans);
+    }
+
+    /// <summary>
+    /// The live version of each item this draw can serve, via <see cref="GateContext.NewestPerItem{T}"/>
+    /// so the ordering is stated once rather than restated per caller.
+    /// </summary>
+    private async Task<Dictionary<int, int?>> LoadNewestVersionsAsync(
+        IEnumerable<int> itemIds, CancellationToken cancellationToken)
+    {
+        var ids = itemIds.ToList();
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        var versions = await db.ItemVersions
+            .AsNoTracking()
+            .Where(v => ids.Contains(v.ItemId))
+            .Select(v => new { v.ItemId, v.VersionNumber, v.ItemVersionId })
+            .ToListAsync(cancellationToken);
+
+        return versions
+            .GroupBy(v => v.ItemId)
+            .ToDictionary(
+                group => group.Key,
+                group => (int?)GateContext.Newest(group, v => v.VersionNumber)?.ItemVersionId);
     }
 
     private static string ModalityCode(Modality modality) => modality.ToCode();

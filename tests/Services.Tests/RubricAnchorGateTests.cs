@@ -183,6 +183,12 @@ public sealed class RubricAnchorGateTests(DatabaseFixture database)
         Assert.Null(grading.OverallScaled);
         Assert.Contains("W_GR", grading.FailureReason, StringComparison.Ordinal);
         Assert.Empty(await check.AiGradingScores.Where(s => s.GradingId == grading.GradingId).ToListAsync());
+
+        // #217 / PLC-35: the task is SETTLED, not left queued. `FreeResponses` has no `failed`
+        // state, so a failed grading that stays `pending_ai` keeps the attempt `submitted` forever
+        // and the learner waits for a result that never arrives. This is the assertion the wave
+        // was missing: every other branch of the processor settles, and these two did not.
+        Assert.NotEqual("pending_ai", grading.FreeResponse.Status);
     }
 
     [Fact]

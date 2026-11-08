@@ -177,12 +177,14 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
             "The edit was refused by gate one (D17), so nothing was written: ",
             cancellationToken);
 
+        // #254: which version is current is stated once, in GateContext. Picking the newest here with a
+        // local ordering was a second definition, so a version inserted out of order would have been
+        // edited while the gate judged a different row.
         var versions = await db.ItemVersions
             .Where(v => v.ItemId == itemId)
-            .OrderByDescending(v => v.VersionNumber)
             .ToListAsync(cancellationToken);
 
-        var current = versions.FirstOrDefault()
+        var current = GateContext.Newest(versions, v => v.VersionNumber)
             ?? throw new AdminItemException(ApiError.Codes.Validation, $"Item {itemId} has no version to edit.", 409);
 
         // CNT-43: a scored change forks a version; a cosmetic one does not. Comparing the incoming

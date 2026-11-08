@@ -53,23 +53,107 @@ The backend is a .NET 10 solution (`ExtraEfficiency.slnx`) structured in six str
 
 ---
 
-## 2. Knowledge Graph (graphify)
+## 2. Knowledge Graph (graphify) — MANDATORY, not advisory
 
-A persistent knowledge graph lives in `graphify-out/`. It is **not tracked** — it is a local
-cache over this source tree, rebuilt in one command with no API cost:
-`python -m graphify update .` (use `python -m`, see §8). A fresh clone starts with no
-graph, so build it once before relying on the commands below.
+A persistent knowledge graph lives in `graphify-out/`. It is **not tracked** — a local cache over this
+source tree. A fresh clone starts with no graph: build it once with `graphify update .` before relying
+on anything below.
 
-**Before debugging, tracing data flow, or implementing new features**:
-- **Inspect nodes first**: `graphify explain "<Symbol>"` is the best first move — it returns neighbours, degree, community and `file:line`, which grep cannot.
-- **Check what a change breaks**: `graphify affected "<Symbol>" --depth 2` before deleting or renaming anything.
-- **Trace connections**: Run `graphify path "<Source>" "<Target>"` to inspect dependencies between layers (e.g. from a UI view to a DB trigger).
-- **Visual map**: Open `graphify-out/graph.html` in a browser or review `graphify-out/GRAPH_REPORT.md`.
-- **Rebuild after major changes**: Run `/graphify --update` to re-extract modified files incrementally.
+`graphify` is on PATH (`C:\Users\Nguoi Viet Chim Tay\.local\bin\graphify.exe`). Use it bare. `python -m
+graphify` also works and is equivalent, but it prints a spurious skill/package version warning — use the
+bare command unless it is missing.
 
-**Do not lead with `graphify query "<question>"`** — see §8 for why: it is keyword BFS with a token budget, so the answer is often among the truncated nodes. Use it only with `--seed`, or not at all.
+### 2.1 The rule
 
-If the graph claims a `built_at_commit` other than `git rev-parse HEAD`, it is stale — rebuild before trusting it.
+**Every ticket starts with graphify, before the first file is read.** This is not a suggestion and it is
+not "when convenient". A brief that omits the block in §2.4 is an incomplete brief.
+
+**Why it is binding.** grep returns text that looks like evidence and is not: it cannot tell you that
+`AttemptEngine.Lifecycle.cs:50` reads `Questions` because `ExamItems` has no roster yet, and it cannot
+tell you that a symbol you are about to delete has a caller in a file you did not think to search.
+Graphify returns `file:line`, degree and community, so a claim can be checked. Every ticket in this
+rebuild where a subagent said "nothing else touches this" and was wrong had skipped it.
+
+### 2.2 The four commands, and how to address a node
+
+**Node addressing is the one thing that will waste your turns if you get it wrong.** Three forms exist
+and only one is reliable:
+
+| Form | Works? | Note |
+|---|---|---|
+| `graphify explain "PracticeService"` | Sometimes | **Ambiguous** for common names — `Questions` matches 8 nodes. Exit 3, no output. |
+| `graphify affected "PracticeService"` | **No** | `affected` requires a node **id**, not a label. `No unique node match`. |
+| `graphify explain "src/Services/PracticeService.cs::PracticeService"` | **Yes** | `path::symbol`. Use this by default. |
+| `graphify explain "<id from the path::symbol output>"` | **Yes** | The `ID:` line it prints. Use this for `affected`. |
+
+Working sequence, verified on this repo:
+
+```sh
+# 1. resolve path::symbol -> id, and see neighbours in the same call
+graphify explain "src/Services/PracticeService.cs::PracticeService"
+#    prints: ID: src_services_practiceservice_services_practiceservice, Degree: 99, and Connections
+
+# 2. feed that id to affected. A label will fail here.
+graphify affected src_services_practiceservice_services_practiceservice --depth 2
+```
+
+```sh
+graphify god-nodes --top 15          # architectural hubs: Contracts(1053) BusinessObjects(666) Services(524)
+graphify path "A" "B"                # shortest dependency path between two nodes
+graphify query "<q>" --seed "<Node>" # BFS, but ONLY with a seed (see 2.3)
+```
+
+### 2.3 `graphify query` is not semantic — use it only with `--seed`
+
+`query` is keyword BFS with a default 2000-token budget. Run bare it dumps 600–950 loosely related
+nodes and truncates, so the answer is frequently in the cut. Use it only as
+`graphify query "<question>" --seed "<KnownNode>"`, never as the opening move.
+
+### 2.4 The block every brief must carry (copy verbatim, fill the tickets)
+
+```
+## Start with graphify (mandatory, before reading any file)
+
+`graphify` is on PATH. Node addressing: `graphify explain "<path>::<Symbol>"` returns the `ID:` line;
+`graphify affected <id> --depth 2` needs that id, NOT a label.
+
+Before you read a single source file:
+1. `graphify explain "<path>::<the main symbol this ticket changes>"` — neighbours, degree, community, file:line.
+2. `graphify affected <id> --depth 2` — everything that breaks if this changes. This is the only thing
+   between a deletion ticket and a self-inflicted outage.
+3. `graphify god-nodes --top 15` once per wave, so you know which hubs you are near.
+
+In your report, quote the `affected` list you got, and name any caller that surprised you. A report
+that says "nothing else references it" without an `affected` output is not evidence.
+
+If the graph reports a `built_at_commit` other than `git rev-parse HEAD`, it is stale: run
+`graphify update .` first (no API cost, AST only).
+```
+
+### 2.5 Beyond lookup — what else the graph gives you
+
+- **`graphify reflect --if-stale`** then read `graphify-out/reflections/LESSONS.md` at the start of graph
+  work. It lists preferred sources, known dead ends and prior corrections. `--if-stale` costs nothing
+  when the git hook already refreshed it.
+- **`graphify save-result --question … --answer … --type query --nodes … --outcome useful|dead_end|corrected`**
+  feeds an answer back so `reflect` can surface it next time. Use `--outcome corrected --correction "…"`
+  when you proved a node's community label or a prior claim wrong.
+- **`graphify export html`** writes `graphify-out/graph.html`; review it when a wave changes the shape of
+  a layer rather than a function.
+- **`graphify hook status`** — the post-commit, post-checkout, post-merge and post-rewrite hooks are
+  installed, so the graph follows commits automatically. `graphify-out/` is ignored, so these rebuilds
+  never create chore commits.
+
+### 2.6 Staleness
+
+If `built_at_commit` ≠ `git rev-parse HEAD`, the graph is stale. Rebuild before trusting it:
+
+```sh
+graphify update .        # AST only, no LLM, no API cost
+```
+
+A rebuild reporting far fewer than ~14.5k nodes means an interpreter without `tree_sitter_sql` dropped
+the 20 `.sql` files (§8). Check with `python -c "import tree_sitter_sql"`.
 
 ---
 

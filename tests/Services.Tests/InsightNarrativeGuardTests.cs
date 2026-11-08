@@ -369,4 +369,50 @@ public sealed class InsightNarrativeGuardTests
 
         Assert.Null(reason);
     }
+
+    // =============================================================================================
+    // Word boundaries in the claim words themselves.
+    // =============================================================================================
+
+    /// <summary>
+    /// <b>The wrong input that would still pass:</b> a guard that matches claim words with
+    /// <c>string.Contains</c>. "aim" is inside <em>claim</em>, so "you can claim your result" is read as
+    /// naming the goal - which switches the level-attribution check into its permissive branch, and a
+    /// level given to the wrong skill then passes.
+    /// </summary>
+    [Fact]
+    public void A_word_that_merely_contains_a_goal_word_does_not_name_the_goal()
+    {
+        // "Reading is at B2" where reading is C1 and B2 is listening's. It is refused only when the
+        // sentence is NOT read as naming the overall/goal. "claim" contains "aim".
+        var reason = InsightNarrativeGuard.Rejection(
+            Request(), "You can claim Reading is at B2 once the drill is done.");
+
+        Assert.NotNull(reason);
+    }
+
+    /// <summary>
+    /// <b>The wrong input that would still pass:</b> the same <c>Contains</c> bug the other way.
+    /// "reach" is inside <em>reached</em>, so a sentence reporting what the learner actually reached is
+    /// read as a goal statement and licensed to quote the overall band.
+    /// </summary>
+    [Fact]
+    public void A_past_tense_of_reach_does_not_make_a_level_the_goal()
+    {
+        var reason = InsightNarrativeGuard.Rejection(
+            Request(), "You reached Reading at B2, which this certificate does not measure there.");
+
+        Assert.NotNull(reason);
+    }
+
+    /// <summary>
+    /// The control: the same words used honestly, as whole words, are still accepted. A guard that
+    /// refuses "your target band is B2" solves nothing.
+    /// </summary>
+    [Fact]
+    public void The_whole_word_goal_phrases_still_license_the_target_band()
+    {
+        Assert.Null(InsightNarrativeGuard.Rejection(
+            Request(), "Your goal is B2, and your target B2 is reachable this term."));
+    }
 }
