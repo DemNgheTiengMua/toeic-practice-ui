@@ -124,7 +124,10 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // phase weights, aggregation rule, band grid and cut-score version an attempt is scored with),
         // trg_ExamEditions_SingleWriter (the eighth covered derived fact) and
         // trg_ExamAttempts_EditionIsFixed (an attempt cannot be moved onto another edition).
-        Assert.Equal(63, triggerCount);
+        // #237: two more, 63 -> 65 - trg_UserCellMasteries_SingleWriter (the ninth covered derived
+        // fact) and trg_UserCellMasteries_StateIsEarned (the four states are reachable only through
+        // the transitions PLC-68/70/71 name, and entering mastered needs the probability AND the count).
+        Assert.Equal(65, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
@@ -166,6 +169,9 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
                      "trg_Exams_PublishRequiresAudit",
                      // #233: the seventh covered derived fact, and the archive's immutability guard.
                      "trg_LearnerPathWeeks_SingleWriter",
+                     // #237: the ninth covered derived fact, and the four-state transition table.
+                     "trg_UserCellMasteries_SingleWriter",
+                     "trg_UserCellMasteries_StateIsEarned",
                  })
         {
             var present = await db.Database

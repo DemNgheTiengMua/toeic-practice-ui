@@ -49,5 +49,9 @@ public partial class Topic
     /// <summary>#240: the leveled lessons teaching this cell's topic.</summary>
     [InverseProperty("Topic")]
     public virtual ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
+
+    /// <summary>#237: the learner mastery rows at this topic's cells.</summary>
+    [InverseProperty("Topic")]
+    public virtual ICollection<UserCellMastery> UserCellMasteries { get; set; } = new List<UserCellMastery>();
 }
 

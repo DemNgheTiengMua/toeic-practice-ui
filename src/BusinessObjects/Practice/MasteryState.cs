@@ -39,4 +39,39 @@ public static class MasterySchedule
     public static readonly TimeSpan MasteredInterval = TimeSpan.FromDays(14);
     public static readonly TimeSpan LapseInterval = TimeSpan.FromHours(24);
     public static readonly TimeSpan WrongAnswerCooldown = TimeSpan.FromHours(24);
+
+    // ---- #237 / SRS §7.5. The cell estimate's numbers, quoted with their requirement ids. ----
+
+    /// <summary>PLC-67: <c>α0</c>, the pseudo-correct count of the prior.</summary>
+    public const double PriorCorrect = 2.0;
+
+    /// <summary>PLC-67: <c>β0</c>, the pseudo-wrong count. Prior probability is 2/(2+2) = 0.5.</summary>
+    public const double PriorWrong = 2.0;
+
+    /// <summary>The prior probability a cell sits at before any answer: <c>α0/(α0+β0)</c>.</summary>
+    public const double PriorProbability = PriorCorrect / (PriorCorrect + PriorWrong);
+
+    /// <summary>PLC-67: <c>w = 0.85^(K-i)</c>. The newest observation weighs 1, the previous 0.85.</summary>
+    public const double RecencyWeight = 0.85;
+
+    /// <summary>PLC-68: <c>p_low = 0.733</c>. Below it the cell displays as <c>low</c>.</summary>
+    public const double LowThreshold = 0.733;
+
+    /// <summary>PLC-68: <c>p_high = 0.80</c>. At or above it, and with the observation minimum, mastered.</summary>
+    public const double MasteredThreshold = 0.80;
+
+    /// <summary>PLC-68: <c>n_min</c> for objective skills, in items.</summary>
+    public const int MinObservationsObjective = 12;
+
+    /// <summary>PLC-68: <c>n_min</c> for productive skills, in tasks.</summary>
+    public const int MinObservationsProductive = 3;
+
+    /// <summary>PLC-71: a mastered cell is not touched before this many days of inactivity.</summary>
+    public const int InactivityOnsetDays = 28;
+
+    /// <summary>PLC-71: the drift per week once the onset has passed.</summary>
+    public const double WeeklyDecay = 0.02;
+
+    /// <summary>PLC-70: a single wrong answer while mastered sets a review window this long.</summary>
+    public static readonly TimeSpan ReviewWindow = TimeSpan.FromHours(24);
 }

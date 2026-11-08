@@ -14,7 +14,7 @@ namespace BusinessObjects;
 /// <c>sp_set_session_context</c> — session context survives commit and rollback on a pooled
 /// connection and would vouch for whatever ran next.
 ///
-/// Coverage today is eight of the ten (#227 added the edition snapshot). The rest are named here so
+/// Coverage today is nine of the eleven (#237 added per-cell mastery). The rest are named here so
 /// the registry has one source in the application as well as in the schema, and so a later ticket has
 /// a name to declare rather than inventing one.
 /// </summary>
@@ -58,10 +58,16 @@ public static class DerivedFactWriters
     /// </summary>
     public const string StratumDecision = "StratifiedAuditService";
 
-    // ---- awaiting a table ----
-
-    /// <summary>Topic capability: awaiting the per-cell mastery table (#232).</summary>
+    /// <summary>
+    /// #237: per-cell mastery, <c>UserCellMasteries</c>. The estimate and the four states are derived
+    /// from the learner's graded answers, so <c>MasteryService</c> is the only service that writes the
+    /// row. The estimate is a probability with a prior, which SQL Server cannot express as a computed
+    /// column, so the writer is a service rather than the schema - but the state machine it calls is a
+    /// pure function in <see cref="MasteryCellMachine"/>, so the arithmetic has exactly one home.
+    /// </summary>
     public const string TopicCapability = "CapabilityWriter";
+
+    // ---- awaiting a table ----
 
     /// <summary>Window synthesis: awaiting the window rows (#212).</summary>
     public const string WindowSynthesis = "PathWindowSynthesizer";

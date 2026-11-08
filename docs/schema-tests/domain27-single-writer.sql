@@ -11,7 +11,7 @@ SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 --   2. a trigger refusing a write that declares a different writer
 --   3. a monotonic ProjectionVersion, so a stale out-of-order callback cannot overwrite a newer result
 --
--- The registry names all nine facts, including the two whose table does not exist yet. A row that
+-- The registry names all ten facts, and #237 gave the last waiting one its table. A row that
 -- claims coverage it does not have is this ticket's worst failure mode, so section 1 counts the
 -- covered/awaiting/exempt split instead of trusting the prose.
 --
@@ -36,7 +36,7 @@ INSERT INTO @expected (FactCode, Coverage) VALUES
   ('learner_skill_state',   'covered'),
   ('attempt_score_and_band', 'covered'),
   ('stratum_decision',      'covered'),
-  ('topic_capability',      'awaiting_table'),
+  ('topic_capability',      'covered'),
   ('step_closure',          'covered'),
   ('window_synthesis',      'covered'),
   ('exam_edition_snapshot', 'covered'),
@@ -58,18 +58,18 @@ IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered' AND Covere
   THROW 50000, 'EXPECT_REJECT FAILED: a fact claims coverage but names no table, so its guard protects nothing', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage <> 'covered' AND CoveredTable IS NOT NULL) <> 0
   THROW 50000, 'EXPECT_REJECT FAILED: a fact that is not covered names a table, which overstates the mechanism', 1;
--- #211 narrowed this from three to four, #212 added a fifth, #206 a sixth, #233 a seventh and #227
--- an eighth; it is now 8/1/1: creating a table and moving it out of `awaiting_table` is the only
--- direction this split may ever move, and #227 both added a fact and closed nothing, so the
--- awaiting count is untouched. The three per-fact counts are asserted separately, not just the
--- total, so a swap that kept the sum would still fail.
-IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 8
-  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the eight tables that exist today (#227 added the exam edition snapshot)', 1;
-IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'awaiting_table') <> 1
-  THROW 50000, 'EXPECT_REJECT FAILED: the awaiting-table set is not the one fact whose table no ticket has created yet', 1;
+-- #211 narrowed this from three to four, #212 added a fifth, #206 a sixth, #233 a seventh, #227 an
+-- eighth and #237 a ninth - it is now 9/0/1. #237 is the ticket that emptied `awaiting_table`: the one
+-- fact still waiting (`topic_capability`) got its `UserCellMasteries` table. Creating a table and moving
+-- a fact out of `awaiting_table` is the only direction this split may ever move. The three per-fact
+-- counts are asserted separately, not just the total, so a swap that kept the sum would still fail.
+IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 9
+  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the nine tables that exist today (#237 added per-cell mastery)', 1;
+IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'awaiting_table') <> 0
+  THROW 50000, 'EXPECT_REJECT FAILED: a fact still awaits a table, and #237 created the last of them', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'exempt') <> 1
   THROW 50000, 'EXPECT_REJECT FAILED: the exempt set is not the one fact that already carries its own guard', 1;
-PRINT 'the registry names ten facts: eight covered now, one awaiting a table, one exempt';
+PRINT 'the registry names ten facts: nine covered now, none awaiting a table, one exempt';
 
 BEGIN TRY
   INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable)
@@ -580,8 +580,8 @@ DECLARE @covered TABLE (TableName SYSNAME NOT NULL PRIMARY KEY);
 INSERT INTO @covered (TableName)
   SELECT CoveredTable FROM DerivedFactOwners WHERE Coverage = 'covered';
 
-IF (SELECT COUNT(*) FROM @covered) <> 8
-  THROW 50000, 'EXPECT_REJECT FAILED: the covered table set is not the eight this schema ships (#227 added the exam edition snapshot)', 1;
+IF (SELECT COUNT(*) FROM @covered) <> 9
+  THROW 50000, 'EXPECT_REJECT FAILED: the covered table set is not the nine this schema ships (#237 added per-cell mastery)', 1;
 
 DECLARE @t SYSNAME, @missing INT = 0;
 DECLARE tbl CURSOR LOCAL FAST_FORWARD FOR SELECT TableName FROM @covered;
@@ -606,8 +606,8 @@ BEGIN
   FETCH NEXT FROM tbl INTO @t;
 END
 CLOSE tbl; DEALLOCATE tbl;
-IF @missing <> 8
-  THROW 50000, 'EXPECT_REJECT FAILED: the column audit did not visit the eight covered tables', 1;
+IF @missing <> 9
+  THROW 50000, 'EXPECT_REJECT FAILED: the column audit did not visit the nine covered tables', 1;
 PRINT 'every covered table carries a writer column and a projection version';
 
-PRINT '#191/#212/#206/#233/#227: ten facts registered, eight enforced today, and each guard refuses a valid write by the wrong writer';
+PRINT '#191/#212/#206/#233/#227/#237: ten facts registered, nine enforced today, and each guard refuses a valid write by the wrong writer';
