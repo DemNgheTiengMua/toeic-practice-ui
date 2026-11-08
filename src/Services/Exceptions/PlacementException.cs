@@ -16,6 +16,13 @@ public class PlacementException(string code, string message) : Exception(message
     /// <summary>#213 / PLC-07: a retake inside the 24-hour cooldown. Never a lifetime cap.</summary>
     public const string PlacementCooldown = "placement_cooldown";
 
+    /// <summary>
+    /// #215 / D7, D10: a routed band cannot supply the five items its floor requires, so the sitting is
+    /// refused before any attempt row exists. Never a shortened paper — a band measured on four items
+    /// makes one lucky guess worth 25 points.
+    /// </summary>
+    public const string PlacementStockShort = "placement_stock_short";
+
     /// <summary>#153: the declared pace is above the 25 h/week ceiling the spec allows any plan.</summary>
     public const string WeeklyHoursTooHigh = "weekly_hours_too_high";
 
