@@ -24,10 +24,10 @@ SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 DECLARE @msg NVARCHAR(2048);
 
 -- ---------------------------------------------------------------------------------------------
--- 1. the registry: nine facts, nine owners, and an honest coverage count
+-- 1. the registry: ten facts, ten owners, and an honest coverage count
 -- ---------------------------------------------------------------------------------------------
-IF (SELECT COUNT(*) FROM DerivedFactOwners) <> 9
-  THROW 50000, 'EXPECT_REJECT FAILED: the registry does not name nine derived facts', 1;
+IF (SELECT COUNT(*) FROM DerivedFactOwners) <> 10
+  THROW 50000, 'EXPECT_REJECT FAILED: the registry does not name ten derived facts', 1;
 
 DECLARE @expected TABLE (FactCode VARCHAR(32) NOT NULL PRIMARY KEY, Coverage VARCHAR(16) NOT NULL);
 INSERT INTO @expected (FactCode, Coverage) VALUES
@@ -39,6 +39,7 @@ INSERT INTO @expected (FactCode, Coverage) VALUES
   ('topic_capability',      'awaiting_table'),
   ('step_closure',          'covered'),
   ('window_synthesis',      'covered'),
+  ('exam_edition_snapshot', 'covered'),
   ('credit_movement',       'exempt');
 
 IF EXISTS (
@@ -47,7 +48,7 @@ IF EXISTS (
   FULL OUTER JOIN DerivedFactOwners o ON o.FactCode = e.FactCode
   WHERE e.FactCode IS NULL OR o.FactCode IS NULL OR o.Coverage <> e.Coverage
 )
-  THROW 50000, 'EXPECT_REJECT FAILED: the registry does not name the nine facts with their real coverage', 1;
+  THROW 50000, 'EXPECT_REJECT FAILED: the registry does not name the ten facts with their real coverage', 1;
 
 IF EXISTS (SELECT 1 FROM DerivedFactOwners WHERE OwningService IS NULL)
   THROW 50000, 'EXPECT_REJECT FAILED: a derived fact has no owning service named', 1;
@@ -57,17 +58,18 @@ IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered' AND Covere
   THROW 50000, 'EXPECT_REJECT FAILED: a fact claims coverage but names no table, so its guard protects nothing', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage <> 'covered' AND CoveredTable IS NOT NULL) <> 0
   THROW 50000, 'EXPECT_REJECT FAILED: a fact that is not covered names a table, which overstates the mechanism', 1;
--- #211 narrowed this from three to four, #212 added a fifth, #206 a sixth and #233 a seventh; it is
--- now 7/1/1: creating a table and moving it out of `awaiting_table` is the only direction this split
--- may ever move. The three per-fact counts are asserted separately, not just the total, so a swap that
--- kept the sum would still fail.
-IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 7
-  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the seven tables that exist today (#233 added the archived week)', 1;
+-- #211 narrowed this from three to four, #212 added a fifth, #206 a sixth, #233 a seventh and #227
+-- an eighth; it is now 8/1/1: creating a table and moving it out of `awaiting_table` is the only
+-- direction this split may ever move, and #227 both added a fact and closed nothing, so the
+-- awaiting count is untouched. The three per-fact counts are asserted separately, not just the
+-- total, so a swap that kept the sum would still fail.
+IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 8
+  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the eight tables that exist today (#227 added the exam edition snapshot)', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'awaiting_table') <> 1
   THROW 50000, 'EXPECT_REJECT FAILED: the awaiting-table set is not the one fact whose table no ticket has created yet', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'exempt') <> 1
   THROW 50000, 'EXPECT_REJECT FAILED: the exempt set is not the one fact that already carries its own guard', 1;
-PRINT 'the registry names nine facts: seven covered now, one awaiting a table, one exempt';
+PRINT 'the registry names ten facts: eight covered now, one awaiting a table, one exempt';
 
 BEGIN TRY
   INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable)
@@ -492,14 +494,94 @@ END CATCH
 PRINT 'accepted an open-to-open step move that derives nothing';
 
 -- ---------------------------------------------------------------------------------------------
+-- 5b. exam edition snapshot: owner is ExamEditionFreeze. The freeze is a trigger on publish, so the
+--     "wrong writer" input has to be a direct write, which is exactly what a service-side re-freeze
+--     would be.
+-- ---------------------------------------------------------------------------------------------
+-- @exam above was inserted already published, so it froze at INSERT. That is the "created published"
+-- arm, and it is the shape a fixture write takes.
+IF NOT EXISTS (SELECT 1 FROM ExamEditions WHERE ExamId = @exam)
+  THROW 50000, 'EXPECT_REJECT FAILED: a paper inserted published did not freeze an edition', 1;
+
+-- The draft arm: a draft has no learners, so it has no edition to protect.
+INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
+VALUES (@cert, N'Edition draft', 'draft', 30, 'mock');
+DECLARE @draftExam INT = SCOPE_IDENTITY();
+IF EXISTS (SELECT 1 FROM ExamEditions WHERE ExamId = @draftExam)
+  THROW 50000, 'EXPECT_REJECT FAILED: a draft exam carried a frozen edition', 1;
+
+UPDATE Exams SET Status = 'published' WHERE ExamId = @draftExam;
+IF NOT EXISTS (SELECT 1 FROM ExamEditions WHERE ExamId = @draftExam)
+  THROW 50000, 'EXPECT_REJECT FAILED: publishing did not freeze an edition', 1;
+IF (SELECT WrittenByService FROM ExamEditions WHERE ExamId = @draftExam) <> 'ExamEditionFreeze'
+  THROW 50000, 'EXPECT_REJECT FAILED: the freeze did not declare its own writer', 1;
+IF (SELECT ScoreAggregationRule FROM ExamEditions WHERE ExamId = @draftExam) <> 'sum'
+  THROW 50000, 'EXPECT_REJECT FAILED: the edition did not pin the certificate aggregation rule in force', 1;
+IF (SELECT TotalDurationSeconds FROM ExamEditions WHERE ExamId = @draftExam) <> 1800
+  THROW 50000, 'EXPECT_REJECT FAILED: the edition did not pin the paper''s own duration', 1;
+IF (SELECT EditionNumber FROM ExamEditions WHERE ExamId = @draftExam) <> 1
+  THROW 50000, 'EXPECT_REJECT FAILED: a paper that was never forked did not freeze as edition 1', 1;
+PRINT 'accepted the edition snapshot frozen by the publish transition';
+
+-- A second writer: a service re-freezing the edition after the fact. Every value it writes is a real
+-- one, so only the ownership check can refuse it.
+BEGIN TRY
+  UPDATE ExamEditions SET TotalDurationSeconds = 3600, WrittenByService = 'AdminExamService',
+         ProjectionVersion = 2
+  WHERE ExamId = @draftExam;
+  THROW 50000, 'EXPECT_REJECT FAILED: AdminExamService rewrote a frozen edition', 1;
+END TRY
+BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_MESSAGE() NOT LIKE '%exam edition snapshot has exactly one writer%'
+  BEGIN
+    SET @msg = N'EXPECT_REJECT FAILED: the second edition writer was refused by the wrong guard: '
+      + ERROR_MESSAGE();
+    THROW 50000, @msg, 1;
+  END
+END CATCH
+IF (SELECT TotalDurationSeconds FROM ExamEditions WHERE ExamId = @draftExam) <> 1800
+  THROW 50000, 'EXPECT_REJECT FAILED: the refused edition write changed the row anyway', 1;
+PRINT 'refused a frozen edition rewritten by AdminExamService';
+
+-- The inherited-name case: only a value moves, so a value-only check would pass it because the row
+-- still holds 'ExamEditionFreeze' from the insert. The duration is a real number; only the
+-- declaration is absent.
+BEGIN TRY
+  UPDATE ExamEditions SET TotalDurationSeconds = 3600, ProjectionVersion = 2 WHERE ExamId = @draftExam;
+  THROW 50000, 'EXPECT_REJECT FAILED: a second writer inherited the edition owner''s name', 1;
+END TRY
+BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_MESSAGE() NOT LIKE '%exam edition snapshot has exactly one writer%'
+  BEGIN
+    SET @msg = N'EXPECT_REJECT FAILED: the inherited-name edition write was refused by the wrong guard: '
+      + ERROR_MESSAGE();
+    THROW 50000, @msg, 1;
+  END
+END CATCH
+IF (SELECT TotalDurationSeconds FROM ExamEditions WHERE ExamId = @draftExam) <> 1800
+  THROW 50000, 'EXPECT_REJECT FAILED: an edition write that inherited the owner''s name changed the duration', 1;
+PRINT 'refused an edition write that inherited the owner''s name';
+
+-- Re-publishing must NOT re-freeze: the paper's learners sat the configuration that was in force,
+-- and a withdrawal followed by a re-publish is a routine act. A re-freeze here would silently rewrite
+-- the timers every historical attempt was scored against.
+UPDATE Exams SET Status = 'hidden' WHERE ExamId = @draftExam;
+UPDATE Exams SET Status = 'published' WHERE ExamId = @draftExam;
+IF (SELECT TotalDurationSeconds FROM ExamEditions WHERE ExamId = @draftExam) <> 1800
+  THROW 50000, 'EXPECT_REJECT FAILED: re-publishing re-froze the edition', 1;
+PRINT 'kept the frozen edition across a withdraw and re-publish';
+
+-- ---------------------------------------------------------------------------------------------
 -- 6. the columns exist on every covered table, and are required exactly where the fact is written
 -- ---------------------------------------------------------------------------------------------
 DECLARE @covered TABLE (TableName SYSNAME NOT NULL PRIMARY KEY);
 INSERT INTO @covered (TableName)
   SELECT CoveredTable FROM DerivedFactOwners WHERE Coverage = 'covered';
 
-IF (SELECT COUNT(*) FROM @covered) <> 7
-  THROW 50000, 'EXPECT_REJECT FAILED: the covered table set is not the seven this schema ships (#233 added the archived week)', 1;
+IF (SELECT COUNT(*) FROM @covered) <> 8
+  THROW 50000, 'EXPECT_REJECT FAILED: the covered table set is not the eight this schema ships (#227 added the exam edition snapshot)', 1;
 
 DECLARE @t SYSNAME, @missing INT = 0;
 DECLARE tbl CURSOR LOCAL FAST_FORWARD FOR SELECT TableName FROM @covered;
@@ -524,8 +606,8 @@ BEGIN
   FETCH NEXT FROM tbl INTO @t;
 END
 CLOSE tbl; DEALLOCATE tbl;
-IF @missing <> 7
-  THROW 50000, 'EXPECT_REJECT FAILED: the column audit did not visit the seven covered tables', 1;
+IF @missing <> 8
+  THROW 50000, 'EXPECT_REJECT FAILED: the column audit did not visit the eight covered tables', 1;
 PRINT 'every covered table carries a writer column and a projection version';
 
-PRINT '#191/#212/#206/#233: nine facts registered, seven enforced today, and each guard refuses a valid write by the wrong writer';
+PRINT '#191/#212/#206/#233/#227: ten facts registered, eight enforced today, and each guard refuses a valid write by the wrong writer';

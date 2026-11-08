@@ -5,17 +5,17 @@ SET QUOTED_IDENTIFIER ON;
 SET ANSI_NULLS ON;
 GO
 -- ============ Domain 0: Single-writer registry ============
--- #191 / D14 / TRN-06, TRN-07: seven derived facts, seven owners, declared here rather than agreed by
+-- #191 / D14 / TRN-06, TRN-07: ten derived facts, ten owners, declared here rather than agreed by
 -- convention. Each covered table carries a `WrittenByService` foreign key to this registry and a
 -- trigger comparing it against the fact's owner, so an invented or mistyped service name is
 -- unstorable and a real second writer is refused at write time.
 --
--- This is a table rather than a comment because the coverage is the thing that must not drift. Four
--- of the seven have a table today; two are waiting on a table another ticket creates; one is
+-- This is a table rather than a comment because the coverage is the thing that must not drift. Eight
+-- of the ten have a table today; one is waiting on a table another ticket creates; one is
 -- exempt because its table already carries the guarantee and the SRS decision log D-09 forbids a
 -- second one. `Coverage` says which, and a CHECK makes "claims coverage but names no table"
 -- unrepresentable - a mechanism that silently covers two and claims seven is this ticket's worst
--- failure mode.
+-- failure mode. (#227 moved one fact out of `awaiting_table` and added `exam_edition_snapshot`.)
 --
 -- PRN-01: the writer identity is a parameter on the write, never `sp_set_session_context`. Session
 -- context survives commit and rollback, so a writer name left in it would be read by the next
@@ -52,6 +52,8 @@ INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable, 
    N'#206: the audit outcome is derived from the sample verdicts, not typed beside them, so one service states it.'),
   ('window_synthesis',       'PathWindowSynthesizer', 'covered',        'LearnerPathWeeks',
    N'#233: one row per archived week. The snapshot is derived from the week closed steps and is written by the slide alone, so a late answer cannot restate it.'),
+  ('exam_edition_snapshot',  'ExamEditionFreeze',  'covered',        'ExamEditions',
+   N'#227: what was in force when a paper went live - timers, phase weights, aggregation rule, band grid, cut-score version. Written by the freeze and by nothing else, because a review that re-derived them would print a number nobody was measured against.'),
   ('credit_movement',        'CreditLedger',       'exempt',         NULL,
    N'CreditTransactions is append-only and immutable already (trg_*_AppendOnly, trg_*_NoRewrite); SRS D-09 refuses a second mutation guard.');
 GO
@@ -517,6 +519,14 @@ CREATE TABLE Exams (
   -- wrong default here is what lets an unreviewed paper go on sale.
   ContentTier     VARCHAR(12) NOT NULL CONSTRAINT DF_Exams_ContentTier DEFAULT 'demo'
     CONSTRAINT CK_Exams_ContentTier CHECK (ContentTier IN ('production','demo')),
+  -- #227: which edition of this paper this row IS. One row is one edition - a structural
+  -- repair forks a new Exam row rather than mutating this one, which is what makes every
+  -- historical attempt's structure, timers and chrome stay exactly as they were (see
+  -- ExamEditions below for the facts that live above the exam and therefore had to be stored).
+  EditionNumber   INT NOT NULL CONSTRAINT DF_Exams_EditionNumber DEFAULT 1
+    CONSTRAINT CK_Exams_EditionNumber CHECK (EditionNumber > 0),
+  -- The edition this one replaced. NULL for a paper that was never forked.
+  SupersedesExamId INT NULL CONSTRAINT FK_Exams_Supersedes REFERENCES Exams(ExamId),
   IsDeleted       BIT NOT NULL DEFAULT 0,
   CreatedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   UpdatedAt       DATETIMEOFFSET NULL,    -- UI-4: admin exam list "Update" column
@@ -527,6 +537,130 @@ CREATE TABLE Exams (
 GO
 -- UI-4: exam editor rejects "That test name already exists"
 CREATE UNIQUE INDEX UX_Exams_Cert_Name ON Exams(CertId, Name) WHERE IsDeleted = 0;
+GO
+-- ============ #227: the edition a learner sat ============
+-- One row per edition of a paper, frozen the moment the paper goes live. An attempt names its
+-- edition through `ExamAttempts.ExamId`, which is already non-nullable, already foreign-keyed and
+-- already pinned to the certificate - so "the edition it sat" is a fact the schema has always been
+-- able to hold, and the only thing missing was the half of it that lives ABOVE the exam row.
+--
+-- #186 pins the ITEMS per attempt (AttemptAnswers.ItemVersionId) and #185 pins which versions a
+-- paper binds. Both are per-row facts. But three of the four things a score depends on are shared
+-- certificate-wide and would otherwise be re-read at review time:
+--
+--   * the score aggregation rule (`Certificates.ScoreAggregationRule`)
+--   * the band grid, by which a total becomes a band NAME the page prints (`ScoreBands`)
+--   * the cut-score table version a level was projected from (`CefrCutScoreVersions`)
+--
+-- and one is shared across every paper of the certificate: the per-skill timer weights
+-- (`Skills.DurationMinutes`, `LockNavigationOneWay`) that `AttemptEngine.BuildAttemptPhases`
+-- divides the sitting into phases with.
+--
+-- Re-reading any of those at review time is the #222 defect this ticket exists to stop: a total
+-- shown beside a band name computed from a grid nobody was measured against. So the values are
+-- STORED here, once, at the moment they are in force. A read of a frozen edition never consults a
+-- live certificate table.
+--
+-- The row is written by a trigger on the publish transition rather than by a service, because a
+-- paper goes live through more than one door (publish, import, seed, fixture) and a service-side
+-- freeze is a convention that the next door goes round - the same reasoning as #157's structure
+-- lock needing a writer in every service.
+CREATE TABLE ExamEditions (
+  ExamId               INT NOT NULL
+    CONSTRAINT PK_ExamEditions PRIMARY KEY
+    CONSTRAINT FK_ExamEditions_Exam REFERENCES Exams(ExamId),
+  -- Carried down so the cut-score version can be pinned by a composite key: a certificate cannot
+  -- name another certificate's cut-score table.
+  CertId               INT NOT NULL,
+  EditionNumber        INT NOT NULL
+    CONSTRAINT CK_ExamEditions_Number CHECK (EditionNumber > 0),
+  -- The sitting's allotted time, in seconds, as the paper declared it when it went live.
+  TotalDurationSeconds INT NOT NULL
+    CONSTRAINT CK_ExamEditions_Duration CHECK (TotalDurationSeconds > 0),
+  -- The phase weights, frozen: one object per skill the paper examines, in sitting order. This is
+  -- the exact input AttemptEngine.BuildAttemptPhases divides the attempt's own total by, so the
+  -- phase bar a mid-sitting learner sees cannot move when a Skill row is edited underneath them.
+  PhasePlanJson        NVARCHAR(MAX) NOT NULL,
+  -- The certificate's total-score rule in force. `sum`, `avg_half_step` or `avg_whole`; a rule
+  -- added after this paper went live must not silently re-score its attempts.
+  ScoreAggregationRule VARCHAR(20) NOT NULL,
+  -- The cut-score table version a level was projected from, or NULL when the certificate had none
+  -- at freeze time. NULL is a recorded fact ("no table existed"), not a missing value: #222 had to
+  -- infer this at read time and flagged it as a reproducibility risk.
+  CutScoreTableVersion INT NULL,
+  -- The band grid, frozen: [{Code, Name, MinTotal, MaxTotal}]. A review prints a band NAME, and the
+  -- name is what a later re-standardisation rewrites. The code on the attempt is already stored.
+  BandsJson            NVARCHAR(MAX) NOT NULL,
+  FrozenAt             DATETIMEOFFSET NOT NULL,
+  -- #191 / ADR-0012: this snapshot is derived from the exam and certificate configuration, so it
+  -- declares its one writer like every other derived fact.
+  WrittenByService     VARCHAR(64) NOT NULL,
+  ProjectionVersion    INT NOT NULL CONSTRAINT DF_ExamEditions_ProjectionVersion DEFAULT 1
+    CONSTRAINT CK_ExamEditions_ProjectionVersion CHECK (ProjectionVersion > 0),
+  CONSTRAINT FK_ExamEditions_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
+  CONSTRAINT FK_ExamEditions_CutScore FOREIGN KEY (CertId, CutScoreTableVersion)
+    REFERENCES CefrCutScoreVersions(CertId, TableVersion)
+);
+GO
+-- The freeze itself. It fires on the transition into 'published' only - a draft has no learners, so
+-- it has no edition to protect - and it is idempotent: a paper withdrawn and re-published keeps the
+-- edition its learners sat rather than silently re-freezing today's configuration over it.
+CREATE TRIGGER trg_Exams_PublishFreezesEdition
+ON Exams AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+
+  INSERT INTO ExamEditions
+    (ExamId, CertId, EditionNumber, TotalDurationSeconds, PhasePlanJson,
+     ScoreAggregationRule, CutScoreTableVersion, BandsJson, FrozenAt, WrittenByService)
+  SELECT
+    i.ExamId,
+    i.CertId,
+    i.EditionNumber,
+    i.DurationMinutes * 60,
+    ISNULL((
+      SELECT s.SkillId, s.Code, s.Name, s.DisplayOrder, s.DurationMinutes,
+             s.LockNavigationOneWay
+      FROM Skills s
+      WHERE s.CertId = i.CertId
+        AND EXISTS (SELECT 1
+                    FROM Questions q
+                    JOIN Sections sec ON sec.SectionId = q.SectionId
+                    WHERE q.ExamId = i.ExamId AND sec.SkillId = s.SkillId)
+      ORDER BY s.DisplayOrder
+      FOR JSON PATH), '[]'),
+    c.ScoreAggregationRule,
+    (SELECT MAX(v.TableVersion) FROM CefrCutScoreVersions v WHERE v.CertId = i.CertId),
+    ISNULL((
+      SELECT b.Code, b.Name, b.MinTotal, b.MaxTotal
+      FROM ScoreBands b
+      WHERE b.CertId = i.CertId
+      ORDER BY b.MinTotal
+      FOR JSON PATH), '[]'),
+    SYSDATETIMEOFFSET(),
+    'ExamEditionFreeze'
+  FROM inserted i
+  JOIN Certificates c ON c.CertId = i.CertId
+  WHERE i.Status = 'published'
+    AND NOT EXISTS (SELECT 1 FROM ExamEditions e WHERE e.ExamId = i.ExamId);
+END;
+GO
+-- ADR-0012: one writer per derived fact. The freeze names its own owner; anything else writing this
+-- row is a second answer to "what was in force when this paper went live".
+CREATE TRIGGER trg_ExamEditions_SingleWriter
+ON ExamEditions AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @owner VARCHAR(64) =
+    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'exam_edition_snapshot');
+
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    WHERE ISNULL(i.WrittenByService, '') <> @owner
+       OR (EXISTS (SELECT 1 FROM deleted d WHERE d.ExamId = i.ExamId) AND NOT UPDATE(WrittenByService))
+  )
+    THROW 50110, 'An exam edition snapshot has exactly one writer, ExamEditionFreeze. A write declaring another writer (or none) is refused: the edition is what a learner sat, so it is not editable after the fact.', 1;
+END;
 GO
 -- now that Exams exists, pin ScoreScales.ExamId
 -- M-11: composite FK so the exam must belong to the same certificate (replaces the single-column FK)
@@ -1633,6 +1767,22 @@ BEGIN
   BEGIN
     THROW 50010, 'Attempt must target a published exam.', 1;
   END
+END;
+GO
+-- #227 criterion 5: an attempt cannot be edited into a different edition. `ExamAttempts.ExamId` IS
+-- the edition reference, and both of its foreign keys admit a sibling edition of the same
+-- certificate, so without this an UPDATE could move a finished attempt onto a paper it never sat.
+CREATE TRIGGER trg_ExamAttempts_EditionIsFixed
+ON ExamAttempts AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN deleted d ON d.AttemptId = i.AttemptId
+    WHERE i.ExamId <> d.ExamId
+  )
+    THROW 50111, 'An attempt records the edition it sat. Moving an attempt to another exam - another edition - is refused: a review would then render a paper the learner never saw.', 1;
 END;
 GO
 -- UI-45: a speaking- or writing-practice attempt scores one rubric against one skill, so the attempt

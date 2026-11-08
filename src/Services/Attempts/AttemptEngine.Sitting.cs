@@ -49,6 +49,51 @@ public sealed partial class AttemptEngine
             .Where(a => a.ExamId == examId)
             .ToDictionaryAsync(a => a.SectionId, a => a.AudioPath, cancellationToken);
 
+    /// <summary>
+    /// #227: the frozen configuration an attempt sits on, read from <c>ExamEditions</c>. NULL for a
+    /// paper with no edition row - a draft, which no learner can sit
+    /// (<c>trg_ExamAttempts_PublishedExamOnly</c>), or a catalog loaded before the column existed.
+    /// <para>
+    /// This is the whole point of the ticket: the phase bar is allocated from THESE weights, not from
+    /// <c>Skills.DurationMinutes</c> as it stands today, so editing a skill cannot move the clock on a
+    /// sitting that is already underway, and re-reading a finished attempt's phase split gives the
+    /// numbers it was actually scored against.
+    /// </para>
+    /// </summary>
+    private Task<ExamEdition?> LoadEditionAsync(int examId, CancellationToken cancellationToken) =>
+        db.ExamEditions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.ExamId == examId, cancellationToken);
+
+    /// <summary>
+    /// #227: the frozen phase weights, or NULL when the paper has no edition. Deserialised rather
+    /// than recomputed: a fallback that consulted the live <c>Skills</c> rows would be the
+    /// re-derivation this ticket forbids, so a missing edition simply leaves the caller on its
+    /// legacy path.
+    /// </summary>
+    private static IReadOnlyList<FrozenPhaseWeight>? ParseFrozenPhases(ExamEdition? edition)
+    {
+        if (edition is null || string.IsNullOrWhiteSpace(edition.PhasePlanJson))
+        {
+            return null;
+        }
+
+        var weights = System.Text.Json.JsonSerializer.Deserialize<List<FrozenPhaseWeight>>(edition.PhasePlanJson);
+        return weights is { Count: > 0 } ? weights : null;
+    }
+
+    /// <summary>
+    /// One row of <see cref="ExamEdition.PhasePlanJson"/>. Property names match the trigger's
+    /// <c>FOR JSON PATH</c> output, so the serializer needs no naming policy.
+    /// </summary>
+    private sealed record FrozenPhaseWeight(
+        int SkillId,
+        string Code,
+        string Name,
+        int DisplayOrder,
+        int? DurationMinutes,
+        bool LockNavigationOneWay);
+
     private static ResolvedGroupAudio? ResolveGroupAudio(QuestionGroup group, Dictionary<int, string> sectionMasters) =>
         ExamAudio.Resolve(
             group.AudioPath,
@@ -114,6 +159,24 @@ public sealed partial class AttemptEngine
             persistPosition: true,
             unlockNavigation: false,
             cancellationToken);
+    }
+
+    private sealed record FrozenBand(string Code, string Name, int MinTotal, int MaxTotal);
+
+    /// <summary>
+    /// #227: the band name the edition froze, or NULL when the paper has no edition or the frozen
+    /// grid has no row for this code. NULL is what sends the caller to the live grid, so a code that
+    /// was genuinely never in the frozen table is not renamed into something it never was.
+    /// </summary>
+    private static string? MatchFrozenBandName(ExamEdition? edition, string? bandCode)
+    {
+        if (edition is null || bandCode is null || string.IsNullOrWhiteSpace(edition.BandsJson))
+        {
+            return null;
+        }
+
+        var bands = System.Text.Json.JsonSerializer.Deserialize<List<FrozenBand>>(edition.BandsJson);
+        return bands?.FirstOrDefault(b => string.Equals(b.Code, bandCode, StringComparison.Ordinal))?.Name;
     }
 
     /// <summary>
@@ -362,9 +425,19 @@ public sealed partial class AttemptEngine
                 group.First().Section.Skill.LockNavigationOneWay))
             .OrderBy(skill => skill.DisplayOrder)
             .ToList();
-        var phases = BuildAttemptPhases(
-            phaseGroups,
-            Math.Max(1, (int)(attempt.ExpiresAt - attempt.StartedAt).TotalSeconds));
+
+        // #227: an attempt on a published paper sits the edition's phase weights, not today's skill
+        // rows. The fallback below is the legacy path for a paper with no edition, and it is chosen
+        // by the edition's absence rather than by trying the live rows first - a paper that HAS an
+        // edition must never fall back, or the pin would only hold until someone edited a skill.
+        var frozenPhases = ParseFrozenPhases(await LoadEditionAsync(attempt.ExamId, cancellationToken));
+        var phases = frozenPhases is null
+            ? BuildAttemptPhases(
+                phaseGroups,
+                Math.Max(1, (int)(attempt.ExpiresAt - attempt.StartedAt).TotalSeconds))
+            : BuildFrozenPhases(
+                frozenPhases,
+                Math.Max(1, (int)(attempt.ExpiresAt - attempt.StartedAt).TotalSeconds));
 
         return new AttemptTakeView(
             attempt.AttemptId,
@@ -426,17 +499,7 @@ public sealed partial class AttemptEngine
             return [];
         }
 
-        var positiveWeights = skills
-            .Select(skill => (int?)skill.DurationMinutes)
-            .Where(duration => duration > 0)
-            .Select(duration => duration!.Value)
-            .ToList();
-        var fallbackWeight = positiveWeights.Count > 0
-            ? positiveWeights.Average()
-            : 1d;
-        var weights = skills
-            .Select(skill => skill.DurationMinutes is int duration && duration > 0 ? duration : fallbackWeight)
-            .ToList();
+        var weights = PhaseWeights(skills.Select(skill => skill.DurationMinutes));
         var totalWeight = weights.Sum();
         var allocatedSeconds = 0;
         var phases = new List<AttemptPhaseInfo>(skills.Count);
@@ -459,5 +522,57 @@ public sealed partial class AttemptEngine
         }
 
         return phases;
+    }
+
+    /// <summary>
+    /// #227: the same allocation run over the FROZEN weights. It shares
+    /// <see cref="PhaseWeights"/> with the live path on purpose: if the two computed their weights
+    /// differently, "the same sitting with the same numbers" would be a claim rather than a fact.
+    /// </summary>
+    private static IReadOnlyList<AttemptPhaseInfo> BuildFrozenPhases(
+        IReadOnlyList<FrozenPhaseWeight> frozen,
+        int totalSeconds)
+    {
+        if (frozen.Count == 0)
+        {
+            return [];
+        }
+
+        var weights = PhaseWeights(frozen.Select(skill => skill.DurationMinutes));
+        var totalWeight = weights.Sum();
+        var allocatedSeconds = 0;
+        var phases = new List<AttemptPhaseInfo>(frozen.Count);
+
+        for (var index = 0; index < frozen.Count; index++)
+        {
+            var skill = frozen[index];
+            var durationSeconds = index == frozen.Count - 1
+                ? totalSeconds - allocatedSeconds
+                : (int)Math.Floor(totalSeconds * weights[index] / totalWeight);
+            phases.Add(new AttemptPhaseInfo(
+                skill.SkillId,
+                skill.Code,
+                skill.Name,
+                skill.DisplayOrder,
+                allocatedSeconds,
+                durationSeconds,
+                skill.LockNavigationOneWay));
+            allocatedSeconds += durationSeconds;
+        }
+
+        return phases;
+    }
+
+    /// <summary>
+    /// The one weighting rule: a declared duration is its own weight, and a skill without one carries
+    /// the average of those that have it. Extracted so the live and the frozen allocation cannot
+    /// drift apart.
+    /// </summary>
+    private static List<double> PhaseWeights(IEnumerable<int?> durations)
+    {
+        var list = durations.ToList();
+        var positive = list.Where(d => d is > 0).Select(d => (double)d!.Value).ToList();
+        var fallback = positive.Count > 0 ? positive.Average() : 1d;
+        return list.Select(d => d is int duration && duration > 0 ? (double)duration : fallback).ToList();
     }
 }

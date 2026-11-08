@@ -169,6 +169,13 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<ExamPublishAudit> ExamPublishAudits { get; set; }
 
 
+    /// <summary>
+    /// #227: the frozen edition - timers, phase weights, aggregation rule, band grid and cut-score
+    /// version as they stood when the paper went live. Written by the publish trigger alone.
+    /// </summary>
+    public virtual DbSet<ExamEdition> ExamEditions { get; set; }
+
+
     /// <summary>#199 / D0.7: one item's stored-answer verdict at one administration checkpoint.</summary>
     public virtual DbSet<ItemTelemetryEvaluation> ItemTelemetryEvaluations { get; set; }
 

@@ -34,8 +34,8 @@ IF NOT EXISTS (
 -- The split moved 4/2/1 -> 5/2/1 in #212, 6/2/1 in #206 and 7/1/1 in #233, and only in that
 -- direction: a fact leaving `awaiting_table` for `covered`. The three counts are asserted separately,
 -- so a swap that kept the sum would still fail.
-IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 7
-  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the seven tables that exist today (#233 added the archived week)', 1;
+IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 8
+  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the eight tables that exist today (#227 added the exam edition snapshot)', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'awaiting_table') <> 1
   THROW 50000, 'EXPECT_REJECT FAILED: the awaiting-table set is not the one fact no ticket has given a table', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'exempt') <> 1
