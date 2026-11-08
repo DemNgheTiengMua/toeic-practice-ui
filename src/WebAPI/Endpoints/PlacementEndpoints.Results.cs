@@ -27,6 +27,12 @@ public static partial class PlacementEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Placement test not finished", ApiError.Codes.PlacementNotFinished, ex.Message);
             }
+            catch (PlacementException ex) when (ex.Code == PlacementException.PlacementAbandoned)
+            {
+                // #217 / PLC-19: nothing measurable, so there is genuinely no result to show. A 409
+                // rather than a 400 because the request was valid and the sitting really did finish.
+                return Problem(StatusCodes.Status409Conflict, "Placement test abandoned", ApiError.Codes.PlacementAbandoned, ex.Message);
+            }
         });
     }
 }

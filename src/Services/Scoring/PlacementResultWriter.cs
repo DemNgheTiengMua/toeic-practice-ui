@@ -104,6 +104,18 @@ public sealed class PlacementResultWriter(
                 .ToListAsync(cancellationToken))
             .ToLookup(g => g.SkillId, g => g.Status);
 
+        // #217 / PLC-35: every task the paper DELIVERED, per skill - a free response with no grading row
+        // is a task that was settled without being scored (a blank one, or one whose failure left no
+        // row). D7 divides by this, so "one of two tasks graded" stays an estimate and a blank task does
+        // not quietly become a full measurement.
+        var deliveredBySkill = (await db.FreeResponses
+                .AsNoTracking()
+                .Where(fr => fr.AttemptId == attempt.AttemptId)
+                .Select(fr => new { fr.SkillId })
+                .ToListAsync(cancellationToken))
+            .GroupBy(fr => fr.SkillId)
+            .ToDictionary(g => g.Key, g => g.Count());
+
         // #219 / D5: what the sitting SAW, per (skill, topic, band). Read from the answers themselves
         // rather than from AttemptSkillScores, because a topic is a property of the item the learner
         // answered and the aggregates carry no topic. An answer with no pool pin has no topic to name
@@ -198,7 +210,13 @@ public sealed class PlacementResultWriter(
             // to make visible. Nothing is written back to LearnerSkillStates - reuse derives no new fact,
             // so the single writer of that table must not be called.
             var status = DeriveStatus(
-                skillId, scored, answeredBySkill, gradingsBySkill, sittingTimedOut, out var failureReason);
+                skillId,
+                scored,
+                answeredBySkill,
+                gradingsBySkill,
+                deliveredBySkill,
+                sittingTimedOut,
+                out var failureReason);
 
             var projected = projectionsBySkill.GetValueOrDefault(skillId);
             var measuredNow = status is PlacementResultStatus.Measured
@@ -293,8 +311,8 @@ public sealed class PlacementResultWriter(
         await db.SaveChangesAsync(cancellationToken);
 
         // Completion, decided after the rows exist. A productive task still in the queue keeps the
-        // placement in progress (PLC-16); nothing measured and nothing queued is a recorded completion
-        // failure, which is the honest alternative to "done with a null result".
+        // placement in progress (PLC-16); nothing measured and nothing queued is a sitting that
+        // produced no result at all.
         var completionFailure = measured == 0 && grading == 0
             ? (sittingTimedOut
                 ? PlacementFailureReason.InactivityTimeout
@@ -309,14 +327,34 @@ public sealed class PlacementResultWriter(
             placementRow.Status = PlacementStatus.InProgress.ToCode();
             placementRow.CompletionFailureReason = null;
         }
-        else if (measured > 0 || completionFailure is not null)
+        else if (measured > 0)
         {
+            // #217 / PLC-19: a sitting where at least one skill was measured is a PARTIAL result. The
+            // unattempted or failed skills are already `not_measured` with a reason, and they were never
+            // given a level or an attempt score, so they are absent from the overall rather than
+            // present in it at zero. `done` is legal here because a measured row exists - which is
+            // exactly what trg_PlacementTests_CompletionIsEarned asks.
             placementRow.Status = PlacementStatus.Done.ToCode();
+            placementRow.CompletionFailureReason = null;
+        }
+        else
+        {
+            // #217 / PLC-19, criterion 3: nothing could be measured, so there is NO result. `done` with
+            // a failure reason was #212's shape and it still presented a result page whose headline was
+            // a null overall; the ticket asks for the sitting to be recorded as abandoned instead. The
+            // reason is kept on the row because it is the honest record of why, and the cooldown waiver
+            // (and the retry) read it.
+            //
+            // A `done` row is what trg_PlacementTests_CompletionIsEarned guards, so this branch cannot
+            // fight the guard #212 built: it is not `done`, and it claims no measurement.
+            placementRow.Status = PlacementStatus.Abandoned.ToCode();
             placementRow.CompletionFailureReason = completionFailure;
         }
 
         // The snapshot fields mirror the attempt, so a screen showing "385 out of 990" traces back to
-        // the attempt rather than to a second computation (the M-2 invariant).
+        // the attempt rather than to a second computation (the M-2 invariant). A sitting that measured
+        // nothing has no total and no band on the attempt either, so this copies NULL rather than a
+        // stale or fabricated figure.
         placementRow.TotalScore = attempt.TotalScore;
         placementRow.ResultBandCode = attempt.BandCode;
         placementRow.TakenAt = attempt.SubmittedAt ?? placementRow.TakenAt;
@@ -343,14 +381,16 @@ public sealed class PlacementResultWriter(
         IReadOnlyDictionary<int, int> scored,
         IReadOnlyDictionary<int, int> answeredBySkill,
         ILookup<int, string> gradingsBySkill,
+        IReadOnlyDictionary<int, int> deliveredBySkill,
         bool sittingTimedOut,
         out string? failureReason)
     {
         failureReason = null;
         var gradings = gradingsBySkill[skillId].ToList();
+        var delivered = deliveredBySkill.GetValueOrDefault(skillId);
 
         // A productive skill's status is the grading queue's, not the objective score's.
-        if (gradings.Count > 0)
+        if (delivered > 0)
         {
             if (gradings.Any(g => g == AiGradingStatus.Pending.ToCode()))
             {
@@ -360,13 +400,20 @@ public sealed class PlacementResultWriter(
             var done = gradings.Count(g => g == AiGradingStatus.Done.ToCode());
             // D7: every task the paper delivered graded is a full measurement; fewer than that but at
             // least one is "estimated from one task". The denominator is what the paper DELIVERED
-            // (one AiGrading per free response), never a hardcoded two - D6's two tasks is a paper
-            // design, and a certificate whose paper carries one task would otherwise never be measured.
-            if (done == gradings.Count) return PlacementResultStatus.Measured;
+            // (every free-response row, whether it carries a grading or was settled blank), never a
+            // hardcoded two - D6's two tasks is a paper design, and a certificate whose paper carries
+            // one task would otherwise never be measured. #217: counting the GRADING ROWS instead made
+            // a blank task silently turn an estimate into a full measurement.
+            if (done == delivered) return PlacementResultStatus.Measured;
             if (done >= 1) return PlacementResultStatus.EstimatedFromOneTask;
 
-            // Every task failed. PLC-35: not_measured with a reason and a retry, never A1.
-            failureReason = PlacementFailureReason.AiGradingFailed;
+            // Nothing graded at all. A task that was settled blank is a skip; a task whose grading
+            // FAILED is the system's failure, and PLC-35 gives it its own reason and a retry.
+            failureReason = gradings.Count > 0
+                ? PlacementFailureReason.AiGradingFailed
+                : sittingTimedOut
+                    ? PlacementFailureReason.InactivityTimeout
+                    : PlacementFailureReason.CandidateSkipped;
             return PlacementResultStatus.NotMeasured;
         }
 

@@ -113,13 +113,19 @@ public sealed partial class PlacementService
     /// The most recent finished sitting's cooldown. Only a sitting that measured NOTHING because every
     /// skill's grading failed waives it; see <see cref="PlacementCooldown"/> for why a skip and a
     /// timeout do not.
+    /// <para>
+    /// #217 / PLC-19: a sitting that measured nothing is now `abandoned` rather than `done`, so this
+    /// read must include it. Leaving the filter at `done` would make the waiver unreachable and let a
+    /// learner whose grading failed wait 24 hours for an outage that was not theirs.
+    /// </para>
     /// </summary>
     private async Task<(DateTimeOffset? Until, bool Waived)> ResolveCooldownAsync(
         int userId, int certId, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var previous = await db.PlacementTests
             .AsNoTracking()
-            .Where(p => p.UserId == userId && p.CertId == certId && p.Status == PlacementStatus.Done.ToCode())
+            .Where(p => p.UserId == userId && p.CertId == certId
+                && (p.Status == PlacementStatus.Done.ToCode() || p.Status == PlacementStatus.Abandoned.ToCode()))
             .OrderByDescending(p => p.TakenAt)
             .Select(p => new { p.PlacementId, p.TakenAt, p.CompletionFailureReason })
             .FirstOrDefaultAsync(cancellationToken);
@@ -140,10 +146,14 @@ public sealed partial class PlacementService
 
         var measured = statuses.Count(r =>
             r.ResultStatus is PlacementResultStatus.Measured or PlacementResultStatus.EstimatedFromOneTask);
+        // #217: an abandoned sitting has NO per-skill rows at all (nothing was measured, so the writer
+        // has nothing to say per skill) - the placement-level reason is then the only evidence, and it
+        // is the same one a `done` sitting records.
         var systemFailure = measured == 0
-            && statuses.Count > 0
-            && statuses.All(r => r.ResultStatus == PlacementResultStatus.NotMeasured
-                && r.FailureReason == PlacementFailureReason.AiGradingFailed);
+            && (statuses.Count == 0
+                ? previous.CompletionFailureReason == PlacementFailureReason.AiGradingFailed
+                : statuses.All(r => r.ResultStatus == PlacementResultStatus.NotMeasured
+                    && r.FailureReason == PlacementFailureReason.AiGradingFailed));
 
         return (
             PlacementCooldown.Until(previous.TakenAt, systemFailure, now),

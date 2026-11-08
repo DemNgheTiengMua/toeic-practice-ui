@@ -1,11 +1,50 @@
 @model PlacementTakeViewModel
+@* #217 / PLC-18: the partial-submission confirmation. It names the unanswered count PER SECTION
+   because a paper total cannot say whether a whole skill was abandoned or two items were missed, and
+   only the section grain tells the learner where to go back. The counts are IBM Plex Mono because
+   they are tabular figures, printed in Sign Red: this is the cost of submitting, not a warning to
+   dismiss. No radius, no shadow, no gradient - 2px ink frame, 1px soft rules.
+
+   The rows are rendered for every section and the client removes the ones that reach zero as the
+   learner answers, so the count on opening the modal is the count at that moment rather than the
+   count when the page loaded. Each row carries its section id and name as data attributes so that
+   repaint needs no second copy of the sitting. *@
 <!-- Modal for Submit Confirmation -->
-<div id="submit-modal" class="modal-overlay take-submit-modal" role="dialog" aria-modal="true">
+<div id="submit-modal" class="modal-overlay take-submit-modal" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title">
   <div class="modal">
-    <div class="modal__header"><strong>Submit placement test?</strong></div>
+    <div class="modal__header"><strong id="submit-modal-title">Submit placement test?</strong></div>
     <div class="modal__body stack">
-      <p id="submit-modal-summary" class="mb-3">
-        You have answered <strong id="modal-answered-count">@Model.Take.AnsweredCount</strong> of <strong>@Model.Take.TotalQuestions</strong> questions.
+      <p id="submit-modal-summary" class="mb-3 take-submit-modal__lede">
+        You have answered <strong id="modal-answered-count" class="font-mono">@Model.Take.AnsweredCount</strong>
+        of <strong class="font-mono">@Model.Take.TotalQuestions</strong> questions.
+      </p>
+
+      <table class="table take-submit-modal__sections" id="submit-modal-sections">
+        <caption class="visually-hidden">Unanswered questions, per section</caption>
+        <thead>
+          <tr>
+            <th scope="col">Section</th>
+            <th scope="col">Unanswered</th>
+          </tr>
+        </thead>
+        <tbody id="submit-modal-section-rows">
+          @foreach (var row in Model.Sections)
+          {
+            <tr data-section-id="@row.SectionId" data-section-name="@row.SectionName" data-total="@row.TotalCount"
+                hidden="@(row.UnansweredCount == 0 ? "hidden" : null)">
+              <th scope="row">@row.SectionName</th>
+              <td class="font-mono">
+                <span class="take-submit-modal__count" data-unanswered>@row.UnansweredCount</span>
+                of <span data-total-display>@row.TotalCount</span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <p id="submit-modal-cost" class="text-sm take-submit-modal__cost no-margin">
+        Unanswered questions are marked <strong>incorrect</strong>. If nothing at all can be measured,
+        this sitting is recorded as abandoned with no result.
       </p>
       <p class="text-sm text-muted no-margin">
         Once submitted, your answers will be graded immediately and your starting band on this certificate's scale calculated.

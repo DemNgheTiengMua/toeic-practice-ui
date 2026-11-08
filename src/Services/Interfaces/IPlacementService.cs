@@ -56,6 +56,12 @@ public interface IPlacementService
 
     Task<PlacementGradingStatusView> GetGradingStatusAsync(int userId, int placementId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// #217 / PLC-35: re-queue every failed grading on this placement. Writes no ledger row —
+    /// placement is free and a grading failure is the system's, not the learner's.
+    /// </summary>
+    Task<PlacementRetryResult> RetryGradingAsync(int userId, int placementId, CancellationToken cancellationToken = default);
+
     Task<PlacementResultView> SubmitPlacementTestAsync(int userId, int placementId, bool isAutoSubmit, CancellationToken cancellationToken = default);
 
     Task<PlacementResultView> GetPlacementResultAsync(int userId, int placementId, CancellationToken cancellationToken = default);

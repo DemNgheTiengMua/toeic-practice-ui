@@ -29,6 +29,10 @@ public interface IPlacementClient
     Task<SavePlacementDraftResponseDto> SavePlacementDraftAsync(int placementId, SavePlacementDraftRequestDto request, string bearerToken, CancellationToken cancellationToken = default) => SavePlacementDraftAsync(placementId, request, cancellationToken);
     Task<PlacementGradingStatusDto> GetPlacementGradingStatusAsync(int placementId, CancellationToken cancellationToken = default);
     Task<PlacementGradingStatusDto> GetPlacementGradingStatusAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) => GetPlacementGradingStatusAsync(placementId, cancellationToken);
+
+    /// <summary>#217 / PLC-35: re-queue the failed gradings. Free, and no ledger row is written.</summary>
+    Task<PlacementRetryResultDto> RetryPlacementGradingAsync(int placementId, CancellationToken cancellationToken = default);
+    Task<PlacementRetryResultDto> RetryPlacementGradingAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) => RetryPlacementGradingAsync(placementId, cancellationToken);
     Task<PlacementResultViewDto> SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, CancellationToken cancellationToken = default);
     Task<PlacementResultViewDto> SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) => SubmitPlacementTestAsync(placementId, request, cancellationToken);
     Task<PlacementResultViewDto> GetPlacementResultAsync(int placementId, CancellationToken cancellationToken = default);

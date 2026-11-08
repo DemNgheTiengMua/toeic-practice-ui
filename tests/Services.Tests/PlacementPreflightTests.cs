@@ -176,7 +176,16 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
 
         await using (var db = Db())
         {
-            await Service(db).SubmitPlacementTestAsync(userId, placementId, isAutoSubmit: false);
+            // #217 / PLC-19: a sitting that measured nothing is recorded as abandoned, and the service
+            // says so rather than returning a result. The caller here wants the ROW, so the refusal is
+            // expected - and only expected when nothing was answered.
+            try
+            {
+                await Service(db).SubmitPlacementTestAsync(userId, placementId, isAutoSubmit: false);
+            }
+            catch (PlacementException ex) when (ex.Code == PlacementException.PlacementAbandoned && !answerEverything)
+            {
+            }
         }
 
         return (placementId, attemptId);
@@ -478,7 +487,11 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
 
         await using (var db = Db())
         {
-            await Service(db, second).SubmitPlacementTestAsync(userId, secondPlacement, isAutoSubmit: false);
+            // #217 / PLC-19: an untouched second sitting is abandoned with no result. That is still a
+            // FINISHED sitting, so the cooldown applies exactly as it did when it was stored as `done`
+            // - which is what the third start below proves, since it must still be allowed.
+            await Assert.ThrowsAsync<PlacementException>(
+                () => Service(db, second).SubmitPlacementTestAsync(userId, secondPlacement, isAutoSubmit: false));
         }
 
         // third sitting: another 25 hours later
@@ -508,7 +521,9 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         await using (var verifyFailure = Db())
         {
             var placement = await verifyFailure.PlacementTests.AsNoTracking().SingleAsync(p => p.PlacementId == placementId);
-            Assert.Equal("done", placement.Status);
+            // #217 / PLC-19: a sitting that measured nothing is ABANDONED, not done. The reason it
+            // records is what waives the cooldown below, and that is the fact this test is about.
+            Assert.Equal("abandoned", placement.Status);
             Assert.Equal(PlacementFailureReason.AiGradingFailed, placement.CompletionFailureReason);
         }
 
@@ -533,12 +548,15 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         var fixture = await SeedAsync(Unique("T213H"), ("LIST", "listening", false), ("READ", "reading", false));
         var userId = await SeedLearnerAsync(fixture.CertCode);
 
-        // started and submitted without answering anything, not auto-submitted: candidate_skipped
+        // started and submitted without answering anything, not auto-submitted: candidate_skipped.
+        // #217 / PLC-19: that sitting is now ABANDONED with no result - the very state the cooldown has
+        // to read, or the "a skip does not waive" rule becomes unreachable.
         var (placementId, _) = await SitAsync(userId, fixture, answerEverything: false);
 
         await using (var verifyFailure = Db())
         {
             var placement = await verifyFailure.PlacementTests.AsNoTracking().SingleAsync(p => p.PlacementId == placementId);
+            Assert.Equal("abandoned", placement.Status);
             Assert.Equal(PlacementFailureReason.CandidateSkipped, placement.CompletionFailureReason);
         }
 
@@ -572,7 +590,12 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
 
         await using (var db = Db())
         {
-            await Service(db).SubmitPlacementTestAsync(userId, placementId, isAutoSubmit: true);
+            // #217 / PLC-19: a sitting that measured NOTHING is now abandoned with no result, so a
+            // plain submit of an untouched paper is a refusal. This test is about the EXPIRY, not the
+            // result: it asserts the deadline passed and the attempt was auto-submitted, and the
+            // refusal is the proof both happened.
+            await Assert.ThrowsAsync<PlacementException>(
+                () => Service(db).SubmitPlacementTestAsync(userId, placementId, isAutoSubmit: true));
         }
 
         await using (var verifyFailure = Db())

@@ -436,6 +436,7 @@ public sealed class LearningPathControllerTests
         Task<SaveAnswerResultDto> IPlacementClient.SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
         Task<SavePlacementDraftResponseDto> IPlacementClient.SavePlacementDraftAsync(int placementId, SavePlacementDraftRequestDto request, CancellationToken cancellationToken) => throw new NotSupportedException();
         Task<PlacementGradingStatusDto> IPlacementClient.GetPlacementGradingStatusAsync(int placementId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<PlacementRetryResultDto> IPlacementClient.RetryPlacementGradingAsync(int placementId, CancellationToken cancellationToken) => throw new NotSupportedException();
         Task<PlacementResultViewDto> IPlacementClient.SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
         Task<PlacementResultViewDto> IPlacementClient.GetPlacementResultAsync(int placementId, CancellationToken cancellationToken) => throw new NotSupportedException();
         Task<TargetBandViewDto> IPlacementClient.GetTargetBandViewAsync(CancellationToken cancellationToken) => throw new NotSupportedException();

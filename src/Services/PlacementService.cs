@@ -521,6 +521,77 @@ public sealed partial class PlacementService(
             stageDescriptor);
     }
 
+    /// <summary>
+    /// #217 / PLC-35: a rejected grading is retried by re-queueing the same <c>AiGradings</c> row. It
+    /// reuses the row rather than creating one, and it writes no ledger row: placement is free and a
+    /// retry is the system's fault, not a second attempt the learner pays for.
+    /// <para>
+    /// Only a FAILED grading is retried. A pending one is already in the queue (retrying it would
+    /// double-dispatch the same job) and a done one must not be re-scored; both are idle no-ops here,
+    /// which is what makes a double-click harmless.
+    /// </para>
+    /// </summary>
+    public async Task<PlacementRetryResult> RetryGradingAsync(
+        int userId,
+        int placementId,
+        CancellationToken cancellationToken = default)
+    {
+        var placement = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.PlacementId == placementId && p.UserId == userId)
+            .Select(p => new { p.AttemptId })
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new PlacementException(PlacementException.PlacementNotFound, $"Placement test {placementId} not found.");
+
+        if (placement.AttemptId is not int attemptId)
+        {
+            throw new PlacementException(PlacementException.PlacementNotFound, $"Exam attempt for placement test {placementId} not found.");
+        }
+
+        var failedGradings = await db.AiGradings
+            .Where(g => g.FreeResponse.AttemptId == attemptId && g.Status == AiGradingStatus.Failed.ToCode())
+            .ToListAsync(cancellationToken);
+
+        if (failedGradings.Count == 0)
+        {
+            throw new PlacementException(
+                PlacementException.RetryNotAllowed,
+                "No failed grading to retry on this placement.");
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var responseIds = failedGradings.Select(g => g.FreeResponseId).ToList();
+        foreach (var grading in failedGradings)
+        {
+            grading.Status = AiGradingStatus.Pending.ToCode();
+            grading.AttemptCount += 1;
+            grading.FailureReason = null;
+            grading.CompletedAt = null;
+        }
+
+        // The attempt moves back to `submitted` FIRST, and the responses follow. The schema refuses a
+        // pending response inside a `graded` attempt (trg_FreeResponses_NotIntoGradedAttempt), so the
+        // order is not cosmetic - the other way round is a refused write. It is also the truth: the
+        // productive half is being re-measured, so the sitting is open again.
+        await db.ExamAttempts
+            .Where(a => a.AttemptId == attemptId && a.Status == AttemptStatus.Graded.ToCode())
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.Status, AttemptStatus.Submitted.ToCode()));
+
+        await db.FreeResponses
+            .Where(fr => responseIds.Contains(fr.FreeResponseId))
+            .ExecuteUpdateAsync(s => s.SetProperty(fr => fr.Status, FreeResponseStatus.PendingAi.ToCode()));
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        // The per-skill rows are deliberately NOT rewritten here. Re-queueing a task does not change
+        // what was measured, and rewriting them would flip a finished partial result back to
+        // `in_progress` while the job is merely queued again. The writer runs on its own when the
+        // retried grading settles (AttemptEngine.FinalizeAiGradedAttemptAsync), which is the one path
+        // that turns `not_measured` into a measurement.
+
+        return new PlacementRetryResult(placementId, attemptId, failedGradings.Count);
+    }
+
     public async Task<PlacementResultView> SubmitPlacementTestAsync(int userId, int placementId, bool isAutoSubmit, CancellationToken cancellationToken = default)
     {
         return await SubmitPlacementInternalAsync(placementId, userId, isAutoSubmit, cancellationToken);
@@ -539,9 +610,33 @@ public sealed partial class PlacementService(
             return await SubmitPlacementInternalAsync(placementId, userId, isAutoSubmit: true, cancellationToken);
         }
 
+        if (placement.Status == PlacementStatus.Abandoned.ToCode())
+        {
+            // #217 / PLC-19: an abandoned sitting has no result to show. This must be refused BEFORE
+            // the "still grading" branch below, or a sitting that measured nothing would render a
+            // result page whose every skill is not_measured - the fabricated result criterion 3 names.
+            throw new PlacementException(
+                PlacementException.PlacementAbandoned,
+                "Nothing on this placement could be measured, so it was recorded as abandoned and has no result.");
+        }
+
         if (placement.Status != PlacementStatus.Done.ToCode())
         {
-            throw new PlacementException(PlacementException.PlacementNotFinished, "Placement test is not finished.");
+            // #217 / PLC-34: a sitting whose attempt was already submitted is GRADING, not unfinished.
+            // Its objective skills are measured and visible now; only the productive tasks are still in
+            // the queue. Returning the view (a pure read - PLC-16) is what lets the result page show the
+            // objective half immediately and fill the productive half in as each task returns.
+            //
+            // A sitting whose attempt is still `in_progress` has nothing to show: the learner is still
+            // answering, and a result page for it would be a screen with no facts.
+            var attemptSubmitted = placement.ExamAttempt is { } attempt
+                && attempt.Status != AttemptStatus.InProgress.ToCode()
+                && attempt.Status != AttemptStatus.Abandoned.ToCode();
+
+            if (!attemptSubmitted)
+            {
+                throw new PlacementException(PlacementException.PlacementNotFinished, "Placement test is not finished.");
+            }
         }
 
         return await BuildPlacementResultViewAsync(placement, cancellationToken);
@@ -931,6 +1026,24 @@ public sealed partial class PlacementService(
 
             await db.SaveChangesAsync(cancellationToken);
             if (tx is not null) await tx.CommitAsync(cancellationToken);
+
+            // #217 / PLC-19, criterion 3: the engine's writer marks a placement `abandoned` when this
+            // sitting measured nothing. Re-reading is deliberate - the status is the writer's decision,
+            // not a second judgement made here - and returning a result for it would hand back the
+            // fabricated figure the ticket forbids.
+            var finished = await db.PlacementTests
+                .AsNoTracking()
+                .Where(p => p.PlacementId == placementId)
+                .Select(p => p.Status)
+                .SingleAsync(cancellationToken);
+
+            if (finished == PlacementStatus.Abandoned.ToCode())
+            {
+                throw new PlacementException(
+                    PlacementException.PlacementAbandoned,
+                    "Nothing on this placement could be measured, so it was recorded as abandoned and has no result. "
+                    + "You can start another one whenever you are ready.");
+            }
 
             return await BuildPlacementResultViewAsync(placement, cancellationToken);
         }

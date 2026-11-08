@@ -379,6 +379,13 @@ public sealed class AiGradingProcessor(
                 // E2.1 (#151): a failed grading carries no marks and no notes. Clearing them here is what
                 // CK_AiGradings_FeedbackOnlyWhenDone enforces: the row must not read as "scored badly".
                 ClearFeedback(grading);
+                // #217 / PLC-35: the task is SETTLED, even though it scored nothing. FreeResponses has
+                // no `failed` state - its vocabulary is draft / pending_ai / graded - and leaving it
+                // pending_ai would keep the attempt `submitted` forever, so the sitting could never
+                // record the honest `not_measured` PLC-35 asks for and the learner would wait for a
+                // result that never arrives. The distinction that matters is carried on the AiGrading
+                // row (`failed` + its reason), which is what the placement writer and the retry read.
+                await SettleFreeResponseAsync(fr.FreeResponseId, cancellationToken);
                 await db.SaveChangesAsync(cancellationToken);
                 return false;
             }
@@ -399,6 +406,19 @@ public sealed class AiGradingProcessor(
                 logger?.LogError(saveEx, "Failed to persist failure status for GradingId {GradingId}", grading.GradingId);
             }
             return false;
+        }
+    }
+
+    /// <summary>
+    /// #217 / PLC-35: a task whose grading failed is settled, not still queued. The row's own
+    /// vocabulary has no `failed`; the AiGrading row carries that fact and its reason.
+    /// </summary>
+    private async Task SettleFreeResponseAsync(int freeResponseId, CancellationToken cancellationToken)
+    {
+        var response = await db.FreeResponses.SingleOrDefaultAsync(fr => fr.FreeResponseId == freeResponseId, cancellationToken);
+        if (response is not null && response.Status == FreeResponseStatus.PendingAi.ToCode())
+        {
+            response.Status = FreeResponseStatus.Graded.ToCode();
         }
     }
 

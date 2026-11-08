@@ -104,7 +104,10 @@
 
   @* #213 / story 55: the per-skill level, its position, and WHEN it was measured. A carried-over
      result is badged here, beside its own number, with the date it actually came from - "always know
-     how old each number is" is a claim about each number, not about the page. *@
+     how old each number is" is a claim about each number, not about the page.
+     #217 / PLC-19: a `not_measured` row stays in the table WITH its reason. Omitting it would make a
+     partial result look complete, and printing "A1" or "0" would be the fabricated bottom band
+     PLC-35 refuses. *@
   @if (Model.SkillResults.Count > 0)
   {
     <section class="card">
@@ -124,7 +127,7 @@
             {
               <tr>
                 <th scope="row">@skill.SkillName</th>
-                <td class="font-mono">@Model.LevelAndPosition(skill)</td>
+                <td class="font-mono">@Model.LevelCell(skill)</td>
                 <td>
                   @if (skill.ReusedFromPrior)
                   {
@@ -135,9 +138,13 @@
                   {
                     <span class="font-mono text-sm text-muted">Measured on @Model.MeasuredOn(skill)</span>
                   }
+                  else if (PlacementResultViewModel.IsGrading(skill))
+                  {
+                    <span class="text-sm text-muted">Still being graded — this fills in on its own.</span>
+                  }
                   else
                   {
-                    <span class="text-sm text-muted">Not measured in this sitting</span>
+                    <span class="text-sm text-muted">@PlacementResultViewModel.NotMeasuredReason(skill.FailureReason)</span>
                   }
                 </td>
               </tr>
@@ -146,6 +153,35 @@
         </table>
       </div>
     </section>
+  }
+
+  @* #217 / PLC-19: a partial result names what is missing rather than presenting a whole one. The
+     overall is the weakest MEASURED skill; an unmeasured skill contributes nothing to it, which is
+     why this says "excluded", not "scored zero". *@
+  @if (Model.Result.SkillResults is { Count: > 0 } && Model.Result.SkillResults.Any(s => s.Status == "not_measured"))
+  {
+    <div class="alert alert--warning" role="status">
+      <strong>This is a partial result.</strong>
+      The skills marked <em>Not measured</em> are left out of your overall level — they did not score zero.
+    </div>
+  }
+
+  @* #217 / PLC-35: the retry a failed grading is offered. It re-queues the same tasks and writes no
+     ledger row, so the page says so; a learner who believed it cost credits would not press it. *@
+  @if (Model.CanRetryGrading)
+  {
+    <div class="card" id="placement-retry-card">
+      <div class="card__body row row--between row--middle">
+        <div>
+          <strong>A task could not be graded.</strong>
+          <p class="text-sm text-muted no-margin">Retrying is free — no credits are used.</p>
+        </div>
+        <form method="post" action="@Model.RetryUrl" class="no-margin">
+          @Html.AntiForgeryToken()
+          <button type="submit" class="btn btn--primary" id="btn-retry-grading">Retry grading</button>
+        </form>
+      </div>
+    </div>
   }
 
   @if (result.IsGraded && !string.IsNullOrEmpty(result.WeakerSkillName))

@@ -41,6 +41,19 @@ public sealed record PlacementTakeViewModel(
     public ExamAudioPlayerModel? AudioPlayer { get; } = BuildAudioPlayer(Take.CurrentQuestion);
     public string PageDataJson { get; } = BuildPageData(Take);
 
+    /// <summary>
+    /// #217 / PLC-18: EVERY section of the sitting with its outstanding count, so the confirmation can
+    /// name the count per section and the client can move each row's number as the learner answers
+    /// without a second copy of the sitting in the page. A section with zero outstanding is present
+    /// but hidden, which is what keeps the table from reshuffling as counts fall.
+    /// </summary>
+    public IReadOnlyList<UnansweredSectionDisplay> Sections { get; } = BuildSections(Take);
+
+    /// <summary>True when anything is still outstanding, i.e. the confirmation's cost is real.</summary>
+    public bool HasUnanswered => Sections.Any(section => section.UnansweredCount > 0);
+
+    public int UnansweredTotal => Sections.Sum(section => section.UnansweredCount);
+
     private static int GetProgressPercent(PlacementTakeViewDto take) =>
         (int)Math.Round((double)take.AnsweredCount / Math.Max(1, take.TotalQuestions) * 100);
 
@@ -115,6 +128,7 @@ public sealed record PlacementTakeViewModel(
                     $"Questions {first} to {last}",
                     items.Select(item => new NavigatorCellDisplay(
                         item.QuestionId,
+                        item.SectionId,
                         item.DisplayOrder,
                         $"/placement/take/{take.PlacementId}?q={item.DisplayOrder}",
                         "navigator__cell" + (item.IsCurrent ? " is-current" : "")
@@ -124,6 +138,40 @@ public sealed record PlacementTakeViewModel(
                         item.IsCurrent ? "true" : "false",
                         item.IsLocked)).ToArray());
             }).ToArray();
+
+    /// <summary>
+    /// #217 / PLC-18: the unanswered count PER SECTION, which is what the submission confirmation
+    /// names. Counted from the navigator's own <c>IsAnswered</c> flag rather than from the paper,
+    /// because a paper total cannot tell a learner whether they abandoned a whole skill or missed two
+    /// items in the one they were on - and only the section grain tells them where to go back.
+    /// <para>
+    /// Ordered by each section's first question, so the modal lists sections in sitting order. A
+    /// section with nothing outstanding keeps its row and is hidden by the view: dropping it would
+    /// reshuffle the table each time a count reached zero.
+    /// </para>
+    /// </summary>
+    private static IReadOnlyList<UnansweredSectionDisplay> BuildSections(PlacementTakeViewDto take)
+    {
+        // The display name lives on the question rows, not on a navigator cell; a sitting that has no
+        // Questions projection falls back to the section code rather than printing a blank heading.
+        var names = (take.Questions ?? [])
+            .GroupBy(question => question.SectionId)
+            .ToDictionary(group => group.Key, group => group.First().SectionName);
+
+        return take.Navigator
+            .GroupBy(item => item.SectionId)
+            .Select(group => new UnansweredSectionDisplay(
+                group.Key,
+                names.TryGetValue(group.Key, out var name) && !string.IsNullOrWhiteSpace(name)
+                    ? name
+                    : group.First().SectionCode,
+                group.Count(),
+                group.Count(item => !item.IsAnswered)))
+            .OrderBy(section => take.Navigator
+                .Where(item => item.SectionId == section.SectionId)
+                .Min(item => item.DisplayOrder))
+            .ToArray();
+    }
 
     private static string BuildPageData(PlacementTakeViewDto take)
     {
@@ -151,5 +199,13 @@ public sealed record PlacementTakeViewModel(
     public sealed record NavigatorGroupDisplay(
         string Title, string RangeLabel, string AriaLabel, IReadOnlyList<NavigatorCellDisplay> Items);
     public sealed record NavigatorCellDisplay(
-        int QuestionId, int DisplayOrder, string Url, string CssClass, string AriaLabel, string AriaCurrent, bool IsLocked);
+        int QuestionId, int SectionId, int DisplayOrder, string Url, string CssClass, string AriaLabel, string AriaCurrent, bool IsLocked);
+
+    /// <summary>
+    /// #217 / PLC-18: one section of the sitting with its outstanding count, for the submit
+    /// confirmation. `UnansweredCount` and `TotalCount` are separate so the modal can print
+    /// "2 of 8 unanswered in Reading" rather than a number with no denominator.
+    /// </summary>
+    public sealed record UnansweredSectionDisplay(
+        int SectionId, string SectionName, int TotalCount, int UnansweredCount);
 }

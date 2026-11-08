@@ -37,6 +37,13 @@ public sealed partial class CompanionApiClient
     public Task<PlacementGradingStatusDto> GetPlacementGradingStatusAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<PlacementGradingStatusDto>($"api/learner/placement/result/{placementId}/status", bearerToken, cancellationToken);
 
+    // #217 / PLC-35: a free retry of the failed gradings - no ledger row, one re-queued pass.
+    public Task<PlacementRetryResultDto> RetryPlacementGradingAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<PlacementRetryResultDto>($"api/learner/placement/result/{placementId}/retry", bearerToken, cancellationToken);
+
+    public Task<PlacementRetryResultDto> RetryPlacementGradingAsync(int placementId, CancellationToken cancellationToken = default) =>
+        RetryPlacementGradingAsync(placementId, string.Empty, cancellationToken);
+
     public Task<PlacementResultViewDto> SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<SubmitPlacementTestRequest, PlacementResultViewDto>($"api/learner/placement/take/{placementId}/submit", request, bearerToken, cancellationToken);
 

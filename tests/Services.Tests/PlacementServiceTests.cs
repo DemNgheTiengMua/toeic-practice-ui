@@ -383,14 +383,22 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
 
         var info = await service.StartPlacementTestAsync(userId, standardExamId);
 
-        // Answer Q1 correctly, Q2 left unanswered (Reading = 0 -> scaled = 100)
+        // Answer Q1 correctly, Q2 (Reading) left unanswered.
         await service.SaveAnswerAsync(userId, info.PlacementId, q1Id, opt1CorrectId, isFlagged: false);
         await service.SubmitPlacementTestAsync(userId, info.PlacementId, isAutoSubmit: false);
 
         var result = await service.GetPlacementResultAsync(userId, info.PlacementId);
 
-        // Listening: 1/1 (100%), Reading: 0/1 (0%) -> Weaker section is Reading!
-        Assert.Equal("Reading", result.WeakerSkillName);
+        // #217 / PLC-19: an untouched Reading is NOT a measured zero - it is `not_measured` and left out
+        // of the overall, so it must not be named the "weaker section". Calling a skill the learner
+        // never sat their weaker one presents a skip as a result. The partial-result banner is what
+        // tells them Reading is missing, and that is asserted instead.
+        Assert.Null(result.WeakerSkillName);
+        Assert.Contains(result.SkillResults!, r => r.SkillCode == "READ"
+            && r.Status == PlacementResultStatus.NotMeasured
+            && r.FailureReason == PlacementFailureReason.CandidateSkipped);
+        Assert.Contains(result.SkillResults!, r => r.SkillCode == "LIST"
+            && r.Status == PlacementResultStatus.Measured);
         Assert.NotNull(result.BandNote);
         Assert.True(result.CefrBands.Count >= 4);
     }
@@ -456,11 +464,16 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
     public async Task GetPlacementTake_WhenExpired_AutoSubmitsAttemptAndSetsIsAutoSubmitted()
     {
         var certCode = Unique("PC10");
-        var (_, standardExamId, _, _, _, _, _) = await SeedPlacementFixtureAsync(certCode);
+        var (_, standardExamId, _, q1Id, _, opt1CorrectId, _) = await SeedPlacementFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (service, _) = CreateServices();
 
         var info = await service.StartPlacementTestAsync(userId, standardExamId);
+
+        // Answer one item, so the expiry produces a measurable partial result rather than an
+        // abandonment - #217 / PLC-19 turns a blank expired paper into `abandoned`, which is a different
+        // outcome and is covered by its own test.
+        await service.SaveAnswerAsync(userId, info.PlacementId, q1Id, opt1CorrectId, isFlagged: false);
 
         // Simulate expired attempt in database
         await database.SqlAsync($"UPDATE ExamAttempts SET ExpiresAt = DATEADD(minute, -10, SYSDATETIMEOFFSET()) WHERE AttemptId = {info.AttemptId};");
@@ -489,6 +502,10 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
         var (service, _) = CreateServices();
 
         var info = await service.StartPlacementTestAsync(userId, standardExamId);
+
+        // Answer one item, so the auto-submit produces a measurable partial result rather than an
+        // abandonment. #217 / PLC-19 turns a blank expired paper into `abandoned`.
+        await service.SaveAnswerAsync(userId, info.PlacementId, q1Id, opt1CorrectId, isFlagged: false);
 
         // Simulate expired attempt in database
         await database.SqlAsync($"UPDATE ExamAttempts SET ExpiresAt = DATEADD(minute, -10, SYSDATETIMEOFFSET()) WHERE AttemptId = {info.AttemptId};");

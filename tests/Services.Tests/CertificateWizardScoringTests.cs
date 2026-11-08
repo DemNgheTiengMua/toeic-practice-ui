@@ -89,6 +89,14 @@ public sealed class CertificateWizardScoringTests(DatabaseFixture database)
             var info = await placement.StartPlacementTestAsync(userId, examId);
             var take = await placement.GetPlacementTakeAsync(userId, info.PlacementId, null);
 
+            // #217 / PLC-19: answer the one item, so the sitting measures something and produces a
+            // result. An untouched paper is now abandoned with no result, which is a different fact and
+            // would not exercise the band lookup this test exists for (#147: the band rows exist).
+            var answerQuestion = take.CurrentQuestion;
+            await placement.SaveAnswerAsync(
+                userId, info.PlacementId, answerQuestion.QuestionId, answerQuestion.Options[0].OptionId,
+                isFlagged: false);
+
             // Before #147 this threw a SQL constraint violation: no band rows existed for the
             // certificate, so BandCode could not be filled in.
             var result = await placement.SubmitPlacementTestAsync(userId, info.PlacementId, isAutoSubmit: false);

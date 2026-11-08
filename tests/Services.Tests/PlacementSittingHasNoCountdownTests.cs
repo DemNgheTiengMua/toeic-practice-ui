@@ -286,9 +286,21 @@ public sealed class PlacementSittingHasNoCountdownTests : IAsyncLifetime
         var placement = await read.PlacementTests.SingleAsync(p => p.PlacementId == placementId);
         var attempt = await read.ExamAttempts.SingleAsync(a => a.AttemptId == placement.AttemptId);
 
-        // The engine scored it: a graded attempt with a total, and a skill score row per examined skill.
+        // The engine scored it: a graded attempt with a total, and a skill score row for the skill it
+        // MEASURED. #217 / PLC-19 changed the count from 2 to 1: only Listening was answered, so only
+        // Listening is measured and only Listening gets a score row. The untouched Reading skill is
+        // `not_measured` on the placement, not a zero row dragging the total down - which is the whole
+        // point of "excluded from the overall". The previous expectation of 2 encoded the zero.
         Assert.Equal("graded", attempt.Status);
         Assert.NotNull(attempt.TotalScore);
-        Assert.Equal(2, await read.AttemptSkillScores.CountAsync(s => s.AttemptId == attempt.AttemptId));
+        var scores = await read.AttemptSkillScores.Where(s => s.AttemptId == attempt.AttemptId).ToListAsync();
+        Assert.Single(scores);
+        Assert.Equal(fixture.QuestionId, await read.Questions
+            .Where(q => q.SkillId == scores[0].SkillId).Select(q => q.QuestionId).FirstAsync());
+
+        var untouched = await read.PlacementSkillResults
+            .SingleAsync(r => r.PlacementId == placementId && r.SkillId != scores[0].SkillId);
+        Assert.Equal(PlacementResultStatus.NotMeasured, untouched.ResultStatus);
+        Assert.Equal(PlacementFailureReason.CandidateSkipped, untouched.FailureReason);
     }
 }

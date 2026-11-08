@@ -13,6 +13,16 @@ public class PlacementException(string code, string message) : Exception(message
     public const string InvalidOption = "invalid_option";
     public const string TargetBandInvalid = "target_band_invalid";
 
+    /// <summary>#217 / PLC-35: nothing on this placement failed to grade, so there is nothing to retry.</summary>
+    public const string RetryNotAllowed = "retry_not_allowed";
+
+    /// <summary>
+    /// #217 / PLC-19: the sitting measured nothing, so it was recorded as abandoned and has no result.
+    /// Distinct from <see cref="PlacementNotFinished"/>, which means "still grading" - a learner told
+    /// "not finished" would wait for a figure that is never coming.
+    /// </summary>
+    public const string PlacementAbandoned = "placement_abandoned";
+
     /// <summary>#213 / PLC-07: a retake inside the 24-hour cooldown. Never a lifetime cap.</summary>
     public const string PlacementCooldown = "placement_cooldown";
 
