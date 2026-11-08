@@ -8,6 +8,12 @@
 }
           <!-- Left Question Pane (0ms In-Memory Swapping) -->
           <div class="stack" id="question-pane">
+            @* #235 / #238: a short drill is presented as short, not padded. The sentence comes from the
+               model, which derives it from the session's own honest count. *@
+            @if (Model.Take.ShortNotice is { } shortNotice)
+            {
+              <div class="alert alert--info mb-3" id="short-drill-notice" role="status">@shortNotice</div>
+            }
             <!-- Audio Player Container with Practice QoL 5s Rewind & Transcript Toggle -->
             <div id="practice-audio-wrapper" class="mb-3" style="@(!string.IsNullOrEmpty(q.AudioPath) ? "" : "display:none;")">
               <div id="practice-audio-player-host">
@@ -65,6 +71,8 @@
                     <span class="badge" id="status-badge" style="display: none;"></span>
                   }
                   <span class="badge badge--muted" id="hint-meta-badge" style="@(q.HintUsed ? "" : "display: none;")">Hint used</span>
+                  @* #238 / U18: revealed only for a locked question; the payload omits it while answering. *@
+                  <span class="badge badge--info" id="question-level-badge" style="@(Model.Take.RevealedLevelCode is null ? "display: none;" : "")">Item level &middot; <span class="font-mono">@Model.Take.RevealedLevelCode</span></span>
                 </div>
                 <div>
                   <button type="button" class="btn btn--ghost btn--sm @(q.IsSaved ? "btn--primary" : "")" id="save-toggle-btn"

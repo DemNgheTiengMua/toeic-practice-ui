@@ -285,13 +285,9 @@ public sealed partial class LearningPathService
             return MasteryState.Untested;
         }
 
-        var accuracy = (int)Math.Round((double)counts.Correct / counts.Answered * 100);
-
-        return accuracy >= MasterySchedule.MinAccuracyToMastered && counts.Answered >= MasterySchedule.MinAnswersToMastered
-            ? MasteryState.Mastered
-            : accuracy >= MasterySchedule.MinAccuracyToReviewing && counts.Answered >= MasterySchedule.MinAnswersToReviewing
-                ? MasteryState.Reviewing
-                : MasteryState.Learning;
+        // #238: the same four-state estimate the practice hub colours its matrix from, so the plan and
+        // the matrix cannot disagree about one cell on the same day.
+        return CellMastery.Estimate(counts.Answered, counts.Correct);
     }
 
     /// <summary>

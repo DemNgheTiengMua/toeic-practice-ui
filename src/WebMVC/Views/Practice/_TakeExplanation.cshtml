@@ -12,9 +12,34 @@
                       <span id="exp-chevron">[-]</span>
                     </button>
                     <div class="accordion-explanation__body" id="explanation-body">
+                      @* #238 / U18: the level is named here, and only here — after the answer has
+                         locked. It arrives in the payload only for a locked question, so this is the
+                         reveal, not a hidden span. *@
+                      @if (Model.Take.RevealedLevelCode is { } revealedLevel)
+                      {
+                        <div id="revealed-level" class="mb-2">
+                          <span class="badge badge--muted">Item level &middot; <span class="font-mono">@revealedLevel</span></span>
+                        </div>
+                      }
                       @if (!string.IsNullOrEmpty(q.Explanation))
                       {
-                        <div class="font-sign uppercase text-xs mb-1" style="font-weight:700;">Giải thích chi tiết:</div>
+                        @* #238: "bound to its evidence" — the heading names the option the rationale
+                           explains, so the paragraph is not free-floating. A free response has no
+                           option to name and prints the rationale alone. *@
+                        <div class="font-sign uppercase text-xs mb-1" style="font-weight:700;">
+                          @if (Model.Take.ExplanationSubjectLabel is { } subjectLabel)
+                          {
+                            <text>Why @subjectLabel is correct</text>
+                            @if (Model.Take.ExplanationSubjectText is { } subjectText)
+                            {
+                              <text> &mdash; @subjectText</text>
+                            }
+                          }
+                          else
+                          {
+                            <text>Giải thích chi tiết:</text>
+                          }
+                        </div>
                         <p class="no-margin" style="white-space: pre-line;">@q.Explanation</p>
                       }
                       @if (!string.IsNullOrEmpty(q.AcceptedAnswersJson))

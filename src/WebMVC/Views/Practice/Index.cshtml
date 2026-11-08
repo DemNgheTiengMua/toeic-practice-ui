@@ -6,6 +6,11 @@
     var catalog = Model.Catalog;
 }
 
+@section Styles {
+  @* #238: the topic matrix's own plate rules. Loaded only on this page. *@
+  <link rel="stylesheet" href="~/css/practice/matrix.css" asp-append-version="true">
+}
+
 <div class="row row--between">
   <div>
     <h1 class="m-0 mb-1">Practice</h1>
@@ -78,6 +83,58 @@
     Today: <span class="font-mono">@freeDrill.AnsweredToday</span> of
     <span class="font-mono">@freeDrill.DailyItemCeiling</span> items practised.
   </p>
+}
+
+@if (Model.HasMatrix)
+{
+  @* #238 / SCR-PRAC-01: the topic matrix. Every cell shows its own mastery state; the three the plan
+     prioritises are inverted to ink, which is the selection language this system uses and never a tint.
+     A resting cell stays in its exact position and names the local time it reopens — hiding it would
+     read as deleted, and printing UTC would be seven hours wrong for a UTC+7 learner. *@
+  <section class="mt-4" aria-labelledby="matrix-heading">
+    <h2 class="section-group__title" id="matrix-heading">Topic matrix</h2>
+    <p class="text-sm text-muted">
+      Each cell is one topic at one level. The highlighted cells are the three your plan prioritises
+      this week — a hint, not a restriction, since free drilling is open to any cell.
+    </p>
+    <table class="matrix">
+      <caption class="visually-hidden">
+        Topic mastery by level. Each row names a cell's topic, level, mastery state and whether it is resting.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Topic</th>
+          <th scope="col">Level</th>
+          <th scope="col">Mastery</th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var cell in Model.Matrix)
+        {
+          <tr class="@cell.CssClass" data-state="@cell.MasteryState" data-resting="@(cell.IsResting ? "true" : "false")">
+            <th scope="row">
+              <span class="matrix__code font-mono">@cell.TopicCode</span>
+              <span class="matrix__name">@cell.TopicName</span>
+              @if (cell.IsPrioritised)
+              {
+                <span class="badge badge--info matrix__priority">Recommended this week</span>
+              }
+            </th>
+            <td class="font-mono">@cell.LevelLabel</td>
+            <td>@cell.MasteryLabel</td>
+            <td class="matrix__status">
+              @cell.StatusLine
+              @* #238: the state is announced in words, not carried by the plate's fill alone. A
+                 visually-hidden sentence is the pattern screen readers reliably read; aria-label on a
+                 <tr> is not. *@
+              <span class="visually-hidden">@cell.AccessibleLabel</span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
 }
 
 @if (catalog.UnfinishedSession is { } unfinished)

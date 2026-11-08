@@ -56,6 +56,21 @@ public sealed record PracticeCatalogViewModel(PracticeCatalogDto Catalog, string
         .Select(p => $"{p.TopicCode} · {p.LevelCode}")
         .ToList();
 
+    /// <summary>
+    /// #238 / SCR-PRAC-01: the objective practice matrix — one plate per (topic, level) cell, with its
+    /// four-state mastery and, for a resting cell, the moment it reopens in the learner's own zone.
+    /// <para>
+    /// The labels are formatted here by the controller, not in the view: an instant printed as UTC is
+    /// seven hours wrong for a UTC+7 learner, which is the defect #159 already fixed once on this page.
+    /// </para>
+    /// </summary>
+    public IReadOnlyList<PracticeMatrixRowViewModel> Matrix { get; init; } = [];
+
+    public bool HasMatrix => Matrix.Count > 0;
+
+    /// <summary>The cells the plan's own top-three point at, highlighted and labelled as a hint.</summary>
+    public int PrioritisedCellCount => Matrix.Count(r => r.IsPrioritised);
+
     // The start form is meaningless without a section button in it: a Speaking-only certificate would
     // otherwise meet three dropdowns it can never submit.
     public bool HasDrillableSections => DrillableSectionGroups.Count > 0;

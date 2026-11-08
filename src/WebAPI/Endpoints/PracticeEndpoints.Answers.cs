@@ -53,6 +53,12 @@ public static partial class PracticeEndpoints
                     questionId,
                     new SubmitPracticeAnswerInput(request.SelectedOptionId, request.ResponseText, request.SelectedOptionIdsJson, request.SelectedOptionIds),
                     cancellationToken);
+
+                // #238 / U18: the cell's level travels only with the graded reply. It is read from the
+                // session the answer belongs to, so it is the drilled cell's level and nothing invented.
+                var session = await practiceService.GetSessionInfoAsync(
+                    CurrentUserId(http), sessionId, cancellationToken);
+
                 return Results.Ok(new GradedAnswerDto(
                     result.IsCorrect,
                     result.SelectedOptionId,
@@ -66,7 +72,8 @@ public static partial class PracticeEndpoints
                     result.CorrectOptionIds,
                     result.ResponseText,
                     result.SelectedOptionIdsJson,
-                    result.SavedQuestionId));
+                    result.SavedQuestionId,
+                    session.CefrLevel?.Code));
             }
             catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
             {

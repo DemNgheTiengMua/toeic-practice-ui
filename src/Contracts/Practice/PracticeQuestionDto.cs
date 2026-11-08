@@ -37,7 +37,14 @@ public sealed record PracticeQuestionDto(
     string? SelectedOptionIdsJson = null,
     IReadOnlyList<int>? CorrectOptionIds = null,
     int? ItemVersionId = null,
-    int? SavedQuestionId = null)
+    int? SavedQuestionId = null,
+    /// <summary>
+    /// #238 / U18: the item's CEFR level. A section question may carry its own; a pool item takes the
+    /// drilled cell's. <see cref="WebMVC.Models.PracticeTakePresentation"/> strips it for any question
+    /// that is not yet answered, so the take manifest cannot be read ahead — the suppression is in the
+    /// payload, not in a CSS class.
+    /// </summary>
+    string? CefrLevelCode = null)
 {
     /// <summary>
     /// #187: the id the browser addresses this question by. A section drill addresses its question

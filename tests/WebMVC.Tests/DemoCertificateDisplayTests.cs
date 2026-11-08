@@ -263,6 +263,12 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
             nameof(IPracticeClient.GetFreeDrillStateAsync) =>
                 Task.FromResult(new FreeDrillStateDto(true, [], 0, [], false, false, 0, 60, null)),
 
+            // #238: the objective practice matrix. A learner with no answers has an open, untested cell
+            // per (topic, level); this fixture returns one so the page renders a real plate.
+            nameof(IPracticeClient.GetPracticeMatrixAsync) => Task.FromResult<IReadOnlyList<PracticeCellDto>>(
+                [new PracticeCellDto(1, "C-GIST", "Comprehension gist", ModalityDto.Listening, "A2",
+                    PracticeCellMasteryDto.Untested, IsPrioritised: false, ReopensAt: null)]),
+
             nameof(IPlacementClient.GetPlacementResultAsync) => Task.FromResult(PlacementResult()),
             nameof(IPlacementClient.GetTargetBandViewAsync) => Task.FromResult(TargetBand()),
             nameof(IMockExamsClient.GetExamHistoryAsync) => Task.FromResult(ExamHistory()),
