@@ -86,6 +86,24 @@ public partial class PlacementSkillResult
     [Unicode(false)]
     public string? FailureReason { get; set; }
 
+    /// <summary>
+    /// #219 / D5: what this sitting SAW per topic, as JSON ΓÇö <c>topicId, evaluatedBand, itemsSeen,
+    /// itemsCorrect, routingSignal</c> (<c>weak</c> or <c>on_level</c>).
+    /// <para>
+    /// <b>This is a sequencing hint, never mastery.</b> A topic touched by one to three items cannot
+    /// support a mastery judgement, which needs twelve; the whole point of keeping it in its own column
+    /// on its own row is that the mastery path reads none of it. Null when the sitting saw nothing on
+    /// this skill ΓÇö an empty array is refused, because it claims topics while naming none.
+    /// </para>
+    /// </summary>
+    public string? TopicPriorsJson { get; set; }
+
+    /// <summary>
+    /// #219 / D5: the productive half's rubric profile ΓÇö the criterion scores and the weakest one, so
+    /// the path has a starting point without recomputing it. Null for an objective skill.
+    /// </summary>
+    public string? CriterionProfileJson { get; set; }
+
     public DateTimeOffset? MeasuredAt { get; set; }
 
     /// <summary>Always <see cref="MeasuredAt"/> + 90 days (D18), pinned by CHECK.</summary>

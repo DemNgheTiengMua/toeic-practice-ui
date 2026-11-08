@@ -282,6 +282,64 @@ public sealed partial class LearningPathService
                 : MasteryState.Learning;
     }
 
+    /// <summary>
+    /// #219 / D5: the topics the latest placement saw go badly, keyed by (skill, level). <b>A hint,
+    /// not mastery.</b>
+    /// <para>
+    /// Only the latest <c>done</c> placement for this learner and certificate is read, and only its
+    /// <see cref="PlacementResultStatus.Measured"/> / <see cref="PlacementResultStatus.EstimatedFromOneTask"/>
+    /// rows. A carried row is skipped: its hint belongs to an earlier sitting (the writer clears it on
+    /// a carried row for that reason), and a re-used result is not evidence this paper saw anything.
+    /// </para>
+    /// <para>
+    /// The band is compared as the row's own <c>CefrLevel</c>, because a hint about A2 is not a hint
+    /// about the B1 cell the block plans at.
+    /// </para>
+    /// </summary>
+    private async Task<Dictionary<(int SkillId, CefrLevel Level), IReadOnlyList<int>>> LoadPlacementTopicHintsAsync(
+        int userId, int certId, CancellationToken cancellationToken)
+    {
+        var latest = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.UserId == userId && p.CertId == certId && p.Status == PlacementStatus.Done.ToCode())
+            .OrderByDescending(p => p.TakenAt)
+            .ThenByDescending(p => p.PlacementId)
+            .Select(p => (int?)p.PlacementId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (latest is null)
+        {
+            return [];
+        }
+
+        var rows = await db.PlacementSkillResults
+            .AsNoTracking()
+            .Where(r => r.PlacementId == latest.Value
+                && !r.ReusedFromPrior
+                && r.CefrLevel != null
+                && (r.ResultStatus == PlacementResultStatus.Measured
+                    || r.ResultStatus == PlacementResultStatus.EstimatedFromOneTask))
+            .Select(r => new { r.SkillId, r.CefrLevel, r.TopicPriorsJson })
+            .ToListAsync(cancellationToken);
+
+        var hints = new Dictionary<(int, CefrLevel), IReadOnlyList<int>>();
+        foreach (var row in rows)
+        {
+            var weak = PlacementTopicPrior.Deserialize(row.TopicPriorsJson)
+                .Where(p => p.RoutingSignal == PlacementTopicPrior.Weak)
+                .Select(p => p.TopicId)
+                .Distinct()
+                .ToList();
+
+            if (weak.Count > 0 && row.CefrLevel is { } level)
+            {
+                hints[(row.SkillId, level)] = weak;
+            }
+        }
+
+        return hints;
+    }
+
     /// <summary>The one lesson of this skill, lowest display order first, or null when the certificate
     /// has none. A lesson step needs a leveled lesson, so the level is carried on the step and not
     /// converted into a lesson's property: lessons are not leveled in this schema yet.</summary>

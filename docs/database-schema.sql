@@ -2399,10 +2399,9 @@ GO
 -- guarded by nothing while the registry claimed coverage of the placement snapshot. It is registered
 -- as `placement_skill_result`, owned by AttemptEngine, with the same trigger idiom.
 --
--- Deliberately absent: an overall (MIN over the measured rows, computed at read — a stored one is a
--- second writer, D15), IsPartialResult (derived from the rows), ReusedFromPrior (reuse is #213) and the
--- topic/criterion JSON (#219). A column that restates what the rows say is a second copy that can
--- disagree with them.
+-- Deliberately absent: an overall (MIN over the measured rows, computed at read - a stored one is a
+-- second writer, D15) and IsPartialResult (derived from the rows). A column that restates what the
+-- rows say is a second copy that can disagree with them.
 CREATE TABLE PlacementSkillResults (
   PlacementId          INT NOT NULL,
   SkillId              INT NOT NULL,
@@ -2444,6 +2443,24 @@ CREATE TABLE PlacementSkillResults (
   FailureReason        VARCHAR(24) NULL
     CONSTRAINT CK_PSR_FailureReason CHECK (FailureReason IS NULL
       OR FailureReason IN ('candidate_skipped','inactivity_timeout','ai_grading_failed')),
+  -- #219 / D5: what the sitting SAW, per topic, as a sequencing hint for the first week - never a
+  -- mastery judgement. Three items cannot prove a topic is learned (mastery needs twelve), so this is
+  -- a separate column on a separate table and NOTHING in the mastery path reads it.
+  --
+  -- Shape: [{topicId, evaluatedBand, itemsSeen, itemsCorrect, routingSignal}] with signal 'weak' or
+  -- 'on_level'. An empty array is refused: it would claim topics were touched while naming none, and
+  -- NULL is the honest "nothing was seen here". `itemsSeen BETWEEN 1 AND 3` is not checkable in a
+  -- CHECK (it needs OPENJSON), so PlacementResultWriter derives it and the service tests assert it.
+  TopicPriorsJson      NVARCHAR(MAX) NULL
+    CONSTRAINT CK_PSR_TopicPriorsIsJson CHECK (
+         TopicPriorsJson IS NULL
+      OR (ISJSON(TopicPriorsJson) = 1 AND LEN(TopicPriorsJson) > 2)),
+  -- #219 / D5: the productive half's rubric profile, so the path has a weakest-criterion starting point
+  -- without recomputing it. Shape: {scores:[{criterionId, code, score, maxScore}], weakestCriterion,
+  -- priorityFix}. A weakest criterion is one of the scores, never an invented code - derived by the
+  -- writer, asserted by the service tests.
+  CriterionProfileJson NVARCHAR(MAX) NULL
+    CONSTRAINT CK_PSR_CriterionProfileIsJson CHECK (CriterionProfileJson IS NULL OR ISJSON(CriterionProfileJson) = 1),
   MeasuredAt           DATETIMEOFFSET NULL,
   ExpiresAt            DATETIMEOFFSET NULL,
   WrittenByService     VARCHAR(64) NULL,
@@ -2480,6 +2497,12 @@ CREATE TABLE PlacementSkillResults (
        (ProjectedBandCode IS NULL AND ProjectedScore IS NULL AND CutScoreTableVersion IS NULL)
     OR (ProjectedBandCode IS NOT NULL AND ProjectedScore IS NOT NULL AND CutScoreTableVersion IS NOT NULL
         AND ResultStatus IN ('measured','estimated_from_one_task'))),
+  -- #219: the two signals describe measurement, so only a measured row may carry them. A `grading`
+  -- row with priors would state what a task in the queue has not yet been read for, and a
+  -- `not_measured` row with them would be a topic hint from a sitting that measured nothing.
+  CONSTRAINT CK_PSR_SignalsOnlyWhenMeasured CHECK (
+       (TopicPriorsJson IS NULL AND CriterionProfileJson IS NULL)
+    OR ResultStatus IN ('measured','estimated_from_one_task')),
   -- D18: the same 90-day reuse window as a stored per-skill state, pinned to the measurement so the
   -- two cannot disagree.
   CONSTRAINT CK_PSR_Expiry CHECK (
@@ -2519,6 +2542,10 @@ BEGIN
        OR i.IsEstimatedFromOneTask <> d.IsEstimatedFromOneTask
        OR i.IsTruncated <> d.IsTruncated
        OR ISNULL(i.FailureReason, '') <> ISNULL(d.FailureReason, '')
+       -- #219: the topic and criterion signals are derived from the same attempt, so a write that
+       -- changes only them is still a derived write and must declare its writer.
+       OR ISNULL(i.TopicPriorsJson, '') <> ISNULL(d.TopicPriorsJson, '')
+       OR ISNULL(i.CriterionProfileJson, '') <> ISNULL(d.CriterionProfileJson, '')
        OR ISNULL(i.MeasuredAt, '0001-01-01') <> ISNULL(d.MeasuredAt, '0001-01-01')
        OR ISNULL(i.ExpiresAt, '0001-01-01') <> ISNULL(d.ExpiresAt, '0001-01-01')
        OR i.ProjectionVersion <> d.ProjectionVersion;
