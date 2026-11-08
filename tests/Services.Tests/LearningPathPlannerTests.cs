@@ -29,8 +29,13 @@ public sealed class LearningPathPlannerTests
     private static SkillPlanBlock Block(int skillId, Modality modality, int[] topics, int? lessonId = 4, int? mockId = 2) =>
         new(skillId, modality, CefrLevel.B1, MasteryState.Reviewing, topics, lessonId, mockId);
 
+    /// <summary>
+    /// #234: the old "3–5 steps a week" bound is replaced by the budget: four weeks are planned, and each
+    /// one's <b>minutes</b> are the goal's. What this now pins is that the window is four weeks and no
+    /// week is empty — the step <i>count</i> is no longer a constant, which was the defect.
+    /// </summary>
     [Fact]
-    public void Six_hours_a_week_plans_four_weeks_of_three_to_five_steps()
+    public void Six_hours_a_week_plans_four_weeks_of_steps_that_sum_to_the_budget()
     {
         var plan = LearningPathPlanner.Plan(weeklyStudyHours: 6m, FourSkills());
 
@@ -38,11 +43,17 @@ public sealed class LearningPathPlannerTests
 
         for (var week = 1; week <= LearningPathPlanner.WindowWeeks; week++)
         {
-            var steps = plan.Count(p => p.WeekNumber == week);
-            Assert.InRange(steps, LearningPathPlanner.MinimumStepsPerWeek, LearningPathPlanner.MaximumStepsPerWeek);
+            var minutes = LearningPathPlanner.PlannedMinutesForWeek(plan, week);
+            Assert.Equal(360, minutes);
+            Assert.True(plan.Count(p => p.WeekNumber == week) >= 1, $"week {week} had no steps");
         }
     }
 
+    /// <summary>
+    /// #234: unchanged in intent and now backed by arithmetic — every step is still a sitting. What was
+    /// previously true by construction (the budget was divided by the step count) is now a property of
+    /// the packing: minutes are split so no sitting exceeds the ceiling.
+    /// </summary>
     [Fact]
     public void Every_step_is_a_sitting_of_no_more_than_forty_five_minutes()
     {

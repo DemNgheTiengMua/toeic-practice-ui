@@ -154,7 +154,7 @@ public sealed class DynamicPathGenerationTests(DatabaseFixture database)
     /// across the assembly, so the fallback would depend on test order.
     /// </summary>
     private async Task<int> SeedLearnerAsync(
-        int certId, decimal weeklyHours = 6m, int daysToTarget = 210)
+        int certId, decimal weeklyHours = 6m, int daysToTarget = 210, string measuredBand = "B2", int scaledScore = 700)
     {
         var email = $"{Guid.NewGuid():N}@test.local";
         await database.SqlAsync($"""
@@ -173,10 +173,10 @@ public sealed class DynamicPathGenerationTests(DatabaseFixture database)
             INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
             VALUES (@u, @measExam, {certId}, 'graded',
                     DATEADD(DAY, -1, SYSDATETIMEOFFSET()), DATEADD(DAY, -1, SYSDATETIMEOFFSET()),
-                    DATEADD(DAY, -1, SYSDATETIMEOFFSET()), 700, 'B2', 'AttemptEngine', 1);
+                    DATEADD(DAY, -1, SYSDATETIMEOFFSET()), {scaledScore}, '{measuredBand}', 'AttemptEngine', 1);
             DECLARE @measAttempt INT = SCOPE_IDENTITY();
             INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore)
-            VALUES (@measAttempt, @measSkill, {certId}, 18, 700);
+            VALUES (@measAttempt, @measSkill, {certId}, 18, {scaledScore});
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -302,7 +302,9 @@ public sealed class DynamicPathGenerationTests(DatabaseFixture database)
         foreach (var week in Enumerable.Range(1, LearningPathPlanner.WindowWeeks))
         {
             var weekSteps = steps.Where(s => s.WeekNumber == week).ToList();
-            Assert.InRange(weekSteps.Count, LearningPathPlanner.MinimumStepsPerWeek, LearningPathPlanner.MaximumStepsPerWeek);
+            // #234: the count is arithmetic now, not a 3–5 bound; the invariant is that no sitting is
+            // outside a sitting's length and the week is not empty.
+            Assert.NotEmpty(weekSteps);
             Assert.All(weekSteps, s => Assert.InRange(s.EstimatedMinutes!.Value, 10, 45));
         }
     }
@@ -331,6 +333,83 @@ public sealed class DynamicPathGenerationTests(DatabaseFixture database)
 
         // The lighter pace is planned close to what the learner actually said they have.
         Assert.Equal(180, lightMinutes);
+    }
+
+    /// <summary>
+    /// #234 / PLC-51: the same learner pace produces <b>different</b> weeks when the runway and the
+    /// remaining band hours change. This is the wiring the pure tests cannot prove — that the plan reads
+    /// <c>ScoreBands.CumulativeStudyHours</c> and the target date rather than only the declared hours.
+    /// <para>
+    /// <b>The input that would pass a wrong version:</b> 6 h/week with 300 hours of band distance. A plan
+    /// that still keyed off the declared pace alone gives 360 minutes for every runway. 300 hours over
+    /// 10 weeks needs 30 h/week — above the declared 6 — so the week is the learner's 6 hours; over 300
+    /// weeks it needs 1 h/week, which the 1.5 h floor lifts, so the week is 90 minutes. Same learner,
+    /// same pace, two different weeks.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task The_runway_and_the_remaining_band_hours_change_the_week_not_just_the_declared_pace()
+    {
+        var certCode = Unique("DERIVED");
+        var (certId, _, _, _, _) = await SeedCertAsync(certCode);
+
+        // The certificate band and the skill's level are different axes (PRN-03): this learner's graded
+        // sitting reports band B1 and their reading skill sits at B2 (where the fixture's stock is).
+        // B1 (500 h) → B2 (800 h) is therefore 300 hours of band distance in both runs.
+        var tight = await SeedLearnerAsync(certId, weeklyHours: 6m, daysToTarget: 70, measuredBand: "B1");
+        var relaxed = await SeedLearnerAsync(certId, weeklyHours: 6m, daysToTarget: 2100, measuredBand: "B1");
+
+        var (paths, _, _, _, db) = CreateServices();
+        var tightPath = await paths.GeneratePathAsync(tight);
+        var relaxedPath = await paths.GeneratePathAsync(relaxed);
+
+        var tightMinutes = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == tightPath.LearnerPathId && s.WeekNumber == 1)
+            .SumAsync(s => s.EstimatedMinutes ?? 0);
+        var relaxedMinutes = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == relaxedPath.LearnerPathId && s.WeekNumber == 1)
+            .SumAsync(s => s.EstimatedMinutes ?? 0);
+
+        // 300 h over 10 weeks needs 30 h/week, above the 6 declared: the week is the learner's own 6 h.
+        Assert.Equal(360, tightMinutes);
+        // 300 h over 300 weeks needs 1 h/week, floored to 1.5: the week is 90 minutes.
+        Assert.Equal(90, relaxedMinutes);
+        Assert.True(tightMinutes > relaxedMinutes,
+            $"a 70-day runway planned {tightMinutes} min, a 2100-day runway {relaxedMinutes}");
+    }
+
+    /// <summary>
+    /// #234: every skill the plan serves is one the certificate examines. #240 distinguished
+    /// "not examined" from "not measured", and a skill the certificate does not examine is not a candidate
+    /// for a step at all.
+    /// <para>
+    /// <b>The input that would pass a wrong version:</b> a certificate whose <c>Skills</c> table holds one
+    /// reading skill while the canonical <c>Topics</c> table holds six reading and six listening topics.
+    /// A plan that iterated topics or modalities rather than the certificate's own skills would schedule a
+    /// listening step on a reading-only certificate — and this fixture is exactly that shape.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task Every_planned_skill_is_one_the_certificate_examines()
+    {
+        var certCode = Unique("EXAM");
+        var (certId, skillId, _, _, _) = await SeedCertAsync(certCode);
+        var userId = await SeedLearnerAsync(certId);
+
+        var (paths, _, _, _, db) = CreateServices();
+        var summary = await paths.GeneratePathAsync(userId);
+
+        var examined = await db.Skills.Where(s => s.CertId == certId).Select(s => s.SkillId).ToListAsync();
+        var planned = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId)
+            .Select(s => s.SkillId)
+            .Distinct()
+            .ToListAsync();
+
+        Assert.NotEmpty(planned);
+        Assert.All(planned, id => Assert.Contains(id, examined));
+        // This certificate examines exactly one skill, so the whole week is that skill's.
+        Assert.Equal([skillId], planned);
     }
 
     /// <summary>

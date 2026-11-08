@@ -370,6 +370,116 @@ public sealed partial class LearningPathService
         return lesson is null ? null : (lesson.LessonId, lesson.TopicId);
     }
 
+    /// <summary>
+    /// #234 / PLC-53: each skill's `θ_target − θ_current`, which is what the skew weights read and
+    /// therefore what decides who gets the largest share of the week.
+    /// <para>
+    /// <b>Both halves come from stored, certificate-owned data. No crosswalk is introduced.</b> The
+    /// current coordinate is <c>LearnerSkillStates.ContinuousCoordinate</c> — D15's single answer to
+    /// "where is this skill", read verbatim. The target coordinate is resolved from the certificate's
+    /// own cut-score table: the target band's scaled range is intersected with that skill's own cut
+    /// rows, and the overlapping row's level becomes the coordinate. That is the same table that
+    /// produces the current level, so the two halves cannot sit on different axes (PRN-03).
+    /// </para>
+    /// <para>
+    /// A skill with no stored state, or no cut row overlapping the target band, gets <c>null</c>: "no
+    /// evidence" is not "already at target", and a fabricated distance would point the week at a skill
+    /// nobody measured. Null takes the floor weight — the guaranteed step, never the largest share —
+    /// which is what a week planned on no evidence should do.
+    /// </para>
+    /// </summary>
+    private async Task<Dictionary<int, decimal?>> LoadDistancesToTargetAsync(
+        int userId, int certId, string targetBandCode, CancellationToken cancellationToken)
+    {
+        var distances = new Dictionary<int, decimal?>();
+
+        var current = await db.LearnerSkillStates
+            .AsNoTracking()
+            .Where(s => s.UserId == userId && s.CertId == certId)
+            .Select(s => new { s.SkillId, s.ContinuousCoordinate })
+            .ToListAsync(cancellationToken);
+
+        if (current.Count == 0)
+        {
+            return distances;
+        }
+
+        var targetBand = await db.ScoreBands
+            .AsNoTracking()
+            .Where(b => b.CertId == certId && b.Code == targetBandCode)
+            .Select(b => new { b.MinTotal, b.MaxTotal })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var version = await db.CefrCutScoreVersions
+            .AsNoTracking()
+            .Where(v => v.CertId == certId)
+            .OrderByDescending(v => v.TableVersion)
+            .Select(v => (int?)v.TableVersion)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var cuts = version is null
+            ? new List<(int SkillId, string CefrLevel, int? MinScaled, int MaxScaled)>()
+            : (await db.CefrCutScores
+                .AsNoTracking()
+                .Where(r => r.CertId == certId && r.TableVersion == version.Value && r.RowKind == "cut")
+                .Select(r => new { r.SkillId, r.CefrLevel, r.MinScaled, r.MaxScaled })
+                .ToListAsync(cancellationToken))
+                .Select(r => (r.SkillId, r.CefrLevel, r.MinScaled, r.MaxScaled))
+                .ToList();
+
+        foreach (var state in current)
+        {
+            var target = targetBand is null
+                ? null
+                : TargetCoordinateFor(
+                    cuts.Where(c => c.SkillId == state.SkillId).ToList(), targetBand.MinTotal, targetBand.MaxTotal);
+
+            distances[state.SkillId] = target is null ? null : target.Value - state.ContinuousCoordinate;
+        }
+
+        return distances;
+    }
+
+    /// <summary>
+    /// The coordinate a target band asks one skill for, read from the certificate's own cut rows.
+    /// <para>
+    /// The band's scaled range is intersected with each cut row; the largest overlap wins, and a tie
+    /// goes to the higher row because a band's upper edge is what "reaching" it means. The coordinate
+    /// is the middle of that level's span — <c>rank + 0.50</c> — which is the convention the worked
+    /// allocation itself states for a B2 target (`θ_target = 4.50`). It is not a name lookup: a
+    /// certificate whose bands carry no cut rows resolves nothing and gets no target.
+    /// </para>
+    /// </summary>
+    private static decimal? TargetCoordinateFor(
+        IReadOnlyList<(int SkillId, string CefrLevel, int? MinScaled, int MaxScaled)> rows,
+        int bandMin, int bandMax)
+    {
+        CefrLevel? bestLevel = null;
+        var bestOverlap = 0;
+
+        foreach (var row in rows)
+        {
+            if (row.MinScaled is not { } min)
+            {
+                continue;
+            }
+
+            var overlap = Math.Max(0, Math.Min(row.MaxScaled, bandMax) - Math.Max(min, bandMin));
+            if (overlap <= 0 || !CefrLevel.TryParseAuthored(row.CefrLevel, out var level))
+            {
+                continue;
+            }
+
+            if (overlap > bestOverlap || (overlap == bestOverlap && bestLevel is { } seen && level > seen))
+            {
+                bestOverlap = overlap;
+                bestLevel = level;
+            }
+        }
+
+        return bestLevel is { } found ? found.Rank + 0.5m : null;
+    }
+
     /// <summary>The published mock exam that covers this skill, or null. A mock section executes
     /// through <c>IAttemptEngine</c>, which serves a whole paper, so a certificate with no published
     /// mock plans no mock step rather than a step that can never be finished.</summary>

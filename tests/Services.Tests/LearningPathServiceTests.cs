@@ -305,10 +305,11 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             .OrderBy(s => s.StepId)
             .ToListAsync();
 
-        Assert.InRange(
-            steps.Count,
-            LearningPathPlanner.MinimumStepsPerWeek * LearningPathPlanner.WindowWeeks,
-            LearningPathPlanner.MaximumStepsPerWeek * LearningPathPlanner.WindowWeeks);
+        // #234: the old "3–5 steps a week" bound is gone with the count-first rule. What remains true is
+        // that every one of the four weeks has work in it, and that the four cover the window.
+        Assert.Equal(
+            Enumerable.Range(1, LearningPathPlanner.WindowWeeks).ToList(),
+            steps.Select(s => s.WeekNumber!.Value).Distinct().OrderBy(w => w).ToList());
         Assert.Equal("available", steps[0].Status);
         Assert.All(steps.Skip(1), s => Assert.Equal("locked", s.Status));
 
