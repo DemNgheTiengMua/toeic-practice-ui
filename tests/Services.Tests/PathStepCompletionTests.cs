@@ -427,7 +427,9 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         var summary = await paths.GeneratePathAsync(userId);
 
         var steps = await StepsAsync(db, summary.LearnerPathId!.Value);
-        Assert.True(steps.Count >= LearningPathPlanner.MinimumStepsPerWeek * LearningPathPlanner.WindowWeeks);
+        // #234: the old floor of 3 steps × 4 weeks is gone. The invariant the walk needs is that there is
+        // a plan to walk at all.
+        Assert.NotEmpty(steps);
 
         foreach (var step in steps)
         {

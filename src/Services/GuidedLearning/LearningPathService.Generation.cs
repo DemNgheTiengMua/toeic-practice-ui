@@ -63,7 +63,8 @@ public sealed partial class LearningPathService
         // per-skill cut scores. There is no template, no module and no section rank: a step is a
         // coordinate, and the skill's level is the axis it is pitched on.
         var skillLevels = await LoadSkillLevelsAsync(userId, activeCertId, cancellationToken);
-        var blocks = await BuildSkillPlanBlocksAsync(userId, activeCertId, skillLevels, cancellationToken);
+        var blocks = await BuildSkillPlanBlocksAsync(
+            userId, activeCertId, skillLevels, toBand, cancellationToken);
 
         if (blocks.Count == 0)
         {
@@ -78,7 +79,18 @@ public sealed partial class LearningPathService
 
         var weeklyHours = savedTarget?.WeeklyStudyHours ?? LearningPathPlanner.DefaultWeeklyHours;
 
-        var plan = LearningPathPlanner.Plan(weeklyHours, blocks);
+        // #234 / PLC-51: the week's volume is derived — `H_required` from the study hours between the
+        // starting and target bands over the runway, then `T_weekly`. The tier the learner's own mastery
+        // sets is what a sitting costs, so the count falls out of the minutes.
+        var fromHours = scoreBands.FirstOrDefault(b => b.Code == currentBand)?.CumulativeStudyHours;
+        var toHours = scoreBands.FirstOrDefault(b => b.Code == toBand)?.CumulativeStudyHours;
+        var remainingHours = fromHours is { } from && toHours is { } to && to > from ? to - from : (int?)null;
+        var daysRemaining = savedTarget?.TargetDate is { } targetDate
+            ? Math.Max(0, targetDate.DayNumber - DateOnly.FromDateTime(DateTime.UtcNow).DayNumber)
+            : 0;
+
+        var plan = LearningPathPlanner.Plan(
+            new LearningPathPlanner.WeeklyPacing(weeklyHours, remainingHours, daysRemaining), blocks);
 
         if (plan.Count == 0)
         {
@@ -225,7 +237,8 @@ public sealed partial class LearningPathService
     /// block at all ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â a step at that skill would have nothing to serve.
     /// </summary>
     private async Task<IReadOnlyList<SkillPlanBlock>> BuildSkillPlanBlocksAsync(
-        int userId, int certId, IReadOnlyDictionary<int, CefrLevel> skillLevels, CancellationToken cancellationToken)
+        int userId, int certId, IReadOnlyDictionary<int, CefrLevel> skillLevels, string targetBandCode,
+        CancellationToken cancellationToken)
     {
         var skills = await db.Skills
             .AsNoTracking()
@@ -236,6 +249,8 @@ public sealed partial class LearningPathService
             .ToListAsync(cancellationToken);
 
         var hints = await LoadPlacementTopicHintsAsync(userId, certId, cancellationToken);
+        // #234: the skew needs each skill's distance to the target, not just its level.
+        var distances = await LoadDistancesToTargetAsync(userId, certId, targetBandCode, cancellationToken);
         var blocks = new List<SkillPlanBlock>(skills.Count);
 
         foreach (var skill in skills)
@@ -270,7 +285,8 @@ public sealed partial class LearningPathService
                 lesson?.LessonId,
                 await LoadMockExamForSkillAsync(certId, skill.SkillId, cancellationToken),
                 weakAtLevel,
-                lesson?.TopicId));
+                lesson?.TopicId,
+                distances.TryGetValue(skill.SkillId, out var distance) ? distance : null));
         }
 
         // Weakest first: a cell marked Low outranks Developing, which outranks Mastered. Ties keep the
