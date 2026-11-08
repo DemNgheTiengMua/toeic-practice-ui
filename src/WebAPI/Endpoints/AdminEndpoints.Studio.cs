@@ -27,6 +27,21 @@ public static partial class AdminEndpoints
             }
         });
 
+        admin.MapGet("/exams/{examId:int}/assembly", async (
+            int examId,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                return Results.Ok(await exams.GetExamAssemblyAsync(examId, cancellationToken));
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
         admin.MapGet("/exams/{examId:int}/audit", async (
             int examId,
             IAdminExamService exams,

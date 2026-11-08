@@ -148,5 +148,6 @@ public sealed class PoolItemEndpointTests
         public Task<AdminQuestionGroupDto> CreateExamClusterAsync(int examId, CreateExamClusterRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<(Stream Stream, string ContentType, string FileName)> ExportExamPackageAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<ExamPreviewTakeView> GetExamPreviewTakeAsync(int examId, int? questionDisplayOrder, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<ExamAssemblyDto> GetExamAssemblyAsync(int examId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 }
