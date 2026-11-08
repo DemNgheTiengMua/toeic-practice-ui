@@ -3924,8 +3924,19 @@ CREATE VIEW vw_UserPurchaseTotals AS
   GROUP BY o.UserId;
 GO
 -- UI-34: weakness analysis combines exams AND practice ("45/78 questions" across both)
--- #187: a pool answer has no section, so it contributes no row here; the section axis stays exactly
--- what it names. Weakness by topic is #236's `vw_UserTopicAccuracy`, not this view.
+--
+-- #250: both answer shapes now contribute, and that is the whole change. The legacy branch joins
+-- Questions for its SectionId; the pool branch reaches a section through the paper binding, because
+-- ExamItems is the only place that says which section an item sat in. Before this, a pool answer was
+-- dropped by the INNER JOIN on Questions (its QuestionId is NULL), so a learner drilling the pool had
+-- every such answer silently missing from their weakness analysis.
+--
+-- A pool PRACTICE answer still contributes no row: an item is certificate-agnostic and section-free,
+-- and a free drill has no paper to read a section from. That is #187's stated boundary, not an
+-- oversight - the topic axis (vw_UserTopicAccuracy, D3) is where drill accuracy belongs.
+--
+-- Column names are unchanged on purpose: WeaknessAnalysisService, AiInsightService.Dashboard (L75,
+-- L198) and AiInsightService.Paths/Exams read UserId, SectionId, Answered and Correct by name.
 CREATE VIEW vw_UserSectionAccuracyAll AS
   SELECT x.UserId, x.SectionId, COUNT(x.IsCorrect) AS Answered,
          SUM(CASE WHEN x.IsCorrect = 1 THEN 1 ELSE 0 END) AS Correct
@@ -3934,15 +3945,35 @@ CREATE VIEW vw_UserSectionAccuracyAll AS
     FROM PracticeAnswers pa JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
     WHERE pa.SectionId IS NOT NULL
     UNION ALL
+    -- legacy attempt answer: the question row carries the section. Excludes a row that also pins a
+    -- version, because such a row is a POOL answer and is counted by the branch below - counting it
+    -- here too is exactly the double count that doubled every total when this view was first
+    -- rewritten. A pool answer keeps a QuestionId for the legacy reader that still resolves it, so
+    -- the shapes overlap unless each branch states which one it owns.
     SELECT a.UserId, q.SectionId, aa.IsCorrect
     FROM AttemptAnswers aa
     JOIN ExamAttempts a ON a.AttemptId = aa.AttemptId
     JOIN Questions q    ON q.QuestionId = aa.QuestionId
+    WHERE a.Status = 'graded' AND aa.ItemVersionId IS NULL
+    UNION ALL
+    -- #250: pool attempt answer - the binding names the section the item sat in
+    SELECT a.UserId, ei.SectionId, aa.IsCorrect
+    FROM AttemptAnswers aa
+    JOIN ExamAttempts a ON a.AttemptId = aa.AttemptId
+    JOIN ExamItems   ei ON ei.ExamId = aa.ExamId AND ei.ItemVersionId = aa.ItemVersionId
     WHERE a.Status = 'graded'
   ) x
   GROUP BY x.UserId, x.SectionId;
 GO
 -- UI-34: "Frequently missed question types" — same union, by category
+--
+-- #250: unchanged in shape, and deliberately so. D3 replaces this view with vw_UserTopicAccuracy
+-- grouped by (TopicId, CefrLevel), which is #243's ticket; until that lands the CategoryId axis is
+-- what the weakness page renders, so it keeps reading the one table that carries CategoryId. It is
+-- NOT rewritten onto the pool here because the pool has no category - Items.TopicId is the
+-- replacement concept, and swapping the key would change what the page groups by, which is a
+-- learner-visible change this ticket is explicitly out of scope for ("it does not change what a
+-- learner sees").
 CREATE VIEW vw_UserCategoryAccuracy AS
   SELECT x.UserId, q.CategoryId, COUNT(x.IsCorrect) AS Answered,
          SUM(CASE WHEN x.IsCorrect = 1 THEN 1 ELSE 0 END) AS Correct
