@@ -288,7 +288,7 @@ public static partial class PlacementEndpoints
                     r.SkillId,
                     r.SkillCode,
                     r.SkillName,
-                    r.Status.ToString(),
+                    r.Status.ToCode(),
                     r.Level?.Code,
                     r.PositionInBand,
                     r.MeasuredAt,
