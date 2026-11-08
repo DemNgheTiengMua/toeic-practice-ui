@@ -17,4 +17,14 @@ public sealed class ExamEditorPresentation(AdminExamDetailDto? detail)
     public int Required { get; } = detail?.QuestionCount ?? detail?.SectionProgress.Sum(s => s.ExpectedQuestionCount) ?? 0;
     public IReadOnlyDictionary<int, string> BadgeClasses { get; } = detail?.SectionProgress.ToDictionary(s => s.SectionId,
         s => s.IsComplete ? "badge badge--success" : "badge badge--warning") ?? [];
+
+    /// <summary>
+    /// #220: the section's skill name. The page used to print <c>@s.Modality</c> - the enum member's
+    /// own name - which happens to read "Listening" today and would read "ListeningComprehension" the
+    /// day a member is renamed. Keyed by section, like the counts beside it.
+    /// </summary>
+    public IReadOnlyDictionary<int, string> ModalityLabels { get; } = detail?.SectionProgress.ToDictionary(
+        s => s.SectionId,
+        s => Contracts.DisplayLabels.LabelFor(s.Modality, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance))
+        ?? [];
 }

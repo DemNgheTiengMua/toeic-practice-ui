@@ -113,27 +113,9 @@ else
               <td>@(order.GatewayTxnRef ?? "—")</td>
               <td>@Model.Dates[order.CreatedAt].Full</td>
               <td>
-                @switch (order.Status)
-                {
-                  case OrderStatusDto.Paid:
-                    <span class="badge badge--success">Paid</span>
-                    break;
-                  case OrderStatusDto.Reconciling:
-                    <span class="badge badge--warning">Reconciling</span>
-                    break;
-                  case OrderStatusDto.Pending:
-                    <span class="badge">Pending</span>
-                    break;
-                  case OrderStatusDto.Failed:
-                    <span class="badge badge--danger">Failed</span>
-                    break;
-                  case OrderStatusDto.Expired:
-                    <span class="badge">Expired</span>
-                    break;
-                  default:
-                    <span class="badge">@order.Status.ToWireCode()</span>
-                    break;
-                }
+                @* #220: the label comes from the display registry; the class stays a class. This switch
+                   used to re-implement the registry and print a wire code in its default arm. *@
+                <span class="@Model.StatusClasses[order.OrderId]">@Model.StatusLabels[order.OrderId]</span>
               </td>
               <td>
                 <div class="row">

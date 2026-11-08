@@ -31,7 +31,7 @@
             var badgeClass = presentation.BadgeClasses[s.SectionId];
             <tr>
               <td><strong>@s.SectionName</strong> <span class="text-xs text-muted">(@s.SectionCode)</span></td>
-              <td>@s.Modality</td>
+              <td>@presentation.ModalityLabels[s.SectionId]</td>
               <td>@s.QuestionCount</td>
               <td>@presentation.ExpectedCounts[s.SectionId]</td>
               <td><span class="@badgeClass">@s.StatusText</span></td>

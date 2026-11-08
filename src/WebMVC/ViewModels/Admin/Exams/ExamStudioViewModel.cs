@@ -14,6 +14,12 @@ public sealed class ExamStudioViewModel
     public int RequiredQuestions { get; }
     public string ConfigurationJson { get; }
     public string CertificateCode => Detail.CertCode.ToUpperInvariant();
+
+    /// <summary>
+    /// #220: the placard used to render <c>@Model.Detail.Purpose</c>, which prints the enum member -
+    /// "SpeakingPractice" - between two bullets of a sentence. The registry owns the word now.
+    /// </summary>
+    public string PurposeLabel => DisplayLabels.LabelFor(Detail.Purpose, NullLog);
     public IReadOnlyDictionary<int, string?> GroupImageUrls { get; }
     public IReadOnlyDictionary<int, string> GroupSliceReadouts { get; }
     public IReadOnlyList<StudioAuditIssueViewModel> AuditIssues { get; }
@@ -57,4 +63,7 @@ public sealed class ExamStudioViewModel
         startMs is >= 0 && endMs > startMs
             ? $"{TimeSpan.FromMilliseconds(startMs.Value):mm\\:ss\\.fff} → {TimeSpan.FromMilliseconds(endMs!.Value):mm\\:ss\\.fff}"
             : "No slice — the whole track plays";
+
+    private static readonly Microsoft.Extensions.Logging.ILogger NullLog =
+        Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
 }

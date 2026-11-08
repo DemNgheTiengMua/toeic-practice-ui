@@ -131,7 +131,7 @@
                   {
                       <tr>
                         <td>@Model.Dates[item.CreatedAt].Full</td>
-                        <td><code>@item.Reason</code></td>
+                        <td data-reason="@item.Reason.ToWireCode()">@Model.LedgerReasonLabels[item.TxnId]</td>
                         <td><strong class="@Model.LedgerDeltaClasses[item.TxnId]">@Model.LedgerDeltaLabels[item.TxnId]</strong></td>
                         <td>@(item.OrderCode ?? "—")</td>
                         <td>@(item.Note ?? "—")</td>
