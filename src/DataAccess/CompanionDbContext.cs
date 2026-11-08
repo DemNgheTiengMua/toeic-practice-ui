@@ -90,6 +90,9 @@ public partial class CompanionDbContext : DbContext
 
     public virtual DbSet<LearnerPathStep> LearnerPathSteps { get; set; }
 
+    /// <summary>#233: the frozen history of closed weeks.</summary>
+    public virtual DbSet<LearnerPathWeek> LearnerPathWeeks { get; set; }
+
 
     public virtual DbSet<Lesson> Lessons { get; set; }
 

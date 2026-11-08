@@ -38,7 +38,7 @@ INSERT INTO @expected (FactCode, Coverage) VALUES
   ('stratum_decision',      'covered'),
   ('topic_capability',      'awaiting_table'),
   ('step_closure',          'covered'),
-  ('window_synthesis',      'awaiting_table'),
+  ('window_synthesis',      'covered'),
   ('credit_movement',       'exempt');
 
 IF EXISTS (
@@ -57,17 +57,17 @@ IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered' AND Covere
   THROW 50000, 'EXPECT_REJECT FAILED: a fact claims coverage but names no table, so its guard protects nothing', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage <> 'covered' AND CoveredTable IS NOT NULL) <> 0
   THROW 50000, 'EXPECT_REJECT FAILED: a fact that is not covered names a table, which overstates the mechanism', 1;
--- #211 narrowed this from three to four, #212 added a fifth and #206 a sixth; it is now 6/2/1:
--- creating a table and moving it out of `awaiting_table` is the only direction this split may ever
--- move. The three per-fact counts are asserted separately, not just the total, so a swap that kept the
--- sum would still fail.
-IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 6
-  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the six tables that exist today (#206 added the stratum decision)', 1;
-IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'awaiting_table') <> 2
-  THROW 50000, 'EXPECT_REJECT FAILED: the awaiting-table set is not the two facts whose table no ticket has created yet', 1;
+-- #211 narrowed this from three to four, #212 added a fifth, #206 a sixth and #233 a seventh; it is
+-- now 7/1/1: creating a table and moving it out of `awaiting_table` is the only direction this split
+-- may ever move. The three per-fact counts are asserted separately, not just the total, so a swap that
+-- kept the sum would still fail.
+IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'covered') <> 7
+  THROW 50000, 'EXPECT_REJECT FAILED: the covered set is not the seven tables that exist today (#233 added the archived week)', 1;
+IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'awaiting_table') <> 1
+  THROW 50000, 'EXPECT_REJECT FAILED: the awaiting-table set is not the one fact whose table no ticket has created yet', 1;
 IF (SELECT COUNT(*) FROM DerivedFactOwners WHERE Coverage = 'exempt') <> 1
   THROW 50000, 'EXPECT_REJECT FAILED: the exempt set is not the one fact that already carries its own guard', 1;
-PRINT 'the registry names nine facts: six covered now, two awaiting a table, one exempt';
+PRINT 'the registry names nine facts: seven covered now, one awaiting a table, one exempt';
 
 BEGIN TRY
   INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable)
@@ -498,8 +498,8 @@ DECLARE @covered TABLE (TableName SYSNAME NOT NULL PRIMARY KEY);
 INSERT INTO @covered (TableName)
   SELECT CoveredTable FROM DerivedFactOwners WHERE Coverage = 'covered';
 
-IF (SELECT COUNT(*) FROM @covered) <> 6
-  THROW 50000, 'EXPECT_REJECT FAILED: the covered table set is not the six this schema ships (#206 added ReviewStrata)', 1;
+IF (SELECT COUNT(*) FROM @covered) <> 7
+  THROW 50000, 'EXPECT_REJECT FAILED: the covered table set is not the seven this schema ships (#233 added the archived week)', 1;
 
 DECLARE @t SYSNAME, @missing INT = 0;
 DECLARE tbl CURSOR LOCAL FAST_FORWARD FOR SELECT TableName FROM @covered;
@@ -524,8 +524,8 @@ BEGIN
   FETCH NEXT FROM tbl INTO @t;
 END
 CLOSE tbl; DEALLOCATE tbl;
-IF @missing <> 6
-  THROW 50000, 'EXPECT_REJECT FAILED: the column audit did not visit the six covered tables', 1;
+IF @missing <> 7
+  THROW 50000, 'EXPECT_REJECT FAILED: the column audit did not visit the seven covered tables', 1;
 PRINT 'every covered table carries a writer column and a projection version';
 
-PRINT '#191/#212/#206: nine facts registered, six enforced today, and each guard refuses a valid write by the wrong writer';
+PRINT '#191/#212/#206/#233: nine facts registered, seven enforced today, and each guard refuses a valid write by the wrong writer';

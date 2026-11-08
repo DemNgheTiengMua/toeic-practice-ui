@@ -2112,6 +2112,11 @@ IF NOT EXISTS (SELECT 1 FROM LearnerPaths WHERE UserId = @learner AND CertId = @
 BEGIN
   DECLARE @placeId INT = (SELECT TOP 1 PlacementId FROM PlacementTests WHERE UserId = @learner AND CertId = @toeicCert AND Status = 'done' ORDER BY TakenAt DESC);
 
+  -- #233: the window columns are left to their schema defaults on purpose. A demo path whose window
+  -- started 14 days ago would archive its own seeded weeks on the first screen that reads it, which
+  -- makes the demo's step set depend on when the seed was loaded - and `AttemptEngineTests` reloads
+  -- this file mid-suite. Starting the window today (the default) keeps the seeded weeks live and the
+  -- seed deterministic; the slide is exercised by PathWindowSynthesizerTests, not by the demo data.
   INSERT INTO LearnerPaths (UserId, CertId, CurrentBandCode, PlacementId, Status, StartedAt)
   VALUES (@learner, @toeicCert, 'B1', @placeId, 'active', DATEADD(DAY, -14, SYSDATETIMEOFFSET()));
   DECLARE @lpId INT = SCOPE_IDENTITY();

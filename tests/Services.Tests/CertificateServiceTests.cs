@@ -115,7 +115,9 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // #206: three more, 54 -> 57 - trg_ReviewStrata_SingleWriter (the sixth covered derived fact,
         // W-01's blind-solve order on ReviewSampleItems, and the batch-scope rule that stops a stratum
         // sampling another author's stock).
-        Assert.Equal(57, triggerCount);
+        // #233: one more, 57 -> 58 - trg_LearnerPathWeeks_SingleWriter, the seventh covered derived fact
+        // and the archive's immutability guard.
+        Assert.Equal(58, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
@@ -152,6 +154,9 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
                      "trg_ReviewStrata_SingleWriter",
                      "trg_ReviewSampleItems_SolveIsBlind",
                      "trg_ReviewSampleItems_ItemIsInItsBatch",
+                     // #233: the seventh covered derived fact, and the one that makes a closed week
+                     // immutable rather than a flag nobody checks.
+                     "trg_LearnerPathWeeks_SingleWriter",
                  })
         {
             var present = await db.Database

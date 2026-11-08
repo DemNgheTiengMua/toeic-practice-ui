@@ -50,8 +50,8 @@ INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable, 
    N'One place closes a step, so the unlock rule cannot drift from the closure.'),
   ('stratum_decision',       'StratifiedAuditService', 'covered',     'ReviewStrata',
    N'#206: the audit outcome is derived from the sample verdicts, not typed beside them, so one service states it.'),
-  ('window_synthesis',       'PathWindowSynthesizer', 'awaiting_table', NULL,
-   N'#212 creates the window rows; a synthesised week has no table yet.'),
+  ('window_synthesis',       'PathWindowSynthesizer', 'covered',        'LearnerPathWeeks',
+   N'#233: one row per archived week. The snapshot is derived from the week closed steps and is written by the slide alone, so a late answer cannot restate it.'),
   ('credit_movement',        'CreditLedger',       'exempt',         NULL,
    N'CreditTransactions is append-only and immutable already (trg_*_AppendOnly, trg_*_NoRewrite); SRS D-09 refuses a second mutation guard.');
 GO
@@ -2775,6 +2775,26 @@ CREATE TABLE LearnerPaths (
   Status          VARCHAR(10) NOT NULL DEFAULT 'active'
     CONSTRAINT CK_LearnerPaths_Status CHECK (Status IN ('active','completed','reset')),
   StartedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- #233 / D10: THE FOUR-WEEK WINDOW LIVES HERE.
+  --
+  -- WindowStartDate is the calendar day week `ActiveWeek` began. `WindowNumber` alone is not enough:
+  -- week 1 next month is a different week, so every archived week is keyed by its own number (see
+  -- LearnerPathWeeks below), and the live window is the span [ActiveWeek, ActiveWeek + 3].
+  --
+  -- #232's closing comment left these to #233: a path with no window has no close rule, so its weeks
+  -- can neither slide nor archive.
+  --
+  -- The default keeps the demo seed and the diagnostic benchmark loadable: a row written by a seed or
+  -- by hand starts its window on the day it was created, at week 1, and slides from there.
+  WindowStartDate DATE NOT NULL
+    CONSTRAINT DF_Paths_WindowStartDate DEFAULT CAST(SYSDATETIMEOFFSET() AS DATE),
+  -- The first live week's number. It only ever moves forward, and only when a week closes.
+  ActiveWeek      INT NOT NULL CONSTRAINT DF_Paths_ActiveWeek DEFAULT 1
+    CONSTRAINT CK_Paths_ActiveWeek CHECK (ActiveWeek >= 1),
+  -- #233: how many times the window has slid. The slide declares the synthesis writer; this column is
+  -- what makes two slides at the same instant collide instead of synthesising two weeks.
+  WindowSlides    INT NOT NULL CONSTRAINT DF_Paths_WindowSlides DEFAULT 0
+    CONSTRAINT CK_Paths_WindowSlides CHECK (WindowSlides >= 0),
   -- composite target so CreditTransactions can prove the charged user owns the path (H-1):
   CONSTRAINT UQ_LearnerPaths_Id_User UNIQUE (LearnerPathId, UserId),
   -- #232: composite target so every step's carried-down CertId is this path's own, and the step's
@@ -2783,6 +2803,74 @@ CREATE TABLE LearnerPaths (
   -- UI-24: the placement must be this user's own
   CONSTRAINT FK_LearnerPaths_PlacementUser FOREIGN KEY (PlacementId, UserId) REFERENCES PlacementTests(PlacementId, UserId)
 );
+GO
+-- #233 / D10: A COMPLETED WEEK IS HISTORY NOBODY CAN REWRITE, and it is a row rather than a flag.
+--
+-- The ticket's third trap is "immutability asserted by a flag nobody checks". So the archived week is
+-- its own row, with the numbers copied into it at the instant it closes, and the trigger below refuses
+-- every UPDATE and every DELETE. A late answer arriving for a closed step therefore has nowhere to
+-- write its change: the week's row is frozen, and the step's own row is on a week that is no longer
+-- live (PathWindow.IsLive is false for it), so the closure writer refuses it too.
+--
+-- Why one row per week rather than the step rows themselves: the step is the plan, the week is what
+-- happened. A week archived on schedule is archived *partially* - carrying its unfinished steps
+-- forward would rewrite the plan, and rewriting the plan's steps is exactly what D10 forbids. The
+-- snapshot states how the week actually went; the unfinished topics are re-queued in the new week.
+CREATE TABLE LearnerPathWeeks (
+  LearnerPathWeekId      INT IDENTITY(1,1) PRIMARY KEY,
+  LearnerPathId          INT NOT NULL,
+  CertId                 INT NOT NULL,
+  -- the week this history belongs to, in the path's own numbering. A number that slides back out of
+  -- the live window is what makes "which week was that" answerable a year later.
+  WeekNumber             INT NOT NULL CONSTRAINT CK_PathWeeks_Week CHECK (WeekNumber >= 1),
+  -- the calendar span the week was open for. Both are facts about the close, not about today.
+  StartedOn              DATE NOT NULL,
+  ClosedOn               DATE NOT NULL,
+  -- which close condition fired. Both close the week; only one of them says the learner did the work.
+  CloseReason            VARCHAR(16) NOT NULL
+    CONSTRAINT CK_PathWeeks_CloseReason CHECK (CloseReason IN ('all_done','calendar')),
+  PlannedSteps           INT NOT NULL CONSTRAINT CK_PathWeeks_Planned CHECK (PlannedSteps >= 0),
+  CompletedSteps         INT NOT NULL CONSTRAINT CK_PathWeeks_Completed CHECK (CompletedSteps >= 0),
+  PlannedMinutes         INT NOT NULL CONSTRAINT CK_PathWeeks_Minutes CHECK (PlannedMinutes >= 0),
+  -- measured, never guessed: NULL when no step in the week produced a score
+  AverageAccuracyPct     DECIMAL(5,2) NULL
+    CONSTRAINT CK_PathWeeks_Accuracy CHECK (AverageAccuracyPct IS NULL OR AverageAccuracyPct BETWEEN 0 AND 100),
+  -- the topics this week left unmastered, so "re-queued" is checkable against what was archived
+  RequeuedTopicIdsJson   NVARCHAR(400) NULL,
+  ArchivedAt             DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- ADR-0012: the archive is a derived fact with exactly one writer, declared on the write.
+  WrittenByService       VARCHAR(64) NULL,
+  ProjectionVersion      INT NOT NULL CONSTRAINT DF_PathWeeks_ProjectionVersion DEFAULT 0,
+  CONSTRAINT UQ_PathWeeks_Path_Week UNIQUE (LearnerPathId, WeekNumber),
+  CONSTRAINT FK_PathWeeks_PathCert FOREIGN KEY (LearnerPathId, CertId)
+    REFERENCES LearnerPaths(LearnerPathId, CertId)
+);
+GO
+-- ADR-0012 / PRN-01: the writer is a column on the write, never sp_set_session_context.
+--
+-- The `UPDATE(WrittenByService)` half of the idiom exists to catch a second writer that changed only a
+-- value and inherited the previous statement's name. Here it is superseded by a stronger rule rather
+-- than omitted: an archived week is a history row, so it is written once and never updated at all.
+-- `deleted` is non-empty only for an UPDATE or a DELETE, so the first THROW covers both, and a second
+-- writer cannot reach the UPDATE half because no UPDATE is legal. What remains is the declaration
+-- check on the one INSERT that is allowed.
+CREATE TRIGGER trg_LearnerPathWeeks_SingleWriter
+ON LearnerPathWeeks AFTER INSERT, UPDATE, DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+
+  IF EXISTS (SELECT 1 FROM deleted)
+    THROW 50077, 'An archived week is history: it may be inserted once and never updated or deleted, by any writer.', 1;
+
+  DECLARE @owner VARCHAR(64) =
+    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'window_synthesis');
+
+  IF EXISTS (SELECT 1 FROM inserted i WHERE ISNULL(i.WrittenByService, '') <> @owner)
+    THROW 50078, 'The archived week has exactly one writer, PathWindowSynthesizer, and the write must declare it.', 1;
+
+  IF EXISTS (SELECT 1 FROM inserted i WHERE i.ProjectionVersion <= 0)
+    THROW 50079, 'An archived week declares the projection version that produced it; zero is not a version.', 1;
+END;
 GO
 -- ADR-0004: declared here because AiInsights (Domain 8) is created before LearnerPaths (Domain 9).
 -- Composite so a path insight must be about this same learner's own path.
@@ -2842,9 +2930,15 @@ CREATE TABLE LearnerPathSteps (
   Score           DECIMAL(6,2) NULL,
   StartedAt       DATETIMEOFFSET NULL,
   CompletedAt     DATETIMEOFFSET NULL,
-  -- #154: the planning week (1-4) this step belongs to. Nullable because rows written by hand or by
-  -- seed have no plan behind them; a generated step always carries both numbers.
-  WeekNumber       INT NULL CONSTRAINT CK_Steps_Week CHECK (WeekNumber IS NULL OR WeekNumber BETWEEN 1 AND 4),
+  -- #154: the planning week this step belongs to. Nullable because rows written by hand or by seed have
+  -- no plan behind them; a generated step always carries both numbers.
+  --
+  -- #233 / D10: this was `BETWEEN 1 AND 4`, which is the fixed-block model the four-week window
+  -- replaces. The window is *live weeks 1-4*, not *week numbers 1-4*: after the first slide the far
+  -- end is week 5, then 6, and a CHECK capping it at 4 would refuse to synthesise any week after the
+  -- first. The live span is enforced where it belongs - in PathWindow.IsLive, over the path's own
+  -- ActiveWeek - because a week number is history and a live window is a position.
+  WeekNumber       INT NULL CONSTRAINT CK_Steps_Week CHECK (WeekNumber IS NULL OR WeekNumber >= 1),
   -- #232 / D10: absolute ordering inside the week. Ordering is pedagogical (lesson -> blocked
   -- practice -> interleaved review, alternating skills across the timeline), so it is a field the
   -- planner sets, never the row's insertion order. #233 packs weeks to a budget; it orders by this.

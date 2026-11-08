@@ -63,8 +63,15 @@ public sealed partial class LearningPathService
         // per-skill cut scores. There is no template, no module and no section rank: a step is a
         // coordinate, and the skill's level is the axis it is pitched on.
         var skillLevels = await LoadSkillLevelsAsync(userId, activeCertId, cancellationToken);
-        var blocks = await BuildSkillPlanBlocksAsync(
-            userId, activeCertId, skillLevels, toBand, cancellationToken);
+
+        var targetBand = scoreBands.FirstOrDefault(b => b.Code == toBand);
+        var targetAccuracy = LearningPathPlanner.TargetAccuracyFor(
+            isTopBand: targetBand is not null && targetBand.DisplayOrder >= scoreBands.Max(b => b.DisplayOrder));
+
+        // #233: one place resolves the pacing and the blocks, shared with the window's slide, so a
+        // synthesised week is sized by the same arithmetic as the plan it extends.
+        var (pacing, blocks) = await ResolvePacingAndBlocksAsync(
+            userId, activeCertId, savedTarget, currentBand, toBand, scoreBands, skillLevels, cancellationToken);
 
         if (blocks.Count == 0)
         {
@@ -73,24 +80,7 @@ public sealed partial class LearningPathService
                 "This certificate has no skill with a level and drillable stock yet, so a path would have no steps. Author content for at least one skill first.");
         }
 
-        var targetBand = scoreBands.FirstOrDefault(b => b.Code == toBand);
-        var targetAccuracy = LearningPathPlanner.TargetAccuracyFor(
-            isTopBand: targetBand is not null && targetBand.DisplayOrder >= scoreBands.Max(b => b.DisplayOrder));
-
-        var weeklyHours = savedTarget?.WeeklyStudyHours ?? LearningPathPlanner.DefaultWeeklyHours;
-
-        // #234 / PLC-51: the week's volume is derived — `H_required` from the study hours between the
-        // starting and target bands over the runway, then `T_weekly`. The tier the learner's own mastery
-        // sets is what a sitting costs, so the count falls out of the minutes.
-        var fromHours = scoreBands.FirstOrDefault(b => b.Code == currentBand)?.CumulativeStudyHours;
-        var toHours = scoreBands.FirstOrDefault(b => b.Code == toBand)?.CumulativeStudyHours;
-        var remainingHours = fromHours is { } from && toHours is { } to && to > from ? to - from : (int?)null;
-        var daysRemaining = savedTarget?.TargetDate is { } targetDate
-            ? Math.Max(0, targetDate.DayNumber - DateOnly.FromDateTime(DateTime.UtcNow).DayNumber)
-            : 0;
-
-        var plan = LearningPathPlanner.Plan(
-            new LearningPathPlanner.WeeklyPacing(weeklyHours, remainingHours, daysRemaining), blocks);
+        var plan = LearningPathPlanner.Plan(pacing, blocks);
 
         if (plan.Count == 0)
         {
@@ -112,7 +102,12 @@ public sealed partial class LearningPathService
             CurrentBandCode = currentBand,
             PlacementId = latestPlacement?.PlacementId,
             Status = "active",
-            StartedAt = DateTimeOffset.UtcNow
+            StartedAt = DateTimeOffset.UtcNow,
+            // #233: the window opens today and its first live week is 1. Named explicitly so a plan is
+            // never built against the schema's insert default by accident.
+            WindowStartDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            ActiveWeek = 1,
+            WindowSlides = 0
         };
 
         try
@@ -172,6 +167,44 @@ public sealed partial class LearningPathService
         await db.SaveChangesAsync(cancellationToken);
 
         return await GetActivePathAsync(userId, cancellationToken);
+    }
+
+    /// <summary>
+    /// #233: the pacing and the blocks a week is planned from, in one place.
+    /// <para>
+    /// Generation calls this for its first four weeks and the window's slide calls it for the week it
+    /// appends, so a synthesised week is sized and skewed by the same arithmetic as the plan it
+    /// extends. Re-reading skill levels on each call is deliberate: the far end must plan from what the
+    /// learner can do <b>now</b>, which is the whole reason a slide synthesises instead of copying.
+    /// </para>
+    /// </summary>
+    private async Task<(LearningPathPlanner.WeeklyPacing Pacing, IReadOnlyList<SkillPlanBlock> Blocks)>
+        ResolvePacingAndBlocksAsync(
+            int userId,
+            int certId,
+            TargetBand? savedTarget,
+            string currentBand,
+            string toBand,
+            IReadOnlyList<ScoreBand> scoreBands,
+            IReadOnlyDictionary<int, CefrLevel>? skillLevels,
+            CancellationToken cancellationToken)
+    {
+        var levels = skillLevels ?? await LoadSkillLevelsAsync(userId, certId, cancellationToken);
+        var blocks = await BuildSkillPlanBlocksAsync(userId, certId, levels, toBand, cancellationToken);
+
+        var weeklyHours = savedTarget?.WeeklyStudyHours ?? LearningPathPlanner.DefaultWeeklyHours;
+
+        // #234 / PLC-51: the week's volume is derived — `H_required` from the study hours between the
+        // starting and target bands over the runway, then `T_weekly`. The tier the learner's own mastery
+        // sets is what a sitting costs, so the count falls out of the minutes.
+        var fromHours = scoreBands.FirstOrDefault(b => b.Code == currentBand)?.CumulativeStudyHours;
+        var toHours = scoreBands.FirstOrDefault(b => b.Code == toBand)?.CumulativeStudyHours;
+        var remainingHours = fromHours is { } from && toHours is { } to && to > from ? to - from : (int?)null;
+        var daysRemaining = savedTarget?.TargetDate is { } targetDate
+            ? Math.Max(0, targetDate.DayNumber - DateOnly.FromDateTime(DateTime.UtcNow).DayNumber)
+            : 0;
+
+        return (new LearningPathPlanner.WeeklyPacing(weeklyHours, remainingHours, daysRemaining), blocks);
     }
 
     /// <summary>

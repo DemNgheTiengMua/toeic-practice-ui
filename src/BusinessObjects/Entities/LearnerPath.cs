@@ -34,6 +34,20 @@ public partial class LearnerPath
 
     public DateTimeOffset StartedAt { get; set; }
 
+    /// <summary>
+    /// #233 / D10: the day the live window's first week began. With <see cref="ActiveWeek"/> this is
+    /// the whole close rule's input: a week closes when the calendar crosses day 8, or when all its
+    /// steps are done (<see cref="PathWindow.DueSlides"/>).
+    /// </summary>
+    public DateOnly WindowStartDate { get; set; }
+
+    /// <summary>#233: the first live week. Only ever moves forward, and only when a week closes.</summary>
+    public int ActiveWeek { get; set; } = 1;
+
+    /// <summary>#233: how many times the window has slid. A second slide at the same instant sees this
+    /// move and archives nothing twice.</summary>
+    public int WindowSlides { get; set; }
+
     [InverseProperty("LearnerPath")]
     public virtual ICollection<AiInsight> AiInsights { get; set; } = new List<AiInsight>();
 
@@ -46,6 +60,10 @@ public partial class LearnerPath
 
     [InverseProperty("LearnerPath")]
     public virtual ICollection<LearnerPathStep> LearnerPathSteps { get; set; } = new List<LearnerPathStep>();
+
+    /// <summary>#233: the weeks this path has closed, frozen by <c>trg_LearnerPathWeeks_SingleWriter</c>.</summary>
+    [InverseProperty("LearnerPath")]
+    public virtual ICollection<LearnerPathWeek> LearnerPathWeeks { get; set; } = new List<LearnerPathWeek>();
 
     [ForeignKey("PlacementId, UserId")]
     [InverseProperty("LearnerPaths")]
