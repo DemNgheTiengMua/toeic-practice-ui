@@ -42,8 +42,20 @@ public sealed class AudioEquipmentGateTests
     private static string MicrophoneView() =>
         View("Shared/_AudioEquipmentCheck.cshtml") + "\n" + View("Shared/_AudioPermissionStates.cshtml");
 
+    /// <summary>
+    /// Reads a browser script with its line endings normalised to LF.
+    /// <para>
+    /// <b>Why normalise.</b> A checkout on Windows writes CRLF while the file in the repo is LF, so a
+    /// regex written against <c>\n</c> matches on one machine and not the other. That is not a code
+    /// defect and it must not read as one: this exact regex passed on the #221 branch and failed the
+    /// moment the branch was merged on a Windows checkout. Normalising here means every assertion in
+    /// this file depends on the script's content, not on the platform that cloned it.
+    /// </para>
+    /// </summary>
     private static string Script(string relative) =>
-        File.ReadAllText(Path.Combine(RepoRoot, "src", "WebMVC", "wwwroot", "js", relative));
+        File.ReadAllText(Path.Combine(RepoRoot, "src", "WebMVC", "wwwroot", "js", relative))
+            .Replace("\r\n", "\n", StringComparison.Ordinal);
+
 
     // ---------------------------------------------------------------- scoping
 
