@@ -14,6 +14,15 @@ public interface IPlacementClient
     Task<PreflightStatusDto> GetPlacementPreflightStatusAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) => GetPlacementPreflightStatusAsync(placementId, cancellationToken);
     Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder, CancellationToken cancellationToken = default);
     Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder, string bearerToken, CancellationToken cancellationToken = default) => GetPlacementTakeAsync(placementId, questionDisplayOrder, cancellationToken);
+    /// <summary>#216 / PLC-14: the returning learner's summary, before choosing resume or abandon.</summary>
+    Task<PlacementResumeViewDto> GetPlacementResumeAsync(int placementId, CancellationToken cancellationToken = default);
+    Task<PlacementResumeViewDto> GetPlacementResumeAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) => GetPlacementResumeAsync(placementId, cancellationToken);
+    /// <summary>#216 / PLC-14: explicit abandon, the lifecycle act the resume screen offers.</summary>
+    Task AbandonPlacementAsync(int placementId, CancellationToken cancellationToken = default);
+    Task AbandonPlacementAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) => AbandonPlacementAsync(placementId, cancellationToken);
+    /// <summary>#216 / PLC-15: one interrupted recording. Idempotent per session token.</summary>
+    Task<RecordingDecisionDto> RecordPlacementRecordingInterruptionAsync(int placementId, RecordingInterruptionRequest request, CancellationToken cancellationToken = default);
+    Task<RecordingDecisionDto> RecordPlacementRecordingInterruptionAsync(int placementId, RecordingInterruptionRequest request, string bearerToken, CancellationToken cancellationToken = default) => RecordPlacementRecordingInterruptionAsync(placementId, request, cancellationToken);
     Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default);
     Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) => SavePlacementAnswerAsync(placementId, questionId, request, cancellationToken);
     Task<SavePlacementDraftResponseDto> SavePlacementDraftAsync(int placementId, SavePlacementDraftRequestDto request, CancellationToken cancellationToken = default);

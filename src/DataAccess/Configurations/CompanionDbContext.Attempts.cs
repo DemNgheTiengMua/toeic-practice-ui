@@ -32,6 +32,9 @@ public partial class CompanionDbContext
             entity.Property(e => e.PhaseDeadlineAt).HasColumnType("datetime2");
             entity.Property(e => e.LastAudioOffsetMs).HasDefaultValue(0);
             entity.Property(e => e.CandidateNotesJson);
+            // #216 / PLC-13: nullable, so a sitting that has not been touched since it opened falls
+            // back to StartedAt rather than to a value invented at insert time.
+            entity.Property(e => e.LastActivityAt);
             entity.Property(e => e.PreflightVerifiedAt);
 
             entity.HasOne(d => d.ActiveSkill).WithMany()

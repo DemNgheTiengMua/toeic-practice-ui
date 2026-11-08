@@ -10,6 +10,8 @@ public static partial class PlacementEndpoints
 
         MapPlacementCatalogEndpoints(learner);
         MapPlacementSittingEndpoints(learner);
+        // #216: resume, explicit abandon and the recording retry.
+        MapPlacementResumeEndpoints(learner);
         MapPlacementGradingEndpoints(learner);
         MapPlacementSubmissionEndpoints(learner);
         MapPlacementResultsEndpoints(learner);

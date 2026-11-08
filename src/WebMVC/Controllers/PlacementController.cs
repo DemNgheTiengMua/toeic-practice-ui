@@ -16,6 +16,13 @@ public sealed class PlacementController(
     IAiInsightsClient? insightsClient = null)
     : LearnerControllerBase(currentUser, logger)
 {
+    /// <summary>PLC-14: a resume that cannot be resumed lands on the catalog with a sentence, never on
+    /// a 500 that reads as a broken product.</summary>
+    private IActionResult RedirectToPlacementIndex(string message)
+    {
+        TempData["ErrorMessage"] = message;
+        return RedirectToAction(nameof(Index));
+    }
     [HttpGet("/placement")]
     [HttpGet("/placement/index")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
@@ -242,6 +249,89 @@ public sealed class PlacementController(
             logger.LogError(ex, "Failed to submit placement test {PlacementId}", placementId);
             TempData["ErrorMessage"] = ex.Detail ?? "Failed to submit placement test. Please try again.";
             return RedirectToAction(nameof(Take), new { placementId });
+        }
+    }
+
+    /// <summary>
+    /// #216 / PLC-14: what a returning learner sees before choosing. It renders no question, so it
+    /// cannot advance them, and it writes nothing.
+    /// <para>
+    /// A learner can reach this from the catalog's "Resume" button, or land on it after a reload; the
+    /// take page is a separate URL on purpose, because PLC-14 is a choice, not a redirect.
+    /// </para>
+    /// </summary>
+    [HttpGet("/placement/take/{placementId:int}/resume")]
+    public async Task<IActionResult> ResumePlacement(int placementId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var resume = await api.GetPlacementResumeAsync(placementId, cancellationToken);
+            return View("ResumeSitting", PlacementResumePageViewModel.From(resume, dates, TempData["ErrorMessage"] as string));
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptNotActive || ex.Code == ApiError.Codes.PlacementNotActive)
+        {
+            return RedirectToPlacementIndex("This placement test is no longer in progress.");
+        }
+        catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.PlacementNotFound)
+        {
+            logger.LogWarning(ex, "Placement test {PlacementId} not found for resume", placementId);
+            Response.StatusCode = 404;
+            return View("PlacementNotFound");
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to load resume state for placement {PlacementId}", placementId);
+            return RedirectToPlacementIndex("Could not load your placement test. Please try again.");
+        }
+    }
+
+    /// <summary>
+    /// #216 / PLC-14: explicit abandon. A POST with anti-forgery, because it is a lifecycle act and a
+    /// link that fires it would be a one-click loss of the sitting.
+    /// </summary>
+    [HttpPost("/placement/take/{placementId:int}/abandon")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Abandon(int placementId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await api.AbandonPlacementAsync(placementId, cancellationToken);
+            TempData["SuccessMessage"] = "That placement test was abandoned. You can start a new one whenever you are ready.";
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to abandon placement {PlacementId}", placementId);
+            TempData["ErrorMessage"] = ex.Detail ?? "Could not abandon the placement test. Please try again.";
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// #216 / PLC-15: one interrupted recording. The response carries the rule's decision, so the page
+    /// never decides it - a client-side counter is the "per page load" defect this ticket names.
+    /// </summary>
+    [HttpPost("/placement/take/{placementId:int}/recording-interruptions")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RecordingInterruption(
+        int placementId,
+        [FromBody] RecordingInterruptionRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var decision = await api.RecordPlacementRecordingInterruptionAsync(placementId, request, cancellationToken);
+            return Json(new
+            {
+                interruptions = decision.Interruptions,
+                outcome = decision.Outcome,
+                replacementQuestionId = decision.ReplacementQuestionId
+            });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to record a recording interruption on placement {PlacementId}", placementId);
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Detail ?? ex.Message });
         }
     }
 

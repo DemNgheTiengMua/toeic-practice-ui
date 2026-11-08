@@ -430,6 +430,9 @@ public sealed class LearningPathControllerTests
         Task<PlacementTestInfoDto> IPlacementClient.StartPlacementTestAsync(StartPlacementTestRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
         Task<PreflightStatusDto> IPlacementClient.GetPlacementPreflightStatusAsync(int placementId, CancellationToken cancellationToken) => throw new NotSupportedException();
         Task<PlacementTakeViewDto> IPlacementClient.GetPlacementTakeAsync(int placementId, int? questionDisplayOrder, CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<PlacementResumeViewDto> IPlacementClient.GetPlacementResumeAsync(int placementId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task IPlacementClient.AbandonPlacementAsync(int placementId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<RecordingDecisionDto> IPlacementClient.RecordPlacementRecordingInterruptionAsync(int placementId, RecordingInterruptionRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
         Task<SaveAnswerResultDto> IPlacementClient.SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
         Task<SavePlacementDraftResponseDto> IPlacementClient.SavePlacementDraftAsync(int placementId, SavePlacementDraftRequestDto request, CancellationToken cancellationToken) => throw new NotSupportedException();
         Task<PlacementGradingStatusDto> IPlacementClient.GetPlacementGradingStatusAsync(int placementId, CancellationToken cancellationToken) => throw new NotSupportedException();

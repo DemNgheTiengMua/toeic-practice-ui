@@ -1427,6 +1427,14 @@ CREATE TABLE ExamAttempts (
     CONSTRAINT CK_Attempts_Status CHECK (Status IN ('in_progress','submitted','graded','abandoned')),
   StartedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   ExpiresAt       DATETIMEOFFSET NOT NULL,          -- server-authoritative
+  -- #216 / PLC-13: the first half of placement's inactivity expiry, `min(last_activity + 48 h,
+  -- started_at + 72 h)`. #214 built the outer bound and deliberately did not invent this one.
+  --
+  -- It is stamped by a WRITE and never by a read: a reload that moved this column would move the
+  -- expiry clock, which is exactly the "refresh is a free skip" the ticket forbids. NULL means
+  -- "nothing written since the sitting opened", so the inactivity arm falls back to StartedAt.
+  -- A mock ignores it - its own deadline is always shorter than 48 h - so the rule stays one rule.
+  LastActivityAt  DATETIMEOFFSET NULL,
   IsAutoSubmitted BIT NOT NULL DEFAULT 0,
   -- UI-14: result "Completed 20 Sep 2026 · 11:42 · time taken 01:53:29"
   SubmittedAt     DATETIMEOFFSET NULL,
@@ -1586,6 +1594,18 @@ CREATE TABLE FreeResponses (
     CONSTRAINT CK_FreeResp_Status CHECK (Status IN ('draft','pending_ai','graded')),
   DraftSavedAt   DATETIMEOFFSET NULL,      -- UI-40: "Saved 11:42:05"
   SubmittedAt    DATETIMEOFFSET NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- #216 / PLC-15: the recording retry. `RecordingInterruptions` is the count of interrupted
+  -- recordings for THIS task, and it is the reason a reload cannot grant a fresh retry: the count is
+  -- durable server state, not a page-load counter. The cap is enforced here rather than trusted to
+  -- the service, because a third interruption must never become a third retry.
+  --
+  -- `RecordingSessionToken` is the token of the last interruption already counted. The client mints
+  -- one per recording attempt; a reload that re-sends the same token is the same interruption and is
+  -- ignored. That is the whole difference between "counted per interruption" and "counted per page
+  -- load", and no other column can express it.
+  RecordingInterruptions INT NOT NULL CONSTRAINT DF_FreeResp_RecordingInterruptions DEFAULT 0,
+  RecordingSessionToken  NVARCHAR(64) NULL,
+  CONSTRAINT CK_FreeResp_InterruptionCap CHECK (RecordingInterruptions BETWEEN 0 AND 2),
   CONSTRAINT CK_FreeResp_DraftNotSubmitted CHECK (
        (Status = 'draft'  AND SubmittedAt IS NULL)
     OR (Status <> 'draft' AND SubmittedAt IS NOT NULL)

@@ -120,6 +120,9 @@ public sealed partial class AttemptEngine
 
         answer.IsFlagged = isFlagged;
         attempt.LastQuestionId = questionId;
+        // #216 / PLC-13: answering is activity, so it moves the placement's inactivity clock. A mock
+        // has no LastActivityAt rule and the guard returns before touching it.
+        await MarkPlacementActivityAsync(attempt, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
 
@@ -162,6 +165,9 @@ public sealed partial class AttemptEngine
         freeResponse.ResponseText = responseText ?? string.Empty;
         freeResponse.DraftSavedAt = savedAt;
         attempt.LastQuestionId = questionId;
+        // #216 / PLC-13: a draft is activity too; otherwise a learner who writes for an hour without
+        // submitting loses the sitting at the 48-hour mark measured from their last click.
+        await MarkPlacementActivityAsync(attempt, cancellationToken, savedAt);
         await db.SaveChangesAsync(cancellationToken);
 
         var words = freeResponse.ResponseText
@@ -238,6 +244,8 @@ public sealed partial class AttemptEngine
         }
 
         attempt.LastQuestionId = questionId;
+        // #216 / PLC-13: the free-response save path is the third write that counts as activity.
+        await MarkPlacementActivityAsync(attempt, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
         var effectiveDeadline = ResolveEffectiveDeadline(attempt);

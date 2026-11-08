@@ -41,6 +41,14 @@ public partial class FreeResponse
 
     public DateTimeOffset? SubmittedAt { get; set; }
 
+    /// <summary>#216 / PLC-15: how many times this task's recording was interrupted.</summary>
+    public int RecordingInterruptions { get; set; }
+
+    /// <summary>#216 / PLC-15: the token of the last interruption already counted, so a reload that
+    /// re-sends it is the same interruption rather than a second retry.</summary>
+    [StringLength(64)]
+    public string? RecordingSessionToken { get; set; }
+
     [InverseProperty("FreeResponse")]
     public virtual AiGrading? AiGradingFreeResponse { get; set; }
 

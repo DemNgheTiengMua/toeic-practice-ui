@@ -136,6 +136,22 @@ public interface IAttemptEngine
         int userId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>#216 / PLC-14: a placement's resume summary. A read - it stamps no clock.</summary>
+    Task<PlacementResumeView> GetPlacementResumeAsync(
+        int attemptId,
+        int userId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>#216 / PLC-15: one interrupted recording, idempotent per session token so a reload
+    /// cannot grant a second retry.</summary>
+    Task<PlacementRecordingDecision> RecordPlacementRecordingInterruptionAsync(
+        int attemptId,
+        int questionId,
+        int userId,
+        string sessionToken,
+        int capturedMs,
+        CancellationToken cancellationToken = default);
+
     WritingEvaluationResult EvaluateWriting(Question question, string? responseText);
 
     Task<SaveSpeakingAudioResult> SaveSpeakingAudioAsync(

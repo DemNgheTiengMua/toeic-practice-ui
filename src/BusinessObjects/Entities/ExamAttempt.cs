@@ -47,6 +47,10 @@ public partial class ExamAttempt
 
     public DateTimeOffset ExpiresAt { get; set; }
 
+    /// <summary>#216 / PLC-13: the first half of placement's inactivity expiry. Written by a write,
+    /// never by a read, so a reload cannot extend the sitting.</summary>
+    public DateTimeOffset? LastActivityAt { get; set; }
+
     public bool IsAutoSubmitted { get; set; }
 
     public DateTimeOffset? SubmittedAt { get; set; }
