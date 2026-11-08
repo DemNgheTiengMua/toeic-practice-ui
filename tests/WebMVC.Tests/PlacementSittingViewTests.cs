@@ -138,7 +138,7 @@ public sealed class PlacementSittingViewTests
 
         Assert.Null(At(0).NextConfirm);
         Assert.Equal(
-            "You are about to finish this question group. You cannot return to it or change its answers afterwards, and its remaining time does not carry over. Continue?",
+            "You are about to finish this question group. You cannot return to it or change its answers afterwards. Continue?",
             At(1).NextConfirm);
         Assert.Null(At(2).NextConfirm);
     }
@@ -217,10 +217,11 @@ public sealed class PlacementSittingViewTests
     }
 
     [Fact]
-    public void Phase_strip_shows_real_clocks_instead_of_placeholders()
+    public void Phase_strip_states_where_each_skill_stands_because_placement_has_no_countdown()
     {
-        // The strip used to render "--:--" for every skill for the whole sitting. A finished skill
-        // reads 00:00, the current one the sitting's remaining time, a later one its allowance.
+        // #214 / PLC-12: there is no overall countdown, so the strip may not print a clock at all -
+        // not a real one and not a "--:--" placeholder. A finished skill is closed for good, the
+        // current one is being answered, and a later one has not started.
         AttemptQuestionDto Q(string skill, string name) => Question() with { SkillCode = skill, SkillName = name };
         AttemptPhaseDto[] phases =
         [
@@ -232,20 +233,27 @@ public sealed class PlacementSittingViewTests
             new(Take(question) with { Phases = phases, RemainingSeconds = remaining });
 
         var reading = At(Q("READ", "Reading"), 2044);
-        Assert.Equal(["00:00", "34:04", "10:00"], reading.Phases.Select(p => p.TimerText));
+        Assert.Equal(["Closed", "In progress", "Not started"], reading.Phases.Select(p => p.StateText));
         Assert.Equal(["false", "step", "false"], reading.Phases.Select(p => p.AriaCurrent));
 
-        // A later skill never claims more time than the sitting has left.
+        // The same states whether the server still reports time left or none at all: nothing on this
+        // strip is a function of a clock. The stub's remainingSeconds is the trap - a strip that
+        // still formatted it would print 05:00 here.
         var listening = At(Q("LIST", "Listening"), 300);
-        Assert.Equal(["05:00", "05:00", "05:00"], listening.Phases.Select(p => p.TimerText));
-        Assert.DoesNotContain(reading.Phases, p => p.TimerText.Contains('-'));
+        Assert.Equal(["In progress", "Not started", "Not started"], listening.Phases.Select(p => p.StateText));
+        Assert.DoesNotContain(reading.Phases.Concat(listening.Phases), p => p.StateText.Any(char.IsDigit));
 
         var root = TestPathHelper.FindRepoRoot();
         var partial = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "Views", "Placement", "_TakePhases.cshtml"));
-        Assert.Contains("@phase.TimerText", partial);
+        Assert.Contains("@phase.StateText", partial);
         Assert.DoesNotContain("--:--", partial);
+        Assert.DoesNotContain("TimerText", partial);
+        // No tick, and no auto-submit on elapsed time: the sitting ends when the learner submits.
         var script = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "js", "placement", "take.js"));
-        Assert.Contains("[data-phase-skill][aria-current='step'] [data-phase-timer]", script);
+        Assert.DoesNotContain("remainingSeconds", script);
+        Assert.DoesNotContain("setInterval", script);
+        var topbar = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "Views", "Placement", "_TakeTopbar.cshtml"));
+        Assert.DoesNotContain("timer", topbar, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -261,7 +269,8 @@ public sealed class PlacementSittingViewTests
         Assert.Equal(path + ":125-0", json.RootElement.GetProperty("audioKey").GetString());
         Assert.Equal(42, json.RootElement.GetProperty("placementId").GetInt32());
         Assert.Equal(10, json.RootElement.GetProperty("questionId").GetInt32());
-        Assert.Equal(1200, json.RootElement.GetProperty("remainingSeconds").GetInt32());
+        // #214 / PLC-12: no countdown, so nothing to round-trip.
+        Assert.False(json.RootElement.TryGetProperty("remainingSeconds", out _));
         Assert.False(json.RootElement.GetProperty("isFlagged").GetBoolean());
         Assert.NotNull(model.AudioPlayer);
         Assert.Equal(path, model.AudioPlayer.AudioPath);
@@ -299,7 +308,9 @@ public sealed class PlacementSittingViewTests
         Assert.Contains("RequestVerificationToken: token", script);
         Assert.Contains("responseText: text", script);
         Assert.Contains("await saveDraftNow()", script);
-        Assert.Contains("#is-auto-submit-input", script);
+        // #214 / PLC-12: the sitting never auto-submits on elapsed time, so this flag is never set
+        // to true by the page. The modal still carries it for an explicit submit.
+        Assert.DoesNotContain("#is-auto-submit-input", script);
         Assert.Contains("examaudiotimeupdate", script);
         Assert.Contains("examaudioended", script);
         Assert.Contains("ee_placement_audio_", script);

@@ -127,18 +127,24 @@ public sealed partial class AttemptEngine
             attempt.ActiveGroupId = null;
         }
 
+        // #214 / PLC-12: a placement does not advance a clock when it advances a skill, so it gets no
+        // phase deadline here. A mock does, exactly as before.
+        var runsAClock = await RunsAClockAsync(attempt, cancellationToken);
         var now = DateTimeOffset.UtcNow;
-        if (firstSectionAndGroup != null && string.Equals(firstSectionAndGroup.Section.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase) && firstSectionAndGroup.Group.ResponseSeconds.HasValue)
+        if (runsAClock)
         {
-            attempt.PhaseDeadlineAt = now.UtcDateTime.AddSeconds(firstSectionAndGroup.Group.ResponseSeconds.Value);
-        }
-        else if (nextSkill.DurationMinutes is int dur && dur > 0)
-        {
-            attempt.PhaseDeadlineAt = now.UtcDateTime.AddMinutes(dur);
-        }
-        else
-        {
-            attempt.PhaseDeadlineAt = attempt.ExpiresAt.UtcDateTime;
+            if (firstSectionAndGroup != null && string.Equals(firstSectionAndGroup.Section.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase) && firstSectionAndGroup.Group.ResponseSeconds.HasValue)
+            {
+                attempt.PhaseDeadlineAt = now.UtcDateTime.AddSeconds(firstSectionAndGroup.Group.ResponseSeconds.Value);
+            }
+            else if (nextSkill.DurationMinutes is int dur && dur > 0)
+            {
+                attempt.PhaseDeadlineAt = now.UtcDateTime.AddMinutes(dur);
+            }
+            else
+            {
+                attempt.PhaseDeadlineAt = attempt.ExpiresAt.UtcDateTime;
+            }
         }
 
         if (firstSectionAndGroup != null)
@@ -224,14 +230,19 @@ public sealed partial class AttemptEngine
 
         attempt.ActiveGroupId = targetGroupId;
 
-        int subTimerSeconds = targetGroup.ResponseSeconds
-            ?? await db.Questions.Where(q => q.GroupId == targetGroupId && q.ResponseSeconds.HasValue).Select(q => q.ResponseSeconds!.Value).FirstOrDefaultAsync(cancellationToken);
-        if (subTimerSeconds <= 0)
+        // #214 / PLC-12: a placement has no clock, so entering a locked group starts no sub-timer.
+        // A mock keeps its per-group window exactly as before.
+        if (await RunsAClockAsync(attempt, cancellationToken))
         {
-            subTimerSeconds = 600;
-        }
+            int subTimerSeconds = targetGroup.ResponseSeconds
+                ?? await db.Questions.Where(q => q.GroupId == targetGroupId && q.ResponseSeconds.HasValue).Select(q => q.ResponseSeconds!.Value).FirstOrDefaultAsync(cancellationToken);
+            if (subTimerSeconds <= 0)
+            {
+                subTimerSeconds = 600;
+            }
 
-        attempt.PhaseDeadlineAt = DateTimeOffset.UtcNow.UtcDateTime.AddSeconds(subTimerSeconds);
+            attempt.PhaseDeadlineAt = DateTimeOffset.UtcNow.UtcDateTime.AddSeconds(subTimerSeconds);
+        }
 
         var firstGroupQuestionId = await db.Questions
             .Where(q => q.GroupId == targetGroupId)
@@ -265,6 +276,21 @@ public sealed partial class AttemptEngine
         CancellationToken cancellationToken = default)
     {
         var attempt = await LoadSittingAttemptAsync(db.ExamAttempts, attemptId, userId, cancellationToken);
+
+        // #214 / PLC-12: the review window is a clock too, and a placement has none. This transition is
+        // the listening half of a mock; a placement never asks for it, and refusing to stamp a deadline
+        // here is what keeps that true if one ever did.
+        if (!await RunsAClockAsync(attempt, cancellationToken))
+        {
+            return new AttemptTransitionResult(
+                attempt.AttemptId,
+                attempt.ActiveSkillId,
+                attempt.ActiveUnitNumber,
+                attempt.ActiveGroupId,
+                ToUtcOffset(attempt.PhaseDeadlineAt),
+                Math.Max(0, (int)(ResolveEffectiveDeadline(attempt) - DateTimeOffset.UtcNow).TotalSeconds),
+                EnumCodes.Parse<AttemptStatus>(attempt.Status));
+        }
 
         var section = await db.Questions
             .Where(q => q.ExamId == attempt.ExamId && (attempt.ActiveSkillId == null || q.Section.SkillId == attempt.ActiveSkillId.Value))

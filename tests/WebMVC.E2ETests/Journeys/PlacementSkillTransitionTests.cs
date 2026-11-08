@@ -67,9 +67,9 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
         Assert.That(dialogs, Has.Count.EqualTo(1));
         Assert.That(dialogs[0], Does.Contain("Listening").And.Contain("Reading"));
 
-        // Listening is now closed: its clock reads 00:00, no Previous into it, and a hand-edited
-        // rewind is refused.
-        await Expect(Page.Locator("[data-phase-skill='LIST'][aria-current='false']")).ToContainTextAsync("00:00");
+        // Listening is now closed for good: no Previous into it, a hand-edited rewind is refused, and
+        // the phase reads "Closed" rather than a clock - #214 / PLC-12 removed the countdown.
+        await Expect(Page.Locator("[data-phase-skill='LIST'][aria-current='false']")).ToContainTextAsync("Closed");
         await Expect(previous).ToHaveCountAsync(0);
         await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q={listeningLast}");
         await Expect(Page).ToHaveURLAsync(new Regex($@"\?q={readingFirst}$"));

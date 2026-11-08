@@ -4,7 +4,6 @@
   const dynamic = document.getElementById("placement-take-dynamic");
   const dataIsland = () => document.getElementById("placement-take-data");
   let config = JSON.parse(dataIsland().textContent);
-  let remainingSeconds = config.remainingSeconds;
   let isFlagged = config.isFlagged;
   let answeredCount = config.answeredCount;
   let draftDirty = false;
@@ -19,24 +18,6 @@
   const saveStatus = () => q("#save-status");
   const writingEditor = () => q("#writing-editor");
   const currentNavCell = () => q("#nav-cell-" + config.questionId);
-
-  function formatTime(seconds) {
-    if (seconds <= 0) return "00:00";
-    return String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
-  }
-
-  function updateTimer() {
-    const display = q("#timer-display");
-    if (display) display.textContent = formatTime(remainingSeconds);
-    // The current skill's clock in the phase strip counts down with the sitting's own clock.
-    const phaseTimer = q("[data-phase-skill][aria-current='step'] [data-phase-timer]");
-    if (phaseTimer) phaseTimer.textContent = formatTime(remainingSeconds);
-    const box = q("#timer-box");
-    if (box) {
-      box.classList.toggle("timer--warning", remainingSeconds <= 300 && remainingSeconds > 120);
-      box.classList.toggle("timer--critical", remainingSeconds <= 120);
-    }
-  }
 
   function updateWritingCounts() {
     const editor = writingEditor();
@@ -174,11 +155,9 @@
     }
     dynamic.replaceChildren(fragment.content);
     config = confirmed;
-    remainingSeconds = config.remainingSeconds;
     isFlagged = config.isFlagged;
     answeredCount = config.answeredCount;
     draftDirty = false;
-    updateTimer();
     updateWritingCounts();
     updateProgress();
     // The server owns the position: a refused jump comes back as a different question, and the
@@ -264,7 +243,6 @@
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error("Save answer failed with status " + response.status);
       setStatus("Saved", "save-status save-status--saved");
-      if (typeof data.remainingSeconds === "number") { remainingSeconds = data.remainingSeconds; updateTimer(); }
       const cell = currentNavCell();
       if (data.selectedOptionId != null) { cell?.classList.add("is-answered"); cell?.classList.remove("is-unanswered"); }
       cell?.classList.toggle("is-marked", !!data.isFlagged);
@@ -297,15 +275,10 @@
     navigate(link.href);
   }
 
-  setInterval(async () => {
-    remainingSeconds--;
-    updateTimer();
-    if (remainingSeconds <= 0) {
-      if (draftDirty) await saveDraftNow();
-      q("#is-auto-submit-input") && (q("#is-auto-submit-input").value = "true");
-      q("#submit-form")?.submit();
-    }
-  }, 1000);
+  // #214 / PLC-12: there is no overall countdown, so nothing here ticks and nothing auto-submits on
+  // elapsed time. The sitting ends when the learner submits, or when the server's own outer bound
+  // (started_at + 72 h) is reached - and that is enforced server-side, where a closed tab cannot
+  // escape it.
 
   q("#submit-form")?.addEventListener("submit", async event => {
     if (draftDirty) {
@@ -316,7 +289,6 @@
     }
   });
 
-  updateTimer();
   updateWritingCounts();
   restorePlacementAudio();
 })();

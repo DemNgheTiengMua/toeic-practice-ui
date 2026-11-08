@@ -61,31 +61,43 @@ public sealed partial class AttemptEngine
             attempt.PreflightVerifiedAt = now;
             // The candidate timer starts upon passing the preflight onboarding gate!
             attempt.StartedAt = now;
-            attempt.ExpiresAt = now.AddMinutes(attempt.Exam.DurationMinutes);
-
-            var firstSkill = await db.Questions
-                .Where(q => q.ExamId == attempt.ExamId && q.Section.SkillId == attempt.ActiveSkillId)
-                .Select(q => q.Section.Skill)
-                .FirstOrDefaultAsync(cancellationToken);
-            var firstSection = await db.Questions
-                .Where(q => q.ExamId == attempt.ExamId && q.Section.SkillId == attempt.ActiveSkillId)
-                .Select(q => q.Section)
-                .FirstOrDefaultAsync(cancellationToken);
-            var firstGroup = attempt.ActiveGroupId.HasValue
-                ? await db.QuestionGroups.SingleOrDefaultAsync(g => g.GroupId == attempt.ActiveGroupId.Value, cancellationToken)
-                : null;
-
-            if (firstSection != null && string.Equals(firstSection.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase) && firstGroup?.ResponseSeconds.HasValue == true)
+            // #214 / PLC-12: a placement is not timed, so passing the gate does not arm a clock. Its
+            // only deadline is the outer bound, and it gets no phase deadline at all - resetting
+            // ExpiresAt to now + DurationMinutes here would have re-armed the countdown the create
+            // path had just removed.
+            if (PlacementSitting.HasCountdown(attempt.Exam.Purpose))
             {
-                attempt.PhaseDeadlineAt = now.UtcDateTime.AddSeconds(firstGroup.ResponseSeconds.Value);
-            }
-            else if (firstSkill?.DurationMinutes is int skillDur && skillDur > 0)
-            {
-                attempt.PhaseDeadlineAt = now.UtcDateTime.AddMinutes(skillDur);
+                attempt.ExpiresAt = now.AddMinutes(attempt.Exam.DurationMinutes);
+
+                var firstSkill = await db.Questions
+                    .Where(q => q.ExamId == attempt.ExamId && q.Section.SkillId == attempt.ActiveSkillId)
+                    .Select(q => q.Section.Skill)
+                    .FirstOrDefaultAsync(cancellationToken);
+                var firstSection = await db.Questions
+                    .Where(q => q.ExamId == attempt.ExamId && q.Section.SkillId == attempt.ActiveSkillId)
+                    .Select(q => q.Section)
+                    .FirstOrDefaultAsync(cancellationToken);
+                var firstGroup = attempt.ActiveGroupId.HasValue
+                    ? await db.QuestionGroups.SingleOrDefaultAsync(g => g.GroupId == attempt.ActiveGroupId.Value, cancellationToken)
+                    : null;
+
+                if (firstSection != null && string.Equals(firstSection.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase) && firstGroup?.ResponseSeconds.HasValue == true)
+                {
+                    attempt.PhaseDeadlineAt = now.UtcDateTime.AddSeconds(firstGroup.ResponseSeconds.Value);
+                }
+                else if (firstSkill?.DurationMinutes is int skillDur && skillDur > 0)
+                {
+                    attempt.PhaseDeadlineAt = now.UtcDateTime.AddMinutes(skillDur);
+                }
+                else
+                {
+                    attempt.PhaseDeadlineAt = attempt.ExpiresAt.UtcDateTime;
+                }
             }
             else
             {
-                attempt.PhaseDeadlineAt = attempt.ExpiresAt.UtcDateTime;
+                attempt.ExpiresAt = PlacementSitting.ExpiresAt(now);
+                attempt.PhaseDeadlineAt = null;
             }
 
             await db.SaveChangesAsync(cancellationToken);
