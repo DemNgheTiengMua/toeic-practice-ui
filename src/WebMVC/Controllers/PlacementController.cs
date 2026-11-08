@@ -362,6 +362,14 @@ public sealed class PlacementController(
             logger.LogInformation("Placement test {PlacementId} is not finished yet, redirecting to take", placementId);
             return RedirectToAction(nameof(Take), new { placementId });
         }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.PlacementAbandoned)
+        {
+            // #217 / PLC-19: nothing could be measured, so there is no result page to show. Saying so
+            // plainly and offering a new sitting is the honest end of that flow.
+            logger.LogInformation("Placement test {PlacementId} measured nothing and was abandoned", placementId);
+            return RedirectToPlacementIndex(
+                "Nothing on that sitting could be measured, so it was recorded as abandoned and has no result. You can start another one whenever you are ready.");
+        }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.PlacementNotFound)
         {
             logger.LogWarning(ex, "Placement test {PlacementId} not found for result", placementId);
@@ -389,6 +397,36 @@ public sealed class PlacementController(
             logger.LogWarning(ex, "Failed to get placement grading status for placement {PlacementId}", placementId);
             return StatusCode(ex.Status, new { code = ex.Code, message = ex.Detail ?? ex.Message });
         }
+    }
+
+    /// <summary>
+    /// #217 / PLC-35: the retry a failed grading is offered. A POST with anti-forgery because it
+    /// re-queues work, and a forward through the cookie token like every other learner write - the
+    /// browser never calls WebAPI. It writes no ledger row; placement is free and the failure was the
+    /// system's.
+    /// </summary>
+    [HttpPost("/placement/result/{placementId:int}/retry")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Retry(int placementId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await api.RetryPlacementGradingAsync(placementId, cancellationToken);
+            TempData["SuccessMessage"] =
+                $"{result.RequeuedCount} response(s) went back to the grader. No credits were used.";
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.PlacementRetryNotAllowed)
+        {
+            logger.LogInformation(ex, "Nothing to retry on placement {PlacementId}", placementId);
+            TempData["ErrorMessage"] = ex.Detail ?? "There is nothing on this placement to retry.";
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to retry grading for placement {PlacementId}", placementId);
+            TempData["ErrorMessage"] = ex.Detail ?? "Could not retry the grading. Please try again.";
+        }
+
+        return RedirectToAction(nameof(Result), new { placementId });
     }
 
     [HttpGet("/placement/target-band")]

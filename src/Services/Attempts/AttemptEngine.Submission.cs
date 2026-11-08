@@ -112,6 +112,27 @@ public sealed partial class AttemptEngine
                 }
             }
 
+            // #217 / PLC-19: a productive task the learner never touched is settled immediately rather
+            // than queued. The engine pre-creates a draft row per free-response question when the
+            // sitting opens, so without this a blank paper would queue an AI grading for every writing
+            // task and the sitting would sit at `grading` forever instead of recording the honest fact:
+            // nothing was attempted.
+            //
+            // The row stays, because PLC-35's "one graded task of two" divides by the tasks the paper
+            // DELIVERED, and deleting a blank one would silently turn an estimate into a full
+            // measurement. It is settled as `graded` with no AiGrading row: settled, so the attempt can
+            // finish, and unqueued, so no grader is spent on an empty answer.
+            var untouchedDrafts = freeResponses
+                .Where(fr => fr.Status == FreeResponseStatus.Draft.ToCode()
+                    && string.IsNullOrWhiteSpace(fr.ResponseText)
+                    && string.IsNullOrWhiteSpace(fr.AudioPath))
+                .ToList();
+            foreach (var untouched in untouchedDrafts)
+            {
+                untouched.Status = FreeResponseStatus.Graded.ToCode();
+                untouched.SubmittedAt = now;
+            }
+
             foreach (var response in freeResponses.Where(fr => fr.Status == FreeResponseStatus.Draft.ToCode()))
             {
                 response.Status = FreeResponseStatus.PendingAi.ToCode();
@@ -134,6 +155,7 @@ public sealed partial class AttemptEngine
                 .Where(a => a.AttemptId == attemptId)
                 .Include(a => a.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
                 .ToListAsync(cancellationToken);
+            var isPlacement = attempt.Exam.Purpose == ExamPurpose.Placement.ToCode();
             var questionIds = answers.Select(answer => answer.QuestionId).Distinct().ToList();
             var optionsByQuestion = (await db.QuestionOptions
                 .Where(option => questionIds.Contains(option.QuestionId))
@@ -143,10 +165,17 @@ public sealed partial class AttemptEngine
             // #186: a pinned answer is scored against the version it pinned, not the question row.
             var pinnedVersions = await LoadPinnedVersionsAsync(answers, cancellationToken);
 
-            // Score each objective answer
+            // Score each objective answer (#217 / PLC-18). An unanswered item scores as incorrect by
+            // NOT being correct - the skill's raw score counts only `IsCorrect == true` over a
+            // denominator of every item the section delivered - but its IsCorrect stays NULL.
+            //
+            // Writing `false` here was the defect the pool accuracy views read: vw_UserSectionAccuracyAll
+            // counts `COUNT(IsCorrect)`, so a blank marked incorrect was counted as an ANSWERED item and
+            // inflated the denominator. #253's rule is that answered is "carries content", not "has a
+            // grade"; leaving the blank unjudged is what makes the two agree.
             foreach (var ans in answers.Where(a => a.Question.QuestionType != QuestionType.FreeResponse.ToCode()))
             {
-                ans.IsCorrect = EvaluateAnswer(ans, pinnedVersions, optionsByQuestion);
+                ans.IsCorrect = IsAnswered(ans) ? EvaluateAnswer(ans, pinnedVersions, optionsByQuestion) : null;
             }
 
             // Clean any existing skill scores for idempotent resubmits
@@ -161,6 +190,17 @@ public sealed partial class AttemptEngine
             var skillGroups = answers
                 .Where(a => a.Question.QuestionType != QuestionType.FreeResponse.ToCode())
                 .GroupBy(a => a.Question.Section.Skill)
+                // #217 / PLC-19: on a PLACEMENT, a skill the learner never touched is not part of the
+                // result. It used to be scored as a zero row, and that zero was summed into the total -
+                // the "not-measured contributing 0" the ticket forbids. Excluding it here is what makes
+                // "excluded from the overall" true by construction rather than by a screen remembering
+                // to skip a row. A skill where the learner answered something and got it all wrong is
+                // still here, scored zero: that is a real measurement at the floor.
+                //
+                // A mock exam keeps every skill, because a blank paper there is a legitimate zero - the
+                // learner sat it and chose not to answer. Placement's "not measured" is a result
+                // concept (PLC-19); a mock has none.
+                .Where(group => !isPlacement || group.Any(IsAnswered))
                 .ToList();
             var newSkillScores = new List<AttemptSkillScore>();
 
@@ -205,7 +245,13 @@ public sealed partial class AttemptEngine
                 .Where(c => c.CertId == attempt.CertId)
                 .Select(c => new { c.Code, c.ScoreAggregationRule })
                 .SingleAsync(cancellationToken);
-            var totalScore = AggregateTotalScore(cert.ScoreAggregationRule, newSkillScores);
+            // #217 / PLC-19: a placement where nothing could be measured has NO result. Writing the
+            // aggregate of an empty score set would store `0`, and a 0 is a figure the learner reads as
+            // "you scored zero" - the fabricated result the ticket forbids. The attempt and its
+            // placement carry no total and no band; the placement's own writer moves it to `abandoned`
+            // with the reason recorded.
+            var measuredNothing = isPlacement && newSkillScores.Count == 0;
+            var totalScore = measuredNothing ? (int?)null : AggregateTotalScore(cert.ScoreAggregationRule, newSkillScores);
             attempt.TotalScore = totalScore;
             // #191: the derived fact on this table is TotalScore + BandCode, and this is its one
             // writer. The version moves forward on every scoring pass, so a stale out-of-order
@@ -214,9 +260,9 @@ public sealed partial class AttemptEngine
             attempt.ProjectionVersion++;
             db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
             string? matchingBandCode = null;
-            if (!hasPendingMockResponses)
+            if (!hasPendingMockResponses && totalScore is int total)
             {
-                matchingBandCode = await FindBandCodeAsync(attempt.CertId, totalScore, cancellationToken);
+                matchingBandCode = await FindBandCodeAsync(attempt.CertId, total, cancellationToken);
                 attempt.BandCode = matchingBandCode;
             }
             else
@@ -238,7 +284,10 @@ public sealed partial class AttemptEngine
                 .Select(p => p.PlacementId)
                 .ToListAsync(cancellationToken);
 
-            var hasFreeResponses = freeResponses.Count > 0;
+            // #217 / PLC-19: only a task that is actually QUEUED keeps the attempt `submitted`. The old
+            // test was "does the paper carry any free response at all", which a settled blank task now
+            // satisfies - and that left a paper with nothing to grade stuck at `submitted` forever.
+            var hasFreeResponses = freeResponses.Any(fr => fr.Status != FreeResponseStatus.Graded.ToCode());
             attempt.Status = hasFreeResponses
                 ? AttemptStatus.Submitted.ToCode()
                 : AttemptStatus.Graded.ToCode();
@@ -254,7 +303,13 @@ public sealed partial class AttemptEngine
                     .Select(g => g.FreeResponseId)
                     .ToListAsync(cancellationToken);
 
-                foreach (var response in freeResponses.Where(r => !existingGradingIds.Contains(r.FreeResponseId)))
+                // Only a task that is waiting for the grader gets a grading row. A settled blank task
+                // has no answer to score, and queueing it would spend a grader call on nothing and hold
+                // the sitting open (see SettleFreeResponseAsync in AiGradingProcessor for the mirror
+                // rule on the failure path).
+                foreach (var response in freeResponses.Where(r =>
+                    r.Status == FreeResponseStatus.PendingAi.ToCode()
+                    && !existingGradingIds.Contains(r.FreeResponseId)))
                 {
                     db.AiGradings.Add(new AiGrading
                     {
@@ -298,7 +353,9 @@ public sealed partial class AttemptEngine
 
             return new AttemptGradingResult(
                 attempt,
-                totalScore,
+                // A placement that measured nothing has no total; the caller's own view decides what to
+                // show, and `0` here is only the DTO's non-nullable shape, never a stored figure.
+                totalScore ?? 0,
                 attempt.BandCode,
                 newSkillScores,
                 answers,
@@ -337,9 +394,13 @@ public sealed partial class AttemptEngine
                 .Include(fr => fr.AiGradingFreeResponse).ThenInclude(g => g!.AiGradingScores)
                 .ToListAsync(cancellationToken);
 
+            // #217 / PLC-35: a task is SETTLED when its response is `graded` and its grading row, if any,
+            // reached a terminal state. A blank task settled at submission carries no grading row at all
+            // (there was nothing to score), so "has no row" must count as settled - requiring a `done`
+            // row sent `Finalize` back for a sitting whose only unfinished work was a task nobody wrote.
             if (freeResponses.Count == 0
                 || freeResponses.Any(fr => fr.Status != FreeResponseStatus.Graded.ToCode()
-                    || fr.AiGradingFreeResponse?.Status != AiGradingStatus.Done.ToCode()))
+                    || fr.AiGradingFreeResponse?.Status is not (null or "done" or "failed")))
             {
                 throw new AttemptEngineException(AttemptEngineException.AttemptNotFinished, "All free responses must finish AI grading before the result can be finalized.");
             }
@@ -404,7 +465,7 @@ public sealed partial class AttemptEngine
                 }
             }
 
-            var responsePointsBySkill = new Dictionary<int, decimal>();
+            var fractionByResponse = new Dictionary<int, decimal>();
             foreach (var response in freeResponses)
             {
                 var sectionCriteria = await db.SectionCriteria
@@ -421,7 +482,7 @@ public sealed partial class AttemptEngine
                 var fraction = maxScore > 0m
                     ? Math.Clamp((response.AiGradingFreeResponse!.OverallScaled ?? 0m) / maxScore, 0m, 1m)
                     : 0m;
-                responsePointsBySkill[response.SkillId] = responsePointsBySkill.GetValueOrDefault(response.SkillId) + fraction;
+                fractionByResponse[response.FreeResponseId] = fraction;
             }
 
             // #186: the same pinned-version rule as the other scoring pass, so an attempt finalized
@@ -429,10 +490,15 @@ public sealed partial class AttemptEngine
             var pinnedVersions = await LoadPinnedVersionsAsync(answers, cancellationToken);
             foreach (var answer in answers.Where(a => a.Question.QuestionType != QuestionType.FreeResponse.ToCode()))
             {
-                answer.IsCorrect = EvaluateAnswer(
-                    answer,
-                    pinnedVersions,
-                    answer.Question.QuestionOptionQuestionNavigations.ToLookup(o => o.QuestionId));
+                // #217 / PLC-18: a blank stays unjudged, exactly as in the objective pass above. It is
+                // still incorrect for the skill's raw score (only `IsCorrect == true` counts, over every
+                // delivered item) but it does not read as an ANSWERED row to the accuracy views.
+                answer.IsCorrect = IsAnswered(answer)
+                    ? EvaluateAnswer(
+                        answer,
+                        pinnedVersions,
+                        answer.Question.QuestionOptionQuestionNavigations.ToLookup(o => o.QuestionId))
+                    : null;
             }
 
             var skills = answers.Select(a => a.Question.Section.Skill)
@@ -440,6 +506,7 @@ public sealed partial class AttemptEngine
                 .DistinctBy(s => s.SkillId)
                 .ToList();
 
+            var isPlacementAttempt = attempt.Exam.Purpose == ExamPurpose.Placement.ToCode();
             var newSkillScores = new List<AttemptSkillScore>();
             foreach (var skill in skills)
             {
@@ -451,17 +518,40 @@ public sealed partial class AttemptEngine
                 var hasScales = await db.ScoreScales.AnyAsync(s => s.CertId == attempt.CertId && s.SkillId == skill.SkillId, cancellationToken);
                 if (objectiveAnswers.Count == 0 && !hasScales && freeResponsesInSkill.Count == 0) continue;
 
+                // #217 / PLC-35: a productive task whose grading FAILED contributes nothing at all -
+                // neither a zero in the numerator nor a slot in the denominator. Counting it as a zero
+                // would make a failed task read as "scored badly", which is the fabricated result the
+                // ticket forbids, and it would drag the skill's level below the one task that did grade.
+                // What remains is the measurement "estimated from one task" (D7).
+                var gradedInSkill = freeResponsesInSkill
+                    .Where(fr => fr.AiGradingFreeResponse?.Status == AiGradingStatus.Done.ToCode())
+                    .ToList();
+
+                // A placement skill with no answered objective item and no graded task measured nothing
+                // and must not be given a score row: the writer would then derive a `measured` status
+                // from a row that says zero, which is the not-measured-as-zero fabrication PLC-19
+                // forbids. A mock keeps the zero, because there a blank paper is a legitimate score.
+                var objectiveAttempted = objectiveAnswers.Any(IsAnswered);
+                if (isPlacementAttempt && !objectiveAttempted && gradedInSkill.Count == 0
+                    && freeResponsesInSkill.Count > 0)
+                {
+                    continue;
+                }
+
                 int scaledScore;
                 decimal rawScore;
 
                 if (freeResponsesInSkill.Count > 0 && objectiveAnswers.Count == 0)
                 {
-                    // Pure free response skill (e.g. IELTS Writing Task 1 + Task 2)
-                    var frSections = freeResponsesInSkill.Select(fr => fr.Question.Section).DistinctBy(s => s.SectionId).ToList();
-                    decimal totalWeight = frSections.Sum(s => s.ScoreWeight > 0 ? s.ScoreWeight : 1.0m);
+                    // Pure free response skill (e.g. IELTS Writing Task 1 + Task 2). Only the tasks that
+                    // actually graded are averaged; a failed task is absent, not a zero (PLC-35).
+                    if (gradedInSkill.Count == 0) continue;
+
+                    var gradedSections = gradedInSkill.Select(fr => fr.Question.Section).DistinctBy(s => s.SectionId).ToList();
+                    decimal totalWeight = gradedSections.Sum(s => s.ScoreWeight > 0 ? s.ScoreWeight : 1.0m);
                     decimal weightedSectionSum = 0m;
 
-                    foreach (var fr in freeResponsesInSkill)
+                    foreach (var fr in gradedInSkill)
                     {
                         var secWeight = fr.Question.Section.ScoreWeight > 0 ? fr.Question.Section.ScoreWeight : 1.0m;
                         var frScore = fr.AiGradingFreeResponse?.OverallScaled ?? 0m;
@@ -487,7 +577,12 @@ public sealed partial class AttemptEngine
                 }
                 else
                 {
-                    rawScore = objectiveAnswers.Count(a => a.IsCorrect == true) + responsePointsBySkill.GetValueOrDefault(skill.SkillId);
+                    // The denominator is every item the skill DELIVERED - which is what makes an
+                    // unanswered item count as incorrect without being counted as answered anywhere.
+                    // A failed productive task is absent from BOTH sides (PLC-35): a zero would drag
+                    // the level down to a mark the grader never gave.
+                    rawScore = objectiveAnswers.Count(a => a.IsCorrect == true)
+                        + gradedInSkill.Sum(fr => fractionByResponse.GetValueOrDefault(fr.FreeResponseId));
                     scaledScore = await ComputeScaledScoreAsync(
                         attempt.CertId,
                         skill.SkillId,
@@ -514,9 +609,14 @@ public sealed partial class AttemptEngine
                 .Where(c => c.CertId == attempt.CertId)
                 .Select(c => new { c.Code, c.ScoreAggregationRule })
                 .SingleAsync(cancellationToken);
-            var totalScore = AggregateTotalScore(cert.ScoreAggregationRule, newSkillScores);
+            // #217 / PLC-19: same rule as the objective pass - a placement where nothing could be
+            // measured has no result, so it carries no total and no band.
+            var measuredNothing = isPlacementAttempt && newSkillScores.Count == 0;
+            var totalScore = measuredNothing ? (int?)null : AggregateTotalScore(cert.ScoreAggregationRule, newSkillScores);
             attempt.TotalScore = totalScore;
-            attempt.BandCode = await FindBandCodeAsync(attempt.CertId, totalScore, cancellationToken);
+            attempt.BandCode = totalScore is int total
+                ? await FindBandCodeAsync(attempt.CertId, total, cancellationToken)
+                : null;
             attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
             attempt.ProjectionVersion++;
             db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;

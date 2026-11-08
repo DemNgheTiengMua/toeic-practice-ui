@@ -28,6 +28,7 @@
                 {
                   <span class="@cell.CssClass"
                         id="nav-cell-@cell.QuestionId"
+                        data-section-id="@cell.SectionId"
                         aria-label="@cell.AriaLabel · Locked until this phase"
                         aria-disabled="true">
                     @cell.DisplayOrder
@@ -38,6 +39,7 @@
                   <a href="@cell.Url"
                      class="@cell.CssClass"
                      id="nav-cell-@cell.QuestionId"
+                     data-section-id="@cell.SectionId"
                      aria-label="@cell.AriaLabel"
                      aria-current="@cell.AriaCurrent">
                     @cell.DisplayOrder

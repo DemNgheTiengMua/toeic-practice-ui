@@ -337,10 +337,14 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
         Assert.Equal(PlacementFailureReason.AiGradingFailed, row.FailureReason);
         Assert.Null(row.CefrLevel);
 
-        // nothing measured anywhere: the placement is done only because the failure is recorded
+        // nothing measured anywhere: #217 / PLC-19 records this as ABANDONED with the reason, not done.
+        // `done` was #212's shape and it rendered a result page whose every skill was not-measured;
+        // the ticket asks for the sitting to be abandoned with no result instead.
         var placement = await verify.PlacementTests.AsNoTracking().SingleAsync(p => p.PlacementId == placementId);
-        Assert.Equal("done", placement.Status);
+        Assert.Equal("abandoned", placement.Status);
         Assert.Equal(PlacementFailureReason.AiGradingFailed, placement.CompletionFailureReason);
+        Assert.Null(placement.TotalScore);
+        Assert.Null(placement.ResultBandCode);
     }
 
     /// <summary>
@@ -554,6 +558,13 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
             var service = new PlacementService(db, new LearnerService(db));
             await service.SaveDraftAsync(userId, placementId, fixture.QuestionIds["WRIT"],
                 "A written response that is long enough to grade.");
+            // #217 / PLC-35: BOTH tasks this paper carries must be answered for the settled result to be
+            // a full measurement. It used to be one: the blank second task was given a grading row of its
+            // own at submission, and "2 of 2 gradings done" read as `measured`. Counting the grading
+            // rows rather than the tasks the paper DELIVERED is exactly the fabricated denominator D7
+            // forbids, so the fixture now answers both - which is what this test's name claims.
+            await service.SaveDraftAsync(userId, placementId, fixture.SecondQuestionIds["WRIT"],
+                "A second written response, also long enough to be graded.");
         }
 
         await using (var db = Db())

@@ -80,6 +80,28 @@
     if (text) text.textContent = `${answeredCount}/${config.totalQuestions} answered`;
     if (modal) modal.textContent = answeredCount;
     if (bar) bar.style.width = Math.round(answeredCount / Math.max(1, config.totalQuestions) * 100) + "%";
+    refreshSubmitModalSections();
+  }
+
+  // #217 / PLC-18: the confirmation's per-section counts, repainted from the navigator itself. The
+  // rows are the server's, one per section, and each cell carries its section id; a section whose
+  // every item has been answered hides its row rather than printing a zero beside a real count. The
+  // count is taken from `is-answered` on the cells - the same class the save path already sets - so
+  // there is one live source for "has this item been answered" and not a second counter to drift.
+  function refreshSubmitModalSections() {
+    const rows = qa("#submit-modal-section-rows tr");
+    if (rows.length === 0) return;
+    rows.forEach(row => {
+      const sectionId = row.dataset.sectionId;
+      const cells = qa(`#placement-take-dynamic [data-section-id="${sectionId}"]`);
+      if (cells.length === 0) return;
+      const unanswered = cells.filter(cell => !cell.classList.contains("is-answered")).length;
+      const count = row.querySelector("[data-unanswered]");
+      if (count) count.textContent = String(unanswered);
+      row.hidden = unanswered === 0;
+    });
+    const cost = q("#submit-modal-cost");
+    if (cost) cost.hidden = !rows.some(row => !row.hidden);
   }
 
   function setStatus(text, className) {
@@ -308,7 +330,7 @@
     const saveDraft = event.target.closest("#btn-save-writing-draft");
     if (saveDraft) saveDraftNow();
     const openModal = event.target.closest(".js-open-submit-modal");
-    if (openModal) q("#submit-modal")?.style.setProperty("display", "flex");
+    if (openModal) { refreshSubmitModalSections(); q("#submit-modal")?.style.setProperty("display", "flex"); }
     if (event.target.closest("#btn-cancel-submit")) q("#submit-modal")?.style.setProperty("display", "none");
   });
 

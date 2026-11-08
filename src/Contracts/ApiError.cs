@@ -84,10 +84,16 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string PlacementNotActive = "placement_not_active";
         public const string PlacementExpired = "placement_expired";
         public const string PlacementNotFinished = "placement_not_finished";
+
+        /// <summary>#217 / PLC-19: nothing was measurable, so the sitting is abandoned and has no result.</summary>
+        public const string PlacementAbandoned = "placement_abandoned";
         public const string TargetBandInvalid = "target_band_invalid";
 
         /// <summary>#213 / PLC-07: a retake inside the 24-hour cooldown. Never a lifetime cap.</summary>
         public const string PlacementCooldown = "placement_cooldown";
+
+        /// <summary>#217 / PLC-35: nothing on this placement failed to grade, so there is nothing to retry.</summary>
+        public const string PlacementRetryNotAllowed = "placement_retry_not_allowed";
 
         /// <summary>#153: a declared pace above the 25 h/week ceiling.</summary>
         public const string WeeklyHoursTooHigh = "weekly_hours_too_high";

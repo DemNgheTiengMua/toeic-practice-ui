@@ -89,7 +89,8 @@ internal static class AttemptViewModelMapper
             : "",
         Skills = result.SkillScores,
         SkillResults = result.SkillResults ?? [],
-        Dates = dates
+        Dates = dates,
+        RetryUrl = $"/placement/result/{result.PlacementId}/retry"
     };
 
     public static TargetBandViewModel TargetBand(TargetBandViewDto view, string? error, string? success)

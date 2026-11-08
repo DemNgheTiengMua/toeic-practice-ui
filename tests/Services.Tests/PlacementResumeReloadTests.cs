@@ -740,21 +740,23 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
             Assert.Equal(1, gradingsBefore);
         }
 
-        // Every read a reload performs. A placement whose free response is still queued stays
-        // in_progress, so the result page redirects to the sitting - and the resume read refuses a
-        // submitted attempt. Both refusals are reads: neither may write.
+        // Every read a reload performs. #217 / PLC-34 changed what the result read answers: a placement
+        // whose productive task is still queued is GRADING, so the result page renders the objective
+        // half now and fills in the productive half as each task returns. It used to throw
+        // PlacementNotFinished and bounce the learner back to a sitting they had already submitted,
+        // which is exactly the progressive-result failure criterion 5 names. What this test still holds
+        // - and the reason it exists - is that ALL of these reads write nothing.
         await using (var db = Db())
         {
             await Assert.ThrowsAsync<PlacementException>(() => Service(db).GetResumeAsync(userId, placementId));
         }
         await using (var db = Db())
         {
-            var notFinished = await Assert.ThrowsAsync<PlacementException>(
-                () => Service(db).GetPlacementResultAsync(userId, placementId));
-            Assert.Equal(PlacementException.PlacementNotFinished, notFinished.Code);
+            var interim = await Service(db).GetPlacementResultAsync(userId, placementId);
+            Assert.False(interim.IsGraded);          // the productive half is still in the queue
+            Assert.Contains(interim.SkillResults!, r => r.Status == PlacementResultStatus.Grading);
             await Service(db).GetGradingStatusAsync(userId, placementId);
-            await Assert.ThrowsAsync<PlacementException>(
-                () => Service(db).GetPlacementResultAsync(userId, placementId));
+            await Service(db).GetPlacementResultAsync(userId, placementId);
             await Service(db).GetGradingStatusAsync(userId, placementId);
         }
 

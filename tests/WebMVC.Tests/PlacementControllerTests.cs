@@ -500,6 +500,77 @@ public sealed class PlacementControllerTests
         Assert.Equal(42, redirect.RouteValues?["placementId"]);
     }
 
+    /// <summary>
+    /// #217 / PLC-19: a sitting that measured nothing has no result page. It returns to the catalogue
+    /// with a sentence, never a 500 and never a page whose every skill is "not measured".
+    /// </summary>
+    [Fact]
+    public async Task Result_when_the_sitting_measured_nothing_redirects_to_the_catalogue_with_a_message()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.PlacementAbandoned, "Nothing measured", 409)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Result(42, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(PlacementController.Index), redirect.ActionName);
+        var message = Assert.IsType<string>(controller.TempData["ErrorMessage"]);
+        Assert.Contains("abandoned", message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// #217 / PLC-35: the retry is a POST with anti-forgery that forwards through the cookie token and
+    /// returns to the result. It is never a link, because it re-queues work.
+    /// </summary>
+    [Fact]
+    public async Task Retry_forwards_to_the_api_and_returns_to_the_result()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+        var result = await controller.Retry(42, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(PlacementController.Result), redirect.ActionName);
+        Assert.Equal(42, redirect.RouteValues?["placementId"]);
+        Assert.NotNull(controller.TempData["SuccessMessage"]);
+    }
+
+    /// <summary>
+    /// §1.2: the retry re-queues work, so it must be a POST guarded by anti-forgery. A missing
+    /// <c>[ValidateAntiForgeryToken]</c> passes every functional test above and ships a one-click
+    /// re-dispatch, so the attribute itself is asserted.
+    /// </summary>
+    [Fact]
+    public void Retry_is_a_post_protected_by_anti_forgery()
+    {
+        var retry = typeof(PlacementController).GetMethod(nameof(PlacementController.Retry),
+            [typeof(int), typeof(CancellationToken)]);
+        Assert.NotNull(retry);
+        Assert.NotNull(retry!.GetCustomAttributes(typeof(HttpPostAttribute), inherit: true).SingleOrDefault());
+        Assert.Single(retry.GetCustomAttributes(typeof(ValidateAntiForgeryTokenAttribute), inherit: true));
+    }
+
+    /// <summary>A retry with nothing failed says so rather than claiming work happened.</summary>
+    [Fact]
+    public async Task Retry_with_nothing_failed_reports_it_and_still_returns_to_the_result()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.PlacementRetryNotAllowed, "Nothing to retry", 409)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Retry(42, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(PlacementController.Result), redirect.ActionName);
+        Assert.NotNull(controller.TempData["ErrorMessage"]);
+        Assert.Null(controller.TempData["SuccessMessage"]);
+    }
+
     [Fact]
     public async Task Result_when_not_found_returns_PlacementNotFound_404()
     {
@@ -921,6 +992,10 @@ public sealed class PlacementControllerTests
 
         public Task<PlacementGradingStatusDto> GetPlacementGradingStatusAsync(int placementId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PlacementGradingStatusDto>(ExceptionToThrow) : Task.FromResult(new PlacementGradingStatusDto(placementId, 1, true, 0, 0, 0, 800, "B2", "Vantage", Array.Empty<PlacementSkillScoreInfoDto>(), "Complete"));
+
+        /// <summary>#217 / PLC-35: the retry the result page offers a failed grading.</summary>
+        public Task<PlacementRetryResultDto> RetryPlacementGradingAsync(int placementId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<PlacementRetryResultDto>(ExceptionToThrow) : Task.FromResult(new PlacementRetryResultDto(placementId, 1, 2));
 
         public Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SaveAnswerResultDto>(ExceptionToThrow) : Task.FromResult(SaveAnswerResult!);

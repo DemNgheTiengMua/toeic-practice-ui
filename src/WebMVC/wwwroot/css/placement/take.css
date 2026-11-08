@@ -12,6 +12,17 @@
 
 .navigator__cell.is-locked { cursor: not-allowed; opacity: 0.55; }
 
+/* #217 / PLC-18: the submit confirmation's per-section table. The count is tabular and printed in
+   Sign Red because it is the cost of submitting; the frame and rules follow the same signage idiom as
+   the rest of the sitting. No radius, no shadow, no gradient. */
+.take-submit-modal__lede { margin: 0; }
+.take-submit-modal__count { color: #b31217; font-family: "IBM Plex Mono", monospace; font-weight: 700; }
+.take-submit-modal__sections { margin-top: var(--space-2); }
+.take-submit-modal__sections th[scope="row"] { font-family: "IBM Plex Sans Condensed", sans-serif; text-transform: uppercase; letter-spacing: 0.02em; }
+.take-submit-modal__sections td { font-family: "IBM Plex Mono", monospace; text-align: right; }
+.take-submit-modal__sections tr[hidden] { display: none; }
+.take-submit-modal__cost { border-left: 2px solid #b31217; padding-left: var(--space-2); }
+
 /* #216 / PLC-17: the offline banner and the sync placard. Signage palette, flat fields, no radius
    and no shadow - the same two colours the sitting already uses for refusal and success. */
 .placement-offline-banner { border: 2px solid #b31217; border-radius: 0; box-shadow: none; padding: var(--space-3); margin-bottom: var(--space-4); font-family: "IBM Plex Sans Condensed", sans-serif; text-transform: uppercase; letter-spacing: 0.02em; }
