@@ -118,7 +118,7 @@ END CATCH
 IF EXISTS (SELECT 1 FROM DerivedFactOwners WHERE FactCode = 'exam_publish_readiness')
   THROW 50000, 'EXPECT_REJECT FAILED: the publish pass is registered as a derived fact, which would demand a ProjectionVersion it does not need', 1;
 
-IF (SELECT COUNT(*) FROM DerivedFactOwners) <> 9
-  THROW 50000, 'EXPECT_REJECT FAILED: the registry no longer names nine facts', 1;
+IF (SELECT COUNT(*) FROM DerivedFactOwners) <> 10
+  THROW 50000, 'EXPECT_REJECT FAILED: the registry no longer names ten facts', 1;
 
 PRINT 'domain41: publishing is one door, and the door is a constraint';

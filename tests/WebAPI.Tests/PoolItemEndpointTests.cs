@@ -133,6 +133,7 @@ public sealed class PoolItemEndpointTests
         public Task<AdminPublishExamResultDto> PublishExamAsync(int examId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<AdminPublishExamResultDto> WithdrawExamAsync(int examId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeleteExamAsync(int examId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<AdminForkEditionResultDto> ForkEditionAsync(int examId, ForkExamEditionRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<AdminExamQuestionsDto> GetExamQuestionsAsync(int examId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<AdminQuestionGroupDto> CreateQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<AdminQuestionGroupDto> UpdateQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();

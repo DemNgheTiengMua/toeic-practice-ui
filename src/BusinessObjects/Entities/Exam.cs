@@ -56,6 +56,20 @@ public partial class Exam
 
     public bool IsDeleted { get; set; }
 
+    /// <summary>
+    /// #227: which edition of this paper this row is. One row is one edition: a structural repair
+    /// forks a new <see cref="Exam"/> whose <see cref="SupersedesExamId"/> names this one, so the
+    /// items, the timers and the chrome a historical attempt sat never move. Defaults to 1, which is
+    /// what every paper created before the column existed is.
+    /// </summary>
+    public int EditionNumber { get; set; } = 1;
+
+    /// <summary>
+    /// #227: the edition this one replaced, or NULL for a paper that was never forked. A chain rather
+    /// than a "current edition" pointer: the live edition is the one whose status is published.
+    /// </summary>
+    public int? SupersedesExamId { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset? UpdatedAt { get; set; }
@@ -100,6 +114,22 @@ public partial class Exam
     /// <summary>#226: the recorded readiness pass that unlocks the publish door. At most one row.</summary>
     [InverseProperty("Exam")]
     public virtual ExamPublishAudit? PublishAudit { get; set; }
+
+    /// <summary>
+    /// #227: the frozen edition - what was in force when this paper went live. Written by the publish
+    /// trigger and by nothing else. NULL on a draft, which has no learners and therefore no edition to
+    /// protect.
+    /// </summary>
+    [InverseProperty("Exam")]
+    public virtual ExamEdition? Edition { get; set; }
+
+    /// <summary>#227: the edition this paper replaced, or NULL for a first edition.</summary>
+    [InverseProperty("SupersededBy")]
+    public virtual Exam? SupersedesExam { get; set; }
+
+    /// <summary>#227: the editions forked from this one.</summary>
+    [InverseProperty("SupersedesExam")]
+    public virtual ICollection<Exam> SupersededBy { get; set; } = new List<Exam>();
 
     [InverseProperty("Exam")]
     public virtual ICollection<ScoreScale> ScoreScales { get; set; } = new List<ScoreScale>();

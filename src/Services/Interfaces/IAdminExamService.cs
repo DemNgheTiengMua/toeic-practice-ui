@@ -27,6 +27,12 @@ public interface IAdminExamService
     Task<AdminPublishExamResultDto> WithdrawExamAsync(int examId, CancellationToken cancellationToken = default);
     Task DeleteExamAsync(int examId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// #227: a structural repair forks a new edition rather than mutating the one learners sat. The
+    /// fork is a draft; it goes live through <see cref="PublishExamAsync"/> like any other paper.
+    /// </summary>
+    Task<AdminForkEditionResultDto> ForkEditionAsync(int examId, ForkExamEditionRequest request, CancellationToken cancellationToken = default);
+
     Task<AdminExamQuestionsDto> GetExamQuestionsAsync(int examId, CancellationToken cancellationToken = default);
     Task<AdminQuestionGroupDto> CreateQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, CancellationToken cancellationToken = default);
     Task<AdminQuestionGroupDto> UpdateQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default);

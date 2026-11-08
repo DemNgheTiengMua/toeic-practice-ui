@@ -139,6 +139,12 @@ internal static class PoolImportWriter
             })
             .ToList();
 
+        // #227: no structure-lock call here, and that is a verified decision rather than an omission.
+        // This writer has exactly two callers: `ExamQuickIngestService.CommitStagedAsync` calls the
+        // lock at its own line 55 before it reaches this writer, and `QuestionImportService.CommitAsync`
+        // only ever writes a paper it created one statement earlier (`db.Exams.Add`, Persistence.cs:224),
+        // which by definition has no attempts. A lock call here would be a third copy of a rule both
+        // callers already satisfy, and it would refuse the import path that is correct today.
         db.ExamItems.AddRange(bindings);
         await db.SaveChangesAsync(cancellationToken);
 

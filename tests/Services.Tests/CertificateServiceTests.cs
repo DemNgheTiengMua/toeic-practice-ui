@@ -120,7 +120,11 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // moves into published with a pass at least as new as its last edit).
         // #233: one more, 59 -> 60 - trg_LearnerPathWeeks_SingleWriter, the seventh covered derived fact
         // and the archive's immutability guard.
-        Assert.Equal(60, triggerCount);
+        // #227: three more, 60 -> 63 - trg_Exams_PublishFreezesEdition (publishing freezes the timers,
+        // phase weights, aggregation rule, band grid and cut-score version an attempt is scored with),
+        // trg_ExamEditions_SingleWriter (the eighth covered derived fact) and
+        // trg_ExamAttempts_EditionIsFixed (an attempt cannot be moved onto another edition).
+        Assert.Equal(63, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]

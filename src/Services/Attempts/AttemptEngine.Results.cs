@@ -193,6 +193,14 @@ public sealed partial class AttemptEngine
             .Where(b => b.CertId == attempt.CertId && b.Code == attempt.BandCode)
             .FirstOrDefaultAsync(cancellationToken);
 
+        // #227: the band the review prints is the NAME, and a name is exactly what a later
+        // re-standardisation rewrites. The attempt stores the code, so the name comes from the
+        // edition's frozen grid. Falling back to today's `ScoreBands` is for a paper with no edition
+        // only - a paper that has one must not read a grid nobody was measured against.
+        var frozenBandName = MatchFrozenBandName(
+            await LoadEditionAsync(attempt.ExamId, cancellationToken),
+            attempt.BandCode);
+
         var sectionMasterAudio = await LoadSectionMasterAudioAsync(attempt.ExamId, cancellationToken);
         var reviewQuestions = new List<AttemptReviewQuestion>();
         var navigator = new List<ReviewNavigatorItem>();
@@ -289,7 +297,7 @@ public sealed partial class AttemptEngine
             durationSeconds,
             attempt.TotalScore ?? 0,
             attempt.BandCode,
-            band?.Name ?? attempt.BandCode,
+            frozenBandName ?? band?.Name ?? attempt.BandCode,
             scoreItems,
             totalQuestions,
             answeredCount,

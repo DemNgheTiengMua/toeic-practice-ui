@@ -205,6 +205,10 @@ public partial class CompanionDbContext
                 tb.HasTrigger("trg_Exams_PurposeKeepsContent");
                 tb.HasTrigger("trg_Exams_TierKeepsContent");
                 tb.HasTrigger("trg_Exams_PublishRequiresAudit");
+                // #227: publishing freezes what was in force - timers, phase weights, aggregation
+                // rule, band grid, cut-score version - so a review of a historical attempt never
+                // re-derives the numbers it was scored with.
+                tb.HasTrigger("trg_Exams_PublishFreezesEdition");
             });
 
             entity.HasIndex(e => new { e.CertId, e.Purpose, e.Status }, "IX_Exams_Cert_Status").HasFilter("([IsDeleted]=(0))");
@@ -220,10 +224,47 @@ public partial class CompanionDbContext
             entity.Property(e => e.Status).HasDefaultValue("draft");
             // #185: a new exam is demo-tier until someone promotes it - the same default as Items.
             entity.Property(e => e.ContentTier).HasMaxLength(12).IsUnicode(false).HasDefaultValue("demo");
+            // #227: a paper that was never forked is edition 1.
+            entity.Property(e => e.EditionNumber).HasDefaultValue(1);
 
             entity.HasOne(d => d.Cert).WithMany(p => p.Exams)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Exams__CertId__160F4887");
+
+            // #227: the fork chain. No inverse collection - a paper has at most one predecessor and
+            // nothing reads the successors from the parent except the fork itself.
+            entity.HasOne(d => d.SupersedesExam).WithMany()
+                .HasForeignKey(d => d.SupersedesExamId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Exams_Supersedes");
+        });
+
+
+
+        modelBuilder.Entity<ExamEdition>(entity =>
+        {
+            entity.HasKey(e => e.ExamId).HasName("PK_ExamEditions");
+
+            // HasTrigger: ADR-0012's ownership guard. Without the declaration every save on this table
+            // fails on the OUTPUT clause.
+            entity.ToTable(tb => tb.HasTrigger("trg_ExamEditions_SingleWriter"));
+
+            entity.Property(e => e.ScoreAggregationRule).HasMaxLength(20).IsUnicode(false);
+            entity.Property(e => e.WrittenByService).HasMaxLength(64).IsUnicode(false);
+            entity.Property(e => e.ProjectionVersion).HasDefaultValue(1);
+
+            // One-to-one with the paper, and the FK is the primary key: a second row for one exam would
+            // be a second answer to "what was in force when it went live".
+            entity.HasOne(d => d.Exam).WithOne(p => p.Edition)
+                .HasForeignKey<ExamEdition>(d => d.ExamId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ExamEditions_Exam");
+
+            entity.HasOne(d => d.CutScoreVersion).WithMany()
+                .HasPrincipalKey(p => new { p.CertId, p.TableVersion })
+                .HasForeignKey(d => new { d.CertId, d.CutScoreTableVersion })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ExamEditions_CutScore");
         });
 
 
