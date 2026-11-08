@@ -59,6 +59,49 @@ public sealed class OneSelectorCallSiteTests(DatabaseFixture database)
     }
 
     /// <summary>
+    /// One definition of "which version is live", proved at every call site rather than only where a
+    /// draw used to be.
+    /// <para>
+    /// <b>The input that would pass a weaker test while being wrong:</b> grepping only the two former
+    /// draws, which is what this class did first. Two placement draw services and the item edit path
+    /// each hand-rolled <c>OrderByDescending(v =&gt; v.VersionNumber)</c> while carrying a comment
+    /// saying <see cref="GateContext"/> states it once - so a version inserted out of order would have
+    /// had two readers pick two different rows.
+    /// </para>
+    /// <para>
+    /// <b>What is allowed:</b> a <c>Max(VersionNumber)</c> inside an EF projection, because it reports a
+    /// number rather than choosing a row - it cannot disagree about <em>which</em> row is live. Only
+    /// row-selecting orderings are refused.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void Only_GateContext_orders_item_versions_to_pick_a_row()
+    {
+        var servicesRoot = Path.Combine(DatabaseFixture.RepoRootPath, "src", "Services");
+
+        var offenders = Directory
+            .EnumerateFiles(servicesRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.EndsWith("GateContext.cs", StringComparison.OrdinalIgnoreCase))
+            .SelectMany(f => File.ReadAllLines(f)
+                .Select((line, index) => (File: Path.GetFileName(f), Line: line, Number: index + 1)))
+            // The shape that picks a row: an explicit ordering on an item version's authored number.
+            .Where(hit => hit.Line.Contains("VersionNumber", StringComparison.Ordinal)
+                && (hit.Line.Contains("OrderByDescending", StringComparison.Ordinal)
+                    || hit.Line.Contains("OrderBy(", StringComparison.Ordinal)
+                    || hit.Line.Contains("MaxBy", StringComparison.Ordinal)))
+            // Max(VersionNumber) reports a value and is not a row choice.
+            .Where(hit => !hit.Line.Contains(".Max(", StringComparison.Ordinal))
+            .Select(hit => $"{hit.File}:{hit.Number}: {hit.Line.Trim()}")
+            .ToList();
+
+        Assert.True(
+            offenders.Count == 0,
+            "These pick a live item version with their own ordering instead of GateContext.Newest/"
+                + "NewestPerItem, so they can disagree with the reader that judged the item:\n  "
+                + string.Join("\n  ", offenders));
+    }
+
+    /// <summary>
     /// A path step and a free drill, both through their real public services, draw the same item at the
     /// same coordinate. Passing while wrong: each service reaching the pool its own way, which agrees
     /// only until one of them learns a new exclusion.
