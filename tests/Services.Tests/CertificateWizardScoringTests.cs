@@ -166,6 +166,31 @@ public sealed class CertificateWizardScoringTests(DatabaseFixture database)
         db.QuestionOptions.Add(option);
         await db.SaveChangesAsync();
 
+        // #259 / PRN-03: the wizard writes Certificate/Skill/Section/ScoreScale/ScoreBand, and a
+        // placement is placed by a CUT-SCORE table. Before #259 this test passed only because the
+        // writer fell back to parsing the band code as a CEFR level, which is the crosswalk the rule
+        // forbids. The table is seeded here rather than by the wizard because publishing cut scores is
+        // a separate admin act (#210 owns it) - this test is about the submit path, not about that.
+        db.CefrCutScoreVersions.Add(new BusinessObjects.Entities.CefrCutScoreVersion
+        {
+            CertId = certId,
+            TableVersion = 1,
+            ReportsSkillsSeparately = false,
+            Source = "wizard-test",
+            PublishedAt = new DateOnly(2026, 1, 1),
+        });
+        db.CefrCutScores.Add(new BusinessObjects.Entities.CefrCutScore
+        {
+            CertId = certId,
+            TableVersion = 1,
+            SkillId = skillId,
+            CefrLevel = "A2",
+            RowKind = "cut",
+            MinScaled = 0,
+            MaxScaled = 100,
+        });
+        await db.SaveChangesAsync();
+
         return exam.ExamId;
     }
 

@@ -252,20 +252,27 @@ public sealed class PlacementResultWriter(
 
             if (measuredNow)
             {
-                // The projection owns the level when it could place the score. When it could not - a
-                // gap between two cut ranges, or no table published - the attempt's own band is the
-                // only evidence there is, and reading it is honest where inventing A1 would not be.
-                var level = projected?.AwardedLevel ?? LevelFromBand(attempt.BandCode);
-                var position = projected?.PositionInBand
-                    ?? PositionFromBand(attempt.TotalScore, attempt.BandCode, bands);
-                var coordinate = projected?.ContinuousCoordinate ?? CoordinateFromLevel(level);
+                // #259 / PRN-03: the projection owns the level, and only the projection. When it could
+                // not place the score — a gap between two cut ranges, or no table at all — there IS no
+                // level, and the band's own name is not one.
+                if (projected?.AwardedLevel is not { } level)
+                {
+                    RecordUnplaceable(row);
+                    // A gap is a content fact, not a learner outcome, so it is NOT a completion failure:
+                    // the placement can still be a partial result on its other skills.
+                    firstFailure ??= PlacementFailureReason.NoCutScoreRow;
+                    continue;
+                }
+
+                var position = projected.PositionInBand!.Value;
+                var coordinate = projected.ContinuousCoordinate;
 
                 row.CefrLevel = level;
                 row.PositionInBand = position;
                 row.ContinuousCoordinate = coordinate;
-                row.ProjectedBandCode = projected is null ? null : BandCodeFor(attempt.TotalScore, bands);
-                row.ProjectedScore = projected is null ? null : attempt.TotalScore;
-                row.CutScoreTableVersion = projected is null ? null : tableVersion;
+                row.ProjectedBandCode = BandCodeFor(attempt.TotalScore, bands);
+                row.ProjectedScore = attempt.TotalScore;
+                row.CutScoreTableVersion = tableVersion;
                 row.MeasuredAt = now;
                 row.ExpiresAt = now + ReuseWindow;
                 row.FailureReason = null;
@@ -575,13 +582,43 @@ public sealed class PlacementResultWriter(
         totalScore is int total ? AttemptEngine.MatchBandCode(total, bands) : null;
 
     /// <summary>
-    /// The level to report when the cut-score table could not place this skill's score. A band code
-    /// that is also a reportable level name (IELTS "B2", TOEIC "A2") is the certificate's own label for
-    /// it; a code like "below_A1" or "CAT_B1" is not a level, so it reports the pre-A1 floor rather
-    /// than inventing one (PRN-03).
+    /// #259 / PRN-03: <b>a band is not a CEFR level, so a score the cut-score table cannot place has no
+    /// level at all.</b>
+    /// <para>
+    /// This used to call a helper that parsed the attempt's band code as a level. It looked harmless and
+    /// was wrong: IELTS, TOEIC and VSTEP spell their band codes <c>A2</c>/<c>B1</c>/…, the very
+    /// characters a level uses, so a table with a gap silently produced a level from the band's NAME.
+    /// The seeded TOEIC table has five such gaps (56–59, 106–109, 271–274, 396–399, 486–489), and 396–399
+    /// sits inside band A2 (225–545) — so a learner scoring 397 was reported at CEFR A2 by a crosswalk
+    /// no one wrote and AGENTS.md §9 forbids without an argued case.
+    /// </para>
+    /// <para>
+    /// <b>Reporting the floor instead would be the other fabrication.</b> PreA1 is a claim about the
+    /// learner; a missing cut row is a claim about the content. So the skill becomes
+    /// <c>not_measured</c> with <see cref="PlacementFailureReason.NoCutScoreRow"/>, which the result
+    /// screen already renders as an attention panel with a reason — the same shape a failed grading
+    /// gets, and honest for the same reason.
+    /// </para>
     /// </summary>
-    private static CefrLevel LevelFromBand(string? bandCode) =>
-        CefrLevel.TryParse(bandCode, out var level) ? level : CefrLevel.PreA1;
+    private void RecordUnplaceable(PlacementSkillResult row)
+    {
+        row.ResultStatus = PlacementResultStatus.NotMeasured;
+        row.IsEstimatedFromOneTask = false;
+        row.ReusedFromPrior = false;
+        row.CefrLevel = null;
+        row.PositionInBand = null;
+        row.ContinuousCoordinate = null;
+        row.ProjectedBandCode = null;
+        row.ProjectedScore = null;
+        row.CutScoreTableVersion = null;
+        row.MeasuredAt = null;
+        row.ExpiresAt = null;
+        row.FailureReason = PlacementFailureReason.NoCutScoreRow;
+        row.IsTruncated = false;
+        // Nothing was read from this skill, so it contributes no hint and no rubric profile.
+        row.TopicPriorsJson = null;
+        row.CriterionProfileJson = null;
+    }
 
     private static int PositionFromBand(int? totalScore, string? bandCode, IReadOnlyList<ScoreBand> bands)
     {

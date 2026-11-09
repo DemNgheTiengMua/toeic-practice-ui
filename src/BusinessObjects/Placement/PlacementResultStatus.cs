@@ -48,7 +48,21 @@ public static class PlacementFailureReason
     /// <summary>Every planned productive task's AI grading failed, so there is no level to report.</summary>
     public const string AiGradingFailed = "ai_grading_failed";
 
+    /// <summary>
+    /// #259 / PRN-03: the certificate's cut-score table has no row covering this skill's score, so
+    /// nothing placed it. A gap in the table is a fact about the CONTENT, not about the learner: it is
+    /// not the bottom band, and reporting the certificate's band name as a CEFR level would be the
+    /// crosswalk AGENTS.md §9 forbids.
+    /// <para>
+    /// A fourth value, where the note above said "a fourth value would be a failure nobody designed".
+    /// That reasoning was about a failure with no author; a gapped table IS authored — the seeded TOEIC
+    /// table has five gaps (56–59, 106–109, 271–274, 396–399, 486–489), and a certificate may publish
+    /// none at all.
+    /// </para>
+    /// </summary>
+    public const string NoCutScoreRow = "no_cut_score_row";
+
     /// <summary>The three, for a CHECK-shaped validation before a write reaches the database.</summary>
     public static IReadOnlyList<string> All { get; } =
-        [CandidateSkipped, InactivityTimeout, AiGradingFailed];
+        [CandidateSkipped, InactivityTimeout, AiGradingFailed, NoCutScoreRow];
 }

@@ -138,6 +138,20 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
               (@cert, 'B1', N'Intermediate', 501, 750, 3),
               (@cert, 'B2', N'Upper intermediate', 751, 990, 4);
 
+            -- #259 / PRN-03: a placement also needs a CUT-SCORE table. Without one the projection cannot
+            -- place a score, and the writer used to parse the band code as a CEFR level instead - the
+            -- crosswalk the rule forbids. Fixtures now carry the table a real certificate has.
+            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
+              VALUES (@cert, 1, 0, N'fixture', '2026-01-01');
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
+              SELECT @cert, 1, SkillId, 'A1', 'cut', 0, 200 FROM Skills WHERE CertId = @cert;
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
+              SELECT @cert, 1, SkillId, 'A2', 'cut', 201, 500 FROM Skills WHERE CertId = @cert;
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
+              SELECT @cert, 1, SkillId, 'B1', 'cut', 501, 750 FROM Skills WHERE CertId = @cert;
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
+              SELECT @cert, 1, SkillId, 'B2', 'cut', 751, 990 FROM Skills WHERE CertId = @cert;
+
             -- Placement exams
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, QuestionCount) VALUES
               (@cert, N'Standard Placement Test', 'published', 30, 'placement', N'A full-length diagnostic across both sections.', 2);

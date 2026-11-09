@@ -156,6 +156,27 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
             new ScoreBand { CertId = certId, Code = "B1", Name = "Intermediate", MinTotal = 200, MaxTotal = 400, DisplayOrder = 2 });
         await db.SaveChangesAsync();
 
+        // #259 / PRN-03: a placement needs a CUT-SCORE table, not only a band table. Without one the
+        // projection cannot place a score, and before #259 the writer papered over that by parsing the
+        // band code as a CEFR level - which is the crosswalk the rule forbids. A fixture with bands and
+        // no cut table was asserting that behaviour, so it now carries the table a real certificate has.
+        db.CefrCutScoreVersions.Add(new CefrCutScoreVersion
+        {
+            CertId = certId,
+            TableVersion = 1,
+            ReportsSkillsSeparately = false,
+            Source = "fixture",
+            PublishedAt = new DateOnly(2026, 1, 1),
+        });
+        foreach (var skillId in scaleRows)
+        {
+            db.CefrCutScores.AddRange(
+                new CefrCutScore { CertId = certId, TableVersion = 1, SkillId = skillId, CefrLevel = "A2", RowKind = "cut", MinScaled = 0, MaxScaled = 199 },
+                new CefrCutScore { CertId = certId, TableVersion = 1, SkillId = skillId, CefrLevel = "B1", RowKind = "cut", MinScaled = 200, MaxScaled = 400 });
+        }
+
+        await db.SaveChangesAsync();
+
         correctOption = await db.QuestionOptions
             .Where(o => o.QuestionId == listeningIds[0] && o.IsCorrect)
             .Select(o => o.OptionId).SingleAsync();

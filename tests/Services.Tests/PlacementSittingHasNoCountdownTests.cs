@@ -103,6 +103,27 @@ public sealed class PlacementSittingHasNoCountdownTests : IAsyncLifetime
         db.ScoreBands.Add(new ScoreBand { CertId = certId, Code = "A2", Name = "Elementary", MinTotal = 0, MaxTotal = 200, DisplayOrder = 1 });
         await db.SaveChangesAsync();
 
+        // #259 / PRN-03: a cut-score table is what places a score. Without one the writer used to parse
+        // the band code as a CEFR level - the crosswalk the rule forbids.
+        db.CefrCutScoreVersions.Add(new CefrCutScoreVersion
+        {
+            CertId = certId,
+            TableVersion = 1,
+            ReportsSkillsSeparately = false,
+            Source = "fixture",
+            PublishedAt = new DateOnly(2026, 1, 1),
+        });
+        foreach (var skillId in await db.Skills.Where(s => s.CertId == certId).Select(s => s.SkillId).ToListAsync())
+        {
+            db.CefrCutScores.Add(new CefrCutScore
+            {
+                CertId = certId, TableVersion = 1, SkillId = skillId,
+                CefrLevel = "A2", RowKind = "cut", MinScaled = 0, MaxScaled = 500,
+            });
+        }
+
+        await db.SaveChangesAsync();
+
         var questionId = await db.Questions.Where(q => q.ExamId == examId).OrderBy(q => q.DisplayOrder)
             .Select(q => q.QuestionId).FirstAsync();
         var correctOption = await db.QuestionOptions.Where(o => o.QuestionId == questionId && o.IsCorrect)

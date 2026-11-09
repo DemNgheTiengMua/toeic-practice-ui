@@ -121,6 +121,16 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
         lines.Add("""
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cert, 'A2', N'Elementary', 0, 200, 1), (@cert, 'B1', N'Intermediate', 201, 500, 2);
+            -- #259 / PRN-03: the cut-score table is what places a score, and it must span BOTH scales a
+            -- paper can produce: an objective skill's scaled score (0-500) and a productive skill's
+            -- rubric total, which the writer stores on the 0-10 rubric scale. The A2 row starts at 0 so
+            -- a graded task lands in a range rather than being judged "no cut row".
+            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
+              VALUES (@cert, 1, 0, N'fixture', '2026-01-01');
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
+              SELECT @cert, 1, SkillId, 'A2', 'cut', 0, 200 FROM Skills WHERE CertId = @cert;
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
+              SELECT @cert, 1, SkillId, 'B1', 'cut', 201, 500 FROM Skills WHERE CertId = @cert;
             INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore)
               SELECT @cert, SkillId, NULL, 0, 0 FROM Skills WHERE CertId = @cert;
             INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore)
@@ -243,6 +253,84 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
 
         var placement = await db.PlacementTests.AsNoTracking().SingleAsync(p => p.PlacementId == placementId);
         Assert.Equal("done", placement.Status);
+    }
+
+    /// <summary>
+    /// #259 / PRN-03: <b>a band is not a CEFR level.</b> A score the cut-score table cannot place must
+    /// not acquire a level from its certificate's band name.
+    /// <para>
+    /// <b>The measured trigger.</b> The seeded TOEIC cut table has real gaps — 56–59, 106–109, 271–274,
+    /// 396–399, 486–489 — and 396–399 sits inside band <c>A2</c> (225–545). So a learner scoring 397 on
+    /// Listening hits no cut row, and <c>PlacementResultWriter</c> used to call
+    /// <c>LevelFromBand("A2")</c>, which succeeds because the band code is spelled like a level. The row
+    /// then reads "measured, A2" for a score the table never placed.
+    /// </para>
+    /// <para>
+    /// <b>The wrong input this refuses.</b> A test asserting "the level is not null" passes on the
+    /// fabricated A2. A test asserting "the position is in 0–100" passes too. The only assertion that
+    /// distinguishes a placed level from a band wearing a level's name is that an unplaceable score
+    /// carries <b>no level at all</b> and a reason saying why.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task A_score_inside_a_cut_score_gap_does_not_borrow_the_band_name_as_its_level()
+    {
+        var code = Unique("T259A");
+        var fixture = await SeedAsync(code, ("LIST", "listening", "mcq"));
+        var userId = await SeedLearnerAsync(code);
+        var skillId = fixture.SkillIds["LIST"];
+
+        // A cut table with a hole around the score the engine will produce. The scale maps raw 1 -> 250,
+        // so a learner answering the single item correctly scores 250; the only cut row covers 400-500,
+        // and the band table puts 250 in band 'B1'. That is the trap: the band code is spelled exactly
+        // like a level, so a reader that parses it reports CEFR B1 for a score no cut row placed.
+        await SqlAsync($"""
+            -- The shared fixture seeds a complete table; this test needs the GAP, so that table goes.
+            DELETE FROM CefrCutScores WHERE CertId = {fixture.CertId};
+            DELETE FROM CefrCutScoreVersions WHERE CertId = {fixture.CertId};
+            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
+              VALUES ({fixture.CertId}, 1, 0, N'gapped', '2026-01-01');
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
+              VALUES ({fixture.CertId}, 1, {skillId}, 'C1', 'cut', 400, 500);
+            """);
+
+        var placementId = await StartPlacementAsync(userId, fixture);
+        var attemptId = await AttemptIdAsync(placementId);
+
+        await SqlAsync($"""
+            UPDATE AttemptAnswers SET SelectedOptionId = {fixture.CorrectOptionBySkillId[skillId]}
+              WHERE AttemptId = {attemptId} AND QuestionId = {fixture.QuestionIds["LIST"]};
+            """);
+
+        // One writer pass, through the real engine. The gap is present from the start, so no done
+        // placement is ever flipped - the guard in trg_PlacementSkillResults_CompletionIsEarned exists
+        // to stop exactly that, and a fixture that provoked it would be testing the guard, not this.
+        await using (var db = Db())
+        {
+            await new AttemptEngine(db).SubmitAttemptAsync(attemptId, userId, isAutoSubmit: false);
+        }
+
+        await using (var db = Db())
+        {
+            await Writer(db).WriteAsync(placementId);
+        }
+
+        await using var verify = Db();
+        var row = await verify.PlacementSkillResults.AsNoTracking()
+            .SingleAsync(r => r.PlacementId == placementId && r.SkillId == skillId);
+
+        // No cut row covers 250, so there is no level. 'B1' here would be the certificate's band name
+        // worn as a CEFR level - the crosswalk AGENTS.md §9 forbids without an argued case.
+        Assert.Null(row.CefrLevel);
+        Assert.Null(row.PositionInBand);
+        Assert.Null(row.ContinuousCoordinate);
+        Assert.Equal(PlacementResultStatus.NotMeasured, row.ResultStatus);
+        Assert.Equal(PlacementFailureReason.NoCutScoreRow, row.FailureReason);
+
+        // The band itself is still a real fact about the attempt, and it is recorded as a band.
+        var attempt = await verify.ExamAttempts.AsNoTracking().SingleAsync(a => a.AttemptId == attemptId);
+        Assert.Equal("B1", attempt.BandCode);
+        Assert.NotEqual(PlacementResultStatus.Measured, row.ResultStatus);
     }
 
     /// <summary>
@@ -454,6 +542,24 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
               WHERE FreeResponseId = @fr2;
             """);
 
+        // The engine scored nothing at submit time because both tasks were ungraded then, so there is no
+        // AttemptSkillScores row to project. The one graded task is worth 4.5 on the rubric scale, which
+        // the engine would store as 5; writing it is what a real settled grading produces. The attempt's
+        // writer declaration is in the statement (ADR-0012 / PRN-01), and the total is nulled first
+        // because trg_Attempts_TotalMatchesSkills compares a non-null total against the skill rows.
+        await SqlAsync($"""
+            UPDATE ExamAttempts
+               SET TotalScore = NULL, WrittenByService = 'AttemptEngine',
+                   ProjectionVersion = ProjectionVersion + 1
+             WHERE AttemptId = {attemptId};
+            INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore)
+              VALUES ({attemptId}, {skillId}, {fixture.CertId}, 5, 5);
+            UPDATE ExamAttempts
+               SET TotalScore = 5, WrittenByService = 'AttemptEngine',
+                   ProjectionVersion = ProjectionVersion + 1
+             WHERE AttemptId = {attemptId};
+            """);
+
         await using (var db = Db())
         {
             await Writer(db).WriteAsync(placementId);
@@ -490,8 +596,11 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
         var userId = await SeedLearnerAsync(code);
         var skillId = fixture.SkillIds["LIST"];
 
-        // two versions with different B1 ranges, so the same position yields different scores
+        // two versions with different B1 ranges, so the same position yields different scores. The
+        // fixture now seeds version 1 itself (#259), so it is cleared first and rebuilt here.
         await SqlAsync($"""
+            DELETE FROM CefrCutScores WHERE CertId = {fixture.CertId};
+            DELETE FROM CefrCutScoreVersions WHERE CertId = {fixture.CertId};
             INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
               VALUES ({fixture.CertId}, 1, 0, N'v1', '2026-01-01'), ({fixture.CertId}, 2, 0, N'v2', '2026-02-01');
             INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)

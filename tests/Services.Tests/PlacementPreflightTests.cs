@@ -112,6 +112,14 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         lines.Add("""
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cert, 'A2', N'Elementary', 0, 200, 1), (@cert, 'B1', N'Intermediate', 201, 500, 2);
+            -- #259 / PRN-03: the cut-score table is what places a score. Without it the writer used to
+            -- parse the band code as a level, which is the crosswalk the rule forbids.
+            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
+              VALUES (@cert, 1, 0, N'fixture', '2026-01-01');
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
+              SELECT @cert, 1, SkillId, 'A2', 'cut', 0, 200 FROM Skills WHERE CertId = @cert;
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
+              SELECT @cert, 1, SkillId, 'B1', 'cut', 201, 500 FROM Skills WHERE CertId = @cert;
             INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore)
               SELECT @cert, SkillId, NULL, 0, 0 FROM Skills WHERE CertId = @cert;
             INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore)

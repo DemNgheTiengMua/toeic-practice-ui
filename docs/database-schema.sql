@@ -2862,7 +2862,7 @@ CREATE TABLE PlacementTests (
   CompletionFailureReason VARCHAR(24) NULL
     CONSTRAINT CK_Placement_CompletionFailure
     CHECK (CompletionFailureReason IS NULL
-           OR CompletionFailureReason IN ('candidate_skipped','inactivity_timeout','ai_grading_failed')),
+           OR CompletionFailureReason IN ('candidate_skipped','inactivity_timeout','ai_grading_failed','no_cut_score_row')),
   -- #213 / story 52: the learner chose, at the preflight, to carry over the skills whose stored result
   -- is still inside D18's window rather than re-measure everything. The choice belongs to the sitting -
   -- the result writer reads it to decide which skills are carried - and it is NOT a stored result: the
@@ -2946,11 +2946,13 @@ CREATE TABLE PlacementSkillResults (
   -- not a restatement of the level: a row that says measured + today's date while claiming reuse is
   -- the re-stamping defect, and only this column distinguishes the two rows.
   ReusedFromPrior      BIT NOT NULL CONSTRAINT DF_PSR_Reused DEFAULT 0,
-  -- The three reasons a skill ends up not measured. Null for every other status: "grading" is not a
+  -- The four reasons a skill ends up not measured. Null for every other status: "grading" is not a
   -- failure yet, and saying it failed while the job is queued is the mirror of the defect being fixed.
+  -- #259: 'no_cut_score_row' is the table's failure, not the learner's - the score exists and nothing
+  -- in the certificate's cut table placed it, so the honest answer is "no level", not the band's name.
   FailureReason        VARCHAR(24) NULL
     CONSTRAINT CK_PSR_FailureReason CHECK (FailureReason IS NULL
-      OR FailureReason IN ('candidate_skipped','inactivity_timeout','ai_grading_failed')),
+      OR FailureReason IN ('candidate_skipped','inactivity_timeout','ai_grading_failed','no_cut_score_row')),
   -- #219 / D5: what the sitting SAW, per topic, as a sequencing hint for the first week - never a
   -- mastery judgement. Three items cannot prove a topic is learned (mastery needs twelve), so this is
   -- a separate column on a separate table and NOTHING in the mastery path reads it.
