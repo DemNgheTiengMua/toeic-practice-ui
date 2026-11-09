@@ -5,20 +5,8 @@
     var resume = Model.Resume;
 }
 
-<div class="context-bar">
-  <div class="context-bar__item">
-    <span class="context-bar__label">Certificate:</span>
-    <span class="context-bar__value">@resume.CertCode</span>
-  </div>
-  <div class="context-bar__item">
-    <span class="context-bar__label">Started:</span>
-    <span class="context-bar__value font-mono">@Model.StartedAtDisplay</span>
-  </div>
-  <div class="context-bar__item">
-    <span class="context-bar__label">Cost:</span>
-    <span class="context-bar__value">Free — 0 credits</span>
-  </div>
-</div>
+@* #250 audit: the certificate bar is the layout's; this page drew a second one above it. The start
+   time and "free" are stated in the page body. *@
 
 <div class="container stack">
   <nav class="breadcrumbs" aria-label="Breadcrumb">

@@ -8,21 +8,9 @@
     var status = Model.Status;
 }
 
-<div class="context-bar">
-  <div class="context-bar__item">
-    <span class="context-bar__label">Certificate:</span>
-    <span class="context-bar__value">@view.ActiveCert.Code</span>
-  </div>
-  <div class="context-bar__item">
-    <span class="context-bar__label">Current level:</span>
-    <span class="context-bar__value">@(view.CurrentBandCode != null ? $"{view.CurrentBandCode} · {view.CurrentTotalScore} points" : "Not yet assessed")</span>
-  </div>
-  <div class="context-bar__item">
-    <span class="context-bar__label">Target level:</span>
-    @* #161: "not chosen yet" is a fact about the learner, not a band the page may supply. *@
-    <span class="context-bar__value">@(Model.TargetCode ?? "no target band yet")</span>
-  </div>
-</div>
+@* #250 audit: the certificate bar belongs to the layout and renders once, above the breadcrumb. This
+   page drew a second, so the heading sat below two stacked bars. What it added beyond the layout's -
+   the current level and the target - is stated in the page body below. *@
 
 <div class="container stack" id="target-band-page" data-current-score="@Model.CurrentScore">
   <nav class="breadcrumbs" aria-label="Breadcrumb">

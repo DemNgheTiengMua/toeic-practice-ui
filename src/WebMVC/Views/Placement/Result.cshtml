@@ -9,20 +9,10 @@
   <link rel="stylesheet" href="~/css/placement/result.css" asp-append-version="true">
 }
 
-<div class="context-bar">
-  <div class="context-bar__item">
-    <span class="context-bar__label">Certificate:</span>
-    <span class="context-bar__value">@result.CertCode</span>
-  </div>
-  <div class="context-bar__item">
-    <span class="context-bar__label">Placement:</span>
-    <span class="context-bar__value">Free · no credits used</span>
-  </div>
-  <div class="context-bar__item">
-    <span class="context-bar__label">Sitting:</span>
-    <span class="context-bar__value font-mono">@Model.TakenAtDisplay</span>
-  </div>
-</div>
+@* #250 audit: the certificate bar is the LAYOUT's and renders once, above the breadcrumb. This page
+   drew a second one, so /placement/result stacked two bars before the heading. The facts it carried
+   are on the page already: "Free" is the badge beside the heading and the sitting date is in the
+   subtitle beneath it. *@
 
 <div class="container stack">
   <nav class="breadcrumbs" aria-label="Breadcrumb">

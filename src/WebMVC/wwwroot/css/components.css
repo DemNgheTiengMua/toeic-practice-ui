@@ -1900,6 +1900,16 @@ button.nav-list__group.has-current[aria-expanded="false"] .nav-list__count {
   font-size: var(--text-sm);
 }
 
+/* A page that states facts the shell does not carry (a mentor's name and price, a booking's type)
+   draws a second bar. It must NOT be sticky: two sticky bars both pin to top:0 and the second hides
+   under the first, which is what a live capture showed. It also keeps a softer bottom rule, because
+   it is a page-level readout and not the shell's placard. */
+.context-bar--secondary {
+  position: static;
+  border-bottom: var(--keyline-soft) solid var(--color-border);
+  background: var(--color-bg, transparent);
+}
+
 .context-bar__item {
   display: flex;
   align-items: center;

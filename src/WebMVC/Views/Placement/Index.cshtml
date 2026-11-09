@@ -5,20 +5,10 @@
     var catalog = Model.Catalog;
 }
 
-<div class="context-bar">
-  <div class="context-bar__item">
-    <span class="context-bar__label">Certificate:</span>
-    <span class="context-bar__value">@catalog.ActiveCert.Code</span>
-  </div>
-  <div class="context-bar__item">
-    <span class="context-bar__label">Cost:</span>
-    <span class="context-bar__value">Free · 0 credits</span>
-  </div>
-  <div class="context-bar__item">
-    <span class="context-bar__label">Current level:</span>
-    <span class="context-bar__value">@(catalog.CurrentBandCode != null ? $"{catalog.CurrentBandCode} · {catalog.CurrentTotalScore} points" : "Not yet assessed")</span>
-  </div>
-</div>
+@* #250 audit: the certificate bar is the LAYOUT's, rendered once above the breadcrumb. This page
+   used to draw a second one here, so /placement showed two stacked context bars and the page's own
+   heading sat below both. The facts the second one carried are already on the page: the Free badge
+   under the heading, and the "Current level" sentence in the alert below it. *@
 
 <div class="container stack">
   <nav class="breadcrumbs" aria-label="Breadcrumb">
