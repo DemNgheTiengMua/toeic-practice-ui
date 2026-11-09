@@ -362,21 +362,34 @@ public static class ProductiveTaskEnvelope
             return;
         }
 
-        if (subTask.MinWords is not int minimum || subTask.MaxWords is not int maximum)
+        // #250: a word FLOOR is the demand; a ceiling is optional. "at least 150 words" is IELTS
+        // Writing Task 1 and "at least 250" Task 2, and neither states a maximum. Requiring both ends
+        // made those tasks unrepresentable. A ceiling with NO floor stays refused: the under-length
+        // penalty reads MinWords, so "at most 300 words" has nothing to score and is not a demand.
+        if (subTask.MinWords is not int minimum)
         {
             refusals.Add(new ProductiveRefusal(
                 ProductiveTaskRules.WordRange,
-                $"sub-task {position} declares no word range. A {bounds.ItemType} answer is counted against "
-                + $"one, and the sitting's word meter and the under-length penalty both read it (D0.4)."));
+                subTask.MaxWords is int
+                    ? $"sub-task {position} declares only a ceiling. A {bounds.ItemType} answer is counted "
+                      + "against a floor - the sitting's word meter and the under-length penalty both read "
+                      + "it - so \"at most N words\" alone is not a demand (D0.4)."
+                    : $"sub-task {position} declares no word range. A {bounds.ItemType} answer is counted "
+                      + "against one, and the sitting's word meter and the under-length penalty both read "
+                      + "it (D0.4)."));
             return;
         }
 
-        if (minimum <= 0 || maximum < minimum)
+        if (minimum <= 0 || (subTask.MaxWords is int ceilingClaimed && ceilingClaimed < minimum))
         {
             refusals.Add(new ProductiveRefusal(
                 ProductiveTaskRules.WordRange,
-                $"sub-task {position} declares {minimum}-{maximum} words. A ceiling below its floor, or a floor "
-                + "of zero, is a target no answer can meet or one every answer meets; neither is a demand (D0.4)."));
+                subTask.MaxWords is int maxCeiling
+                    ? $"sub-task {position} declares {minimum}-{maxCeiling} words. A ceiling below its floor, "
+                      + "or a floor of zero, is a target no answer can meet or one every answer meets; "
+                      + "neither is a demand (D0.4)."
+                    : $"sub-task {position} declares a floor of {minimum} words. A floor of zero is a target "
+                      + "every answer meets, which is not a demand (D0.4)."));
             return;
         }
 
@@ -396,7 +409,7 @@ public static class ProductiveTaskEnvelope
                       + $"cannot measure {level.Code} writing, whatever it asks (D0.2)."));
         }
 
-        if (maximum > ceiling)
+        if (subTask.MaxWords is int maximum && maximum > ceiling)
         {
             refusals.Add(new ProductiveRefusal(
                 placementScoped ? ProductiveTaskRules.PlacementCap : ProductiveTaskRules.WordRange,

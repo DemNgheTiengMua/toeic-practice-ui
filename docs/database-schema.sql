@@ -1287,11 +1287,24 @@ CREATE TABLE ItemVersions (
     OR (EvidenceStart >= 0 AND EvidenceEnd > EvidenceStart AND EvidenceUnit IS NOT NULL)
   ),
   -- #204: a declared window is a real window. Zero is not "no preparation" - that is NULL - and a
-  -- negative or inverted one is a sitting the learner cannot finish. The pair is checked together
-  -- because a word range with no ceiling is a range nobody can satisfy.
+  -- negative or inverted one is a sitting the learner cannot finish.
+  --
+  -- #250: a FLOOR WITH NO CEILING is a real exam demand, so it is legal. IELTS Writing Task 1 says
+  -- "at least 150 words" and Task 2 "at least 250", and neither states a maximum - a candidate who
+  -- writes 400 words has met the task. Requiring both ends made those tasks unrepresentable, which is
+  -- the content this rebuild exists to serve. The previous rule's own comment said "a word range with
+  -- no ceiling is a range nobody can satisfy"; that is true of a RANGE and false of a MINIMUM, and
+  -- every reader already treats the ceiling as optional:
+  --   AttemptEngine.Evaluation   `if (question.MaxWords.HasValue && words.Length > ...)`
+  --   AiGrader                   `if (request.MaxWords.HasValue && request.MaxWords.Value > 0 && ...)`
+  --   ClaudeAiGrader             `request.MaxWords is null or <= 0 || words <= request.MaxWords`
+  -- so the reader was already tolerant and only the constraint was strict.
+  --
+  -- A ceiling with no floor stays refused: "at most 300 words" alone is not a demand this product can
+  -- score, because the under-length penalty reads MinWords and would have nothing to read.
   CONSTRAINT CK_ItemVersions_WordRange CHECK (
        (MinWords IS NULL AND MaxWords IS NULL)
-    OR (MinWords IS NOT NULL AND MaxWords IS NOT NULL AND MinWords > 0 AND MaxWords >= MinWords)
+    OR (MinWords IS NOT NULL AND MinWords > 0 AND (MaxWords IS NULL OR MaxWords >= MinWords))
   ),
   CONSTRAINT CK_ItemVersions_Timing CHECK (
        (PrepSeconds IS NULL OR PrepSeconds > 0)

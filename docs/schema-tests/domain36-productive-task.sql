@@ -74,18 +74,41 @@ PRINT 'an objective item carries no word range and no windows';
 -- ---------------------------------------------------------------------------------------------
 -- 3. the wrong-but-passing inputs for the word range
 -- ---------------------------------------------------------------------------------------------
--- 3a. a floor with no ceiling. "MinWords 110" alone reads as "at least 110", which is a demand the
---     pool can serve but a RANGE it cannot: the live word counter needs both ends to draw a target.
+-- 3a. #250: a floor with NO ceiling is legal, and this is the case that used to be refused. IELTS
+--     Writing Task 1 says "at least 150 words" and Task 2 "at least 250"; neither states a maximum, and
+--     a candidate who writes 400 words has met the task. The old rule refused those tasks outright,
+--     which made real exam content unrepresentable. Every reader already treats the ceiling as optional
+--     (AttemptEngine.Evaluation, AiGrader, ClaudeAiGrader all test `MaxWords.HasValue` first), so only
+--     the constraint was strict.
+--
+--     This case gets its OWN item: it is the one INSERT below that succeeds, so leaving it on @item
+--     would consume a VersionNumber the refusing cases below depend on.
+DECLARE @floorOnly INT;
+INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, RenderFormat)
+VALUES (@stim, 'writing', @topic, 'B1', 'persuasive_essay', 'demo', 'draft', 'free_response');
+SET @floorOnly = SCOPE_IDENTITY();
+
+INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, MinWords)
+VALUES (@floorOnly, 1, N'A floor with no ceiling.', 150);
+IF (SELECT MaxWords FROM ItemVersions WHERE ItemId = @floorOnly) IS NOT NULL
+  THROW 50000, 'EXPECT_REJECT FAILED: a floor-with-no-ceiling version invented a maximum', 1;
+IF (SELECT MinWords FROM ItemVersions WHERE ItemId = @floorOnly) <> 150
+  THROW 50000, 'EXPECT_REJECT FAILED: a floor-with-no-ceiling version did not keep its floor', 1;
+PRINT 'accepted a word floor with no ceiling, and stored no maximum';
+
+-- 3a-2. A CEILING WITH NO FLOOR stays refused. "at most 300 words" alone is not a demand this product
+--       can score: the under-length penalty reads MinWords, and would have nothing to read. Widening
+--       the floor side must not have widened this one by accident.
 BEGIN TRY
-  INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, MinWords)
-  VALUES (@item, 2, N'A floor with no ceiling.', 110);
-  THROW 50000, 'EXPECT_REJECT FAILED: a word floor with no ceiling was accepted', 1;
+  INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, MaxWords)
+  VALUES (@item, 2, N'A ceiling with no floor.', 300);
+  THROW 50000, 'EXPECT_REJECT FAILED: a word ceiling with no floor was accepted', 1;
 END TRY
 BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   IF ERROR_MESSAGE() NOT LIKE '%CK_ItemVersions_WordRange%'
-    THROW 50000, 'EXPECT_REJECT FAILED: the range was refused by the wrong guard', 1;
-  PRINT 'rejected a word floor with no ceiling, by CK_ItemVersions_WordRange';
+    THROW 50000, 'EXPECT_REJECT FAILED: the ceiling-only range was refused by the wrong guard', 1;
+  PRINT 'rejected a word ceiling with no floor, by CK_ItemVersions_WordRange';
 END CATCH
 
 -- 3b. an inverted range: the ceiling below the floor is a target no answer can reach.
