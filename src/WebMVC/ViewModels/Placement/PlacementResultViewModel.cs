@@ -153,10 +153,6 @@ public sealed record PlacementResultViewModel(
         SkillResults.Any(skill => NormalizeStatus(skill.Status) == "not_measured"
             && skill.FailureReason == "ai_grading_failed");
 
-    /// <summary>#217 / PLC-19: `done` with a reason and no measurement, i.e. nothing could be measured.</summary>
-    public bool HasNoResult => Result.SkillResults is { Count: > 0 }
-        && SkillResults.All(skill => NormalizeStatus(skill.Status) is not ("measured" or "estimated_from_one_task"));
-
     public string RetryUrl { get; init; } = string.Empty;
 
     /// <summary>Words a row prints when it carries no level. Never a code, never a low band.</summary>
