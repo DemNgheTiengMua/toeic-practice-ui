@@ -28,5 +28,21 @@ public static partial class WeaknessEndpoints
             view.PriorityPracticeSection.Correct,
             view.PriorityPracticeSection.AccuracyPercentage,
             view.PriorityPracticeSection.IsWeakest,
-            view.PriorityPracticeSection.IsStrongest));
+            view.PriorityPracticeSection.IsStrongest),
+        view.Topics.Select(ToDto).ToList(),
+        view.WeakestTopic is null ? null : ToDto(view.WeakestTopic));
+
+    /// <summary>#243: one <c>(topic, level)</c> cell. The percentage is the view's, never recomputed here.</summary>
+    private static TopicAccuracyDto ToDto(TopicAccuracy c) => new(
+        c.TopicId,
+        c.TopicCode,
+        c.TopicName,
+        c.Modality.MapTo<ModalityDto>(),
+        c.CefrLevel.Code,
+        c.Answered,
+        c.Correct,
+        c.AccuracyPercent,
+        c.IsWeakest,
+        c.ObservationFloor,
+        c.LessonId);
 }

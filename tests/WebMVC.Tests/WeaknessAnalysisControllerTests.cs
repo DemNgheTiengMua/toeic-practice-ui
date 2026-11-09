@@ -46,6 +46,20 @@ public sealed class WeaknessAnalysisControllerTests
             : [],
         PriorityPracticeSection: hasData
             ? new SectionAccuracyDto(1, "P7", "Reading Comprehension", 20, 10, 50, IsWeakest: true, IsStrongest: false)
+            : null,
+        Topics: hasData
+            ? [
+                // #243: one topic at two levels, two lessons - so "the cell's lesson" and "the
+                // topic's first lesson" are different answers and the test can tell them apart.
+                new TopicAccuracyDto(4, "R-DET", "Local detail", ModalityDto.Reading, "B1", 14, 6, 43,
+                    IsWeakest: true, ObservationFloor: 12, LessonId: 41),
+                new TopicAccuracyDto(4, "R-DET", "Local detail", ModalityDto.Reading, "B2", 2, 0, 0,
+                    IsWeakest: false, ObservationFloor: 12, LessonId: 47)
+              ]
+            : [],
+        WeakestTopic: hasData
+            ? new TopicAccuracyDto(4, "R-DET", "Local detail", ModalityDto.Reading, "B1", 14, 6, 43,
+                IsWeakest: true, ObservationFloor: 12, LessonId: 41)
             : null);
 
     [Fact]
@@ -66,6 +80,57 @@ public sealed class WeaknessAnalysisControllerTests
         Assert.Equal(2, model.Data.Sections.Count);
         Assert.Single(model.Data.Recommendations);
         Assert.NotNull(model.Data.PriorityPracticeSection);
+    }
+
+    /// <summary>
+    /// #243 criterion 4: the page's rows carry the lessons for <b>their own cells</b>.
+    /// <para>
+    /// <b>The wrong input this catches:</b> a fixture where the weakness is the only cell with a lesson,
+    /// so "the topic's lesson" and "the cell's lesson" are the same id and either reading passes. The
+    /// fixture here has two cells of one topic at two levels with different lesson ids, and the
+    /// unranked cell must keep its own.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task Index_links_each_cell_to_its_own_lesson()
+    {
+        var api = new TestApiClient { WeaknessData = SampleDto(true) };
+        var controller = CreateController(api);
+        var result = await controller.Index(CancellationToken.None);
+
+        var model = Assert.IsType<WeaknessAnalysisViewModel>(Assert.IsType<ViewResult>(result).Model);
+
+        Assert.Equal(2, model.TopicRows.Count);
+        var weakest = Assert.Single(model.TopicRows, r => r.IsWeakest);
+        Assert.Equal("/lessons/41", weakest.LessonHref);
+        Assert.Equal("B1", weakest.LevelLabel);
+
+        // The other cell carries ITS OWN lesson, not the weakest cell's: a link built from the topic
+        // alone would give both cells 41.
+        var other = Assert.Single(model.TopicRows, r => !r.IsWeakest);
+        Assert.Equal("/lessons/47", other.LessonHref);
+        Assert.Equal("B2", other.LevelLabel);
+
+        Assert.NotNull(model.WeakestTopic);
+        Assert.Equal(41, int.Parse(model.WeakestTopic!.LessonHref!["/lessons/".Length..]));
+    }
+
+    /// <summary>
+    /// #243 criterion 2 in the view model: a cell below the floor says so, and the page has no weakest
+    /// topic to show. <b>The wrong input this catches:</b> a row model that renders "0% correct" for
+    /// two answers and lets the template treat it as a ranked weakness.
+    /// </summary>
+    [Fact]
+    public async Task Index_prepares_an_unranked_cell_with_its_reason()
+    {
+        var api = new TestApiClient { WeaknessData = SampleDto(true) };
+        var result = await CreateController(api).Index(CancellationToken.None);
+
+        var model = Assert.IsType<WeaknessAnalysisViewModel>(Assert.IsType<ViewResult>(result).Model);
+
+        var unranked = Assert.Single(model.TopicRows, r => !r.HasEnoughEvidence);
+        Assert.Contains("12", unranked.EvidenceNote, StringComparison.Ordinal);
+        Assert.Contains("2 of the 12", unranked.EvidenceNote, StringComparison.Ordinal);
     }
 
     [Fact]

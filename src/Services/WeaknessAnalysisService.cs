@@ -11,6 +11,33 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Services;
 
+/// <summary>
+/// #243 / D3 / UI-34: the learner's weakest <c>(topic, level)</c> cell.
+/// <para>
+/// <b>It ranks; it does not compute.</b> Accuracy per cell arrives from <c>vw_UserTopicAccuracy</c>,
+/// which is D3's single deterministic SQL for this figure. Dividing <c>Correct</c> by
+/// <c>Answered</c> here - or recomputing a cell's mastery from the answers - would be a second
+/// definition beside the view and beside #237's stored row, which is the defect the rebuild exists to
+/// remove.
+/// </para>
+/// <para>
+/// <b>The floor is PLC-68's <c>n_min</c>, reused rather than restated.</b> A cell holding three answers
+/// and no correct ones is not a weakness yet: it is three answers. So a cell is <i>ranked</i> only at
+/// 12 objective items or 3 productive tasks - the same constant the mastery model uses, read from
+/// <see cref="MasteryEstimate.MinimumObservationsFor"/> so the two rules can never drift apart. The
+/// cells below it are still <i>listed</i>, with their count, because hiding them would make the page
+/// silent rather than honest: "2 of the 12 answers this needs".
+/// </para>
+/// <para>
+/// <b>An empty cell is excluded, never ranked last.</b> With no evidence a cell would sort at 0% and
+/// be named the learner's weakest topic, which is a statement about nothing that reads as a statement
+/// about the learner - the exact fault SRS §2 item 3 records. Only view rows are considered at all, so
+/// a topic no item exists for cannot appear.
+/// </para>
+/// <para>
+/// No write path: this is a read (ADR-0012 names none of it as a derived fact).
+/// </para>
+/// </summary>
 public sealed class WeaknessAnalysisService(
     CompanionDbContext db,
     ILearnerService learners) : IWeaknessAnalysisService
@@ -157,6 +184,7 @@ public sealed class WeaknessAnalysisService(
             .ThenByDescending(c => c.Answered)
             .ToList();
 
+        var (topicCells, weakestTopic) = await BuildTopicAccuracyAsync(userId, activeCertId, cancellationToken);
         // Open recommendations for this learner and certificate
         var recos = await db.Recommendations
             .AsNoTracking()
@@ -175,7 +203,7 @@ public sealed class WeaknessAnalysisService(
 
         return new WeaknessAnalysisView(
             cert,
-            hasData,
+            hasData || topicCells.Count > 0,
             gradedExamCount,
             completedPracticeCount,
             totalAnswered,
@@ -184,7 +212,131 @@ public sealed class WeaknessAnalysisService(
             sortedSections,
             sortedMissedCategories,
             recos,
-            priorityPracticeSection);
+            priorityPracticeSection,
+            topicCells,
+            weakestTopic);    }
+
+    /// <summary>
+    /// The topic axis: every cell the learner has evidence for, weakest first, plus the one cell that
+    /// may be called the weakest.
+    /// <para>
+    /// <b>Certificate isolation without a <c>CertId</c> on a topic.</b> A topic belongs to the language
+    /// (D-3), so the certificate is applied through the one axis it does declare: the modalities of its
+    /// skills. A learner on a listening-and-reading certificate is never told a writing topic is weak,
+    /// because that certificate does not examine writing. The lesson link is scoped by
+    /// <c>CertId</c> as well, so the link cannot cross into another certificate's lesson.
+    /// </para>
+    /// </summary>
+    private async Task<(IReadOnlyList<TopicAccuracy> Cells, TopicAccuracy? Weakest)> BuildTopicAccuracyAsync(
+        int userId, int certId, CancellationToken cancellationToken)
+    {
+        var examinedModalities = await db.Skills
+            .AsNoTracking()
+            .Where(s => s.CertId == certId)
+            .Select(s => s.Modality)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        if (examinedModalities.Count == 0)
+        {
+            return ([], null);
+        }
+
+        // Only view rows: a cell exists here because an answer was graded in it. A topic with no items
+        // has no answers, so it has no row and can never be reported - criterion 3 by construction.
+        var rows = await db.vw_UserTopicAccuracies
+            .AsNoTracking()
+            .Where(v => v.UserId == userId)
+            .ToListAsync(cancellationToken);
+
+        if (rows.Count == 0)
+        {
+            return ([], null);
+        }
+
+        var topics = await db.Topics
+            .AsNoTracking()
+            .Where(t => examinedModalities.Contains(t.Modality))
+            .Select(t => new { t.TopicId, t.Code, t.Name, t.Modality })
+            .ToDictionaryAsync(t => t.TopicId, cancellationToken);
+
+        if (topics.Count == 0)
+        {
+            return ([], null);
+        }
+
+        // One lesson per cell. The tie-break is #240's own (DisplayOrder, then LessonId), so "which of
+        // them" is reproducible rather than the storage engine's choice.
+        var lessons = (await db.Lessons
+                .AsNoTracking()
+                .Where(l => l.CertId == certId)
+                .Select(l => new { l.LessonId, l.TopicId, l.CefrLevel, l.DisplayOrder })
+                .ToListAsync(cancellationToken))
+            .GroupBy(l => (l.TopicId, l.CefrLevel))
+            .ToDictionary(
+                g => g.Key,
+                g => (int?)g.OrderBy(l => l.DisplayOrder).ThenBy(l => l.LessonId).First().LessonId);
+
+        var cells = new List<TopicAccuracy>(rows.Count);
+        foreach (var row in rows)
+        {
+            if (!topics.TryGetValue(row.TopicId, out var topic))
+            {
+                continue;
+            }
+
+            // A level this build cannot place is not a cell it can report; the row is skipped rather
+            // than crashing a read path on a code from a newer schema.
+            if (!CefrLevel.TryParseAuthored(row.CefrLevel, out var level))
+            {
+                continue;
+            }
+
+            var modality = EnumCodes.Parse<Modality>(topic.Modality);
+            lessons.TryGetValue((row.TopicId, level), out var lessonId);
+
+            cells.Add(new TopicAccuracy(
+                row.TopicId,
+                topic.Code,
+                topic.Name,
+                modality,
+                level,
+                row.Answered,
+                row.Correct,
+                row.AccuracyPercent,
+                IsWeakest: false,
+                MasteryEstimate.MinimumObservationsFor(modality),
+                lessonId));
+        }
+
+        // PLC-68's n_min per modality: 12 objective items or 3 productive tasks. Read from the mastery
+        // model's own function, so there is one floor in the codebase and not two.
+        bool HasEnoughEvidence(TopicAccuracy c) => c.Answered >= c.ObservationFloor;
+
+        var ranked = cells
+            .Where(HasEnoughEvidence)
+            .OrderBy(c => c.AccuracyPercent)
+            .ThenByDescending(c => c.Answered - c.Correct)
+            .ThenByDescending(c => c.Answered)
+            .ThenBy(c => c.TopicId)
+            .ThenBy(c => c.CefrLevel.Rank)
+            .ToList();
+
+        var weakest = ranked.FirstOrDefault();
+
+        var ordered = cells
+            // Rankable cells first, weakest first; the rest after, worst-evidenced last. A cell below
+            // the floor is shown with its count so the page can say why it is not ranked.
+            .OrderBy(c => HasEnoughEvidence(c) ? 0 : 1)
+            .ThenBy(c => c.AccuracyPercent)
+            .ThenByDescending(c => c.Answered - c.Correct)
+            .ThenByDescending(c => c.Answered)
+            .ThenBy(c => c.TopicId)
+            .ThenBy(c => c.CefrLevel.Rank)
+            .Select(c => c with { IsWeakest = weakest is not null && c.TopicId == weakest.TopicId && c.CefrLevel == weakest.CefrLevel })
+            .ToList();
+
+        return (ordered, ordered.FirstOrDefault(c => c.IsWeakest));
     }
 
     public async Task<bool> ResolveRecommendationAsync(int userId, int recId, CancellationToken cancellationToken = default)

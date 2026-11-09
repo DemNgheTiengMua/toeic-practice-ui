@@ -276,6 +276,9 @@ public partial class CompanionDbContext : DbContext
     /// <summary>#235: the daily ceiling, derived from answers (D12).</summary>
     public virtual DbSet<vw_DailyPracticeVolume> vw_DailyPracticeVolumes { get; set; }
 
+    /// <summary>#243 / D3: accuracy per (topic, level) cell, from stored answers.</summary>
+    public virtual DbSet<vw_UserTopicAccuracy> vw_UserTopicAccuracies { get; set; }
+
     /// <summary>#201 / ADM-02: who decided what about a review sample, which the trigger reads.</summary>
     public virtual DbSet<ReviewSampleDecision> ReviewSampleDecisions { get; set; }
 

@@ -187,6 +187,8 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // #162: vw_LearnerPathIsPremium went with the premium-path feature, leaving eight views.
         // #202: vw_CoverageMatrix is the ninth - one row per coverage cell, always all 120 of them.
         // #235: vw_DailyPracticeVolume is the tenth - the daily ceiling, derived from answers (D12).
-        Assert.Equal(10, viewCount);
+        // #243: vw_UserTopicAccuracy is the eleventh - accuracy per (topic, level), the axis D3
+        // replaces the flat category aggregation with.
+        Assert.Equal(11, viewCount);
     }
 }

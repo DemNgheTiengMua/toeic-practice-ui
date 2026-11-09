@@ -30,10 +30,35 @@ public sealed class WeaknessAnalysisController(
             {
                 logger.LogWarning(ex, "Could not pre-fetch AI insight for weakness analysis");
             }
+            // #243 / D19: the level and modality registries are the layers a page may not call, so
+            // the words are rendered here. The href is built here too, from the lesson id for THIS
+            // cell - a view that assembled it would be free to point at the wrong level.
+            var rows = data.Topics.Select(c => Row(c)).ToList();
+
             return View(new WeaknessAnalysisViewModel(data, TempData["ErrorMessage"] as string, TempData["SuccessMessage"] as string)
             {
-                InsightPanel = new("dashboard", insight?.CertId ?? 0, insight)
+                InsightPanel = new("dashboard", insight?.CertId ?? 0, insight),
+                TopicRows = rows,
+                // The service marked exactly one row; finding it among the prepared rows rather than
+                // rebuilding it keeps one row shape for both places the page shows it.
+                WeakestTopic = rows.FirstOrDefault(r => r.IsWeakest)
             });
+
+            TopicAccuracyRowViewModel Row(TopicAccuracyDto c) => new(
+                c.TopicId,
+                c.TopicCode,
+                c.TopicName,
+                CefrLevelLabels.LabelForCode(c.LevelCode, logger),
+                ModalityLabels.LabelForCode(c.Modality.ToWireCode(), logger),
+                c.Answered,
+                c.Correct,
+                c.AccuracyPercent,
+                c.IsWeakest,
+                c.Answered >= c.ObservationFloor,
+                c.Answered >= c.ObservationFloor
+                    ? $"{c.Correct}/{c.Answered} correct"
+                    : $"{c.Answered} of the {c.ObservationFloor} answers this needs before it can be called a weakness",
+                c.LessonId is { } lessonId ? $"/lessons/{lessonId}" : null);
         }
         catch (ApiException ex)
         {

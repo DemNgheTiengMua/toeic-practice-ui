@@ -3965,15 +3965,72 @@ CREATE VIEW vw_UserSectionAccuracyAll AS
   ) x
   GROUP BY x.UserId, x.SectionId;
 GO
+-- #243 / D3: accuracy on the two axes the rest of the product uses, (TopicId, CefrLevel).
+--
+-- D3: "Every reader of CategoryId moves to TopicId", and "vw_UserCategoryAccuracy is replaced by
+-- vw_UserTopicAccuracy, grouping by (TopicId, CefrLevel)". This is that view.
+--
+-- WHERE A CELL COMES FROM. Only the pool carries a topic: Items.TopicId and Items.CefrLevel. The
+-- legacy Questions row has neither (it has CategoryId, which is the bucket D3 retires), so a legacy
+-- answer has no cell and contributes no row here. That is not an omission to be papered over with a
+-- category-to-topic guess - the vocabulary is a closed set of twenty and no mapping exists.
+--
+-- WHY THE CELL IS THE ITEM'S, NOT THE SESSION'S. #237 settled this for mastery: a drill may serve a
+-- substituted sibling-topic item, and crediting the session's cell would report accuracy for a topic
+-- the learner never practised. The joining column is therefore Items.TopicId/Items.CefrLevel, which
+-- is also what makes the two answer shapes share one branch each.
+--
+-- THE DOUBLE COUNT #250 FOUND CANNOT ARISE HERE, and that is worth stating because the shapes DO
+-- overlap: AttemptAnswers keeps a non-null QuestionId on a pool answer so the legacy reader can still
+-- resolve it. This view has exactly ONE branch per attempt answer - the pinned-version join to Items -
+-- and no branch that reaches a cell through Questions, because Questions has no cell to reach. A row
+-- is counted once or not at all. What the join must not do is fall back to the session's cell when the
+-- item is missing, and it does not: an answer with no ItemId yields no row.
+--
+-- AN UNANSWERED ROW IS NOT AN OBSERVATION. PracticeAnswers rows are written when a drill starts, with
+-- every answer column null; counting them would inflate every denominator by the size of the drill.
+-- IsCorrect IS NULL is the filter, and it is the same one vw_DailyPracticeVolume uses.
+--
+-- A TOPIC WITH NO ITEMS PRODUCES NO ROW, rather than a zero row: there is nothing to average, and a
+-- 0% row is a claim about the learner that no answer supports.
+CREATE VIEW vw_UserTopicAccuracy AS
+  WITH cells AS (
+    SELECT x.UserId, x.TopicId, x.CefrLevel, COUNT(x.IsCorrect) AS Answered,
+           SUM(CASE WHEN x.IsCorrect = 1 THEN 1 ELSE 0 END) AS Correct
+    FROM (
+      -- pool practice answer: the item names the cell
+      SELECT ps.UserId, i.TopicId, i.CefrLevel, pa.IsCorrect
+      FROM PracticeAnswers pa
+      JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
+      JOIN Items i            ON i.ItemId = pa.ItemId
+      WHERE pa.IsCorrect IS NOT NULL
+      UNION ALL
+      -- pool attempt answer: the same item join, on a graded attempt only
+      SELECT a.UserId, i.TopicId, i.CefrLevel, aa.IsCorrect
+      FROM AttemptAnswers aa
+      JOIN ExamAttempts a ON a.AttemptId = aa.AttemptId
+      JOIN Items i        ON i.ItemId = aa.ItemId
+      WHERE a.Status = 'graded' AND aa.IsCorrect IS NOT NULL
+    ) x
+    GROUP BY x.UserId, x.TopicId, x.CefrLevel
+  )
+  -- The percentage is HERE, not in C#. D3 makes this view the deterministic accuracy SQL that the
+  -- weakness page and the AI insight both read; a reader that divided Correct by Answered would be a
+  -- second definition of the same figure.
+  SELECT UserId, TopicId, CefrLevel, Answered, Correct,
+         CAST(ROUND(100.0 * Correct / Answered, 0) AS INT) AS AccuracyPercent
+  FROM cells;
+GO
 -- UI-34: "Frequently missed question types" — same union, by category
 --
 -- #250: unchanged in shape, and deliberately so. D3 replaces this view with vw_UserTopicAccuracy
--- grouped by (TopicId, CefrLevel), which is #243's ticket; until that lands the CategoryId axis is
--- what the weakness page renders, so it keeps reading the one table that carries CategoryId. It is
--- NOT rewritten onto the pool here because the pool has no category - Items.TopicId is the
--- replacement concept, and swapping the key would change what the page groups by, which is a
--- learner-visible change this ticket is explicitly out of scope for ("it does not change what a
--- learner sees").
+-- grouped by (TopicId, CefrLevel) - #243 created it below, and the weakness page now reads it.
+-- This view is retained because two readers still name it and neither is #243's: the dashboard's
+-- per-skill cards (LearnerService.Skills) and the AI insight payload (AiInsightService.Exams /
+-- Paths / Practice). It is NOT rewritten onto the pool, because the pool has no category -
+-- Items.TopicId is the replacement concept - and swapping the key here would change what those two
+-- readers group by. D3's "every reader of CategoryId moves to TopicId" is therefore complete for
+-- the weakness page in this ticket and remains open for those two readers.
 CREATE VIEW vw_UserCategoryAccuracy AS
   SELECT x.UserId, q.CategoryId, COUNT(x.IsCorrect) AS Answered,
          SUM(CASE WHEN x.IsCorrect = 1 THEN 1 ELSE 0 END) AS Correct
