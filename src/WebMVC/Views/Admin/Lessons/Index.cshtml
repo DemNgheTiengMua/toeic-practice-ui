@@ -23,6 +23,18 @@
   </div>
 </div>
 
+@* The upload and save actions both set TempData into these two fields, and this view never rendered
+   them: an import that succeeded said nothing, so the page looked identical to one that had done
+   nothing at all. *@
+@if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+{
+  <div class="alert alert--success" role="status">@Model.SuccessMessage</div>
+}
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+  <div class="alert alert--warning" role="alert">@Model.ErrorMessage</div>
+}
+
 <form method="get" action="/admin/lessons" class="toolbar">
   <div class="field toolbar__grow">
     <label class="field__label" for="f-cert">Filter by Certificate</label>

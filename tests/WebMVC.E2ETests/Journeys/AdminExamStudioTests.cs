@@ -62,8 +62,15 @@ public class AdminExamStudioTests : PlaywrightTestBase
         // what "the author sees" means.
         var visible = await card.EvaluateAsync<int>(@"el => Array.from(el.querySelectorAll('input,select,textarea,button'))
             .filter(c => c.offsetParent !== null && !c.closest('details:not([open])')).length");
-        Assert.That(visible, Is.LessThanOrEqualTo(14),
-            "a 4-option MCQ used to show 18 controls; it must not exceed 14");
+
+        // #159 cut this from 18 to 14. #229 then added the item's LEVEL select (+1), because a level
+        // is a coordinate of the item rather than content and every authoring path had to speak it.
+        // So 15 is the current floor for a 4-option MCQ: 3 selects, 2 buttons, the stem, the
+        // explanation, and four (radio + text) pairs. The guard's purpose is unchanged - an author
+        // must not wade through eighteen controls - so it asserts the ceiling that is actually true
+        // rather than a number that predates the level control.
+        Assert.That(visible, Is.LessThanOrEqualTo(15),
+            $"a 4-option MCQ shows {visible} controls; #159's 14 plus #229's level select is the ceiling");
     }
 
     [Test]

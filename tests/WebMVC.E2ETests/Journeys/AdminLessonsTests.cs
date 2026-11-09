@@ -90,6 +90,8 @@ public class AdminLessonsTests : PlaywrightTestBase
               "title": "E2E Imported Grammar Lesson",
               "skill": "reading",
               "categoryCode": "grammar_tense",
+              "topicCode": "R-GRAM",
+              "cefrLevel": "B1",
               "summary": "Imported via Playwright E2E test",
               "estimatedMinutes": 5,
               "displayOrder": 99,
