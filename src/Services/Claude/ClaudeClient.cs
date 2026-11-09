@@ -26,14 +26,21 @@ public sealed class ClaudeClient : IClaudeClient
         string userPrompt,
         string? systemPrompt = null,
         int maxTokens = 4000,
+        string? model = null,
         CancellationToken cancellationToken = default)
     {
         var baseUrl = (_options.BaseUrl?.TrimEnd('/') ?? "https://hhtechapi.net");
         var endpoint = $"{baseUrl}/v1/messages";
 
+        // The caller's model wins. Gate three needs two verifiers on two different models, and a client
+        // that always sent the configured one made "two families" one opinion counted twice.
+        var chosen = !string.IsNullOrWhiteSpace(model)
+            ? model!.Trim()
+            : string.IsNullOrWhiteSpace(_options.Model) ? "claude-sonnet-3.7" : _options.Model;
+
         var payload = new
         {
-            model = string.IsNullOrWhiteSpace(_options.Model) ? "claude-sonnet-3.7" : _options.Model,
+            model = chosen,
             max_tokens = maxTokens,
             system = systemPrompt,
             messages = new[]

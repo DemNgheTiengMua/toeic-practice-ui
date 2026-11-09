@@ -94,7 +94,7 @@ public sealed class AiInsightNarrativeGuardTests(DatabaseFixture database)
         public string? Prompt { get; private set; }
 
         public Task<string> CreateMessageAsync(string userPrompt, string? systemPrompt = null,
-            int maxTokens = 1500, CancellationToken cancellationToken = default)
+            int maxTokens = 1500, string? model = null, CancellationToken cancellationToken = default)
         {
             Prompt = userPrompt;
             return Task.FromResult(response);

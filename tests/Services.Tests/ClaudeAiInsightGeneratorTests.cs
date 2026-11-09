@@ -60,8 +60,7 @@ public sealed class ClaudeAiInsightGeneratorTests
         public int MaxTokens { get; private set; }
         public CancellationToken CancellationToken { get; private set; }
 
-        public Task<string> CreateMessageAsync(string userPrompt, string? systemPrompt = null, int maxTokens = 1500,
-            CancellationToken cancellationToken = default)
+        public Task<string> CreateMessageAsync(string userPrompt, string? systemPrompt = null, int maxTokens = 1500, string? model = null, CancellationToken cancellationToken = default)
         {
             Prompt = userPrompt;
             MaxTokens = maxTokens;

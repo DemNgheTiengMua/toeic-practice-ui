@@ -101,10 +101,13 @@ public sealed class ClaudeLevelClassifier : ILevelClassifier
 
         for (var attempt = 1; attempt <= AttemptsAllowed; attempt++)
         {
+            // #258: the classifier's family is the model it asks for, so a deployment that names one
+            // family actually runs that one rather than whatever the client was configured with.
             var raw = await _client.CreateMessageAsync(
                 prompt,
                 systemPrompt: SystemPrompt,
                 maxTokens: 200,
+                model: Family,
                 cancellationToken: cancellationToken);
 
             var (level, reason) = ReadLevel(raw);

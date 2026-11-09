@@ -135,10 +135,14 @@ public sealed class ClaudeVerifierModel : IVerifierModel
         var prompt = BuildPrompt(request);
         for (var attempt = 1; attempt <= AttemptsAllowed; attempt++)
         {
+            // #258: this verifier's own family is the model it asks for. Without it every verifier
+            // called the one configured model, so two "distinct families" were two names over one set
+            // of weights - the agreement gate three exists to require, defeated by the wiring.
             var raw = await _client.CreateMessageAsync(
                 prompt,
                 systemPrompt: SystemPrompt,
                 maxTokens: 400,
+                model: Family,
                 cancellationToken: cancellationToken);
 
             var probabilities = ReadResponse(raw);

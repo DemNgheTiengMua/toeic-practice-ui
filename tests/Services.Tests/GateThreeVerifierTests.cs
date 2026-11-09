@@ -193,9 +193,7 @@ public sealed class GateThreeVerifierTests
 
         public string LastPrompt => Prompts[^1];
 
-        public Task<string> CreateMessageAsync(
-            string userPrompt, string? systemPrompt = null, int maxTokens = 1500,
-            CancellationToken cancellationToken = default)
+        public Task<string> CreateMessageAsync(string userPrompt, string? systemPrompt = null, int maxTokens = 1500, string? model = null, CancellationToken cancellationToken = default)
         {
             Prompts.Add(userPrompt);
             return Task.FromResult(respond(Prompts.Count));

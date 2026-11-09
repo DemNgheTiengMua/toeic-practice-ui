@@ -358,8 +358,7 @@ public sealed class WritingGradingPromptTests
 
         public string LastPrompt => Prompts[^1];
 
-        public Task<string> CreateMessageAsync(
-            string userPrompt, string? systemPrompt = null, int maxTokens = 4000, CancellationToken cancellationToken = default)
+        public Task<string> CreateMessageAsync(string userPrompt, string? systemPrompt = null, int maxTokens = 4000, string? model = null, CancellationToken cancellationToken = default)
         {
             Prompts.Add(userPrompt);
             return Task.FromResult(respond(userPrompt));
