@@ -137,7 +137,12 @@
                 <div class="row" style="gap: var(--space-2); align-items: center; flex-wrap: wrap;">
                   <button type="button" class="btn" id="btn-prev" @(q.DisplayOrder > 1 ? "" : "disabled")>Previous</button>
                   <button type="button" class="btn btn--ghost" id="btn-skip" style="@(isCurrentAnswered ? "display:none;" : "")">Skip</button>
-                  <button type="button" class="btn btn--ghost" id="show-hint-btn" style="@(q.HintUsed || isCurrentAnswered ? "display:none;" : "")">Show hint (H)</button>
+                  @* #239 finding: a "Show hint" control on a question that HAS no hint is a button that
+                     does nothing - the service returns null, the box stays hidden, and the learner reads
+                     it as a failure. The hint is authored per question, so the control is shown only when
+                     one exists. *@
+                  <button type="button" class="btn btn--ghost" id="show-hint-btn"
+                          style="@(q.HintUsed || isCurrentAnswered || string.IsNullOrWhiteSpace(q.Hint) ? "display:none;" : "")">Show hint (H)</button>
                   <span class="text-xs text-muted" id="hint-used-msg" style="@(q.HintUsed ? "" : "display: none;")">Hint used · noted in summary</span>
                 </div>
 

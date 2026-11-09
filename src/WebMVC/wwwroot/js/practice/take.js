@@ -494,7 +494,12 @@
           // Re-enable: revealHint disables while the request is in flight, and a phase change
           // must not leave the control dead for the rest of the session (ticket d06).
           showHintBtn.disabled = false;
-          showHintBtn.style.display = (s.hintUsed || s.isAnswered) ? "none" : "";
+          // The hint is authored per question, so the control is offered only where one exists. The
+          // server has already decided this for the first render (?q.Hint?), and this is the same rule
+          // applied after a client-side navigation - otherwise moving to a hintless question would
+          // reveal a button whose click does nothing and leaves the box hidden, which reads as failure.
+          var hasHint = !!(q && q.hint);
+          showHintBtn.style.display = (s.hintUsed || s.isAnswered || !hasHint) ? "none" : "";
         }
         if (hintUsedMsg) {
           // Only claim a hint was used when the question actually has hint text to show.

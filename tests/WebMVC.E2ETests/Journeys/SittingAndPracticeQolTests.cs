@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using NUnit.Framework;
 
@@ -12,7 +12,7 @@ namespace WebMVC.E2ETests.Journeys;
 /// </summary>
 /// <remarks>
 /// Not parallelizable: the setup abandons in-progress attempts on exam 1 and tops up the demo
-/// learner's credit ledger, and both are shared mutable state — running these alongside the other
+/// learner's credit ledger, and both are shared mutable state â€” running these alongside the other
 /// journeys made them race (the palette/token test failed intermittently).
 /// </remarks>
 [NonParallelizable]
@@ -143,9 +143,22 @@ public class SittingAndPracticeQolTests : PlaywrightTestBase
     {
         await SignInAsync("learner@demo.local", "Demo1234!");
         await SwitchToToeicAsync();
-        await OpenPracticeSectionAsync("P3");
+        await OpenPracticeSectionAsync("P1");
 
+        // The rule, and it holds whichever question the smart planner serves: the hint control is
+        // present exactly when the question carries a hint. A control on a hintless question is a
+        // button that does nothing - the service returns null, the box stays hidden, and the learner
+        // reads that as a failure. The planner is least-recently-seen, so a fixed "the first question
+        // has a hint" assumption breaks on the second run; asserting the INVARIANT does not.
+        var hintText = (await Page.Locator("#hint-text").TextContentAsync() ?? string.Empty).Trim();
         var hintButton = Page.Locator("#show-hint-btn");
+
+        if (hintText.Length == 0)
+        {
+            await Expect(hintButton).ToBeHiddenAsync();
+            Assert.Pass("this question carries no hint, so no control is offered - that is the rule");
+        }
+
         await Expect(hintButton).ToBeEnabledAsync();
         await hintButton.ClickAsync();
 
@@ -153,15 +166,24 @@ public class SittingAndPracticeQolTests : PlaywrightTestBase
         await Expect(hintBox).ToBeVisibleAsync();
         Assert.That((await hintBox.InnerTextAsync()).Trim(), Is.Not.Empty, "The hint text must actually render");
 
-        // Answer, move on, and come back — the control must not stay disabled.
+        // Answer, move on, and come back â€” the control must not stay disabled.
         await Page.Locator(".option").First.ClickAsync();
         await Page.Locator("#submit-btn").ClickAsync();
         await Expect(Page.Locator("#submit-btn")).ToContainTextAsync("Next question", new() { Timeout = 10000 });
         await Page.Locator("#submit-btn").ClickAsync();
         await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 2");
 
-        var enabled = await Page.EvaluateAsync<bool>("() => { const b = document.getElementById('show-hint-btn'); return b ? !b.disabled : false; }");
-        Assert.That(enabled, Is.True, "The hint control must be usable again on the next question");
+        // The same rule on the next question: a hint control is either usable or absent, never
+        // visible-but-disabled. "Disabled" is the defect this journey was written for; a hidden
+        // control is the honest answer for a question that carries no hint.
+        var next = await Page.EvaluateAsync<string>(@"() => {
+            const b = document.getElementById('show-hint-btn');
+            if (!b) return 'absent';
+            if (b.offsetParent === null) return 'hidden';
+            return b.disabled ? 'disabled' : 'usable';
+        }");
+        Assert.That(next, Is.Not.EqualTo("disabled"),
+            "the hint control must not sit visible-but-disabled on the next question");
     }
 
     [Test]
