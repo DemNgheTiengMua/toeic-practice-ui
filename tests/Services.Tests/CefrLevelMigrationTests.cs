@@ -134,6 +134,107 @@ public sealed class CefrLevelMigrationTests
     private static bool NamesDifficulty(string? name) =>
         name?.Contains("ifficulty", StringComparison.OrdinalIgnoreCase) == true;
 
+    /// <summary>
+    /// #248.4 / PRN-03: <b>no reader produces a band-derived level.</b>
+    /// <para>
+    /// #259 deleted <c>PlacementResultWriter.LevelFromBand</c>, which parsed a certificate's band code
+    /// as a CEFR level. It looked harmless because IELTS, TOEIC and VSTEP spell their band codes
+    /// A2/B1/C2 - the very characters a level uses - so a table with a gap silently produced a level
+    /// from the band's NAME. Measured before the fix: a learner scoring 397 on TOEIC Listening, inside
+    /// band A2 but in a cut-score gap, was reported at CEFR A2 by a crosswalk nobody wrote.
+    /// </para>
+    /// <para>
+    /// <b>Why this guard and not only the red test #259 shipped.</b> That test pins today's behaviour
+    /// at one call site. The failure returns by somebody writing the same convenience method one layer
+    /// over - it is a two-line function that always compiles and looks helpful. This scan is the same
+    /// shape as the difficulty guard beside it: a method that returns a level and names a band, a
+    /// property typed a level whose name mentions a band, or any member called LevelFromBand/BandToLevel.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void No_code_derives_a_level_from_a_band()
+    {
+        var assemblies = new[]
+        {
+            typeof(CefrLevel).Assembly, typeof(CreateQuestionRequest).Assembly,
+            typeof(CompanionDbContext).Assembly, typeof(Services.AdminExamService).Assembly,
+        };
+
+        var offenders = assemblies
+            .SelectMany(assembly => assembly.GetTypes())
+            .SelectMany(BandBridges)
+            .ToList();
+
+        // A scan that found no level at all proves nothing: the type is used in all four assemblies.
+        Assert.Contains(assemblies, assembly =>
+            assembly.GetTypes().Any(type => type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic
+                | BindingFlags.Static | BindingFlags.Instance).Any(p => Includes(p.PropertyType, typeof(CefrLevel)))));
+        Assert.Empty(offenders);
+
+        static IEnumerable<string> BandBridges(Type type)
+        {
+            const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic
+                | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+
+            foreach (var method in type.GetMethods(All))
+            {
+                // The retired method by name: a rename would dodge a parameter-name check, so the
+                // exact name is caught first.
+                if (method.Name is "LevelFromBand" or "BandToLevel")
+                {
+                    yield return $"{type.FullName}.{method.Name}()";
+                    continue;
+                }
+
+                // The bridge is a TRANSLATION: it takes a band in and hands a level out. A method that
+                // merely mentions a band and returns something else is not one, and a member that
+                // STORES a level under a band-flavoured name is authoring data, not a crosswalk -
+                // GateTwoItem.Band holds the level an item was written at, which is a fact.
+                var producesLevel = Includes(method.ReturnType, typeof(CefrLevel));
+                var takesBand = method.GetParameters().Any(p => NamesBand(p.Name));
+
+                if (producesLevel && takesBand)
+                {
+                    yield return $"{type.FullName}.{method.Name}({string.Join(", ", method.GetParameters().Select(p => p.Name))})";
+                }
+            }
+
+            // A property or field typed level whose NAME is a band code is the other shape: the value
+            // was computed somewhere and parked under the certificate's word. `Band` alone is excluded
+            // on purpose - it names the certificate's own scale and is a legitimate column.
+            foreach (var property in type.GetProperties(All).Cast<MemberInfo>()
+                .Concat(type.GetFields(All)))
+            {
+                var holdsLevel = property switch
+                {
+                    PropertyInfo p => Includes(p.PropertyType, typeof(CefrLevel)),
+                    FieldInfo f => Includes(f.FieldType, typeof(CefrLevel)),
+                    _ => false,
+                };
+
+                if (holdsLevel && NamesBandCode(property.Name))
+                {
+                    yield return $"{type.FullName}.{property.Name}";
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// A parameter that carries a certificate's band: <c>bandCode</c>, <c>band</c>, <c>resultBand</c>.
+    /// </summary>
+    private static bool NamesBand(string? name) =>
+        name?.Contains("Band", StringComparison.OrdinalIgnoreCase) == true;
+
+    /// <summary>
+    /// A member whose own name says "this is a band code" while its type is a level - the shape a
+    /// crosswalk's output takes when it is stored rather than returned.
+    /// </summary>
+    private static bool NamesBandCode(string? name) =>
+        name is not null
+        && name.Contains("Band", StringComparison.OrdinalIgnoreCase)
+        && name.Contains("Code", StringComparison.OrdinalIgnoreCase);
+
     [Fact]
     public void Every_level_round_trips_through_the_wire_by_name()
     {
