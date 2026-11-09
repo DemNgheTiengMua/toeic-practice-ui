@@ -1766,7 +1766,7 @@ BEGIN
   DECLARE @gIS1 INT = SCOPE_IDENTITY();
   INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
   VALUES (@gIS1, @ieltsSpeaExam, @secInt, @ieltsSpea,
-          N'Part 1: Do you work or are you a student? What do you enjoy most about your studies or job?', 'B1', 'free_response', 0, 60, 1);
+          N'Part 1: Do you work or are you a student? What do you enjoy most about your studies or job?', 'B1', 'free_response', NULL, 60, 1);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
   VALUES (@ieltsSpeaExam, @ieltsCert, @secInt, 2,
@@ -1936,7 +1936,7 @@ BEGIN
   DECLARE @gVS1 INT = SCOPE_IDENTITY();
   INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
   VALUES (@gVS1, @vstepSpeaExam, @secVS3, @vstepSpea,
-          N'Part 1: Social Interaction: Talk about your favorite leisure activity. Why do you enjoy it?', 'B1', 'free_response', 0, 60, 1);
+          N'Part 1: Social Interaction: Talk about your favorite leisure activity. Why do you enjoy it?', 'B1', 'free_response', NULL, 60, 1);
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
   VALUES (@vstepSpeaExam, @vstepCert, @secVS3, 2,
@@ -3705,7 +3705,7 @@ Directions: Respond to the e-mail as if you are a Customer Fulfillment Represent
 (Target length: 60–100 words | Time limit: 10 minutes)',
             'B2', 'free_response',
             N'Tiêu chí chấm điểm ETS Writing Part 2: (1) Giải quyết trọn vẹn cả 3 yêu cầu trong đề bài; (2) Văn phong email thương mại lịch sự, trang trọng; (3) Sử dụng chính xác các từ nối và cấu trúc câu phức; (4) Đạt độ dài tiêu chuẩn 60–100 từ.',
-            31, 0, 600, 60, 100
+            31, NULL, 600, 60, 100
         );
     END
 
@@ -3741,7 +3741,7 @@ Essay Guidelines:
 (Target length: 150–220 words | Time limit: 20 minutes)',
             'C1', 'free_response',
             N'Tiêu chí chấm điểm ETS Writing Part 3: (1) Bố cục 3 phần (Introduction - Body Paragraphs - Conclusion) mạch lạc; (2) Lập luận nhất quán kèm ví dụ thực tiễn nơi công sở; (3) Đa dạng hóa cấu trúc ngữ pháp và từ vựng học thuật/thương mại; (4) Đạt độ dài 150–220 từ.',
-            32, 0, 1200, 150, 220
+            32, NULL, 1200, 150, 220
         );
     END
     /* ======================================================================================
