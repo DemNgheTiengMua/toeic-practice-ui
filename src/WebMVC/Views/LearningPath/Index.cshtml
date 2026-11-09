@@ -81,18 +81,20 @@ else
           <span class="cefr__current">@summary.FromBandCode → @summary.ToBandCode</span>
           <span>@(summary.CurrentScore.HasValue ? $"{summary.CurrentScore} at placement" : "")@(summary.CurrentScore.HasValue && summary.TargetScore.HasValue ? " · " : "")@(summary.TargetScore.HasValue ? $"{summary.TargetScore} target" : "")</span>
         </div>
-        <div class="cefr__track" role="img" aria-label="Current band @summary.CurrentBandCode, target band @summary.TargetBandCode">
-          @foreach (var band in summary.CefrBands)
+        <div class="cefr__track" role="img" aria-label="Current band @summary.CurrentBandCode, target band @summary.TargetBandCode"
+             style="--band-count: @Model.BandCount; --band-columns: @Model.BandColumns;">
+          @foreach (var band in Model.BandsInScoreOrder)
           {
             var isCurrent = band.Code == summary.CurrentBandCode;
             var isReached = band.IsReached;
-            <span class="cefr__band@(isCurrent ? " is-current" : isReached ? " is-reached" : "")">@band.Code</span>
+            <span class="cefr__band font-mono@(isCurrent ? " is-current" : isReached ? " is-reached" : "")">@band.Code</span>
           }
         </div>
-        <div class="cefr__scale" aria-hidden="true">
-          @foreach (var band in summary.CefrBands)
+        <div class="cefr__scale" aria-hidden="true"
+             style="--band-count: @Model.BandCount; --band-columns: @Model.BandColumns;">
+          @foreach (var band in Model.BandsInScoreOrder)
           {
-            <span class="cefr__tick">@band.MinTotal</span>
+            <span class="cefr__tick font-mono">@band.MinTotal</span>
           }
         </div>
       </div>

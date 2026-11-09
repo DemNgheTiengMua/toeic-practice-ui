@@ -24,7 +24,6 @@
   sitting.bindSubmissionForms();
 
   sitting.initAccessibility();
-  sitting.initVolume();
 
   // Start initial queue flush if uncommitted items restored
   sitting.renderQuestion(sitting.currentDisplayOrder);

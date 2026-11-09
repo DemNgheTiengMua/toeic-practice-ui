@@ -98,12 +98,14 @@ public sealed class ExamsViewTests
         Assert.Contains("id=\"split-passage-scroll\"", html);
         Assert.Contains("id=\"split-passage-text\"", html);
 
-        // 2. Top Control Bar: Red countdown flash placard, volume slider, accessibility modal
+        // 2. Top Control Bar: Red countdown flash placard, ONE volume control, accessibility modal
         Assert.Contains("keyframes timer-pulse-red", html);
         Assert.Contains(".timer--warn-flash", html);
         Assert.Contains(".timer-alert-placard", html);
-        Assert.Contains("id=\"exam-volume-slider\"", html);
-        Assert.Contains("id=\"exam-volume-pct\"", html);
+        // One volume control, not two. The header carried a second slider that wrote to every <audio>
+        // on the page; the player owns the element it actually controls (.exam-audio__slider), so the
+        // header one was removed rather than left to disagree with it.
+        Assert.DoesNotContain("id=\"exam-volume-slider\"", html);
         Assert.Contains("id=\"accessibility-modal\"", html);
         Assert.Contains("data-size=\"standard\"", html);
         Assert.Contains("data-size=\"large\"", html);

@@ -22,7 +22,7 @@
   @foreach (var cert in Model.Certificates)
   {
     <section class="stack" aria-labelledby="cert-@cert.Code.ToLowerInvariant()">
-      <h2 id="cert-@cert.Code.ToLowerInvariant()" class="section-group__title">@cert.Code — @cert.Name</h2>
+      <h2 id="cert-@cert.Code.ToLowerInvariant()" class="section-group__title">@Model.Headings[cert.Code]</h2>
       <div class="card">
         <div class="card__body stack">
           @if (!string.IsNullOrEmpty(cert.Description))

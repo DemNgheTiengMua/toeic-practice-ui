@@ -599,6 +599,21 @@ dialog:not([open]) {
 .table {
   width: 100%; border-collapse: collapse; font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
+  /* A ledger's intrinsic width is set by its uppercase tracked headers plus three-deep cell padding,
+     and `width: 100%` cannot shrink a table below its min-content width. So a wide one (the Lessons
+     list with 8 columns was 1264px inside a 988px card at 1280px viewport) dragged the whole document
+     sideways and pushed the DELETE column past the panel keyline — measured: tableRight 1530 vs
+     wrapRight 1254, docScrollWidth 1530 at a 1280px window.
+
+     It scrolls inside itself instead: the page keeps ONE scroll axis and the table keeps its column
+     alignment, which stacking rows into cards would throw away. `display: block` is what makes the
+     scroll possible at all — a table box cannot carry `overflow`. Alignment survives because
+     consecutive table-internal children share one anonymous table wrapper.
+
+     This lived only inside the mobile and tablet media queries, which is why the desktop capture still
+     overflowed: the rule was there, the width it guarded was not. */
+  display: block;
+  overflow-x: auto;
 }
 .table th, .table td {
   padding: var(--space-3);
@@ -943,16 +958,20 @@ dialog:not([open]) {
   letter-spacing: var(--tracking-sign);
 }
 .audio-equipment__browser {
-  border-left: 2px solid var(--sign-red);
-  padding-left: var(--space-3);
+  /* DESIGN.md refuses a left-only accent bar on callouts; a quiet wash bounded by the field's own
+     keyline says the same thing without borrowing the incumbent pattern. */
+  border: 1px solid var(--sign-red);
+  background: var(--color-danger-soft);
+  padding: var(--space-2) var(--space-3);
   margin-top: var(--space-2);
 }
 .audio-equipment__browser[hidden] {
   display: none !important;
 }
 .audio-equipment__sitting-note {
-  border-left: 2px solid var(--sign-gold);
-  padding-left: var(--space-2);
+  border: 1px solid var(--sign-gold);
+  background: #fdf3d9;
+  padding: var(--space-2);
 }
 .audio-equipment[data-audio-blocked="true"] [data-audio-action="mic-check"],
 .audio-equipment[data-audio-blocked="true"] [data-audio-action="echo-test"] {
@@ -1216,9 +1235,6 @@ button.nav-list__group.has-current[aria-expanded="false"] .nav-list__count {
 
   /* Topbar wraps more aggressively on tablet */
   .exam-topbar-group { gap: var(--space-3); }
-
-  /* Tables get horizontal scroll on tablet when needed */
-  .table { display: block; overflow-x: auto; }
 }
 
 .exam-topbar-group { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
@@ -2430,10 +2446,15 @@ details > summary:focus-visible { outline: 3px solid var(--sign-blue); outline-o
 
 
 /* ===== AI insight panel frame ===== */
-/* Every page that shows an AI insight keeps the blue edge: it is the one mark that says the text
-   below is generated, not measured. The dashboard no longer renders the panel itself. */
+/* Every page that shows an AI insight is bounded by the blue keyline: it is the one mark that says the
+   text below is generated, not measured. The dashboard no longer renders the panel itself.
+   DESIGN.md's "status wash" rule is a pale field bounded by a keyline of the field's OWN colour on all
+   four sides, and it explicitly refuses "an accent bar down the left edge of every callout" as the
+   incumbent pattern this system exists to reject. A 4px left-only bar was exactly that. */
 .ai-insight-panel {
-  border-left: 4px solid var(--sign-blue, #0b4ea2);
+  border: var(--keyline) solid var(--sign-blue, #0b4ea2);
+  background: #e8eef7;
+  padding: var(--space-3);
 }
 
 .ai-insight-panel__companion-tagline {

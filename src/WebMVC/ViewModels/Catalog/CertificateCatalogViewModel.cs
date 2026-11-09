@@ -27,4 +27,24 @@ public sealed record CertificateCatalogViewModel(IReadOnlyList<CertificateDto> C
     /// the view only renders what it was handed.</summary>
     public IReadOnlyDictionary<string, BandStripViewModel> BandStrips { get; } = Certificates
         .ToDictionary(c => c.Code, c => BandStripViewModel.From(c.Bands, c.Code, _ => "cefr__band"));
+
+    /// <summary>
+    /// A certificate's heading, without saying its code twice.
+    /// <para>
+    /// The page used to render <c>@cert.Code - @cert.Name</c>, and VSTEP's Name is
+    /// "VSTEP - the Vietnamese national test", so the heading read
+    /// "VSTEP - VSTEP - the Vietnamese national test". A duplicate is not a styling problem: it is the
+    /// page stating the same fact twice, which is the class of drift this rebuild exists to remove. The
+    /// datum decides: a name that already opens with its own code keeps its name alone.
+    /// </para>
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Headings { get; } = Certificates
+        .ToDictionary(c => c.Code, c => StartsWithCode(c.Code, c.Name)
+            ? c.Name
+            : $"{c.Code} - {c.Name}");
+
+    private static bool StartsWithCode(string code, string name) =>
+        name.StartsWith(code, StringComparison.OrdinalIgnoreCase)
+        && (name.Length == code.Length
+            || !char.IsLetterOrDigit(name[code.Length]));
 }

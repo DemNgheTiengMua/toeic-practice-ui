@@ -74,7 +74,7 @@ public sealed class DashboardPresentation
                 : date.ToString("d MMM yyyy")
             : "";
 
-        // "B1 to B2" rather than an arrow glyph: Â§5 forbids raw unicode in the markup, and icons.js
+        // "B1 to B2" rather than an arrow glyph: §5 forbids raw unicode in the markup, and icons.js
         // decorates by label rather than inside a table cell.
         LevelCell = goal.CurrentBandCode is { } current && goal.TargetBandCode is { } targetBand
             ? $"{current} to {targetBand}"
@@ -82,7 +82,7 @@ public sealed class DashboardPresentation
                 ? $"Not placed to {onlyTarget}"
                 : "No target set";
 
-        // #234 / D21: the stored Î”H, or nothing. A certificate whose bands carry no study hours has no
+        // #234 / D21: the stored ΔH, or nothing. A certificate whose bands carry no study hours has no
         // number, so this says so rather than prorating one.
         RemainingHoursCell = goal.RequiredTotalHours is { } hours
             ? $"{hours} h"
@@ -90,7 +90,7 @@ public sealed class DashboardPresentation
 
         PacingCell = goal.WeeklyStudyHours is { } pace
             ? goal.TargetDate is { } runway
-                ? $"{pace:0.#} h/week Â· {WeeksLeft(now, runway)} wk"
+                ? $"{pace:0.#} h/week · {WeeksLeft(now, runway)} wk"
                 : $"{pace:0.#} h/week"
             : "No pace set";
 
@@ -114,17 +114,17 @@ public sealed class DashboardPresentation
         WeekPaceText = goal.CurrentWeekNumber is { } week
             ? $"Week {week}: {goal.WeekCompletedMinutes} of {goal.WeekPlannedMinutes} minutes done"
             : goal.TotalPathSteps > 0
-                ? $"This path has no week plan Â· {goal.CompletedPathSteps} of {goal.TotalPathSteps} steps done"
+                ? $"This path has no week plan · {goal.CompletedPathSteps} of {goal.TotalPathSteps} steps done"
                 : "No active learning path yet";
 
         CascadeLabel = dashboard.NextAction.CascadeStep switch
         {
-            "resume_in_progress" => "Step 1 Â· finish what is already open",
-            "retry_unmeasured_skill" => "Step 2 Â· measure a skill nothing has measured",
-            "next_step" => "Step 3 Â· the next step of your plan",
-            "free_drill" => "Step 4 Â· the recommended practice",
-            "daily_ceiling" => "Step 5 Â· today's practice is complete",
-            "completion" => "Step 6 Â· the plan is complete",
+            "resume_in_progress" => "Step 1 · finish what is already open",
+            "retry_unmeasured_skill" => "Step 2 · measure a skill nothing has measured",
+            "next_step" => "Step 3 · the next step of your plan",
+            "free_drill" => "Step 4 · the recommended practice",
+            "daily_ceiling" => "Step 5 · today's practice is complete",
+            "completion" => "Step 6 · the plan is complete",
             _ => "",
         };
     }
@@ -135,7 +135,7 @@ public sealed class DashboardPresentation
     /// <summary>#159: the score as the certificate reports it. A certificate that stores tenths
     /// (IELTS, VSTEP) would otherwise print 65 for 6.5 on this card.</summary>
     public static string ScoreText(int? score, int factor) =>
-        score.HasValue ? ScoreDisplay.Format(score.Value, factor) : "â€”";
+        score.HasValue ? ScoreDisplay.Format(score.Value, factor) : "—";
 
     public static string SeverityBadge(string severity) => severity switch
     {

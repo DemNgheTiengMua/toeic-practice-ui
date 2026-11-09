@@ -146,7 +146,7 @@ public sealed partial class LearnerService
             return new NextAction(
                 nextStep.IsInProgress ? "PICK UP YOUR PLAN" : "NEXT ON YOUR PATH",
                 nextStep.Title,
-                $"{nextStep.SkillName} Â· week {nextStep.WeekNumber} Â· {nextStep.Minutes} minutes. "
+                $"{nextStep.SkillName} · week {nextStep.WeekNumber} · {nextStep.Minutes} minutes. "
                     + "It is the first step of this week that is still open, so it is the one that keeps the plan moving.",
                 nextStep.IsInProgress ? "Continue this step" : "Open this step",
                 $"/learning-path/steps/{nextStep.StepId}",
@@ -179,7 +179,7 @@ public sealed partial class LearnerService
                     "/practice",
                     weakest.Category.AccuracyPercent < 50 ? "danger" : "warning",
                     NextActionCascade.FreeDrill,
-                    $"{weakest.Skill.Code} Â· {weakest.Category.AccuracyPercent}%");
+                    $"{weakest.Skill.Code} · {weakest.Category.AccuracyPercent}%");
             }
 
             // A certificate whose skills include speaking or writing has a whole flow the typed drill

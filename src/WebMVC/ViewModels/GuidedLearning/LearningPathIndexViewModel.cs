@@ -17,6 +17,40 @@ public sealed record LearningPathIndexViewModel(
         : 0;
 
     /// <summary>
+    /// The certificate's bands in score order, prepared here rather than in the markup.
+    /// <para>
+    /// <b>Why the view may not sort.</b> Presentation rules are enforced by a test that refuses
+    /// <c>.OrderBy(</c> in a Razor view, because a view that reorders its model is a second place that
+    /// decides what "first" means - and the first band is what the strip's left tick names. The
+    /// ordering belongs with the other preparation, so the view renders what it was handed.
+    /// </para>
+    /// </summary>
+    public IReadOnlyList<CefrBandInfoDto> BandsInScoreOrder { get; } =
+        Summary.CefrBands.OrderBy(b => b.MinTotal).ToList();
+
+    /// <summary>
+    /// How many columns the CEFR strip has, and how wide each one is.
+    /// <para>
+    /// <b>Why the view cannot work this out itself.</b> `.cefr__track` is a CSS grid whose template is
+    /// `var(--band-columns, repeat(var(--band-count, 1), ...))` - with neither property set, every band
+    /// falls into ONE column, which is what a live capture showed: a single full-width `below_A1` cell
+    /// with the six tick numbers stacked vertically past the panel's right edge. The shared
+    /// <c>_BandStrip</c> partial writes these two properties; this page built its own strip and did not,
+    /// so the rule had nothing to read.
+    /// </para>
+    /// <para>
+    /// One unit per score point the band covers, with a floor of one so a band that exists is never
+    /// given zero width - the same arithmetic as <see cref="BandStripViewModel"/>.
+    /// </para>
+    /// </summary>
+    public int BandCount => BandsInScoreOrder.Count;
+
+    public string BandColumns => BandCount == 0
+        ? "none"
+        : string.Join(" ", BandsInScoreOrder
+            .Select(b => $"{Math.Max(1, b.MaxTotal - b.MinTotal)}fr"));
+
+    /// <summary>
     /// #156: the "estimate confidence" line. It prints the count the detector has actually measured,
     /// out of the threshold it applies, and says "estimate" — never "score" or "level", because a
     /// band from a short form is an estimate and the page must not dress it up as a measurement.

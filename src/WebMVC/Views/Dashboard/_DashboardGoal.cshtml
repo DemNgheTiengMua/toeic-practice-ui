@@ -13,13 +13,13 @@
    D21a puts it, stated as two numbers - so this block is exactly the four cells and has no fifth. *@
 <section class="dashboard-goal" aria-labelledby="dashboard-goal-title">
   <header class="dashboard-goal__header">
-    <h2 class="dashboard-goal__title" id="dashboard-goal-title">Goal Standing Â· @cert.Code</h2>
+    <h2 class="dashboard-goal__title" id="dashboard-goal-title">Goal Standing · @cert.Code</h2>
     @* #211: the overall is the weakest measured skill, and the skill that produced it is named
        beside it. An overall with no name lets a learner read a low number and guess. *@
     @if (Model.OverallLevelCode is { } overall)
     {
       <span class="badge badge--muted font-mono">
-        OVERALL @overall@(string.IsNullOrEmpty(Model.LimitingSkillName) ? "" : $" Â· {Model.LimitingSkillName}")
+        OVERALL @overall@(string.IsNullOrEmpty(Model.LimitingSkillName) ? "" : $" · {Model.LimitingSkillName}")
       </span>
     }
   </header>

@@ -51,23 +51,4 @@
       });
     }
   };
-  sitting.initVolume = function () {
-    var slider = document.getElementById('exam-volume-slider');
-    var pct = document.getElementById('exam-volume-pct');
-    var savedVol = localStorage.getItem('ee_exam_volume');
-    var vol = savedVol !== null ? parseFloat(savedVol) : 1.0;
-
-    if (slider) {
-      slider.value = vol;
-      if (pct) pct.textContent = Math.round(vol * 100) + '%';
-      slider.addEventListener('input', function () {
-        var currentVol = parseFloat(slider.value);
-        if (pct) pct.textContent = Math.round(currentVol * 100) + '%';
-        document.querySelectorAll('audio').forEach(function (a) {
-          a.volume = currentVol;
-        });
-        localStorage.setItem('ee_exam_volume', currentVol.toString());
-      });
-    }
-  };
 })(window.ExamSitting);
