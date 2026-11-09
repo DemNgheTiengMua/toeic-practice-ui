@@ -73,6 +73,16 @@ public partial class ExamAttempt
     /// newer result.</summary>
     public int ProjectionVersion { get; set; }
 
+    /// <summary>
+    /// #246: which generation of the product this sitting was taken under. NULL means "written by the
+    /// current code"; a value means the row was PRESERVED across a cutover and is history, not a
+    /// sitting. <c>trg_Attempts_EpochIsReadOnly</c> refuses every write to a tagged row, so this is
+    /// read-only in fact and not by convention.
+    /// </summary>
+    [StringLength(16)]
+    [Unicode(false)]
+    public string? EpochTag { get; set; }
+
     [InverseProperty("ExamAttempt")]
     public virtual ICollection<AiInsight> AiInsights { get; set; } = new List<AiInsight>();
 

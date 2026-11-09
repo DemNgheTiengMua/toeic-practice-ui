@@ -26,7 +26,14 @@ public partial class CompanionDbContext
                     tb.HasTrigger("trg_ExamAttempts_EditionIsFixed");
                     // #191: the single-writer guard, which reads WrittenByService and ProjectionVersion
                     tb.HasTrigger("trg_Attempts_SingleWriter");
+                    // #246: a preserved attempt is read-only. Declared here or every EF save on this
+                    // table fails on the OUTPUT clause (ADR-0001).
+                    tb.HasTrigger("trg_Attempts_EpochIsReadOnly");
                 });
+
+            // #246: the cutover tag. Nullable and unset by default: a default would make every new
+            // attempt claim an epoch, and "taken before" vs "taken after" is the whole distinction.
+            entity.Property(e => e.EpochTag).HasMaxLength(16).IsUnicode(false);
 
             entity.Property(e => e.StartedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.Status).HasDefaultValue("in_progress");

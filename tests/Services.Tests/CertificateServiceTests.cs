@@ -127,7 +127,10 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // #237: two more, 63 -> 65 - trg_UserCellMasteries_SingleWriter (the ninth covered derived
         // fact) and trg_UserCellMasteries_StateIsEarned (the four states are reachable only through
         // the transitions PLC-68/70/71 name, and entering mastered needs the probability AND the count).
-        Assert.Equal(65, triggerCount);
+        // #246: one more, 65 -> 66 - trg_Attempts_EpochIsReadOnly, so a preserved attempt
+        // (EpochTag = 'legacy_v1') can be read forever and written never: its score came from a scoring
+        // model this build no longer has, and a recomputation would silently disagree with the record.
+        Assert.Equal(66, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]

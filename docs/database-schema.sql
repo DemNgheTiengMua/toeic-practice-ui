@@ -1942,6 +1942,20 @@ CREATE TABLE ExamAttempts (
   -- whenever TotalScore or BandCode is written; a sitting-state write declares neither.
   WrittenByService VARCHAR(64) NULL,
   ProjectionVersion INT NOT NULL CONSTRAINT DF_Attempts_ProjectionVersion DEFAULT 0,
+  -- #246: which generation of the product this sitting was taken under. NULL means "written by the
+  -- current code", which is every attempt created since the rebuild; a value means the row was
+  -- PRESERVED across a cutover and is history rather than a sitting.
+  --
+  -- It is the tag D23 asks for ("completed mock attempts are preserved, tagged legacy_v1, read-only").
+  -- The column is nullable and unset by default on purpose: a default would mean every new attempt
+  -- claims an epoch, and the distinction between "taken before" and "taken after" is exactly what the
+  -- tag exists to record.
+  --
+  -- Read-only is enforced by trg_Attempts_EpochIsReadOnly below, not by a convention: a preserved
+  -- attempt may be read forever and written never, because its score was produced by a scoring model
+  -- this build no longer has and no reader can honestly recompute it.
+  EpochTag VARCHAR(16) NULL
+    CONSTRAINT CK_Attempts_EpochTag CHECK (EpochTag IS NULL OR EpochTag IN ('legacy_v1')),
   -- H-5: ExamId's CertId must be the attempt's own (pins the carried-down value)
   CONSTRAINT FK_Attempts_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
   CONSTRAINT FK_Attempts_ActiveSkill FOREIGN KEY (ActiveSkillId, CertId) REFERENCES Skills(SkillId, CertId),
@@ -2128,6 +2142,45 @@ BEGIN
   IF EXISTS (SELECT 1 FROM inserted i JOIN Exams e ON e.ExamId=i.ExamId WHERE e.Status <> 'published')
   BEGIN
     THROW 50010, 'Attempt must target a published exam.', 1;
+  END
+END;
+GO
+-- #246: a PRESERVED attempt is history, and history is read-only.
+--
+-- D23 preserves completed mock attempts across a cutover and the ticket asks for two things of them:
+-- that they carry an epoch tag, and that they are read-only thereafter. The tag alone would be a label;
+-- this trigger is what makes "read-only" a fact. It refuses any write that touches a row whose EpochTag
+-- is set, except the one write that sets it (an import must be able to TAG the row it is preserving).
+--
+-- Why refuse rather than trust the services: the row's score was produced by a scoring model this build
+-- no longer has. A reader that recomputed it would produce a different number from the same answers, and
+-- the two would disagree on the learner's record forever - the class of defect ADR-0012 exists to
+-- prevent. The row is preserved exactly so it is never recalculated.
+CREATE TRIGGER trg_Attempts_EpochIsReadOnly
+ON ExamAttempts AFTER UPDATE, DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+
+  -- A DELETE leaves `inserted` empty and an UPDATE does not. That is the only reliable discriminator:
+  -- both fire with rows in `deleted`, so the first draft of this trigger reported every UPDATE as a
+  -- DELETE and the message named the wrong rule.
+  IF NOT EXISTS (SELECT 1 FROM inserted)
+  BEGIN
+    IF EXISTS (SELECT 1 FROM deleted WHERE EpochTag IS NOT NULL)
+      THROW 50029, '#246: a preserved attempt is history and cannot be deleted. Its epoch tag means it was carried across a cutover precisely so the learner keeps that sitting.', 1;
+    RETURN;
+  END
+
+  -- An UPDATE is refused when the row ALREADY carried a tag and anything at all moved. Setting the tag
+  -- on an untagged row (the import's own act) is the one permitted write.
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN deleted d ON d.AttemptId = i.AttemptId
+    WHERE d.EpochTag IS NOT NULL
+  )
+  BEGIN
+    THROW 50029, '#246: a preserved attempt is read-only. Its score came from a scoring model this build no longer has, so recomputing it would silently disagree with the learner''s record.', 1;
   END
 END;
 GO
