@@ -2020,6 +2020,20 @@ BEGIN
   FROM Skills s
   WHERE s.CertId = @toeicCert AND s.Code IN ('LIST', 'READ');
 
+  -- The per-skill state the REAL writer records beside the result. PlacementResultWriter calls
+  -- SkillStateWriter.RecordAsync for every measured skill, so a seed that writes a `done` placement
+  -- and no state leaves the demo learner "placed but unmeasured": the dashboard collapses to its
+  -- unplaced form (LRN-13), and the learner reads a page that says their level was never measured
+  -- directly under a completed placement. That is the two-surfaces-disagreeing shape TRN-13 forbids,
+  -- reproduced in the seed.
+  INSERT INTO LearnerSkillStates
+    (UserId, CertId, SkillId, CefrLevel, PositionInBand, ContinuousCoordinate, Source,
+     MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
+  SELECT @learner, @toeicCert, s.SkillId, 'B1', 55, 3.55, 'placement',
+         @plcMeasured, DATEADD(DAY, 90, @plcMeasured), 'SkillStateWriter', 1
+  FROM Skills s
+  WHERE s.CertId = @toeicCert AND s.Code IN ('LIST', 'READ');
+
   UPDATE PlacementTests
     SET Status = 'done', ResultBandCode = 'B1', TotalScore = 650,
         WrittenByService = 'AttemptEngine', ProjectionVersion = 1
