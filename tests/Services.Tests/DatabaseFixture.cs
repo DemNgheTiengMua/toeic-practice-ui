@@ -77,7 +77,6 @@ public sealed class DatabaseFixture : IAsyncLifetime
             $"ALTER DATABASE [{Database}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{Database}]; END; " +
             $"CREATE DATABASE [{Database}];");
         await SqlCmdFileAsync(Database, Path.Combine(RepoRoot, "docs", "database-schema.sql"));
-        await ApplyPendingSchemaDeltasAsync(Database);
         await MarkFixtureCatalogAsync(Database);
     }
 
@@ -90,26 +89,15 @@ public sealed class DatabaseFixture : IAsyncLifetime
             $"ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{databaseName}]; END; " +
             $"CREATE DATABASE [{databaseName}];");
         await SqlCmdFileAsync(databaseName, Path.Combine(RepoRoot, "docs", "database-schema.sql"));
-        await ApplyPendingSchemaDeltasAsync(databaseName);
         await MarkFixtureCatalogAsync(databaseName);
         return $"{BaseConnectionString};Database={databaseName}";
     }
 
-    /// <summary>
-    /// A ticket that needs a table while #250 owns <c>docs/database-schema.sql</c> writes its SQL to
-    /// <c>docs/schema-changes-&lt;n&gt;.sql</c> instead of editing that file. Every delta is guarded, so
-    /// applying the set is a no-op once the change is folded into the schema; applying it here means a
-    /// test never has to know which file its table lives in. Sorted, so two deltas touching one object
-    /// apply in a stable order.
-    /// </summary>
-    private static async Task ApplyPendingSchemaDeltasAsync(string database)
-    {
-        var docs = Path.Combine(RepoRoot, "docs");
-        foreach (var delta in Directory.GetFiles(docs, "schema-changes-*.sql").OrderBy(p => p, StringComparer.Ordinal))
-        {
-            await SqlCmdFileAsync(database, delta);
-        }
-    }
+    // NO ApplyPendingSchemaDeltasAsync. A previous wave let a ticket write docs/schema-changes-<n>.sql
+    // when it did not own database-schema.sql, and this fixture applied the set - so the tests had a
+    // table the product did not, and every practice answer returned 500 with "Invalid object name
+    // 'UserCellMasteries'" on the real app while the suite stayed green. database-schema.sql is the
+    // single source of truth (ADR-0001): a table that is not in it does not exist.
 
     /// <summary>
     /// #201: this catalog holds disposable test data, so the schema's five write guards do not demand

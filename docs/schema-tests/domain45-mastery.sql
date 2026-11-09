@@ -1,10 +1,12 @@
 -- docs/schema-tests/domain45-mastery.sql
 -- #237 / D4 / PLC-66..71: per-cell mastery as the database enforces it.
 --
--- WHERE THE TABLE COMES FROM: while #250 owns docs/database-schema.sql, the table, its two triggers and
--- the registry row live in docs/schema-changes-237.sql. reset-and-load.sh applies every
--- docs/schema-changes-*.sql after the schema, so this file needs no include of its own - and when #250
--- folds the delta into database-schema.sql, deleting the delta file turns that step into a no-op.
+-- WHERE THE TABLE COMES FROM: docs/database-schema.sql, immediately after Topics. It was briefly in a
+-- docs/schema-changes-237.sql delta while #250 owned that file, and the delta was applied by the harness
+-- but NOT by the application - so the suite had a table the product did not, and every practice answer
+-- returned 500 with "Invalid object name 'UserCellMasteries'". The delta is folded in and deleted;
+-- database-schema.sql is the single source of truth (ADR-0001).
+
 --
 -- WHAT THIS FILE PROVES, and the wrong input that would pass without each guard:
 --

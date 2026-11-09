@@ -9,8 +9,8 @@ public partial class CompanionDbContext
     /// <summary>
     /// #237 / D4: the per-cell mastery row.
     /// <para>
-    /// The table and its two triggers arrive as <c>docs/schema-changes-237.sql</c> while #250 owns
-    /// <c>database-schema.sql</c>; this mapping is written against that delta and compiles either way.
+    /// The table and its two triggers live in <c>database-schema.sql</c>, immediately after Topics; this
+    /// mapping is written against that table and compiles either way.
     /// </para>
     /// </summary>
     private static void ConfigureCellMastery(ModelBuilder modelBuilder)

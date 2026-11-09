@@ -40,7 +40,7 @@ the step `developing`; the stored fact sizes it `mastered`.
 
 ## `prove-guard-237-schema.py`
 
-Mutates `docs/schema-changes-237.sql`, runs `domain45-mastery.sql` on a scratch catalog.
+Mutates `docs/database-schema.sql` (the `UserCellMasteries` block), runs `domain45-mastery.sql` on a scratch catalog.
 
 | Mutation | What it removes | Case that must abort |
 |---|---|---|

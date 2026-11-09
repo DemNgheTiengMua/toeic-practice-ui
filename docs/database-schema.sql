@@ -44,8 +44,8 @@ INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable, 
    N'#212: one row per skill per placement. A registered fact of its own, not a second table under placement_result: CoveredTable names exactly one table, and an unregistered table would be guarded by nothing.'),
   ('attempt_score_and_band', 'AttemptEngine',      'covered',        'ExamAttempts',
    N'TotalScore and BandCode, the two values the snapshot is copied from.'),
-  ('topic_capability',       'CapabilityWriter',   'awaiting_table', NULL,
-   N'#232 replaces UserCategoryMasteries with per-cell mastery; guarding the table it deletes is waste.'),
+  ('topic_capability',       'CapabilityWriter',   'covered',        'UserCellMasteries',
+   N'#237 / D4 / D-19: per-cell mastery (topic, level, no CertId - mastery follows the topic). The estimate and its four states are derived from the learner graded answers; CapabilityWriter is the only writer.'),
   ('step_closure',           'PathStepCompletion', 'covered',        'LearnerPathSteps',
    N'One place closes a step, so the unlock rule cannot drift from the closure.'),
   ('stratum_decision',       'StratifiedAuditService', 'covered',     'ReviewStrata',
@@ -794,6 +794,236 @@ GO
 -- adds no uniqueness, it exists so Items' composite foreign key has a target. It is declared before
 -- Items for that reason.
 ALTER TABLE Topics ADD CONSTRAINT UQ_Topics_Id_Modality UNIQUE (TopicId, Modality);
+GO
+-- ============ #237: per-cell mastery, the capability record ============
+-- D4 / D-19: mastery follows the TOPIC, not the certificate, so there is no CertId here. A learner who
+-- switches certificate keeps one comparable record per cell.
+--
+-- The cell IS (TopicId, CefrLevel) and the primary key says so. `State` carries the four values of the
+-- existing BusinessObjects.MasteryState enum by code; they are not renamed, because PLC-70 itself calls
+-- the lapsed state `reviewing` and a second four-state vocabulary would be two answers to one question.
+--
+-- The stored statistics are PLC-67's sufficient statistic, not a copy of the probability: practice
+-- sessions are pruned FIFO (CONTEXT.md), so a cell that re-read its own answers would silently rewind a
+-- state the learner already earned. Appending one observation is exactly
+--   w_c <- 0.85*w_c + c,  w_n <- 0.85*w_n + 1
+-- so the two numbers ARE the sequence for every purpose the estimate has. Storing the probability too
+-- would let a row disagree with its own arithmetic.
+CREATE TABLE UserCellMasteries (
+  UserId     INT NOT NULL,
+  TopicId    INT NOT NULL REFERENCES Topics(TopicId),
+  -- Authored levels only: a cell is content, and the pre-A1 floor is reportable but never taught, so a
+  -- mastery row at 'pre_a1' would be mastery of a cell that cannot hold an item.
+  CefrLevel  VARCHAR(10) NOT NULL
+    CONSTRAINT CK_UserCellMasteries_Level
+    CHECK (CefrLevel IN ('A1','A2','B1','B2','C1','C2')),
+
+  State      VARCHAR(12) NOT NULL
+    CONSTRAINT DF_UserCellMasteries_State DEFAULT 'untested'
+    CONSTRAINT CK_UserCellMasteries_State
+    CHECK (State IN ('untested','learning','reviewing','mastered')),
+
+  WeightedCorrect      FLOAT NOT NULL CONSTRAINT DF_UserCellMasteries_WC DEFAULT 0
+    CONSTRAINT CK_UserCellMasteries_WeightedCorrect CHECK (WeightedCorrect >= 0),
+  WeightedObservations FLOAT NOT NULL CONSTRAINT DF_UserCellMasteries_WN DEFAULT 0
+    CONSTRAINT CK_UserCellMasteries_WeightedObservations CHECK (WeightedObservations >= 0),
+  -- The unweighted count, because PLC-68's n_min is a COUNT and a weighted sum is not one. Four answers
+  -- must not be able to look like twelve.
+  ObservationCount     INT NOT NULL CONSTRAINT DF_UserCellMasteries_N DEFAULT 0
+    CONSTRAINT CK_UserCellMasteries_ObservationCount CHECK (ObservationCount >= 0),
+
+  -- A correct answer resets this, which is the half a counter that only increments gets wrong:
+  -- wrong, correct, wrong is NOT a lapse.
+  ConsecutiveWrong     INT NOT NULL CONSTRAINT DF_UserCellMasteries_CW DEFAULT 0
+    CONSTRAINT CK_UserCellMasteries_ConsecutiveWrong CHECK (ConsecutiveWrong >= 0),
+
+  -- A wrong answer while mastered sets now + 24 h; a correct answer spaces by state.
+  NextReviewDueAt      DATETIMEOFFSET NULL,
+  -- The datum the 28-day inactivity clock reads, and the boundary a mock section must postdate to save
+  -- the cell from decay.
+  LastPractisedAt      DATETIMEOFFSET NULL,
+  -- Set when mastered is entered and never cleared by a lapse: "earned once" is a fact about the
+  -- learner, and PLC-71's reversion is not a claim it never happened.
+  MasteredAt           DATETIMEOFFSET NULL,
+
+  UpdatedAt            DATETIMEOFFSET NOT NULL CONSTRAINT DF_UserCellMasteries_Updated DEFAULT SYSDATETIMEOFFSET(),
+
+  -- #191 / ADR-0012. Nullable for the same reason the other covered tables are: the trigger, not the
+  -- column, is what refuses a write that declares nothing.
+  WrittenByService     VARCHAR(64) NULL,
+  ProjectionVersion    INT NOT NULL CONSTRAINT DF_UserCellMasteries_ProjectionVersion DEFAULT 0,
+
+  CONSTRAINT PK_UserCellMasteries PRIMARY KEY (UserId, TopicId, CefrLevel),
+
+  CONSTRAINT FK_UserCellMasteries_User FOREIGN KEY (UserId) REFERENCES Users(UserId),
+  -- Unmeasured is the absence of evidence, so an untested cell has no counts to carry.
+  CONSTRAINT CK_UserCellMasteries_StateHasEvidence CHECK (
+       (State <> 'untested')
+    OR (ObservationCount = 0 AND WeightedObservations = 0)
+  ),
+  -- A correct answer can never be counted more than the answers that carried it.
+  CONSTRAINT CK_UserCellMasteries_CorrectLeObservations CHECK (WeightedCorrect <= WeightedObservations),
+  -- Mastered is a state reached, so it always has a date. One-way on purpose: a lapsed cell keeps the
+  -- date it earned, so the reverse implication would be false.
+  CONSTRAINT CK_UserCellMasteries_MasteredIsDated CHECK (State <> 'mastered' OR MasteredAt IS NOT NULL)
+);
+GO
+CREATE INDEX IX_UserCellMasteries_User_Due ON UserCellMasteries(UserId, NextReviewDueAt);
+GO
+-- ADR-0012: one writer per derived fact. The owner is read from the registry, never written into the
+-- trigger, because a second source for the name is a second answer to "who owns this".
+--
+-- The declaration must be IN THE STATEMENT. The trigger checks UPDATE(WrittenByService) as well as the
+-- value, because a second writer that changes only State leaves the stored name reading
+-- 'CapabilityWriter' and would pass a value-only check (PRN-01's inherited-name case).
+CREATE TRIGGER trg_UserCellMasteries_SingleWriter
+ON UserCellMasteries AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @owner VARCHAR(64) =
+    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'topic_capability');
+
+  DECLARE @touched TABLE (
+    UserId INT NOT NULL, TopicId INT NOT NULL, CefrLevel VARCHAR(10) NOT NULL, WasVersion INT NOT NULL,
+    PRIMARY KEY (UserId, TopicId, CefrLevel));
+  INSERT INTO @touched (UserId, TopicId, CefrLevel, WasVersion)
+    SELECT i.UserId, i.TopicId, i.CefrLevel, ISNULL(d.ProjectionVersion, 0)
+    FROM inserted i
+    LEFT JOIN deleted d
+      ON d.UserId = i.UserId AND d.TopicId = i.TopicId AND d.CefrLevel = i.CefrLevel
+    WHERE d.UserId IS NULL
+       OR i.State <> d.State
+       OR i.WeightedCorrect <> d.WeightedCorrect
+       OR i.WeightedObservations <> d.WeightedObservations
+       OR i.ObservationCount <> d.ObservationCount
+       OR i.ConsecutiveWrong <> d.ConsecutiveWrong
+       OR i.MasteredAt <> d.MasteredAt
+       OR i.ProjectionVersion <> d.ProjectionVersion;
+
+  IF NOT EXISTS (SELECT 1 FROM @touched)
+    RETURN;
+
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN @touched t
+      ON t.UserId = i.UserId AND t.TopicId = i.TopicId AND t.CefrLevel = i.CefrLevel
+    WHERE ISNULL(i.WrittenByService, '') <> @owner
+       OR (EXISTS (SELECT 1 FROM deleted d
+                   WHERE d.UserId = i.UserId AND d.TopicId = i.TopicId AND d.CefrLevel = i.CefrLevel)
+           AND NOT UPDATE(WrittenByService))
+  )
+    THROW 50112, 'The per-cell mastery has exactly one writer, CapabilityWriter. A write declaring another writer (or none) is refused.', 1;
+
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN @touched t
+      ON t.UserId = i.UserId AND t.TopicId = i.TopicId AND t.CefrLevel = i.CefrLevel
+    WHERE i.ProjectionVersion <= t.WasVersion
+  )
+    THROW 50113, 'The per-cell mastery projection version must be newer than the stored one; an older callback cannot overwrite a newer state.', 1;
+END;
+GO
+-- PLC-68 + PLC-70 + PLC-71, as a transition table. A setter that accepts any state passes every
+-- service-level transition test, so the reachable set is pinned here:
+--
+--   (no row)/untested -> untested    a row created before its first answer
+--   (no row)          -> learning    a row created BY its first answer
+--   untested          -> learning    the first answer on a row that already existed
+--   learning          -> learning | reviewing | mastered
+--   reviewing         -> reviewing | learning | mastered
+--   mastered          -> mastered    an answer that does not lapse, or a maintenance pass
+--   mastered          -> reviewing   the lapse (two wrong in a row) or the inactivity decay
+--
+-- Nothing reaches mastered directly from untested or from a new row, and nothing ever returns to
+-- untested: evidence cannot be unobserved.
+CREATE TRIGGER trg_UserCellMasteries_StateIsEarned
+ON UserCellMasteries AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @msg NVARCHAR(2048);
+
+  DECLARE @moved TABLE (
+    UserId INT NOT NULL, TopicId INT NOT NULL, CefrLevel VARCHAR(10) NOT NULL,
+    FromState VARCHAR(12) NULL, ToState VARCHAR(12) NOT NULL,
+    Probability FLOAT NOT NULL, ObservationCount INT NOT NULL, MinimumObservations INT NOT NULL,
+    PRIMARY KEY (UserId, TopicId, CefrLevel));
+
+  -- The probability MUST be the same expression the service uses, or this trigger and the writer
+  -- disagree about one row. MasteryEstimate normalises the recency weights to the observation count
+  -- (k = n / SUM(w)), and so does this - see MasteryEstimate for why the un-normalised form cannot
+  -- reach 0.80 and would make n_min unreachable.
+  INSERT INTO @moved (UserId, TopicId, CefrLevel, FromState, ToState, Probability, ObservationCount,
+                      MinimumObservations)
+    SELECT i.UserId, i.TopicId, i.CefrLevel, d.State, i.State,
+           (2.0 + ((CASE WHEN i.WeightedObservations > 0
+                         THEN i.ObservationCount / i.WeightedObservations
+                         ELSE 0 END) * i.WeightedCorrect))
+             / (4.0 + i.ObservationCount),
+           i.ObservationCount,
+           CASE WHEN t.Modality IN ('speaking','writing') THEN 3 ELSE 12 END
+    FROM inserted i
+    JOIN Topics t ON t.TopicId = i.TopicId
+    LEFT JOIN deleted d
+      ON d.UserId = i.UserId AND d.TopicId = i.TopicId AND d.CefrLevel = i.CefrLevel
+    WHERE d.State IS NULL OR i.State <> d.State;
+
+  IF NOT EXISTS (SELECT 1 FROM @moved)
+    RETURN;
+
+  -- 1. the transition itself is one the specification names
+  IF EXISTS (
+    SELECT 1 FROM @moved m
+    WHERE NOT EXISTS (
+      SELECT 1 FROM (VALUES
+        (NULL,        'untested'),
+        (NULL,        'learning'),
+        ('untested',  'untested'),
+        ('untested',  'learning'),
+        ('learning',  'learning'),
+        ('learning',  'reviewing'),
+        ('learning',  'mastered'),
+        ('reviewing', 'reviewing'),
+        ('reviewing', 'learning'),
+        ('reviewing', 'mastered'),
+        ('mastered',  'mastered'),
+        ('mastered',  'reviewing')
+      ) AS allowed(FromState, ToState)
+      WHERE ISNULL(allowed.FromState, '') = ISNULL(m.FromState, '')
+        AND allowed.ToState = m.ToState
+    )
+  )
+  BEGIN
+    SET @msg = N'PLC-68/70/71: that mastery transition is not one the specification names. Named: ' +
+               N'(new|untested)->untested, untested->learning, learning->{learning,reviewing,mastered}, ' +
+               N'reviewing->{reviewing,learning,mastered}, mastered->{mastered,reviewing}. ' +
+               N'Nothing returns to untested, and nothing reaches mastered from untested.';
+    THROW 50114, @msg, 0;
+  END
+
+  -- 2. ENTERING mastered needs the probability AND the observation minimum (PLC-68). Held mastery is
+  --    deliberately exempt: PLC-70 says a single wrong answer does not drag a mastered topic back, so
+  --    the estimate may sit below 0.80 while the state is still mastered. The guard is on the
+  --    transition, not on every row.
+  IF EXISTS (
+    SELECT 1 FROM @moved m
+    WHERE m.ToState = 'mastered'
+      AND (m.FromState IS NULL OR m.FromState <> 'mastered')
+      AND (m.Probability < 0.80 OR m.ObservationCount < m.MinimumObservations)
+  )
+    THROW 50115, 'PLC-68: a cell cannot be declared mastered without p_m >= 0.80 and the observation minimum (12 objective items or 3 tasks). Four answers cannot pronounce a topic learned.', 1;
+
+  -- 3. ENTERING reviewing from below needs the estimate (PLC-68): the band between the cuts is earned
+  --    by p_m, not asserted. Arriving from mastered is exempt - that is the lapse and the decay.
+  IF EXISTS (
+    SELECT 1 FROM @moved m
+    WHERE m.ToState = 'reviewing'
+      AND ISNULL(m.FromState, 'untested') IN ('untested','learning')
+      AND m.Probability < 0.733
+  )
+    THROW 50116, 'PLC-68: a cell enters reviewing only when p_m >= 0.733; below that it is low.', 1;
+END;
 GO
 CREATE TABLE Items (
   ItemId           INT IDENTITY(1,1) PRIMARY KEY,
