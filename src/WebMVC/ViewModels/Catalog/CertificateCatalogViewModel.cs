@@ -5,6 +5,21 @@ namespace WebMVC.Models;
 /// <summary>The public certificate catalogue, prepared for rendering.</summary>
 public sealed record CertificateCatalogViewModel(IReadOnlyList<CertificateDto> Certificates, bool IsSignedIn, bool IsStaff)
 {
+    /// <summary>
+    /// The certificate the learner is already working on, or null when signed out or unknown.
+    /// <para>
+    /// The page needs it to say where you ARE, not only where you could go: without it every card
+    /// rendered the same filled "Switch to X" button, including the active one, whose switch is a
+    /// no-op. A control that appears to do something and does nothing is the shape of defect this
+    /// rebuild exists to remove, so the active card states "Current" instead of offering a switch.
+    /// </para>
+    /// </summary>
+    public string? ActiveCertCode { get; init; }
+
+    public bool IsActive(string code) =>
+        ActiveCertCode is { Length: > 0 } active
+        && string.Equals(active, code, StringComparison.OrdinalIgnoreCase);
+
     public IReadOnlyDictionary<(string Certificate, string Skill), int> QuestionCounts { get; } =
         Certificates.SelectMany(c => c.Skills.Select(s => new { Certificate = c.Code, Skill = s }))
             .ToDictionary(item => (item.Certificate, item.Skill.Code),

@@ -79,16 +79,24 @@
           }
         </div>
         <div class="card__footer">
-          @* Switching the active certificate is a learner action (admins have none). *@
+          @* Switching the active certificate is a learner action (admins have none). The card you are
+             already on says "Current" rather than offering a switch that would do nothing. *@
           @if (Model.IsSignedIn && !Model.IsStaff)
           {
-            <form method="post" action="/learner/active-certificate" style="display:inline; margin:0;">
-              @Html.AntiForgeryToken()
-              <input type="hidden" name="returnUrl" value="/dashboard" />
-              <button type="submit" name="code" value="@cert.Code" class="btn btn--primary">
-                Switch to @cert.Code
-              </button>
-            </form>
+            if (Model.IsActive(cert.Code))
+            {
+              <span class="badge badge--success">Current certificate</span>
+            }
+            else
+            {
+              <form method="post" action="/learner/active-certificate" style="display:inline; margin:0;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="/dashboard" />
+                <button type="submit" name="code" value="@cert.Code" class="btn btn--primary">
+                  Switch to @cert.Code
+                </button>
+              </form>
+            }
           }
           else if (!Model.IsSignedIn)
           {

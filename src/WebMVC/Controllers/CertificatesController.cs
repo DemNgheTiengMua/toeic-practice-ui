@@ -14,7 +14,14 @@ public sealed class CertificatesController(ILogger<CertificatesController> logge
         {
             var certificates = await api.GetCertificatesAsync(cancellationToken: cancellationToken);
             var user = new CurrentUser(new HttpContextAccessor { HttpContext = HttpContext });
-            return View(new WebMVC.Models.CertificateCatalogViewModel(certificates, user.IsSignedIn, user.IsStaff));
+            // #250 audit: which certificate the learner is already on. Without it every card showed
+            // an identical filled "Switch to X" button - including the active one, whose switch is a
+            // no-op - so the page could not say where you are. The shell is the one place that knows.
+            var activeCertCode = WebMVC.Infrastructure.LearnerShell.Get(HttpContext)?.Active?.Code;
+            return View(new WebMVC.Models.CertificateCatalogViewModel(certificates, user.IsSignedIn, user.IsStaff)
+            {
+                ActiveCertCode = activeCertCode,
+            });
         }
         catch (ApiException ex)
         {
