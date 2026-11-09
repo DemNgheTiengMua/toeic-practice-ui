@@ -139,6 +139,48 @@ public sealed partial class AttemptEngine
         _ => -1,
     };
 
+    /// <summary>
+    /// #250: the labels <paramref name="keyLabel"/> marks correct, as a set. A key is a comma-separated
+    /// ascending label list: 'A' for the four-option shape, 'A,C' for multi_select's two answers.
+    /// <para>
+    /// <b>Why a set and not a comparison.</b> Every reader that asked "is this the key" was really
+    /// asking "does the key contain this label". With one label the two questions coincide, which is
+    /// why the single-label form survived; the moment a key can hold two, `==` answers only for the
+    /// first one and a multi_select would be marked wrong for the answer it just recorded. Returning a
+    /// set makes the real question the one every caller has to ask.
+    /// </para>
+    /// <para>
+    /// A malformed key yields an empty set rather than throwing: the constraint on <c>ItemVersions</c>
+    /// is what refuses a bad key at write time, and a reader that threw on historical data would take
+    /// the sitting down over a row it cannot fix.
+    /// </para>
+    /// </summary>
+    internal static IReadOnlySet<string> KeyLabels(string? keyLabel)
+    {
+        if (string.IsNullOrWhiteSpace(keyLabel))
+        {
+            return EmptyLabels;
+        }
+
+        var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var part in keyLabel.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (LabelIndex(part) >= 0)
+            {
+                labels.Add(part.ToUpperInvariant());
+            }
+        }
+
+        return labels;
+    }
+
+    /// <summary>Whether <paramref name="label"/> is one of the labels the version marks correct.</summary>
+    internal static bool IsKeyLabel(ItemVersion version, string? label) =>
+        label is not null && KeyLabels(version.KeyLabel).Contains(label.Trim());
+
+    private static readonly IReadOnlySet<string> EmptyLabels =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>CNT-06: a version is either four options with a key, or a productive task with none.</summary>
     internal static bool IsProductive(ItemVersion version) => version.OptionA is null;
 
@@ -160,7 +202,7 @@ public sealed partial class AttemptEngine
                     PoolOptionId(itemVersionId, index),
                     OptionLabel(index),
                     text ?? string.Empty,
-                    string.Equals(OptionLabel(index), version.KeyLabel, StringComparison.OrdinalIgnoreCase),
+                    IsKeyLabel(version, OptionLabel(index)),
                     Rationale: null))
                 .ToList();
 
@@ -210,8 +252,7 @@ public sealed partial class AttemptEngine
     {
         if (answer.ItemVersionId is int versionId && pinnedVersions.TryGetValue(versionId, out var version))
         {
-            return answer.SelectedLabel is not null
-                && string.Equals(answer.SelectedLabel, version.KeyLabel, StringComparison.OrdinalIgnoreCase);
+            return IsKeyLabel(version, answer.SelectedLabel);
         }
 
         return EvaluateObjectiveAnswer(

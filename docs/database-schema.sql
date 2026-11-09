@@ -1178,8 +1178,29 @@ CREATE TABLE ItemVersions (
   OptionB        NVARCHAR(MAX) NULL,
   OptionC        NVARCHAR(MAX) NULL,
   OptionD        NVARCHAR(MAX) NULL,
-  KeyLabel       VARCHAR(1) NULL
-    CONSTRAINT CK_ItemVersions_KeyLabel CHECK (KeyLabel IN ('A','B','C','D')),
+  -- #250: the key is a SET of labels, not one label. 'A' is the four-option shape; 'A,C' is
+  -- multi_select's "these two are correct". A separate column was considered and rejected: every
+  -- reader that asks "is this option correct" becomes a set membership test either way, and two
+  -- columns would need a rule for which one wins when both are set.
+  --
+  -- The canonical form is comma-separated, ascending, no spaces ('A', 'A,C', 'A,B,D'). Encoded in
+  -- the CHECK rather than a trigger so a malformed key is refused by the table that holds it:
+  --   only A-D and commas, no leading/trailing/double comma, no repeated letter, odd length.
+  -- Scored, so trg_ItemVersions_ScoredFieldsImmutable compares it (CNT-43).
+  KeyLabel       VARCHAR(7) NULL
+    CONSTRAINT CK_ItemVersions_KeyLabel CHECK (
+      KeyLabel IS NULL OR (
+            KeyLabel NOT LIKE '%[^A-D,]%'
+        AND KeyLabel NOT LIKE ',%'
+        AND KeyLabel NOT LIKE '%,'
+        AND KeyLabel NOT LIKE '%,,%'
+        AND LEN(KeyLabel) % 2 = 1
+        AND LEN(KeyLabel) - LEN(REPLACE(KeyLabel,'A','')) <= 1
+        AND LEN(KeyLabel) - LEN(REPLACE(KeyLabel,'B','')) <= 1
+        AND LEN(KeyLabel) - LEN(REPLACE(KeyLabel,'C','')) <= 1
+        AND LEN(KeyLabel) - LEN(REPLACE(KeyLabel,'D','')) <= 1
+      )
+    ),
   -- CNT-43: the one editable field
   Explanation    NVARCHAR(MAX) NULL,
   -- #194: gate one requires a rationale per option, so an objective item carries one beside each
@@ -1251,21 +1272,21 @@ CREATE TABLE ItemVersions (
        -- constrains only the option columns.
        (OptionA IS NULL AND OptionB IS NULL AND OptionC IS NULL AND OptionD IS NULL
         AND KeyLabel IS NULL)
-    -- #250: two to four options, filled contiguously from A, with a key naming a filled option. The
-    -- pool previously demanded exactly four or none, which could not express the paper: the seed's
+    -- #250: two to four options, filled contiguously from A, with a key naming only filled options.
+    -- The pool previously demanded exactly four or none, which could not express the paper: the seed's
     -- 17 three-option 'mcq' items and its 'mcq_3' item are real renderings, not defects. Widening is
     -- not a convenience - criterion 3 (all seven render formats representable and rendering
     -- identically) is unreachable without it.
     --
     -- The half-filled guard is kept, and made explicit rather than left to "the count is 3 or 4": D
-    -- cannot be set without C, and KeyLabel must name an option that actually exists. A row with
-    -- options A,B and key 'D' would otherwise parse as four-with-a-gap and render a leader to a
-    -- letter the learner can never pick.
+    -- cannot be set without C, and every label in KeyLabel must name an option that actually exists. A
+    -- row with options A,B and key 'D' would otherwise parse as four-with-a-gap and render a leader to
+    -- a letter the learner can never pick. A and B always exist in this branch, so only C and D are
+    -- checked - and they are checked with LIKE because the key is a set ('A,C'), not one letter.
     OR (OptionA IS NOT NULL AND OptionB IS NOT NULL AND KeyLabel IS NOT NULL
         AND (OptionC IS NOT NULL OR OptionD IS NULL)
-        AND (KeyLabel IN ('A','B')
-             OR (KeyLabel = 'C' AND OptionC IS NOT NULL)
-             OR (KeyLabel = 'D' AND OptionD IS NOT NULL))
+        AND (OptionC IS NOT NULL OR KeyLabel NOT LIKE '%C%')
+        AND (OptionD IS NOT NULL OR KeyLabel NOT LIKE '%D%')
         -- a keyed item is not also a blank: AcceptedAnswersJson is inline_completion's answer set
         AND AcceptedAnswersJson IS NULL)
   ),

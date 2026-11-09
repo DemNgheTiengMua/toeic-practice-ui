@@ -251,9 +251,18 @@ internal static class PoolImport
         }
 
         var keys = options.Where(o => o.IsCorrect).Select(o => o.Label!.Trim().ToUpperInvariant()).ToList();
-        if (keys.Count != 1)
+        // #250: a multi_select marks two or more options correct. Requiring exactly one made the
+        // paper's own multi_select items unrepresentable, which is why the (topic, level) cell could
+        // hold them and the pool could not. The key is a SET; a single label is a set of one.
+        if (keys.Count == 0)
         {
-            reason = $"a pool item has exactly one key; this one marks {keys.Count} options correct.";
+            reason = "a pool item with options marks none of them correct, so it has no key.";
+            return false;
+        }
+
+        if (keys.Distinct(StringComparer.OrdinalIgnoreCase).Count() != keys.Count)
+        {
+            reason = $"option labels are used twice in this item's key: {string.Join(",", keys)}.";
             return false;
         }
 
@@ -261,7 +270,8 @@ internal static class PoolImport
         optionB = byLabel["B"];
         optionC = byLabel["C"];
         optionD = byLabel["D"];
-        keyLabel = keys[0];
+        // Canonical, so 'C,A' and 'A,C' are the same answer and a re-import is not a change.
+        keyLabel = BusinessObjects.KeyLabelSet.From(keys);
         rationaleA = rationales["A"];
         rationaleB = rationales["B"];
         rationaleC = rationales["C"];
@@ -567,6 +577,7 @@ internal static class PoolImport
                 {
                     i.ItemId,
                     i.ItemType,
+                    i.RenderFormat,
                     i.CefrLevel,
                     i.PlacementEligible,
                     i.StimulusId,
@@ -641,7 +652,8 @@ internal static class PoolImport
                 version.EvidenceQuote,
                 version.ReferenceText,
                 version.ReferenceKind,
-                stimulus);
+                stimulus,
+                item.RenderFormat);
         }
 
         return annotations;
@@ -765,7 +777,14 @@ internal sealed record PoolQuestionAnnotation(
     string? EvidenceQuote,
     string? ReferenceText,
     string? ReferenceKind,
-    PoolStimulusAnnotation? Stimulus)
+    PoolStimulusAnnotation? Stimulus,
+    /// <summary>
+    /// #250: the seven-way render format the item was written as. The legacy <c>QuestionType</c> IS
+    /// the render format, so exporting without it lost the distinction: a multi_select came back as
+    /// an mcq, its two answers collapsed to a refusal, and the roundtrip test caught it as a failed
+    /// batch. Defaulted so every existing construction stays valid.
+    /// </summary>
+    string RenderFormat = "mcq")
 {
     /// <summary>CNT-06: no options means a productive task, which the legacy shape calls free_response.</summary>
     public bool IsProductive => OptionA is null;

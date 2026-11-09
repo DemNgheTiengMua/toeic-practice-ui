@@ -153,7 +153,11 @@ public sealed partial class QuestionImportService
                         source.EvidenceUnit,
                         source.EvidenceQuote,
                         out var content,
-                        out var reason))
+                        out var reason,
+                        // #250: the legacy QuestionType IS the render format. Passing it keeps a
+                        // multi_select a multi_select; without it the item falls back to the modality's
+                        // default and every round-trip silently turns checkboxes into radios.
+                        renderFormat: source.QuestionType))
                 {
                     notes.Add(
                         $"Section {question.Section.Code}, group {question.GroupSource.DisplayOrder}, question \"{Truncate(source.Stem)}\": " +

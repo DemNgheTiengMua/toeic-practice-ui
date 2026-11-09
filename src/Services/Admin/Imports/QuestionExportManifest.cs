@@ -197,16 +197,17 @@ internal static class QuestionExportManifest
 
         return new ImportManifestQuestion
         {
-            // The pool's own content, so exporting what was imported and importing it again produces
-            // the same item and version rather than the legacy skeleton it was also written into.
+            // #250: the pool's own content, so exporting what was imported and importing it again
+            // produces the same item and version rather than the legacy skeleton it was also written
+            // into. QuestionType is the RENDER format (the legacy column's meaning), so it comes from
+            // the pool's RenderFormat: hardcoding "mcq" collapsed a multi_select to a single-answer
+            // item on the way out, and its two correct options were then refused on the way back in.
             Stem = pool.Stem,
             CefrLevel = pool.CefrLevel,
             TopicCode = pool.TopicCode,
             ItemType = pool.ItemType,
             PlacementEligible = pool.PlacementEligible,
-            // The pool has no seven-way type: a productive version is the legacy free_response, and
-            // an objective one is a four-option MCQ by construction.
-            QuestionType = pool.IsProductive ? "free_response" : "mcq",
+            QuestionType = pool.IsProductive ? "free_response" : pool.RenderFormat,
             CategoryCode = q.Category?.Code,
             Explanation = pool.Explanation,
             Hint = q.Hint,
@@ -228,10 +229,13 @@ internal static class QuestionExportManifest
             Options = pool.IsProductive
                 ? null
                 : [
-                    new ImportManifestOption { Label = "A", Text = pool.OptionA!, IsCorrect = pool.KeyLabel == "A" },
-                    new ImportManifestOption { Label = "B", Text = pool.OptionB!, IsCorrect = pool.KeyLabel == "B" },
-                    new ImportManifestOption { Label = "C", Text = pool.OptionC!, IsCorrect = pool.KeyLabel == "C" },
-                    new ImportManifestOption { Label = "D", Text = pool.OptionD!, IsCorrect = pool.KeyLabel == "D" },
+                    // #250: the key is a SET ('A,C' for multi_select), so equality would export a
+                    // multi-answer item as having no correct option at all - and the roundtrip test
+                    // caught exactly that: the re-import produced a batch with no key.
+                    new ImportManifestOption { Label = "A", Text = pool.OptionA!, IsCorrect = BusinessObjects.KeyLabelSet.Contains(pool.KeyLabel, "A") },
+                    new ImportManifestOption { Label = "B", Text = pool.OptionB!, IsCorrect = BusinessObjects.KeyLabelSet.Contains(pool.KeyLabel, "B") },
+                    new ImportManifestOption { Label = "C", Text = pool.OptionC!, IsCorrect = BusinessObjects.KeyLabelSet.Contains(pool.KeyLabel, "C") },
+                    new ImportManifestOption { Label = "D", Text = pool.OptionD!, IsCorrect = BusinessObjects.KeyLabelSet.Contains(pool.KeyLabel, "D") },
                 ],
         };
     }

@@ -594,13 +594,17 @@ public sealed class PoolImportTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// A question the pool cannot hold - here a multi-select, which has two keys where CNT-06 allows
-    /// exactly one - is written in the legacy shape and named in the batch log. Refusing the whole
-    /// file would mean a legacy manifest that imported yesterday stops importing today, which is the
-    /// opposite of expand.
+    /// #250: a multi-select marks two options correct, and the pool can now hold that. Before this the
+    /// importer refused it ("a pool item has exactly one key"), wrote the legacy row, and the pool never
+    /// saw the item - which is what made the paper's own multi_select content unreachable to a drill.
+    /// <para>
+    /// <b>Which guard could this pass while being wrong:</b> asserting only that the batch succeeded,
+    /// which a legacy-only import also satisfies. The key itself is read back: two labels, in canonical
+    /// order, on the version the pool wrote.
+    /// </para>
     /// </summary>
     [Fact]
-    public async Task A_question_with_no_pool_form_still_imports_legacy_and_the_log_says_which()
+    public async Task A_multi_select_reaches_the_pool_with_both_of_its_correct_options()
     {
         var (certId, adminId, _, _, _) = await SeedAsync();
         var manifest = JsonNode.Parse(TwoChildManifest(Unique("Multi select ")))!;
@@ -615,12 +619,27 @@ public sealed class PoolImportTests(DatabaseFixture database)
         Assert.Equal(ImportBatchStatusDto.Done, result.Status);
         Assert.Equal(2, result.QuestionCount);
 
-        var logs = await LogsAsync(result.BatchId);
-        Assert.Contains(logs, l => l.Level == "warn" && l.Message.Contains("exactly one key"));
-
         await using var db = Db();
-        // Only the second question reached the pool; the multi-select did not.
-        Assert.Equal(1, await db.ExamItems.CountAsync(b => b.ExamId == result.ExamId));
+        // Both questions reached the pool, so both are bound: the multi-select is no longer the item
+        // the pool has to refuse.
+        Assert.Equal(2, await db.ExamItems.CountAsync(b => b.ExamId == result.ExamId));
+
+        var multiSelect = await db.Questions.AsNoTracking()
+            .SingleAsync(q => q.ExamId == result.ExamId && q.QuestionType == "multi_select");
+
+        // Scope to THIS exam: the fixture database is shared with every other test class, so an
+        // unscoped "the version with a comma in its key" can match another class's row.
+        var keyed = await db.ItemVersions.AsNoTracking()
+            .Join(db.ExamItems.Where(e => e.ExamId == result.ExamId),
+                v => v.ItemId, e => e.ItemId, (v, e) => v)
+            .SingleAsync(v => v.KeyLabel != null && v.KeyLabel.Contains(','));
+        // options[0] and options[1] are marked correct above, so the canonical set is A,B - ascending
+        // and comma-joined, which is the form the writer is required to produce.
+        Assert.Equal("A,B", keyed.KeyLabel);
+
+        var keyedItem = await db.Items.AsNoTracking().SingleAsync(i => i.ItemId == keyed.ItemId);
+        Assert.Equal("multi_select", keyedItem.RenderFormat);
+        Assert.Equal(multiSelect.Stem, keyed.Stem);
     }
 
     /// <summary>

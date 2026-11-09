@@ -224,7 +224,30 @@ public static class GateOne
         {
             refusals.Add(new GateOneRefusal(
                 GateOneRules.MissingKey,
-                "four options and no key. Exactly one of A-D is correct (CNT-06)."));
+                "four options and no key. At least one of A-D is correct (CNT-06)."));
+            return new GateOneVerdict(refusals, notices);
+        }
+
+        var keyedLabels = KeyLabelSet.Split(key);
+
+        // #250: three of gate one's rules are statements about ONE correct option - "the key is not
+        // the longest option", "the stem and the key do not share a content word", "the key letters
+        // are distributed evenly across the cell". A multi_select marks two or more options correct,
+        // so each of those rules would be judging a fact that does not exist for this item: which of
+        // the two is "the" key is not a question. They are skipped for a set, and the skip is reported
+        // rather than silently dropped, because an unreported skip reads as a pass.
+        if (keyedLabels.Count > 1)
+        {
+            notices.Add(new GateOneNotice(
+                GateOneRules.KeyCellBalance,
+                $"the key names {keyedLabels.Count} correct options ({key}), so the single-key checks were "
+                + "not run: key-length parity, stem-key lemma and cell key balance all ask which option is "
+                + "\"the\" answer, and a multi-answer item has no such option."));
+
+            CheckDistinctness(options, refusals);
+            CheckMetaOptions(options, refusals);
+            CheckParallelism(options, refusals, notices);
+            CheckRationales(item, refusals);
             return new GateOneVerdict(refusals, notices);
         }
 
@@ -589,11 +612,12 @@ public static class GateOne
             .Select(option => new LabelledOption(option.Item1, option.Item2!.Trim()))
             .ToList();
 
-    private static string? NormaliseKey(string? keyLabel)
-    {
-        var key = keyLabel?.Trim().ToUpperInvariant();
-        return key is "A" or "B" or "C" or "D" ? key : null;
-    }
+    /// <summary>
+    /// The canonical key, or null when it names no option. #250: a key is a SET - 'A' for the
+    /// four-option shape, 'A,C' for multi_select - so this accepts any non-empty subset of A-D and
+    /// returns it in canonical order.
+    /// </summary>
+    private static string? NormaliseKey(string? keyLabel) => KeyLabelSet.Normalise(keyLabel);
 
     private static bool IsBlank(string? value) => string.IsNullOrWhiteSpace(value);
 

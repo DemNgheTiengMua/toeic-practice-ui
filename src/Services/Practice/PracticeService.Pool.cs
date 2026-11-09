@@ -95,7 +95,13 @@ public sealed partial class PracticeService
 
     private static int? PinnedCorrectOptionId(int itemVersionId, ItemVersion version)
     {
-        var index = AttemptEngine.LabelIndex(version.KeyLabel);
+        // #250: a key can name more than one correct option ('A,C' for multi_select). The review screen
+        // marks every correct option from the version's own label set (AttemptEngine.PoolReviewOptions),
+        // and this single id is the fallback the DTO carries. The first label is the honest choice: for
+        // a one-label key it is exactly the previous behaviour, and for a set it names one of the
+        // answers rather than none.
+        var first = AttemptEngine.KeyLabels(version.KeyLabel).OrderBy(label => label, StringComparer.Ordinal).FirstOrDefault();
+        var index = AttemptEngine.LabelIndex(first);
         return index < 0 ? null : AttemptEngine.PoolOptionId(itemVersionId, index);
     }
 
@@ -116,7 +122,7 @@ public sealed partial class PracticeService
     private static bool EvaluatePinnedAnswer(ItemVersion version, string? selectedLabel) =>
         selectedLabel is not null
         && AttemptEngine.LabelIndex(selectedLabel) >= 0
-        && string.Equals(selectedLabel, version.KeyLabel, StringComparison.OrdinalIgnoreCase);
+        && AttemptEngine.IsKeyLabel(version, selectedLabel);
 
     /// <summary>
     /// The option the learner picked, expressed as the id every screen renders: the pinned answer's

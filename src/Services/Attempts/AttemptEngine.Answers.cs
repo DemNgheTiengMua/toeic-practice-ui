@@ -87,8 +87,7 @@ public sealed partial class AttemptEngine
                 answer.SelectedOptionId = null;
                 answer.SelectedOptionIdsJson = selectedOptionIdsJson;
                 answer.ResponseText = responseText;
-                answer.IsCorrect = label is not null
-                    && string.Equals(label, pinnedVersion.KeyLabel, StringComparison.OrdinalIgnoreCase);
+                answer.IsCorrect = IsKeyLabel(pinnedVersion, label);
             }
             else
             {
