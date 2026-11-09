@@ -1536,9 +1536,13 @@ BEGIN
 Why is the finance team moving?', 'B2', 'mcq', N'The audit occupies the fifth floor, which is why the team moves.', 24);
   SET @plQuestion = SCOPE_IDENTITY();
   DELETE FROM @plOptions;
+  -- The correct answer was missing: all three options were distractors, so the item asked a question
+  -- nothing in its own option set answered. A learner could not be right, and the key had to come from
+  -- the explanation rather than the choices. The fourth option states what the memo says.
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Their printers have been removed.', 0);
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'The second floor is being renovated.', 0);
   INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'They need to meet clients.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('D', N'The audit will occupy their floor.', 1);
   INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
   SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
 END
