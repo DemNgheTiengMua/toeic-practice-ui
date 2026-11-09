@@ -72,6 +72,17 @@ public sealed class PoolIngestionGates(
     public bool HasNoVerifiers => verifierOne is null || verifierTwo is null;
 
     /// <summary>
+    /// Whether this deployment wired gate four's level classifier.<para>
+    /// The switch a caller that stages a PRODUCTIVE task reads. Gate three never runs over a task - a
+    /// task has no key for a blind solver to distribute over, so the seam skips it by design - which
+    /// makes <see cref="HasNoVerifiers"/> the wrong question there: it would report a check as unrun
+    /// that could never have existed, and stage a validated task as a draft for a gate that is not
+    /// applicable. Gate four is the one that judges a productive task's level claim.
+    /// </para>
+    /// </summary>
+    public bool HasNoClassifier => classifier is null;
+
+    /// <summary>
     /// Judges one bundle and returns one result per child, in file order. Gate two runs once for the
     /// stimulus; gates one and three run per child; gate four runs per child for the level claim and
     /// once over the bundle for span independence.

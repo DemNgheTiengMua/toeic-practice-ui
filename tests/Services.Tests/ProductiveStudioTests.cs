@@ -45,8 +45,14 @@ public sealed class ProductiveStudioTests(DatabaseFixture database) : IAsyncLife
     public async Task DisposeAsync() => await ClearAsync();
 
     /// <summary>
-    /// Removes only the rows this fixture wrote, anchored on <see cref="Nonce"/>. The items go through
-    /// <c>trg_Items_NoHardDelete</c>, which removes their versions.
+    /// Removes only the rows this fixture wrote, anchored on <see cref="Nonce"/>.
+    /// <para>
+    /// #256: a save with verifier models now stages <c>validated</c>, and CNT-43 refuses the hard delete
+    /// of anything that has left draft - so this fixture disables that trigger for its own rows rather
+    /// than weakening it. The rows are this class's own, identified by the nonce, and a test catalog is
+    /// the one place the delete may be stepped around. The trigger itself is untouched and
+    /// <c>ItemLifecycleTests</c> still proves it fires.
+    /// </para>
     /// </summary>
     private async Task ClearAsync()
     {
@@ -57,7 +63,12 @@ public sealed class ProductiveStudioTests(DatabaseFixture database) : IAsyncLife
               SELECT i.ItemId FROM Items i
               WHERE EXISTS (SELECT 1 FROM ItemVersions v WHERE v.ItemId = i.ItemId AND v.Stem LIKE N'{like}');
 
+            ALTER TABLE Items DISABLE TRIGGER trg_Items_NoHardDelete;
+            DELETE FROM ImportLog WHERE ItemId IN (SELECT ItemId FROM @mine);
+            DELETE FROM ReviewSampleDecisions WHERE ItemId IN (SELECT ItemId FROM @mine);
+            DELETE FROM ItemVersions WHERE ItemId IN (SELECT ItemId FROM @mine);
             DELETE i FROM Items i WHERE i.ItemId IN (SELECT ItemId FROM @mine);
+            ALTER TABLE Items ENABLE TRIGGER trg_Items_NoHardDelete;
 
             DELETE s FROM Stimuli s
               WHERE s.PromptCopy LIKE N'{like}'
@@ -85,7 +96,35 @@ public sealed class ProductiveStudioTests(DatabaseFixture database) : IAsyncLife
             // No classifier: the shape every unconfigured deployment starts in.
             : new PoolIngestionGates(db);
 
-        return new ProductiveStudioService(db, TimeProvider.System, gates);
+        return new ProductiveStudioService(db, TimeProvider.System, gates, new FixedActing(StaffUserId(db)));
+    }
+
+    /// <summary>The seeded author account, created on first use. A studio save names its uploader.</summary>
+    private static int StaffUserId(CompanionDbContext db)
+    {
+        var role = db.Roles.FirstOrDefault(r => r.Code == "studio-staff");
+        if (role is null)
+        {
+            role = new Role { Code = "studio-staff", Name = "Studio staff" };
+            db.Roles.Add(role);
+            db.SaveChanges();
+        }
+
+        const string email = "productive-studio-author@test.local";
+        var user = db.Users.FirstOrDefault(u => u.Email == email);
+        if (user is null)
+        {
+            user = new User { RoleId = role.RoleId, Email = email, PasswordHash = [1], FullName = "Studio author" };
+            db.Users.Add(user);
+            db.SaveChanges();
+        }
+
+        return user.UserId;
+    }
+
+    private sealed class FixedActing(int userId) : IActingStaffAccount
+    {
+        public int? UserId { get; } = userId;
     }
 
     private static Dictionary<string, decimal> Confident() => new(StringComparer.OrdinalIgnoreCase)
@@ -183,7 +222,9 @@ public sealed class ProductiveStudioTests(DatabaseFixture database) : IAsyncLife
         var saved = await Service(db).SaveAsync(WritingTask(min: 110, max: 300, prep: 300, response: 900));
 
         var part = Assert.Single(saved.Parts);
-        Assert.Equal("draft", part.LifecycleStatus);
+        // #256: gate four's classifier RAN here (the service is built with models), so the task is
+        // staged `validated` - the state that means "gates passed, awaiting audit".
+        Assert.Equal("validated", part.LifecycleStatus);
         Assert.Equal("demo", part.ContentTier);
         Assert.Equal("writing", part.Modality.ToString().ToLowerInvariant());
 
@@ -542,15 +583,23 @@ public sealed class ProductiveStudioTests(DatabaseFixture database) : IAsyncLife
         Assert.Contains(analysis.UnrunChecks, check => check.Rule == GateFourRules.ClassifierUnavailable);
 
         var saved = await service.SaveAsync(WritingTask(min: 110, max: 300, prep: 400, response: 1200));
-        Assert.Single(saved.Parts);
+        var part = Assert.Single(saved.Parts);
+        // #256: no classifier, so gate four did not run and the task correctly stays `draft`. Staging it
+        // `validated` would claim a certification nobody made.
+        Assert.Equal("draft", part.LifecycleStatus);
     }
 
     /// <summary>
     /// The tier prefix is CNT-03’s, and the studio cannot mint production stock: an id that says one
     /// tier while the column says another is refused by the seam, not by a copy of the rule here.
+    /// <para>
+    /// #256: the lifecycle is now decided by whether the gates ran, not by the request - and the request
+    /// still has no field that can say. A <c>validated</c> stage here is the wired deployment; the
+    /// unwired one is asserted <c>draft</c> in the test above, which is the half that keeps this honest.
+    /// </para>
     /// </summary>
     [Fact]
-    public async Task The_saved_rows_are_demo_and_draft_and_no_request_field_can_say_otherwise()
+    public async Task The_saved_rows_are_demo_and_validated_and_no_request_field_can_say_otherwise()
     {
         await SeedTopicsAsync();
         await using var db = Db();
@@ -560,7 +609,7 @@ public sealed class ProductiveStudioTests(DatabaseFixture database) : IAsyncLife
         await using var check = Db();
         var item = await check.Items.SingleAsync(i => i.ItemId == saved.Parts[0].ItemId);
         Assert.Equal("demo", item.ContentTier);
-        Assert.Equal("draft", item.LifecycleStatus);
+        Assert.Equal("validated", item.LifecycleStatus);
 
         // The request shape carries no tier and no lifecycle at all, which is what makes the two
         // constants above the only reachable answer.

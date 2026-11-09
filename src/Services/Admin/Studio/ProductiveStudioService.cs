@@ -38,7 +38,8 @@ namespace Services;
 public sealed class ProductiveStudioService(
     CompanionDbContext db,
     TimeProvider clock,
-    PoolIngestionGates gates) : IProductiveStudioService
+    PoolIngestionGates gates,
+    IActingStaffAccount? acting = null) : IProductiveStudioService
 {
     /// <summary>
     /// The refusals that mean "this check has not run" rather than "this content is defective", on the
@@ -234,7 +235,53 @@ public sealed class ProductiveStudioService(
         // One save, one transaction: a task with a prompt and no parts, or a part pointing at a
         // stimulus that rolled back, is a half-committed task.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        var written = PoolIngestionWriter.WriteBundle(db, verdict, clock.GetUtcNow());
+
+        // #256: a studio save is an UPLOAD as far as the pool is concerned, so it records one. Without
+        // a batch and an ImportLog row per item, nothing downstream can see what the studio wrote:
+        // StratifiedAuditService draws strata from ImportLog, and ClearForServiceAsync refuses an item
+        // that "did not arrive in batch {id}" - so a studio item could never be promoted and never
+        // reach a learner, no matter how many gates it passed.
+        //
+        // The uploader is the acting staff account, which is what trg_ReviewSampleDecisions_NoSelfApproval
+        // reads: the author cannot then clear their own batch, and that refusal is the database's.
+        var batch = new ImportBatch
+        {
+            CertId = null, // pool stock names no certificate (CNT-01)
+            SourceName = $"studio:{DateTimeOffset.UtcNow:yyyyMMddHHmmss}",
+            Status = "done",
+            UploadedBy = acting?.UserId
+                ?? throw Refused(["A studio save needs the acting staff account, because the pool records "
+                    + "who uploaded the bundle and the audit refuses a review whose uploader is unknown."]),
+            CreatedAt = clock.GetUtcNow(),
+            CompletedAt = clock.GetUtcNow(),
+        };
+        db.ImportBatches.Add(batch);
+        await db.SaveChangesAsync(cancellationToken);
+
+        // Gate four is the only gate that judges a productive task's level claim: gate three never runs
+        // over a task (it has no key for a blind solver to distribute over), so `HasNoVerifiers` would
+        // ask about a check that could never exist. A `draft` is the honest stage when the classifier is
+        // unwired, and promoting it would claim a certification nobody made.
+        var lifecycle = gates.HasNoClassifier ? PoolImport.LifecycleStatus : PoolImport.ValidatedLifecycleStatus;
+
+        var written = PoolIngestionWriter.WriteBundle(db, verdict, clock.GetUtcNow(), lifecycle);
+        await db.SaveChangesAsync(cancellationToken);
+
+        foreach (var item in written.Items)
+        {
+            db.ImportLogs.Add(new ImportLog
+            {
+                BatchId = batch.BatchId,
+                RowNo = null,
+                Level = "info",
+                Message = $"Accepted: {item.ItemId} written by the studio and staged as '{lifecycle}'.",
+                RuleCode = null,
+                Attempt = 1,
+                ItemId = item.ItemId,
+                LoggedAt = clock.GetUtcNow(),
+            });
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
