@@ -77,6 +77,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAdminCoverageService, AdminCoverageService>();
         // #247 / #248: the automated cutover-readiness pass. It reports; the cutover script decides.
         services.AddScoped<ICutoverReadinessService, CutoverReadinessService>();
+        // #247.2: the financial pass over the cutover window. A discrepancy blocks the step.
+        services.AddScoped<IReconciliationService, ReconciliationService>();
         // #246: the ledger crosses a cutover by export/re-import, and the import is idempotent.
         services.AddScoped<ILedgerTransferService, LedgerTransferService>();
         services.AddScoped<IExamQuickIngestService, ExamQuickIngestService>();
