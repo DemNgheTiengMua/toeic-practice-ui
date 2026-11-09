@@ -100,11 +100,15 @@ else
         <ul class="stack m-0 pl-5">
           <li>As on test day, spell check and grammar assistance are disabled.</li>
           <li>Your writing is automatically saved every few seconds. If you reload or leave, your drafts will be restored.</li>
-          <li>Starting the attempt does not charge. <strong>1 credit</strong> is deducted upon final submission for AI grading.</li>
+          <li>Starting the attempt does not charge. <strong>@instr.CreditCost credit</strong> is deducted upon final submission for AI grading.</li>
           <li>If an AI grading fails, retrying is completely free and will never charge again.</li>
         </ul>
       </div>
     </div>
+
+    @* #239: a prior submission is listed here, beside the start button, so it can be read again
+       without starting (and paying for) a new sitting first. *@
+    <partial name="_PriorAttempts" model="instr.Attempts" />
 
     <form method="post" action="/writing/@instr.ExamId/start" class="stack">
       @Html.AntiForgeryToken()

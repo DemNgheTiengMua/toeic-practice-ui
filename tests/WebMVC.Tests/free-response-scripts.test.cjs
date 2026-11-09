@@ -64,6 +64,29 @@ test('writing initializes timer, word meter, modal and keyboard dismissal', asyn
   await p.doc.fire('keydown', { key: 'Escape' });
   assert.equal(p.get('submit-modal').getAttribute('aria-hidden'), 'true');
 });
+
+// #239: the live count must be the SERVER's count. The harness hands the page the same expression the
+// service sends, and these three strings are the ones a whitespace split answers differently: a double
+// space (agrees), a hyphen (one word, not two) and a no-break space (one word, which `\s` splits).
+test('the writing word count agrees with the server on double spaces, hyphens and a no-break space', async () => {
+  const p = page('writing');
+  p.editor.getAttribute = key => ({
+    'data-attempt-id': '12', 'data-question-id': '4', 'data-min-words': '2', 'data-max-words': '50',
+    'data-word-pattern': '[ \\t\\r\\n]+'
+  })[key];
+
+  p.editor.value = 'one  two'; await p.editor.fire('input');
+  assert.equal(p.get('word-count').textContent, 2);
+
+  p.editor.value = 'well-known'; await p.editor.fire('input');
+  assert.equal(p.get('word-count').textContent, 1);
+
+  p.editor.value = 'one\u00A0two'; await p.editor.fire('input');
+  assert.equal(p.get('word-count').textContent, 1);
+
+  p.editor.value = 'first\nsecond'; await p.editor.fire('input');
+  assert.equal(p.get('word-count').textContent, 2);
+});
 test('writing saves via MVC with anti-forgery before navigating', async () => {
   const requests = [];
   const p = page('writing', async (url, options) => { requests.push({ url, options }); return { ok: true }; });
@@ -122,15 +145,21 @@ test('speaking records and uploads through the MVC proxy with ownership IDs and 
       this.onstop();
     }
   }
+  // #221 / D18: the sitting never raises a permission dialog, so the recorder asks the gate first.
+  // Supplying it here is what lets the test drive the real recording path rather than the refusal.
+  const gate = { acquire: async () => ({ ok: true, stream: { getTracks: () => tracks }, reason: null }) };
   const p = page('speaking', async (url, options) => {
     requests.push({ url, options }); return { ok: false };
   }, {
     hasAudio: 'false',
     globals: {
       navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => tracks }) } },
-      MediaRecorder: Recorder
+      MediaRecorder: Recorder,
+      EeAudioGate: gate
     }
   });
+  // The gate is reached through `window`, which the harness keeps separate from the globals.
+  p.window.EeAudioGate = gate;
   await p.get('btn-start-now').fire('click');
   await Promise.resolve();
   await p.get('btn-stop-now').fire('click');

@@ -15,6 +15,8 @@ public record WritingReviewDto(
     decimal MaxScore,
     IReadOnlyList<WritingQuestionReviewItemDto> Questions,
     string? EstimatedBandCode = null,
-    string? EstimatedBandName = null
+    string? EstimatedBandName = null,
+    // #239: how many tasks carry a rubric score. The page labels a band as an estimate from one task
+    // when this is 1.
+    int GradedQuestions = 0
 );
-

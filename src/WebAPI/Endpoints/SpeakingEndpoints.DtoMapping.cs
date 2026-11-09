@@ -25,7 +25,10 @@ public static partial class SpeakingEndpoints
                 s.ExpectedQuestionCount,
                 s.PrepSeconds,
                 s.ResponseSeconds,
-                s.DisplayOrder)).ToList());
+                s.DisplayOrder)).ToList(),
+            view.Attempts.Select(a => new PriorAttemptDto(
+                a.AttemptId, a.Status, a.StartedAt, a.SubmittedAt, a.CanReview,
+                a.ReopenPath("/speaking"))).ToList());
     }
 
     private static SpeakingTakeDto MapTakeDto(SpeakingTakeView take)
@@ -152,6 +155,7 @@ public static partial class SpeakingEndpoints
             review.EstimatedBandCode,
             review.EstimatedBandName,
             review.ScaledScoreMax,
-            review.ScoreDisplayFactor);
+            review.ScoreDisplayFactor,
+            review.GradedQuestions);
     }
 }

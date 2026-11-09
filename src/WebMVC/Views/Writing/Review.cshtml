@@ -71,6 +71,21 @@
         estimate for this skill: whether it also becomes your certificate band depends on how @rev.CertCode
         reports its skills, and that is a rule of the certificate, not of this page.
       </p>
+      @* #239: one task is not a level. A single graded task generalises poorly (r(1) = 0.55), so the
+         band says which it is rather than letting one task's mark read as a measurement of the skill. *@
+      @if (rev.GradedQuestions == 1)
+      {
+        <p class="text-sm no-margin mt-2">
+          <strong>Estimated from one task.</strong> One graded task is a reading of this answer, not of
+          your writing: the same skill measured over several tasks is what supports a level.
+        </p>
+      }
+      else if (rev.GradedQuestions > 1)
+      {
+        <p class="text-sm no-margin mt-2 font-mono">
+          Measured over @rev.GradedQuestions graded tasks.
+        </p>
+      }
     </div>
   }
   else if (rev.AnsweredQuestions == 0 || rev.TotalScore <= 0)
@@ -164,7 +179,7 @@
                 <tr>
                   <th scope="col" style="width: 25%">Criterion</th>
                   <th scope="col" style="width: 15%">Score</th>
-                  <th scope="col">Grader's note</th>
+                  <th scope="col">What the grader saw</th>
                 </tr>
               </thead>
               <tbody>
@@ -173,7 +188,19 @@
                   <tr>
                     <th scope="row">@crit.Name</th>
                     <td><strong>@crit.Score.ToString("0.#") / @crit.MaxScore.ToString("0.#")</strong></td>
-                    <td>@(crit.Comment ?? "Evaluated against rubric.")</td>
+                    @* #239: a score is not evidence. The note is the evidence, and when the grader
+                       stored none the cell says so as a fact instead of filling the gap with a phrase
+                       that reads like feedback but names nothing ("Evaluated against rubric."). *@
+                    <td>
+                      @if (!string.IsNullOrWhiteSpace(crit.Comment))
+                      {
+                        @crit.Comment
+                      }
+                      else
+                      {
+                        <span class="text-muted text-xs">No note was recorded for this criterion on this grading.</span>
+                      }
+                    </td>
                   </tr>
                 }
               </tbody>
