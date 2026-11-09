@@ -139,33 +139,44 @@ public sealed class DashboardThreeBlocksTests
         Assert.DoesNotContain("Hello, @", DashboardView());
     }
 
+    /// <summary>
+    /// #242 / LRN-08: six doors, and Path is one of them. #242 moved the list out of six hand-written
+    /// anchors and into one `doors` array the rail loops over, so the door set is a declaration this
+    /// test can read. <b>The input that passes a weaker guard while being wrong:</b> counting
+    /// `href=` occurrences, which a second link inside the same anchor would inflate; the assertion
+    /// is on the ordered array of hrefs, so a renamed or reordered door fails.
+    /// </summary>
     [Fact]
-    public void The_sidebar_has_five_items_including_writing_and_speaking()
+    public void The_sidebar_has_six_items_including_path_writing_and_speaking()
     {
         var layout = LearnerLayout();
         var nav = Regex.Match(layout, @"<nav class=""nav-list""[^>]*>(?<body>[\s\S]*?)</nav>").Groups["body"].Value;
         Assert.NotEmpty(nav);
 
-        var items = Regex.Matches(nav, @"<a class=""@NavClass\(""(?<href>[^""]+)""\)").Select(m => m.Groups["href"].Value).ToList();
+        var doors = Regex.Matches(
+                layout,
+                @"\(""(?<href>/[^""]+)"",\s*""(?<label>[^""]+)"",\s*(?<skill>[^)]+)\)")
+            .Select(m => m.Groups["href"].Value)
+            .ToList();
 
-        Assert.Equal(5, items.Count);
-        Assert.Contains("/dashboard", items);
-        Assert.Contains("/exams", items);
-        Assert.Contains("/practice", items);
-        Assert.Contains("/writing", items);
-        Assert.Contains("/speaking", items);
+        Assert.Equal(["/learning-path", "/exams", "/practice", "/writing", "/speaking", "/dashboard"], doors);
+        // The rail loops over that list and nothing else: a second hard-coded door would pass the
+        // assertion above while adding a seventh item to the page.
+        Assert.Contains("@foreach (var door in doors)", nav);
     }
 
     [Fact]
     public void Writing_and_speaking_are_not_behind_a_submenu()
     {
-        // "Do not put them behind a submenu": the entry is an anchor in the rail, not a <details>
-        // group or a button that opens a second list.
+        // "Do not put them behind a submenu": each door is one element in the rail, not a <details>
+        // group or a button that opens a second list. #242 renders an unavailable door as a span, so
+        // the assertion is on the shape of the rail rather than on a literal anchor for each door.
         var layout = LearnerLayout();
         var nav = Regex.Match(layout, @"<nav class=""nav-list""[^>]*>(?<body>[\s\S]*?)</nav>").Groups["body"].Value;
 
         Assert.DoesNotContain("<details", nav);
-        Assert.Contains("href=\"/writing\"", nav);
-        Assert.Contains("href=\"/speaking\"", nav);
+        Assert.DoesNotContain("<button", nav);
+        Assert.Contains("\"/writing\"", layout);
+        Assert.Contains("\"/speaking\"", layout);
     }
 }

@@ -16,7 +16,9 @@ public static partial class LearnerEndpoints
             return Results.Ok(new LearnerContextDto(
                 ToCertificateDto(context.Active),
                 context.Certificates.Select(ToCertificateDto).ToList(),
-                context.CreditBalance));
+                context.CreditBalance,
+                context.Skills.Select(s => s.MapTo<ModalityDto>()).ToList(),
+                context.ExamDate));
         });
 
         learner.MapPut("/active-certificate", async Task<IResult> (

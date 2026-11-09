@@ -52,9 +52,51 @@
         <partial name="_AudioEquipmentCheck" model="Model.Equipment" />
       }
 
+      @* #242 / LRN-09 / SCR-PR-01: the one place a certificate changes. The copy states what a
+         switch moves (path, placement, practice pool), because the cost of a wrong click is the
+         reason the control lives here rather than in the shell. *@
+      @if (isLearner && Model.Certificates is { Count: > 0 })
+      {
+        <div class="card">
+          <div class="card__header"><strong>Certificate</strong></div>
+          <div class="card__body stack">
+            <p class="m-0 text-muted text-sm">
+              Your certificate scopes your learning path, your placement result and your practice
+              bank. Switching keeps each certificate's own history and changes all three
+              together.
+            </p>
+            <p class="m-0" data-active-certificate>Active: <strong>@Model.ActiveCertCode</strong></p>
+            @if (Model.Certificates.Count > 1)
+            {
+              <form method="post" action="/learner/active-certificate" class="stack">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="/profile" />
+                <label class="field__label" for="cert-switch-code">Switch to</label>
+                <select class="field__input" id="cert-switch-code" name="code" required>
+                  @foreach (var cert in Model.Certificates)
+                  {
+                    <option value="@cert.Code" selected="@(cert.Code == Model.ActiveCertCode)">@cert.Code — @cert.Name</option>
+                  }
+                </select>
+                <div class="field__hint">
+                  Writing and speaking practice are available only on a certificate that examines
+                  those skills. The doors stay in the sidebar either way.
+                </div>
+                <div>
+                  <button type="submit" class="btn btn--sm btn--primary">Switch certificate</button>
+                </div>
+              </form>
+            }
+            else
+            {
+              <p class="m-0 text-muted text-sm">This is the only certificate available.</p>
+            }
+          </div>
+        </div>
+      }
+
       <div class="card">
-        <div class="card__header"><strong>Credit wallet</strong></div>
-        <div class="card__body stack">
+        <div class="card__header"><strong>Credit wallet</strong></div>        <div class="card__body stack">
           <p class="m-0 text-muted text-sm">
             Credits pay for a mock exam start, AI grading, or a mentor booking. Practice, weakness analysis, and placement exams are completely free. Credits never expire.
           </p>

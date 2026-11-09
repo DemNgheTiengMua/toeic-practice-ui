@@ -52,8 +52,10 @@ public sealed class SkillPracticeDoorTests : IClassFixture<SkillPracticeDoorTest
         // have one <html>, one topbar and one "Sign out", so the assertions above pass for either -
         // which is how /writing and /speaking shipped without the five-item sidebar. The sidebar and
         // the credit badge exist only in _LearnerLayout.
+        // #242: the certificate marker in that shell is now the placard, not the removed one-click
+        // switcher; the assertion follows the marker so it still proves "this is the learner layout".
         Assert.Contains("app-sidebar", body);
-        Assert.Contains("cert-switcher", body);
+        Assert.Contains("cert-placard", body);
     }
 
     [Theory]

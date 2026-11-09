@@ -113,15 +113,21 @@
 
   /* ---- sidebar: one mark per destination, keyed by the label ---------------- */
   var NAV = {
-    "Home": "home", "Dashboard": "grid", "Test list": "test", "Tests": "test", "Exams": "test",
-    "Exam history": "archive", "Practice by section": "pencil",
+    "Home": "home", "Path": "route", "Dashboard": "grid", "Test list": "test", "Tests": "test", "Exams": "test",
+    "Exam history": "archive", "Practice": "pencil", "Practice by section": "pencil",
+    "Writing": "pencil", "Speaking": "mic",
     "Weakness analysis": "chart", "My learning path": "route",
     "Find a mentor": "chat", "Credit wallet": "wallet", "Profile": "user",
     "Students": "user", "Score conversion": "swap", "Credit packages": "box",
     "Orders": "receipt", "Complaints": "flag", "Support reports": "flag", "Prototype catalog": "grid",
     "Saved questions": "bookmark", "Placement test": "target"
   };
-  each(".nav-list__item", function (a) { lead(a, NAV[text(a)]); });
+  each(".nav-list__item", function (a) {
+    /* The label is the item's own first text node. An unavailable door also carries its reason in a
+       nested span, so matching the whole text would leave that door without its mark. */
+    var label = ((a.firstChild && a.firstChild.textContent) || "").trim();
+    lead(a, NAV[label] || NAV[text(a)]);
+  });
 
   /* ---- state stamps: the word stays, the mark sits beside it ---------------- */
   var STAMP = {
@@ -198,9 +204,12 @@
     var el = make(text(s) === "▼" ? "chevron-down" : "arrow-right", "icon--trail");
     if (el) { s.textContent = ""; s.appendChild(el); }
   });
-  each(".cert-switcher__arrow, .landing-preview__arrow", function (s) {
+
+  /* #242: the shell's certificate placard is not a control, so it no longer carries a disclosure
+     chevron; the landing preview still draws its own trailing arrow. */
+  each(".landing-preview__arrow", function (s) {
     if (s.querySelector(".icon")) return;
-    var el = make(s.className.indexOf("cert") !== -1 ? "chevron-down" : "arrow-right", "icon--trail");
+    var el = make("arrow-right", "icon--trail");
     if (el) { s.textContent = ""; s.appendChild(el); }
   });
 

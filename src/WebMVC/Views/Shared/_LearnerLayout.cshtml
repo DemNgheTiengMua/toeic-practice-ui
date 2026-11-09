@@ -1,22 +1,64 @@
 @{
     var shell = ViewData["LearnerShell"] as LearnerContextDto ?? Context.Items["learner-shell"] as LearnerContextDto;
+
+    // A context that arrived without its active certificate is not a shell: the credit badge, the
+    // placard and the six doors all read it, so a half-loaded projection renders none of them rather
+    // than throwing on the layout that wraps every page.
+    if (shell?.Active is null)
+    {
+        shell = null;
+    }
     var path = Context.Request.Path.Value ?? "/";
-    var returnUrl = path + Context.Request.QueryString;
+
+    // #242 / LRN-08: exactly six doors, in this order and only here. Each names the modality it
+    // opens; a null modality is a door every certificate has. LRN-10: a certificate that does not
+    // examine a skill keeps the door and the door SAYS SO - removing it renumbers the rail and
+    // breaks the muscle memory the numbering gave the learner.
+    var doors = new (string Href, string Label, ModalityDto? Skill)[]
+    {
+        ("/learning-path", "Path", null),
+        ("/exams", "Exams", null),
+        ("/practice", "Practice", null),
+        ("/writing", "Writing", ModalityDto.Writing),
+        ("/speaking", "Speaking", ModalityDto.Speaking),
+        ("/dashboard", "Home", null),
+    };
+
+    // A certificate whose skill list did not arrive leaves every door open: a failed projection must
+    // never be the reason a learner cannot reach a screen they own.
+    bool IsInactive(ModalityDto? skill) => skill is { } s && shell is not null && !shell.Examines(s);
+
+    // #242: `?offline=1` is the deterministic trigger for the offline banner. A banner that only
+    // appears while `navigator.onLine` is false can never be seen by a server-rendered test (or by a
+    // reviewer on a working laptop), so the shell accepts the condition explicitly and shell.js
+    // respects it rather than clearing it.
+    var forcedOffline = Context.Request.Query["offline"] == "1";
+
     string NavClass(string href)
     {
         if (href == "/exams")
         {
-            return (path.Equals("/exams", StringComparison.OrdinalIgnoreCase) || 
-                    path.StartsWith("/exams/index", StringComparison.OrdinalIgnoreCase) || 
+            return (path.Equals("/exams", StringComparison.OrdinalIgnoreCase) ||
+                    path.StartsWith("/exams/index", StringComparison.OrdinalIgnoreCase) ||
                     (path.StartsWith("/exams/", StringComparison.OrdinalIgnoreCase) && !path.StartsWith("/exams/history", StringComparison.OrdinalIgnoreCase) && !path.StartsWith("/exams/review", StringComparison.OrdinalIgnoreCase)))
                 ? "nav-list__item is-active" : "nav-list__item";
         }
         return path.StartsWith(href, StringComparison.OrdinalIgnoreCase)
             ? "nav-list__item is-active" : "nav-list__item";
     }
+
+    // #242 / LRN-15: the exam date is a date normally and a gold countdown inside the same two-week
+    // window the dashboard uses. One constant, so the shell and the goal block cannot disagree about
+    // when the pressure starts. A date in the past is a date, not a negative countdown.
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    var daysToExam = shell?.ExamDate is { } examDay ? examDay.DayNumber - today.DayNumber : (int?)null;
+    var countdown = daysToExam is >= 0 and <= DashboardPresentation.CountdownWindowDays;
+    var examText = daysToExam is 0 ? "Exam today"
+        : countdown ? (daysToExam == 1 ? "1 day to exam" : $"{daysToExam} days to exam")
+        : shell?.ExamDate?.ToString("d MMM yyyy") ?? "";
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-offline="@(forcedOffline ? "true" : null)" data-offline-forced="@(forcedOffline ? "true" : null)">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -31,6 +73,12 @@
 </head>
 <body>
   <a class="visually-hidden" href="#main">Skip to content</a>
+  @* #242 / U16: offline outside a sitting is banner-only - no answer buffering. It lives here, in the
+     shell, so every screen states the condition; shell.js raises data-offline on <html> and the CSS
+     paints it. Present in the markup on every page, so the state is never a page's own invention. *@
+  <div class="offline-banner" role="alert">
+    <strong>OFFLINE:</strong> Your connection is down. Nothing you change is saved until it returns.
+  </div>
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <a href="/dashboard"><strong>extra efficient</strong></a>
@@ -39,8 +87,8 @@
         {
           <span class="badge badge--info">@shell.CreditBalance @(shell.CreditBalance == 1 ? "credit" : "credits") left</span>
         }
-        @* #159: the sidebar is five items, so the account pages live here, behind one disclosure.
-           Not a sixth rail item: buying credits, the wallet, support and the profile are not
+        @* #159: the sidebar is six items, so the account pages live here, behind one disclosure.
+           Not a seventh rail item: buying credits, the wallet, support and the profile are not
            learning, and a learner looking for "what do I practise" should not wade past them. *@
         <details class="cert-menu account-menu">
           <summary class="btn btn--ghost btn--sm" aria-label="Account">Account</summary>
@@ -60,43 +108,52 @@
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        @* #159: five items. Seventeen items in six groups was what hid the learning features: Writing
-           and Speaking existed but had no door, so the learner never found them. Each of these five
-           opens a page that leads on to the rest - the rail is a map, not an index. *@
+        @* #242 / LRN-08: six items. Writing and Speaking are their own doors because learners could
+           not find productive practice behind a generic "practice"; Path is its own because a concept
+           with no door does not exist in a learner's head. The rail is a map, not an index. *@
         <nav class="nav-list" aria-label="Main navigation">
-          <a class="@NavClass("/dashboard")" href="/dashboard" aria-current="@(path.StartsWith("/dashboard", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Home</a>
-          <a class="@NavClass("/exams")" href="/exams" aria-current="@(path.Equals("/exams", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/exams/", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Exams</a>
-          <a class="@NavClass("/practice")" href="/practice" aria-current="@(path.StartsWith("/practice", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Practice</a>
-          <a class="@NavClass("/writing")" href="/writing" aria-current="@(path.StartsWith("/writing", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Writing</a>
-          <a class="@NavClass("/speaking")" href="/speaking" aria-current="@(path.StartsWith("/speaking", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Speaking</a>
+          @foreach (var door in doors)
+          {
+            if (IsInactive(door.Skill))
+            {
+              @* LRN-10: not a link, not focusable, and it carries the reason. A disabled anchor
+                 ("pointer-events: none") stays a link to a keyboard and to a screen reader. This is a
+                 plain span: no href, no role, no tabindex, so nothing claims it can be operated, and
+                 the sentence beneath the label is what a learner - or a screen reader - hears. *@
+              <span class="nav-list__item nav-list__item--inactive">
+                @door.Label
+                <span class="nav-list__item-why">Not examined by this certificate</span>
+              </span>
+            }
+            else
+            {
+              <a class="@NavClass(door.Href)" href="@door.Href" aria-current="@(path.StartsWith(door.Href, StringComparison.OrdinalIgnoreCase) || (door.Href == "/exams" && path.StartsWith("/exams", StringComparison.OrdinalIgnoreCase)) ? "page" : null)">@door.Label</a>
+            }
+          }
         </nav>
       </aside>
       <main class="app-main" id="main">
         @if (shell is not null)
         {
           <div class="context-bar">
+            @* #242 / LRN-09: the placard states; it does not switch. Switching changes the path, the
+               placement and the practice pool at once, and a one-click switch reads as data loss. *@
             <div class="context-bar__item">
-              <span class="context-bar__label" id="cert-switcher-label">Certificate:</span>
-              <details class="cert-menu">
-                <summary class="cert-switcher" aria-labelledby="cert-switcher-label cert-switcher-current">
-                  <span class="cert-switcher__current" id="cert-switcher-current">@shell.Active.Code</span>
-                  <span class="cert-switcher__arrow" aria-hidden="true">▼</span>
-                </summary>
-                <form class="cert-dropdown" method="post" action="/learner/active-certificate">
-                  @Html.AntiForgeryToken()
-                  <input type="hidden" name="returnUrl" value="@returnUrl">
-                  @foreach (var cert in shell.Certificates)
-                  {
-                    var isCurrent = cert.Code == shell.Active.Code;
-                    <button type="submit" name="code" value="@cert.Code"
-                            class="cert-dropdown__item@(isCurrent ? " is-current" : "")"
-                            aria-current="@(isCurrent ? "true" : null)">
-                      @cert.Code <span class="text-xs">@cert.Name</span>
-                    </button>
-                  }
-                </form>
-              </details>
+              <span class="context-bar__label" id="cert-placard-label">Certificate:</span>
+              <span class="cert-placard" data-cert-placard aria-labelledby="cert-placard-label">
+                <span class="cert-placard__code">@shell.Active.Code</span>
+                <span class="cert-placard__name">@shell.Active.Name</span>
+              </span>
+              <a class="context-bar__link" href="/profile">Change in profile</a>
             </div>
+            @if (shell.ExamDate is { } examDate)
+            {
+              <div class="context-bar__item">
+                <span class="context-bar__label">Exam date:</span>
+                <time class="context-bar__value font-mono@(countdown ? " context-bar__value--countdown" : "")"
+                      datetime="@examDate.ToString("yyyy-MM-dd")">@examText</time>
+              </div>
+            }
           </div>
         }
         <div class="container stack">
@@ -110,6 +167,7 @@
     </div>
   </div>
   <script src="~/js/icons.js"></script>
+  <script src="~/js/shell.js"></script>
   <script src="~/js/audio-gate.js"></script>
   <script src="~/js/ee-audio.js"></script>
   <script src="~/js/exam-audio.js"></script>

@@ -33,10 +33,30 @@ public sealed partial class LearnerService(
         var activeId = await ResolveActiveCertIdAsync(userId, certificates, cancellationToken);
 
         var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
+
+        // #242: the shell's six doors read the certificate's own skill list, and its exam-date
+        // indicator reads the goal row. Both are scoped to the ACTIVE certificate, which is why they
+        // are read here: one switch moves the doors, the date and the practice pool together.
+        var skills = await db.Skills
+            .AsNoTracking()
+            .Where(s => s.CertId == activeId)
+            .OrderBy(s => s.DisplayOrder)
+            .ThenBy(s => s.SkillId)
+            .Select(s => s.Modality)
+            .ToListAsync(cancellationToken);
+
+        var examDate = await db.TargetBands
+            .AsNoTracking()
+            .Where(t => t.UserId == userId && t.CertId == activeId)
+            .Select(t => t.TargetDate)
+            .FirstOrDefaultAsync(cancellationToken);
+
         return new LearnerContext(
             certificates.Single(c => c.CertId == activeId).Option,
             certificates.Select(c => c.Option).ToList(),
-            balance);
+            balance,
+            skills.Select(EnumCodes.Parse<Modality>).ToList(),
+            examDate);
     }
 
     public async Task SwitchCertificateAsync(int userId, string certificateCode, CancellationToken cancellationToken = default)
