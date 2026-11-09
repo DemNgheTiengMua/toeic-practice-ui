@@ -82,7 +82,51 @@ public static class ServiceCollectionExtensions
         // where a deployment opts into real ones; unconfigured, they refuse rather than pass (see
         // PoolIngestionGates). The seam itself is always registered, because its own rules - version,
         // skill, tier prefix, record shape - need no model at all.
-        services.AddScoped<PoolIngestionGates>();
+        //
+        // #258: the models are opt-in by CONFIGURATION, not by a code change that nobody made. Gate
+        // three needs TWO verifiers from DISTINCT families - two instances of one family agree with
+        // each other and the agreement means nothing while every count looks right - so the family
+        // list is a config array and one entry is deliberately NOT enough.
+        var gateModels = GateModelConfiguration.Resolve(configuration);
+
+        services.AddScoped<PoolIngestionGates>(sp =>
+        {
+            var client = sp.GetRequiredService<IClaudeClient>();
+            var logger = sp.GetRequiredService<ILogger<PoolIngestionGates>>();
+
+            var verifiers = gateModels.IsGateThreeEnabled
+                ? new IVerifierModel[]
+                  {
+                      new ClaudeVerifierModel(client, gateModels.VerifierFamilies[0]),
+                      new ClaudeVerifierModel(client, gateModels.VerifierFamilies[1]),
+                      // The ablation solver is the first family by design: gate four asks whether the
+                      // stimulus alone decides the key, which is a different question from agreement.
+                      new ClaudeVerifierModel(client, gateModels.VerifierFamilies[0], "ablation"),
+                  }
+                : [];
+
+            ILevelClassifier? classifier = gateModels.ClassifierFamily is { } classifierFamily
+                ? new ClaudeLevelClassifier(client, classifierFamily)
+                : null;
+
+            if (!gateModels.IsFullyConfigured)
+            {
+                logger.LogWarning(
+                    "The content gates are not fully configured: {Verifiers} distinct verifier family(ies) "
+                    + "and {Classifier} classifier. Gate three and gate four will report their checks as "
+                    + "not run rather than pass. {Reason}",
+                    gateModels.VerifierFamilies.Count,
+                    classifier is null ? "no" : "a",
+                    GateModelConfiguration.Remedy);
+            }
+
+            return new PoolIngestionGates(
+                sp.GetRequiredService<CompanionDbContext>(),
+                verifiers.Length > 0 ? verifiers[0] : null,
+                verifiers.Length > 1 ? verifiers[1] : null,
+                verifiers.Length > 2 ? verifiers[2] : null,
+                classifier);
+        });
         services.AddScoped<PoolIngestionService>();
         // #205: the staging workbench - the batch, its verdicts, one re-submitted record, and the
         // audit's clearance. A thin adapter so the endpoints speak DTOs.
