@@ -25,4 +25,17 @@ public record SpeakingReviewView(
     // #152: stored units per reported point. 10 on a certificate whose scale is in tenths, so a
     // stored 75 is shown as 7.5 and never as 75. Every rendered score divides by this.
     int ScoreDisplayFactor = 1
-);
+)
+{
+    /// <summary>
+    /// #239: how many tasks actually carry a rubric score — the count the "one task cannot set a level"
+    /// rule is about, read from graded rows rather than from <see cref="AnsweredQuestions"/>.
+    /// </summary>
+    public int GradedQuestions { get; init; }
+
+    /// <summary>
+    /// #239: spec §5, "one graded task yields a result marked as estimated from one task". A single
+    /// task generalises poorly (<c>r(1) = 0.55</c>), so the page says so in words.
+    /// </summary>
+    public bool IsEstimatedFromOneTask => GradedQuestions == 1;
+}

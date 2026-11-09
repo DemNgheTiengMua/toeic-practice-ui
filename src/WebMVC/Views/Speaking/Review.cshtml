@@ -157,7 +157,15 @@
             {
               <li>
                 <strong>@c.Name (@c.Score.ToString("0.#")/@c.MaxScore.ToString("0.#")):</strong>
-                @(c.Comment ?? "Evaluated against rubric standards.")
+                @* #239: the score is not the evidence; the note is. A missing note says so. *@
+                @if (!string.IsNullOrWhiteSpace(c.Comment))
+                {
+                  @c.Comment
+                }
+                else
+                {
+                  <span class="text-muted text-xs">No note was recorded for this criterion on this grading.</span>
+                }
               </li>
             }
           </ul>
@@ -216,9 +224,18 @@
                     <div class="card p-3">
                       <div class="row row--between mb-1">
                         <strong>@c.Name</strong>
-                        <span class="badge badge--info">@c.Score.ToString("0.#") / @c.MaxScore.ToString("0.#")</span>
+                        <span class="badge badge--info font-mono">@c.Score.ToString("0.#") / @c.MaxScore.ToString("0.#")</span>
                       </div>
-                      <p class="text-xs text-muted no-margin">@(c.Comment ?? "Criteria satisfied.")</p>
+                      @* #239: the note is the evidence a criterion was actually judged. A missing one
+                         says so rather than reading as praise ("Criteria satisfied."). *@
+                      @if (!string.IsNullOrWhiteSpace(c.Comment))
+                      {
+                        <p class="text-xs text-muted no-margin">@c.Comment</p>
+                      }
+                      else
+                      {
+                        <p class="text-xs text-muted no-margin">No note was recorded for this criterion on this grading.</p>
+                      }
                     </div>
                   }
                 </div>
@@ -239,6 +256,21 @@
         estimate for this skill: whether it also becomes your certificate band depends on how
         @Model.Review.CertCode reports its skills, and that is a rule of the certificate, not of this page.
       </p>
+      @* #239: one task is not a level. A single graded task generalises poorly (r(1) = 0.55), so the
+         band says which it is rather than letting one task's mark read as a measurement of the skill. *@
+      @if (r.GradedQuestions == 1)
+      {
+        <p class="text-sm no-margin mt-2">
+          <strong>Estimated from one task.</strong> One graded task is a reading of this answer, not of
+          your speaking: the same skill measured over several tasks is what supports a level.
+        </p>
+      }
+      else if (r.GradedQuestions > 1)
+      {
+        <p class="text-sm no-margin mt-2 font-mono">
+          Measured over @r.GradedQuestions graded tasks.
+        </p>
+      }
     </div>
   }
   else if (r.AnsweredQuestions == 0 || r.TotalScore <= 0)

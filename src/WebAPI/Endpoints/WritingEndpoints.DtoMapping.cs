@@ -24,7 +24,10 @@ public static partial class WritingEndpoints
                 s.Name,
                 s.ExpectedQuestionCount,
                 s.ResponseSeconds,
-                s.DisplayOrder)).ToList());
+                s.DisplayOrder)).ToList(),
+            view.Attempts.Select(a => new PriorAttemptDto(
+                a.AttemptId, a.Status, a.StartedAt, a.SubmittedAt, a.CanReview,
+                a.ReopenPath("/writing"))).ToList());
     }
 
     private static WritingTakeDto MapTakeDto(WritingTakeView take)
@@ -126,6 +129,7 @@ public static partial class WritingEndpoints
                 q.PriorityFix,
                 q.ModelRewrite)).ToList(),
             review.EstimatedBandCode,
-            review.EstimatedBandName);
+            review.EstimatedBandName,
+            review.GradedQuestions);
     }
 }

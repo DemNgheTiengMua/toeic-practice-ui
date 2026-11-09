@@ -109,6 +109,8 @@ public sealed class WritingControllerTests
         var model = Assert.IsType<WritingTakeViewModel>(viewResult.Model);
         Assert.Equal(100, model.Take.AttemptId);
         Assert.Equal("My response", model.Take.Question.ResponseText);
+        // #239: the composer counts with the server's own expression, not a second copy of the rule.
+        Assert.Equal(WordCount.Pattern, model.WordCountPattern);
     }
 
     [Fact]
@@ -257,7 +259,8 @@ public sealed class WritingControllerTests
             ReviewDto = new WritingReviewDto(
                 100, 1, "TOEIC Writing", "TOEIC", DateTimeOffset.UtcNow, 2, 2, 12.0m, 16.0m,
                 [new WritingQuestionReviewItemDto(10, 1, "Sentence", "Prompt", "My answer", 8, 6.0m, 6.0m,
-                    [new WritingCriterionScoreItemDto(1, "GRAM", "Grammar", 3.0m, 3.0m, "Good grammar.")])])
+                    [new WritingCriterionScoreItemDto(1, "GRAM", "Grammar", 3.0m, 3.0m, "Good grammar.")])],
+                GradedQuestions: 1)
         };
 
         var controller = CreateController(api);
@@ -268,6 +271,35 @@ public sealed class WritingControllerTests
         Assert.Equal(100, model.Review.AttemptId);
         Assert.Equal(12.0m, model.Review.TotalScore);
         Assert.Equal(16.0m, model.Review.MaxScore);
+        // #239: one graded task is carried through to the page, which labels the band accordingly.
+        Assert.Equal(1, model.Review.GradedQuestions);
+    }
+
+    /// <summary>
+    /// #239: a prior submission is listed on the instructions page and re-openable. The route comes from
+    /// the service, so a graded attempt opens its feedback rather than the sitting it can no longer enter.
+    /// </summary>
+    [Fact]
+    public async Task Instructions_carries_every_prior_attempt_with_its_route()
+    {
+        var api = new TestApiClient
+        {
+            WritingInstructions = new WritingInstructionsDto(
+                1, 1, "TOEIC", "TOEIC Writing Practice", "Test description", 60, 2, 1, 5, null,
+                [new WritingSectionInfoDto(1, "W1", "Sentence", 1, null, 1)],
+                [
+                    new PriorAttemptDto(42, "graded", DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(-1), true, "/writing/review/42"),
+                    new PriorAttemptDto(43, "in_progress", DateTimeOffset.UtcNow, null, false, "/writing/take/43"),
+                ])
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Instructions(1, CancellationToken.None);
+
+        var model = Assert.IsType<WritingInstructionsViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal(2, model.Instructions.Attempts!.Count);
+        Assert.Equal("/writing/review/42", model.Instructions.Attempts[0].ReopenPath);
+        Assert.Equal("/writing/take/43", model.Instructions.Attempts[1].ReopenPath);
     }
 
     private static WritingController CreateController(TestApiClient api)

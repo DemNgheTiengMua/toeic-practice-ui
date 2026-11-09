@@ -57,6 +57,20 @@ public sealed class SpeakingPracticeService(
                 s.DisplayOrder))
             .ToListAsync(cancellationToken);
 
+        // #239: a prior take is listed and re-openable, newest first, the active one included.
+        var attempts = await db.ExamAttempts
+            .AsNoTracking()
+            .Where(a => a.UserId == userId && a.ExamId == examId)
+            .OrderByDescending(a => a.SubmittedAt ?? a.StartedAt)
+            .ThenByDescending(a => a.AttemptId)
+            .Select(a => new PriorAttempt(
+                a.AttemptId,
+                a.Status,
+                a.StartedAt,
+                a.SubmittedAt,
+                a.Status == AttemptStatus.Graded.ToCode()))
+            .ToListAsync(cancellationToken);
+
         return new SpeakingPracticeInstructionsView(
             exam.ExamId,
             exam.CertId,
@@ -68,7 +82,10 @@ public sealed class SpeakingPracticeService(
             SpeakingPracticeCreditCost,
             balance,
             activeAttempt?.AttemptId,
-            sections);
+            sections)
+        {
+            Attempts = attempts
+        };
     }
 
     public async Task<SpeakingAttemptInfo> StartAttemptAsync(int userId, int examId, CancellationToken cancellationToken = default)
@@ -319,6 +336,24 @@ public sealed class SpeakingPracticeService(
                 && q.Section.Modality == Modality.Speaking.ToCode())
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new SpeakingPracticeException(SpeakingPracticeException.QuestionNotFound, $"Speaking question {questionId} not found in this exam.");
+
+        // #239: the recording window is the TASK'S OWN declaration, and the server enforces it. The
+        // composer stops the recorder at this second, but a client that ignores the countdown would
+        // otherwise store a longer take and the window would exist only in JavaScript. A question that
+        // declares no window is not refused: the column is nullable, and refusing an undeclared window
+        // would invent a limit no author wrote. The boundary is inclusive, because a recorder that
+        // stops ON the last second saves exactly the window.
+        //
+        // shortcut: the duration is the recorder's own report, so a modified client can understate it.
+        // Closing that needs the audio decoded server-side (ffprobe or an audio library), which is a
+        // dependency this ticket does not add; upgrade when a stored take's length becomes a scored fact.
+        var windowMs = question.ResponseSeconds is int declared ? declared * 1000 : (int?)null;
+        if (windowMs is int limit && durationMs is int recorded && recorded > limit)
+        {
+            throw new SpeakingPracticeException(
+                SpeakingPracticeException.AudioTooLong,
+                $"This task records for {question.ResponseSeconds}s; the take is {recorded / 1000.0:0.#}s. It was not saved.");
+        }
 
         var ext = Path.GetExtension(fileName) ?? ".webm";
         if (fileName?.Contains(FakeAiGrader.SimulateFailMarker, StringComparison.OrdinalIgnoreCase) == true)
@@ -585,6 +620,7 @@ public sealed class SpeakingPracticeService(
         var questionItems = new List<SpeakingQuestionReviewItem>();
         decimal overallTotalScore = 0m;
         decimal overallMaxScore = 0m;
+        int gradedCount = 0;
 
         foreach (var fr in freeResponses)
         {
@@ -600,6 +636,8 @@ public sealed class SpeakingPracticeService(
             var criteriaItems = new List<SpeakingCriterionScoreItem>();
             decimal qTotal = 0m;
             decimal qMax = 0m;
+
+            if (grading?.AiGradingScores is { Count: > 0 } && !string.IsNullOrEmpty(fr.AudioPath)) gradedCount++;
 
             foreach (var s in scores.OrderBy(s => s.GradingCriterion.DisplayOrder))
             {
@@ -698,7 +736,11 @@ public sealed class SpeakingPracticeService(
             estimatedCode,
             estimatedName,
             scaledScoreMax,
-            displayFactor);
+            displayFactor)
+        {
+            // #239: "one task is not a level" counts GRADED tasks, not recorded ones.
+            GradedQuestions = gradedCount
+        };
     }
 
     /// <summary>

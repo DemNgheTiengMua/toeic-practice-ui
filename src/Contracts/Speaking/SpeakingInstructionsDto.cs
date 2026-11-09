@@ -14,6 +14,7 @@ public record SpeakingInstructionsDto(
     int CreditCost,
     int CreditBalance,
     int? ActiveAttemptId,
-    IReadOnlyList<SpeakingSectionInfoDto> Sections
+    IReadOnlyList<SpeakingSectionInfoDto> Sections,
+    // #239: every attempt already made on this exam, newest first.
+    IReadOnlyList<PriorAttemptDto>? Attempts = null
 );
-

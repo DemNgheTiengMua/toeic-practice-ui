@@ -14,6 +14,7 @@ public record WritingInstructionsDto(
     int CreditCost,
     int CreditBalance,
     int? ActiveAttemptId,
-    IReadOnlyList<WritingSectionInfoDto> Sections
+    IReadOnlyList<WritingSectionInfoDto> Sections,
+    // #239: every attempt already made on this exam, newest first.
+    IReadOnlyList<PriorAttemptDto>? Attempts = null
 );
-

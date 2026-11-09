@@ -94,7 +94,7 @@ public sealed class WritingController(
                 return RedirectToAction(nameof(Pending), new { attemptId });
             }
 
-            return View(new WritingTakeViewModel(take, TempData["ErrorMessage"] as string));
+            return View(new WritingTakeViewModel(take, WordCount.Pattern, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptExpired)
         {

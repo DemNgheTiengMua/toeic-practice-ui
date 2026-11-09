@@ -28,5 +28,8 @@ public class SpeakingPracticeException(string code, string message) : Exception(
     public const string AudioNotFound = "audio_not_found";
     public const string Validation = "validation";
 
+    /// <summary>#239: the take is longer than the task's declared recording window.</summary>
+    public const string AudioTooLong = "audio_too_long";
+
     public string Code { get; } = code;
 }

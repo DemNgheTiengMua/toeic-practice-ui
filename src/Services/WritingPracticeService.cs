@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
+using Contracts;
 using DataAccess;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
@@ -59,6 +60,21 @@ public sealed class WritingPracticeService(
                 s.DisplayOrder))
             .ToListAsync(cancellationToken);
 
+        // #239: a prior submission is listed and re-openable. Newest first. This includes the active
+        // attempt when there is one, which is why `activeAttempt` is not appended separately.
+        var attempts = await db.ExamAttempts
+            .AsNoTracking()
+            .Where(a => a.UserId == userId && a.ExamId == examId)
+            .OrderByDescending(a => a.SubmittedAt ?? a.StartedAt)
+            .ThenByDescending(a => a.AttemptId)
+            .Select(a => new PriorAttempt(
+                a.AttemptId,
+                a.Status,
+                a.StartedAt,
+                a.SubmittedAt,
+                a.Status == AttemptStatus.Graded.ToCode()))
+            .ToListAsync(cancellationToken);
+
         return new WritingPracticeInstructionsView(
             exam.ExamId,
             exam.CertId,
@@ -70,7 +86,10 @@ public sealed class WritingPracticeService(
             IsFreeDiagnostic(exam) ? 0 : WritingPracticeCreditCost,
             balance,
             activeAttempt?.AttemptId,
-            sections);
+            sections)
+        {
+            Attempts = attempts
+        };
     }
 
     public async Task<WritingAttemptInfo> StartAttemptAsync(int userId, int examId, CancellationToken cancellationToken = default)
@@ -319,7 +338,7 @@ public sealed class WritingPracticeService(
         attempt.LastQuestionId = questionId;
         await db.SaveChangesAsync(cancellationToken);
 
-        var wordCount = text.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        var wordCount = WordCount.Count(text);
         return new SaveDraftResult(freeResponse.FreeResponseId, questionId, now, wordCount);
     }
 
@@ -546,11 +565,14 @@ public sealed class WritingPracticeService(
         decimal overallTotalScore = 0m;
         decimal overallMaxScore = 0m;
         int answeredCount = 0;
+        int gradedCount = 0;
 
         foreach (var fr in freeResponses)
         {
             var text = fr.ResponseText ?? string.Empty;
-            var words = text.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+            // #239: the same rule the composer and the save path use, so the review page's word count
+            // and the one the learner watched cannot disagree.
+            var words = WordCount.Count(text);
             if (words > 0) answeredCount++;
 
             var criteriaScores = new List<WritingCriterionScoreItem>();
@@ -559,6 +581,10 @@ public sealed class WritingPracticeService(
 
             if (fr.AiGradingFreeResponse?.AiGradingScores is { Count: > 0 } scores)
             {
+                // #239: a task counts as evidence of a level only when it was BOTH answered and graded.
+                // A blank draft is still graded (the grader scores it zero with "no response"), and
+                // counting that would let a one-answer sitting look like a two-task measurement.
+                if (words > 0) gradedCount++;
                 foreach (var critScore in scores.OrderBy(s => s.GradingCriterion.DisplayOrder))
                 {
                     var overrideMax = sectionCriteria.FirstOrDefault(c => c.SectionId == fr.Question.SectionId && c.CriterionId == critScore.CriterionId)?.MaxScore;
@@ -633,6 +659,11 @@ public sealed class WritingPracticeService(
             overallMaxScore,
             questionItems,
             estimatedCode,
-            estimatedName);
+            estimatedName)
+        {
+            // #239: "one task is not a level" is a count of GRADED tasks, not of answered ones - a
+            // blank or failed answer is not evidence of a level.
+            GradedQuestions = gradedCount
+        };
     }
 }

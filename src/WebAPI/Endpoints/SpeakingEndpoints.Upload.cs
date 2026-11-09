@@ -62,6 +62,12 @@ public static partial class SpeakingEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Invalid audio file", ApiError.Codes.Validation, ex.Message);
             }
+            catch (SpeakingPracticeException ex) when (ex.Code == SpeakingPracticeException.AudioTooLong)
+            {
+                // #239: the declared window is the server's, not the recorder's. A take past it is
+                // refused rather than stored, so a client that skips the countdown cannot widen it.
+                return Problem(StatusCodes.Status400BadRequest, "Recording too long", ApiError.Codes.Validation, ex.Message);
+            }
             catch (SpeakingPracticeException ex) when (ex.Code == SpeakingPracticeException.AttemptNotFound)
             {
                 return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);

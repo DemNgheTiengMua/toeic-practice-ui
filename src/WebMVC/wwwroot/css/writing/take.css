@@ -4,3 +4,32 @@
 .writing-meter-empty { width: 0%; }
 .writing-actions { gap: var(--space-2); }
 .writing-submit-form { margin:0; }
+
+/* #239: the task checklist beside the editor. A flat painted list: no radius, no shadow, one keyline
+   between rows, and the state carried by a border and a word rather than a tint (DESIGN.md §5). */
+.task-checklist { list-style: none; padding: 0; }
+.task-checklist__item {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: start;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-block-end: 1px solid var(--rule-soft);
+}
+.task-checklist__item:last-child { border-block-end: 0; }
+.task-checklist__mark {
+  inline-size: 20px;
+  block-size: 20px;
+  border: 2px solid var(--ink);
+  background: transparent;
+}
+.task-checklist__item.is-met { border-inline-start: 4px solid var(--sign-green); padding-inline-start: var(--space-2); }
+.task-checklist__item.is-met .task-checklist__mark { background: var(--sign-green); border-color: var(--sign-green); }
+.task-checklist__item.is-unmet { border-inline-start: 4px solid var(--sign-gold); padding-inline-start: var(--space-2); }
+.task-checklist__item.is-unmet .task-checklist__mark { background: var(--sign-gold); border-color: var(--sign-gold); }
+.task-checklist__label { display: block; font-weight: 700; }
+.task-checklist__detail { display: block; color: var(--color-text-muted); font-size: var(--text-xs); }
+
+/* The meter's own state, in the same vocabulary as the checklist above it. */
+.word-meter--met .word-meter__fill { background: var(--sign-green); }
+.word-meter--over .word-meter__fill { background: var(--sign-red); }

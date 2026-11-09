@@ -13,10 +13,27 @@
     const minWords = parseInt(editor.getAttribute('data-min-words'), 10) || 0;
     const maxWords = parseInt(editor.getAttribute('data-max-words'), 10) || 0;
 
+    // #239: the server's own separator expression, sent with the page. Counting with `\s+` here would
+    // split a no-break space or a hyphen and the page would show one word more than the row stores.
+    // The browser has no lookbehind-free fallback need: the pattern is a plain character class.
+    const wordPattern = editor.getAttribute('data-word-pattern') || '[ \\t\\r\\n]+';
+    const wordSeparators = new RegExp(wordPattern);
+
     function countWords(str) {
       if (!str) return 0;
-      const tokens = str.trim().split(/\s+/);
-      return tokens.length === 1 && tokens[0] === '' ? 0 : tokens.length;
+      return str.split(wordSeparators).filter(function (token) { return token.length > 0; }).length;
+    }
+
+    const checklistLengthItem = document.querySelector('[data-checklist="length"]');
+    const checklistLengthStatus = document.querySelector('[data-checklist-status="length"]');
+    const checklistAnsweredItem = document.querySelector('[data-checklist="answered"]');
+
+    // One state rule for every checklist row: `true` paints it met, `false` paints it unmet, and `null`
+    // leaves it plain — a row the task does not require cannot claim to be satisfied.
+    function setChecklistState(item, met) {
+      if (!item) return;
+      item.classList.toggle('is-met', met === true);
+      item.classList.toggle('is-unmet', met === false);
     }
 
     function updateWordMeter() {
@@ -24,42 +41,57 @@
       wordCountSpan.textContent = words;
 
       const wordMeterContainer = document.getElementById('word-meter-container');
+      const hasRange = minWords > 0 || maxWords > 0;
       let pct = 0;
       let statusDesc = 'words';
+      let lengthMet = null;
 
       if (minWords > 0) {
         if (words < minWords) {
           const under = minWords - words;
           statusDesc = `words · ${under} under the ${minWords}-word minimum`;
           pct = Math.min(70, Math.round((words / minWords) * 70));
-          if (wordMeterContainer) wordMeterContainer.className = 'word-meter';
+          lengthMet = false;
         } else if (maxWords > 0 && words > maxWords) {
           const over = words - maxWords;
           statusDesc = `words · ${over} over the ${maxWords}-word maximum`;
           pct = 100;
-          if (wordMeterContainer) wordMeterContainer.className = 'word-meter word-meter--over';
+          lengthMet = false;
         } else {
           statusDesc = `words · the ${minWords}-word minimum is met`;
           pct = maxWords > 0
             ? 70 + Math.min(30, Math.round(((words - minWords) / (maxWords - minWords)) * 30))
             : 85;
-          if (wordMeterContainer) wordMeterContainer.className = 'word-meter word-meter--met';
+          lengthMet = true;
         }
       } else if (maxWords > 0) {
         if (words > maxWords) {
           const over = words - maxWords;
           statusDesc = `words · ${over} over the ${maxWords}-word maximum`;
           pct = 100;
-          if (wordMeterContainer) wordMeterContainer.className = 'word-meter word-meter--over';
+          lengthMet = false;
         } else {
           statusDesc = `words · within ${maxWords}-word limit`;
           pct = Math.round((words / maxWords) * 100);
-          if (wordMeterContainer) wordMeterContainer.className = 'word-meter word-meter--met';
+          lengthMet = true;
         }
       }
 
       wordStatusSpan.textContent = statusDesc;
       wordMeterFill.style.width = pct + '%';
+      if (wordMeterContainer) {
+        wordMeterContainer.className = 'word-meter'
+          + (lengthMet === true ? ' word-meter--met' : lengthMet === false ? ' word-meter--over' : '');
+      }
+
+      // The checklist reads the same number the meter does, because it is the same number.
+      setChecklistState(checklistLengthItem, lengthMet);
+      if (checklistLengthStatus) {
+        checklistLengthStatus.textContent = !hasRange ? ''
+          : lengthMet === true ? 'The length requirement is met.'
+          : 'The length requirement is not met yet.';
+      }
+      setChecklistState(checklistAnsweredItem, words > 0);
     }
 
     editor.addEventListener('input', updateWordMeter);

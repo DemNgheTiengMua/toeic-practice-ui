@@ -118,6 +118,8 @@ else
       </div>
     </div>
 
+    <partial name="_PriorAttempts" model="instr.Attempts" />
+
     <form method="post" action="/speaking/@instr.ExamId/start" class="stack">
       @Html.AntiForgeryToken()
       <label class="row">

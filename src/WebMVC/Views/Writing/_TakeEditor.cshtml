@@ -2,10 +2,17 @@
 @{
     var take = Model.Take;
     var q = take.Question;
+    // #239: the task's own demands, read from the row. Nothing here is a constant: the range comes from
+    // Questions.MinWords/MaxWords, the budget from the task's own ResponseSeconds.
+    var hasRange = q.MinWords.HasValue || q.MaxWords.HasValue;
+    var rangeText = q.MinWords.HasValue && q.MaxWords.HasValue ? $"{q.MinWords}–{q.MaxWords}"
+        : q.MinWords.HasValue ? $"{q.MinWords} or more"
+        : q.MaxWords.HasValue ? $"up to {q.MaxWords}"
+        : "no declared range";
 }
 <div class="writing-panes">
-  <!-- Left pane: Prompt -->
-  <div class="writing-panes__prompt stack">
+  <!-- Left pane: the task checklist, beside the editor rather than above it (spec §5) -->
+  <aside class="writing-panes__prompt stack" aria-labelledby="task-checklist-title">
     <div class="card">
       <div class="card__header">
         <div class="row row--between">
@@ -29,43 +36,68 @@
             <strong>Hint:</strong> @q.Hint
           </div>
         }
-
-        <div class="grid-2 mt-3">
-          @if (q.ResponseSeconds.HasValue)
-          {
-            <div class="stat">
-              <div class="stat__label">Recommended time</div>
-              <div class="stat__value">@(q.ResponseSeconds.Value / 60) min</div>
-            </div>
-          }
-          <div class="stat">
-            <div class="stat__label">Target length</div>
-            <div class="stat__value">
-              @if (q.MinWords.HasValue && q.MaxWords.HasValue)
-              {
-                <span>@q.MinWords–@q.MaxWords</span>
-              }
-              else if (q.MinWords.HasValue)
-              {
-                <span>@q.MinWords+</span>
-              }
-              else if (q.MaxWords.HasValue)
-              {
-                <span>≤@q.MaxWords</span>
-              }
-              else
-              {
-                <span>Open</span>
-              }
-            </div>
-            <div class="stat__hint">words</div>
-          </div>
-        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Right pane: Answer Editor -->
+    @* The checklist. Each row is a demand the task itself declares and the rubric scores, and each
+       carries a live state the composer updates as the learner types — so the requirement is readable
+       while composing rather than recalled from the instructions page. *@
+    <div class="card">
+      <div class="card__header">
+        <strong id="task-checklist-title">Task checklist</strong>
+      </div>
+      <div class="card__body">
+        <ul class="task-checklist stack m-0">
+          <li class="task-checklist__item" data-checklist="length">
+            <span class="task-checklist__mark" aria-hidden="true" data-checklist-mark="length"></span>
+            <span class="task-checklist__body">
+              <span class="task-checklist__label">Length</span>
+              <span class="task-checklist__detail font-mono" data-checklist-detail="length">
+                @if (hasRange)
+                {
+                  <text>@rangeText words</text>
+                }
+                else
+                {
+                  <text>no declared range</text>
+                }
+              </span>
+            </span>
+            @* Announced, not only coloured: this is the one checklist row whose state changes on every
+               keystroke, and a screen reader must hear it settle rather than discover it later. *@
+            <span class="visually-hidden" role="status" aria-live="polite" data-checklist-status="length"></span>
+          </li>
+
+          <li class="task-checklist__item" data-checklist="time">
+            <span class="task-checklist__mark" aria-hidden="true" data-checklist-mark="time"></span>
+            <span class="task-checklist__body">
+              <span class="task-checklist__label">Writing time</span>
+              <span class="task-checklist__detail font-mono">
+                @if (q.ResponseSeconds.HasValue)
+                {
+                  <text>@(q.ResponseSeconds.Value / 60) min @(q.ResponseSeconds.Value % 60) s</text>
+                }
+                else
+                {
+                  <text>the exam clock</text>
+                }
+              </span>
+            </span>
+          </li>
+
+          <li class="task-checklist__item" data-checklist="answered">
+            <span class="task-checklist__mark" aria-hidden="true" data-checklist-mark="answered"></span>
+            <span class="task-checklist__body">
+              <span class="task-checklist__label">Answer written</span>
+              <span class="task-checklist__detail" data-checklist-detail="answered">anything above zero words is submitted</span>
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right pane: the editor -->
   <div class="stack">
     <div class="card">
       <div class="card__header">
@@ -85,12 +117,13 @@
           data-attempt-id="@take.AttemptId"
           data-question-id="@q.QuestionId"
           data-min-words="@(q.MinWords ?? 0)"
-          data-max-words="@(q.MaxWords ?? 0)">@(q.ResponseText ?? "")</textarea>
+          data-max-words="@(q.MaxWords ?? 0)"
+          data-word-pattern="@Model.WordCountPattern">@(q.ResponseText ?? "")</textarea>
 
         <!-- Live Word Meter -->
         <div class="word-meter" id="word-meter-container">
           <div class="word-meter__readout">
-            <span id="word-count" class="word-meter__count">0</span>
+            <span id="word-count" class="word-meter__count font-mono">0</span>
             <span id="word-status" class="word-meter__state">words</span>
           </div>
           <div class="word-meter__track">
@@ -129,4 +162,3 @@
     </div>
   </div>
 </div>
-
