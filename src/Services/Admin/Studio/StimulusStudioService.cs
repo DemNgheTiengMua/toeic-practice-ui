@@ -34,7 +34,8 @@ namespace Services;
 public sealed class StimulusStudioService(
     CompanionDbContext db,
     TimeProvider clock,
-    PoolIngestionGates gates) : IStimulusStudioService
+    PoolIngestionGates gates,
+    IActingStaffAccount? acting = null) : IStimulusStudioService
 {
     /// <summary>
     /// The refusals that mean "this check has not run" rather than "this content is defective". They
@@ -245,7 +246,53 @@ public sealed class StimulusStudioService(
         // One save, one transaction: a stimulus with no children, or a child pointing at a stimulus that
         // rolled back, is a half-committed bundle.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        var written = PoolIngestionWriter.WriteBundle(db, verdict, clock.GetUtcNow());
+
+        // #256: a studio save is an UPLOAD as far as the pool is concerned, so it records one. Without
+        // a batch and an ImportLog row per item, nothing downstream can see what the studio wrote:
+        // StratifiedAuditService draws strata from ImportLog, and ClearForServiceAsync refuses an item
+        // that "did not arrive in batch {id}" - so a studio item could never be promoted and never
+        // reach a learner, no matter how many gates it passed.
+        //
+        // The uploader is the acting staff account, which is what trg_ReviewSampleDecisions_NoSelfApproval
+        // reads: the author cannot then clear their own batch, and that refusal is the database's.
+        var batch = new ImportBatch
+        {
+            CertId = null, // pool stock names no certificate (CNT-01)
+            SourceName = $"studio:{DateTimeOffset.UtcNow:yyyyMMddHHmmss}",
+            Status = "done",
+            UploadedBy = acting?.UserId
+                ?? throw Refused(["A studio save needs the acting staff account, because the pool records "
+                    + "who uploaded the bundle and the audit refuses a review whose uploader is unknown."]),
+            CreatedAt = clock.GetUtcNow(),
+            CompletedAt = clock.GetUtcNow(),
+        };
+        db.ImportBatches.Add(batch);
+        await db.SaveChangesAsync(cancellationToken);
+
+        // Gate three has no pure half: with no verifier models it never runs, so the item is staged as
+        // `validated` only when it actually did. A `draft` is honest in the other case and is what the
+        // screen already says ("gate three did not run"); promoting it would claim a check that never
+        // happened, which is the fabricated pass the ChecksThatDidNotRun list exists to prevent.
+        var lifecycle = gates.HasNoVerifiers ? PoolImport.LifecycleStatus : PoolImport.ValidatedLifecycleStatus;
+
+        var written = PoolIngestionWriter.WriteBundle(db, verdict, clock.GetUtcNow(), lifecycle);
+        await db.SaveChangesAsync(cancellationToken);
+
+        foreach (var item in written.Items)
+        {
+            db.ImportLogs.Add(new ImportLog
+            {
+                BatchId = batch.BatchId,
+                RowNo = null,
+                Level = "info",
+                Message = $"Accepted: {item.ItemId} written by the studio and staged as '{lifecycle}'.",
+                RuleCode = null,
+                Attempt = 1,
+                ItemId = item.ItemId,
+                LoggedAt = clock.GetUtcNow(),
+            });
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 

@@ -67,7 +67,39 @@ public sealed class StimulusStudioTests(DatabaseFixture database) : IAsyncLifeti
             // one AC5's "cannot be saved as validated" must hold in.
             : new PoolIngestionGates(db);
 
-        return new StimulusStudioService(db, TimeProvider.System, gates);
+        // #256: a studio save now records the upload it is, so the service needs the acting staff
+        // account. A fixed id is enough here: the fixture clears its own rows and the self-approval
+        // trigger is exercised in IngestionWorkbenchTests, not in a studio test.
+        return new StimulusStudioService(db, TimeProvider.System, gates, new FixedActing(StaffUserId(db, "author")));
+    }
+
+    /// <summary>A seeded staff account, created on first use. A studio save names its uploader, and a
+    /// clearance must name a different one: ADM-02 refuses a reviewer who uploaded the batch.</summary>
+    private static int StaffUserId(CompanionDbContext db, string tag)
+    {
+        var role = db.Roles.FirstOrDefault(r => r.Code == "studio-staff");
+        if (role is null)
+        {
+            role = new Role { Code = "studio-staff", Name = "Studio staff" };
+            db.Roles.Add(role);
+            db.SaveChanges();
+        }
+
+        var email = $"studio-{tag}@test.local";
+        var user = db.Users.FirstOrDefault(u => u.Email == email);
+        if (user is null)
+        {
+            user = new User { RoleId = role.RoleId, Email = email, PasswordHash = [1], FullName = $"Studio {tag}" };
+            db.Users.Add(user);
+            db.SaveChanges();
+        }
+
+        return user.UserId;
+    }
+
+    private sealed class FixedActing(int userId) : IActingStaffAccount
+    {
+        public int? UserId { get; } = userId;
     }
 
     /// <summary>
@@ -121,11 +153,14 @@ public sealed class StimulusStudioTests(DatabaseFixture database) : IAsyncLifeti
     private static readonly string Nonce = $"studio{Guid.NewGuid():N}"[..12];
 
     /// <summary>
-    /// Removes only the rows this fixture wrote, anchored on <see cref="Nonce"/>. The items go through
-    /// <c>trg_Items_NoHardDelete</c>, which removes their versions; nothing a learner answered is in
-    /// this set, so the trigger's second clause cannot fire. A stimulus left with no items is then
-    /// removed, but only when its text is one this fixture used - another class's stimulus keeps its
-    /// own items and therefore survives.
+    /// Removes only the rows this fixture wrote, anchored on <see cref="Nonce"/>.
+    /// <para>
+    /// #256: a save with verifier models now stages <c>validated</c>, and CNT-43 refuses the hard delete
+    /// of anything that has left draft - so this fixture disables that trigger for its own rows rather
+    /// than weakening it. The rows are this class's own, identified by the nonce, and a test catalog is
+    /// the one place the delete may be stepped around (<c>PoolIngestionTests</c> sets the same
+    /// precedent). The trigger itself is untouched and domain-level tests still prove it fires.
+    /// </para>
     /// </summary>
     private async Task ClearAsync()
     {
@@ -136,7 +171,18 @@ public sealed class StimulusStudioTests(DatabaseFixture database) : IAsyncLifeti
               SELECT i.ItemId FROM Items i
               WHERE EXISTS (SELECT 1 FROM ItemVersions v WHERE v.ItemId = i.ItemId AND v.Stem LIKE N'{like}');
 
+            -- #256: rows this fixture staged as `validated` are not deletable under CNT-43, and a review
+            -- decision is not deletable at all under ADM-02 - both invariants working. Removing them is a
+            -- fixture concern, so the guards are stepped around for exactly these rows and turned back on
+            -- immediately. The versions go first because the trigger's own cascade used to remove them.
+            ALTER TABLE Items DISABLE TRIGGER trg_Items_NoHardDelete;
+            ALTER TABLE ReviewSampleDecisions DISABLE TRIGGER trg_ReviewSampleDecisions_NoSelfApproval;
+            DELETE FROM ImportLog WHERE ItemId IN (SELECT ItemId FROM @mine);
+            DELETE FROM ReviewSampleDecisions WHERE ItemId IN (SELECT ItemId FROM @mine);
+            DELETE FROM ItemVersions WHERE ItemId IN (SELECT ItemId FROM @mine);
             DELETE i FROM Items i WHERE i.ItemId IN (SELECT ItemId FROM @mine);
+            ALTER TABLE ReviewSampleDecisions ENABLE TRIGGER trg_ReviewSampleDecisions_NoSelfApproval;
+            ALTER TABLE Items ENABLE TRIGGER trg_Items_NoHardDelete;
 
             DELETE s FROM Stimuli s
               WHERE (s.Passage = N'{Escape(Passage)}' OR s.Transcript = N'{Escape(Script)}')
@@ -296,7 +342,10 @@ public sealed class StimulusStudioTests(DatabaseFixture database) : IAsyncLifeti
             Assert.Equal("reading", item.Modality);
             Assert.Equal("B1", item.CefrLevel.Code);
             Assert.Equal("passage_comprehension", item.ItemType);
-            Assert.Equal("draft", item.LifecycleStatus);
+            // #256: gate three RAN here (the service is built with models), so the item is staged
+            // `validated` - the state that means "gates passed, awaiting audit". Before #256 the studio
+            // wrote `draft`, which no promotion path could see.
+            Assert.Equal("validated", item.LifecycleStatus);
             Assert.Equal("demo", item.ContentTier);
         });
 
@@ -514,6 +563,8 @@ public sealed class StimulusStudioTests(DatabaseFixture database) : IAsyncLifeti
             .ToListAsync();
 
         Assert.Equal(3, items.Count);
+        // #256: no verifier models, so gate three did not run and the item correctly stays `draft`.
+        // Staging it `validated` here would claim a check that never happened.
         Assert.All(items, item => Assert.Equal("draft", item.LifecycleStatus));
     }
 
@@ -689,4 +740,79 @@ public sealed class StimulusStudioTests(DatabaseFixture database) : IAsyncLifeti
         Assert.All(versions, version => Assert.Equal("sec", version.EvidenceUnit));
         Assert.All(versions, version => Assert.True(version.EvidenceEnd > version.EvidenceStart));
     }
+
+    // -----------------------------------------------------------------------------------------
+    // #256: the save is an upload, so the audit and the clearance can see what it wrote
+    // -----------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// #256. A studio save records a batch and one <c>ImportLog</c> row per item it wrote, and a
+    /// <em>different</em> account can then clear that item for service.
+    /// <para>
+    /// <b>The defect this covers, measured.</b> The studio wrote items with no batch and no log row.
+    /// <c>StratifiedAuditService</c> draws its strata from <c>ImportLog</c> and
+    /// <see cref="IngestionWorkbenchService.ClearForServiceAsync"/> refuses an item that "did not arrive
+    /// in batch {id}", so a studio item could never be promoted and never be served. The studio was a
+    /// screen that could create content and never publish it.
+    /// </para>
+    /// <para>
+    /// <b>Which guard could this pass while being wrong:</b> a save that writes the batch but no log
+    /// row — the batch assertion alone would pass, and the clearance would still refuse. Every written
+    /// item is therefore asserted present in the batch's log, and the clearance is driven for real.
+    /// The step after this one — an <c>active</c> item being drawn by a drill — is
+    /// <c>ItemPromotionTests.An_imported_item_reaches_a_pool_drill_only_after_it_is_promoted</c>.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task A_saved_bundle_records_the_batch_the_audit_and_the_clearance_read()
+    {
+        await SeedTopicsAsync();
+        await using var db = Db();
+        var author = StaffUserId(db, "author");
+        var reviewer = StaffUserId(db, "reviewer");
+
+        var batchesBefore = await db.ImportBatches.CountAsync();
+        var saved = await Service(db).SaveAsync(ReadingBundle());
+        Assert.Equal(3, saved.Children.Count);
+
+        await using var read = Db();
+        Assert.Equal(batchesBefore + 1, await read.ImportBatches.CountAsync());
+
+        var batch = await read.ImportBatches.AsNoTracking()
+            .OrderByDescending(b => b.BatchId)
+            .FirstAsync();
+
+        // The upload names the acting account, which is what ADM-02's self-approval rule reads.
+        Assert.Equal(author, batch.UploadedBy);
+        Assert.Null(batch.CertId);
+
+        var logged = await read.ImportLogs.AsNoTracking()
+            .Where(l => l.BatchId == batch.BatchId && l.ItemId != null)
+            .Select(l => l.ItemId!.Value)
+            .ToListAsync();
+
+        var written = saved.Children.Select(item => item.ItemId).ToList();
+        Assert.All(written, id => Assert.Contains(id, logged));
+
+        // A different account clears one item: validated -> active. The refusal when the uploader tries
+        // is the database's own (ADM-02) and is covered in IngestionWorkbenchTests.
+        await new IngestionWorkbenchService(db, TimeProvider.System, new PoolIngestionService(db, TimeProvider.System, Gates(db)))
+            .ClearForServiceAsync(batch.BatchId, written[0], reviewer);
+
+        await using var verify = Db();
+        var cleared = await verify.Items.AsNoTracking().SingleAsync(i => i.ItemId == written[0]);
+        Assert.Equal("active", cleared.LifecycleStatus);
+
+        // A clearance is one item, not a batch.
+        var uncleared = await verify.Items.AsNoTracking().SingleAsync(i => i.ItemId == written[1]);
+        Assert.Equal("validated", uncleared.LifecycleStatus);
+    }
+
+    /// <summary>The same gates the save used, so the clearance runs against the same deployment shape.</summary>
+    private PoolIngestionGates Gates(CompanionDbContext db) => new(
+        db,
+        verifierOne: new FakeVerifierModel("verifier-a", "v1") { Probabilities = Confident(), BlindProbabilities = Blind() },
+        verifierTwo: new FakeVerifierModel("verifier-b", "v2") { Probabilities = Confident(), BlindProbabilities = Blind() },
+        ablationSolver: null,
+        classifier: new FakeLevelClassifier("classifier-family", "c1") { Predicted = CefrLevel.B1 });
 }
