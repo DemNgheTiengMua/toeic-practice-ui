@@ -334,6 +334,71 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// #259 / PRN-03, the sibling case of the gap above: <b>a certificate that publishes no cut-score
+    /// table at all.</b> <c>TOEIC_CAT</c> is the deployed example - it has bands and scales but ships no
+    /// table - and the pre-#259 writer reported every learner who sat it as <c>PreA1</c>, because
+    /// <see cref="CefrLevel"/>'s default is the floor and the level came from a failed parse.
+    /// <para>
+    /// <b>Why this is a separate test from the gap.</b> The gap exercises a table that exists and does
+    /// not cover the score; this exercises the table's absence. Both route through the same branch now,
+    /// but they arrived there by different paths before, and a fix that special-cased "empty projection
+    /// result" while still reading a table version would pass only one of them.
+    /// </para>
+    /// <para>
+    /// <b>What would pass while being wrong:</b> asserting <c>CefrLevel is null</c> alone, which a row
+    /// that was never written also satisfies. The status and the reason are asserted too, and the
+    /// placement is asserted to still have a result to show - the skill is unmeasured, not missing.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task A_certificate_with_no_cut_score_table_reports_no_level_rather_than_the_floor()
+    {
+        var code = Unique("T259B");
+        var fixture = await SeedAsync(code, ("LIST", "listening", "mcq"));
+        var userId = await SeedLearnerAsync(code);
+        var skillId = fixture.SkillIds["LIST"];
+
+        // No table, no rows: the shape TOEIC_CAT ships in today.
+        await SqlAsync($"""
+            DELETE FROM CefrCutScores WHERE CertId = {fixture.CertId};
+            DELETE FROM CefrCutScoreVersions WHERE CertId = {fixture.CertId};
+            """);
+
+        var placementId = await StartPlacementAsync(userId, fixture);
+        var attemptId = await AttemptIdAsync(placementId);
+
+        await SqlAsync($"""
+            UPDATE AttemptAnswers SET SelectedOptionId = {fixture.CorrectOptionBySkillId[skillId]}
+              WHERE AttemptId = {attemptId} AND QuestionId = {fixture.QuestionIds["LIST"]};
+            """);
+
+        await using (var engineDb = Db())
+        {
+            await new AttemptEngine(engineDb).SubmitAttemptAsync(attemptId, userId, isAutoSubmit: false);
+        }
+
+        await using (var writerDb = Db())
+        {
+            await Writer(writerDb).WriteAsync(placementId);
+        }
+
+        await using var verify = Db();
+        var row = await verify.PlacementSkillResults.AsNoTracking()
+            .SingleAsync(r => r.PlacementId == placementId && r.SkillId == skillId);
+
+        // PreA1 is a claim about the learner. A missing table is a claim about the content.
+        Assert.Null(row.CefrLevel);
+        Assert.NotEqual(CefrLevel.PreA1, row.CefrLevel);
+        Assert.Equal(PlacementResultStatus.NotMeasured, row.ResultStatus);
+        Assert.Equal(PlacementFailureReason.NoCutScoreRow, row.FailureReason);
+        Assert.Null(row.CutScoreTableVersion);
+
+        // The row exists, so the result screen has something to explain. "No level" is not "no result".
+        var placement = await verify.PlacementTests.AsNoTracking().SingleAsync(p => p.PlacementId == placementId);
+        Assert.NotEqual("done", placement.Status);
+    }
+
+    /// <summary>
     /// A productive skill whose grading is still pending is `grading`, and the placement stays in
     /// progress. This is the ticket's sixth criterion and the confirmed defect's shape: before #212 the
     /// row was `done` with a null result.
