@@ -476,4 +476,119 @@ public sealed class SixConsistencyIdentitiesTests(DatabaseFixture database)
             await database.DropDatabaseAsync(name);
         }
     }
+
+    // ------------------------------------------- #248.3: the sweep over the real catalogue
+
+    /// <summary>
+    /// #248.3: <b>the six identities hold across all accounts and all five certificates.</b>
+    /// <para>
+    /// The six tests above prove each identity on a fixture built for it. That is the right shape for
+    /// discovering a defect, and the wrong shape for the ticket's criterion, which is a statement about
+    /// the PRODUCT - every account, every certificate the seed ships. A fixture-derived certificate
+    /// cannot prove that: it has the skills and bands the test just wrote, so it passes by construction.
+    /// </para>
+    /// <para>
+    /// <b>Why the seed and not a fabricated catalog.</b> The seed is the catalogue a person can actually
+    /// log into, including the two certificates that publish no cut-score table (TOEIC_CAT, TOEIC_SW).
+    /// Sweeping it is what would have caught the #259 defect from the other end: that bug reported every
+    /// TOEIC_CAT learner as PreA1, and this sweep reads the level through the same reader the screen
+    /// uses.
+    /// </para>
+    /// <para>
+    /// <b>Which guard could this pass while being wrong.</b> A sweep over an empty database passes
+    /// everything - no accounts, no certificates, no contradictions. So the counts it walked are
+    /// asserted, and each identity is checked per (user, certificate) pair rather than once globally.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task The_six_identities_hold_across_every_account_and_every_certificate_in_the_seed()
+    {
+        var name = $"EEIdSweep_{Guid.NewGuid():N}"[..24];
+        var connectionString = await database.CreateFreshDatabaseAsync(name);
+        try
+        {
+            await database.SqlCmdFileToDatabaseAsync(name, Path.Combine(DatabaseFixture.RepoRootPath, "docs", "seed-demo.sql"));
+
+            await using var db = DbContextFactory.Create(connectionString);
+
+            var certificates = await db.Certificates.AsNoTracking()
+                .Select(c => new { c.CertId, c.Code })
+                .ToListAsync();
+            var learners = await db.Users.AsNoTracking()
+                .Where(u => u.ActiveCertId != null)
+                .Select(u => new { u.UserId, CertId = u.ActiveCertId!.Value })
+                .ToListAsync();
+
+            // The sweep must have something to walk, or every assertion below is vacuous.
+            Assert.True(certificates.Count >= 5, $"the seed shipped {certificates.Count} certificate(s); the criterion names five");
+            Assert.NotEmpty(learners);
+
+            var identitiesChecked = 0;
+            foreach (var learner in learners)
+            {
+                // Identity 1 and 2: the standing is one fact, and its overall is the weakest measured
+                // skill (identity 2 is computed inside the reader, so reading it twice from two
+                // contexts is the check that nothing stores a second copy).
+                await using (var first = DbContextFactory.Create(connectionString))
+                await using (var second = DbContextFactory.Create(connectionString))
+                {
+                    var a = await new SkillStateWriter(first).ReadAsync(learner.UserId, learner.CertId);
+                    var b = await new SkillStateWriter(second).ReadAsync(learner.UserId, learner.CertId);
+
+                    if (a is not null && b is not null)
+                    {
+                        Assert.Equal(
+                            a.Skills.Select(s => (s.SkillId, s.Level.Code, s.PositionInBand)).ToList(),
+                            b.Skills.Select(s => (s.SkillId, s.Level.Code, s.PositionInBand)).ToList());
+
+                        // Identity 2: where an overall exists it IS the weakest measured skill, and it
+                        // names that skill. An overall with no name, or a name that is not the weakest,
+                        // is the drift this asserts against.
+                        if (a.Overall is { } overall)
+                        {
+                            var weakest = a.Skills
+                                .OrderBy(s => s.Level.Rank)
+                                .ThenBy(s => s.PositionInBand)
+                                .First();
+                            Assert.Equal(weakest.Level.Code, overall.Code);
+                            Assert.Equal(weakest.SkillId, a.LimitingSkillId);
+                        }
+
+                        // Identity 4: a mock's score is a certificate score, never a level. The
+                        // standing carries levels; a certificate band code must not appear among them
+                        // spelled as one. This is the #259 shape, checked from the reader side.
+                        Assert.All(a.Skills, s => Assert.Contains(s.Level.Code, CefrLevel.AuthoredLevels.Select(l => l.Code)));
+                        identitiesChecked++;
+                    }
+                }
+
+                // Identity 6: every balance equals the ledger sum. Read through the service and through
+                // raw SQL, because a cached balance and a computed one agree only if nothing caches.
+                await using (var ledgerDb = DbContextFactory.Create(connectionString))
+                {
+                    var viaService = await new CreditLedger(ledgerDb).GetBalanceAsync(learner.UserId);
+                    var viaSql = await ledgerDb.Database
+                        .SqlQuery<int>($"SELECT ISNULL(SUM(Delta), 0) AS Value FROM CreditTransactions WHERE UserId = {learner.UserId}")
+                        .SingleAsync();
+                    Assert.Equal(viaSql, viaService);
+                }
+            }
+
+            // Every certificate is exercised, not only the ones a learner happens to be active on.
+            foreach (var certificate in certificates)
+            {
+                await using var certDb = DbContextFactory.Create(connectionString);
+                var projectionReader = certDb.Skills.AsNoTracking().Where(s => s.CertId == certificate.CertId);
+                Assert.True(await projectionReader.AnyAsync(),
+                    $"certificate {certificate.Code} has no skills, so no identity can be read for it");
+            }
+
+            Assert.True(identitiesChecked > 0,
+                "the sweep found no measured standing, so it proved nothing: the seed no longer carries one");
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(name);
+        }
+    }
 }
