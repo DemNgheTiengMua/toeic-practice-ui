@@ -123,7 +123,10 @@ public sealed class GateModelConfigurationTests
     {
         var config = Resolve(("Claude:GateFour:ClassifierFamily", "haiku"));
 
-        Assert.Null(config.ClassifierFamily is null ? null : config.VerifierFamilies.FirstOrDefault());
+        // Asserted positively: the earlier form (`config.ClassifierFamily is null ? null : ...`) was
+        // true for both arms and proved nothing - the §8 trap of a test that cannot fail.
+        Assert.Equal("haiku", config.ClassifierFamily);
+        Assert.Empty(config.VerifierFamilies);
         Assert.False(config.IsGateThreeEnabled);
         Assert.False(config.IsFullyConfigured);
     }
