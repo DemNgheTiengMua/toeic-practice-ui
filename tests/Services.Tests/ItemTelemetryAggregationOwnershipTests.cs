@@ -106,6 +106,12 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
             VALUES ('{certCode}', N'Ownership cert', 1, 'sum');
             DECLARE @cert INT = SCOPE_IDENTITY();
 
+            -- #257: the rule is set BEFORE the paper is inserted, because publishing freezes the
+            -- certificate's rule onto the edition and scoring now reads the edition. Setting it after
+            -- the insert would make the edition say 'sum' while this fixture believes it says {storedRule}
+            -- - the exact drift the ticket exists to prevent, reproduced inside a test.
+            {ruleAssignment}
+
             INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
               (@cert, 'S1', N'Skill one', 'reading', 1, 0, 100, 1),
               (@cert, 'S2', N'Skill two', 'reading', 2, 0, 100, 1);

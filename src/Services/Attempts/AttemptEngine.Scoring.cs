@@ -198,10 +198,9 @@ public sealed partial class AttemptEngine
 
             // Both numbers are decided before the first write, so a certificate whose rule this engine
             // refuses leaves the attempt exactly as it found it rather than relying on a rollback.
-            var rule = await db.Certificates
-                .Where(c => c.CertId == attempt.CertId)
-                .Select(c => c.ScoreAggregationRule)
-                .SingleAsync(cancellationToken);
+            // #227 / #257: the rule is the one the edition froze; the certificate column is the
+            // fallback for an attempt with no edition row, and that fallback is named inside the helper.
+            var rule = await LoadAggregationRuleAsync(attempt.ExamId, attempt.CertId, cancellationToken);
             var total = AggregateTotalScore(rule, skillScores);
             var band = await FindBandCodeAsync(attempt.CertId, total, cancellationToken);
 

@@ -243,15 +243,17 @@ public sealed partial class AttemptEngine
 
             var cert = await db.Certificates
                 .Where(c => c.CertId == attempt.CertId)
-                .Select(c => new { c.Code, c.ScoreAggregationRule })
+                .Select(c => new { c.Code })
                 .SingleAsync(cancellationToken);
+            // #227 / #257: the rule is the one the edition froze, not today's certificate column.
+            var aggregationRule = await LoadAggregationRuleAsync(attempt.ExamId, attempt.CertId, cancellationToken);
             // #217 / PLC-19: a placement where nothing could be measured has NO result. Writing the
             // aggregate of an empty score set would store `0`, and a 0 is a figure the learner reads as
             // "you scored zero" - the fabricated result the ticket forbids. The attempt and its
             // placement carry no total and no band; the placement's own writer moves it to `abandoned`
             // with the reason recorded.
             var measuredNothing = isPlacement && newSkillScores.Count == 0;
-            var totalScore = measuredNothing ? (int?)null : AggregateTotalScore(cert.ScoreAggregationRule, newSkillScores);
+            var totalScore = measuredNothing ? (int?)null : AggregateTotalScore(aggregationRule, newSkillScores);
             attempt.TotalScore = totalScore;
             // #191: the derived fact on this table is TotalScore + BandCode, and this is its one
             // writer. The version moves forward on every scoring pass, so a stale out-of-order
@@ -607,12 +609,14 @@ public sealed partial class AttemptEngine
 
             var cert = await db.Certificates
                 .Where(c => c.CertId == attempt.CertId)
-                .Select(c => new { c.Code, c.ScoreAggregationRule })
+                .Select(c => new { c.Code })
                 .SingleAsync(cancellationToken);
+            // #227 / #257: the same rule the edition froze, as in the objective pass above.
+            var productiveRule = await LoadAggregationRuleAsync(attempt.ExamId, attempt.CertId, cancellationToken);
             // #217 / PLC-19: same rule as the objective pass - a placement where nothing could be
             // measured has no result, so it carries no total and no band.
             var measuredNothing = isPlacementAttempt && newSkillScores.Count == 0;
-            var totalScore = measuredNothing ? (int?)null : AggregateTotalScore(cert.ScoreAggregationRule, newSkillScores);
+            var totalScore = measuredNothing ? (int?)null : AggregateTotalScore(productiveRule, newSkillScores);
             attempt.TotalScore = totalScore;
             attempt.BandCode = totalScore is int total
                 ? await FindBandCodeAsync(attempt.CertId, total, cancellationToken)

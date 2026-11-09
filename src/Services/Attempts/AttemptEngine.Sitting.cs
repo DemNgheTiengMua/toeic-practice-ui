@@ -42,6 +42,43 @@ public sealed partial class AttemptEngine
         return attempt;
     }
 
+    /// <summary>
+    /// #227 / #257: the aggregation rule this attempt was scored under.
+    /// <para>
+    /// <b>The edition wins; the certificate is the fallback, not the rule.</b> #227 froze
+    /// <c>ScoreAggregationRule</c> on the edition because changing a certificate's rule after a sitting
+    /// changes what that sitting's stored total means. Every reader went on selecting the live column,
+    /// so the freeze was a claim nothing consulted: re-standardise a certificate from <c>sum</c> to
+    /// <c>avg_half_step</c> and a re-score, a re-projection or a displayed factor uses the new rule on
+    /// an attempt computed under the old one.
+    /// </para>
+    /// <para>
+    /// <b>An attempt with no edition row reads live configuration, and that is intended.</b> The row's
+    /// absence is the record - "no edition existed" - which
+    /// <c>A_historical_attempt_with_no_edition_row_reads_todays_configuration_and_says_so</c> pins. A
+    /// silent <c>??</c> would make that path invisible, so the fallback is a named branch here.
+    /// </para>
+    /// </summary>
+    private async Task<string> LoadAggregationRuleAsync(int examId, int certId, CancellationToken cancellationToken)
+    {
+        var frozen = await db.ExamEditions
+            .AsNoTracking()
+            .Where(e => e.ExamId == examId)
+            .Select(e => e.ScoreAggregationRule)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(frozen))
+        {
+            return frozen;
+        }
+
+        return await db.Certificates
+            .AsNoTracking()
+            .Where(c => c.CertId == certId)
+            .Select(c => c.ScoreAggregationRule)
+            .SingleAsync(cancellationToken);
+    }
+
     /// <summary>Studio-uploaded master track per section of the exam (ExamSectionAudio).</summary>
     private Task<Dictionary<int, string>> LoadSectionMasterAudioAsync(int examId, CancellationToken cancellationToken) =>
         db.ExamSectionAudios

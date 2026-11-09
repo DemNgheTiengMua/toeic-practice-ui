@@ -1898,7 +1898,15 @@ BEGIN
     THROW 50041, 'A speaking- or writing-practice attempt cannot carry a total score.', 1;
 END;
 GO
--- TotalScore uses the certificate's aggregation rule when skill scores are present.
+-- TotalScore uses the aggregation rule the ATTEMPT's edition froze when one exists, and the
+-- certificate's column only as the fallback for an attempt with no edition row.
+--
+-- #257: this trigger used to read `Certificates.ScoreAggregationRule` alone, which made it the second
+-- half of the defect #227 exists to close. Re-standardise a certificate from `sum` to `avg_half_step`
+-- after a sitting, and every stored total becomes "wrong" to this trigger while still being exactly the
+-- number that sitting produced - so a re-score could not be written at all, and a legitimate correction
+-- was refused for agreeing with history. The edition is the record of what was in force; the absence of
+-- an edition row is the record that nothing was frozen, and that attempt keeps reading today's column.
 CREATE TRIGGER trg_Attempts_TotalMatchesSkills
 ON AttemptSkillScores AFTER INSERT, UPDATE, DELETE AS
 BEGIN
@@ -1907,6 +1915,7 @@ BEGIN
     SELECT a.AttemptId
     FROM ExamAttempts a
     JOIN Certificates c ON c.CertId = a.CertId
+    LEFT JOIN ExamEditions e ON e.ExamId = a.ExamId
     CROSS APPLY (
       SELECT
         SUM(s.ScaledScore) AS SumScore,
@@ -1916,13 +1925,13 @@ BEGIN
     ) scores
     WHERE a.TotalScore IS NOT NULL
       AND a.AttemptId IN (SELECT AttemptId FROM inserted UNION SELECT AttemptId FROM deleted)
-      AND a.TotalScore <> CASE c.ScoreAggregationRule
+      AND a.TotalScore <> CASE COALESCE(e.ScoreAggregationRule, c.ScoreAggregationRule)
         WHEN 'avg_half_step' THEN CONVERT(INT, FLOOR((COALESCE(scores.AverageScore, 0) + 2.5) / 5.0) * 5)
         WHEN 'avg_whole' THEN CONVERT(INT, ROUND(COALESCE(scores.AverageScore, 0), 0))
         ELSE COALESCE(scores.SumScore, 0)
       END
   )
-    THROW 50011, 'TotalScore does not match the certificate score aggregation rule.', 1;
+    THROW 50011, 'TotalScore does not match the aggregation rule in force for this attempt.', 1;
 END;
 GO
 -- same check when TotalScore itself changes
@@ -1934,6 +1943,7 @@ BEGIN
     SELECT i.AttemptId
     FROM inserted i
     JOIN Certificates c ON c.CertId = i.CertId
+    LEFT JOIN ExamEditions e ON e.ExamId = i.ExamId
     CROSS APPLY (
       SELECT
         SUM(s.ScaledScore) AS SumScore,
@@ -1943,13 +1953,13 @@ BEGIN
     ) scores
     WHERE i.TotalScore IS NOT NULL
       AND EXISTS (SELECT 1 FROM AttemptSkillScores s WHERE s.AttemptId=i.AttemptId)
-      AND i.TotalScore <> CASE c.ScoreAggregationRule
+      AND i.TotalScore <> CASE COALESCE(e.ScoreAggregationRule, c.ScoreAggregationRule)
         WHEN 'avg_half_step' THEN CONVERT(INT, FLOOR((COALESCE(scores.AverageScore, 0) + 2.5) / 5.0) * 5)
         WHEN 'avg_whole' THEN CONVERT(INT, ROUND(COALESCE(scores.AverageScore, 0), 0))
         ELSE COALESCE(scores.SumScore, 0)
       END
   )
-    THROW 50011, 'TotalScore does not match the certificate score aggregation rule.', 1;
+    THROW 50011, 'TotalScore does not match the aggregation rule in force for this attempt.', 1;
 END;
 GO
 -- M-6: an attempt cannot reach 'graded' while any of its free responses is still 'pending_ai'

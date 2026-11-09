@@ -548,4 +548,92 @@ public sealed class ExamEditionTests(DatabaseFixture database)
         Assert.Equal("Legacy band", review.BandName);
         Assert.Null(await db.ExamEditions.AsNoTracking().SingleOrDefaultAsync(e => e.ExamId == examId));
     }
+
+    /// <summary>
+    /// #257: the aggregation rule a re-score uses is the one the edition froze, not today's
+    /// certificate column.
+    /// <para>
+    /// <b>The wrong input that would pass a weaker test:</b> asserting the total is simply non-zero, or
+    /// asserting it equals what <see cref="AttemptEngine.AggregateTotalScore"/> returns for whatever
+    /// rule the certificate happens to carry now. Both pass while the reader is consulting the live
+    /// column, which is the defect: re-standardise a certificate after a sitting and its stored total
+    /// silently means something else.
+    /// </para>
+    /// <para>
+    /// Two skill scores of 40 and 60 make the two rules disagree by construction — <c>sum</c> is 100 and
+    /// <c>avg_half_step</c> is 50 — so there is no value the test can accept from both.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task A_rescore_uses_the_rule_the_edition_froze_not_the_one_configured_since()
+    {
+        var (certId, firstSkillId, secondSkillId, firstSectionId, secondSectionId) =
+            await SeedCertificateAsync(CertCode("EDRULE_"));
+
+        await using var db = Db();
+        var service = CreateService(db);
+        var (examId, _) = await SeedPublishedExamAsync(service, certId, firstSectionId, secondSectionId, Unique("Rule "));
+
+        // The edition froze 'sum' at publish, because that is the certificate's rule at that moment.
+        var edition = await db.ExamEditions.AsNoTracking().SingleAsync(e => e.ExamId == examId);
+        Assert.Equal("sum", edition.ScoreAggregationRule, ignoreCase: true);
+
+        var userId = await LearnerAsync();
+        var attemptId = await FinishedAttemptAsync(userId, examId, certId, 0, bandCode: null);
+
+        // Re-standardise the certificate afterwards. The attempt was sat under 'sum'; a re-score must
+        // still use 'sum', or the learner's total changes meaning without the sitting changing.
+        await database.SqlAsync($"UPDATE Certificates SET ScoreAggregationRule = 'avg_half_step' WHERE CertId = {certId};");
+
+        var scores = new List<BusinessObjects.Entities.AttemptSkillScore>
+        {
+            new() { AttemptId = attemptId, SkillId = firstSkillId, CertId = certId, RawScore = 40, ScaledScore = 40 },
+            new() { AttemptId = attemptId, SkillId = secondSkillId, CertId = certId, RawScore = 60, ScaledScore = 60 },
+        };
+
+        var (total, _) = await new AttemptEngine(Db()).WriteAttemptScoreAsync(attemptId, scores);
+
+        // 100 is 'sum' (the frozen rule). 50 is 'avg_half_step' (today's certificate) and would mean the
+        // reader consulted the column this ticket exists to stop it consulting.
+        Assert.Equal(100, total);
+    }
+
+    /// <summary>
+    /// The other half of #257: an attempt with <b>no</b> edition row keeps reading live configuration.
+    /// #227 pinned that absence as the record ("no edition existed"), so this is intended behaviour and
+    /// the fallback must survive the change above.
+    /// <para>
+    /// <b>The wrong input that would pass:</b> a test that only covers the frozen path, leaving the
+    /// fallback to be discovered in production by a historical attempt.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task An_attempt_with_no_edition_row_rescores_under_todays_configuration()
+    {
+        var (certId, firstSkillId, secondSkillId, firstSectionId, secondSectionId) =
+            await SeedCertificateAsync(CertCode("EDRULEL_"));
+
+        await using var db = Db();
+        var service = CreateService(db);
+        var (examId, _) = await SeedPublishedExamAsync(service, certId, firstSectionId, secondSectionId, Unique("RuleL "));
+
+        // A catalog that predates the table: every attempt taken before #227 has no edition row.
+        await database.SqlAsync($"DELETE FROM ExamEditions WHERE ExamId = {examId};");
+
+        var userId = await LearnerAsync();
+        var attemptId = await FinishedAttemptAsync(userId, examId, certId, 0, bandCode: null);
+
+        await database.SqlAsync($"UPDATE Certificates SET ScoreAggregationRule = 'avg_half_step' WHERE CertId = {certId};");
+
+        var scores = new List<BusinessObjects.Entities.AttemptSkillScore>
+        {
+            new() { AttemptId = attemptId, SkillId = firstSkillId, CertId = certId, RawScore = 40, ScaledScore = 40 },
+            new() { AttemptId = attemptId, SkillId = secondSkillId, CertId = certId, RawScore = 60, ScaledScore = 60 },
+        };
+
+        var (total, _) = await new AttemptEngine(Db()).WriteAttemptScoreAsync(attemptId, scores);
+
+        // No edition means no frozen rule, so today's certificate decides. 50, not 100.
+        Assert.Equal(50, total);
+    }
 }
