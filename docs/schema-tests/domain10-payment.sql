@@ -141,14 +141,18 @@ PRINT 'accepted expiring an uncredited pending order';
 INSERT INTO CreditTransactions (UserId,Reason,Delta,AdminUserId,Note) VALUES (@u,'admin_grant',1,@u2,N'a'),(@u,'admin_grant',2,@u2,N'b');
 PRINT 'accepted multi-row all-NULL-source admin grants';
 
--- #162: the premium-path feature is gone, so vw_LearnerPathIsPremium went with it, but the reason
--- code must stay legal. The ledger is append-only: real databases already hold rows written with
--- 'premium_path', and stripping the value from CK_CreditTxn_Reason would make them unreadable.
+-- #246: the premium-path feature is gone, so vw_LearnerPathIsPremium went with it (#162), and the
+-- reason code and LearnerPathId column went with the feature now. The project has no production
+-- ledger, so there is no historical row to keep readable, and a 'premium_path' value must now be
+-- refused like any other retired vocabulary.
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('PREM162',N'P',1); DECLARE @pc INT=SCOPE_IDENTITY();
-INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES (@pc,'A1',N'A1',0,100,1),(@pc,'B2',N'B2',101,900,2);
--- #232: a path carries no TemplateId; the ledger row is the only thing this fixture needs.
+-- #232: a path carries no TemplateId; this fixture only needs a learner to own the charge attempt.
 INSERT INTO LearnerPaths (UserId,CertId,Status) VALUES (@u,@pc,'reset');
-DECLARE @plp INT=SCOPE_IDENTITY();
-INSERT INTO CreditTransactions (UserId,Reason,Delta,AdminUserId,Note) VALUES (@u,'admin_grant',5,@u2,N'funds the charge below');
-INSERT INTO CreditTransactions (UserId,Reason,Delta,LearnerPathId) VALUES (@u,'premium_path',-5,@plp);
-PRINT 'accepted a historical premium_path row: the ledger vocabulary is not deletable';
+BEGIN TRY
+  INSERT INTO CreditTransactions (UserId,Reason,Delta) VALUES (@u,'premium_path',-5);
+  THROW 50000, 'EXPECT_REJECT FAILED: a retired premium_path reason was accepted', 1;
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() = 50000 THROW;
+  PRINT 'refused a retired premium_path reason: ' + ERROR_MESSAGE();
+END CATCH;

@@ -202,13 +202,16 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
                 Assert.Equal(4, userCount);
             }
 
-            // 2. Verify Credit Wallet & Ledger Invariant: balance is SUM(Delta) == 8 for learner@demo.local
+            // 2. Verify Credit Wallet & Ledger Invariant: balance is SUM(Delta) == 13 for learner@demo.local
+            // #246 removed the seeded premium_path charge (-5) along with the reason code and the
+            // LearnerPathId column, so the demo wallet is now the purchases (10 + 5) minus the one mock
+            // exam start (-1) minus two mentor bookings and plus the admin grant: 13.
             await using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = @"SELECT SUM(Delta) FROM CreditTransactions 
                                     WHERE UserId = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local')";
                 var balance = Convert.ToInt32(await cmd.ExecuteScalarAsync());
-                Assert.Equal(8, balance);
+                Assert.Equal(13, balance);
             }
 
             // 3. Verify Active Learning Path has all 4 statuses represented across steps

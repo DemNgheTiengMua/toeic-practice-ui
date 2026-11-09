@@ -191,7 +191,7 @@ public sealed class DisplayLabelDriftTests
                      (typeof(OrderStatusDto), "refunded"),
                      (typeof(ExamStatusDto), ""),
                      (typeof(AttemptStatusDto), "In Progress"),
-                     (typeof(CreditReasonDto), "premium_path_v2"),
+                     (typeof(CreditReasonDto), "premium_path"),
                  })
         {
             var logger = new CapturingLogger();

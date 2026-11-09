@@ -92,10 +92,6 @@ public partial class CompanionDbContext
                 .IsUnique()
                 .HasFilter("([OrderId] IS NOT NULL)");
 
-            entity.HasIndex(e => e.LearnerPathId, "UX_CreditTxn_Path")
-                .IsUnique()
-                .HasFilter("([LearnerPathId] IS NOT NULL)");
-
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
 
             entity.HasOne(d => d.AdminUser).WithMany(p => p.CreditTransactionAdminUsers).HasConstraintName("FK_CreditTxn_Admin");
@@ -113,11 +109,6 @@ public partial class CompanionDbContext
                 .HasPrincipalKey(p => new { p.BookingId, p.UserId })
                 .HasForeignKey(d => new { d.BookingId, d.UserId })
                 .HasConstraintName("FK_CreditTxn_Booking");
-
-            entity.HasOne(d => d.LearnerPath).WithMany(p => p.CreditTransactions)
-                .HasPrincipalKey(p => new { p.LearnerPathId, p.UserId })
-                .HasForeignKey(d => new { d.LearnerPathId, d.UserId })
-                .HasConstraintName("FK_CreditTxn_Path");
 
             entity.HasOne(d => d.Order).WithMany(p => p.CreditTransactions)
                 .HasPrincipalKey(p => new { p.OrderId, p.UserId })

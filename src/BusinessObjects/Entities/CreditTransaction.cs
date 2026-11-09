@@ -27,8 +27,6 @@ public partial class CreditTransaction
 
     public int? BookingId { get; set; }
 
-    public int? LearnerPathId { get; set; }
-
     public int? AdminUserId { get; set; }
 
     [StringLength(400)]
@@ -50,10 +48,6 @@ public partial class CreditTransaction
     [ForeignKey("AttemptId, UserId")]
     [InverseProperty("CreditTransactions")]
     public virtual ExamAttempt? ExamAttempt { get; set; }
-
-    [ForeignKey("LearnerPathId, UserId")]
-    [InverseProperty("CreditTransactions")]
-    public virtual LearnerPath? LearnerPath { get; set; }
 
     [ForeignKey("OrderId, UserId")]
     [InverseProperty("CreditTransactions")]

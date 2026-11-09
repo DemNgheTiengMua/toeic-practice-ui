@@ -850,29 +850,28 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         }
     }
 
-    /// <summary>#162: the ledger is append-only, so 'premium_path' stays a legal reason whose past
-    /// rows must still read back. Deleting the vocabulary would have thrown on every old row.</summary>
+    /// <summary>#246: the premium-path feature is gone AND its ledger vocabulary is gone with it. The
+    /// project has no production ledger, so there is no historical row to keep readable, and the user's
+    /// decision was to wipe rather than carry a retired reason forever. A row naming it must now be
+    /// refused by the database, which is what makes the removal real rather than a comment.</summary>
     [Fact]
-    public async Task GetLedgerHistoryAsync_StillReadsHistoricalPremiumPathRows()
+    public async Task A_retired_premium_path_reason_is_refused_by_the_ledger_vocabulary()
     {
         var certCode = Unique("HIST");
         await SeedPathFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         await GrantCreditsAsync(userId, 5);
 
-        var (service, _, _, db) = CreateServices();
+        var (service, _, _, _) = CreateServices();
         var summary = await service.GeneratePathAsync(userId);
 
-        await database.SqlAsync($"""
-            INSERT INTO CreditTransactions (UserId, Reason, Delta, LearnerPathId)
-            VALUES ({userId}, 'premium_path', -5, {summary.LearnerPathId});
-            """);
-
-        var ledger = new CreditLedger(db, TimeProvider.System);
-        var history = await ledger.GetLedgerHistoryAsync(userId);
-
-        var charge = Assert.Single(history, h => h.Reason == CreditReasonDto.PremiumPath);
-        Assert.Equal(-5, charge.Delta);
+        // The INSERT is the assertion: CK_CreditTxn_Reason no longer lists 'premium_path', and the
+        // LearnerPathId column it used to require is gone too. A fixture that still wrote the row would
+        // pass a "the enum has no such member" test while the database accepted it.
+        await Assert.ThrowsAnyAsync<Exception>(() => database.SqlAsync($"""
+            INSERT INTO CreditTransactions (UserId, Reason, Delta)
+            VALUES ({userId}, 'premium_path', -5);
+            """));
     }
 
     [Fact]

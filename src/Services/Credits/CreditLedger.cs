@@ -413,10 +413,6 @@ public sealed class CreditLedger : ICreditLedger
         {
             return _db.CreditTransactions.FirstOrDefaultAsync(t => t.BookingId == txn.BookingId.Value && t.Reason == txn.Reason, cancellationToken);
         }
-        if (txn.LearnerPathId.HasValue)
-        {
-            return _db.CreditTransactions.FirstOrDefaultAsync(t => t.LearnerPathId == txn.LearnerPathId.Value, cancellationToken);
-        }
         if (txn.AttemptId.HasValue)
         {
             return _db.CreditTransactions.FirstOrDefaultAsync(t => t.AttemptId == txn.AttemptId.Value && t.Reason == txn.Reason, cancellationToken);

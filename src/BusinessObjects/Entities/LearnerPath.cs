@@ -56,9 +56,6 @@ public partial class LearnerPath
     public virtual Certificate Cert { get; set; } = null!;
 
     [InverseProperty("LearnerPath")]
-    public virtual ICollection<CreditTransaction> CreditTransactions { get; set; } = new List<CreditTransaction>();
-
-    [InverseProperty("LearnerPath")]
     public virtual ICollection<LearnerPathStep> LearnerPathSteps { get; set; } = new List<LearnerPathStep>();
 
     /// <summary>#233: the weeks this path has closed, frozen by <c>trg_LearnerPathWeeks_SingleWriter</c>.</summary>

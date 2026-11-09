@@ -73,7 +73,6 @@ internal static class OperationsLabels
             ("mock_exam_start", "Mock exam"),
             ("ai_grading", "AI grading"),
             ("mentor_booking", "Mentor booking"),
-            ("premium_path", "Premium learning path"),
             ("admin_revoke", "Revoked by staff"),
             ("booking_cancel", "Booking cancelled"),
         ]);

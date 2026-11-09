@@ -1,4 +1,4 @@
--- docs/database-schema.sql
+﻿-- docs/database-schema.sql
 -- Multi-certificate mock-exam companion schema.
 -- Spec: docs/superpowers/specs/2026-09-24-multi-cert-companion-design.md
 SET QUOTED_IDENTIFIER ON;
@@ -132,7 +132,7 @@ CREATE TABLE Sections (
   RequiredKeywordCount      INT NOT NULL CONSTRAINT DF_Sections_RequiredKeywordCount DEFAULT 0,
   AllowedComponentTypesJson NVARCHAR(MAX) NULL,
   ToolsConfigJson           NVARCHAR(MAX) NULL,
-  -- UI-18: fixed per-Part question count ("Part 3 — 39 questions", editor progress "25 / 39")
+  -- UI-18: fixed per-Part question count ("Part 3 â€” 39 questions", editor progress "25 / 39")
   -- #157: NOT NULL, because a blank count made the publish audit skip SEC_QUESTION_COUNT_LOW and an
   -- empty part could go live. A section always knows how many questions it holds.
   ExpectedQuestionCount     INT NOT NULL CONSTRAINT CK_Sections_ExpectedCount CHECK (ExpectedQuestionCount > 0),
@@ -271,7 +271,7 @@ GO
 -- ============ Domain 4b: Per-skill CEFR cut scores (#210 / D6 / LVL-13) ============
 -- ScoreBands above stays exactly what it is: the certificate's own band rows, keyed by a total.
 -- It cannot express "TOEIC Reading >= 385 is B2 while 785 total is not", because a band is one
--- interval on one axis and the claim is per skill. These two tables are the crosswalk §4.6 describes,
+-- interval on one axis and the claim is per skill. These two tables are the crosswalk Â§4.6 describes,
 -- and they are read-only at the presentation layer: projection is a lookup, never arithmetic on a total.
 --
 -- The version header is a table rather than a column on every row for two reasons. A recorded
@@ -296,7 +296,7 @@ CREATE TABLE CefrCutScoreVersions (
   CONSTRAINT CK_CefrCutScoreVersions_Version CHECK (TableVersion > 0)
 );
 GO
--- One row per (certificate, version, skill, level). §4.6's table has three row kinds and a single
+-- One row per (certificate, version, skill, level). Â§4.6's table has three row kinds and a single
 -- (MinScaled, MaxScaled) pair cannot carry all three, so MinScaled is NULL exactly where the row
 -- records no range:
 --
@@ -511,7 +511,7 @@ CREATE TABLE Exams (
   Description     NVARCHAR(500) NULL,     -- UI-3: placement card copy (see the seeded exam's description)
   SourceName      NVARCHAR(120) NULL,     -- UI-4: exam editor "Test set / source" (e.g. ETS 2024)
   InternalNote    NVARCHAR(1000) NULL,    -- UI-4: exam editor note, admin only
-  -- UI-45: placement-select card meta "40 questions · 30 minutes"; kept on the exam because the
+  -- UI-45: placement-select card meta "40 questions Â· 30 minutes"; kept on the exam because the
   -- question bank can grow past the fixed count (an adaptive form draws a subset)
   QuestionCount   INT NULL CONSTRAINT CK_Exams_QuestionCount CHECK (QuestionCount IS NULL OR QuestionCount > 0),
   -- #185 / INV-6: which tier of stock this paper may draw from. Defaults to 'demo' for the same
@@ -1433,7 +1433,7 @@ BEGIN
     THROW 50049, 'INV-6: a production exam cannot bind a demo-tier item.', 1;
 END;
 GO
--- UI-8: question-type labels ("Verb tense", "Part 7 — inference") per certificate.
+-- UI-8: question-type labels ("Verb tense", "Part 7 â€” inference") per certificate.
 -- #183: retained while items/lessons still read it; the topic axis above replaces it once every
 -- reader has moved. It is not deleted here, because deleting it now would break the readers the
 -- next ticket rewrites.
@@ -1898,7 +1898,7 @@ CREATE TABLE ExamAttempts (
   -- A mock ignores it - its own deadline is always shorter than 48 h - so the rule stays one rule.
   LastActivityAt  DATETIMEOFFSET NULL,
   IsAutoSubmitted BIT NOT NULL DEFAULT 0,
-  -- UI-14: result "Completed 20 Sep 2026 · 11:42 · time taken 01:53:29"
+  -- UI-14: result "Completed 20 Sep 2026 Â· 11:42 Â· time taken 01:53:29"
   SubmittedAt     DATETIMEOFFSET NULL,
   -- UI-15: resume "You returned to question 8"
   LastQuestionId  INT NULL,
@@ -2606,14 +2606,14 @@ GO
 CREATE TABLE AiGradings (
   GradingId      INT IDENTITY(1,1) PRIMARY KEY,
   FreeResponseId INT NOT NULL REFERENCES FreeResponses(FreeResponseId),
-  -- M-3: no longer a bare Skills FK — it must be the graded response's OWN skill (see FK below)
+  -- M-3: no longer a bare Skills FK â€” it must be the graded response's OWN skill (see FK below)
   SkillId        INT NOT NULL,
   Status         VARCHAR(8) NOT NULL DEFAULT 'pending'
     CONSTRAINT CK_AiGradings_Status CHECK (Status IN ('pending','done','failed')),
   OverallScaled  DECIMAL(6,2) NULL,
   BandCode       VARCHAR(20) NULL,             -- snapshot
   Model          NVARCHAR(80) NULL,
-  -- UI-35: speaking-review "Grading did not finish · Retry grading" (retry is free: one ai_grading
+  -- UI-35: speaking-review "Grading did not finish Â· Retry grading" (retry is free: one ai_grading
   -- charge per attempt). A retry reuses this row: Status back to 'pending', AttemptCount + 1.
   FailureReason  NVARCHAR(400) NULL,
   -- E2.1 (#151): the feedback a learner can act on. An error span quotes the candidate's own text,
@@ -2636,7 +2636,7 @@ CREATE TABLE AiGradings (
   -- composite target so AiGradingScores can require the criterion's skill = the grading's own skill
   CONSTRAINT UQ_AiGradings_Id_Skill UNIQUE (GradingId, SkillId),
   -- M-3 clause 3: the graded skill must be the free response's own skill, which the chain
-  -- FreeResponses → Questions → Sections pins to a single certificate
+  -- FreeResponses â†’ Questions â†’ Sections pins to a single certificate
   CONSTRAINT FK_AiGradings_ResponseSkill FOREIGN KEY (FreeResponseId, SkillId) REFERENCES FreeResponses(FreeResponseId, SkillId)
 );
 GO
@@ -2802,7 +2802,7 @@ CREATE TABLE Recommendations (
   GradingId      INT NULL REFERENCES AiGradings(GradingId),   -- NULL = not from rubric grading
   -- ADR-0004: the aggregate insight that produced this recommendation, when one did
   InsightId      INT NULL,
-  -- UI-21: exam-result "To reach B2 (your target): …" lists recommendations for THIS attempt
+  -- UI-21: exam-result "To reach B2 (your target): â€¦" lists recommendations for THIS attempt
   AttemptId      INT NULL,
   -- UI-43: practice-summary "Next: review present perfect" lists recommendations for THIS session
   PracticeSessionId INT NULL,
@@ -2838,7 +2838,7 @@ CREATE TABLE PlacementTests (
     CONSTRAINT CK_Placement_Status CHECK (Status IN ('in_progress','done','abandoned')),
   ResultBandCode VARCHAR(20) NULL,        -- snapshot
   -- UI-22: placement-take saves/resumes answers and placement-result shows L/R scores, time and
-  -- question count. All of that is an ExamAttempt (free: no mock_exam_start charge) — linked here.
+  -- question count. All of that is an ExamAttempt (free: no mock_exam_start charge) â€” linked here.
   AttemptId      INT NULL,
   ExamPurpose    VARCHAR(20) NOT NULL CONSTRAINT DF_Placement_ExamPurpose DEFAULT 'placement'
     CONSTRAINT CK_Placement_ExamPurpose CHECK (ExamPurpose = 'placement'),
@@ -2849,13 +2849,13 @@ CREATE TABLE PlacementTests (
   WrittenByService VARCHAR(64) NULL,
   ProjectionVersion INT NOT NULL CONSTRAINT DF_Placement_ProjectionVersion DEFAULT 0,
   -- UI-46, replaced in #212: a finished placement names its result band and its total **where it has
-  -- one**. `done ⇒ band AND total` was the constraint that turned the confirmed defect
+  -- one**. `done â‡’ band AND total` was the constraint that turned the confirmed defect
   -- (docs/research/placement-free-response-defect.md) into a live crash: a placement carrying a free
   -- response had no band yet, so the row could not be written at all. The rule that replaces it is
   -- about measured SKILLS, not about a certificate band, and it lives in
   -- trg_PlacementTests_CompletionIsEarned below because it reads another table.
   --
-  -- CompletionFailureReason is the honest second way to finish: PLC-36's "done ⇒ overall present, or a
+  -- CompletionFailureReason is the honest second way to finish: PLC-36's "done â‡’ overall present, or a
   -- completion failure recorded". It is deliberately NOT a fourth PlacementStatus - the sitting is
   -- still `in_progress` while a productive task is in the AI queue, and that state is carried by the
   -- per-skill rows' `grading` status, which is the grain the screen needs.
@@ -2887,7 +2887,7 @@ GO
 -- ============ Domain 9a: the per-skill placement result (#212) ============
 -- One row per skill per placement, and the row is the derived fact: the level, the position inside it,
 -- the continuous coordinate they were read from, the certificate projection computed from that
--- coordinate, and — the part that is new — WHICH of five outcomes this skill actually had.
+-- coordinate, and â€” the part that is new â€” WHICH of five outcomes this skill actually had.
 --
 -- **Why a status and not a nullable level.** Before #212 a null CefrLevel meant three different things
 -- at once: the learner skipped this skill, the sitting timed out before it, and its free response is
@@ -2930,7 +2930,7 @@ CREATE TABLE PlacementSkillResults (
   ContinuousCoordinate DECIMAL(3,2) NULL
     CONSTRAINT CK_PSR_Coordinate CHECK (ContinuousCoordinate IS NULL
       OR ContinuousCoordinate BETWEEN 1.00 AND 6.99),
-  -- The certificate's own scale, read back from the cut-score table (§4.5). Read-only lookup, never
+  -- The certificate's own scale, read back from the cut-score table (Â§4.5). Read-only lookup, never
   -- arithmetic: LVL-12/PRN-03 remove the "TOEIC 785 = B2" conversion, not this projection.
   ProjectedBandCode    VARCHAR(20) NULL,
   ProjectedScore       INT NULL,
@@ -3020,7 +3020,7 @@ CREATE TABLE PlacementSkillResults (
     OR (MeasuredAt IS NOT NULL AND ExpiresAt = DATEADD(DAY, 90, MeasuredAt)))
 );
 GO
--- #212 / D14: the per-skill result has exactly one writer, AttemptEngine — the same service that owns
+-- #212 / D14: the per-skill result has exactly one writer, AttemptEngine â€” the same service that owns
 -- the certificate-level snapshot, because both are derived from one attempt and a second writer is
 -- what the confirmed defect was made of.
 --
@@ -3139,8 +3139,8 @@ BEGIN
     THROW 50078, 'A placement cannot be done without at least one measured skill or a recorded completion failure.', 1;
 END;
 GO
--- UI-46: the snapshot is a copy of the attempt's own result, not a free-standing number —
--- a placement-result page ("385 out of 990 · L 215 · R 170") must trace back to real scores.
+-- UI-46: the snapshot is a copy of the attempt's own result, not a free-standing number â€”
+-- a placement-result page ("385 out of 990 Â· L 215 Â· R 170") must trace back to real scores.
 CREATE TRIGGER trg_PlacementTests_SnapshotMatchesAttempt
 ON PlacementTests AFTER INSERT, UPDATE AS
 BEGIN
@@ -3248,7 +3248,7 @@ CREATE TABLE TargetBands (
   CurrentBandCode   VARCHAR(20) NULL,     -- snapshot of the band the learner starts from
   TargetDate        DATE NULL,            -- the exam date the learner is working towards
   WeeklyStudyHours  DECIMAL(4,1) NULL,    -- hours per week the learner can actually spend
-  RequiredTotalHours INT NULL,            -- ΔH, computed by code; NULL when the bands carry no hours
+  RequiredTotalHours INT NULL,            -- Î”H, computed by code; NULL when the bands carry no hours
   FeasibilityStatus VARCHAR(12) NULL,     -- computed by code, never by the LLM
   CONSTRAINT PK_TargetBands PRIMARY KEY (UserId, CertId),
   CONSTRAINT FK_TargetBands_Band FOREIGN KEY (CertId, TargetBandCode) REFERENCES ScoreBands(CertId, Code),
@@ -3663,8 +3663,8 @@ CREATE TABLE MentorProfiles (
   -- UI-26 (gap 7): what the learner is charged; the mentor_booking ledger Delta must equal -PriceCredits
   PriceCredits INT NOT NULL CONSTRAINT DF_Mentor_PriceCredits DEFAULT 1
     CONSTRAINT CK_Mentor_PriceCredits CHECK (PriceCredits > 0),
-  Headline     NVARCHAR(200) NULL,   -- UI-26: one-line card copy ("10 years teaching TOEIC…")
-  Expertise    NVARCHAR(400) NULL,   -- UI-26: "Expertise: Listening strategies, pronunciation…"
+  Headline     NVARCHAR(200) NULL,   -- UI-26: one-line card copy ("10 years teaching TOEICâ€¦")
+  Expertise    NVARCHAR(400) NULL,   -- UI-26: "Expertise: Listening strategies, pronunciationâ€¦"
   SessionMinutes INT NOT NULL CONSTRAINT DF_Mentor_SessionMinutes DEFAULT 60
     CONSTRAINT CK_Mentor_SessionMinutes CHECK (SessionMinutes > 0),
   IsActive     BIT NOT NULL DEFAULT 1,
@@ -3773,7 +3773,7 @@ CREATE TABLE MentorPayouts (
   MentorId     INT NOT NULL REFERENCES MentorProfiles(MentorId),
   PeriodStart  DATETIMEOFFSET NOT NULL,
   PeriodEnd    DATETIMEOFFSET NOT NULL,
-  -- M-17: BookingCount/GrossAmount removed (stored aggregates drift) — see vw_MentorPayoutTotals
+  -- M-17: BookingCount/GrossAmount removed (stored aggregates drift) â€” see vw_MentorPayoutTotals
   Status       VARCHAR(7) NOT NULL DEFAULT 'pending'
     CONSTRAINT CK_Payouts_Status CHECK (Status IN ('pending','paid')),
   PaidAt       DATETIMEOFFSET NULL,
@@ -3858,7 +3858,7 @@ CREATE UNIQUE INDEX UX_Packages_OneFeatured ON Packages(IsFeatured) WHERE IsFeat
 GO
 -- ADR-0003: numeric merchant order number sent to the gateway. A SEQUENCE (not IDENTITY) because the
 -- value is needed to build the checkout request before the Orders row is written, and because every
--- gateway must see a number it has never seen before — including across retries of a failed insert.
+-- gateway must see a number it has never seen before â€” including across retries of a failed insert.
 CREATE SEQUENCE SEQ_PaymentNo AS BIGINT START WITH 1 INCREMENT BY 1 NO CYCLE;
 GO
 CREATE TABLE Orders (
@@ -3897,8 +3897,8 @@ GO
 CREATE UNIQUE INDEX UX_Orders_GatewayTxnRef ON Orders(Gateway, GatewayTxnRef) WHERE GatewayTxnRef IS NOT NULL;
 GO
 -- ADR-0003: every message about an order from or to its gateway, kept as evidence. Credit is granted
--- only on a signature-verified webhook or a server-side status query — never on the return redirect,
--- which anyone can type — so which source said "paid" has to be auditable after the fact.
+-- only on a signature-verified webhook or a server-side status query â€” never on the return redirect,
+-- which anyone can type â€” so which source said "paid" has to be auditable after the fact.
 CREATE TABLE PaymentEvents (
   EventId    INT IDENTITY(1,1) PRIMARY KEY,
   OrderId    INT NOT NULL REFERENCES Orders(OrderId),
@@ -3936,13 +3936,12 @@ CREATE TABLE CreditTransactions (
   UserId   INT NOT NULL REFERENCES Users(UserId),
   Reason   VARCHAR(16) NOT NULL
     CONSTRAINT CK_CreditTxn_Reason CHECK (Reason IN
-      ('purchase','admin_grant','mock_exam_start','ai_grading','mentor_booking','premium_path','admin_revoke',
+      ('purchase','admin_grant','mock_exam_start','ai_grading','mentor_booking','admin_revoke',
        'booking_cancel')),   -- UI-31 (gap 8): refund of a cancelled booking
   Delta    INT NOT NULL CONSTRAINT CK_CreditTxn_NonZero CHECK (Delta <> 0),
   OrderId       INT NULL,
   AttemptId     INT NULL,
   BookingId     INT NULL,
-  LearnerPathId INT NULL,
   -- UI-32: admin users "Adjust credits": reason is required and logged with the admin's name
   AdminUserId   INT NULL CONSTRAINT FK_CreditTxn_Admin REFERENCES Users(UserId),
   Note          NVARCHAR(400) NULL,
@@ -3954,25 +3953,29 @@ CREATE TABLE CreditTransactions (
   CONSTRAINT UQ_CreditTxn_Id_User UNIQUE (TxnId, UserId),
   -- H-1: composite FKs carry UserId so the source row's owner must match the charged wallet.
   -- MATCH SIMPLE (default) skips the FK check when any column is NULL, so admin_grant/admin_revoke
-  -- rows (all four source columns NULL) remain legal with no extra guards.
+  -- rows (all three source columns NULL) remain legal with no extra guards.
+  --
+  -- #246: FK_CreditTxn_Path is gone with the premium-path feature. The learner path it pointed at is
+  -- dropped in the rebuild, and the user's decision was to wipe rather than carry a tombstone id:
+  -- the project has no production data to preserve. A ledger row that charged for a feature that no
+  -- longer exists has nothing left to point at, and inventing a reference would be the mapping D23
+  -- forbids.
   CONSTRAINT FK_CreditTxn_Order   FOREIGN KEY (OrderId, UserId)       REFERENCES Orders(OrderId, UserId),
   CONSTRAINT FK_CreditTxn_Attempt FOREIGN KEY (AttemptId, UserId)     REFERENCES ExamAttempts(AttemptId, UserId),
   CONSTRAINT FK_CreditTxn_Booking FOREIGN KEY (BookingId, UserId)     REFERENCES Bookings(BookingId, UserId),
-  CONSTRAINT FK_CreditTxn_Path    FOREIGN KEY (LearnerPathId, UserId) REFERENCES LearnerPaths(LearnerPathId, UserId),
   -- sign per reason
   CONSTRAINT CK_CreditTxn_DeltaSign CHECK (
        (Reason IN ('purchase','admin_grant','booking_cancel') AND Delta > 0)
-    OR (Reason IN ('mock_exam_start','ai_grading','mentor_booking','premium_path','admin_revoke') AND Delta < 0)
+    OR (Reason IN ('mock_exam_start','ai_grading','mentor_booking','admin_revoke') AND Delta < 0)
   ),
   -- exactly the source column matching the reason is set (admin_* carry none)
   CONSTRAINT CK_CreditTxn_Source CHECK (
-       (Reason='purchase'        AND OrderId IS NOT NULL AND AttemptId IS NULL AND BookingId IS NULL AND LearnerPathId IS NULL)
-    OR (Reason='mock_exam_start' AND AttemptId IS NOT NULL AND OrderId IS NULL AND BookingId IS NULL AND LearnerPathId IS NULL)
-    OR (Reason='ai_grading'      AND AttemptId IS NOT NULL AND OrderId IS NULL AND BookingId IS NULL AND LearnerPathId IS NULL)
+       (Reason='purchase'        AND OrderId IS NOT NULL AND AttemptId IS NULL AND BookingId IS NULL)
+    OR (Reason='mock_exam_start' AND AttemptId IS NOT NULL AND OrderId IS NULL AND BookingId IS NULL)
+    OR (Reason='ai_grading'      AND AttemptId IS NOT NULL AND OrderId IS NULL AND BookingId IS NULL)
     OR (Reason IN ('mentor_booking','booking_cancel')
-                                 AND BookingId IS NOT NULL AND OrderId IS NULL AND AttemptId IS NULL AND LearnerPathId IS NULL)
-    OR (Reason='premium_path'    AND LearnerPathId IS NOT NULL AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL)
-    OR (Reason IN ('admin_grant','admin_revoke') AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL AND LearnerPathId IS NULL)
+                                 AND BookingId IS NOT NULL AND OrderId IS NULL AND AttemptId IS NULL)
+    OR (Reason IN ('admin_grant','admin_revoke') AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL)
   )
 );
 GO
@@ -3980,8 +3983,10 @@ CREATE VIEW vw_UserCreditBalance AS
   SELECT UserId, SUM(Delta) AS Balance
   FROM CreditTransactions GROUP BY UserId;
 GO
--- #162: the vw_LearnerPathIsPremium view is gone with the premium-path feature. The reason code
--- 'premium_path' stays in CK_CreditTxn_Reason: the ledger is append-only and rows already carry it.
+-- #162: the vw_LearnerPathIsPremium view is gone with the premium-path feature. #246 removed the
+-- 'premium_path' reason code and the LearnerPathId column as well: the learner path is dropped in the
+-- rebuild, so a ledger row pointing at it has nothing to point at. The user's decision was to wipe
+-- rather than carry a tombstone id, because there is no production ledger to preserve.
 -- Review Focus #4 / C-1: no debit may drive the running balance below zero.
 -- Must also cover DELETE so a removed credit row can't leave a wallet negative unnoticed.
 CREATE TRIGGER trg_CreditTransactions_NoNegativeBalance
@@ -4008,7 +4013,7 @@ BEGIN
 END;
 GO
 -- R2b: append-only means IMMUTABLE, not merely undeletable. Without this, a settled
--- purchase could be rewritten into an admin_grant with OrderId=NULL — severing it from its
+-- purchase could be rewritten into an admin_grant with OrderId=NULL â€” severing it from its
 -- order, which frees UX_CreditTxn_Order to credit that same order a second time.
 CREATE TRIGGER trg_CreditTransactions_NoRewrite
 ON CreditTransactions AFTER UPDATE AS
@@ -4025,19 +4030,17 @@ BEGIN
        OR ISNULL(i.OrderId,-1)       <> ISNULL(d.OrderId,-1)
        OR ISNULL(i.AttemptId,-1)     <> ISNULL(d.AttemptId,-1)
        OR ISNULL(i.BookingId,-1)     <> ISNULL(d.BookingId,-1)
-       OR ISNULL(i.LearnerPathId,-1) <> ISNULL(d.LearnerPathId,-1)
   )
     THROW 50028, 'CreditTransactions is append-only; a posted transaction cannot be rewritten.', 1;
 END;
 GO
--- H-2: OrderId/LearnerPathId each fund at most one txn; AttemptId allows one
+-- H-2: OrderId funds at most one txn; AttemptId allows one
 -- mock_exam_start AND one ai_grading charge, but only one of each (spec: one charge covers all answers).
 -- UI-31: a booking likewise carries one mentor_booking charge and at most one booking_cancel refund.
+-- #246: UX_CreditTxn_Path went with the LearnerPathId column.
 CREATE UNIQUE INDEX UX_CreditTxn_Order ON CreditTransactions(OrderId) WHERE OrderId IS NOT NULL;
 GO
 CREATE UNIQUE INDEX UX_CreditTxn_Booking ON CreditTransactions(BookingId, Reason) WHERE BookingId IS NOT NULL;
-GO
-CREATE UNIQUE INDEX UX_CreditTxn_Path ON CreditTransactions(LearnerPathId) WHERE LearnerPathId IS NOT NULL;
 GO
 CREATE UNIQUE INDEX UX_CreditTxn_Attempt_Reason ON CreditTransactions(AttemptId, Reason) WHERE AttemptId IS NOT NULL;
 GO
@@ -4146,7 +4149,7 @@ BEGIN
 END;
 GO
 -- ============ Views ============
--- UI-33: wallet "15 purchased − 7 used", pricing "7 of 15 used", "Total purchased 548,000 ₫"
+-- UI-33: wallet "15 purchased âˆ’ 7 used", pricing "7 of 15 used", "Total purchased 548,000 â‚«"
 CREATE VIEW vw_UserCreditSummary AS
   SELECT UserId,
          SUM(Delta) AS Balance,
@@ -4156,7 +4159,7 @@ CREATE VIEW vw_UserCreditSummary AS
            - SUM(CASE WHEN Reason = 'booking_cancel' THEN Delta ELSE 0 END) AS CreditsUsed
   FROM CreditTransactions GROUP BY UserId;
 GO
--- UI-33: wallet stat "Total purchased 548,000 ₫ · 2 paid orders" — money, not credits
+-- UI-33: wallet stat "Total purchased 548,000 â‚« Â· 2 paid orders" â€” money, not credits
 CREATE VIEW vw_UserPurchaseTotals AS
   SELECT o.UserId,
          SUM(o.Amount)    AS AmountPurchased,
@@ -4263,7 +4266,7 @@ CREATE VIEW vw_UserTopicAccuracy AS
          CAST(ROUND(100.0 * Correct / Answered, 0) AS INT) AS AccuracyPercent
   FROM cells;
 GO
--- UI-34: "Frequently missed question types" — same union, by category
+-- UI-34: "Frequently missed question types" â€” same union, by category
 --
 -- #250: unchanged in shape, and deliberately so. D3 replaces this view with vw_UserTopicAccuracy
 -- grouped by (TopicId, CefrLevel) - #243 created it below, and the weakness page now reads it.

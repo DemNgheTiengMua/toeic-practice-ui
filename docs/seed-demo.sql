@@ -2179,10 +2179,9 @@ BEGIN
     VALUES (@learner, @demoLesson, @toeicCert, @lastCard, 4, 4, 1, DATEADD(DAY, -12, SYSDATETIMEOFFSET()), DATEADD(DAY, -11, SYSDATETIMEOFFSET()), DATEADD(DAY, -11, SYSDATETIMEOFFSET()));
   END;
 
-  -- Historical premium-path charge (-5 credits). #162 deleted the feature, not the ledger: real
-  -- databases already hold rows with this reason, and the wallet page still has to render them.
-  INSERT INTO CreditTransactions (UserId, Reason, Delta, LearnerPathId, CreatedAt)
-  VALUES (@learner, 'premium_path', -5, @lpId, DATEADD(DAY, -14, SYSDATETIMEOFFSET()));
+  -- #246: the premium-path charge is gone with the reason code and the LearnerPathId column. The
+  -- project has no production ledger, so there is no historical row to keep readable - the user's
+  -- decision was to wipe rather than carry a tombstone id for a feature that no longer exists.
 END;
 GO
 
