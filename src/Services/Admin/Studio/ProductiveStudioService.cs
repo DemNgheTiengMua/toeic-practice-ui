@@ -144,6 +144,17 @@ public sealed class ProductiveStudioService(
             }
         }
 
+        // #258: gate three has no pure half. With no verifier models it never runs, and saying so is the
+        // only honest report - the same sentence the stimulus studio gives, because an author who saw
+        // "nothing unrun" here and "gate three did not run" there would conclude the task was certified.
+        if (gates.HasNoVerifiers)
+        {
+            unrun.Add(ToDto(
+                "gate3.not_run",
+                "the blind dual-model key verification and the rubric ablation were not run: no verifier "
+                + "models are configured, so nothing has certified this task (CNT-37, D17)."));
+        }
+
         // The cap is computed on the draft, not at extraction, and it is returned whether or not the
         // task is currently legal - a refusal the author has to reverse-engineer from a message is the
         // defect this field exists to prevent. The practice figure is computed WITHOUT the placement
