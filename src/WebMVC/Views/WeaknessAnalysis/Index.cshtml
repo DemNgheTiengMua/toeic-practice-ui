@@ -63,6 +63,89 @@ else
 
   <partial name="_AiInsightPanel" model='Model.InsightPanel' />
 
+  @* #243 / D3: the topic axis, which is the product's own unit. The section axis below survives for
+     mock exams; this block is what answers "which topic at which level is my weakest", and it says so
+     in words so the ranking is never carried by the ordering alone. *@
+  <div class="card mt-4" id="topic-weakness">
+    <div class="card__header"><strong>Weakest topic at its level</strong></div>
+    <div class="card__body stack">
+      @if (Model.WeakestTopic is not null)
+      {
+        <p class="text-sm no-margin">
+          <strong>@Model.WeakestTopic.TopicCode — @Model.WeakestTopic.TopicName</strong>
+          <span class="badge ml-1">@Model.WeakestTopic.LevelLabel</span>
+          <span class="badge badge--danger ml-1">Weakest</span>
+        </p>
+        <p class="text-sm text-muted no-margin">
+          <span class="font-mono">@Model.WeakestTopic.AccuracyPercent%</span>
+          · @Model.WeakestTopic.EvidenceNote
+        </p>
+        @if (Model.WeakestTopic.LessonHref is not null)
+        {
+          <div class="row mt-2">
+            <a class="btn btn--sm" href="@Model.WeakestTopic.LessonHref">Read the lesson for this cell</a>
+          </div>
+        }
+      }
+      else
+      {
+        @* #243: nothing is rankable. Not "your weakest is the least bad cell", and not a fabricated
+           percentage - the reason in words, and the honest next step. *@
+        <p class="text-sm text-muted no-margin" id="no-ranked-weakness">
+          No topic holds enough answers to be called a weakness yet. A cell is ranked at 12 answers in
+          listening and reading, or 3 tasks in speaking and writing, so one short session cannot name
+          your weakest topic.
+        </p>
+      }
+
+      @if (Model.TopicRows.Count > 0)
+      {
+        <table class="table mt-3">
+          <caption class="text-sm text-muted">Every topic at a level you have answered in. Ranked cells come first.</caption>
+          <thead>
+            <tr>
+              <th scope="col">Topic</th>
+              <th scope="col">Level</th>
+              <th scope="col">Skill</th>
+              <th scope="col">Accuracy</th>
+              <th scope="col">Evidence</th>
+              <th scope="col">Lesson</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var c in Model.TopicRows)
+            {
+              <tr data-topic-id="@c.TopicId">
+                <td>
+                  <strong>@c.TopicCode</strong> @c.TopicName
+                  @if (c.IsWeakest)
+                  {
+                    @* Not colour alone: the badge is a word, and the caption above states the order. *@
+                    <span class="badge badge--danger ml-1">Weakest</span>
+                  }
+                </td>
+                <td><span class="badge">@c.LevelLabel</span></td>
+                <td>@c.ModalityLabel</td>
+                <td class="font-mono">@c.AccuracyPercent%</td>
+                <td class="text-muted">@c.EvidenceNote</td>
+                <td>
+                  @if (c.LessonHref is not null)
+                  {
+                    <a href="@c.LessonHref">Review the rule</a>
+                  }
+                  else
+                  {
+                    <span class="text-muted">No lesson yet</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+
   <div class="card mt-4">
     <div class="card__header"><strong>Accuracy by section</strong></div>
     <div class="card__body stack">

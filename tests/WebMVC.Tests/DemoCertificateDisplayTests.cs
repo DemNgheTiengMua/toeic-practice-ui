@@ -74,6 +74,34 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
         Assert.DoesNotContain("Section C1", body);
     }
 
+    /// <summary>
+    /// #243 criterion 4: the weakness page links a weakness to the lesson for its own CELL.
+    /// <para>
+    /// <b>The wrong input this catches:</b> a href that exists and points somewhere plausible. The
+    /// fixture holds two cells of one topic at two levels, and only the B1 one carries a lesson (41) -
+    /// the B2 cell's lesson id is null. A link built from the topic alone would still render, and would
+    /// still pass "an href is present"; it would be wrong, and this asserts the exact id.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task A_weakness_links_to_the_lesson_for_its_own_level_and_not_the_topic()
+    {
+        using var client = site.CreateClientWithLearner();
+        var body = await client.GetStringAsync("/weakness-analysis");
+
+        // The B1 weakness's link, from the weakness placard and from its row.
+        Assert.Contains("href=\"/lessons/41\"", body);
+
+        // The B2 cell of the same topic has no lesson, so its row says so instead of linking at a
+        // guessed id. Both rows share the topic id, so the level badge is what tells them apart.
+        Assert.Contains("No lesson yet", body);
+        var rows = Regex.Matches(body, @"<tr data-topic-id=""1"">(?<body>[\s\S]*?)</tr>")
+            .Select(m => m.Groups["body"].Value).ToList();
+        Assert.Equal(2, rows.Count);
+        Assert.Contains(rows, r => r.Contains("B1", StringComparison.Ordinal) && r.Contains("/lessons/41", StringComparison.Ordinal));
+        Assert.Contains(rows, r => r.Contains("B2", StringComparison.Ordinal) && !r.Contains("/lessons/", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task The_certificates_strip_draws_exactly_the_bands_the_certificate_has()
     {
@@ -243,7 +271,18 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
                 TotalCorrect: 10, OverallAccuracyPercentage: 50,
                 Sections: [new SectionAccuracyDto(1, "C1", "First passage", 20, 10, 50, IsWeakest: true, IsStrongest: false)],
                 FrequentlyMissedCategories: [], Recommendations: [],
-                PriorityPracticeSection: new SectionAccuracyDto(1, "C1", "First passage", 20, 10, 50, true, false))),
+                PriorityPracticeSection: new SectionAccuracyDto(1, "C1", "First passage", 20, 10, 50, true, false),
+                Topics:
+                [
+                    // #243: two cells for the same topic at different levels, so a link that ignored the
+                    // level would be caught. Only the B1 cell carries a lesson.
+                    new TopicAccuracyDto(1, "L-DET", "Local detail", ModalityDto.Listening, "B1",
+                        14, 5, 36, IsWeakest: true, ObservationFloor: 12, LessonId: 41),
+                    new TopicAccuracyDto(1, "L-DET", "Local detail", ModalityDto.Listening, "B2",
+                        12, 11, 92, IsWeakest: false, ObservationFloor: 12, LessonId: null),
+                ],
+                WeakestTopic: new TopicAccuracyDto(1, "L-DET", "Local detail", ModalityDto.Listening, "B1",
+                    14, 5, 36, IsWeakest: true, ObservationFloor: 12, LessonId: 41))),
             nameof(IWeaknessAnalysisClient.GetDashboardInsightAsync) =>
                 Task.FromException<AiInsightDto>(new InvalidOperationException("No insight")),
             // The placement result prefetches an insight and degrades without one, so this fixture

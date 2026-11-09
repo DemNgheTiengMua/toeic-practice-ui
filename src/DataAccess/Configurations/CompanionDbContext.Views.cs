@@ -76,6 +76,13 @@ public partial class CompanionDbContext
         {
             entity.ToView("vw_DailyPracticeVolume");
         });
+
+        // #243 / D3: accuracy per (topic, level). Keyless and read-only like every other view here;
+        // the percentage is the database's arithmetic, never recomputed in C#.
+        modelBuilder.Entity<vw_UserTopicAccuracy>(entity =>
+        {
+            entity.ToView("vw_UserTopicAccuracy");
+        });
     }
 
 }
