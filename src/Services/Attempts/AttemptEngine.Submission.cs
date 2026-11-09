@@ -24,6 +24,21 @@ public sealed partial class AttemptEngine
 
         try
         {
+            // #247.4: SUBMIT IS A RACE, and the status check below is not enough to stop it. Two callers
+            // - a learner double-clicking and an auto-submit firing, or a retried request - both read
+            // 'in_progress', both score, and both insert AttemptSkillScores. The second insert dies on
+            // PK_AttemptSkillScores and the caller gets a 500 for a paper that was in fact submitted.
+            // Measured, not theorised: the concurrent test failed with "Cannot insert duplicate key ...
+            // The duplicate key value is (1, 1)".
+            //
+            // The lock is taken on the attempt ROW, so the second caller blocks here and then reads the
+            // state the first one committed - which is exactly what the early-return branch expects.
+            // READPAST is deliberately NOT used: a caller that skipped a locked row would fall through
+            // to scoring, which is the defect.
+            await db.Database.ExecuteSqlRawAsync(
+                $"SELECT 1 FROM ExamAttempts WITH (UPDLOCK, HOLDLOCK) WHERE AttemptId = {attemptId}",
+                cancellationToken);
+
             var attempt = await db.ExamAttempts
                 .Include(a => a.Exam)
                 .Include(a => a.Cert)
