@@ -83,6 +83,12 @@ public sealed partial class AttemptEngine
 
         int durationSeconds = (int)Math.Max(0, ((attempt.SubmittedAt ?? DateTimeOffset.UtcNow) - attempt.StartedAt).TotalSeconds);
 
+        // #257: the display factor divides the stored total for presentation, so it has to be the rule
+        // the attempt was scored under. Reading the live certificate column meant a re-standardisation
+        // after the sitting printed a sum-based total divided by 10, a wrong number on a page about a
+        // real result rather than a stale convention.
+        var displayRule = await LoadAggregationRuleAsync(attempt.ExamId, attempt.CertId, cancellationToken);
+
         return new AttemptResultView(
             attempt.AttemptId,
             attempt.ExamId,
@@ -104,7 +110,7 @@ public sealed partial class AttemptEngine
             freeResponseCount,
             gradingStates.Count(status => status == AiGradingStatus.Done.ToCode()),
             gradingStates.Count(status => status == AiGradingStatus.Failed.ToCode()),
-            DisplayFactor(attempt.Cert.ScoreAggregationRule));
+            DisplayFactor(displayRule));
     }
 
     public async Task<AttemptReviewView> GetAttemptReviewAsync(

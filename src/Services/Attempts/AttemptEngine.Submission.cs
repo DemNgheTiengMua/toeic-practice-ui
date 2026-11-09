@@ -563,10 +563,13 @@ public sealed partial class AttemptEngine
                     decimal weightedScore = totalWeight > 0 ? weightedSectionSum / totalWeight : 0m;
                     rawScore = weightedScore;
 
-                    var certRule = await db.Certificates
-                        .Where(c => c.CertId == attempt.CertId)
-                        .Select(c => c.ScoreAggregationRule)
-                        .FirstOrDefaultAsync(cancellationToken);
+                    // #257: the rounding of a productive skill's scaled score is the aggregation rule
+                    // the attempt is scored under, so it takes the same resolution as the total. A live
+                    // read here mixed two rules inside one attempt: an edition frozen to avg_half_step
+                    // over a certificate since moved to sum stored a whole-rounded skill score beneath a
+                    // half-stepped total.
+                    var certRule = await LoadAggregationRuleAsync(
+                        attempt.ExamId, attempt.CertId, cancellationToken);
 
                     if (string.Equals(certRule, "avg_half_step", StringComparison.OrdinalIgnoreCase))
                     {
