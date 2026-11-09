@@ -75,6 +75,8 @@ public static class ServiceCollectionExtensions
         // why the ladder is not a pure function: seven responses are graded by a model.
         services.AddScoped<IRubricStudioService, RubricStudioService>();
         services.AddScoped<IAdminCoverageService, AdminCoverageService>();
+        // #247 / #248: the automated cutover-readiness pass. It reports; the cutover script decides.
+        services.AddScoped<ICutoverReadinessService, CutoverReadinessService>();
         services.AddScoped<IExamQuickIngestService, ExamQuickIngestService>();
         services.AddScoped<IQuestionImportService, QuestionImportService>();
 
