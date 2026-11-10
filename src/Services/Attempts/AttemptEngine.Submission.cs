@@ -94,22 +94,25 @@ public sealed partial class AttemptEngine
                     var response = freeResponses.SingleOrDefault(item => item.QuestionId == finalDraft.QuestionId);
                     if (response is null)
                     {
-                        var question = await db.Questions
-                            .SingleOrDefaultAsync(q =>
-                                q.QuestionId == finalDraft.QuestionId
-                                && q.ExamId == attempt.ExamId
-                                && q.QuestionType == QuestionType.FreeResponse.ToCode(),
-                                cancellationToken)
-                            ?? throw new AttemptEngineException(
+                        // #250: the position comes from the paper, so a pool-only productive task
+                        // resolves too. A response row names whichever identity its paper uses, and
+                        // CK_FreeResp_HasShape guarantees at least one is set.
+                        var question = await FindSittingQuestionAsync(attempt, finalDraft.QuestionId, cancellationToken);
+
+                        if (question.RenderFormat != QuestionType.FreeResponse.ToCode())
+                        {
+                            throw new AttemptEngineException(
                                 AttemptEngineException.QuestionNotFound,
-                                $"Free-response question {finalDraft.QuestionId} was not found for this attempt.");
+                                $"Question {finalDraft.QuestionId} is not a free-response task.");
+                        }
 
                         response = new FreeResponse
                         {
                             AttemptId = attemptId,
-                            QuestionId = question.QuestionId,
+                            QuestionId = question.LegacyQuestion is null ? null : question.Id,
+                            ExamItemId = question.ExamItemId,
                             ExamId = attempt.ExamId,
-                            SkillId = question.SkillId,
+                            SkillId = question.Section.SkillId,
                             QuestionType = QuestionType.FreeResponse.ToCode(),
                             ResponseText = finalDraft.ResponseText ?? string.Empty,
                             Status = FreeResponseStatus.Draft.ToCode(),
