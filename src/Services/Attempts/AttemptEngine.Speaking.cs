@@ -34,12 +34,12 @@ public sealed partial class AttemptEngine
             throw new AttemptEngineException(AttemptEngineException.AttemptExpired, "Exam attempt has expired.");
         }
 
-        var question = await db.Questions
-            .Include(q => q.Section)
-            .SingleOrDefaultAsync(q => q.QuestionId == questionId && q.ExamId == attempt.ExamId, cancellationToken)
-            ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found.");
+        // #250: the position comes from the paper, so a pool-only speaking task resolves too. Before
+        // this the lookup was a Questions query, and a pool paper's task was "not found" even though
+        // the sitting had just rendered it.
+        var question = await FindSittingQuestionAsync(attempt, questionId, cancellationToken);
 
-        if (question.QuestionType != QuestionType.FreeResponse.ToCode())
+        if (question.RenderFormat != QuestionType.FreeResponse.ToCode())
         {
             throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Audio response can only be attached to free-response questions.");
         }
@@ -61,7 +61,7 @@ public sealed partial class AttemptEngine
                 AttemptId = attemptId,
                 QuestionId = questionId,
                 ExamId = attempt.ExamId,
-                SkillId = question.SkillId,
+                SkillId = question.Section.SkillId,
                 QuestionType = QuestionType.FreeResponse.ToCode(),
                 AudioPath = relativePath,
                 DurationMs = durationMs,
@@ -116,12 +116,12 @@ public sealed partial class AttemptEngine
             throw new AttemptEngineException(AttemptEngineException.AttemptExpired, "Exam attempt has expired.");
         }
 
-        var question = await db.Questions
-            .Include(q => q.Section)
-            .SingleOrDefaultAsync(q => q.QuestionId == questionId && q.ExamId == attempt.ExamId, cancellationToken)
-            ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found.");
+        // #250: the position comes from the paper, so a pool-only speaking task resolves too. Before
+        // this the lookup was a Questions query, and a pool paper's task was "not found" even though
+        // the sitting had just rendered it.
+        var question = await FindSittingQuestionAsync(attempt, questionId, cancellationToken);
 
-        if (question.QuestionType != QuestionType.FreeResponse.ToCode())
+        if (question.RenderFormat != QuestionType.FreeResponse.ToCode())
         {
             throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Audio response can only be attached to free-response questions.");
         }
@@ -136,7 +136,7 @@ public sealed partial class AttemptEngine
                 AttemptId = attemptId,
                 QuestionId = questionId,
                 ExamId = attempt.ExamId,
-                SkillId = question.SkillId,
+                SkillId = question.Section.SkillId,
                 QuestionType = QuestionType.FreeResponse.ToCode(),
                 AudioPath = audioPath,
                 DurationMs = durationMs,
