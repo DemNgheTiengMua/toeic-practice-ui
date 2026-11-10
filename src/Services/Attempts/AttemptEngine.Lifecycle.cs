@@ -359,26 +359,35 @@ public sealed partial class AttemptEngine
             throw new AttemptEngineException(AttemptEngineException.AttemptExpired, "Exam time has expired and your exam was auto-submitted.");
         }
 
+        // #250: answers and free responses are keyed by whichever identity their paper uses - a legacy
+        // position names QuestionId, a pool position names ExamItemId - so the sheet must look up both
+        // rather than assume one.
         var answers = await db.AttemptAnswers
             .Where(a => a.AttemptId == attempt.AttemptId)
-            .ToDictionaryAsync(a => a.QuestionId, cancellationToken);
+            .ToListAsync(cancellationToken);
+        var answerByQuestionId = answers
+            .Where(a => a.QuestionId.HasValue)
+            .ToDictionary(a => a.QuestionId!.Value);
+        var answerByExamItemId = answers
+            .Where(a => a.ExamItemId.HasValue)
+            .ToDictionary(a => a.ExamItemId!.Value);
 
         var freeResponses = await db.FreeResponses
             .Where(fr => fr.AttemptId == attempt.AttemptId)
             .ToDictionaryAsync(fr => fr.QuestionId, cancellationToken);
 
-        var questionIds = await db.Questions
-            .Where(q => q.ExamId == attempt.ExamId)
-            .OrderBy(q => q.DisplayOrder)
-            .Select(q => q.QuestionId)
-            .ToListAsync(cancellationToken);
+        // The paper's positions in order, from the seam - a pool-only paper has no Questions rows to
+        // enumerate, and the old query returned an empty sheet for it.
+        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
 
-        var answerSheet = questionIds.Select(qId =>
+        var answerSheet = paperQuestions.Select(q =>
         {
-            answers.TryGetValue(qId, out var ans);
-            freeResponses.TryGetValue(qId, out var fr);
+            var ans = q.ExamItemId is int examItemId
+                ? answerByExamItemId.GetValueOrDefault(examItemId)
+                : answerByQuestionId.GetValueOrDefault(q.Id);
+            freeResponses.TryGetValue(q.Id, out var fr);
             return new AttemptAnswerSheetItem(
-                qId,
+                q.Id,
                 ProjectedOptionId(ans),
                 ans?.SelectedOptionIdsJson,
                 fr?.ResponseText ?? ans?.ResponseText,
