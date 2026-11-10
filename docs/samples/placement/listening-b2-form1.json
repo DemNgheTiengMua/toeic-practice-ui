@@ -1,0 +1,351 @@
+﻿{
+  "version": "1.0",
+  "exam": {
+    "title": "General English Placement Test - Listening Band B2 (Form 1)",
+    "purpose": "placement",
+    "sourceName": "Placement Content Generator",
+    "description": "Standardized two-stage placement item bank subset for Listening CEFR Level B2 Form 1 (Half A transcript and items; BLOCKED-AUDIO)."
+  },
+  "sections": [
+    {
+      "sectionCode": "listening",
+      "groups": [
+        {
+          "passage": null,
+          "transcript": "Woman: Mark, have you reviewed the preliminary feedback from our pilot four-day workweek trial in the logistics division? The executive board wants a recommendation by Friday.\nMan: I finished compiling the metrics this morning, Elena. Honestly, the output figures surprised me. Shipment accuracy actually rose by six percent over the quarter, and overtime expenses dropped by nearly fifteen percent because teams restructured their morning handover routines.\nWoman: That aligns with what the warehouse supervisors told me. However, several client account managers complained that Friday afternoon inquiries were going unanswered when urgent customs delays occurred.\nMan: That is a valid concern, but it is a scheduling flaw rather than a failure of the compressed model itself. During the pilot, everybody took Friday off simultaneously. If we stagger the schedule so half the staff takes Monday off and the other half takes Friday, we maintain uninterrupted five-day coverage for clients.\nWoman: Good point. Still, I am *not* convinced we should roll this out company-wide next month without testing that staggered roster first.\nMan: Agreed. Let us propose extending the pilot for one more quarter using split shifts before making it permanent.",
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "cefrLevel": "B2",
+          "domainContext": "workplace",
+          "promptCopy": "Listen to two managers discussing a workplace trial and answer the questions that follow.",
+          "unitNumber": 1,
+          "displayOrder": 1,
+          "questions": [
+            {
+              "stem": "What do the speakers ultimately decide to recommend to the executive board?",
+              "cefrLevel": "B2",
+              "questionType": "mcq",
+              "itemType": "extended_dialogue",
+              "topicCode": "L-GIST",
+              "placementEligible": true,
+              "explanation": "Across the dialogue, the speakers evaluate the pros and cons of the four-day workweek trial and conclude by agreeing to propose a one-quarter extension using split Monday/Friday shifts.",
+              "hint": "Focus on the final consensus reached by both managers regarding the next phase of the trial.",
+              "evidenceStart": 60,
+              "evidenceEnd": 72,
+              "evidenceUnit": "sec",
+              "evidenceQuote": "Let us propose extending the pilot for one more quarter using split shifts before making it permanent.",
+              "displayOrder": 1,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "Continuing the trial for an additional quarter with staggered days off to ensure full weekday coverage.",
+                  "isCorrect": true,
+                  "rationale": "Correct. Both speakers agree to test a staggered Monday/Friday roster for one more quarter before permanent adoption."
+                },
+                {
+                  "label": "B",
+                  "text": "Terminating the compressed workweek immediately due to declining warehouse shipment accuracy.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The man states that shipment accuracy rose by six percent during the trial."
+                },
+                {
+                  "label": "C",
+                  "text": "Expanding the Friday-off schedule across all departments starting next month.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The woman explicitly rejects rolling the program out company-wide next month without testing staggered shifts."
+                },
+                {
+                  "label": "D",
+                  "text": "Hiring external customs brokers to handle Friday afternoon client inquiries.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. They address the Friday gap by staggering internal staff schedules, not by outsourcing to external brokers."
+                }
+              ]
+            },
+            {
+              "stem": "According to the man, what financial benefit was observed during the pilot program?",
+              "cefrLevel": "B1",
+              "questionType": "mcq",
+              "itemType": "extended_dialogue",
+              "topicCode": "L-DET",
+              "placementEligible": true,
+              "explanation": "The man explicitly notes that overtime expenses fell by nearly fifteen percent because teams streamlined their morning handover routines.",
+              "hint": "Listen for the specific cost metric the man reports after mentioning shipment accuracy.",
+              "evidenceStart": 16,
+              "evidenceEnd": 27,
+              "evidenceUnit": "sec",
+              "evidenceQuote": "overtime expenses dropped by nearly fifteen percent because teams restructured their morning handover routines.",
+              "displayOrder": 2,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "Commercial shipping insurance premiums were reduced by six percent.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. Six percent refers to the increase in shipment accuracy, not insurance premiums."
+                },
+                {
+                  "label": "B",
+                  "text": "Overtime labor costs decreased by almost fifteen percent.",
+                  "isCorrect": true,
+                  "rationale": "Correct. The man states that overtime expenses dropped by nearly fifteen percent."
+                },
+                {
+                  "label": "C",
+                  "text": "Client account retention revenue doubled during the quarter.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. Client account revenue is never mentioned in the conversation."
+                },
+                {
+                  "label": "D",
+                  "text": "Office utility bills fell by half due to Friday building closures.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. Utility expenses are not discussed by either speaker."
+                }
+              ]
+            },
+            {
+              "stem": "Why does the woman say, \"Still, I am *not* convinced we should roll this out company-wide next month\"?",
+              "cefrLevel": "B2",
+              "questionType": "mcq",
+              "itemType": "extended_dialogue",
+              "topicCode": "L-ATT",
+              "placementEligible": true,
+              "explanation": "By emphasizing 'not' and conditioning expansion on first testing the staggered roster, the woman expresses cautious reservations about premature scaling.",
+              "hint": "Consider the woman's attitude toward expanding the policy before the new scheduling solution has been verified.",
+              "evidenceStart": 52,
+              "evidenceEnd": 60,
+              "evidenceUnit": "sec",
+              "evidenceQuote": "Still, I am *not* convinced we should roll this out company-wide next month without testing that staggered roster first.",
+              "displayOrder": 3,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "To express frustration that the logistics supervisors falsified their productivity data.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. She accepts the productivity figures and says they align with what supervisors told her."
+                },
+                {
+                  "label": "B",
+                  "text": "To signal cautious hesitation about expanding the policy before the proposed staggered schedule is proven effective.",
+                  "isCorrect": true,
+                  "rationale": "Correct. She acknowledges the man's scheduling solution ('Good point') but insists on testing it before company-wide implementation."
+                },
+                {
+                  "label": "C",
+                  "text": "To dismiss the man's suggestion of splitting staff between Monday and Friday shifts.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. She praises the staggered shift idea and wants to test it rather than dismiss it."
+                },
+                {
+                  "label": "D",
+                  "text": "To announce that the executive board has already canceled the pilot project.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The board is awaiting their recommendation on Friday and has not canceled the trial."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "passage": null,
+          "transcript": "Welcome to today's urban ecology seminar. For over a century, coastal engineers relied almost exclusively on poured concrete seawalls to defend harbor cities against storm surges. While vertical concrete barriers deflect wave energy in the short term, they actually accelerate erosion along adjacent beaches by reflecting turbulent force back toward the seabed. Even worse, solid concrete offers a barren surface that marine organisms struggle to colonize.\n\nTo address this ecological deficit, marine biologists and materials scientists have developed bio-receptive concrete panels cast with intricate surface grooves and small water-retaining cavities. When the tide recedes, these micro-pools trap seawater, creating cool, shaded habitats that mimic natural rocky intertidal zones. Within months of installation in Rotterdam and Sydney harbors, textured seawalls supported three times the biodiversity of smooth concrete, hosting barnacles, oysters, and kelp.\n\nImportantly, this biological layer is not merely cosmetic. As filter-feeding shellfish attach to the textured panels, their calcium carbonate shells gradually fuse together, forming a self-repairing mineral crust that shields the underlying concrete from saltwater chemical degradation. By designing infrastructure that accommodates marine life rather than excluding it, municipalities can simultaneously reduce long-term structural maintenance costs and rehabilitate urban marine ecosystems.",
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "cefrLevel": "B2",
+          "domainContext": "academic",
+          "promptCopy": "Listen to an excerpt from an urban ecology seminar and answer the questions that follow.",
+          "unitNumber": 1,
+          "displayOrder": 2,
+          "questions": [
+            {
+              "stem": "How does the speaker organize the presentation on coastal defense infrastructure?",
+              "cefrLevel": "B2",
+              "questionType": "mcq",
+              "itemType": "monologue_talk",
+              "topicCode": "L-ORG",
+              "placementEligible": true,
+              "explanation": "The lecturer begins by outlining the environmental and physical drawbacks of conventional concrete seawalls, introduces bio-receptive textured panels as a technological solution, and concludes by explaining their dual ecological and structural durability benefits.",
+              "hint": "Track the progression of ideas across the three main sections of the talk.",
+              "evidenceStart": 1,
+              "evidenceEnd": 74,
+              "evidenceUnit": "sec",
+              "evidenceQuote": "Welcome to today's urban ecology seminar. For over a century, coastal engineers relied almost exclusively on poured concrete seawalls to defend harbor cities against storm surges.",
+              "displayOrder": 1,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "By contrasting historical harbor shipping budgets across several European capitals.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The talk mentions Rotterdam and Sydney briefly as installation sites, not to compare shipping budgets."
+                },
+                {
+                  "label": "B",
+                  "text": "By outlining the limitations of conventional seawalls before explaining the ecological and structural advantages of textured alternatives.",
+                  "isCorrect": true,
+                  "rationale": "Correct. The speaker moves from the erosion and habitat problems of smooth seawalls to the design and structural benefits of bio-receptive panels."
+                },
+                {
+                  "label": "C",
+                  "text": "By chronologically profiling the biographies of the engineers who invented poured marine concrete.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. No individual biographical profiles are presented."
+                },
+                {
+                  "label": "D",
+                  "text": "By refuting the claim that storm surges pose a threat to modern coastal municipalities.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The speaker accepts the necessity of coastal defense and focuses on improving how seawalls are engineered."
+                }
+              ]
+            },
+            {
+              "stem": "According to the speaker, how do the surface cavities on bio-receptive panels support marine organisms?",
+              "cefrLevel": "B2",
+              "questionType": "mcq",
+              "itemType": "monologue_talk",
+              "topicCode": "L-DET",
+              "placementEligible": true,
+              "explanation": "The speaker states that when the tide goes out, the grooves and cavities retain seawater, forming cool, shaded micro-pools that replicate natural rocky intertidal habitats.",
+              "hint": "Listen for what happens to the textured panels when the tide recedes.",
+              "evidenceStart": 31,
+              "evidenceEnd": 41,
+              "evidenceUnit": "sec",
+              "evidenceQuote": "When the tide recedes, these micro-pools trap seawater, creating cool, shaded habitats that mimic natural rocky intertidal zones.",
+              "displayOrder": 2,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "They release synthetic chemical nutrients into the surrounding harbor water.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The panels work through physical geometry (grooves and water-retaining cavities), not synthetic chemical release."
+                },
+                {
+                  "label": "B",
+                  "text": "They heat the water temperature during winter to attract tropical fish species.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The speaker states that the cavities create cool, shaded habitats for intertidal organisms like barnacles and oysters."
+                },
+                {
+                  "label": "C",
+                  "text": "They retain water at low tide to create cool, sheltered environments resembling natural rock pools.",
+                  "isCorrect": true,
+                  "rationale": "Correct. The transcript explicitly states that the micro-pools trap seawater when the tide recedes, mimicking rocky intertidal zones."
+                },
+                {
+                  "label": "D",
+                  "text": "They generate low-voltage electrical currents that prevent predators from approaching.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. Electrical currents are never mentioned in the talk."
+                }
+              ]
+            },
+            {
+              "stem": "What can be inferred about the long-term engineering value of shellfish colonizing the seawall panels?",
+              "cefrLevel": "C1",
+              "questionType": "mcq",
+              "itemType": "monologue_talk",
+              "topicCode": "L-INF",
+              "placementEligible": true,
+              "explanation": "Because the fused calcium carbonate shells protect the underlying concrete from saltwater chemical degradation and lower maintenance costs, marine colonization actively extends the structural lifespan of the seawall.",
+              "hint": "Consider how the mineral crust formed by shellfish affects the underlying concrete structure.",
+              "evidenceStart": 54,
+              "evidenceEnd": 66,
+              "evidenceUnit": "sec",
+              "evidenceQuote": "their calcium carbonate shells gradually fuse together, forming a self-repairing mineral crust that shields the underlying concrete from saltwater chemical degradation.",
+              "displayOrder": 3,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "The biological growth actively prolongs the physical durability of the seawall rather than weakening it.",
+                  "isCorrect": true,
+                  "rationale": "Correct. The fused shells form a protective mineral barrier against saltwater degradation, reducing long-term structural maintenance."
+                },
+                {
+                  "label": "B",
+                  "text": "Municipal workers must scrape the shellfish off every six months to prevent structural collapse.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The shellfish layer is described as a beneficial, self-repairing shield that lowers maintenance costs."
+                },
+                {
+                  "label": "C",
+                  "text": "The shellfish harvest provides sufficient commercial seafood revenue to fund harbor construction.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The talk discusses filter-feeding and mineral protection, not commercial seafood harvesting."
+                },
+                {
+                  "label": "D",
+                  "text": "Bio-receptive panels can only be installed in freshwater lakes where salt corrosion does not occur.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The panels are specifically designed for tidal seawater harbors and shield against saltwater degradation."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "passage": null,
+          "transcript": "Man: Excuse me, Dr. Patel, do you have a minute to discuss the clinical research symposium next Wednesday? I was scheduled to present our poster on automated diagnostic imaging during the morning session, but the airline just notified me that my connecting flight from Zurich has been moved to Wednesday afternoon.\nWoman: That is unfortunate timing, David. Have you contacted the conference organizing committee to see if they can swap your slot with an afternoon presenter?\nMan: I emailed the program chair an hour ago, but the printed schedule has already been finalized. However, since you are already delivering the keynote lecture that morning, I was wondering if you might be willing to stand in during the first thirty minutes of the poster session until my co-author arrives from Boston.\nWoman: My keynote concludes at ten-thirty, which leaves me a forty-five-minute gap before the panel debate. As long as you upload the high-resolution calibration charts to our shared folder tonight so I can review the methodology, I can cover the opening inquiries.",
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "cefrLevel": "B2",
+          "domainContext": "academic",
+          "promptCopy": "Listen to a conversation between two researchers and answer the question that follows.",
+          "unitNumber": 1,
+          "displayOrder": 3,
+          "questions": [
+            {
+              "stem": "What communicative function does the woman perform in her final response?",
+              "cefrLevel": "B2",
+              "questionType": "mcq",
+              "itemType": "short_exchange",
+              "topicCode": "L-FUNC",
+              "placementEligible": true,
+              "explanation": "In her final turn, Dr. Patel agrees to cover the opening thirty minutes of the poster session on the condition that David uploads the calibration charts that evening.",
+              "hint": "Focus on the condition the woman attaches to her agreement at the end of the exchange.",
+              "evidenceStart": 47,
+              "evidenceEnd": 61,
+              "evidenceUnit": "sec",
+              "evidenceQuote": "As long as you upload the high-resolution calibration charts to our shared folder tonight so I can review the methodology, I can cover the opening inquiries.",
+              "displayOrder": 1,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "She declines a colleague's request due to a scheduling conflict with her keynote lecture.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. She notes that her keynote ends at ten-thirty, giving her enough free time to help."
+                },
+                {
+                  "label": "B",
+                  "text": "She reprimands the man for failing to book a direct flight to the symposium.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. She expresses sympathy ('That is unfortunate timing') rather than blaming him for the airline schedule change."
+                },
+                {
+                  "label": "C",
+                  "text": "She instructs the man to cancel their research team's participation in the poster session.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. She agrees to cover the session so the presentation can proceed as planned."
+                },
+                {
+                  "label": "D",
+                  "text": "She grants a request conditionally, requiring preparatory materials in advance.",
+                  "isCorrect": true,
+                  "rationale": "Correct. She agrees to cover the opening inquiries provided he uploads the calibration charts to the shared folder that night."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

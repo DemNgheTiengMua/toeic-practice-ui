@@ -1,0 +1,80 @@
+﻿{
+  "version": "1.0",
+  "exam": {
+    "title": "General English Placement Test - Speaking Band B2 (Form 1)",
+    "purpose": "placement",
+    "sourceName": "Placement Content Generator",
+    "description": "Standardized two-stage placement item bank subset for Speaking CEFR Level B2 Form 1."
+  },
+  "sections": [
+    {
+      "sectionCode": "speaking",
+      "groups": [
+        {
+          "passage": null,
+          "transcript": null,
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": "Split-panel photograph comparing a traditional library quiet reading hall on the left with a modern collaborative community media hub on the right.",
+          "cefrLevel": "B2",
+          "domainContext": "general",
+          "promptCopy": "You will have 40 seconds to prepare and 60 seconds to speak. Describe the visual prompt and address the comparative question.",
+          "prepSeconds": 40,
+          "responseSeconds": 60,
+          "unitNumber": 1,
+          "displayOrder": 1,
+          "questions": [
+            {
+              "stem": "Look at the image comparing two different public library spaces. Describe the key differences between the two environments shown, and explain how shifting community needs have changed the role of public libraries in modern cities.",
+              "cefrLevel": "B2",
+              "questionType": "free_response",
+              "itemType": "descriptive_monologue",
+              "topicCode": "S-DESC",
+              "placementEligible": true,
+              "explanation": "Evaluates B2 informational description and framing (S-DESC), requiring the candidate to contrast visual details systematically and link them to broader social trends using complex subordination and appropriate discourse markers.",
+              "sampleAnswerOrImageDesc": "IMAGE SPECIFICATION FOR EXAMINER AND MEDIA PRODUCTION: A high-resolution split-frame interior photograph. Left panel: A traditional municipal reading room with tall oak bookshelves, individual green-shaded desk lamps, and four patrons reading printed volumes in strict silence. Right panel: A contemporary glass-walled library commons where small groups sit around modular tables using laptops, a 3D printer operates in the background beside a digital media studio, and a librarian assists an elderly resident with a tablet computer.",
+              "referenceKind": "image",
+              "prepSeconds": 40,
+              "responseSeconds": 60,
+              "displayOrder": 1
+            }
+          ]
+        },
+        {
+          "passage": null,
+          "transcript": null,
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "cefrLevel": "B2",
+          "domainContext": "workplace",
+          "promptCopy": "You will have 50 seconds to prepare and 60 seconds to deliver a structured spoken argument.",
+          "prepSeconds": 50,
+          "responseSeconds": 60,
+          "unitNumber": 1,
+          "displayOrder": 2,
+          "questions": [
+            {
+              "stem": "Many organizations now use automated artificial intelligence software to screen job applicants' resumes and conduct initial video interviews before a human manager reviews the candidates. Do the efficiency advantages of automated recruitment outweigh the potential risks? Support your position with clear reasoning and examples.",
+              "cefrLevel": "B2",
+              "questionType": "free_response",
+              "itemType": "argumentative_monologue",
+              "topicCode": "S-ARG",
+              "placementEligible": true,
+              "explanation": "Evaluates B2 sustained monologic argumentation (S-ARG), requiring clear stance-taking, hedging, concession clauses, and workplace lexical precision within a 60-second response window.",
+              "sampleAnswerOrImageDesc": "MODEL B2 RESPONSE: While automated screening tools undeniably accelerate recruitment for large corporations overwhelmed by thousands of applications, relying on algorithms for initial interviews carries significant drawbacks that outweigh mere administrative speed. On the one hand, software can rapidly verify objective qualifications such as technical certifications. However, automated systems frequently penalize candidates with non-traditional career paths or subtle communication styles, potentially reinforcing historical hiring biases. Therefore, technology should only assist human recruiters with basic administrative sorting rather than replacing human judgment during the interview stage.",
+              "referenceKind": "sample",
+              "prepSeconds": 50,
+              "responseSeconds": 60,
+              "displayOrder": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

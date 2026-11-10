@@ -1,0 +1,84 @@
+﻿{
+  "version": "1.0",
+  "exam": {
+    "title": "General English Placement Test - Writing Band B2 (Form 1)",
+    "purpose": "placement",
+    "sourceName": "Placement Content Generator",
+    "description": "Standardized two-stage placement item bank subset for Writing CEFR Level B2 Form 1."
+  },
+  "sections": [
+    {
+      "sectionCode": "writing",
+      "groups": [
+        {
+          "passage": null,
+          "transcript": null,
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "cefrLevel": "B2",
+          "domainContext": "workplace",
+          "promptCopy": "Write a formal workplace email responding to the scenario below. Write between 120 and 140 words.",
+          "prepSeconds": 0,
+          "responseSeconds": 600,
+          "unitNumber": 1,
+          "displayOrder": 1,
+          "questions": [
+            {
+              "stem": "Your company recently relocated its regional headquarters to a suburban business park where public transit connections are infrequent. Write a formal email to the Facilities Director on behalf of your department. In your email:\n- explain how the limited transit schedule is affecting staff punctuality and morale;\n- evaluate the limitations of the current parking reimbursement policy; and\n- propose a practical commuter shuttle or flexible arrival window solution.\n\nWrite between 120 and 140 words.",
+              "cefrLevel": "B2",
+              "questionType": "free_response",
+              "itemType": "transactional_correspondence",
+              "topicCode": "W-CORR",
+              "placementEligible": true,
+              "explanation": "Evaluates B2 transactional correspondence and register control (W-CORR), testing the candidate's ability to convey structured problem analysis, polite critique, and actionable workplace recommendations within a strict 120-140 word budget.",
+              "sampleAnswerOrImageDesc": "Dear Ms. Vance,\n\nI am writing on behalf of the Product Development team regarding commuting challenges following our relocation to the Oakridge Business Park. Because municipal buses serve this corridor only once per hour, several colleagues who rely on public transit face lengthy delays, which has begun to impact morning productivity and team morale.\n\nWhile the company generously introduced a parking subsidy, this measure does not assist non-driving employees and has inadvertently congested the visitor parking lot. To address this equitably, we propose introducing a thirty-minute flexible arrival window alongside a contracted morning and evening shuttle van linking our building to the central rail station.\n\nWe would welcome the opportunity to discuss the cost projections for this arrangement at your earliest convenience.\n\nSincerely,\nJordan Miller",
+              "referenceKind": "sample",
+              "prepSeconds": 0,
+              "responseSeconds": 600,
+              "minWords": 120,
+              "maxWords": 140,
+              "displayOrder": 1
+            }
+          ]
+        },
+        {
+          "passage": null,
+          "transcript": null,
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "cefrLevel": "B2",
+          "domainContext": "academic",
+          "promptCopy": "Write a structured persuasive essay responding to the prompt below. Write between 180 and 220 words.",
+          "prepSeconds": 0,
+          "responseSeconds": 900,
+          "unitNumber": 1,
+          "displayOrder": 2,
+          "questions": [
+            {
+              "stem": "Several municipal governments have proposed banning private passenger cars from historic city centers entirely, permitting only public transit, bicycles, and emergency or delivery vehicles. To what extent do the environmental and economic benefits of car-free city centers outweigh the inconvenience to residents and retail businesses? Support your argument with specific reasons and examples.\n\nWrite between 180 and 220 words.",
+              "cefrLevel": "B2",
+              "questionType": "free_response",
+              "itemType": "persuasive_essay",
+              "topicCode": "W-ARG",
+              "placementEligible": true,
+              "explanation": "Evaluates B2 thesis-driven persuasive argumentation (W-ARG), requiring complex clause subordination, hedging, counter-argument concession, and cohesive paragraphing within the placement envelope of 180-220 words.",
+              "sampleAnswerOrImageDesc": "Banning private automobiles from historic city centers is a bold urban policy whose long-term environmental and commercial benefits substantially outweigh the transitional inconvenience experienced by motorists. Historic districts were originally constructed for pedestrians rather than heavy vehicular traffic, meaning that chronic congestion degrades both air quality and architectural heritage.\n\nOpponents, particularly independent shopkeepers, frequently contend that restricting car access deters suburban shoppers and reduces retail revenue. However, empirical evidence from pedestrianized European districts demonstrates the opposite effect. When noisy thoroughfares are converted into walkable plazas with reliable tram links and cycling lanes, foot traffic consistently increases, benefiting cafes and local boutiques.\n\nNevertheless, for such restrictions to succeed without alienating residents with limited mobility, municipalities must pair vehicle bans with affordable peripheral park-and-ride hubs and frequent electric shuttles. Provided that accessible transit alternatives are established beforehand, reclaiming historic centers from private cars enhances both public health and urban economic vitality.",
+              "referenceKind": "sample",
+              "prepSeconds": 0,
+              "responseSeconds": 900,
+              "minWords": 180,
+              "maxWords": 220,
+              "displayOrder": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

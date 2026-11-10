@@ -1,0 +1,351 @@
+﻿{
+  "version": "1.0",
+  "exam": {
+    "title": "General English Placement Test - Reading Band B2 (Form 1)",
+    "purpose": "placement",
+    "sourceName": "Placement Content Generator",
+    "description": "Standardized two-stage placement item bank subset for Reading CEFR Level B2 Form 1."
+  },
+  "sections": [
+    {
+      "sectionCode": "reading",
+      "groups": [
+        {
+          "passage": "In recent decades, urban centers around the world have experienced a quiet revolution in architecture. Faced with rising summer temperatures, traffic noise, and dwindling green space, municipal planners are turning to biophilic design. This architectural philosophy deliberately connects building occupants more closely to the natural environment. Rather than treating indoor plants as simple decoration, the approach incorporates living elements into the core structure of modern office towers and residential complexes. Architects install vertical plant walls, extensive interior gardens, and natural airflow channels to bring the outdoors inside.\n\nAdvocates of biophilic buildings point to a growing body of psychological research to support their work. Controlled workplace studies demonstrate that exposure to natural light and foliage can noticeably reduce mental fatigue and daily stress. Office workers in settings with living green walls frequently report higher productivity, better mood, and fewer sick days than peers in conventional office cubicles. Consequently, commercial developers are investing in interior gardens, natural airflow channels, and rooftop terraces to attract corporate tenants who want to foster employee health and satisfaction. In many cities, companies even market these green spaces as key benefits during recruitment drives.\n\nDespite these positive outcomes, structural engineers and facility managers urge caution regarding widespread adoption. Incorporating large volumes of soil and vegetation introduces complex mechanical challenges. Irrigation networks must be continuously monitored to prevent hidden water leaks, which can damage concrete foundations and compromise electrical grids over time. Furthermore, plant species must be carefully chosen to match the unique humidity and temperature of individual floors, requiring continuous horticultural expertise. In several prominent cases, the unexpected maintenance costs of vertical gardens forced property owners to replace live foliage with plastic substitutes.\n\nUltimately, the long-term viability of biophilic architecture depends on balancing attractive visual design with practical maintenance realities. When developers treat green installations as dynamic systems rather than temporary marketing features, buildings can deliver genuine environmental and human benefits. However, achieving this harmony requires active collaboration between architects, engineers, and landscape specialists from the initial project planning phase.",
+          "transcript": null,
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "cefrLevel": "B2",
+          "domainContext": "academic",
+          "promptCopy": "Read the text and answer the questions that follow.",
+          "unitNumber": 1,
+          "displayOrder": 1,
+          "questions": [
+            {
+              "stem": "What is the primary objective of biophilic design as described in the passage?",
+              "cefrLevel": "B2",
+              "questionType": "mcq",
+              "itemType": "passage_comprehension",
+              "topicCode": "R-GIST",
+              "placementEligible": true,
+              "explanation": "The opening paragraph explicitly defines biophilic design as an architectural philosophy that integrates living natural elements into building structures to connect occupants with the natural environment.",
+              "hint": "Look for the definition and underlying philosophy introduced in the first paragraph.",
+              "evidenceStart": 236,
+              "evidenceEnd": 347,
+              "evidenceUnit": "char",
+              "evidenceQuote": "This architectural philosophy deliberately connects building occupants more closely to the natural environment.",
+              "displayOrder": 1,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "To connect inhabitants more deeply with nature by incorporating living elements into architecture.",
+                  "isCorrect": true,
+                  "rationale": "Correct. Paragraph 1 states that the philosophy deliberately connects building occupants more closely to the natural environment."
+                },
+                {
+                  "label": "B",
+                  "text": "To lower commercial construction costs by utilizing inexpensive natural building supplies.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The passage notes that green installations often increase engineering complexity and maintenance expenses rather than lowering costs."
+                },
+                {
+                  "label": "C",
+                  "text": "To replace traditional heating and air-conditioning units entirely with outdoor weather corridors.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The passage mentions natural airflow channels, but never claims they completely eliminate mechanical heating or cooling systems."
+                },
+                {
+                  "label": "D",
+                  "text": "To provide suburban communities with convenient agricultural cultivation spaces inside office buildings.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The text focuses on dense urban centers and psychological well-being, not suburban food production or farming."
+                }
+              ]
+            },
+            {
+              "stem": "According to the second paragraph, what psychological benefit has been observed in employees working near living green walls?",
+              "cefrLevel": "B1",
+              "questionType": "mcq",
+              "itemType": "passage_comprehension",
+              "topicCode": "R-DET",
+              "placementEligible": true,
+              "explanation": "Paragraph 2 states that workplace studies demonstrate that exposure to foliage and natural light reduces mental fatigue and stress, resulting in higher productivity and fewer sick days.",
+              "hint": "Examine the specific research findings regarding worker health mentioned in paragraph 2.",
+              "evidenceStart": 803,
+              "evidenceEnd": 895,
+              "evidenceUnit": "char",
+              "evidenceQuote": "exposure to natural light and foliage can noticeably reduce mental fatigue and daily stress.",
+              "displayOrder": 2,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "An immediate promotion rate among administrative staff.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The passage mentions improved productivity and mood, not career promotions."
+                },
+                {
+                  "label": "B",
+                  "text": "A noticeable reduction in mental exhaustion and everyday stress levels.",
+                  "isCorrect": true,
+                  "rationale": "Correct. Paragraph 2 explicitly notes that foliage exposure can noticeably reduce mental fatigue and daily stress."
+                },
+                {
+                  "label": "C",
+                  "text": "A complete elimination of occupational conflict during team meetings.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The text does not discuss interpersonal conflict or team dynamics."
+                },
+                {
+                  "label": "D",
+                  "text": "A preference for longer working shifts without scheduled rest periods.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The passage makes no reference to extended working hours or skipping breaks."
+                }
+              ]
+            },
+            {
+              "stem": "What can be inferred from the author's discussion of maintenance challenges in paragraph 3?",
+              "cefrLevel": "B2",
+              "questionType": "mcq",
+              "itemType": "passage_comprehension",
+              "topicCode": "R-INF",
+              "placementEligible": true,
+              "explanation": "Paragraph 3 explains that unexpected maintenance costs and mechanical difficulties forced some property owners to replace live greenery with artificial plants, implying that ongoing upkeep requires substantial technical and financial commitment.",
+              "hint": "Consider why property owners eventually resorted to replacing living flora with plastic alternatives.",
+              "evidenceStart": 1933,
+              "evidenceEnd": 2058,
+              "evidenceUnit": "char",
+              "evidenceQuote": "the unexpected maintenance costs of vertical gardens forced property owners to replace live foliage with plastic substitutes.",
+              "displayOrder": 3,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "Artificial plants offer superior psychological health dividends compared to organic vegetation.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The author cites plastic substitutes as a compromised retreat caused by high maintenance costs, not as a superior health alternative."
+                },
+                {
+                  "label": "B",
+                  "text": "Modern irrigation systems have completely solved water penetration risks in older concrete structures.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The text specifically highlights that irrigation networks risk hidden leaks that damage foundations."
+                },
+                {
+                  "label": "C",
+                  "text": "Sustaining living architectural elements requires ongoing specialized investment that some developers underestimate.",
+                  "isCorrect": true,
+                  "rationale": "Correct. The text highlights unexpected maintenance costs, continuous horticultural expertise, and complex mechanical challenges that forced owners into compromises."
+                },
+                {
+                  "label": "D",
+                  "text": "Municipal building regulations strictly prohibit commercial facilities from hiring professional botanists.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The passage encourages collaboration with landscape specialists rather than prohibiting it."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "passage": "The rapid growth of the global subscription economy has fundamentally altered how consumers acquire and value everyday goods. From digital entertainment platforms and cloud computing software to curated meal boxes and wardrobe deliveries, automated monthly billing has largely replaced traditional retail transactions. Economists observe that this commercial model offers substantial advantages for modern enterprises. Predictable recurring cash flow shields corporations from seasonal revenue fluctuations, while continuous digital interactions generate rich behavioral data that companies leverage to refine their marketing strategies.\n\nFor consumers, however, the financial consequences of this transition are considerably more ambiguous. Behavioral economists emphasize the powerful psychological role of automated transactions in obscuring ongoing expenditure. When subscription fees are withdrawn automatically each month, consumers often underestimate the aggregate cost of their commitments, leading to widespread financial strain. A recent survey revealed that over seventy percent of consumers spend significantly more per year on streaming services and digital memberships than their initial household budgets allowed. Furthermore, many subscribers continue paying for dormant services simply because cancellation procedures involve complex, multi-step verification designed to discourage cancellation.\n\nIn response to these predatory retention tactics, consumer advocacy organizations are urging regulators to intervene. Proposed consumer protection standards include mandatory annual renewal notices, transparent spending dashboards, and a universal requirement that companies allow cancellation with a single click. Business trade groups argue that strict government mandates would impose costly administrative burdens on emerging startups and limit consumer choice. Nevertheless, legal experts maintain that regulatory action is necessary to protect consumer rights and restore commercial fairness in digital commerce.\n\nUltimately, digital subscription platforms must evolve toward greater transparency if they hope to retain long-term customer loyalty. While convenience remains a powerful draw, companies that exploit behavioral inertia risk facing both regulatory penalties and public backlash.",
+          "transcript": null,
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "cefrLevel": "B2",
+          "domainContext": "general",
+          "promptCopy": "Read the text and answer the questions that follow.",
+          "unitNumber": 1,
+          "displayOrder": 2,
+          "questions": [
+            {
+              "stem": "What is the author's overall stance regarding current recurring subscription billing practices?",
+              "cefrLevel": "B2",
+              "questionType": "mcq",
+              "itemType": "passage_comprehension",
+              "topicCode": "R-ATT",
+              "placementEligible": true,
+              "explanation": "The author characterizes multi-step cancellation hurdles as predatory retention tactics and warns that businesses exploiting consumer inertia risk regulatory penalties and backlash.",
+              "hint": "Analyze the evaluative language used in the third and fourth paragraphs to describe retention tactics.",
+              "evidenceStart": 1415,
+              "evidenceEnd": 1532,
+              "evidenceUnit": "char",
+              "evidenceQuote": "In response to these predatory retention tactics, consumer advocacy organizations are urging regulators to intervene.",
+              "displayOrder": 1,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "Unreserved enthusiasm for the financial savings subscriptions offer average households.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The author highlights financial strain and budget overruns rather than household savings."
+                },
+                {
+                  "label": "B",
+                  "text": "Indifference because consumers bear sole moral responsibility for monitoring their personal bank statements.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The author supports regulatory intervention to restore commercial fairness, rejecting indifference."
+                },
+                {
+                  "label": "C",
+                  "text": "Skepticism about whether digital software platforms can ever achieve commercial profitability.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The author explicitly notes that the model offers substantial commercial advantages and predictable cash flow to enterprises."
+                },
+                {
+                  "label": "D",
+                  "text": "Critical concern that companies are exploiting consumer psychology through opaque cancellation barriers.",
+                  "isCorrect": true,
+                  "rationale": "Correct. The author labels retention practices 'predatory' and emphasizes that automated payments obscure expenditure."
+                }
+              ]
+            },
+            {
+              "stem": "Which sentence would most logically connect the discussion of automatic monthly debits to consumer budget overruns in paragraph 2?",
+              "cefrLevel": "B2",
+              "questionType": "mcq",
+              "itemType": "text_insertion_cohesion",
+              "topicCode": "R-COH",
+              "placementEligible": true,
+              "explanation": "An effective cohesive sentence bridges the psychological mechanism of frictionless recurring billing with the empirical outcome of budget overruns.",
+              "hint": "Look for a sentence that reinforces the causal link between automated deductions and perceived expense.",
+              "evidenceStart": 866,
+              "evidenceEnd": 1039,
+              "evidenceUnit": "char",
+              "evidenceQuote": "When subscription fees are withdrawn automatically each month, consumers often underestimate the aggregate cost of their commitments, leading to widespread financial strain.",
+              "displayOrder": 2,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "Retail department stores frequently launch seasonal promotions to liquidate surplus inventory.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. This statement shifts focus off-topic to traditional brick-and-mortar store sales."
+                },
+                {
+                  "label": "B",
+                  "text": "Because individual payments appear negligible in isolation, cumulative monthly expenditures frequently escape careful scrutiny.",
+                  "isCorrect": true,
+                  "rationale": "Correct. This statement establishes smooth discourse cohesion by explaining why automated fees lead to underestimating total costs."
+                },
+                {
+                  "label": "C",
+                  "text": "Many software developers prefer working remotely from home offices rather than commuting to urban centers.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. Workplace preferences of software developers are irrelevant to consumer subscription expenditures."
+                },
+                {
+                  "label": "D",
+                  "text": "International shipping tariffs have substantially raised the wholesale cost of importing fresh agricultural produce.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. Shipping tariffs on agricultural produce have no cohesive link to subscription billing dynamics."
+                }
+              ]
+            },
+            {
+              "stem": "According to paragraph 3, which specific regulatory reform is championed by consumer protection groups?",
+              "cefrLevel": "C1",
+              "questionType": "mcq",
+              "itemType": "passage_comprehension",
+              "topicCode": "R-DET",
+              "placementEligible": true,
+              "explanation": "Paragraph 3 lists three specific reforms: mandatory annual renewal notices, transparent spending dashboards, and a universal requirement that companies allow cancellation with a single click.",
+              "hint": "Check the exact proposed consumer protection standards listed in paragraph 3.",
+              "evidenceStart": 1533,
+              "evidenceEnd": 1729,
+              "evidenceUnit": "char",
+              "evidenceQuote": "Proposed consumer protection standards include mandatory annual renewal notices, transparent spending dashboards, and a universal requirement that companies allow cancellation with a single click.",
+              "displayOrder": 3,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "A universal standard requiring providers to permit account cancellation with a single click.",
+                  "isCorrect": true,
+                  "rationale": "Correct. The passage explicitly includes 'a universal requirement that companies allow cancellation with a single click'."
+                },
+                {
+                  "label": "B",
+                  "text": "A total prohibition against companies utilizing automated monthly bank deductions.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The proposals regulate transparency and cancellation ease, but do not outlaw automated billing altogether."
+                },
+                {
+                  "label": "C",
+                  "text": "A strict price ceiling capping monthly digital memberships at twenty dollars per service.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The text does not mention price caps or maximum subscription charges."
+                },
+                {
+                  "label": "D",
+                  "text": "A legal mandate forcing corporate executives to personally handle customer complaints.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. Executive customer complaint handling is never suggested in the passage."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "passage": "Although the new environmental regulations were initially criticized by corporate leaders, the manufacturing sector adapted to the stringent emissions targets far more rapidly than economists had anticipated.",
+          "transcript": null,
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "cefrLevel": "B2",
+          "domainContext": "workplace",
+          "promptCopy": "Choose the word or phrase that best completes the sentence.",
+          "unitNumber": 1,
+          "displayOrder": 3,
+          "questions": [
+            {
+              "stem": "Choose the option that correctly completes the sentence:\n\n\"Although the new environmental regulations were initially criticized by corporate leaders, the manufacturing sector ________ to the stringent emissions targets far more rapidly than economists had anticipated.\"",
+              "cefrLevel": "B2",
+              "questionType": "mcq",
+              "itemType": "sentence_cloze",
+              "topicCode": "R-GRAM",
+              "placementEligible": true,
+              "explanation": "The past simple form 'adapted' correctly indicates completed historical past action following the concessive clause 'Although the new environmental regulations were initially criticized...'.",
+              "hint": "Consider the grammatical tense required to maintain consistency with 'were initially criticized' and 'had anticipated'.",
+              "evidenceStart": 116,
+              "evidenceEnd": 123,
+              "evidenceUnit": "char",
+              "evidenceQuote": "adapted",
+              "displayOrder": 1,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "will adapt",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The future modal 'will adapt' conflicts with the completed past framing established by 'were initially criticized'."
+                },
+                {
+                  "label": "B",
+                  "text": "has been adapting",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The present perfect continuous suggests an incomplete action extending into the present, which does not match the past perspective."
+                },
+                {
+                  "label": "C",
+                  "text": "adapted",
+                  "isCorrect": true,
+                  "rationale": "Correct. The simple past 'adapted' agrees temporally with the dependent clause 'were initially criticized' and the past perfect 'had anticipated'."
+                },
+                {
+                  "label": "D",
+                  "text": "is adapting",
+                  "isCorrect": false,
+                  "rationale": "Incorrect. The present continuous tense is grammatically inconsistent with the past narrative context."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
