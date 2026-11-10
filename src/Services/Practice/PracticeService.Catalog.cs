@@ -90,9 +90,9 @@ public sealed partial class PracticeService
 
         if (rows.Count == 0)
         {
-            // shortgap: a section the pool has not stocked still drills its legacy questions. #269
-            // deletes this branch with the tables; a stocked section never reaches it.
-            return await LoadLegacySectionCandidatesAsync(userId, certId, sectionId, cancellationToken);
+            // The caller decides what an unstocked section does; this method answers only "what stock
+            // does the pool hold here", and an empty list is the honest answer.
+            return [];
         }
 
         var itemIds = rows.Select(r => r.ItemId).ToList();

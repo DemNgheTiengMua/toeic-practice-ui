@@ -139,29 +139,36 @@ public sealed partial class PracticeService
                 "Speaking is answered by voice, so it has no typed drill: open the recorded speaking practice, which is graded by AI.");
         }
 
-        var selectedIds = await PlanSmartPracticeAsync(userId, certId, section.SectionId, cancellationToken);
+        // #263: the section draws from ONE shape, and the planner says which. Deciding per id by
+        // "does a pool item happen to have this id" is wrong: item ids and question ids are two
+        // counters that collide, so a legacy question id can name an unrelated item and the answer
+        // would be written as a pool row for content nobody drew.
+        var plan = await PlanSmartPracticeAsync(userId, certId, section.SectionId, cancellationToken);
+        var selectedIds = plan.Ids;
+        var isPool = plan.IsPool;
 
         if (selectedIds.Count == 0)
         {
             throw new PracticeException(PracticeException.NoQuestionsAvailable, "No questions match the selected criteria for this section.");
         }
 
-        // #263: a section draws from its pool stock when it has any, and from its legacy questions
-        // otherwise. Which one a drawn id is, is decided by whether that id is a pool item - not by a
-        // second planning pass, so a candidate cannot be planned one way and written another.
-        var drawnItems = await db.Items
-            .AsNoTracking()
-            .Where(i => selectedIds.Contains(i.ItemId))
-            .Select(i => new
-            {
-                i.ItemId,
-                VersionId = i.ItemVersions
-                    .OrderByDescending(v => v.VersionNumber)
-                    .Select(v => (int?)v.ItemVersionId)
-                    .FirstOrDefault(),
-            })
-            .ToListAsync(cancellationToken);
-        var versionByItem = drawnItems.ToDictionary(d => d.ItemId, d => d.VersionId!.Value);
+        var versionByItem = new Dictionary<int, int>();
+        if (isPool)
+        {
+            var drawnItems = await db.Items
+                .AsNoTracking()
+                .Where(i => selectedIds.Contains(i.ItemId))
+                .Select(i => new
+                {
+                    i.ItemId,
+                    VersionId = i.ItemVersions
+                        .OrderByDescending(v => v.VersionNumber)
+                        .Select(v => (int?)v.ItemVersionId)
+                        .FirstOrDefault(),
+                })
+                .ToListAsync(cancellationToken);
+            versionByItem = drawnItems.ToDictionary(d => d.ItemId, d => d.VersionId!.Value);
+        }
 
         await AbandonInProgressAsync(userId, certId, cancellationToken);
 
@@ -183,16 +190,15 @@ public sealed partial class PracticeService
 
         for (var i = 0; i < selectedIds.Count; i++)
         {
-            var isPoolItem = versionByItem.TryGetValue(selectedIds[i], out var versionId);
             db.PracticeAnswers.Add(new PracticeAnswer
             {
                 SessionId = session.SessionId,
                 // #263: a pool item names itself and the version it pinned; a legacy question names
                 // itself and the section. CK_PracticeAnswers_Shape forbids the third mixture.
-                QuestionId = isPoolItem ? null : selectedIds[i],
-                SectionId = isPoolItem ? null : section.SectionId,
-                ItemId = isPoolItem ? selectedIds[i] : null,
-                ItemVersionId = isPoolItem ? versionId : null,
+                QuestionId = isPool ? null : selectedIds[i],
+                SectionId = isPool ? null : section.SectionId,
+                ItemId = isPool ? selectedIds[i] : null,
+                ItemVersionId = isPool ? versionByItem[selectedIds[i]] : null,
                 SelectedLabel = null,
                 SelectedOptionId = null,
                 IsCorrect = null,
@@ -252,7 +258,7 @@ public sealed partial class PracticeService
     /// learner-picked source. The mix itself is <see cref="SmartPracticePlanner"/>, a pure function; this
     /// only loads what it needs.
     /// </summary>
-    private async Task<IReadOnlyList<int>> PlanSmartPracticeAsync(
+    private async Task<(IReadOnlyList<int> Ids, bool IsPool)> PlanSmartPracticeAsync(
         int userId, int certId, int sectionId, CancellationToken cancellationToken)
     {
         var now = _clock.GetUtcNow();
@@ -260,7 +266,13 @@ public sealed partial class PracticeService
         // #263: a section's candidates come from the items its paper binds into it. The cooldown is
         // derived from this learner's own answers to those items, because #237 made the CELL the unit of
         // mastery and the selector already refuses the per-question history table as a source.
-        var candidates = await LoadSectionCandidatesAsync(userId, certId, sectionId, cancellationToken);
+        var poolCandidates = await LoadSectionCandidatesAsync(userId, certId, sectionId, cancellationToken);
+        var isPool = poolCandidates.Count > 0;
+        var candidates = isPool
+            ? poolCandidates
+            // shortgap: a section the pool has not stocked still drills its legacy questions. #269
+            // deletes this branch; a stocked section never reaches it.
+            : await LoadLegacySectionCandidatesAsync(userId, certId, sectionId, cancellationToken);
 
         var plan = candidates
             .Select(c => new PracticeCandidate(
@@ -271,7 +283,7 @@ public sealed partial class PracticeService
             .ToList();
 
         var mastery = await LoadMasteryAsync(userId, cancellationToken);
-        return SmartPracticePlanner.Plan(plan, mastery, now);
+        return (SmartPracticePlanner.Plan(plan, mastery, now), isPool);
     }
 
     public async Task<PracticeSessionInfo> GetSessionInfoAsync(int userId, int sessionId, CancellationToken cancellationToken = default)

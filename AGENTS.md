@@ -224,6 +224,29 @@ lives in `docs/MANUAL-TEST-CREDENTIALS.md`. Use `scripts/seed-manual-test.sh` ra
 `dotnet run`: `appsettings.json` selects the **real** payOS gateway with placeholder credentials,
 so an unparameterised run returns 500 on checkout.
 
+### Test run discipline — filtered during work, full suite twice at the end
+
+`tests/Services.Tests` creates a **fresh database from `database-schema.sql` per test**, so the suite
+takes ~20 minutes. Running it between edits wastes the session and teaches nothing a filtered run
+would not.
+
+- **During work:** run only the tests the change touches, by namespace or class. A filtered run is
+  10–90 s and is the evidence a ticket needs.
+  ```sh
+  dotnet test tests/Services.Tests --filter "FullyQualifiedName~PoolDrillCatalogTests" --nologo
+  dotnet test tests/Services.Tests --filter "FullyQualifiedName~PracticeServiceTests|FullyQualifiedName~PoolDrillCatalogTests" --nologo
+  ```
+- **When a change fans out** (a shared loader, a schema rule, a service three areas call), run the
+  *set of affected areas* once — not the whole suite. That set is the ticket's "prior art" list.
+- **At the end of a body of work:** the whole suite **twice**, plus the schema harness and the
+  browser journeys on a fresh crawl env. Twice, because a single green run cannot tell a fix from a
+  flake.
+- **Before believing any count**, if a run reports a total that does not match the previous one:
+  kill `testhost`, `dotnet build-server shutdown`, rebuild. A rebuild that reports
+  1773/1522/1917/937 total depending on concurrent runs is a stale process, not a real suite.
+- **Build errors with no `error CS`** are file locks (MSB3027/MSB3021) held by a running crawl
+  server: `scripts/crawl-env.sh stop`, then rebuild.
+
 ---
 
 ## 7. Fixing a crawl-finding issue
