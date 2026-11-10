@@ -178,17 +178,20 @@ public sealed partial class AttemptEngine
 
         attempt.ActiveUnitNumber = targetUnitNumber;
 
-        var firstUnitQuestionId = await db.Questions
-            .Where(q => q.ExamId == attempt.ExamId && q.Section.SkillId == attempt.ActiveSkillId && q.Group.UnitNumber == targetUnitNumber)
-            .OrderBy(q => q.Section.DisplayOrder)
-            .ThenBy(q => q.Group.DisplayOrder)
-            .ThenBy(q => q.DisplayOrder)
-            .Select(q => (int?)q.QuestionId)
-            .FirstOrDefaultAsync(cancellationToken);
+        // #250: the paper's positions come from the seam, not from a Questions query. A pool-only
+        // paper had no row here, so the unit transition silently left LastQuestionId pointing at the
+        // previous unit's question.
+        //
+        // No re-sort: LoadSittingQuestionsAsync already returns sitting order (skill, section, then the
+        // binding's own position), so the first match is the unit's first question.
+        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var firstUnitQuestion = paperQuestions
+            .FirstOrDefault(q => q.Section.SkillId == attempt.ActiveSkillId
+                && q.Group.UnitNumber == targetUnitNumber);
 
-        if (firstUnitQuestionId.HasValue)
+        if (firstUnitQuestion is not null)
         {
-            attempt.LastQuestionId = firstUnitQuestionId.Value;
+            RecordLastPosition(attempt, firstUnitQuestion);
         }
 
         await db.SaveChangesAsync(cancellationToken);
