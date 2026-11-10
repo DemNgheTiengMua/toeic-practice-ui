@@ -146,6 +146,23 @@ public sealed partial class PracticeService
             throw new PracticeException(PracticeException.NoQuestionsAvailable, "No questions match the selected criteria for this section.");
         }
 
+        // #263: a section draws from its pool stock when it has any, and from its legacy questions
+        // otherwise. Which one a drawn id is, is decided by whether that id is a pool item - not by a
+        // second planning pass, so a candidate cannot be planned one way and written another.
+        var drawnItems = await db.Items
+            .AsNoTracking()
+            .Where(i => selectedIds.Contains(i.ItemId))
+            .Select(i => new
+            {
+                i.ItemId,
+                VersionId = i.ItemVersions
+                    .OrderByDescending(v => v.VersionNumber)
+                    .Select(v => (int?)v.ItemVersionId)
+                    .FirstOrDefault(),
+            })
+            .ToListAsync(cancellationToken);
+        var versionByItem = drawnItems.ToDictionary(d => d.ItemId, d => d.VersionId!.Value);
+
         await AbandonInProgressAsync(userId, certId, cancellationToken);
 
         var session = new PracticeSession
@@ -166,11 +183,17 @@ public sealed partial class PracticeService
 
         for (var i = 0; i < selectedIds.Count; i++)
         {
+            var isPoolItem = versionByItem.TryGetValue(selectedIds[i], out var versionId);
             db.PracticeAnswers.Add(new PracticeAnswer
             {
                 SessionId = session.SessionId,
-                QuestionId = selectedIds[i],
-                SectionId = section.SectionId,
+                // #263: a pool item names itself and the version it pinned; a legacy question names
+                // itself and the section. CK_PracticeAnswers_Shape forbids the third mixture.
+                QuestionId = isPoolItem ? null : selectedIds[i],
+                SectionId = isPoolItem ? null : section.SectionId,
+                ItemId = isPoolItem ? selectedIds[i] : null,
+                ItemVersionId = isPoolItem ? versionId : null,
+                SelectedLabel = null,
                 SelectedOptionId = null,
                 IsCorrect = null,
                 HintUsed = false,
@@ -234,28 +257,17 @@ public sealed partial class PracticeService
     {
         var now = _clock.GetUtcNow();
 
-        var candidates = await DrillableQuestions(certId)
-            .Where(q => q.SectionId == sectionId)
-            .Select(q => new
-            {
-                q.QuestionId,
-                q.CategoryId,
-                History = db.UserQuestionHistories
-                    .Where(h => h.UserId == userId && h.QuestionId == q.QuestionId)
-                    .Select(h => new { h.LastAnsweredAt, h.CooldownUntil })
-                    .FirstOrDefault(),
-            })
-            .ToListAsync(cancellationToken);
+        // #263: a section's candidates come from the items its paper binds into it. The cooldown is
+        // derived from this learner's own answers to those items, because #237 made the CELL the unit of
+        // mastery and the selector already refuses the per-question history table as a source.
+        var candidates = await LoadSectionCandidatesAsync(userId, certId, sectionId, cancellationToken);
 
-        // Projected as an anonymous type first and narrowed here: a nullable DateTimeOffset selected
-        // through FirstOrDefault comes back as default(DateTimeOffset) in SQL, not null, which would
-        // read every unseen question as "answered in year 1".
         var plan = candidates
             .Select(c => new PracticeCandidate(
                 c.QuestionId,
                 c.CategoryId,
-                c.History?.LastAnsweredAt,
-                c.History?.CooldownUntil))
+                c.LastAnsweredAt,
+                c.CooldownUntil))
             .ToList();
 
         var mastery = await LoadMasteryAsync(userId, cancellationToken);

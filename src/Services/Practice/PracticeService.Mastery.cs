@@ -44,13 +44,22 @@ public sealed partial class PracticeService
             return;
         }
 
-        var now = _clock.GetUtcNow();
-        await RecordQuestionHistoryAsync(userId, question.QuestionId, correct, now, cancellationToken);
-
-        // A question with no category still earns its own cooldown; it just has no mastery row to move.
-        if (question.CategoryId is { } categoryId)
+        // #263: a POOL answer writes no per-question history - the cooldown for a pool item is derived
+        // from the answer rows themselves, because #237 made the CELL the unit of mastery and the
+        // selector already refuses this table as a source.
+        //
+        // shortgap: a legacy answer still writes it, because the legacy candidate loader (kept for a
+        // section the pool has not stocked) still reads it. #269 deletes the table, the loader and this
+        // line together; writing it for a pool answer is the part that had to stop now.
+        if (question is not null)
         {
-            await ApplyMasteryAsync(userId, categoryId, certId, correct, now, cancellationToken);
+            var now = _clock.GetUtcNow();
+            await RecordQuestionHistoryAsync(userId, question.QuestionId, correct, now, cancellationToken);
+
+            if (question.CategoryId is { } categoryId)
+            {
+                await ApplyMasteryAsync(userId, categoryId, certId, correct, now, cancellationToken);
+            }
         }
     }
 
