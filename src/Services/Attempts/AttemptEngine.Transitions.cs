@@ -70,12 +70,15 @@ public sealed partial class AttemptEngine
     {
         var attempt = await LoadSittingAttemptAsync(db.ExamAttempts.Include(a => a.Exam), attemptId, userId, cancellationToken);
 
-        var examSkills = await db.Questions
-            .Where(q => q.ExamId == attempt.ExamId)
+        // #250: the paper's skills and their order come from the seam. For a pool-only paper the old
+        // query returned an empty list, so the transition immediately submitted the attempt instead of
+        // moving to the next skill.
+        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var examSkills = paperQuestions
             .Select(q => q.Section.Skill)
-            .Distinct()
+            .DistinctBy(s => s.SkillId)
             .OrderBy(s => s.DisplayOrder)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         int currentIndex = -1;
         if (attempt.ActiveSkillId.HasValue)
@@ -291,10 +294,11 @@ public sealed partial class AttemptEngine
                 EnumCodes.Parse<AttemptStatus>(attempt.Status));
         }
 
-        var section = await db.Questions
-            .Where(q => q.ExamId == attempt.ExamId && (attempt.ActiveSkillId == null || q.Section.SkillId == attempt.ActiveSkillId.Value))
-            .Select(q => q.Section)
-            .FirstOrDefaultAsync(cancellationToken);
+        // #250: the section's timer policy is a property of the paper, so it comes from the seam.
+        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var section = paperQuestions
+            .FirstOrDefault(q => attempt.ActiveSkillId == null || q.Section.SkillId == attempt.ActiveSkillId.Value)
+            ?.Section;
 
         int checkTimeSec = 120;
         if (section?.TimerPolicyJson != null)
