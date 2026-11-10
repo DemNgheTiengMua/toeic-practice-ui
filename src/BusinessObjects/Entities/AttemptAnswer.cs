@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 namespace BusinessObjects.Entities;
 
 [Index("QuestionId", Name = "IX_AttemptAnswers_Question")]
-[Index("AttemptId", "QuestionId", Name = "UQ_AttemptAnswers", IsUnique = true)]
 public partial class AttemptAnswer
 {
     [Key]
@@ -15,7 +14,15 @@ public partial class AttemptAnswer
 
     public int AttemptId { get; set; }
 
-    public int QuestionId { get; set; }
+    /// <summary>
+    /// #250: the legacy question this answer was given against, or NULL for a pool answer.
+    ///
+    /// It was <c>int</c> (NOT NULL) until #250, which forced every pool answer to invent a question id -
+    /// and that is why the sitting path could never reach zero reads of <c>Questions</c>. The database's
+    /// <c>CK_AttemptAnswers_HasShape</c> requires at least one of this and <see cref="ItemVersionId"/>:
+    /// a row naming neither cannot be rendered, scored or reviewed.
+    /// </summary>
+    public int? QuestionId { get; set; }
 
     public int ExamId { get; set; }
 

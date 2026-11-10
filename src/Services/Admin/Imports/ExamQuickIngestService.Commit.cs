@@ -155,7 +155,9 @@ public sealed partial class ExamQuickIngestService
 
             var existingQuestionIds = existingGroups.SelectMany(g => g.QuestionGroups.Select(q => q.QuestionId)).ToList();
 
-            var hasAnswers = await db.AttemptAnswers.AnyAsync(a => existingQuestionIds.Contains(a.QuestionId), cancellationToken)
+            // #250: a pool answer carries a NULL QuestionId and can never match a legacy question id.
+            var hasAnswers = await db.AttemptAnswers.AnyAsync(
+                    a => a.QuestionId != null && existingQuestionIds.Contains(a.QuestionId.Value), cancellationToken)
                 || await db.FreeResponses.AnyAsync(r => existingQuestionIds.Contains(r.QuestionId), cancellationToken);
 
             if (hasAnswers)

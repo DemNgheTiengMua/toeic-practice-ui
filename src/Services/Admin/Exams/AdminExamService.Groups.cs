@@ -170,7 +170,10 @@ public sealed partial class AdminExamService
         await RequireStructureEditableAsync(examId, cancellationToken);
 
         var qIds = await db.Questions.Where(q => q.GroupId == groupId).Select(q => q.QuestionId).ToListAsync(cancellationToken);
-        var hasAnswers = await db.AttemptAnswers.AnyAsync(a => qIds.Contains(a.QuestionId), cancellationToken)
+        // #250: QuestionId is nullable, so the predicate is stated on a nullable column. A pool answer
+        // carries NULL here and can never match a real question id, which is the correct answer.
+        var hasAnswers = await db.AttemptAnswers.AnyAsync(
+                a => a.QuestionId != null && qIds.Contains(a.QuestionId.Value), cancellationToken)
             || await db.FreeResponses.AnyAsync(r => qIds.Contains(r.QuestionId), cancellationToken);
 
         if (hasAnswers)

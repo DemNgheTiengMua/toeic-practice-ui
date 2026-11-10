@@ -235,7 +235,11 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var answers = await db.AttemptAnswers.Where(a => a.AttemptId == attempt.AttemptId).ToListAsync();
         var drafts = await db.FreeResponses.Where(r => r.AttemptId == attempt.AttemptId).ToListAsync();
 
-        Assert.Equal(new[] { q1Id, q2Id }.OrderBy(id => id), answers.Select(a => a.QuestionId).OrderBy(id => id));
+        // #250: QuestionId is nullable now, so the projection is int?. This fixture's answers are all
+        // legacy rows, so the value is present - `!.Value` states that rather than hiding a null.
+        Assert.Equal(
+            new[] { q1Id, q2Id }.OrderBy(id => id),
+            answers.Select(a => a.QuestionId!.Value).OrderBy(id => id));
         var draft = Assert.Single(drafts);
         Assert.Equal(freeResponseQuestionId, draft.QuestionId);
         Assert.Equal(FreeResponseStatus.Draft.ToCode(), draft.Status);

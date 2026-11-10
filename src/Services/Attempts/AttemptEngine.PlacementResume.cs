@@ -237,8 +237,13 @@ public sealed partial class AttemptEngine
             .Select(r => r.QuestionId)
             .ToListAsync(cancellationToken);
         var answered = await db.AttemptAnswers
-            .Where(a => a.AttemptId == attempt.AttemptId && a.SelectedOptionId != null)
-            .Select(a => a.QuestionId)
+            .Where(a => a.AttemptId == attempt.AttemptId
+                && a.SelectedOptionId != null
+                && a.QuestionId != null)
+            // #250: QuestionId is nullable now, so the projection yields int? and a pool answer would
+            // contribute a NULL here. This branch is about LEGACY questions, so the nulls are dropped
+            // rather than carried into a set of question ids.
+            .Select(a => a.QuestionId!.Value)
             .ToListAsync(cancellationToken);
 
         var seen = drafted.Union(answered).ToHashSet();

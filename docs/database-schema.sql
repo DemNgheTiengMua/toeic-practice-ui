@@ -1987,7 +1987,12 @@ GO
 CREATE TABLE AttemptAnswers (
   AnswerId         INT IDENTITY(1,1) PRIMARY KEY,
   AttemptId        INT NOT NULL REFERENCES ExamAttempts(AttemptId),
-  QuestionId       INT NOT NULL REFERENCES Questions(QuestionId),
+  -- #250: NULLABLE, because a pool answer names no legacy question. Before this the column was NOT
+  -- NULL, so a pool answer had to invent one - which is why ExamAnswers could never reach zero reads of
+  -- db.Questions, and why #250 could not delete that table. A pool answer is identified by
+  -- (ItemId, ItemVersionId) below; a legacy answer by QuestionId here; and CK_AttemptAnswers_OneShape
+  -- at the bottom refuses a row that names neither or both.
+  QuestionId       INT NULL REFERENCES Questions(QuestionId),
   -- H-5: carried down from the attempt so the question must belong to the attempt's own exam
   ExamId           INT NOT NULL,
   -- #186: which version of which item the learner answered. Copy-on-write (CNT-43) means this pair,
@@ -2011,7 +2016,18 @@ CREATE TABLE AttemptAnswers (
   IsFlagged        BIT NOT NULL CONSTRAINT DF_AttemptAnswers_IsFlagged DEFAULT 0,
   -- #167: no AnsweredAt here. Sitting timing is not measured for regular attempts and nothing
   -- reads it; only PracticeAnswers.AnsweredAt feeds the calibration rushed-answer filter.
-  CONSTRAINT UQ_AttemptAnswers UNIQUE (AttemptId, QuestionId),
+  -- #250: uniqueness moved from one constraint to a FILTERED index.
+  --
+  -- `UNIQUE (AttemptId, QuestionId)` was correct while QuestionId was NOT NULL. With it nullable, SQL
+  -- Server treats every NULL as equal for uniqueness - so an attempt could hold exactly ONE pool answer
+  -- and every later one would be refused, collapsing a whole paper onto one row. The filter states the
+  -- rule only for the rows it applies to: one answer per legacy question.
+  --
+  -- There is deliberately NO sibling index on ItemVersionId. A paper may bind the same version at two
+  -- positions ("the same item on two papers, or twice on one paper, gets two positions" - ExamItems),
+  -- so (AttemptId, ItemVersionId) is legitimately non-unique. What makes a pool answer unique is the
+  -- roster position it is recorded against, not the version it pins.
+  INDEX UX_AttemptAnswers_Question UNIQUE (AttemptId, QuestionId) WHERE QuestionId IS NOT NULL,
   -- H-5: ExamId must be the attempt's own
   CONSTRAINT FK_AttemptAnswers_AttemptExam FOREIGN KEY (AttemptId, ExamId) REFERENCES ExamAttempts(AttemptId, ExamId),
   -- H-5: the question must belong to that same exam
@@ -2027,6 +2043,18 @@ CREATE TABLE AttemptAnswers (
   CONSTRAINT CK_AttemptAnswers_ItemPair CHECK (
        (ItemId IS NULL AND ItemVersionId IS NULL)
     OR (ItemId IS NOT NULL AND ItemVersionId IS NOT NULL)
+  ),
+  -- #250: AT LEAST ONE shape. A row names a legacy question, or pins a pool item version, or - during
+  -- the transition - both, because every pool answer written before this ticket kept a QuestionId (the
+  -- column was NOT NULL, so it had to). Forbidding "both" would refuse rows that already exist and every
+  -- fixture that models the pool arriving beside the paper.
+  --
+  -- A row that names NEITHER is refused: nothing identifies what was asked, so it cannot be rendered,
+  -- scored or reviewed. That is the only state this check exists to exclude, and it is the one the two
+  -- accuracy views could not have been trusted to assume.
+  CONSTRAINT CK_AttemptAnswers_HasShape CHECK (
+       QuestionId IS NOT NULL
+    OR ItemVersionId IS NOT NULL
   )
 );
 GO

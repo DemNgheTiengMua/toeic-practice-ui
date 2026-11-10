@@ -53,9 +53,10 @@ public sealed partial class AdminExamService
             .ToListAsync(cancellationToken);
 
         var allQuestionIds = groups.SelectMany(g => g.QuestionGroups.Select(q => q.QuestionId)).ToList();
+        // #250: a pool answer has a NULL QuestionId and belongs to no legacy question.
         var answeredQuestionIds = new HashSet<int>(await db.AttemptAnswers.AsNoTracking()
-            .Where(a => allQuestionIds.Contains(a.QuestionId))
-            .Select(a => a.QuestionId)
+            .Where(a => a.QuestionId != null && allQuestionIds.Contains(a.QuestionId.Value))
+            .Select(a => a.QuestionId!.Value)
             .Concat(db.FreeResponses.AsNoTracking().Where(r => allQuestionIds.Contains(r.QuestionId)).Select(r => r.QuestionId))
             .ToListAsync(cancellationToken));
 

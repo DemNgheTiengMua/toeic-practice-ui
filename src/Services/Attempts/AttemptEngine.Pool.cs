@@ -255,9 +255,17 @@ public sealed partial class AttemptEngine
             return IsKeyLabel(version, answer.SelectedLabel);
         }
 
+        // #250: a legacy answer is identified by its question and a pool answer by its pinned version;
+        // CK_AttemptAnswers_OneShape guarantees exactly one. This branch is the legacy one, so the
+        // question is present - the `is not int` guard states that rather than silencing the compiler.
+        if (answer.QuestionId is not int questionId || answer.Question is null)
+        {
+            return false;
+        }
+
         return EvaluateObjectiveAnswer(
             answer.Question,
-            optionsByQuestion[answer.QuestionId],
+            optionsByQuestion[questionId],
             answer.SelectedOptionId,
             answer.SelectedOptionIdsJson,
             answer.ResponseText);
