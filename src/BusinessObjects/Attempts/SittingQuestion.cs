@@ -28,6 +28,12 @@ namespace BusinessObjects;
 public sealed record SittingQuestion(
     int Id,
     int ExamId,
+    /// <summary>The roster row this position is, or NULL for a legacy paper. Together with
+    /// <see cref="ItemVersionId"/> it is what an answer row records.</summary>
+    int? ExamItemId,
+    /// <summary>The pinned version, or NULL for a legacy paper.</summary>
+    int? ItemVersionId,
+    int ItemId,
     int SectionId,
     string SectionCode,
     string SectionName,
