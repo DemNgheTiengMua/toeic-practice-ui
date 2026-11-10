@@ -232,12 +232,18 @@ public sealed partial class AttemptEngine
 
         attempt.ActiveGroupId = targetGroupId;
 
+        // #250: the group's window and its first position come from the paper, not from a Questions
+        // query. A pool-only paper has no row here, so the sub-timer fell to the 600s default and the
+        // first position was never recorded.
+        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var groupQuestions = paperQuestions.Where(q => q.GroupId == targetGroupId).ToList();
+
         // #214 / PLC-12: a placement has no clock, so entering a locked group starts no sub-timer.
         // A mock keeps its per-group window exactly as before.
         if (await RunsAClockAsync(attempt, cancellationToken))
         {
             int subTimerSeconds = targetGroup.ResponseSeconds
-                ?? await db.Questions.Where(q => q.GroupId == targetGroupId && q.ResponseSeconds.HasValue).Select(q => q.ResponseSeconds!.Value).FirstOrDefaultAsync(cancellationToken);
+                ?? groupQuestions.Where(q => q.ResponseSeconds.HasValue).Select(q => q.ResponseSeconds!.Value).FirstOrDefault();
             if (subTimerSeconds <= 0)
             {
                 subTimerSeconds = 600;
@@ -246,15 +252,11 @@ public sealed partial class AttemptEngine
             attempt.PhaseDeadlineAt = DateTimeOffset.UtcNow.UtcDateTime.AddSeconds(subTimerSeconds);
         }
 
-        var firstGroupQuestionId = await db.Questions
-            .Where(q => q.GroupId == targetGroupId)
-            .OrderBy(q => q.DisplayOrder)
-            .Select(q => (int?)q.QuestionId)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (firstGroupQuestionId.HasValue)
+        // The group's first position in sitting order - the loader already sorted the paper.
+        var firstGroupQuestion = groupQuestions.FirstOrDefault();
+        if (firstGroupQuestion is not null)
         {
-            attempt.LastQuestionId = firstGroupQuestionId.Value;
+            RecordLastPosition(attempt, firstGroupQuestion);
         }
 
         await db.SaveChangesAsync(cancellationToken);
