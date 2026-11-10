@@ -210,10 +210,15 @@ public sealed partial class AttemptEngine
     }
 
     /// <summary>
-    /// PLC-15's "unseen sibling from the same cell". Where the pool has not assembled the paper, the
-    /// cell is the paper's own (skill, level) pair and "unseen" means no answer or non-empty draft
-    /// recorded for it in this attempt. Null when the paper carries no such sibling - the rule then
-    /// finalises rather than inventing a task.
+    /// PLC-15's "unseen sibling from the same cell". The id of a same-skill, same-level sibling task
+    /// with no answer yet.
+    /// <para>
+    /// <b>This is a legacy-paper rule, by design.</b> It matches on <c>Questions.CefrLevel</c>, so a
+    /// pool-authored paper has no row here and the method returns null - which is the correct answer,
+    /// not a failure: the caller's contract is "null means the paper carries no such sibling, so
+    /// finalise rather than inventing a task". Adding a level lookup for the pool would mean a second
+    /// way to pick a sibling, and #250's whole point is that a paper has one roster.
+    /// </para>
     /// </summary>
     private async Task<int?> FindUnseenSiblingQuestionAsync(
         ExamAttempt attempt,
