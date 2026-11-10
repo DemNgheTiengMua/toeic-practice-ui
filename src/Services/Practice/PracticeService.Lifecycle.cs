@@ -270,7 +270,7 @@ public sealed partial class PracticeService
         var isPool = poolCandidates.Count > 0;
         var candidates = isPool
             ? poolCandidates
-            // shortgap: a section the pool has not stocked still drills its legacy questions. #269
+            // shortcut: a section the pool has not stocked still drills its legacy questions. #269
             // deletes this branch; a stocked section never reaches it.
             : await LoadLegacySectionCandidatesAsync(userId, certId, sectionId, cancellationToken);
 

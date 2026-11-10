@@ -1,4 +1,4 @@
-﻿-- docs/database-schema.sql
+-- docs/database-schema.sql
 -- Multi-certificate mock-exam companion schema.
 -- Spec: docs/superpowers/specs/2026-09-24-multi-cert-companion-design.md
 SET QUOTED_IDENTIFIER ON;
@@ -4331,6 +4331,12 @@ CREATE VIEW vw_UserSectionAccuracyAll AS
     FROM PracticeAnswers pa JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
     WHERE pa.SectionId IS NOT NULL
     UNION ALL
+    -- shortcut: the legacy attempt-answer branch. It stays until #269 drops Questions, because
+    -- PoolAndLegacyAccuracyAgreeTests proves the two shapes agree by holding BOTH in one database and
+    -- asserting equal figures - removing this branch now would make that proof vacuous rather than
+    -- make the product more correct. A pool answer never reaches it (ItemVersionId IS NOT NULL), so it
+    -- cannot double count; #269 deletes the branch with the table.
+    --
     -- legacy attempt answer: the question row carries the section. Excludes a row that also pins a
     -- version, because such a row is a POOL answer and is counted by the branch below - counting it
     -- here too is exactly the double count that doubled every total when this view was first

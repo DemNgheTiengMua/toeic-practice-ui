@@ -22,7 +22,7 @@ public sealed partial class PracticeService
     /// section's cell is read from the bindings, and a section with no binding has no stock.
     /// </para>
     /// <para>
-    /// shortgap: a section with NO pool bindings falls back to the legacy question count, because a
+    /// shortcut: a section with NO pool bindings falls back to the legacy question count, because a
     /// certificate authored before the pool still has to drill. #269 drops that table and this branch with
     /// it; a section that HAS pool stock never consults the legacy count, so the two can never disagree
     /// about the same section.
@@ -43,7 +43,7 @@ public sealed partial class PracticeService
             .GroupBy(sectionId => sectionId)
             .ToDictionary(g => g.Key, g => g.Count());
 
-        // shortgap: the legacy branch #269 deletes.
+        // shortcut: the legacy branch #269 deletes.
         var legacy = await DrillableLegacyQuestions(certId)
             .GroupBy(q => q.SectionId)
             .Select(g => new { SectionId = g.Key, Count = g.Count() })
@@ -58,7 +58,7 @@ public sealed partial class PracticeService
     }
 
     /// <summary>
-    /// shortgap: the legacy drillability rule, kept only for a section the pool has not stocked. The
+    /// shortcut: the legacy drillability rule, kept only for a section the pool has not stocked. The
     /// speaking exclusion and the "answerable without a grader" rule are the same two facts the pool
     /// branch expresses; #269 deletes this method with the tables it reads.
     /// </summary>
@@ -138,7 +138,7 @@ public sealed partial class PracticeService
     }
 
     /// <summary>
-    /// shortgap: the legacy half of <see cref="LoadSectionCandidatesAsync"/>, for a section the pool has
+    /// shortcut: the legacy half of <see cref="LoadSectionCandidatesAsync"/>, for a section the pool has
     /// not stocked. It reads the per-question history table this ticket stops WRITING but does not yet
     /// delete; #269 removes both branches together. The planner is given the legacy question id in the
     /// item slot, which is what the session builder then writes back as a legacy answer.
@@ -225,7 +225,7 @@ public sealed partial class PracticeService
                     return (Total: g.Count(), Resting: due.Count, Next: due.Count > 0 ? (DateTimeOffset?)due.Min() : null);
                 });
 
-        // shortgap: a section the pool has not stocked reports its rest from the legacy category axis,
+        // shortcut: a section the pool has not stocked reports its rest from the legacy category axis,
         // which is what the drill itself still draws for such a section. #269 deletes both this branch
         // and the legacy loader behind it. A stocked section never reaches it.
         var legacySectionCategories = await db.Questions

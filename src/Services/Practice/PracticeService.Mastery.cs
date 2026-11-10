@@ -48,7 +48,7 @@ public sealed partial class PracticeService
         // from the answer rows themselves, because #237 made the CELL the unit of mastery and the
         // selector already refuses this table as a source.
         //
-        // shortgap: a legacy answer still writes it, because the legacy candidate loader (kept for a
+        // shortcut: a legacy answer still writes it, because the legacy candidate loader (kept for a
         // section the pool has not stocked) still reads it. #269 deletes the table, the loader and this
         // line together; writing it for a pool answer is the part that had to stop now.
         if (question is not null)
