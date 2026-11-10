@@ -104,22 +104,15 @@ public sealed partial class AttemptEngine
         attempt.ActiveSkillId = nextSkill.SkillId;
         attempt.ActiveUnitNumber = 1;
 
-        var firstSectionAndGroup = await db.Questions
-            .Where(q => q.ExamId == attempt.ExamId && q.Section.SkillId == nextSkill.SkillId)
-            .OrderBy(q => q.Section.DisplayOrder)
-            .ThenBy(q => q.Group.DisplayOrder)
-            .ThenBy(q => q.DisplayOrder)
-            .Select(q => new
-            {
-                q.Section,
-                q.Group,
-                q.QuestionId
-            })
-            .FirstOrDefaultAsync(cancellationToken);
+        // #250: the first position of the next skill comes from the paper the loader already returned,
+        // so this does not re-query. A pool-only paper would have found nothing here and left
+        // ActiveGroupId null on a HYBRID_GROUP_LOCKED paper, unlocking a group that should be locked.
+        var firstSectionAndGroup = paperQuestions
+            .FirstOrDefault(q => q.Section.SkillId == nextSkill.SkillId);
 
         if (firstSectionAndGroup != null && string.Equals(firstSectionAndGroup.Section.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase))
         {
-            attempt.ActiveGroupId = firstSectionAndGroup.Group.GroupId;
+            attempt.ActiveGroupId = firstSectionAndGroup.GroupId;
         }
         else
         {
@@ -148,7 +141,7 @@ public sealed partial class AttemptEngine
 
         if (firstSectionAndGroup != null)
         {
-            attempt.LastQuestionId = firstSectionAndGroup.QuestionId;
+            RecordLastPosition(attempt, firstSectionAndGroup);
         }
 
         await db.SaveChangesAsync(cancellationToken);
