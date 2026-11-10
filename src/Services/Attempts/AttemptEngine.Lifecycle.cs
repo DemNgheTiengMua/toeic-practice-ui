@@ -144,22 +144,16 @@ public sealed partial class AttemptEngine
                     }
                     else
                     {
-                        // A free response is still keyed by its legacy question: FreeResponses.QuestionId
-                        // is NOT NULL and its composite foreign keys pin the question's own exam, type
-                        // and skill. A pool-only productive paper therefore cannot create this row yet,
-                        // and the refusal says so by name rather than leaving a draft silently missing.
-                        if (q.LegacyQuestion is null)
-                        {
-                            throw new AttemptEngineException(
-                                AttemptEngineException.PaperNotAssembled,
-                                "This paper's productive task has no legacy question row, and FreeResponses still requires one. "
-                                + "A pool-only productive paper cannot be sat until those tables are repointed (#250 criterion 5).");
-                        }
-
+                        // #250 / #261: a productive task on a pool paper names its roster position, so
+                        // the row is written with ExamItemId and no QuestionId. CK_FreeResp_HasShape
+                        // requires at least one identity and the two filtered unique indexes keep one
+                        // response per position, so this is the same shape the legacy write produced -
+                        // addressed by the paper's own position instead of a question row.
                         db.FreeResponses.Add(new FreeResponse
                         {
                             AttemptId = attempt.AttemptId,
-                            QuestionId = q.Id,
+                            QuestionId = q.LegacyQuestion is null ? null : q.Id,
+                            ExamItemId = q.ExamItemId,
                             ExamId = examId,
                             SkillId = q.Section.SkillId,
                             QuestionType = QuestionType.FreeResponse.ToCode(),
@@ -374,7 +368,15 @@ public sealed partial class AttemptEngine
 
         var freeResponses = await db.FreeResponses
             .Where(fr => fr.AttemptId == attempt.AttemptId)
-            .ToDictionaryAsync(fr => fr.QuestionId, cancellationToken);
+            .ToListAsync(cancellationToken);
+        // #261: keyed twice, because a response names its position by whichever identity its paper
+        // uses - keying by the nullable legacy column throws on the second pool row.
+        var freeResponseByQuestionId = freeResponses
+            .Where(fr => fr.QuestionId.HasValue)
+            .ToDictionary(fr => fr.QuestionId!.Value);
+        var freeResponseByExamItemId = freeResponses
+            .Where(fr => fr.ExamItemId.HasValue)
+            .ToDictionary(fr => fr.ExamItemId!.Value);
 
         // The paper's positions in order, from the seam - a pool-only paper has no Questions rows to
         // enumerate, and the old query returned an empty sheet for it.
@@ -385,7 +387,9 @@ public sealed partial class AttemptEngine
             var ans = q.ExamItemId is int examItemId
                 ? answerByExamItemId.GetValueOrDefault(examItemId)
                 : answerByQuestionId.GetValueOrDefault(q.Id);
-            freeResponses.TryGetValue(q.Id, out var fr);
+            var fr = q.ExamItemId is int itemId
+                ? freeResponseByExamItemId.GetValueOrDefault(itemId)
+                : freeResponseByQuestionId.GetValueOrDefault(q.Id);
             return new AttemptAnswerSheetItem(
                 q.Id,
                 ProjectedOptionId(ans),

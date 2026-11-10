@@ -293,14 +293,28 @@ public sealed partial class AttemptEngine
             ? answerByExamItemId.GetValueOrDefault(examItemId)
             : answerByQuestionId.GetValueOrDefault(q.Id);
 
+        // #261: a response names its position by whichever identity its paper uses, so this is keyed
+        // twice rather than by the nullable legacy column - keying a dictionary by a null column throws
+        // on the second pool row, and the sitting then fails for a paper it just created.
         var freeResponses = await db.FreeResponses
             .AsNoTracking()
             .Where(r => r.AttemptId == attempt.AttemptId)
-            .ToDictionaryAsync(r => r.QuestionId, cancellationToken);
+            .ToListAsync(cancellationToken);
+        var responseByQuestionId = freeResponses
+            .Where(r => r.QuestionId.HasValue)
+            .ToDictionary(r => r.QuestionId!.Value);
+        var responseByExamItemId = freeResponses
+            .Where(r => r.ExamItemId.HasValue)
+            .ToDictionary(r => r.ExamItemId!.Value);
+
+        FreeResponse? ResponseFor(SittingQuestion q) => q.ExamItemId is int examItemId
+            ? responseByExamItemId.GetValueOrDefault(examItemId)
+            : responseByQuestionId.GetValueOrDefault(q.Id);
 
         int answeredCount = questions.Count(q =>
             q.RenderFormat == QuestionType.FreeResponse.ToCode()
-                ? freeResponses.TryGetValue(q.Id, out var response) && (!string.IsNullOrWhiteSpace(response.ResponseText) || !string.IsNullOrWhiteSpace(response.AudioPath))
+                ? ResponseFor(q) is { } response
+                    && (!string.IsNullOrWhiteSpace(response.ResponseText) || !string.IsNullOrWhiteSpace(response.AudioPath))
                 : IsAnswered(AnswerFor(q)));
         int flaggedCount = answers.Count(a => a.IsFlagged);
 
@@ -361,7 +375,7 @@ public sealed partial class AttemptEngine
         {
             var q = questions[i];
             var ans = AnswerFor(q);
-            freeResponses.TryGetValue(q.Id, out var response);
+            var response = ResponseFor(q);
 
             // #250: the loader resolved the scored content - a pinned version's stem, options and key,
             // or the legacy question's - so the projection no longer branches on which it got.
@@ -429,7 +443,7 @@ public sealed partial class AttemptEngine
         var navigator = questions.Select((q, idx) =>
         {
             var answer = AnswerFor(q);
-            freeResponses.TryGetValue(q.Id, out var response);
+            var response = ResponseFor(q);
             var isLocked = !unlockNavigation && (isPhaseExpired
                 || IsPhaseOrUnitOrGroupLocked(attempt, q)
                 || (string.Equals(q.Section.NavigationMode, "SYSTEM_PACED_AUTO", StringComparison.OrdinalIgnoreCase)

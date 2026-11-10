@@ -176,10 +176,16 @@ public sealed partial class AttemptEngine
 
         await ValidateQuestionSittingStateAsync(attempt, questionId, cancellationToken);
 
+        // #261: the row is addressed by the position the request names, which is a question id on a
+        // legacy paper and a roster id on a pool paper.
+        var position = await FindSittingQuestionAsync(attempt, questionId, cancellationToken);
+        var examItemId = position.ExamItemId;
         var freeResponse = await db.FreeResponses
             .SingleOrDefaultAsync(response =>
                 response.AttemptId == attemptId &&
-                response.QuestionId == questionId &&
+                (examItemId.HasValue
+                    ? response.ExamItemId == examItemId
+                    : response.QuestionId == questionId) &&
                 response.Status == FreeResponseStatus.Draft.ToCode(),
                 cancellationToken)
             ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Free-response question {questionId} not found in attempt.");
@@ -188,7 +194,7 @@ public sealed partial class AttemptEngine
         freeResponse.ResponseText = responseText ?? string.Empty;
         freeResponse.DraftSavedAt = savedAt;
         // #250: see SaveAnswerAsync - the column is an FK to Questions and only a legacy position fits.
-        RecordLastPosition(attempt, await FindSittingQuestionAsync(attempt, questionId, cancellationToken));
+        RecordLastPosition(attempt, position);
         // #216 / PLC-13: a draft is activity too; otherwise a learner who writes for an hour without
         // submitting loses the sitting at the 48-hour mark measured from their last click.
         await MarkPlacementActivityAsync(attempt, cancellationToken, savedAt);
@@ -215,24 +221,25 @@ public sealed partial class AttemptEngine
             throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Free-response questions do not accept multiple-choice options.");
         }
 
+        var position = await FindSittingQuestionAsync(attempt, questionId, cancellationToken);
+
+        var positionExamItemId = position.ExamItemId;
         var response = await db.FreeResponses
-            .Include(r => r.Question)
-            .SingleOrDefaultAsync(fr => fr.AttemptId == attemptId && fr.QuestionId == questionId, cancellationToken);
+            .SingleOrDefaultAsync(fr => fr.AttemptId == attemptId
+                && (positionExamItemId.HasValue
+                    ? fr.ExamItemId == positionExamItemId
+                    : fr.QuestionId == questionId), cancellationToken);
 
         if (response is null)
         {
-            if (answer is null)
-            {
-                throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found in attempt.");
-            }
-
             response = new FreeResponse
             {
                 AttemptId = attemptId,
-                QuestionId = questionId,
-                ExamId = answer.ExamId,
-                SkillId = answer.Question.SkillId,
-                QuestionType = answer.Question.QuestionType,
+                QuestionId = position.ExamItemId is null ? questionId : null,
+                ExamItemId = position.ExamItemId,
+                ExamId = attempt.ExamId,
+                SkillId = position.Section.SkillId,
+                QuestionType = QuestionType.FreeResponse.ToCode(),
                 Status = FreeResponseStatus.Draft.ToCode(),
                 SubmittedAt = null
             };
@@ -241,15 +248,16 @@ public sealed partial class AttemptEngine
 
         if (answer is null)
         {
-            // #186: a lazily created row pins the same version attempt creation would have pinned.
-            var bound = await FindBoundPositionAsync(attempt.ExamId, questionId, cancellationToken);
+            // #186 / #261: a lazily created answer names the same position attempt creation would
+            // have, so a pool paper records its roster row and a legacy paper its question.
             answer = new AttemptAnswer
             {
                 AttemptId = attemptId,
-                QuestionId = questionId,
+                QuestionId = position.ExamItemId is null ? questionId : null,
+                ExamItemId = position.ExamItemId,
                 ExamId = attempt.ExamId,
-                ItemId = bound?.ItemId,
-                ItemVersionId = bound?.ItemVersionId,
+                ItemId = position.ItemId == 0 ? null : position.ItemId,
+                ItemVersionId = position.ItemVersionId,
                 IsFlagged = isFlagged
             };
             db.AttemptAnswers.Add(answer);
