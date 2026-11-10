@@ -75,6 +75,13 @@ public sealed record SittingQuestion(
     SittingSection Section,
     SittingGroup Group,
     /// <summary>
+    /// #262: the words a read-aloud task wants spoken, or the description of the picture, and which of
+    /// the two it is. Producing practice reads these to build a pronunciation reference; the sitting
+    /// itself never renders them. Null on a legacy position, whose reference lives on the question row.
+    /// </summary>
+    string? ReferenceText = null,
+    string? ReferenceKind = null,
+    /// <summary>
     /// The legacy question row this position was read from, or NULL for a pool position. Only the
     /// legacy scoring path needs it; nothing else may branch on it.
     /// </summary>

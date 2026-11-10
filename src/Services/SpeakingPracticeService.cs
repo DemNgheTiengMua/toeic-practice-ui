@@ -22,6 +22,14 @@ public sealed class SpeakingPracticeService(
     public const int SpeakingPracticeCreditCost = 1;
     private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db);
 
+    /// <summary>
+    /// #262: the paper's productive positions, from the one loader the sitting engine uses. This
+    /// service enumerated an exam's tasks with a legacy query, which returns nothing for a paper
+    /// authored on the pool - so the screen said "no questions found" for a paper that can be sat.
+    /// </summary>
+    private async Task<List<SittingQuestion>> LoadPaperPositionsAsync(int examId, CancellationToken cancellationToken) =>
+        await new AttemptEngine(db, fileStore).LoadSittingQuestionsAsync(examId, cancellationToken);
+
     public async Task<SpeakingPracticeInstructionsView> GetInstructionsAsync(int userId, int examId, CancellationToken cancellationToken = default)
     {
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
@@ -145,20 +153,23 @@ public sealed class SpeakingPracticeService(
         db.ExamAttempts.Add(attempt);
         await db.SaveChangesAsync(cancellationToken);
 
-        // Pre-populate empty draft free responses for questions so they are linked
-        var questions = await db.Questions
-            .Where(q => q.ExamId == examId && q.QuestionType == QuestionType.FreeResponse.ToCode())
-            .OrderBy(q => q.DisplayOrder)
-            .ToListAsync(cancellationToken);
+        // Pre-populate empty draft free responses for the paper's productive tasks.
+        // #262: the paper is the source, not the legacy question table - a pool-authored paper has no
+        // question rows, and the old query wrote no drafts for it.
+        var paperPositions = await LoadPaperPositionsAsync(examId, cancellationToken);
+        var questions = paperPositions
+            .Where(p => p.RenderFormat == QuestionType.FreeResponse.ToCode())
+            .ToList();
 
         foreach (var q in questions)
         {
             var fr = new FreeResponse
             {
                 AttemptId = attempt.AttemptId,
-                QuestionId = q.QuestionId,
+                QuestionId = q.ExamItemId is null ? q.Id : null,
+                ExamItemId = q.ExamItemId,
                 ExamId = examId,
-                SkillId = q.SkillId,
+                SkillId = q.Section.SkillId,
                 QuestionType = QuestionType.FreeResponse.ToCode(),
                 ResponseText = string.Empty,
                 AudioPath = null,
@@ -203,13 +214,12 @@ public sealed class SpeakingPracticeService(
             throw new SpeakingPracticeException(SpeakingPracticeException.AttemptExpired, $"Attempt {attemptId} has expired.");
         }
 
-        var questions = await db.Questions
-            .AsNoTracking()
-            .Where(q => q.ExamId == attempt.ExamId && q.QuestionType == QuestionType.FreeResponse.ToCode())
-            .Include(q => q.Section)
-            .Include(q => q.Group)
-            .OrderBy(q => q.DisplayOrder)
-            .ToListAsync(cancellationToken);
+        // #262: the paper is the source. A pool-authored paper has no question rows, and the old query
+        // returned nothing for it, so the screen said "no questions found" for a paper that can be sat.
+        var paperPositions = await LoadPaperPositionsAsync(attempt.ExamId, cancellationToken);
+        var questions = paperPositions
+            .Where(p => p.RenderFormat == QuestionType.FreeResponse.ToCode())
+            .ToList();
 
         if (questions.Count == 0)
         {
@@ -221,45 +231,45 @@ public sealed class SpeakingPracticeService(
             .Where(fr => fr.AttemptId == attemptId)
             .ToListAsync(cancellationToken);
 
+        // #262: a response names its position by whichever identity its paper uses.
+        FreeResponse? ResponseFor(SittingQuestion q) => q.ExamItemId is int examItemId
+            ? freeResponses.FirstOrDefault(fr => fr.ExamItemId == examItemId)
+            : freeResponses.FirstOrDefault(fr => fr.QuestionId == q.Id);
+
         var targetQuestion = questionId.HasValue
-            ? questions.FirstOrDefault(q => q.QuestionId == questionId.Value) ?? questions[0]
-            : (attempt.LastQuestionId.HasValue
-                ? questions.FirstOrDefault(q => q.QuestionId == attempt.LastQuestionId.Value) ?? questions[0]
-                : questions[0]);
+            ? questions.FirstOrDefault(q => q.Id == questionId.Value) ?? questions[0]
+            : questions[0];
 
-        if (attempt.LastQuestionId != targetQuestion.QuestionId)
+        var navList = questions.Select((q, idx) =>
         {
-            attempt.LastQuestionId = targetQuestion.QuestionId;
-            await db.SaveChangesAsync(cancellationToken);
-        }
-
-        var navList = questions.Select(q =>
-        {
-            var fr = freeResponses.FirstOrDefault(r => r.QuestionId == q.QuestionId);
+            var fr = ResponseFor(q);
             var isAnswered = fr != null && (!string.IsNullOrEmpty(fr.AudioPath) || !string.IsNullOrEmpty(fr.ResponseText));
             return new SpeakingQuestionNav(
-                q.QuestionId,
-                q.DisplayOrder,
+                q.Id,
+                idx + 1,
                 q.Section.Code,
                 q.Section.Name,
                 isAnswered,
-                q.QuestionId == targetQuestion.QuestionId);
+                q.Id == targetQuestion.Id);
         }).ToList();
 
-        var currentFr = freeResponses.FirstOrDefault(r => r.QuestionId == targetQuestion.QuestionId);
+        var currentFr = ResponseFor(targetQuestion);
         var savedCount = freeResponses.Count(r => !string.IsNullOrEmpty(r.AudioPath));
 
         // #152: a Read Aloud question shows the words it wants read. There is no reference for a
         // free-speech or picture question, so those carry none and are graded without one.
+        // #262: the reference is carried by the position, so it resolves for a pool task too.
         var (referenceText, describesImage) = SpeakingTask.ResolveReference(
-            targetQuestion.SampleAnswerOrImageDesc, targetQuestion.ReferenceKind);
+            targetQuestion.ReferenceText, targetQuestion.ReferenceKind);
         var readAloudText = SpeakingTask.IsScripted(referenceText, describesImage)
             ? SpeakingTask.PronunciationReference(referenceText, describesImage)
             : null;
 
+        var targetIndex = questions.FindIndex(q => q.Id == targetQuestion.Id) + 1;
+
         var qView = new SpeakingQuestionView(
-            targetQuestion.QuestionId,
-            targetQuestion.DisplayOrder,
+            targetQuestion.Id,
+            targetIndex,
             targetQuestion.Stem,
             targetQuestion.PrepSeconds ?? 45,
             targetQuestion.ResponseSeconds ?? 30,
@@ -277,7 +287,6 @@ public sealed class SpeakingPracticeService(
             readAloudText);
 
         var remainingSeconds = Math.Max(0, (int)(attempt.ExpiresAt - now).TotalSeconds);
-        var targetIndex = questions.FindIndex(q => q.QuestionId == targetQuestion.QuestionId) + 1;
 
         return new SpeakingTakeView(
             attempt.AttemptId,
@@ -289,7 +298,7 @@ public sealed class SpeakingPracticeService(
             attempt.StartedAt,
             attempt.ExpiresAt,
             remainingSeconds,
-            targetQuestion.QuestionId,
+            targetQuestion.Id,
             targetIndex,
             questions.Count,
             savedCount,

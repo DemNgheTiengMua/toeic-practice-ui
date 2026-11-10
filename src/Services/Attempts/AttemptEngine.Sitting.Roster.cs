@@ -12,8 +12,8 @@ namespace Services;
 public sealed partial class AttemptEngine
 {
     /// <summary>
-    /// #250: the paper's questions, read from the POOL when the paper was authored there, and from the
-    /// legacy rows otherwise.
+    /// #250 / #262: the paper's questions, read from the pool when the paper was authored there and
+    /// from the legacy rows otherwise.
     /// <para>
     /// <b>Why this is the whole ticket in one method.</b> <see cref="LoadExamQuestionsAsync"/> reads
     /// <c>db.Questions</c>, and every downstream reader - navigation locks, clustering, the take view,
@@ -44,7 +44,7 @@ public sealed partial class AttemptEngine
     /// tables are dropped, this becomes "read the roster" and nothing else.
     /// </para>
     /// </summary>
-    private async Task<List<SittingQuestion>> LoadSittingQuestionsAsync(
+    internal async Task<List<SittingQuestion>> LoadSittingQuestionsAsync(
         int examId, CancellationToken cancellationToken)
     {
         var legacyCount = await db.Questions
@@ -154,6 +154,10 @@ public sealed partial class AttemptEngine
                 AcceptedAnswersJson: version.AcceptedAnswersJson,
                 RequiredKeywords: version.RequiredKeywords,
                 Hint: version.Hint,
+                // #262: a read-aloud task's reference lives on the version, so producing practice can
+                // build its pronunciation prompt without a question row.
+                ReferenceText: version.ReferenceText,
+                ReferenceKind: version.ReferenceKind,
                 // A pool position's grouping identity is its stimulus: the navigation locks compare
                 // "am I in the same bundle", and a stimulus IS the bundle.
                 GroupId: row.item.StimulusId,
@@ -271,6 +275,8 @@ public sealed partial class AttemptEngine
         RequiredKeywords: q.RequiredKeywords,
         Hint: q.Hint,
         GroupId: q.GroupId,
+        ReferenceText: q.SampleAnswerOrImageDesc,
+        ReferenceKind: q.ReferenceKind,
         Section: new SittingSection(
             SectionId: q.SectionId,
             Code: q.Section?.Code ?? "",

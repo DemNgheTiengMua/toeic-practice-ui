@@ -26,6 +26,28 @@ public sealed class WritingPracticeService(
         string.Equals(exam.Purpose, "placement", StringComparison.OrdinalIgnoreCase)
         || string.Equals(exam.SourceName, FreeDiagnosticSourceName, StringComparison.Ordinal);
 
+    /// <summary>
+    /// #262: the paper's productive positions, from the one loader the sitting engine uses.
+    /// <para>
+    /// This service used to enumerate an exam's tasks with a legacy query, which returns nothing for a
+    /// paper authored on the pool. Rather than a second interpretation of "what is on this paper", it
+    /// reads the same <see cref="SittingQuestion"/> list the sitting does - so the practice screen and
+    /// the paper can never disagree about which tasks exist or how many there are.
+    /// </para>
+    /// </summary>
+    private async Task<List<SittingQuestion>> LoadPaperPositionsAsync(int examId, CancellationToken cancellationToken) =>
+        await new AttemptEngine(db).LoadSittingQuestionsAsync(examId, cancellationToken);
+
+    /// <summary>The one position a request names, resolved through the same seam.</summary>
+    private async Task<SittingQuestion> LoadPaperPositionAsync(
+        int examId, int questionId, CancellationToken cancellationToken)
+    {
+        var positions = await LoadPaperPositionsAsync(examId, cancellationToken);
+        return positions.FirstOrDefault(p => p.Id == questionId)
+            ?? throw new WritingPracticeException(
+                WritingPracticeException.QuestionNotFound, $"Question {questionId} not found.");
+    }
+
     public async Task<WritingPracticeInstructionsView> GetInstructionsAsync(int userId, int examId, CancellationToken cancellationToken = default)
     {
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
@@ -152,23 +174,25 @@ public sealed class WritingPracticeService(
         db.ExamAttempts.Add(attempt);
         await db.SaveChangesAsync(cancellationToken);
 
-        // Pre-populate free response draft rows for questions in this exam
-        var questions = await db.Questions
-            .Where(q => q.ExamId == examId)
-            .OrderBy(q => q.DisplayOrder)
-            .ToListAsync(cancellationToken);
+        // Pre-populate free response draft rows for the paper's productive tasks.
+        // #262: the paper is the source. A pool-authored paper has no question rows, and the old query
+        // wrote no drafts for it - so the screen opened with every task missing a response row.
+        var paperPositions = await LoadPaperPositionsAsync(examId, cancellationToken);
+        var questions = paperPositions
+            .Where(p => p.RenderFormat == QuestionType.FreeResponse.ToCode())
+            .ToList();
 
         if (questions.Count > 0)
         {
-            attempt.LastQuestionId = questions[0].QuestionId;
             foreach (var q in questions)
             {
                 db.FreeResponses.Add(new FreeResponse
                 {
                     AttemptId = attempt.AttemptId,
-                    QuestionId = q.QuestionId,
+                    QuestionId = q.ExamItemId is null ? q.Id : null,
+                    ExamItemId = q.ExamItemId,
                     ExamId = examId,
-                    SkillId = q.SkillId,
+                    SkillId = q.Section.SkillId,
                     QuestionType = QuestionType.FreeResponse.ToCode(),
                     ResponseText = string.Empty,
                     Status = FreeResponseStatus.Draft.ToCode(),
@@ -209,13 +233,13 @@ public sealed class WritingPracticeService(
             throw new WritingPracticeException(WritingPracticeException.AttemptExpired, "Attempt has expired.");
         }
 
-        var questions = await db.Questions
-            .AsNoTracking()
-            .Where(q => q.ExamId == attempt.ExamId)
-            .Include(q => q.Group)
-            .Include(q => q.Section)
-            .OrderBy(q => q.DisplayOrder)
-            .ToListAsync(cancellationToken);
+        // #262: the paper is the source, not the legacy question table. A pool-authored paper has no
+        // question rows, and the old query returned nothing for it - so the screen reported "no
+        // questions found" for a paper the sitting engine can open.
+        var positions = await LoadPaperPositionsAsync(attempt.ExamId, cancellationToken);
+        var questions = positions
+            .Where(p => p.RenderFormat == QuestionType.FreeResponse.ToCode())
+            .ToList();
 
         if (questions.Count == 0)
         {
@@ -227,32 +251,35 @@ public sealed class WritingPracticeService(
             .Where(fr => fr.AttemptId == attemptId)
             .ToListAsync(cancellationToken);
 
-        var targetQuestion = questionId.HasValue
-            ? questions.FirstOrDefault(q => q.QuestionId == questionId.Value) ?? questions[0]
-            : (attempt.LastQuestionId.HasValue
-                ? questions.FirstOrDefault(q => q.QuestionId == attempt.LastQuestionId.Value) ?? questions[0]
-                : questions[0]);
+        // #262: a response names its position by whichever identity its paper uses.
+        FreeResponse? ResponseFor(SittingQuestion q) => q.ExamItemId is int examItemId
+            ? freeResponses.FirstOrDefault(fr => fr.ExamItemId == examItemId)
+            : freeResponses.FirstOrDefault(fr => fr.QuestionId == q.Id);
 
-        var targetFr = freeResponses.FirstOrDefault(fr => fr.QuestionId == targetQuestion.QuestionId);
+        var targetQuestion = questionId.HasValue
+            ? questions.FirstOrDefault(q => q.Id == questionId.Value) ?? questions[0]
+            : questions[0];
+
+        var targetFr = ResponseFor(targetQuestion);
 
         var questionNavs = questions.Select((q, idx) =>
         {
-            var fr = freeResponses.FirstOrDefault(r => r.QuestionId == q.QuestionId);
+            var fr = ResponseFor(q);
             var isAnswered = fr != null && !string.IsNullOrWhiteSpace(fr.ResponseText);
             return new WritingQuestionNav(
-                q.QuestionId,
+                q.Id,
                 idx + 1,
                 q.Section.Code,
                 q.Section.Name,
                 isAnswered,
-                q.QuestionId == targetQuestion.QuestionId);
+                q.Id == targetQuestion.Id);
         }).ToList();
 
         var remainingSeconds = Math.Max(0, (int)(attempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds);
         var currentQuestionIndex = questions.IndexOf(targetQuestion) + 1;
 
         var questionView = new WritingQuestionView(
-            targetQuestion.QuestionId,
+            targetQuestion.Id,
             currentQuestionIndex,
             targetQuestion.Stem,
             targetQuestion.MinWords,
@@ -277,7 +304,7 @@ public sealed class WritingPracticeService(
             attempt.StartedAt,
             attempt.ExpiresAt,
             remainingSeconds,
-            targetQuestion.QuestionId,
+            targetQuestion.Id,
             currentQuestionIndex,
             questions.Count,
             questionView,
@@ -301,8 +328,17 @@ public sealed class WritingPracticeService(
             throw new WritingPracticeException(WritingPracticeException.AttemptExpired, "Attempt has expired.");
         }
 
+        // #262: the position is resolved from the paper, so a pool task resolves to its roster row and
+        // a legacy task to its question. LastQuestionId is a foreign key to Questions and cannot hold a
+        // roster position, so it is only stamped for a legacy paper - it retires with the tables.
+        var position = await LoadPaperPositionAsync(attempt.ExamId, questionId, cancellationToken);
+
+        var positionExamItemId = position.ExamItemId;
         var freeResponse = await db.FreeResponses
-            .Where(fr => fr.AttemptId == attemptId && fr.QuestionId == questionId)
+            .Where(fr => fr.AttemptId == attemptId
+                && (positionExamItemId.HasValue
+                    ? fr.ExamItemId == positionExamItemId
+                    : fr.QuestionId == questionId))
             .SingleOrDefaultAsync(cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
@@ -310,15 +346,13 @@ public sealed class WritingPracticeService(
 
         if (freeResponse is null)
         {
-            var question = await db.Questions.FindAsync(new object[] { questionId }, cancellationToken)
-                ?? throw new WritingPracticeException(WritingPracticeException.QuestionNotFound, $"Question {questionId} not found.");
-
             freeResponse = new FreeResponse
             {
                 AttemptId = attemptId,
-                QuestionId = questionId,
+                QuestionId = position.ExamItemId is null ? questionId : null,
+                ExamItemId = position.ExamItemId,
                 ExamId = attempt.ExamId,
-                SkillId = question.SkillId,
+                SkillId = position.Section.SkillId,
                 QuestionType = QuestionType.FreeResponse.ToCode(),
                 ResponseText = text,
                 Status = FreeResponseStatus.Draft.ToCode(),
@@ -335,7 +369,10 @@ public sealed class WritingPracticeService(
             freeResponse.Status = FreeResponseStatus.Draft.ToCode();
         }
 
-        attempt.LastQuestionId = questionId;
+        if (position.ExamItemId is null)
+        {
+            attempt.LastQuestionId = questionId;
+        }
         await db.SaveChangesAsync(cancellationToken);
 
         var wordCount = WordCount.Count(text);
