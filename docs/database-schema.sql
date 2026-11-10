@@ -2002,6 +2002,15 @@ CREATE TABLE AttemptAnswers (
   -- so an answer can never name an item without naming its version or the reverse.
   ItemId           INT NULL,
   ItemVersionId    INT NULL,
+  -- #250: the ROSTER POSITION this answer was recorded against, for a paper the pool assembled.
+  -- NULL for a legacy answer.
+  --
+  -- Why a position column is needed on top of (ItemId, ItemVersionId): a paper may bind the same item
+  -- version at two positions ("the same item on two papers, or twice on one paper, gets two positions"),
+  -- so the version pair does not identify WHICH question of the paper was answered. Without this column
+  -- two answers to one repeated item are indistinguishable, and the navigator cannot mark the right cell
+  -- as answered. The position is the answer's identity, exactly as QuestionId is on a legacy paper.
+  ExamItemId       INT NULL REFERENCES ExamItems(ExamItemId),
   -- #186: which of the pinned version's four options was picked. An ItemVersion stores labels A-D,
   -- not option rows, so there is no OptionId to point at; SelectedOptionId keeps its meaning (and its
   -- FK) for a legacy answer and stays NULL whenever this is set. The pair is the answer's whole
@@ -2028,6 +2037,10 @@ CREATE TABLE AttemptAnswers (
   -- so (AttemptId, ItemVersionId) is legitimately non-unique. What makes a pool answer unique is the
   -- roster position it is recorded against, not the version it pins.
   INDEX UX_AttemptAnswers_Question UNIQUE (AttemptId, QuestionId) WHERE QuestionId IS NOT NULL,
+  -- #250: the same rule for the pool shape, on the ROSTER POSITION rather than the item version. One
+  -- answer per position is what the navigator counts, and it is the only statement that stays true when
+  -- a paper binds one version twice.
+  INDEX UX_AttemptAnswers_ExamItem UNIQUE (AttemptId, ExamItemId) WHERE ExamItemId IS NOT NULL,
   -- H-5: ExamId must be the attempt's own
   CONSTRAINT FK_AttemptAnswers_AttemptExam FOREIGN KEY (AttemptId, ExamId) REFERENCES ExamAttempts(AttemptId, ExamId),
   -- H-5: the question must belong to that same exam
@@ -2044,10 +2057,11 @@ CREATE TABLE AttemptAnswers (
        (ItemId IS NULL AND ItemVersionId IS NULL)
     OR (ItemId IS NOT NULL AND ItemVersionId IS NOT NULL)
   ),
-  -- #250: AT LEAST ONE shape. A row names a legacy question, or pins a pool item version, or - during
-  -- the transition - both, because every pool answer written before this ticket kept a QuestionId (the
-  -- column was NOT NULL, so it had to). Forbidding "both" would refuse rows that already exist and every
-  -- fixture that models the pool arriving beside the paper.
+  -- #250: AT LEAST ONE identity. A row names a legacy question, or pins a pool item version (with the
+  -- roster position it sat at), or - during the transition - both, because every pool answer written
+  -- before this ticket kept a QuestionId (the column was NOT NULL, so it had to). Forbidding "both"
+  -- would refuse rows that already exist and every fixture that models the pool arriving beside the
+  -- paper.
   --
   -- A row that names NEITHER is refused: nothing identifies what was asked, so it cannot be rendered,
   -- scored or reviewed. That is the only state this check exists to exclude, and it is the one the two
@@ -2055,6 +2069,7 @@ CREATE TABLE AttemptAnswers (
   CONSTRAINT CK_AttemptAnswers_HasShape CHECK (
        QuestionId IS NOT NULL
     OR ItemVersionId IS NOT NULL
+    OR ExamItemId IS NOT NULL
   )
 );
 GO

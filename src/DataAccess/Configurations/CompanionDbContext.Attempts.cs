@@ -90,6 +90,11 @@ public partial class CompanionDbContext
             entity.Property(e => e.ResponseText);
             entity.Property(e => e.SelectedOptionIdsJson);
             entity.Property(e => e.SelectedLabel).HasMaxLength(1).IsUnicode(false);
+            // #250: the roster position a pool answer was recorded against. Mapped as a plain scalar -
+            // no navigation, because nothing reads the ExamItem row through an answer: the sitting
+            // projection resolves positions in one query and the answer only needs the id it was
+            // written with. The database still enforces the foreign key.
+            entity.Property(e => e.ExamItemId);
 
             entity.HasOne(d => d.Attempt).WithMany(p => p.AttemptAnswerAttempts)
                 .OnDelete(DeleteBehavior.ClientSetNull)

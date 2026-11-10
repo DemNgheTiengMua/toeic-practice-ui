@@ -36,6 +36,17 @@ public partial class AttemptAnswer
     public int? ItemVersionId { get; set; }
 
     /// <summary>
+    /// #250: the roster position this answer was recorded against, for a paper the pool assembled.
+    /// NULL for a legacy answer.
+    ///
+    /// Needed on top of <see cref="ItemId"/> and <see cref="ItemVersionId"/> because a paper may bind
+    /// one item version at two positions, so the version pair does not say which question of the paper
+    /// was answered. The position is the answer's identity, exactly as <see cref="QuestionId"/> is on a
+    /// legacy paper, and it is what the navigator counts.
+    /// </summary>
+    public int? ExamItemId { get; set; }
+
+    /// <summary>
     /// #186: which of the pinned version's four options was picked. An <see cref="ItemVersion"/>
     /// stores labels A–D rather than option rows, so there is no id to point at;
     /// <see cref="SelectedOptionId"/> keeps its meaning (and its foreign key) for a legacy answer and
