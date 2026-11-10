@@ -183,6 +183,26 @@ public sealed partial class AttemptEngine
             // #186: a pinned answer is scored against the version it pinned, not the question row.
             var pinnedVersions = await LoadPinnedVersionsAsync(answers, cancellationToken);
 
+            // #250: an answer on a pool-authored paper has no `Question` navigation - it names a roster
+            // position instead. Scoring therefore cannot read `a.Question.QuestionType`; it asks the
+            // paper, which is the one place that knows the render format and the section of a position.
+            //
+            // Measured before this: submitting a pool paper threw NullReferenceException at
+            // `a.Question.QuestionType`, because the navigation is legitimately null when
+            // CK_AttemptAnswers_HasShape chose the ExamItemId branch.
+            var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+            var positionById = paperQuestions.ToDictionary(q => q.Id);
+            var positionByExamItemId = paperQuestions
+                .Where(q => q.ExamItemId.HasValue)
+                .ToDictionary(q => q.ExamItemId!.Value);
+
+            SittingQuestion? PositionOf(AttemptAnswer a) => a.ExamItemId is int examItemId
+                ? positionByExamItemId.GetValueOrDefault(examItemId)
+                : a.QuestionId is int questionId ? positionById.GetValueOrDefault(questionId) : null;
+
+            bool IsProductiveAnswer(AttemptAnswer a) =>
+                PositionOf(a)?.RenderFormat == QuestionType.FreeResponse.ToCode();
+
             // Score each objective answer (#217 / PLC-18). An unanswered item scores as incorrect by
             // NOT being correct - the skill's raw score counts only `IsCorrect == true` over a
             // denominator of every item the section delivered - but its IsCorrect stays NULL.
@@ -191,7 +211,7 @@ public sealed partial class AttemptEngine
             // counts `COUNT(IsCorrect)`, so a blank marked incorrect was counted as an ANSWERED item and
             // inflated the denominator. #253's rule is that answered is "carries content", not "has a
             // grade"; leaving the blank unjudged is what makes the two agree.
-            foreach (var ans in answers.Where(a => a.Question.QuestionType != QuestionType.FreeResponse.ToCode()))
+            foreach (var ans in answers.Where(a => !IsProductiveAnswer(a)))
             {
                 ans.IsCorrect = IsAnswered(ans) ? EvaluateAnswer(ans, pinnedVersions, optionsByQuestion) : null;
             }
@@ -206,8 +226,8 @@ public sealed partial class AttemptEngine
             }
 
             var skillGroups = answers
-                .Where(a => a.Question.QuestionType != QuestionType.FreeResponse.ToCode())
-                .GroupBy(a => a.Question.Section.Skill)
+                .Where(a => !IsProductiveAnswer(a))
+                .GroupBy(a => PositionOf(a)!.Section.Skill)
                 // #217 / PLC-19: on a PLACEMENT, a skill the learner never touched is not part of the
                 // result. It used to be scored as a zero row, and that zero was summed into the total -
                 // the "not-measured contributing 0" the ticket forbids. Excluding it here is what makes
@@ -225,7 +245,9 @@ public sealed partial class AttemptEngine
             foreach (var group in skillGroups)
             {
                 var skill = group.Key;
-                var sectionGroups = group.GroupBy(a => a.Question.Section).ToList();
+                var sectionGroups = group
+                    .GroupBy(a => PositionOf(a)!.Section)
+                    .ToList();
                 int rawScore;
                 int scaledScore;
 

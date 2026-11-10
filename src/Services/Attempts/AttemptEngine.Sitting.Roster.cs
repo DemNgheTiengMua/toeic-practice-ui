@@ -172,6 +172,7 @@ public sealed partial class AttemptEngine
                     ClusterSize: row.s.ClusterSize > 0 ? row.s.ClusterSize : 1,
                     RequireImage: row.s.RequireImage,
                     TimerPolicyJson: row.s.TimerPolicyJson,
+                    ScoreWeight: row.s.ScoreWeight,
                     Skill: new SittingSkill(
                         SkillId: row.k.SkillId,
                         Code: row.k.Code,
@@ -285,6 +286,7 @@ public sealed partial class AttemptEngine
             ClusterSize: q.Section is { ClusterSize: > 0 } c ? c.ClusterSize : 1,
             RequireImage: q.Section?.RequireImage ?? false,
             TimerPolicyJson: q.Section?.TimerPolicyJson,
+            ScoreWeight: q.Section?.ScoreWeight ?? 1.0m,
             Skill: new SittingSkill(
                 SkillId: q.Section?.SkillId ?? 0,
                 Code: q.Section?.Skill?.Code ?? "",

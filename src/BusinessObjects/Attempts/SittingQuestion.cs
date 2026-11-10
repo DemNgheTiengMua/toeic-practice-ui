@@ -96,6 +96,12 @@ public sealed record SittingSection(
     int ClusterSize,
     bool RequireImage,
     string? TimerPolicyJson,
+    /// <summary>
+    /// The section's scoring weight. Needed by the scorer: a paper whose sections carry different
+    /// weights is scored by weighted raw score, not a bare count, and that decision belongs to the
+    /// paper rather than to the answer row.
+    /// </summary>
+    decimal ScoreWeight,
     SittingSkill Skill);
 
 /// <summary>The skill a section belongs to. The phase bar and the one-way lock are read from here.</summary>
