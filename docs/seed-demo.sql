@@ -1522,7 +1522,7 @@ BEGIN CATCH
 END CATCH
 SET IDENTITY_INSERT [GradingCriteria] OFF;
 
--- ---- Items (116 rows)
+-- ---- Items (140 rows)
 SET IDENTITY_INSERT [Items] ON;
 BEGIN TRY
   INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (1, 1, N'listening', 2, N'A2', N'short_exchange', N'mcq', 0, N'demo', N'active', N'seed-vstep-sample-1', '2026-11-11T01:44:02.8064239+07:00', NULL);
@@ -2220,9 +2220,153 @@ END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (118, NULL, N'listening', 2, N'A1', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9218259+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (119, NULL, N'listening', 2, N'A1', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9387647+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (120, NULL, N'listening', 2, N'A2', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9397649+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (121, NULL, N'listening', 2, N'A2', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9397649+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (122, NULL, N'listening', 3, N'B1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9407647+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (123, NULL, N'listening', 3, N'B1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9417644+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (124, NULL, N'listening', 3, N'B2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9422700+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (125, NULL, N'listening', 3, N'B2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9422700+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (126, NULL, N'listening', 6, N'C1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9422700+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (127, NULL, N'listening', 6, N'C1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9432717+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (128, NULL, N'listening', 6, N'C2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9432717+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (129, NULL, N'listening', 6, N'C2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9442715+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (130, NULL, N'reading', 8, N'A1', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9442715+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (131, NULL, N'reading', 8, N'A1', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9452714+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (132, NULL, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9452714+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (133, NULL, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9452714+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (134, NULL, N'reading', 9, N'B1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9462717+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (135, NULL, N'reading', 9, N'B1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9462717+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (136, NULL, N'reading', 9, N'B2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9472713+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (137, NULL, N'reading', 9, N'B2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9477761+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (138, NULL, N'reading', 7, N'C1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9477761+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (139, NULL, N'reading', 7, N'C1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9487794+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (140, NULL, N'reading', 7, N'C2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9492906+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (141, NULL, N'reading', 7, N'C2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9492906+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
 SET IDENTITY_INSERT [Items] OFF;
 
--- ---- ItemVersions (116 rows)
+-- ---- ItemVersions (140 rows)
 SET IDENTITY_INSERT [ItemVersions] ON;
 BEGIN TRY
   INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (1, 1, 1, N'On what date will the festival open?', N'June 1st', N'June 8th', N'June 15th', N'July 8th', N'B', N'The speaker explicitly states June 8th.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:02.8106557+07:00', NULL);
@@ -2916,6 +3060,150 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (116, 116, 1, N'Write an opinion essay explaining whether remote work improves employee productivity.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 15, 300, NULL, 1800, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1792242+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (117, 118, 1, N'Listen: where is the meeting being held?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'A', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9347648+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (118, 119, 1, N'Listen: what time does the shop close?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'B', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9397649+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (119, 120, 1, N'Listen: which platform does the train leave from?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'C', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9397649+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (120, 121, 1, N'Listen: what did the caller ask to change?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'D', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9407647+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (121, 122, 1, N'Listen: why is the shipment delayed?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'A', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9407647+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (122, 123, 1, N'Listen: what will the woman do next?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'B', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9417644+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (123, 124, 1, N'Listen: what does the man imply about the budget?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'C', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9422700+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (124, 125, 1, N'Listen: what concern does the second speaker raise?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'D', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9422700+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (125, 126, 1, N'Listen: what does she imply about the deadline she was given?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'A', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9432717+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (126, 127, 1, N'Listen: which assumption does the negotiation depend on?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'B', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9432717+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (127, 128, 1, N'Listen: the speaker''s tone shifts twice. Which pair of attitudes fits?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'C', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9442715+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (128, 129, 1, N'Listen: what does the concession at the end actually concede?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'D', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9442715+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (129, 130, 1, N'The office opens _____ nine o''clock.', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'A', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9442715+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (130, 131, 1, N'Please sign _____ the bottom of the form.', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'B', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9452714+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (131, 132, 1, N'The delivery arrived _____ Tuesday morning.', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'C', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9452714+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (132, 133, 1, N'She has worked here _____ 2019.', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'D', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9462717+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (133, 134, 1, N'The notice says the car park closes early. What should staff do?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'A', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9462717+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (134, 135, 1, N'The memo changes the meeting room. Where will the meeting be held?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'B', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9472713+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (135, 136, 1, N'The report qualifies its forecast twice. What does it imply about the second half?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'C', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9472713+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (136, 137, 1, N'The author cites two studies that disagree. What does that disagreement support?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'D', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9477761+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (137, 138, 1, N'The author concedes a point in the second paragraph chiefly to what end?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'A', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9477761+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (138, 139, 1, N'Which claim about the reform does the passage leave standing?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'B', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9487794+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (139, 140, 1, N'Which reading of "the proposal was quietly shelved" does the argument require?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'C', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9492906+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (140, 141, 1, N'The final sentence reverses the analogy. What does that reversal license?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'D', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9492906+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
