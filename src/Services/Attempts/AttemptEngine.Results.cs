@@ -135,22 +135,27 @@ public sealed partial class AttemptEngine
             throw new AttemptEngineException(AttemptEngineException.AttemptNotFinished, "Review is available only for finished exam attempts.");
         }
 
-        var questions = await db.Questions
-            .AsNoTracking()
-            .Where(q => q.ExamId == attempt.ExamId)
-            .Include(q => q.Section).ThenInclude(s => s.Skill)
-            .Include(q => q.Group)
-            .Include(q => q.QuestionOptionQuestionNavigations)
-            .OrderBy(q => q.Section.Skill.DisplayOrder)
-            .ThenBy(q => q.Section.DisplayOrder)
-            .ThenBy(q => q.Group.DisplayOrder)
-            .ThenBy(q => q.DisplayOrder)
-            .ToListAsync(cancellationToken);
+        // #250: the review enumerates the PAPER, not a Questions query. A pool-only paper has no
+        // question rows to enumerate, so the old query produced an empty review for an attempt that
+        // was sat and graded.
+        var questions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
 
+        // Answers are keyed by whichever identity their paper uses: a legacy position names QuestionId,
+        // a pool position names ExamItemId. Two maps, because the id spaces are independent.
         var answers = await db.AttemptAnswers
             .AsNoTracking()
             .Where(a => a.AttemptId == attemptId)
-            .ToDictionaryAsync(a => a.QuestionId, cancellationToken);
+            .ToListAsync(cancellationToken);
+        var answerByQuestionId = answers
+            .Where(a => a.QuestionId.HasValue)
+            .ToDictionary(a => a.QuestionId!.Value);
+        var answerByExamItemId = answers
+            .Where(a => a.ExamItemId.HasValue)
+            .ToDictionary(a => a.ExamItemId!.Value);
+
+        AttemptAnswer? AnswerFor(SittingQuestion q) => q.ExamItemId is int examItemId
+            ? answerByExamItemId.GetValueOrDefault(examItemId)
+            : answerByQuestionId.GetValueOrDefault(q.Id);
 
         // #186: the version each answer pinned is what review renders. Not the item's current version,
         // and not the paper's binding as it stands today: a later correction creates version 2 and a
@@ -160,7 +165,7 @@ public sealed partial class AttemptEngine
         // before the pool reached this paper, so the learner answered from the question row and the
         // review must render that row — falling back to today's binding would show options the learner
         // was never offered, and lose the one they actually picked.
-        var pinnedVersionIds = answers.Values
+        var pinnedVersionIds = answers
             .Where(a => a.ItemVersionId.HasValue)
             .Select(a => a.ItemVersionId!.Value)
             .Distinct()
@@ -216,24 +221,24 @@ public sealed partial class AttemptEngine
             var q = questions[idx];
             int displayOrder = idx + 1;
 
-            bool hasAnswer = answers.TryGetValue(q.QuestionId, out var ans);
+            var ans = AnswerFor(q);
 
             // #186: the pinned version wins. A reviewed attempt renders the stem, options and
-            // explanation the learner actually sat; an answer with no pin was answered from the
-            // question row, so that is what it renders.
+            // explanation the learner actually sat. An answer with NO pin was recorded before the pool
+            // reached this paper, so it renders the legacy question row - not today's binding, which
+            // would show options the learner was never offered and lose the one they picked. That is
+            // why the loader carries both beside each other instead of overlaying one onto the other.
             var pinnedVersion = ans?.ItemVersionId is int pinnedVersionId
                 ? pinnedVersions.GetValueOrDefault(pinnedVersionId)
                 : null;
 
+            var stem = pinnedVersion?.Stem ?? q.LegacyStem ?? q.Stem;
+            var explanation = pinnedVersion?.Explanation ?? q.LegacyExplanation ?? q.Explanation;
             var options = pinnedVersion is null
-                ? q.QuestionOptionQuestionNavigations
-                    .OrderBy(o => o.Label)
+                ? (q.LegacyOptions ?? q.Options)
                     .Select(o => new AttemptReviewOption(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
                     .ToList()
                 : PoolReviewOptions(pinnedVersion.ItemVersionId, pinnedVersion);
-
-            var stem = pinnedVersion?.Stem ?? q.Stem;
-            var explanation = pinnedVersion?.Explanation ?? q.Explanation;
             int? selectedOptionId = pinnedVersion is null
                 ? ans?.SelectedOptionId
                 : SelectedPoolOptionId(pinnedVersion.ItemVersionId, ans);
@@ -245,10 +250,9 @@ public sealed partial class AttemptEngine
                 && AnswerContent.IsAnswered(
                     ans.SelectedOptionId, ans.SelectedLabel, ans.ResponseText, ans.SelectedOptionIdsJson);
             bool? isCorrect = isAnswered ? ans?.IsCorrect : null;
-            var audio = ResolveGroupAudio(q.Group, sectionMasterAudio);
 
             reviewQuestions.Add(new AttemptReviewQuestion(
-                q.QuestionId,
+                q.Id,
                 displayOrder,
                 questions.Count,
                 q.SectionId,
@@ -260,9 +264,9 @@ public sealed partial class AttemptEngine
                 stem,
                 q.Group.ImagePath,
                 q.Group.ImageAlt,
-                audio?.Path,
-                audio?.StartMs,
-                audio?.EndMs,
+                q.Group.AudioPath,
+                q.Group.AudioStartMs,
+                q.Group.AudioEndMs,
                 q.Group.Transcript,
                 q.Group.Passage,
                 explanation,
@@ -272,7 +276,7 @@ public sealed partial class AttemptEngine
                 isFlagged));
 
             navigator.Add(new ReviewNavigatorItem(
-                q.QuestionId,
+                q.Id,
                 displayOrder,
                 q.SectionId,
                 q.Section.Code,
@@ -283,11 +287,11 @@ public sealed partial class AttemptEngine
         }
 
         int totalQuestions = questions.Count;
-        int answeredCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && IsAnswered(a));
-        int correctCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && a.IsCorrect == true);
-        int incorrectCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && IsAnswered(a) && a.IsCorrect == false);
+        int answeredCount = questions.Count(q => IsAnswered(AnswerFor(q)));
+        int correctCount = questions.Count(q => AnswerFor(q)?.IsCorrect == true);
+        int incorrectCount = questions.Count(q => IsAnswered(AnswerFor(q)) && AnswerFor(q)!.IsCorrect == false);
         int blankCount = totalQuestions - answeredCount;
-        int flaggedCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && a.IsFlagged);
+        int flaggedCount = questions.Count(q => AnswerFor(q)?.IsFlagged == true);
         int durationSeconds = (int)Math.Max(0, ((attempt.SubmittedAt ?? DateTimeOffset.UtcNow) - attempt.StartedAt).TotalSeconds);
 
         return new AttemptReviewView(

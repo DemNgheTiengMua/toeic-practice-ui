@@ -130,6 +130,20 @@ public sealed partial class AttemptEngine
         return index < 0 ? null : OptionLabel(index);
     }
 
+    /// <summary>
+    /// #250: the per-option rationale a pool version stores as four columns, selected by label. Review
+    /// renders it; the sitting does not. Returns null for a productive version, which has no options.
+    /// </summary>
+    private static string? OptionRationale(ItemVersion version, string? label) =>
+        label?.Trim().ToUpperInvariant() switch
+        {
+            "A" => version.RationaleA,
+            "B" => version.RationaleB,
+            "C" => version.RationaleC,
+            "D" => version.RationaleD,
+            _ => null,
+        };
+
     internal static int LabelIndex(string? label) => label?.Trim().ToUpperInvariant() switch
     {
         "A" => 0,

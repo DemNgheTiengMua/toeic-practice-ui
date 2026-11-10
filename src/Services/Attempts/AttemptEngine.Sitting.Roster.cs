@@ -135,9 +135,16 @@ public sealed partial class AttemptEngine
                 SectionId: row.s.SectionId,
                 RenderFormat: row.item.RenderFormat,
                 Stem: version.Stem,
+                LegacyStem: null,
+                Explanation: version.Explanation,
+                LegacyExplanation: null,
                 Options: PoolOptions(version.ItemVersionId, version)
-                    .Select(o => new SittingOption(o.OptionId, o.Label, o.Text))
+                    .Select(o => new SittingOption(
+                        o.OptionId, o.Label, o.Text,
+                        IsCorrect: IsKeyLabel(version, o.Label),
+                        Rationale: OptionRationale(version, o.Label)))
                     .ToList(),
+                LegacyOptions: null,
                 MinWords: version.MinWords,
                 MaxWords: version.MaxWords,
                 PrepSeconds: version.PrepSeconds ?? stimulus?.PrepSeconds,
@@ -233,14 +240,26 @@ public sealed partial class AttemptEngine
         // word limits, timers, the section's chrome - is the paper's, so it still comes from the row.
         RenderFormat: q.QuestionType,
         Stem: bound?.Version.Stem ?? q.Stem,
+        LegacyStem: q.Stem,
+        Explanation: bound?.Version.Explanation ?? q.Explanation,
+        LegacyExplanation: q.Explanation,
         Options: bound is null
             ? q.QuestionOptionQuestionNavigations
                 .OrderBy(o => o.Label)
-                .Select(o => new SittingOption(o.OptionId, o.Label, o.Text))
+                .Select(o => new SittingOption(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
                 .ToList()
             : PoolOptions(bound.ItemVersionId, bound.Version)
-                .Select(o => new SittingOption(o.OptionId, o.Label, o.Text))
+                .Select(o => new SittingOption(
+                    o.OptionId, o.Label, o.Text,
+                    IsCorrect: IsKeyLabel(bound.Version, o.Label),
+                    Rationale: OptionRationale(bound.Version, o.Label)))
                 .ToList(),
+        // The row's own options, kept beside the scored ones so review can render what the learner
+        // answered rather than what the paper binds today.
+        LegacyOptions: q.QuestionOptionQuestionNavigations
+            .OrderBy(o => o.Label)
+            .Select(o => new SittingOption(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
+            .ToList(),
         MinWords: q.MinWords,
         MaxWords: q.MaxWords,
         PrepSeconds: q.PrepSeconds,

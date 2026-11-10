@@ -37,8 +37,31 @@ public sealed record SittingQuestion(
     int ItemId,
     int SectionId,
     string RenderFormat,
+    /// <summary>
+    /// The scored stem the SITTING renders: the pinned version's when the paper has a binding, else the
+    /// legacy question's. <see cref="LegacyStem"/> is kept beside it because review decides differently.
+    /// </summary>
     string Stem,
+    /// <summary>
+    /// The legacy question's own stem, always populated for a legacy paper and null for a pool one.
+    /// <para>
+    /// <b>Why both.</b> The sitting renders whatever the paper bound, so it wants <see cref="Stem"/>.
+    /// Review renders what the LEARNER ANSWERED: an answer that pinned a version shows that version, and
+    /// an answer recorded before the pool existed shows the question row even though the paper is bound
+    /// today. Collapsing the two made
+    /// <c>A_review_of_an_answer_with_no_pin_keeps_the_question_it_was_answered_from</c> fail with
+    /// "Pinned stem one." where "Legacy stem one." was expected - a review showing an option set the
+    /// learner was never offered.
+    /// </para>
+    /// </summary>
+    string? LegacyStem,
+    /// <summary>The scored explanation, resolved the same way as <see cref="Stem"/>.</summary>
+    string? Explanation,
+    /// <summary>The legacy question's own explanation, for the same review reason as <see cref="LegacyStem"/>.</summary>
+    string? LegacyExplanation,
     IReadOnlyList<SittingOption> Options,
+    /// <summary>The legacy question's own options, for the same review reason as <see cref="LegacyStem"/>.</summary>
+    IReadOnlyList<SittingOption>? LegacyOptions,
     int? MinWords,
     int? MaxWords,
     int? PrepSeconds,
@@ -109,4 +132,14 @@ public sealed record SittingGroup(
 /// The id the client echoes back. A pool option has no row to point at (an <c>ItemVersion</c> stores
 /// labels A-D), so the engine derives a stable id from the version; see <c>AttemptEngine.PoolOptionId</c>.
 /// </param>
-public sealed record SittingOption(int OptionId, string Label, string Text);
+/// <param name="IsCorrect">
+/// Review-only: whether this option is the key. The sitting never shows it, but the review's whole
+/// purpose is to, so one record carries it rather than two shapes of the same question.
+/// </param>
+/// <param name="Rationale">Review-only: why this option is right or wrong.</param>
+public sealed record SittingOption(
+    int OptionId,
+    string Label,
+    string Text,
+    bool IsCorrect = false,
+    string? Rationale = null);
