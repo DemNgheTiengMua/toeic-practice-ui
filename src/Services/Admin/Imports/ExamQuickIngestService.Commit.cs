@@ -158,7 +158,7 @@ public sealed partial class ExamQuickIngestService
             // #250: a pool answer carries a NULL QuestionId and can never match a legacy question id.
             var hasAnswers = await db.AttemptAnswers.AnyAsync(
                     a => a.QuestionId != null && existingQuestionIds.Contains(a.QuestionId.Value), cancellationToken)
-                || await db.FreeResponses.AnyAsync(r => existingQuestionIds.Contains(r.QuestionId), cancellationToken);
+                || await db.FreeResponses.AnyAsync(r => r.QuestionId != null && existingQuestionIds.Contains(r.QuestionId.Value), cancellationToken);
 
             if (hasAnswers)
             {

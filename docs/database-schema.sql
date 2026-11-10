@@ -2129,7 +2129,13 @@ GO
 CREATE TABLE FreeResponses (
   FreeResponseId INT IDENTITY(1,1) PRIMARY KEY,
   AttemptId      INT NOT NULL REFERENCES ExamAttempts(AttemptId),
-  QuestionId     INT NOT NULL REFERENCES Questions(QuestionId),
+  -- #250: NULLABLE. A productive task on a pool-authored paper names no legacy question, and while this
+  -- was NOT NULL such a paper could not be sat at all - AttemptEngine refused it explicitly rather than
+  -- write a fake id. A pool response names ExamItemId below instead; CK_FreeResp_HasShape refuses a row
+  -- that names neither.
+  QuestionId     INT NULL REFERENCES Questions(QuestionId),
+  -- #250: the roster position this response was recorded against, for a pool-authored paper.
+  ExamItemId     INT NULL REFERENCES ExamItems(ExamItemId),
   -- H-5: carried down from the attempt so the question must belong to the attempt's own exam
   ExamId         INT NOT NULL,
   -- M-3: carried down from the question so AiGradings must name that question's own skill
@@ -2163,8 +2169,13 @@ CREATE TABLE FreeResponses (
        (Status = 'draft'  AND SubmittedAt IS NULL)
     OR (Status <> 'draft' AND SubmittedAt IS NOT NULL)
   ),
-  CONSTRAINT UQ_FreeResponses UNIQUE (AttemptId, QuestionId),
+  -- #250: uniqueness per shape. `UNIQUE (AttemptId, QuestionId)` over a nullable column admits exactly
+  -- ONE pool response, because SQL Server treats every NULL as equal.
+  INDEX UX_FreeResponses_Question UNIQUE (AttemptId, QuestionId) WHERE QuestionId IS NOT NULL,
+  INDEX UX_FreeResponses_ExamItem UNIQUE (AttemptId, ExamItemId) WHERE ExamItemId IS NOT NULL,
   CONSTRAINT CK_FreeResp_HasContent CHECK (ResponseText IS NOT NULL OR AudioPath IS NOT NULL),
+  -- #250: at least one identity. A row naming neither cannot be rendered, graded or reviewed.
+  CONSTRAINT CK_FreeResp_HasShape CHECK (QuestionId IS NOT NULL OR ExamItemId IS NOT NULL),
   -- H-5: ExamId must be the attempt's own
   CONSTRAINT FK_FreeResp_AttemptExam FOREIGN KEY (AttemptId, ExamId) REFERENCES ExamAttempts(AttemptId, ExamId),
   -- H-5: the question must belong to that same exam

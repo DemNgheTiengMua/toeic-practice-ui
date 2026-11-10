@@ -233,8 +233,11 @@ public sealed partial class AttemptEngine
 
         var drafted = await db.FreeResponses
             .Where(r => r.AttemptId == attempt.AttemptId
+                && r.QuestionId != null
                 && (!string.IsNullOrEmpty(r.ResponseText) || r.AudioPath != null))
-            .Select(r => r.QuestionId)
+            // #250: QuestionId is nullable now. This branch is about LEGACY questions - the fallback it
+            // feeds is a query over Questions - so a pool response contributes nothing here.
+            .Select(r => r.QuestionId!.Value)
             .ToListAsync(cancellationToken);
         var answered = await db.AttemptAnswers
             .Where(a => a.AttemptId == attempt.AttemptId

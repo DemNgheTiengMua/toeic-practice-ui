@@ -402,7 +402,7 @@ public sealed class SpeakingPracticeService(
 
         return new SaveSpeakingAudioResult(
             fr.FreeResponseId,
-            fr.QuestionId,
+            fr.QuestionId!.Value,
             relativePath,
             durationMs,
             now);
@@ -534,7 +534,7 @@ public sealed class SpeakingPracticeService(
 
         var items = gradings.Select(g => new FreeResponseGradingStatus(
             g.FreeResponseId,
-            g.FreeResponse.QuestionId,
+            g.FreeResponse.QuestionId!.Value,
             g.FreeResponse.Question.DisplayOrder,
             EnumCodes.Parse<AiGradingStatus>(g.Status),
             g.AttemptCount,
@@ -657,7 +657,7 @@ public sealed class SpeakingPracticeService(
             }
 
             questionItems.Add(new SpeakingQuestionReviewItem(
-                fr.QuestionId,
+                fr.QuestionId!.Value,
                 fr.Question.DisplayOrder,
                 fr.Question.Section.Name,
                 fr.Question.Stem,

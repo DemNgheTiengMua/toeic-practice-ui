@@ -475,7 +475,7 @@ public sealed class WritingPracticeService(
 
             items.Add(new FreeResponseGradingStatus(
                 fr.FreeResponseId,
-                fr.QuestionId,
+                fr.QuestionId!.Value,
                 fr.Question.DisplayOrder,
                 status,
                 grading?.AttemptCount ?? 0,
@@ -609,7 +609,7 @@ public sealed class WritingPracticeService(
             var (qScore, _) = AttemptEngine.WeightedRubricTotal(marks);
 
             questionItems.Add(new WritingQuestionReviewItem(
-                fr.QuestionId,
+                fr.QuestionId!.Value,
                 fr.Question.DisplayOrder,
                 fr.Question.Section.Name,
                 fr.Question.Stem,

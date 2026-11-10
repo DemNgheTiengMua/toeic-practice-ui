@@ -113,7 +113,7 @@ public sealed partial class AiInsightService
             int words = string.IsNullOrWhiteSpace(text) ? 0 : text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
 
             result.Add(new WritingEvidence(
-                fr.QuestionId,
+                fr.QuestionId!.Value,
                 fr.Question?.Stem ?? "Writing Prompt",
                 text,
                 words,

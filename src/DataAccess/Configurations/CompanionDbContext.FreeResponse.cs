@@ -29,12 +29,19 @@ public partial class CompanionDbContext
             // #216 / PLC-15: the retry count and the token that makes one interruption count once.
             entity.Property(e => e.RecordingInterruptions).HasDefaultValue(0);
             entity.Property(e => e.RecordingSessionToken).HasMaxLength(64);
+            // #250: the roster position a pool response was recorded against. A plain scalar - nothing
+            // reads the ExamItem row through a response, and the database still enforces the key.
+            entity.Property(e => e.ExamItemId);
 
             entity.HasOne(d => d.Attempt).WithMany(p => p.FreeResponseAttempts)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__FreeRespo__Attem__18B6AB08");
 
+            // #250: optional, because a pool-authored paper names no legacy question. Without this the
+            // three composite relationships below are configured as required by their key shape, and a
+            // pool response fails to save.
             entity.HasOne(d => d.Question).WithMany(p => p.FreeResponseQuestions)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__FreeRespo__Quest__19AACF41");
 
@@ -47,18 +54,21 @@ public partial class CompanionDbContext
             entity.HasOne(d => d.QuestionNavigation).WithMany(p => p.FreeResponseQuestionNavigations)
                 .HasPrincipalKey(p => new { p.QuestionId, p.ExamId })
                 .HasForeignKey(d => new { d.QuestionId, d.ExamId })
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_FreeResp_QuestionExam");
 
             entity.HasOne(d => d.Question1).WithMany(p => p.FreeResponseQuestion1s)
                 .HasPrincipalKey(p => new { p.QuestionId, p.QuestionType })
                 .HasForeignKey(d => new { d.QuestionId, d.QuestionType })
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_FreeResp_QuestionType");
 
             entity.HasOne(d => d.Question2).WithMany(p => p.FreeResponseQuestion2s)
                 .HasPrincipalKey(p => new { p.QuestionId, p.SkillId })
                 .HasForeignKey(d => new { d.QuestionId, d.SkillId })
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_FreeResp_QuestionSkill");
         });

@@ -93,7 +93,7 @@ public sealed partial class AttemptEngine
 
         return new SaveSpeakingAudioResult(
             fr.FreeResponseId,
-            fr.QuestionId,
+            fr.QuestionId!.Value,
             relativePath,
             durationMs,
             now);
@@ -162,7 +162,7 @@ public sealed partial class AttemptEngine
 
         return new SaveSpeakingAudioResult(
             fr.FreeResponseId,
-            fr.QuestionId,
+            fr.QuestionId!.Value,
             audioPath,
             durationMs,
             now);

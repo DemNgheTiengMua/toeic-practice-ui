@@ -57,7 +57,7 @@ public sealed partial class AdminExamService
         var answeredQuestionIds = new HashSet<int>(await db.AttemptAnswers.AsNoTracking()
             .Where(a => a.QuestionId != null && allQuestionIds.Contains(a.QuestionId.Value))
             .Select(a => a.QuestionId!.Value)
-            .Concat(db.FreeResponses.AsNoTracking().Where(r => allQuestionIds.Contains(r.QuestionId)).Select(r => r.QuestionId))
+            .Concat(db.FreeResponses.AsNoTracking().Where(r => r.QuestionId != null && allQuestionIds.Contains(r.QuestionId.Value)).Select(r => r.QuestionId!.Value))
             .ToListAsync(cancellationToken));
 
         var availableCategories = await db.QuestionCategories.AsNoTracking()

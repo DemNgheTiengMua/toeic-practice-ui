@@ -8,7 +8,6 @@ namespace BusinessObjects.Entities;
 
 [Index("QuestionId", Name = "IX_FreeResponses_Question")]
 [Index("FreeResponseId", "SkillId", Name = "UQ_FreeResp_Id_Skill", IsUnique = true)]
-[Index("AttemptId", "QuestionId", Name = "UQ_FreeResponses", IsUnique = true)]
 public partial class FreeResponse
 {
     [Key]
@@ -16,7 +15,17 @@ public partial class FreeResponse
 
     public int AttemptId { get; set; }
 
-    public int QuestionId { get; set; }
+    /// <summary>
+    /// #250: the legacy question this response was given against, or NULL for a pool-authored paper.
+    ///
+    /// It was <c>int</c> (NOT NULL) with three composite foreign keys into <c>Questions</c>, which is why
+    /// a pool-only productive paper could not be sat at all: the engine refused it explicitly rather
+    /// than invent a question id. <c>CK_FreeResp_HasShape</c> now requires at least one identity.
+    /// </summary>
+    public int? QuestionId { get; set; }
+
+    /// <summary>#250: the roster position this response was recorded against, for a pool paper.</summary>
+    public int? ExamItemId { get; set; }
 
     public int ExamId { get; set; }
 

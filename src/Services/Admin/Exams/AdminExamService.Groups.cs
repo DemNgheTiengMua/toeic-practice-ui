@@ -174,7 +174,7 @@ public sealed partial class AdminExamService
         // carries NULL here and can never match a real question id, which is the correct answer.
         var hasAnswers = await db.AttemptAnswers.AnyAsync(
                 a => a.QuestionId != null && qIds.Contains(a.QuestionId.Value), cancellationToken)
-            || await db.FreeResponses.AnyAsync(r => qIds.Contains(r.QuestionId), cancellationToken);
+            || await db.FreeResponses.AnyAsync(r => r.QuestionId != null && qIds.Contains(r.QuestionId.Value), cancellationToken);
 
         if (hasAnswers)
         {

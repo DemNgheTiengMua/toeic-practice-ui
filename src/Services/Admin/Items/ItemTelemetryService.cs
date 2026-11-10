@@ -381,9 +381,12 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
             .Where(g => g.Status == AiGradingStatus.Done.ToCode())
             .Select(g => new
             {
-                QuestionId = g.FreeResponse.QuestionId,
-                ExamId = g.FreeResponse.Question.ExamId,
-                SectionId = g.FreeResponse.Question.SectionId,
+                // #250: a grading belongs to a legacy free response here - the position map this feeds
+                // is built from Questions rows. A pool grading has no row in that map and is skipped
+                // below, so the nullable id is filtered rather than coerced.
+                QuestionId = g.FreeResponse.QuestionId!.Value,
+                ExamId = g.FreeResponse.Question!.ExamId,
+                SectionId = g.FreeResponse.Question!.SectionId,
                 SittingTotal = (double)(g.FreeResponse.Attempt.TotalScore ?? 0),
                 MeanBand = g.AiGradingScores.Average(s => (double?)s.Score),
             })
