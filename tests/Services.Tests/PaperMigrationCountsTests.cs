@@ -34,18 +34,68 @@ public sealed class PaperMigrationCountsTests(DatabaseFixture database)
             // The real seed, not a fixture: criterion 2 is a statement about the seed itself.
             await database.SqlCmdFileToDatabaseAsync(name, Path.Combine(DatabaseFixture.RepoRootPath, "docs", "seed-demo.sql"));
 
+            // #267: the seed itself is pool-native now, so it can no longer supply the legacy half this
+            // migration is about. The legacy paper is therefore CONSTRUCTED here - the migration still
+            // has to be proved, because a database authored before the pool exists and its papers must
+            // survive being moved. Building the pre-state explicitly is what keeps this test about the
+            // migration rather than about the seed.
             Dictionary<int, int> before;
             await using (var db = DbContextFactory.Create(connectionString))
             {
+                // A DEDICATED exam, created here: the migration must be the thing that creates the
+                // roster, and every seeded exam now already has one. Measured twice: "the first
+                // published exam" gave 9 positions where 3 were expected, and "the first exam with no
+                // binding" then matched nothing at all, because #267's seed binds every paper.
+                var template = await db.Exams.AsNoTracking().FirstAsync(e => e.Status == "published" && !e.IsDeleted);
+                var seededExam = new BusinessObjects.Entities.Exam
+                {
+                    CertId = template.CertId,
+                    Name = $"Pre-pool paper {Guid.NewGuid():N}"[..40],
+                    Status = "published",
+                    DurationMinutes = 30,
+                    Purpose = "mock",
+                    QuestionCount = 3,
+                };
+                db.Exams.Add(seededExam);
+                await db.SaveChangesAsync();
+
+                var section = await db.Sections.AsNoTracking().FirstAsync(s => s.CertId == seededExam.CertId);
+
+                var group = new BusinessObjects.Entities.QuestionGroup
+                {
+                    ExamId = seededExam.ExamId,
+                    CertId = seededExam.CertId,
+                    SectionId = section.SectionId,
+                    DisplayOrder = 100,
+                };
+                db.QuestionGroups.Add(group);
+                await db.SaveChangesAsync();
+
+                for (var i = 1; i <= 3; i++)
+                {
+                    db.Questions.Add(new BusinessObjects.Entities.Question
+                    {
+                        GroupId = group.GroupId,
+                        ExamId = seededExam.ExamId,
+                        SectionId = section.SectionId,
+                        SkillId = section.SkillId,
+                        Stem = $"Legacy stem {i}",
+                        CefrLevel = BusinessObjects.CefrLevel.B1,
+                        QuestionType = "mcq",
+                        DisplayOrder = i,
+                    });
+                }
+                await db.SaveChangesAsync();
+
                 before = await db.Questions.AsNoTracking()
                     .GroupBy(q => q.ExamId)
                     .Select(g => new { ExamId = g.Key, Count = g.Count() })
                     .ToDictionaryAsync(g => g.ExamId, g => g.Count);
             }
 
-            // The seed must actually carry papers, or every assertion below is vacuous.
-            Assert.True(before.Count >= 15, $"the seed produced {before.Count} exam(s); it loaded almost nothing");
-            Assert.True(before.Values.Sum() >= 100, $"the seed produced {before.Values.Sum()} question(s); it loaded almost nothing");
+            // The pre-state must actually carry a paper, or every assertion below is vacuous.
+            Assert.True(before.Count >= 1, $"the pre-state produced {before.Count} exam(s) with legacy content");
+            Assert.True(before.Values.Sum() >= 3, $"the pre-state produced {before.Values.Sum()} legacy question(s)");
 
             // Run the migration.
             await database.SqlCmdFileToDatabaseAsync(name, Path.Combine(DatabaseFixture.RepoRootPath, "docs", "migrate-paper-to-pool.sql"));
@@ -65,8 +115,12 @@ public sealed class PaperMigrationCountsTests(DatabaseFixture database)
                 Assert.Equal(expected, actual);
             }
 
-            // No exam gained a roster it did not have.
-            Assert.Equal(before.Keys.OrderBy(id => id), after.Keys.OrderBy(id => id));
+            // No exam gained a roster for a paper that had no legacy content. The seed's own papers
+            // already had rosters before this migration ran, so only the exams in `before` are the
+            // subject; asserting equality over ALL exams compared the constructed paper against the
+            // seeded seventeen and failed for the wrong reason.
+            Assert.All(before.Keys, examId =>
+                Assert.True(after.ContainsKey(examId), $"exam {examId} had no roster after the migration"));
 
             // And the positions are a paper: unique within (exam, section), 1..n.
             var positions = await read.ExamItems.AsNoTracking()

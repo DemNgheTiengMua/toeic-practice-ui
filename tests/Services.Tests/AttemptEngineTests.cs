@@ -470,23 +470,52 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     [Fact]
     public async Task CreateAttempt_Seeds_The_Diagnostic_Benchmark_Hybrid_Question_Set()
     {
-        var seedDemoPath = Path.Combine(DatabaseFixture.RepoRootPath, "docs", "seed-demo.sql");
-        await database.SqlCmdFileAsync(seedDemoPath);
+        // #267: the seed now carries explicit ids for every row, so loading it into the SHARED test
+        // database puts its certificates beside whatever a previous test left there and a foreign key
+        // can name a row this database holds under a different id. It is loaded into its own database,
+        // which is also how the product loads it: a fresh schema, then one seed.
+        var name = $"EEseed_{Guid.NewGuid():N}"[..24];
+        var connectionString = await database.CreateFreshDatabaseAsync(name);
+        try
+        {
+            await database.SqlCmdFileToDatabaseAsync(name, Path.Combine(DatabaseFixture.RepoRootPath, "docs", "seed-demo.sql"));
 
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-        var exam = await db.Exams.SingleAsync(e => e.Name == "Diagnostic Benchmark 45M");
-        var certId = exam.CertId;
-        var examId = exam.ExamId;
-        var userId = await SeedLearnerAsync("TOEIC");
+            await using var db = DbContextFactory.Create(connectionString);
+            var exam = await db.Exams.SingleAsync(e => e.Name == "Diagnostic Benchmark 45M");
+            var certId = exam.CertId;
+            var examId = exam.ExamId;
 
-        var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, exam.DurationMinutes);
-        await CreateEngine().VerifyPreflightAsync(attempt.AttemptId, userId);
+            // The engine and the learner must live in the SAME database the seed was loaded into, so
+            // both are built against `connectionString` rather than through the helpers that point at
+            // the shared database.
+            var seedDb = DbContextFactory.Create(connectionString);
+            var engine = new AttemptEngine(seedDb);
+            // A learner in the same database the seed was loaded into.
+            var learnerEmail = $"{Guid.NewGuid():N}@seeded.test";
+            seedDb.Users.Add(new BusinessObjects.Entities.User
+            {
+                RoleId = (await seedDb.Roles.SingleAsync(r => r.Code == "learner")).RoleId,
+                Email = learnerEmail,
+                PasswordHash = [1],
+                FullName = "Seeded learner",
+                ActiveCertId = certId,
+            });
+            await seedDb.SaveChangesAsync();
+            var userId = await seedDb.Users.Where(u => u.Email == learnerEmail).Select(u => u.UserId).SingleAsync();
 
-        await using var resultDb = DbContextFactory.Create(database.ConnectionString);
-        Assert.Equal(30, await resultDb.AttemptAnswers.CountAsync(a => a.AttemptId == attempt.AttemptId));
-        Assert.Equal(2, await resultDb.FreeResponses.CountAsync(r => r.AttemptId == attempt.AttemptId));
-        var take = await new AttemptEngine(resultDb).GetAttemptTakeAsync(attempt.AttemptId, userId, null);
-        Assert.Equal(32, take.TotalQuestions);
+            var attempt = await engine.CreateAttemptAsync(userId, certId, examId, exam.DurationMinutes);
+            await engine.VerifyPreflightAsync(attempt.AttemptId, userId);
+
+            await using var resultDb = DbContextFactory.Create(connectionString);
+            Assert.Equal(30, await resultDb.AttemptAnswers.CountAsync(a => a.AttemptId == attempt.AttemptId));
+            Assert.Equal(2, await resultDb.FreeResponses.CountAsync(r => r.AttemptId == attempt.AttemptId));
+            var take = await new AttemptEngine(resultDb).GetAttemptTakeAsync(attempt.AttemptId, userId, null);
+            Assert.Equal(32, take.TotalQuestions);
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(name);
+        }
     }
 
     [Fact]

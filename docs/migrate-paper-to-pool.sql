@@ -46,13 +46,13 @@ END
 -- ---- 1. a stimulus per group ----------------------------------------------------------------
 -- One row per group, created only when the group actually carries text or audio. A group with neither
 -- is a bare set of questions, and an empty Stimulus row would be a pointer at nothing.
-INSERT INTO Stimuli (CefrLevel, Passage, AudioPath, Transcript, ImagePath, ImageAlt, DomainContext, PromptCopy)
+INSERT INTO Stimuli (CefrLevel, Passage, AudioPath, AudioStartMs, AudioEndMs, Transcript, ImagePath, ImageAlt, DomainContext, PromptCopy)
 SELECT
     -- The stimulus's level is its group's FIRST child's level: D0.3 allows children at Ls +/- 1 and
     -- requires the majority at Ls, so the first child is the best available reading of the group's own.
     COALESCE((SELECT TOP 1 q.CefrLevel FROM Questions q WHERE q.GroupId = g.GroupId AND q.CefrLevel IS NOT NULL
               ORDER BY q.DisplayOrder), 'B1'),
-    g.Passage, g.AudioPath, g.Transcript, g.ImagePath, g.ImageAlt, 'general', NULL
+    g.Passage, g.AudioPath, g.AudioStartMs, g.AudioEndMs, g.Transcript, g.ImagePath, g.ImageAlt, 'general', NULL
 FROM QuestionGroups g
 WHERE (g.Passage IS NOT NULL OR g.AudioPath IS NOT NULL OR g.Transcript IS NOT NULL OR g.ImagePath IS NOT NULL)
   AND NOT EXISTS (
@@ -176,12 +176,30 @@ BEGIN
     INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel,
                               Explanation, RationaleA, RationaleB, RationaleC, RationaleD,
                               MaxSelections, AllowNumber, AcceptedAnswersJson, RequiredKeywords, Hint,
+                              MinWords, MaxWords, PrepSeconds, ResponseSeconds,
                               LastWrittenBy)
     VALUES (@itemId, 1, @stem, @optA, @optB, @optC, @optD, @key,
             @explain, @ratA, @ratB, @ratC, @ratD,
             (SELECT MaxSelections FROM Questions WHERE QuestionId = @qid),
             ISNULL((SELECT AllowNumber FROM Questions WHERE QuestionId = @qid), 1),
-            @accepted, @keywords, @hint, @author);
+            @accepted, @keywords, @hint,
+            -- A productive task's word window and timers live on the version, not on the paper. Without
+            -- these four a writing task migrates with no floor - measured: four Writing Extension tasks
+            -- all arrived with MinWords NULL, and the grader's "at least N words" check silently stopped
+            -- applying.
+            --
+            -- CK_ItemVersions_WordRange refuses a ceiling with no floor, and one legacy row has exactly
+            -- that (Q110: an inline_completion with MaxWords = 1 and no MinWords). That row's ceiling is
+            -- its whole meaning, so it is carried as a floor of 1 rather than dropped - dropping it
+            -- would let a one-word blank accept a paragraph.
+            CASE WHEN (SELECT MinWords FROM Questions WHERE QuestionId = @qid) IS NULL
+                  AND (SELECT MaxWords FROM Questions WHERE QuestionId = @qid) IS NOT NULL
+                 THEN 1
+                 ELSE (SELECT MinWords FROM Questions WHERE QuestionId = @qid) END,
+            (SELECT MaxWords FROM Questions WHERE QuestionId = @qid),
+            (SELECT PrepSeconds FROM Questions WHERE QuestionId = @qid),
+            (SELECT ResponseSeconds FROM Questions WHERE QuestionId = @qid),
+            @author);
     SET @versionId = SCOPE_IDENTITY();
 
     -- The roster, which is the whole point: the paper's position now exists on the pool.
