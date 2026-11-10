@@ -97,6 +97,33 @@ format. A manifest is:
   ]
 }
 
+**`sectionCode` is not free text.** It must be a section that already exists on the target certificate.
+The importer refuses an unknown code by name and lists the ones that would work:
+
+```
+Unknown section 'reading' for this certificate. Known sections: P1, P2, P3, P4, P5, P6, P7, S1, ...
+```
+
+That refusal is not a formatting complaint — it is the importer telling you the paper you are writing has
+no shelf to sit on. The codes below are what this product currently holds; **use one of them exactly**.
+If the certificate you are asked for is not here, ask for its section rows rather than inventing a code.
+
+| Certificate | Listening | Reading | Speaking | Writing |
+|---|---|---|---|---|
+| TOEIC | P1, P2, P3, P4 | P5, P6, P7 | S1, S2, S3, S4, S5 | W1, W2, W3 |
+| TOEIC_CAT | P1_CAT, P2_CAT | P5_CAT, P7_CAT | — | — |
+| TOEIC_SW | — | — | SW_S1, SW_S2 | SW_W1, SW_W3 |
+| IELTS | REC | PAS | INT | T1, T2 |
+| VSTEP | L3 | R4 | S3 | W1, W2 |
+
+The section also decides things you must match, so read it as a constraint and not just a label:
+
+- its **modality** fixes the skill, so a `P5` section can only hold reading items
+- its **`OptionCount`** fixes how many options an `mcq` there takes (TOEIC `P2` is three)
+- its **`ClusterSize`** fixes how many questions each group must hold when it is greater than one
+- its **`HideOptionText`** means the options are spoken, not printed — do not write option text that the
+  learner is expected to read
+
 A question is:
 
 {
