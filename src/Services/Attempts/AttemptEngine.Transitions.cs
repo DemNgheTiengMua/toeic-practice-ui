@@ -23,34 +23,30 @@ public sealed partial class AttemptEngine
                 "Exam phase time has expired.");
         }
 
-        var question = await db.Questions
-            .Where(q => q.QuestionId == questionId && q.ExamId == attempt.ExamId)
-            .Select(q => new
-            {
-                q.SkillId,
-                q.GroupId,
-                q.SectionId,
-                UnitNumber = q.Group.UnitNumber,
-                NavigationMode = q.Section.NavigationMode
-            })
-            .SingleOrDefaultAsync(cancellationToken)
+        // #250: the sitting state of a position is a property of the PAPER, not of a question row. A
+        // pool answer names an ExamItemId, which has no Questions row to look up - so this resolves
+        // through the same seam the projection uses. Measured: before this, saving an answer on a
+        // pool-only paper failed with "Question 1 not found in attempt" even though the paper had three
+        // positions, because the lookup was a query on db.Questions.
+        var questions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var question = questions.FirstOrDefault(q => q.Id == questionId)
             ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found in attempt.");
 
-        if (attempt.ActiveSkillId.HasValue && question.SkillId != attempt.ActiveSkillId.Value)
+        if (attempt.ActiveSkillId.HasValue && question.Section.SkillId != attempt.ActiveSkillId.Value)
         {
             throw new AttemptEngineException(
                 AttemptEngineException.WrongPhase,
                 "This question is not in the active exam skill.");
         }
 
-        if (question.UnitNumber != attempt.ActiveUnitNumber)
+        if ((question.Group.UnitNumber ?? 1) != attempt.ActiveUnitNumber)
         {
             throw new AttemptEngineException(
                 AttemptEngineException.WrongPhase,
                 "This question belongs to a locked unit.");
         }
 
-        if (string.Equals(question.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(question.Section.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase))
         {
             if (attempt.ActiveGroupId.HasValue && question.GroupId != attempt.ActiveGroupId.Value)
             {

@@ -12,46 +12,57 @@ namespace Services;
 public sealed partial class AttemptEngine
 {
     /// <summary>
-    /// #250: the paper's questions, read from the POOL when the paper has a roster.
+    /// #250: the paper's questions, read from the POOL when the paper was authored there, and from the
+    /// legacy rows otherwise.
     /// <para>
     /// <b>Why this is the whole ticket in one method.</b> <see cref="LoadExamQuestionsAsync"/> reads
-    /// <c>db.Questions</c>, and every downstream reader — navigation locks, clustering, the take view,
-    /// the navigator, submission — was written against a <c>Question</c> row. That made the legacy table
+    /// <c>db.Questions</c>, and every downstream reader - navigation locks, clustering, the take view,
+    /// the navigator, submission - was written against a <c>Question</c> row. That made the legacy table
     /// impossible to drop: even a fully migrated paper still had to read it, because the projection had
     /// no other source for <i>where a question sits</i>.
     /// </para>
     /// <para>
     /// This method supplies that source. A roster row already carries every field the projection needs
-    /// from the paper — section, position, unit, modality — and the pinned <c>ItemVersion</c> carries
+    /// from the paper - section, position, unit, modality - and the pinned <c>ItemVersion</c> carries
     /// the scored content. So a paper built from <c>ExamItems</c> and one built from <c>Questions</c>
     /// arrive at the same <see cref="SittingQuestion"/> shape, and every reader after this point is
     /// shape-blind.
     /// </para>
     /// <para>
-    /// <b>The legacy branch is explicit, not a silent fallback.</b> A paper with no roster rows reads
-    /// its <c>Questions</c> exactly as before, and that branch is named
-    /// <see cref="LoadLegacyQuestionsAsync"/> so a reader can see which path a paper took. When criterion
-    /// 5 of #250 drops the three tables, that branch goes with them; until then, 17 of 18 seeded papers
-    /// still depend on it and a migration nobody has run yet is not a reason to break them.
+    /// <b>Which branch, and why it is decided this way.</b> A paper is pool-authored only when it has NO
+    /// legacy <c>Questions</c> rows. That is what criterion 1 states - "builds a paper from ExamItems
+    /// ALONE" - and it is the only rule that is safe during the transition, because a paper that has
+    /// BOTH (the seed's assembled paper does: bindings beside question rows) has answers recorded
+    /// against <c>QuestionId</c>, and reading it through the roster would look for an <c>ExamItemId</c>
+    /// those answers do not carry. Measured: the first draft preferred the roster whenever bindings
+    /// existed, and
+    /// <c>Saving_an_answer_records_the_pinned_label_and_scores_against_the_pinned_key</c> came back with
+    /// a null selected option, because the answer's legacy key never met the roster's position key.
+    /// </para>
+    /// <para>
+    /// The count query is the transition's cost, and criterion 5 pays it off: when the three legacy
+    /// tables are dropped, this becomes "read the roster" and nothing else.
     /// </para>
     /// </summary>
     private async Task<List<SittingQuestion>> LoadSittingQuestionsAsync(
         int examId, CancellationToken cancellationToken)
     {
-        var roster = await LoadRosterAsync(examId, cancellationToken);
-        return roster.Count > 0
-            ? roster
-            : await LoadLegacyQuestionsAsync(examId, cancellationToken);
+        var legacyCount = await db.Questions
+            .AsNoTracking()
+            .CountAsync(q => q.ExamId == examId, cancellationToken);
+
+        return legacyCount > 0
+            ? await LoadLegacyQuestionsAsync(examId, cancellationToken)
+            : await LoadRosterAsync(examId, cancellationToken);
     }
 
     /// <summary>
     /// The paper as the pool describes it: one row per <c>ExamItems</c> binding, in sitting order.
     /// Reads no <c>Questions</c> row at all.
     /// <para>
-    /// Ordering is by skill, then section, then the binding's own position — the same order
-    /// <see cref="LoadLegacyQuestionsAsync"/> produced, because the roster's
-    /// <c>DisplayOrder</c> is defined as "the paper's position, 1-based within its section" and the
-    /// navigator's numbering must not move when a paper migrates.
+    /// Ordering is by skill, then section, then the binding's own position - the same order the legacy
+    /// branch produced, because the roster's <c>DisplayOrder</c> is defined as "the paper's position,
+    /// 1-based within its section" and the navigator's numbering must not move when a paper migrates.
     /// </para>
     /// </summary>
     private async Task<List<SittingQuestion>> LoadRosterAsync(
@@ -82,7 +93,7 @@ public sealed partial class AttemptEngine
             return [];
         }
 
-        // The shared stimulus, when the item has one. Read once for the row set rather than per item.
+        // The shared stimulus, read once for the row set rather than per item.
         var stimulusIds = rows
             .Where(r => r.item.StimulusId.HasValue)
             .Select(r => r.item.StimulusId!.Value)
@@ -107,13 +118,8 @@ public sealed partial class AttemptEngine
                 : null;
             var version = row.v;
 
-            var options = PoolOptions(version.ItemVersionId, version)
-                .Select(o => new SittingOption(o.OptionId, o.Label, o.Text))
-                .ToList();
-
             // Audio resolution matches the legacy path: a stimulus slice wins, and a section master
-            // track is the fallback. Resolved here rather than in the projection so both paths hand
-            // the view the same resolved values.
+            // track is the fallback.
             var audio = ExamAudio.Resolve(
                 stimulus?.AudioPath,
                 stimulus?.AudioStartMs,
@@ -127,24 +133,11 @@ public sealed partial class AttemptEngine
                 ItemVersionId: version.ItemVersionId,
                 ItemId: row.i.ItemId,
                 SectionId: row.s.SectionId,
-                SectionCode: row.s.Code,
-                SectionName: row.s.Name,
-                SkillId: row.k.SkillId,
-                SkillCode: row.k.Code,
-                SkillName: row.k.Name,
-                SkillDisplayOrder: row.k.DisplayOrder,
-                SkillDurationMinutes: row.k.DurationMinutes,
-                Modality: row.s.Modality,
                 RenderFormat: row.item.RenderFormat,
                 Stem: version.Stem,
-                ImagePath: stimulus?.ImagePath,
-                ImageAlt: stimulus?.ImageAlt,
-                AudioPath: audio?.Path,
-                AudioStartMs: audio?.StartMs,
-                AudioEndMs: audio?.EndMs,
-                Transcript: stimulus?.Transcript,
-                Passage: stimulus?.Passage,
-                Options: options,
+                Options: PoolOptions(version.ItemVersionId, version)
+                    .Select(o => new SittingOption(o.OptionId, o.Label, o.Text))
+                    .ToList(),
                 MinWords: version.MinWords,
                 MaxWords: version.MaxWords,
                 PrepSeconds: version.PrepSeconds ?? stimulus?.PrepSeconds,
@@ -154,19 +147,40 @@ public sealed partial class AttemptEngine
                 AcceptedAnswersJson: version.AcceptedAnswersJson,
                 RequiredKeywords: version.RequiredKeywords,
                 Hint: version.Hint,
-                LayoutType: row.s.LayoutType,
-                RequirePassage: row.s.RequirePassage,
-                NavigationMode: row.s.NavigationMode,
-                ToolsConfigJson: row.s.ToolsConfigJson,
-                HideOptionText: row.s.HideOptionText,
-                OptionCount: row.s.OptionCount > 0 ? row.s.OptionCount : 4,
-                ClusterSize: row.s.ClusterSize > 0 ? row.s.ClusterSize : 1,
-                RequireImage: row.s.RequireImage,
-                UnitNumber: row.i.UnitNumber,
                 // A pool position's grouping identity is its stimulus: the navigation locks compare
                 // "am I in the same bundle", and a stimulus IS the bundle.
                 GroupId: row.item.StimulusId,
-                TimerPolicyJson: row.s.TimerPolicyJson));
+                Section: new SittingSection(
+                    SectionId: row.s.SectionId,
+                    Code: row.s.Code,
+                    Name: row.s.Name,
+                    SkillId: row.s.SkillId,
+                    Modality: row.s.Modality,
+                    LayoutType: row.s.LayoutType,
+                    RequirePassage: row.s.RequirePassage,
+                    NavigationMode: row.s.NavigationMode,
+                    ToolsConfigJson: row.s.ToolsConfigJson,
+                    HideOptionText: row.s.HideOptionText,
+                    OptionCount: row.s.OptionCount > 0 ? row.s.OptionCount : 4,
+                    ClusterSize: row.s.ClusterSize > 0 ? row.s.ClusterSize : 1,
+                    RequireImage: row.s.RequireImage,
+                    TimerPolicyJson: row.s.TimerPolicyJson,
+                    Skill: new SittingSkill(
+                        SkillId: row.k.SkillId,
+                        Code: row.k.Code,
+                        Name: row.k.Name,
+                        DisplayOrder: row.k.DisplayOrder,
+                        DurationMinutes: row.k.DurationMinutes,
+                        LockNavigationOneWay: row.k.LockNavigationOneWay)),
+                Group: new SittingGroup(
+                    UnitNumber: row.i.UnitNumber,
+                    Passage: stimulus?.Passage,
+                    Transcript: stimulus?.Transcript,
+                    ImagePath: stimulus?.ImagePath,
+                    ImageAlt: stimulus?.ImageAlt,
+                    AudioPath: audio?.Path,
+                    AudioStartMs: audio?.StartMs,
+                    AudioEndMs: audio?.EndMs)));
         }
 
         return list;
@@ -193,38 +207,32 @@ public sealed partial class AttemptEngine
         EnsureBindingsRender(questions, bindings);
         var boundByQuestion = PlaceBindings(questions, bindings);
 
+        // The legacy audio chain, resolved here rather than in the projection: a group's own slice
+        // wins, and the section's uploaded master track is the fallback. Both are properties of the
+        // paper, so they belong to the loader.
+        var sectionMasterAudio = await LoadSectionMasterAudioAsync(examId, cancellationToken);
+
         return questions
-            .Select(q => FromLegacyQuestion(q, boundByQuestion.GetValueOrDefault(q.QuestionId)))
+            .Select(q => FromLegacyQuestion(
+                q,
+                boundByQuestion.GetValueOrDefault(q.QuestionId),
+                ResolveGroupAudio(q.Group, sectionMasterAudio)))
             .ToList();
     }
 
     /// <summary>One legacy <c>Question</c> row as a <see cref="SittingQuestion"/>.</summary>
-    private SittingQuestion FromLegacyQuestion(Question q, BoundPaperPosition? bound) => new(
+    private SittingQuestion FromLegacyQuestion(
+        Question q, BoundPaperPosition? bound, ResolvedGroupAudio? audio) => new(
         Id: q.QuestionId,
         ExamId: q.ExamId,
         ExamItemId: null,
         ItemVersionId: bound?.ItemVersionId,
         ItemId: bound?.ItemId ?? 0,
         SectionId: q.SectionId,
-        SectionCode: q.Section?.Code ?? "",
-        SectionName: q.Section?.Name ?? "",
-        SkillId: q.Section?.SkillId ?? 0,
-        SkillCode: q.Section?.Skill?.Code ?? "",
-        SkillName: q.Section?.Skill?.Name ?? "",
-        SkillDisplayOrder: q.Section?.Skill?.DisplayOrder ?? 0,
-        SkillDurationMinutes: q.Section?.Skill?.DurationMinutes,
-        Modality: q.Section?.Modality ?? "reading",
         // #186: the pinned version's stem and options are the scored content. Everything else - type,
         // word limits, timers, the section's chrome - is the paper's, so it still comes from the row.
         RenderFormat: q.QuestionType,
         Stem: bound?.Version.Stem ?? q.Stem,
-        ImagePath: q.Group?.ImagePath,
-        ImageAlt: q.Group?.ImageAlt,
-        AudioPath: null,
-        AudioStartMs: null,
-        AudioEndMs: null,
-        Transcript: q.Group?.Transcript,
-        Passage: q.Group?.Passage,
         Options: bound is null
             ? q.QuestionOptionQuestionNavigations
                 .OrderBy(o => o.Label)
@@ -242,17 +250,80 @@ public sealed partial class AttemptEngine
         AcceptedAnswersJson: q.AcceptedAnswersJson,
         RequiredKeywords: q.RequiredKeywords,
         Hint: q.Hint,
-        LayoutType: q.Section?.LayoutType,
-        RequirePassage: q.Section?.RequirePassage ?? false,
-        NavigationMode: q.Section?.NavigationMode,
-        ToolsConfigJson: q.Section?.ToolsConfigJson,
-        HideOptionText: q.Section?.HideOptionText ?? false,
-        OptionCount: q.Section is { OptionCount: > 0 } s ? s.OptionCount : 4,
-        ClusterSize: q.Section is { ClusterSize: > 0 } c ? c.ClusterSize : 1,
-        RequireImage: q.Section?.RequireImage ?? false,
-        UnitNumber: q.Group?.UnitNumber ?? 1,
         GroupId: q.GroupId,
-        TimerPolicyJson: q.Section?.TimerPolicyJson,
+        Section: new SittingSection(
+            SectionId: q.SectionId,
+            Code: q.Section?.Code ?? "",
+            Name: q.Section?.Name ?? "",
+            SkillId: q.Section?.SkillId ?? 0,
+            Modality: q.Section?.Modality ?? "reading",
+            LayoutType: q.Section?.LayoutType,
+            RequirePassage: q.Section?.RequirePassage ?? false,
+            NavigationMode: q.Section?.NavigationMode,
+            ToolsConfigJson: q.Section?.ToolsConfigJson,
+            HideOptionText: q.Section?.HideOptionText ?? false,
+            OptionCount: q.Section is { OptionCount: > 0 } s ? s.OptionCount : 4,
+            ClusterSize: q.Section is { ClusterSize: > 0 } c ? c.ClusterSize : 1,
+            RequireImage: q.Section?.RequireImage ?? false,
+            TimerPolicyJson: q.Section?.TimerPolicyJson,
+            Skill: new SittingSkill(
+                SkillId: q.Section?.SkillId ?? 0,
+                Code: q.Section?.Skill?.Code ?? "",
+                Name: q.Section?.Skill?.Name ?? "",
+                DisplayOrder: q.Section?.Skill?.DisplayOrder ?? 0,
+                DurationMinutes: q.Section?.Skill?.DurationMinutes,
+                LockNavigationOneWay: q.Section?.Skill?.LockNavigationOneWay ?? false)),
+        Group: new SittingGroup(
+            UnitNumber: q.Group?.UnitNumber ?? 1,
+            Passage: q.Group?.Passage,
+            Transcript: q.Group?.Transcript,
+            ImagePath: q.Group?.ImagePath,
+            ImageAlt: q.Group?.ImageAlt,
+            AudioPath: audio?.Path,
+            AudioStartMs: audio?.StartMs,
+            AudioEndMs: audio?.EndMs,
+            ResponseSeconds: q.Group?.ResponseSeconds),
         // The legacy scoring path needs the row itself; nothing else may branch on it.
         LegacyQuestion: q);
+
+    /// <summary>
+    /// #250: the paper position a request names, resolved through the same seam the projection uses.
+    /// <para>
+    /// The client sends back the id the projection gave it, and that id is a <c>QuestionId</c> on a
+    /// legacy paper and an <c>ExamItemId</c> on a pool paper. Resolving it here means every writer -
+    /// answer, draft, flag, navigation - agrees with the reader about what a position is, instead of
+    /// each querying <c>Questions</c> on its own.
+    /// </para>
+    /// </summary>
+    private async Task<SittingQuestion> FindSittingQuestionAsync(
+        ExamAttempt attempt, int questionId, CancellationToken cancellationToken)
+    {
+        var questions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        return questions.FirstOrDefault(q => q.Id == questionId)
+            ?? throw new AttemptEngineException(
+                AttemptEngineException.QuestionNotFound,
+                $"Question {questionId} not found in attempt.");
+    }
+
+    /// <summary>
+    /// #250: remember where the learner is, for the one column that can hold it.
+    /// <para>
+    /// <b>The limit, stated rather than hidden.</b> <c>ExamAttempts.LastQuestionId</c> carries a foreign
+    /// key to <c>Questions(QuestionId, ExamId)</c>. A pool position's id is an <c>ExamItemId</c>, which
+    /// is not a question id, so writing it here would either fail the foreign key or - worse, on a
+    /// database whose id spaces overlap - silently point at an unrelated question. So this records the
+    /// position only for a legacy paper, and a pool paper resumes at its first unlocked position.
+    /// </para>
+    /// <para>
+    /// That is a real limitation and it is why criterion 5 has to repoint the column before the legacy
+    /// tables go: a pool-only paper cannot yet remember a mid-paper position across a reload.
+    /// </para>
+    /// </summary>
+    private static void RecordLastPosition(ExamAttempt attempt, SittingQuestion q)
+    {
+        if (q.LegacyQuestion is not null)
+        {
+            attempt.LastQuestionId = q.Id;
+        }
+    }
 }

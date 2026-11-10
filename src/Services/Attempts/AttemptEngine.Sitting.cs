@@ -269,37 +269,46 @@ public sealed partial class AttemptEngine
         bool unlockNavigation,
         CancellationToken cancellationToken)
     {
-        var questions = await LoadExamQuestionsAsync(attempt.ExamId, cancellationToken);
+        var questions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
         int totalQuestions = questions.Count;
         if (totalQuestions == 0)
         {
             throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Exam {attempt.ExamId} has no questions.");
         }
 
-        // #186: where the pool has assembled this paper, the scored content comes from the version
-        // the binding pinned. A paper with no binding reads its Questions rows exactly as before.
-        var bindings = await LoadPaperBindingsAsync(attempt.ExamId, cancellationToken);
-        var boundByQuestion = PlaceBindings(questions, bindings);
-
-        var answersByQuestion = await db.AttemptAnswers
+        // #250: a legacy answer names QuestionId and a pool answer names ExamItemId;
+        // CK_AttemptAnswers_HasShape guarantees at least one. Two maps, because the numbers are
+        // independent id spaces and must never stand in for each other.
+        var answers = await db.AttemptAnswers
             .Where(a => a.AttemptId == attempt.AttemptId)
-            .ToDictionaryAsync(a => a.QuestionId, cancellationToken);
+            .ToListAsync(cancellationToken);
+        var answerByQuestionId = answers
+            .Where(a => a.QuestionId.HasValue)
+            .ToDictionary(a => a.QuestionId!.Value);
+        var answerByExamItemId = answers
+            .Where(a => a.ExamItemId.HasValue)
+            .ToDictionary(a => a.ExamItemId!.Value);
+
+        AttemptAnswer? AnswerFor(SittingQuestion q) => q.ExamItemId is int examItemId
+            ? answerByExamItemId.GetValueOrDefault(examItemId)
+            : answerByQuestionId.GetValueOrDefault(q.Id);
+
         var freeResponses = await db.FreeResponses
             .AsNoTracking()
             .Where(r => r.AttemptId == attempt.AttemptId)
             .ToDictionaryAsync(r => r.QuestionId, cancellationToken);
 
         int answeredCount = questions.Count(q =>
-            q.QuestionType == QuestionType.FreeResponse.ToCode()
-                ? freeResponses.TryGetValue(q.QuestionId, out var response) && (!string.IsNullOrWhiteSpace(response.ResponseText) || !string.IsNullOrWhiteSpace(response.AudioPath))
-                : answersByQuestion.TryGetValue(q.QuestionId, out var answer) && IsAnswered(answer));
-        int flaggedCount = answersByQuestion.Values.Count(a => a.IsFlagged);
+            q.RenderFormat == QuestionType.FreeResponse.ToCode()
+                ? freeResponses.TryGetValue(q.Id, out var response) && (!string.IsNullOrWhiteSpace(response.ResponseText) || !string.IsNullOrWhiteSpace(response.AudioPath))
+                : IsAnswered(AnswerFor(q)));
+        int flaggedCount = answers.Count(a => a.IsFlagged);
 
         // Determine authoritative saved question index within the active phase/unit/group
         int savedIndex = -1;
         if (attempt.LastQuestionId.HasValue)
         {
-            savedIndex = questions.FindIndex(q => q.QuestionId == attempt.LastQuestionId.Value);
+            savedIndex = questions.FindIndex(q => q.Id == attempt.LastQuestionId.Value);
         }
 
         if (savedIndex < 0 || IsPhaseOrUnitOrGroupLocked(attempt, questions[savedIndex]))
@@ -335,7 +344,7 @@ public sealed partial class AttemptEngine
                     && targetIndex > savedIndex
                     && string.Equals(requestedQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase))
                 {
-                    attempt.LastQuestionId = requestedQuestion.QuestionId;
+                    RecordLastPosition(attempt, requestedQuestion);
                     await db.SaveChangesAsync(cancellationToken);
                     savedIndex = targetIndex;
                     minAllowedAudioIndex = GetFirstClusterIndex(questions, savedIndex);
@@ -347,30 +356,21 @@ public sealed partial class AttemptEngine
             }
         }
 
-        var sectionMasterAudio = await LoadSectionMasterAudioAsync(attempt.ExamId, cancellationToken);
         var allQuestions = new List<AttemptQuestionInfo>(totalQuestions);
         for (int i = 0; i < totalQuestions; i++)
         {
             var q = questions[i];
-            answersByQuestion.TryGetValue(q.QuestionId, out var ans);
-            freeResponses.TryGetValue(q.QuestionId, out var response);
-            boundByQuestion.TryGetValue(q.QuestionId, out var bound);
+            var ans = AnswerFor(q);
+            freeResponses.TryGetValue(q.Id, out var response);
 
-            // #186: the pinned version's stem and options are the scored content; everything else —
-            // type, word limits, timers, the section's chrome — is the paper's, not the item's, so it
-            // still comes from the question row.
-            var opts = bound is null
-                ? q.QuestionOptionQuestionNavigations
-                    .OrderBy(o => o.Label)
-                    .Select(o => new AttemptOption(o.OptionId, o.Label, o.Text))
-                    .ToList()
-                : PoolOptions(bound.ItemVersionId, bound.Version);
-            var stem = bound?.Version.Stem ?? q.Stem;
-            var selectedOptionId = bound is null ? ans?.SelectedOptionId : SelectedPoolOptionId(bound.ItemVersionId, ans);
-            var audio = ResolveGroupAudio(q.Group, sectionMasterAudio);
+            // #250: the loader resolved the scored content - a pinned version's stem, options and key,
+            // or the legacy question's - so the projection no longer branches on which it got.
+            var selectedOptionId = q.ItemVersionId is int pinnedVersionId
+                ? SelectedPoolOptionId(pinnedVersionId, ans)
+                : ans?.SelectedOptionId;
 
             allQuestions.Add(new AttemptQuestionInfo(
-                q.QuestionId,
+                q.Id,
                 i + 1,
                 totalQuestions,
                 q.SectionId,
@@ -379,18 +379,18 @@ public sealed partial class AttemptEngine
                 q.Section.Skill.Code,
                 q.Section.Skill.Name,
                 EnumCodes.Parse<Modality>(q.Section.Modality),
-                stem,
+                q.Stem,
                 q.Group.ImagePath,
                 q.Group.ImageAlt,
-                audio?.Path,
-                audio?.StartMs,
-                audio?.EndMs,
+                q.Group.AudioPath,
+                q.Group.AudioStartMs,
+                q.Group.AudioEndMs,
                 q.Group.Transcript,
                 q.Group.Passage,
-                opts,
+                q.Options.Select(o => new AttemptOption(o.OptionId, o.Label, o.Text)).ToList(),
                 selectedOptionId,
                 ans?.IsFlagged ?? false,
-                q.QuestionType,
+                q.RenderFormat,
                 q.MinWords,
                 q.MaxWords,
                 q.PrepSeconds,
@@ -411,10 +411,10 @@ public sealed partial class AttemptEngine
                 q.Section.NavigationMode,
                 q.Section.ToolsConfigJson,
                 q.Section.HideOptionText,
-                q.Section.OptionCount > 0 ? q.Section.OptionCount : 4,
-                q.Section.ClusterSize > 0 ? q.Section.ClusterSize : 1,
+                q.Section.OptionCount,
+                q.Section.ClusterSize,
                 q.Section.RequireImage,
-                q.Group.UnitNumber,
+                q.Group.UnitNumber ?? 1,
                 q.GroupId,
                 q.Section.TimerPolicyJson));
         }
@@ -428,8 +428,8 @@ public sealed partial class AttemptEngine
 
         var navigator = questions.Select((q, idx) =>
         {
-            answersByQuestion.TryGetValue(q.QuestionId, out var answer);
-            freeResponses.TryGetValue(q.QuestionId, out var response);
+            var answer = AnswerFor(q);
+            freeResponses.TryGetValue(q.Id, out var response);
             var isLocked = !unlockNavigation && (isPhaseExpired
                 || IsPhaseOrUnitOrGroupLocked(attempt, q)
                 || (string.Equals(q.Section.NavigationMode, "SYSTEM_PACED_AUTO", StringComparison.OrdinalIgnoreCase)
@@ -438,12 +438,12 @@ public sealed partial class AttemptEngine
                     && idx < GetFirstClusterIndex(questions, targetIndex)));
 
             return new NavigatorItem(
-                q.QuestionId,
+                q.Id,
                 idx + 1,
                 q.SectionId,
                 q.Section.Code,
                 EnumCodes.Parse<Modality>(q.Section.Modality),
-                q.QuestionType == QuestionType.FreeResponse.ToCode()
+                q.RenderFormat == QuestionType.FreeResponse.ToCode()
                     ? (!string.IsNullOrWhiteSpace(response?.ResponseText) || !string.IsNullOrWhiteSpace(response?.AudioPath))
                     : IsAnswered(answer),
                 answer?.IsFlagged ?? false,
@@ -503,14 +503,14 @@ public sealed partial class AttemptEngine
             CandidateNotesJson: attempt.CandidateNotesJson);
     }
 
-    private static bool IsPhaseOrUnitOrGroupLocked(ExamAttempt attempt, Question q) =>
+    private static bool IsPhaseOrUnitOrGroupLocked(ExamAttempt attempt, SittingQuestion q) =>
         (attempt.ActiveSkillId.HasValue && q.Section.SkillId != attempt.ActiveSkillId.Value)
         || (q.Group.UnitNumber != attempt.ActiveUnitNumber)
         || (string.Equals(q.Section.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase)
             && attempt.ActiveGroupId.HasValue
             && q.GroupId != attempt.ActiveGroupId.Value);
 
-    private static int GetFirstClusterIndex(IReadOnlyList<Question> questions, int currentIndex)
+    private static int GetFirstClusterIndex(IReadOnlyList<SittingQuestion> questions, int currentIndex)
     {
         if (currentIndex <= 0 || currentIndex >= questions.Count) return Math.Max(0, currentIndex);
         var current = questions[currentIndex];

@@ -43,9 +43,20 @@ public sealed partial class AttemptEngine
 
         await ValidateQuestionSittingStateAsync(attempt, questionId, cancellationToken);
 
-        var answer = await db.AttemptAnswers
-            .Include(a => a.Question)
-            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.QuestionId == questionId, cancellationToken);
+        // #250: an answer is keyed by whatever identity its question carries. A legacy position names
+        // QuestionId; a pool position names ExamItemId, which is the id the projection handed the
+        // client. Looking up only the first makes a pool paper look unanswered - measured: saving failed
+        // with "Free-response questions do not accept multiple-choice options", because a missing answer
+        // fell through to the free-response branch.
+        var sittingQuestion = await FindSittingQuestionAsync(attempt, questionId, cancellationToken);
+
+        var answer = sittingQuestion.ExamItemId is int examItemId
+            ? await db.AttemptAnswers
+                .Include(a => a.Question)
+                .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.ExamItemId == examItemId, cancellationToken)
+            : await db.AttemptAnswers
+                .Include(a => a.Question)
+                .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.QuestionId == questionId, cancellationToken);
 
         if (answer is null)
         {
@@ -53,14 +64,16 @@ public sealed partial class AttemptEngine
                 attempt, attemptId, questionId, selectedOptionId, responseText, isFlagged, null, cancellationToken);
         }
 
-        if (answer.Question.QuestionType == QuestionType.FreeResponse.ToCode())
+        // #250: the question's type comes from the paper, not from a joined Questions row - a pool
+        // answer has no such row.
+        if (sittingQuestion.RenderFormat == QuestionType.FreeResponse.ToCode())
         {
             return await SaveFreeResponseInternalAsync(
                 attempt, attemptId, questionId, selectedOptionId, responseText, isFlagged, answer, cancellationToken);
         }
         else
         {
-            if (!string.IsNullOrWhiteSpace(responseText) && (answer.Question.QuestionType == QuestionType.Mcq.ToCode() || answer.Question.QuestionType == QuestionType.Mcq_3.ToCode()))
+            if (!string.IsNullOrWhiteSpace(responseText) && (sittingQuestion.RenderFormat == QuestionType.Mcq.ToCode() || sittingQuestion.RenderFormat == QuestionType.Mcq_3.ToCode()))
             {
                 throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Multiple-choice questions do not accept free-response text.");
             }
@@ -105,11 +118,19 @@ public sealed partial class AttemptEngine
                 answer.SelectedOptionIdsJson = selectedOptionIdsJson;
                 answer.ResponseText = responseText;
 
+                // #250: a legacy answer still scores against its QuestionOptions rows, so that branch
+                // needs the question row itself. The loader carries it for exactly this.
+                var legacyQuestion = sittingQuestion.LegacyQuestion
+                    ?? answer.Question
+                    ?? throw new AttemptEngineException(
+                        AttemptEngineException.PaperNotAssembled,
+                        "This answer names neither a pinned item version nor a legacy question, so it cannot be scored.");
+
                 var options = await db.QuestionOptions
-                    .Where(o => o.QuestionId == questionId)
+                    .Where(o => o.QuestionId == (answer.QuestionId ?? questionId))
                     .ToListAsync(cancellationToken);
                 answer.IsCorrect = EvaluateObjectiveAnswer(
-                    answer.Question,
+                    legacyQuestion,
                     options,
                     selectedOptionId,
                     selectedOptionIdsJson,
@@ -118,7 +139,10 @@ public sealed partial class AttemptEngine
         }
 
         answer.IsFlagged = isFlagged;
-        attempt.LastQuestionId = questionId;
+        // #250: LastQuestionId is an FK to Questions, so only a legacy position can be stored there.
+        // A pool position's id is an ExamItemId, and writing it would violate that FK - measured:
+        // "The UPDATE statement conflicted with the FOREIGN KEY constraint FK_Attempts_LastQuestionExam".
+        RecordLastPosition(attempt, sittingQuestion);
         // #216 / PLC-13: answering is activity, so it moves the placement's inactivity clock. A mock
         // has no LastActivityAt rule and the guard returns before touching it.
         await MarkPlacementActivityAsync(attempt, cancellationToken);
@@ -163,7 +187,8 @@ public sealed partial class AttemptEngine
         var savedAt = DateTimeOffset.UtcNow;
         freeResponse.ResponseText = responseText ?? string.Empty;
         freeResponse.DraftSavedAt = savedAt;
-        attempt.LastQuestionId = questionId;
+        // #250: see SaveAnswerAsync - the column is an FK to Questions and only a legacy position fits.
+        RecordLastPosition(attempt, await FindSittingQuestionAsync(attempt, questionId, cancellationToken));
         // #216 / PLC-13: a draft is activity too; otherwise a learner who writes for an hour without
         // submitting loses the sitting at the 48-hour mark measured from their last click.
         await MarkPlacementActivityAsync(attempt, cancellationToken, savedAt);
@@ -242,7 +267,8 @@ public sealed partial class AttemptEngine
             answer.IsFlagged = isFlagged;
         }
 
-        attempt.LastQuestionId = questionId;
+        // #250: same rule as the other two writes - only a legacy position fits LastQuestionId's FK.
+        RecordLastPosition(attempt, await FindSittingQuestionAsync(attempt, questionId, cancellationToken));
         // #216 / PLC-13: the free-response save path is the third write that counts as activity.
         await MarkPlacementActivityAsync(attempt, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);

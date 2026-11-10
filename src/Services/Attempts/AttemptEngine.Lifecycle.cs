@@ -47,38 +47,26 @@ public sealed partial class AttemptEngine
             var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(examId, cancellationToken);
             var requiresPreflight = requiresAudio || requiresMic;
 
-            var questions = await db.Questions
-                .Where(q => q.ExamId == examId)
-                .Include(q => q.Group)
-                .Include(q => q.Section).ThenInclude(s => s.Skill)
-                .OrderBy(q => q.Section.Skill.DisplayOrder)
-                .ThenBy(q => q.Section.DisplayOrder)
-                .ThenBy(q => q.Group.DisplayOrder)
-                .ThenBy(q => q.DisplayOrder)
-                .ToListAsync(cancellationToken);
+            // #250: ONE source for the paper. LoadSittingQuestionsAsync resolves the roster when the
+            // paper was authored on the pool and the legacy rows otherwise, and it has already applied
+            // the pinned-version overlay and resolved the audio chain. Creation and the sitting
+            // projection therefore cannot disagree about what the paper is - before this, creation read
+            // Questions directly, so a pool-only paper was refused here with "that position holds no
+            // question". PoolOnlyPaperTests pins that.
+            var questions = await LoadSittingQuestionsAsync(examId, cancellationToken);
 
-            // #186: resolve the paper's bindings before anything is written. A binding whose position
-            // holds no question is refused here rather than creating an attempt the learner cannot sit
-            // to completion � and because this runs before the transaction's first insert, a refusal
-            // leaves no attempt, no answer and no free-response draft behind.
-            var bindings = await LoadPaperBindingsAsync(examId, cancellationToken);
-            EnsureBindingsRender(questions, bindings);
-            var boundByQuestion = PlaceBindings(questions, bindings);
-
+            var firstQuestion = questions.FirstOrDefault();
             var firstSkill = questions
-                .Select(q => q.Section.Skill)
-                .OrderBy(s => s.DisplayOrder)
+                .OrderBy(q => q.Section.Skill.DisplayOrder)
                 .FirstOrDefault();
 
-            var firstSection = questions.FirstOrDefault()?.Section;
-            var firstGroup = questions.FirstOrDefault()?.Group;
-
-            int? activeSkillId = firstSkill?.SkillId;
+            int? activeSkillId = firstSkill?.Section.SkillId;
             int activeUnitNumber = 1;
             int? activeGroupId = null;
-            if (firstSection != null && string.Equals(firstSection.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase))
+            if (firstQuestion != null
+                && string.Equals(firstQuestion.Section.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase))
             {
-                activeGroupId = firstGroup?.GroupId;
+                activeGroupId = firstQuestion.GroupId;
             }
 
             DateTime? phaseDeadlineAt = null;
@@ -87,11 +75,13 @@ public sealed partial class AttemptEngine
                 // #214 / PLC-12: no overall countdown, so no phase clock either. The outer bound is the
                 // only deadline, and it is enforced where every engine deadline is.
             }
-            else if (firstSection != null && string.Equals(firstSection.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase) && firstGroup?.ResponseSeconds.HasValue == true)
+            else if (firstQuestion != null
+                && string.Equals(firstQuestion.Section.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase)
+                && firstQuestion.Group.ResponseSeconds.HasValue)
             {
-                phaseDeadlineAt = now.UtcDateTime.AddSeconds(firstGroup.ResponseSeconds.Value);
+                phaseDeadlineAt = now.UtcDateTime.AddSeconds(firstQuestion.Group.ResponseSeconds.Value);
             }
-            else if (firstSkill?.DurationMinutes is int skillDur && skillDur > 0)
+            else if (firstSkill?.Section.Skill.DurationMinutes is int skillDur && skillDur > 0)
             {
                 phaseDeadlineAt = now.UtcDateTime.AddMinutes(skillDur);
             }
@@ -128,21 +118,24 @@ public sealed partial class AttemptEngine
 
             if (questions.Count > 0)
             {
-                attempt.LastQuestionId = questions[0].QuestionId;
+                RecordLastPosition(attempt, questions[0]);
                 foreach (var q in questions)
                 {
-                    boundByQuestion.TryGetValue(q.QuestionId, out var bound);
-                    if (q.QuestionType != QuestionType.FreeResponse.ToCode())
+                    if (q.RenderFormat != QuestionType.FreeResponse.ToCode())
                     {
                         db.AttemptAnswers.Add(new AttemptAnswer
                         {
                             AttemptId = attempt.AttemptId,
-                            QuestionId = q.QuestionId,
+                            // #250: a legacy position names its question; a pool position names the
+                            // roster row it sits at. CK_AttemptAnswers_HasShape requires at least one,
+                            // and only one of the two is ever set for a given paper.
+                            QuestionId = q.LegacyQuestion is null ? null : q.Id,
                             ExamId = examId,
                             // #186: the row records the version, so a re-versioned or retired item
                             // cannot change what this attempt renders later.
-                            ItemId = bound?.ItemId,
-                            ItemVersionId = bound?.ItemVersionId,
+                            ItemId = q.ItemId == 0 ? null : q.ItemId,
+                            ItemVersionId = q.ItemVersionId,
+                            ExamItemId = q.ExamItemId,
                             SelectedOptionId = null,
                             SelectedLabel = null,
                             IsCorrect = null,
@@ -151,12 +144,24 @@ public sealed partial class AttemptEngine
                     }
                     else
                     {
+                        // A free response is still keyed by its legacy question: FreeResponses.QuestionId
+                        // is NOT NULL and its composite foreign keys pin the question's own exam, type
+                        // and skill. A pool-only productive paper therefore cannot create this row yet,
+                        // and the refusal says so by name rather than leaving a draft silently missing.
+                        if (q.LegacyQuestion is null)
+                        {
+                            throw new AttemptEngineException(
+                                AttemptEngineException.PaperNotAssembled,
+                                "This paper's productive task has no legacy question row, and FreeResponses still requires one. "
+                                + "A pool-only productive paper cannot be sat until those tables are repointed (#250 criterion 5).");
+                        }
+
                         db.FreeResponses.Add(new FreeResponse
                         {
                             AttemptId = attempt.AttemptId,
-                            QuestionId = q.QuestionId,
+                            QuestionId = q.Id,
                             ExamId = examId,
-                            SkillId = q.SkillId,
+                            SkillId = q.Section.SkillId,
                             QuestionType = QuestionType.FreeResponse.ToCode(),
                             ResponseText = string.Empty,
                             Status = FreeResponseStatus.Draft.ToCode(),
@@ -279,21 +284,16 @@ public sealed partial class AttemptEngine
 
         if (request.LastQuestionId.HasValue)
         {
-            var orderedQuestions = await db.Questions
-                .Where(q => q.ExamId == attempt.ExamId)
-                .Include(q => q.Group)
-                .Include(q => q.Section).ThenInclude(s => s.Skill)
-                .OrderBy(q => q.Section.Skill.DisplayOrder)
-                .ThenBy(q => q.Section.DisplayOrder)
-                .ThenBy(q => q.Group.DisplayOrder)
-                .ThenBy(q => q.DisplayOrder)
-                .ToListAsync(cancellationToken);
+            // #250: the same seam the sitting projection reads, so a position means the same thing in
+            // both places. Before this, sync resolved positions against Questions directly and a pool
+            // paper's position could not be found at all.
+            var orderedQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
 
-            var targetIdx = orderedQuestions.FindIndex(q => q.QuestionId == request.LastQuestionId.Value);
+            var targetIdx = orderedQuestions.FindIndex(q => q.Id == request.LastQuestionId.Value);
             if (targetIdx >= 0 && !IsPhaseOrUnitOrGroupLocked(attempt, orderedQuestions[targetIdx]))
             {
                 var currentIdx = attempt.LastQuestionId.HasValue
-                    ? orderedQuestions.FindIndex(q => q.QuestionId == attempt.LastQuestionId.Value)
+                    ? orderedQuestions.FindIndex(q => q.Id == attempt.LastQuestionId.Value)
                     : -1;
                 var targetQuestion = orderedQuestions[targetIdx];
                 var isBackwardInAudio = string.Equals(targetQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase)
@@ -302,12 +302,11 @@ public sealed partial class AttemptEngine
 
                 if (!isBackwardInAudio)
                 {
-                    attempt.LastQuestionId = request.LastQuestionId.Value;
+                    RecordLastPosition(attempt, targetQuestion);
                     writesPosition = true;
                 }
             }
         }
-
         // #216 / PLC-13: only a write that actually carried something moves the inactivity clock. An
         // empty sync - what a poll or a reload sends - moves nothing, because a read must never
         // extend a sitting; refreshing would then be a way to keep a dead one alive.
