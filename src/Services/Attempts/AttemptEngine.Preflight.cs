@@ -69,21 +69,19 @@ public sealed partial class AttemptEngine
             {
                 attempt.ExpiresAt = now.AddMinutes(attempt.Exam.DurationMinutes);
 
-                var firstSkill = await db.Questions
-                    .Where(q => q.ExamId == attempt.ExamId && q.Section.SkillId == attempt.ActiveSkillId)
-                    .Select(q => q.Section.Skill)
-                    .FirstOrDefaultAsync(cancellationToken);
-                var firstSection = await db.Questions
-                    .Where(q => q.ExamId == attempt.ExamId && q.Section.SkillId == attempt.ActiveSkillId)
-                    .Select(q => q.Section)
-                    .FirstOrDefaultAsync(cancellationToken);
-                var firstGroup = attempt.ActiveGroupId.HasValue
-                    ? await db.QuestionGroups.SingleOrDefaultAsync(g => g.GroupId == attempt.ActiveGroupId.Value, cancellationToken)
-                    : null;
+                // #250: the phase clock is a property of the paper, so it comes from the same seam the
+                // projection reads. A pool-only paper has no Questions row for this skill, and the old
+                // query returned null for it - which silently fell through to the whole-sitting deadline.
+                var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+                var firstQuestion = paperQuestions.FirstOrDefault(q => q.Section.SkillId == attempt.ActiveSkillId);
 
-                if (firstSection != null && string.Equals(firstSection.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase) && firstGroup?.ResponseSeconds.HasValue == true)
+                var firstSkill = firstQuestion?.Section.Skill;
+                var firstSection = firstQuestion?.Section;
+                var firstGroupResponseSeconds = firstQuestion?.Group.ResponseSeconds;
+
+                if (firstSection != null && string.Equals(firstSection.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase) && firstGroupResponseSeconds.HasValue)
                 {
-                    attempt.PhaseDeadlineAt = now.UtcDateTime.AddSeconds(firstGroup.ResponseSeconds.Value);
+                    attempt.PhaseDeadlineAt = now.UtcDateTime.AddSeconds(firstGroupResponseSeconds.Value);
                 }
                 else if (firstSkill?.DurationMinutes is int skillDur && skillDur > 0)
                 {
@@ -124,12 +122,14 @@ public sealed partial class AttemptEngine
 
     private async Task<(bool RequiresAudio, bool RequiresMicrophone)> InspectPreflightRequirementsAsync(int examId, CancellationToken cancellationToken)
     {
-        var questionSectionIds = await db.Questions
-            .AsNoTracking()
-            .Where(q => q.ExamId == examId)
+        // #250: the sections a paper uses come from the paper itself, not from a Questions query. For a
+        // pool-only paper the old query returned nothing, and the fallback then asked every section of
+        // the CERTIFICATE for a microphone - a TOEIC reading paper would have demanded one.
+        var paperQuestions = await LoadSittingQuestionsAsync(examId, cancellationToken);
+        var questionSectionIds = paperQuestions
             .Select(q => q.SectionId)
             .Distinct()
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         List<Section> sections;
         if (questionSectionIds.Count > 0)
