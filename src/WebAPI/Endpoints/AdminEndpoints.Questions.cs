@@ -8,9 +8,22 @@ namespace WebAPI.Endpoints;
 
 public static partial class AdminEndpoints
 {
+    /// <summary>
+    /// #265: the paper's positions, read for the admin editor.
+    /// <para>
+    /// <b>What used to be here, and why it is gone.</b> Create/update/delete question and
+    /// create/update/delete group were exposed beside this read and called by no screen - the editor
+    /// edits through its autosave and reorder routes, which write the pool. An endpoint whose backing
+    /// table is being deleted must not answer at all, so those six routes are removed rather than left
+    /// returning empty; a client that calls one gets a 404, which is the honest answer.
+    /// </para>
+    /// <para>
+    /// The pool authoring door is the only authoring surface: author an item, then bind one of its
+    /// versions to a position (<c>AdminEndpoints.Items</c>).
+    /// </para>
+    /// </summary>
     private static void MapQuestions(RouteGroupBuilder admin)
     {
-
         admin.MapGet("/exams/{examId:int}/questions", async (
             int examId,
             IAdminExamService exams,
@@ -20,108 +33,6 @@ public static partial class AdminEndpoints
             {
                 var questions = await exams.GetExamQuestionsAsync(examId, cancellationToken);
                 return Results.Ok(questions);
-            }
-            catch (AdminExamException ex)
-            {
-                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
-            }
-        });
-
-        admin.MapPost("/exams/{examId:int}/groups", async (
-            int examId,
-            CreateQuestionGroupRequest request,
-            IAdminExamService exams,
-            CancellationToken cancellationToken) =>
-        {
-            try
-            {
-                var created = await exams.CreateQuestionGroupAsync(examId, request, cancellationToken);
-                return Results.Created($"/api/admin/exams/{examId}/groups/{created.GroupId}", created);
-            }
-            catch (AdminExamException ex)
-            {
-                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
-            }
-        });
-
-        admin.MapPut("/exams/{examId:int}/groups/{groupId:int}", async (
-            int examId,
-            int groupId,
-            UpdateQuestionGroupRequest request,
-            IAdminExamService exams,
-            CancellationToken cancellationToken) =>
-        {
-            try
-            {
-                var updated = await exams.UpdateQuestionGroupAsync(examId, groupId, request, cancellationToken);
-                return Results.Ok(updated);
-            }
-            catch (AdminExamException ex)
-            {
-                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
-            }
-        });
-
-        admin.MapDelete("/exams/{examId:int}/groups/{groupId:int}", async (
-            int examId,
-            int groupId,
-            IAdminExamService exams,
-            CancellationToken cancellationToken) =>
-        {
-            try
-            {
-                await exams.DeleteQuestionGroupAsync(examId, groupId, cancellationToken);
-                return Results.NoContent();
-            }
-            catch (AdminExamException ex)
-            {
-                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
-            }
-        });
-
-        admin.MapPost("/exams/{examId:int}/questions", async (
-            int examId,
-            CreateQuestionRequest request,
-            IAdminExamService exams,
-            CancellationToken cancellationToken) =>
-        {
-            try
-            {
-                var created = await exams.CreateQuestionAsync(examId, request, cancellationToken);
-                return Results.Created($"/api/admin/questions/{created.QuestionId}", created);
-            }
-            catch (AdminExamException ex)
-            {
-                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
-            }
-        });
-
-        admin.MapPut("/questions/{questionId:int}", async (
-            int questionId,
-            UpdateQuestionRequest request,
-            IAdminExamService exams,
-            CancellationToken cancellationToken) =>
-        {
-            try
-            {
-                var updated = await exams.UpdateQuestionAsync(questionId, request, cancellationToken);
-                return Results.Ok(updated);
-            }
-            catch (AdminExamException ex)
-            {
-                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
-            }
-        });
-
-        admin.MapDelete("/questions/{questionId:int}", async (
-            int questionId,
-            IAdminExamService exams,
-            CancellationToken cancellationToken) =>
-        {
-            try
-            {
-                await exams.DeleteQuestionAsync(questionId, cancellationToken);
-                return Results.NoContent();
             }
             catch (AdminExamException ex)
             {

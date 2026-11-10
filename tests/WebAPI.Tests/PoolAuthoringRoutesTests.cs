@@ -73,6 +73,48 @@ public sealed class PoolAuthoringRoutesTests : IClassFixture<PoolAuthoringRoutes
         Assert.DoesNotContain("ContentTier", names);
     }
 
+    /// <summary>
+    /// #265: the legacy question and group authoring routes are GONE, not empty.
+    /// <para>
+    /// They wrote <c>Questions</c>, <c>QuestionGroups</c> and <c>QuestionOptions</c>, which #269 drops.
+    /// An endpoint whose backing table is deleted must not answer at all, so the assertion is absence
+    /// from the route table rather than a 404 at request time: a route that exists and 404s for another
+    /// reason would pass a request-level check and still be a door.
+    /// </para>
+    /// </summary>
+    [Theory]
+    [InlineData("POST", "api/admin/exams/{examId:int}/questions")]
+    [InlineData("PUT", "api/admin/questions/{questionId:int}")]
+    [InlineData("DELETE", "api/admin/questions/{questionId:int}")]
+    [InlineData("POST", "api/admin/exams/{examId:int}/groups")]
+    [InlineData("PUT", "api/admin/exams/{examId:int}/groups/{groupId:int}")]
+    [InlineData("DELETE", "api/admin/exams/{examId:int}/groups/{groupId:int}")]
+    public void The_legacy_authoring_routes_are_not_mapped(string method, string route)
+    {
+        var mapped = site.Services.GetRequiredService<EndpointDataSource>().Endpoints
+            .OfType<RouteEndpoint>()
+            .Where(e => e.RoutePattern.RawText?.TrimStart('/') == route
+                && e.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods.Contains(method) == true)
+            .ToList();
+
+        Assert.Empty(mapped);
+    }
+
+    /// <summary>
+    /// The read the editor still needs is mapped. Asserting the positive here is what keeps the theory
+    /// above from passing on a Program that mapped nothing at all.
+    /// </summary>
+    [Fact]
+    public void The_editor_read_is_still_mapped()
+    {
+        var mapped = site.Services.GetRequiredService<EndpointDataSource>().Endpoints
+            .OfType<RouteEndpoint>()
+            .Any(e => e.RoutePattern.RawText?.TrimStart('/') == "api/admin/exams/{examId:int}/questions"
+                && e.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods.Contains("GET") == true);
+
+        Assert.True(mapped, "GET api/admin/exams/{examId}/questions must still answer");
+    }
+
     public sealed class Site : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
