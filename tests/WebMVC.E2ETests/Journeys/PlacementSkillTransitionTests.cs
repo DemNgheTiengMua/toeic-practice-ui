@@ -80,12 +80,19 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
         await Expect(previous).ToHaveAttributeAsync("href", $"/placement/take/{placementId}?q={readingFirst}");
 
         // The answer given right before leaving Listening was saved, not refused by the closed skill.
+        //
+        // #250: "saved" now has two legal shapes. A paper the pool has assembled records the pinned
+        // version's LABEL (#186: an ItemVersion stores labels A-D, not option rows), while a paper with
+        // no binding records the legacy SelectedOptionId. Asserting only SelectedOptionId passed before
+        // the migration ran and fails after it - which is the migration working, not the save breaking.
+        // The question is "was the choice recorded", so both columns are accepted.
         await using var check = await OpenAppDatabaseAsync();
         await using var answered = check.CreateCommand();
         answered.CommandText = """
             SELECT COUNT(*) FROM AttemptAnswers a
             JOIN PlacementTests p ON p.AttemptId = a.AttemptId
-            WHERE p.PlacementId = @placementId AND a.SelectedOptionId IS NOT NULL;
+            WHERE p.PlacementId = @placementId
+              AND (a.SelectedOptionId IS NOT NULL OR a.SelectedLabel IS NOT NULL);
             """;
         answered.Parameters.AddWithValue("@placementId", int.Parse(placementId));
         Assert.That(Convert.ToInt32(await answered.ExecuteScalarAsync()), Is.GreaterThanOrEqualTo(1));

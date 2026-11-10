@@ -187,9 +187,28 @@ BEGIN
     -- The roster, which is the whole point: the paper's position now exists on the pool.
     -- CertId comes from Exams, not from Questions: a question row carries no certificate of its own
     -- (it belongs to a paper), and the paper is the thing that names one.
+    --
+    -- DisplayOrder is NOT Question.DisplayOrder. A binding's position is "1-based within its section"
+    -- (UQ_ExamItems_Exam_Section_Order), and the engine places bindings by RANK inside the section,
+    -- not by the raw column. The first draft copied the question's own ordering - 3,4,5,6 in a section
+    -- - so the binding at rank 1 carried DisplayOrder 3 and PlaceBindings found no match at position 1.
+    -- Measured on the seeded placement paper: "This paper binds item version 46 at section 2 position 5,
+    -- but that position holds no question."
+    --
+    -- ROW_NUMBER cannot be used here: this INSERT runs once per question inside a cursor, so the
+    -- window sees a single row and always yields 1 - which then collides with
+    -- UQ_ExamItems_Exam_Section_Order on the second question. The rank is counted instead.
+    DECLARE @position INT =
+        (SELECT COUNT(*) + 1
+         FROM Questions other
+         WHERE other.ExamId = @examId
+           AND other.SectionId = @sectionId
+           AND (other.DisplayOrder < @order
+                OR (other.DisplayOrder = @order AND other.QuestionId < @qid)));
+
     INSERT INTO ExamItems (ExamId, CertId, SectionId, ItemId, ItemVersionId, Modality, DisplayOrder, UnitNumber,
                            LastWrittenBy)
-    SELECT @examId, e.CertId, @sectionId, @itemId, @versionId, @modality, @order,
+    SELECT @examId, e.CertId, @sectionId, @itemId, @versionId, @modality, @position,
            ISNULL((SELECT g.UnitNumber FROM QuestionGroups g WHERE g.GroupId = @groupId), 1), @author
     FROM Exams e WHERE e.ExamId = @examId;
 
