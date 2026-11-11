@@ -36,6 +36,12 @@ public static partial class SpeakingEndpoints
             {
                 return Problem(StatusCodes.Status410Gone, "Attempt expired", ApiError.Codes.AttemptExpired, ex.Message);
             }
+            catch (SpeakingPracticeException ex) when (ex.Code == SpeakingPracticeException.QuestionNotFound)
+            {
+                // Same arm as the writing take route: a paper with no speaking task is a request
+                // problem, and without this it answered 500.
+                return Problem(StatusCodes.Status404NotFound, "No questions found", ApiError.Codes.Validation, ex.Message);
+            }
         });
     }
 }

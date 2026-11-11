@@ -34,6 +34,13 @@ public static partial class WritingEndpoints
             {
                 return Problem(StatusCodes.Status410Gone, "Attempt expired", ApiError.Codes.AttemptExpired, ex.Message);
             }
+            catch (WritingPracticeException ex) when (ex.Code == WritingPracticeException.QuestionNotFound)
+            {
+                // A paper with no writing task on it is a request problem, not a server fault. Without
+                // this arm the exception fell through to the handler and answered 500 - measured on a
+                // stale /writing/take/{id} after a database reset.
+                return Problem(StatusCodes.Status404NotFound, "No questions found", ApiError.Codes.Validation, ex.Message);
+            }
         });
     }
 }

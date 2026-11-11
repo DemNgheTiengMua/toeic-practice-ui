@@ -179,7 +179,8 @@ public sealed class WritingPracticeService(
         // wrote no drafts for it - so the screen opened with every task missing a response row.
         var paperPositions = await LoadPaperPositionsAsync(examId, cancellationToken);
         var questions = paperPositions
-            .Where(p => p.RenderFormat == QuestionType.FreeResponse.ToCode())
+            .Where(p => p.RenderFormat == QuestionType.FreeResponse.ToCode()
+                && string.Equals(p.Section.Modality, Modality.Writing.ToCode(), StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         if (questions.Count > 0)
@@ -237,8 +238,14 @@ public sealed class WritingPracticeService(
         // question rows, and the old query returned nothing for it - so the screen reported "no
         // questions found" for a paper the sitting engine can open.
         var positions = await LoadPaperPositionsAsync(attempt.ExamId, cancellationToken);
+
+        // #269: a writing route must not serve a SPEAKING paper. Both modalities render as
+        // `free_response`, so filtering on the render format alone accepted either - measured: GET
+        // /api/learner/writing/attempts/{speakingAttemptId} returned a speaking exam with its three
+        // speaking tasks and prompts, through the writing take route.
         var questions = positions
-            .Where(p => p.RenderFormat == QuestionType.FreeResponse.ToCode())
+            .Where(p => p.RenderFormat == QuestionType.FreeResponse.ToCode()
+                && string.Equals(p.Section.Modality, Modality.Writing.ToCode(), StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         if (questions.Count == 0)

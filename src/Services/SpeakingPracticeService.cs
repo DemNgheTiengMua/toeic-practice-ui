@@ -157,8 +157,11 @@ public sealed class SpeakingPracticeService(
         // #262: the paper is the source, not the legacy question table - a pool-authored paper has no
         // question rows, and the old query wrote no drafts for it.
         var paperPositions = await LoadPaperPositionsAsync(examId, cancellationToken);
+        // #269: only this service's own modality. Both writing and speaking render as `free_response`,
+        // so the format alone does not say which route may serve the paper.
         var questions = paperPositions
-            .Where(p => p.RenderFormat == QuestionType.FreeResponse.ToCode())
+            .Where(p => p.RenderFormat == QuestionType.FreeResponse.ToCode()
+                && string.Equals(p.Section.Modality, Modality.Speaking.ToCode(), StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         foreach (var q in questions)
@@ -218,7 +221,8 @@ public sealed class SpeakingPracticeService(
         // returned nothing for it, so the screen said "no questions found" for a paper that can be sat.
         var paperPositions = await LoadPaperPositionsAsync(attempt.ExamId, cancellationToken);
         var questions = paperPositions
-            .Where(p => p.RenderFormat == QuestionType.FreeResponse.ToCode())
+            .Where(p => p.RenderFormat == QuestionType.FreeResponse.ToCode()
+                && string.Equals(p.Section.Modality, Modality.Speaking.ToCode(), StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         if (questions.Count == 0)
@@ -344,7 +348,9 @@ public sealed class SpeakingPracticeService(
         // page uses answers it.
         var positions = await LoadPaperPositionsAsync(attempt.ExamId, cancellationToken);
         var position = positions
-            .FirstOrDefault(p => p.Id == questionId && p.RenderFormat == QuestionType.FreeResponse.ToCode())
+            .FirstOrDefault(p => p.Id == questionId
+                && p.RenderFormat == QuestionType.FreeResponse.ToCode()
+                && string.Equals(p.Section.Modality, Modality.Speaking.ToCode(), StringComparison.OrdinalIgnoreCase))
             ?? throw new SpeakingPracticeException(SpeakingPracticeException.QuestionNotFound, $"Speaking question {questionId} not found in this exam.");
 
         var question = position.LegacyQuestion;
@@ -670,7 +676,8 @@ public sealed class SpeakingPracticeService(
         freeResponses = freeResponses.OrderBy(ReviewOrderOf).ToList();
 
         var totalExamQuestions = reviewPositions
-            .Count(p => p.RenderFormat == QuestionType.FreeResponse.ToCode());
+            .Count(p => p.RenderFormat == QuestionType.FreeResponse.ToCode()
+                && string.Equals(p.Section.Modality, Modality.Speaking.ToCode(), StringComparison.OrdinalIgnoreCase));
 
         var questionItems = new List<SpeakingQuestionReviewItem>();
         decimal overallTotalScore = 0m;

@@ -365,6 +365,73 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         Assert.Equal(0, pending.FailedResponses);
     }
 
+    /// <summary>
+    /// #269: a writing route must refuse a speaking paper.
+    /// <para>
+    /// Writing and speaking tasks both render as <c>free_response</c>, so every filter that asked only
+    /// for that format accepted either modality. Measured against the running API: GET
+    /// <c>/api/learner/writing/attempts/{speakingAttemptId}</c> answered 200 with the speaking exam,
+    /// its three speaking tasks and their prompts - a learner's writing screen listing read-aloud and
+    /// picture-description tasks, and a writing submission writing speak rows.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task GetAttemptTake_refuses_a_speaking_paper_through_the_writing_route()
+    {
+        var certCode = Unique("WRMod");
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
+
+        int speakingAttemptId;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+            db.Certificates.Add(cert);
+            await db.SaveChangesAsync();
+
+            var skill = new Skill
+            {
+                CertId = cert.CertId, Code = "SPEA", Name = "Speaking", Modality = "speaking",
+                DisplayOrder = 1, MinScaledScore = 0, MaxScaledScore = 100, ScoreStep = 1,
+            };
+            db.Skills.Add(skill);
+            await db.SaveChangesAsync();
+
+            var section = new Section
+            {
+                CertId = cert.CertId, SkillId = skill.SkillId, Modality = "speaking",
+                Code = "S1", Name = "Read a text aloud", DisplayOrder = 1,
+                ExpectedQuestionCount = 1, LastWrittenBy = userId,
+            };
+            db.Sections.Add(section);
+            await db.SaveChangesAsync();
+
+            var exam = new Exam
+            {
+                CertId = cert.CertId, Name = $"Speaking {certCode}", Status = "published",
+                DurationMinutes = 20, Purpose = "speaking_practice", QuestionCount = 1,
+                LastWrittenBy = userId,
+            };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+
+            await PoolFixture.AddProductiveAsync(
+                db, exam.ExamId, cert.CertId, section.SectionId, "speaking",
+                "Read the announcement aloud.", displayOrder: 1, prepSeconds: 10, responseSeconds: 45);
+
+            var speakingTemp = Path.Combine(Path.GetTempPath(), "ee-speak-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(speakingTemp);
+            var speaking = new SpeakingPracticeService(db, new LearnerService(db), new LocalFileStore(speakingTemp));
+            speakingAttemptId = (await speaking.StartAttemptAsync(userId, exam.ExamId)).AttemptId;
+        }
+
+        var (writing, _, _, _) = CreateServices();
+
+        // The writing take route must not answer for a speaking paper.
+        var ex = await Assert.ThrowsAsync<WritingPracticeException>(() =>
+            writing.GetAttemptTakeAsync(userId, speakingAttemptId, questionId: null));
+        Assert.Equal(WritingPracticeException.QuestionNotFound, ex.Code);
+    }
+
     [Fact]
     public async Task Failed_grading_can_be_retried_reusing_grading_row_without_additional_charges()
     {
