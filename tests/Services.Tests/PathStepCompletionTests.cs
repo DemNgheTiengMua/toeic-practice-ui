@@ -39,20 +39,16 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
 
     /// <summary>
     /// One reading skill at B2 by its own cut-score row, four canonical topics holding two active B2
-    /// items each, one lesson with one card, and one published mock exam with one question.
+    /// items each, one lesson with one card, and one published mock exam carrying one pool position.
     /// Every activity type the planner can place is sat-able here.
     ///
     /// The cell is B2 on purpose: `PoolIngestionTests` counts R-DET at B1 exactly, so a fixture that
     /// stocked there would shift a number another test asserts.
     ///
-    /// <b>#269: the mock paper stays on a legacy <c>Questions</c> row, and the reason is production code
-    /// rather than this fixture.</b> <c>LearningPathService.LoadMockExamForSkillAsync</c> decides whether
-    /// a certificate plans a mock step with <c>e.QuestionGroups.Any(g =&gt; g.Section.SkillId == skillId)</c>,
-    /// so a paper bound only through <c>ExamItems</c> plans no mock step and there is nothing to sit.
-    /// Migrating it here would delete the test's subject rather than port it; #269 deletes this row with
-    /// the table, when that reader moves to the roster.
+    /// #269: the mock paper is the pool's roster. The position is bound in the reading section, and
+    /// <c>LoadMockExamForSkillAsync</c> reads bindings, so the certificate plans its mock step.
     /// </summary>
-    private async Task<(int certId, int skillId, int topicId, int questionId, int examId, int lessonId, int cardId)> SeedCertAsync(string certCode)
+    private async Task<(int certId, int skillId, int topicId, int mockExamItemId, int examId, int lessonId, int cardId)> SeedCertAsync(string certCode)
     {
         await database.SqlAsync($"""
             -- #232: the canonical twenty topics are the step coordinate's topic axis.
@@ -106,17 +102,6 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
             VALUES (@cert, N'Mock Exam', 'published', 60, 'mock');
             DECLARE @exam INT = SCOPE_IDENTITY();
 
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @sR, N'One question', 'B1', 'mcq', 1);
-            DECLARE @q INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q, 'mcq', 'A', N'Right', 1),
-              (@q, 'mcq', 'B', N'Wrong', 0);
-
             INSERT INTO Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, EstimatedMinutes, DisplayOrder)
             VALUES (@cert, @sR, 'reading',
                     (SELECT TopicId FROM Topics WHERE Modality = 'reading' AND Code = 'R-GRAM'),
@@ -155,11 +140,17 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var skillId = await db.Skills.Where(s => s.CertId == cert.CertId).Select(s => s.SkillId).SingleAsync();
         var topicId = await db.Topics.Where(t => t.Modality == "reading" && t.Code == "R-DET").Select(t => t.TopicId).SingleAsync();
-        var questionId = await db.Questions.Where(q => q.Section.CertId == cert.CertId).Select(q => q.QuestionId).SingleAsync();
         var examId = await db.Exams.Where(e => e.CertId == cert.CertId && e.Purpose == "mock").Select(e => e.ExamId).SingleAsync();
         var lessonId = await db.Lessons.Where(l => l.CertId == cert.CertId).Select(l => l.LessonId).SingleAsync();
         var cardId = await db.LessonCards.Where(c => c.LessonId == lessonId).Select(c => c.CardId).SingleAsync();
-        return (cert.CertId, skillId, topicId, questionId, examId, lessonId, cardId);
+
+        // #269: the paper is a pool position bound in the reading section. The id a test addresses is
+        // its ExamItemId, and the answer writes the pinned version's SelectedLabel.
+        var sectionId = await db.Sections.Where(s => s.CertId == cert.CertId).Select(s => s.SectionId).SingleAsync();
+        var position = await PoolFixture.AddMcqAsync(
+            db, examId, cert.CertId, sectionId, "reading", "Mock position", displayOrder: 1);
+
+        return (cert.CertId, skillId, topicId, position.ExamItemId, examId, lessonId, cardId);
     }
 
     private async Task<int> SeedLearnerAsync(int certId, decimal weeklyHours = 10m)
@@ -220,21 +211,22 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
     /// Does the activity a step plans, through the real service, in the way a learner would. The step's
     /// type decides the route; a drill step closes through its practice session, which the real learner
     /// answers.
+    /// <para>
+    /// #269: the mock paper's one position is a pool binding, so it is answered with the option id the
+    /// sitting renders for the version's own key label — the id a pool answer is addressed by.
+    /// </para>
     /// </summary>
     private async Task SitStepAsync(
         int userId, LearnerPathStep step, MockExamService mocks, LessonService lessons,
-        LearningPathService paths, PracticeService practice, int questionId, int lessonId, int cardId, CompanionDbContext db)
+        LearningPathService paths, PracticeService practice, int mockExamItemId, int lessonId, int cardId, CompanionDbContext db)
     {
         switch (step.StepType)
         {
             case "mock_section":
             {
                 var attempt = await mocks.StartAttemptAsync(userId, step.RefExamId!.Value);
-                var correct = await db.QuestionOptions
-                    .Where(o => o.QuestionId == questionId && o.IsCorrect)
-                    .Select(o => o.OptionId)
-                    .SingleAsync();
-                await mocks.SaveAnswerAsync(userId, attempt.AttemptId, questionId, correct, isFlagged: false);
+                await AnswerPoolMockPositionAsync(
+                    userId, attempt.AttemptId, step.RefExamId.Value, mockExamItemId, mocks, db);
                 await mocks.SubmitAttemptAsync(userId, attempt.AttemptId, isAutoSubmit: false);
                 break;
             }
@@ -248,6 +240,23 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
                 await SitDrillAsync(userId, step, paths, practice, db);
                 break;
         }
+    }
+
+    /// <summary>
+    /// Answers one pool position of the mock paper with its key. The option id comes from the projection
+    /// the sitting renders — <c>PoolFixture.OptionIdAsync</c> reads it off the take view — so the answer
+    /// is addressed the way the browser addresses it, not by a recomputed id.
+    /// </summary>
+    private static async Task AnswerPoolMockPositionAsync(
+        int userId, int attemptId, int examId, int examItemId, MockExamService mocks, CompanionDbContext db)
+    {
+        var keyLabel = await db.ExamItems.AsNoTracking()
+            .Where(i => i.ExamItemId == examItemId)
+            .Select(i => i.ItemVersion.KeyLabel)
+            .SingleAsync();
+        var correct = await PoolFixture.OptionIdAsync(db, examId, examItemId, keyLabel!);
+
+        await mocks.SaveAnswerAsync(userId, attemptId, examItemId, correct, isFlagged: false);
     }
 
     /// <summary>Opens a drill step through the service and answers every item it drew.</summary>
@@ -299,7 +308,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
     public async Task Sitting_a_mock_exam_marks_its_path_step_done_and_unlocks_the_next()
     {
         var certCode = Unique("MOCK");
-        var (certId, _, _, questionId, examId, lessonId, cardId) = await SeedCertAsync(certCode);
+        var (certId, _, _, mockExamItemId, examId, lessonId, cardId) = await SeedCertAsync(certCode);
         var userId = await SeedLearnerAsync(certId);
         await GrantCreditsAsync(userId, 5);
 
@@ -316,18 +325,14 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         {
             await db.Entry(earlier).ReloadAsync();
             Assert.NotEqual("locked", earlier.Status);
-            await SitStepAsync(userId, earlier, mocks, lessons, paths, practice, questionId, lessonId, cardId, db);
+            await SitStepAsync(userId, earlier, mocks, lessons, paths, practice, mockExamItemId, lessonId, cardId, db);
             await db.Entry(earlier).ReloadAsync();
             Assert.Equal("done", earlier.Status);
         }
 
         // Sit and submit the mock exam through the real service.
         var attempt = await mocks.StartAttemptAsync(userId, examId);
-        var correctOption = await db.QuestionOptions
-            .Where(o => o.QuestionId == questionId && o.IsCorrect)
-            .Select(o => o.OptionId)
-            .SingleAsync();
-        await mocks.SaveAnswerAsync(userId, attempt.AttemptId, questionId, correctOption, isFlagged: false);
+        await AnswerPoolMockPositionAsync(userId, attempt.AttemptId, examId, mockExamItemId, mocks, db);
         await mocks.SubmitAttemptAsync(userId, attempt.AttemptId, isAutoSubmit: false);
 
         // Re-read from a fresh context: `done` has to be in the row, not drawn by a read path.
@@ -425,7 +430,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         // The gate: no step may sit unreachable forever. Walk the whole path, mock exams included,
         // in the order the plan wrote it.
         var certCode = Unique("WALK");
-        var (certId, _, _, questionId, _, lessonId, cardId) = await SeedCertAsync(certCode);
+        var (certId, _, _, mockExamItemId, _, lessonId, cardId) = await SeedCertAsync(certCode);
         var userId = await SeedLearnerAsync(certId);
         await GrantCreditsAsync(userId, 20);
 
@@ -443,7 +448,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
             await db.Entry(step).ReloadAsync();
             Assert.NotEqual("locked", step.Status);   // it must already be open by now
 
-            await SitStepAsync(userId, step, mocks, lessons, paths, practice, questionId, lessonId, cardId, db);
+            await SitStepAsync(userId, step, mocks, lessons, paths, practice, mockExamItemId, lessonId, cardId, db);
 
             var closed = await FreshStepAsync(step.StepId);
             Assert.Equal("done", closed.Status);

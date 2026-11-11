@@ -94,12 +94,6 @@ public sealed class DynamicPathGenerationTests(DatabaseFixture database)
             VALUES (@cert, N'Mock Exam', 'published', 60, 'mock');
             DECLARE @exam INT = SCOPE_IDENTITY();
 
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
-            VALUES (@exam, @cert, (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5'), 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5'), @sR, N'One question', 'B1', 'mcq', 1);
-
             -- #240: a lesson is addressed by (skill, topic, level), so the fixture names the cell.
             INSERT INTO Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, EstimatedMinutes, DisplayOrder)
             VALUES (@cert, @sR, 'reading',
@@ -144,6 +138,13 @@ public sealed class DynamicPathGenerationTests(DatabaseFixture database)
         var topics = await db.Topics.Where(t => t.Modality == "reading").ToDictionaryAsync(t => t.Code, t => t.TopicId);
         var lessonId = await db.Lessons.Where(l => l.CertId == cert.CertId).Select(l => l.LessonId).SingleAsync();
         var examId = await db.Exams.Where(e => e.CertId == cert.CertId && e.Purpose == "mock").Select(e => e.ExamId).SingleAsync();
+
+        // #269: a pool position bound in the reading section is what makes this certificate plan a mock
+        // step - `LoadMockExamForSkillAsync` reads the roster.
+        var sectionId = await db.Sections.Where(s => s.CertId == cert.CertId).Select(s => s.SectionId).SingleAsync();
+        await PoolFixture.AddMcqAsync(
+            db, examId, cert.CertId, sectionId, "reading", "Mock position", displayOrder: 1);
+
         return (cert.CertId, skillId, topics, lessonId, examId);
     }
 

@@ -207,25 +207,6 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             VALUES (@cert, N'Mock Exam 1', 'published', 120, 'mock');
             DECLARE @exam INT = SCOPE_IDENTITY();
 
-            -- #269: NOT migrated, and the reason is production code rather than this fixture.
-            -- `LearningPathService.LoadMockExamForSkillAsync` decides whether a certificate plans a mock
-            -- step with `e.QuestionGroups.Any(g => g.Section.SkillId == skillId)`, so a paper bound only
-            -- through ExamItems plans no mock step at all and `StartStepAsync_ForAMockSection_...` would
-            -- have nothing to open. Everything else in this fixture - the drillable stock below - is
-            -- already the pool, because the drill reads Items. #269 deletes these rows with the table,
-            -- when that reader moves to the roster.
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
-            VALUES (@exam, @cert, @secR, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, @secR, @sR, N'Question 1 stem', 'B1', 'mcq', 1);
-            DECLARE @q1 INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q1, 'mcq', 'A', N'Opt A', 1),
-              (@q1, 'mcq', 'B', N'Opt B', 0);
-
             -- #240: a lesson is addressed by (skill, topic, level), so the fixture names the cell.
             INSERT INTO Lessons (CertId, SkillId, Modality, TopicId, CefrLevel, Title, EstimatedMinutes, DisplayOrder)
             VALUES (@cert, @sR, 'reading',
@@ -267,6 +248,12 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             .Select(t => t.TopicId).SingleAsync();
         var lessonId = await db.Lessons.Where(l => l.CertId == cert.CertId).Select(l => l.LessonId).SingleAsync();
         var examId = await db.Exams.Where(e => e.CertId == cert.CertId && e.Purpose == "mock").Select(e => e.ExamId).SingleAsync();
+
+        // #269: the mock paper is the pool's roster. `LoadMockExamForSkillAsync` reads ExamItems, so a
+        // position bound in the reading section is what makes this certificate plan a mock step.
+        var sectionId = await db.Sections.Where(s => s.CertId == cert.CertId).Select(s => s.SectionId).SingleAsync();
+        await PoolFixture.AddMcqAsync(
+            db, examId, cert.CertId, sectionId, "reading", "Mock position", displayOrder: 1);
 
         return (cert.CertId, skillId, topicId, lessonId, examId);
     }

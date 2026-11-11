@@ -44,7 +44,6 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder)
             VALUES (@sR, @cert, 'reading', 'P5', N'Sentences', 1, 1);
-            DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
             -- the seeded hours: B1 = 500, B2 = 800, C1 = 1150
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder, CumulativeStudyHours) VALUES
@@ -56,24 +55,11 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
             -- #232: a path is a coordinate set, not a template. This fixture seeds a certificate only, so
             -- no path row is planted here - the services create it.
 
-            -- #154: a path needs a topic with stock it can actually drill, so the fixture carries one
-            -- canonical reading topic. It needs an exam to hang on: QuestionGroups.ExamId is NOT NULL,
-            -- and drilling reads Questions by section, never by exam.
+            -- #154: a path needs a topic with stock it can actually drill, and a published mock paper so
+            -- the plan includes a mock step. Both are authored on the pool below, because that is what the
+            -- drill reads and what `LoadMockExamForSkillAsync` recognises as a paper for this skill.
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
             VALUES (@cert, N'Subject bank', 'published', 30, 'mock');
-            DECLARE @drillExam INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
-            VALUES (@drillExam, @cert, @secR, 1);
-            DECLARE @drillGroup INT = SCOPE_IDENTITY();
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@drillGroup, @drillExam, @secR, @sR, N'Drill question', 'B1', 'mcq', 1);
-            DECLARE @drillQ INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@drillQ, 'mcq', 'A', N'Right', 1),
-              (@drillQ, 'mcq', 'B', N'Wrong', 0);
 
             -- #232: the step coordinate's topic and the skill's own level from its cut-score table.
             IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading')
@@ -85,6 +71,19 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
               (@cert, 1, @sR, 'B1', 'cut', 101, 500),
               (@cert, 1, @sR, 'B2', 'cut', 501, 990);
             """);
+
+        // #269: the drillable stock is a pool position bound to the section, because a drill reads
+        // Items. It is B1 - the level the skill's cut rows put an unmeasured learner at - so the plan
+        // does not depend on which other fixtures happened to stock the shared pool first.
+        await using (var seedDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            var cert = await seedDb.Certificates.SingleAsync(c => c.Code == certCode);
+            var section = await seedDb.Sections.SingleAsync(s => s.CertId == cert.CertId);
+            var exam = await seedDb.Exams.SingleAsync(e => e.CertId == cert.CertId);
+            await PoolFixture.AddMcqAsync(
+                seedDb, exam.ExamId, cert.CertId, section.SectionId, "reading", "Drill pool item",
+                displayOrder: 1, keyLabel: "A", level: "B1");
+        }
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         return await db.Certificates.Where(c => c.Code == certCode).Select(c => c.CertId).SingleAsync();
