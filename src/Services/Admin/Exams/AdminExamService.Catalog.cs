@@ -173,7 +173,9 @@ public sealed partial class AdminExamService
             throw new ExamNotFoundException(examId);
         }
 
-        var actualQuestionCount = await db.Questions.AsNoTracking().CountAsync(q => q.ExamId == examId, cancellationToken);
+        // #269: a paper's item count is its roster. Reading the legacy table reported zero for every
+        // pool paper, which made the admin list understate what an exam holds.
+        var actualQuestionCount = await db.ExamItems.AsNoTracking().CountAsync(i => i.ExamId == examId, cancellationToken);
         var finishedAttemptCount = await db.ExamAttempts.AsNoTracking().CountAsync(a => a.ExamId == examId && (a.Status == "submitted" || a.Status == "graded"), cancellationToken);
 
         var sections = await db.Sections.AsNoTracking()

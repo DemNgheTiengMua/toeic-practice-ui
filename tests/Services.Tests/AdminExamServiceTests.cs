@@ -670,7 +670,28 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             60,
             ExamPurposeDto.Mock));
 
-        await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(sec1R));
+        // #269: content is the roster. A legacy group is no longer content this rule can see, so the
+        // fixture puts a bound position on the paper instead - which is what an exam with content
+        // actually looks like now.
+        await database.SqlAsync($"""
+            INSERT INTO Topics (Modality, Code, Name)
+            SELECT 'reading', 'R-GRAM', N'Grammatical accuracy'
+            WHERE NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading' AND Code = 'R-GRAM');
+
+            DECLARE @topic INT = (SELECT TopicId FROM Topics WHERE Modality = 'reading' AND Code = 'R-GRAM');
+            DECLARE @author INT = (SELECT MIN(UserId) FROM Users);
+
+            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, RenderFormat, ContentTier, LifecycleStatus, LastWrittenBy)
+            VALUES ('reading', @topic, 'B1', 'sentence_cloze', 'mcq', 'demo', 'active', @author);
+            DECLARE @item INT = SCOPE_IDENTITY();
+
+            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel, LastWrittenBy)
+            VALUES (@item, 1, N'Cert-change probe', N'a', N'b', N'c', N'd', 'A', @author);
+            DECLARE @version INT = SCOPE_IDENTITY();
+
+            INSERT INTO ExamItems (ExamId, CertId, SectionId, ItemId, ItemVersionId, Modality, DisplayOrder, LastWrittenBy)
+            VALUES ({exam.ExamId}, {cert1Id}, {sec1R}, @item, @version, 'reading', 1, @author);
+            """);
 
         // Changing certId when exam has question groups is blocked
         var ex = await Assert.ThrowsAsync<AdminExamException>(() => service.UpdateExamAsync(exam.ExamId, new UpdateAdminExamRequest(

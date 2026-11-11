@@ -156,8 +156,18 @@ public sealed partial class AttemptEngine
         }
 
         var hasSectionAudioFlag = sections.Any(s => s.RequireAudio);
+        // #269: audio is a property of the stimulus a paper's items share, not of a legacy question
+        // group. Asking the old table made every pool paper report "no audio to preflight", so a
+        // listening sitting opened without checking the learner could hear anything.
+        var hasPooledAudio = await db.ExamItems
+            .AsNoTracking()
+            .Where(i => i.ExamId == examId)
+            .Join(db.Items.AsNoTracking(), i => i.ItemId, item => item.ItemId, (i, item) => item)
+            .Join(db.Stimuli.AsNoTracking(), item => item.StimulusId, s => s.StimulusId, (item, s) => s)
+            .AnyAsync(s => !string.IsNullOrWhiteSpace(s.AudioPath), cancellationToken);
+
         var hasUploadedAudio = await db.ExamSectionAudios.AnyAsync(a => a.ExamId == examId, cancellationToken)
-            || await db.QuestionGroups.AnyAsync(g => g.ExamId == examId && !string.IsNullOrWhiteSpace(g.AudioPath), cancellationToken);
+            || hasPooledAudio;
         var requiresAudio = hasSectionAudioFlag || hasUploadedAudio;
 
         // #160: the old third clause compared Skill.Code against "speaking" - a name, not a code - so it
@@ -188,13 +198,18 @@ public sealed partial class AttemptEngine
             }
         }
 
-        var groupAudios = await db.QuestionGroups
+        // #269: the audio a pool paper needs is its stimuli's, reached through the roster.
+        var pooledAudios = await db.ExamItems
             .AsNoTracking()
-            .Where(g => g.ExamId == examId && !string.IsNullOrWhiteSpace(g.AudioPath))
-            .Select(g => g.AudioPath!)
+            .Where(i => i.ExamId == examId)
+            .Join(db.Items.AsNoTracking(), i => i.ItemId, item => item.ItemId, (i, item) => item)
+            .Join(db.Stimuli.AsNoTracking(), item => item.StimulusId, s => s.StimulusId, (item, s) => s)
+            .Where(s => !string.IsNullOrWhiteSpace(s.AudioPath))
+            .Select(s => s.AudioPath!)
+            .Distinct()
             .ToListAsync(cancellationToken);
 
-        foreach (var path in groupAudios)
+        foreach (var path in pooledAudios)
         {
             var normalized = MediaUrlHelper.NormalizeMediaUrl(path);
             if (!string.IsNullOrWhiteSpace(normalized))

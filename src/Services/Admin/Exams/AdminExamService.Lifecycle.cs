@@ -128,7 +128,10 @@ public sealed partial class AdminExamService
 
         if (exam.CertId != request.CertId)
         {
-            var hasExamContent = await db.QuestionGroups.AnyAsync(g => g.ExamId == examId, cancellationToken)
+            // #269: content is the roster, not the legacy group tree. Asking the old table would have
+            // said "empty" for every pool paper, letting an admin re-certificate a paper that already
+            // had items on it.
+            var hasExamContent = await db.ExamItems.AnyAsync(i => i.ExamId == examId, cancellationToken)
                 || await db.ExamSectionAudios.AnyAsync(a => a.ExamId == examId, cancellationToken)
                 || await db.ExamAttempts.AnyAsync(a => a.ExamId == examId, cancellationToken);
 
@@ -142,7 +145,8 @@ public sealed partial class AdminExamService
         {
             if (request.Purpose == ExamPurposeDto.SpeakingPractice)
             {
-                var hasNonSpeaking = await db.QuestionGroups.AnyAsync(g => g.ExamId == examId && g.Section.Modality != "speaking", cancellationToken);
+                var hasNonSpeaking = await db.ExamItems.AnyAsync(
+                    i => i.ExamId == examId && i.Section.Modality != "speaking", cancellationToken);
                 if (hasNonSpeaking)
                 {
                     throw new AdminExamException(ApiError.Codes.Validation, "A speaking-practice exam can only hold speaking sections.");
@@ -150,7 +154,8 @@ public sealed partial class AdminExamService
             }
             else if (request.Purpose == ExamPurposeDto.WritingPractice)
             {
-                var hasNonWriting = await db.QuestionGroups.AnyAsync(g => g.ExamId == examId && g.Section.Modality != "writing", cancellationToken);
+                var hasNonWriting = await db.ExamItems.AnyAsync(
+                    i => i.ExamId == examId && i.Section.Modality != "writing", cancellationToken);
                 if (hasNonWriting)
                 {
                     throw new AdminExamException(ApiError.Codes.Validation, "A writing-practice exam can only hold writing sections.");
