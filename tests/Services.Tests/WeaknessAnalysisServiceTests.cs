@@ -40,57 +40,86 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// The certificate, its skill and both sections (P5, P6), with no paper behind them. The tests that
-    /// assert on recommendations or on an empty reading need a certificate to be active and nothing
-    /// else, so they author no content rows at all.
-    /// </summary>
-    private async Task<(int CertId, int Sec1Id, int Sec2Id, int Cat1Id, int Cat2Id)> SeedCertificateAsync(string certCode)
-    {
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-
-        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
-        db.Certificates.Add(cert);
-        await db.SaveChangesAsync();
-
-        var cat1 = new QuestionCategory { CertId = cert.CertId, Code = Unique("CAT1"), Name = "Grammar: Tenses" };
-        var cat2 = new QuestionCategory { CertId = cert.CertId, Code = Unique("CAT2"), Name = "Vocabulary: Synonyms" };
-        db.QuestionCategories.AddRange(cat1, cat2);
-        await db.SaveChangesAsync();
-
-        var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
-        db.Skills.Add(skill);
-        await db.SaveChangesAsync();
-
-        var sec1 = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
-        var sec2 = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Text Completion", DisplayOrder = 2, OptionCount = 4, ExpectedQuestionCount = 1 };
-        db.Sections.AddRange(sec1, sec2);
-        await db.SaveChangesAsync();
-
-        return (cert.CertId, sec1.SectionId, sec2.SectionId, cat1.CategoryId, cat2.CategoryId);
-    }
-
-    /// <summary>
-    /// The catalog plus a legacy paper of four <c>Questions</c> rows, two per section.
+    /// Two pool cells on one paper: <c>R-DET</c> at B1 for the practice drill and <c>R-INF</c> at B2 for
+    /// the graded attempt, so the topic view reports two rows with different figures and the service
+    /// has something to order.
     /// <para>
-    /// <b>#269: NOT migrated, and the reason is production code rather than this fixture.</b> The two
-    /// tests that use it assert on the <b>category</b> axis, which only the legacy store carries:
-    /// <c>vw_UserCategoryAccuracy</c> joins <c>Questions</c> to reach a <c>CategoryId</c>, and a pool
-    /// answer's <c>QuestionId</c> is NULL. Migrating the rows would silently drop every
-    /// <c>FrequentlyMissedCategories</c> assertion, which is a weakened test rather than a ported one.
-    /// The category axis moves to <c>vw_UserTopicAccuracy</c> under #271; these rows go with the tables.
+    /// <b>#271: this fixture used to author legacy <c>Questions</c> rows with a <c>CategoryId</c>.</b>
+    /// The weakness page now reports the topic axis, and <c>vw_UserTopicAccuracy</c> reaches a cell only
+    /// through <c>Items</c> - a legacy answer has no cell at all, so a legacy fixture would make every
+    /// <c>FrequentlyMissedTopics</c> assertion below an assertion about an empty list.
     /// </para>
     /// </summary>
-    private async Task<(int CertId, int Sec1Id, int Sec2Id, int Cat1Id, int Cat2Id, List<int> QIds)> SeedCertificateWithCatalogAsync(string certCode)
+    private Task<(int CertId, int Sec1Id, int Sec2Id, int ExamId,
+        List<PoolPosition> P5, List<PoolPosition> P6)>
+        SeedCertificateWithPoolPaperAsync(string certCode) =>
+        SeedPoolPaperCoreAsync(certCode);
+
+    private sealed record PoolPosition(int ExamItemId, int ItemId, int ItemVersionId);
+
+    private async Task<(int CertId, int Sec1Id, int Sec2Id, int ExamId,
+        List<PoolPosition> P5, List<PoolPosition> P6)> SeedPoolPaperCoreAsync(string certCode)
+    {
+        int certId, sec1Id, sec2Id, examId;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+            db.Certificates.Add(cert);
+            await db.SaveChangesAsync();
+
+            var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
+            db.Skills.Add(skill);
+            await db.SaveChangesAsync();
+
+            var sec1 = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
+            var sec2 = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Text Completion", DisplayOrder = 2, OptionCount = 4, ExpectedQuestionCount = 1 };
+            db.Sections.AddRange(sec1, sec2);
+            await db.SaveChangesAsync();
+
+            var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 120, Purpose = "mock" };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+
+            certId = cert.CertId;
+            sec1Id = sec1.SectionId;
+            sec2Id = sec2.SectionId;
+            examId = exam.ExamId;
+        }
+
+        // Both cells exist in the canonical twenty; a database that has not seen them needs the rows.
+        await database.SqlAsync("""
+            INSERT INTO Topics (Modality, Code, Name)
+            SELECT v.Modality, v.Code, v.Name
+            FROM (VALUES ('reading','R-DET',N'Local detail'),
+                         ('reading','R-INF',N'Bridging inference')) v(Modality, Code, Name)
+            WHERE NOT EXISTS (SELECT 1 FROM Topics t WHERE t.Modality = v.Modality AND t.Code = v.Code);
+            """);
+
+        var p5 = new List<PoolPosition>();
+        var p6 = new List<PoolPosition>();
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            // The pool's own authoring path, so the rows satisfy the real checks and a binding exists
+            // for the section view to reach a section through.
+            p5.Add(Position(await PoolFixture.AddMcqAsync(db, examId, certId, sec1Id, "reading", "P5-1", displayOrder: 1, level: "B1")));
+            p5.Add(Position(await PoolFixture.AddMcqAsync(db, examId, certId, sec1Id, "reading", "P5-2", displayOrder: 2, level: "B1")));
+            p6.Add(Position(await PoolFixture.AddMcqAsync(db, examId, certId, sec2Id, "reading", "P6-1", displayOrder: 1, level: "B2")));
+            p6.Add(Position(await PoolFixture.AddMcqAsync(db, examId, certId, sec2Id, "reading", "P6-2", displayOrder: 2, level: "B2")));
+        }
+
+        return (certId, sec1Id, sec2Id, examId, p5, p6);
+
+        static PoolPosition Position(PoolFixture.Position p) =>
+            new(p.ExamItemId, p.ItemId, p.ItemVersionId);
+    }
+
+    /// <summary>A learner on a certificate, with no content rows of its own.</summary>
+    private async Task<(int CertId, int Sec1Id, int Sec2Id)> SeedCertificateAsync(string certCode)
     {
         await using var db = DbContextFactory.Create(database.ConnectionString);
 
         var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
         db.Certificates.Add(cert);
-        await db.SaveChangesAsync();
-
-        var cat1 = new QuestionCategory { CertId = cert.CertId, Code = Unique("CAT1"), Name = "Grammar: Tenses" };
-        var cat2 = new QuestionCategory { CertId = cert.CertId, Code = Unique("CAT2"), Name = "Vocabulary: Synonyms" };
-        db.QuestionCategories.AddRange(cat1, cat2);
         await db.SaveChangesAsync();
 
         var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
@@ -102,38 +131,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
         db.Sections.AddRange(sec1, sec2);
         await db.SaveChangesAsync();
 
-        var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 120, Purpose = "mock" };
-        db.Exams.Add(exam);
-        await db.SaveChangesAsync();
-
-        var grp1 = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = sec1.SectionId, DisplayOrder = 1 };
-        var grp2 = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = sec2.SectionId, DisplayOrder = 2 };
-        db.QuestionGroups.AddRange(grp1, grp2);
-        await db.SaveChangesAsync();
-
-        var q1 = new Question { GroupId = grp1.GroupId, ExamId = exam.ExamId, SectionId = sec1.SectionId, SkillId = skill.SkillId, CategoryId = cat1.CategoryId, Stem = "Q1 in P5", CefrLevel = CefrLevel.B1, QuestionType = "mcq", DisplayOrder = 1 };
-        var q2 = new Question { GroupId = grp1.GroupId, ExamId = exam.ExamId, SectionId = sec1.SectionId, SkillId = skill.SkillId, CategoryId = cat1.CategoryId, Stem = "Q2 in P5", CefrLevel = CefrLevel.B1, QuestionType = "mcq", DisplayOrder = 2 };
-        var q3 = new Question { GroupId = grp2.GroupId, ExamId = exam.ExamId, SectionId = sec2.SectionId, SkillId = skill.SkillId, CategoryId = cat2.CategoryId, Stem = "Q3 in P6", CefrLevel = CefrLevel.B2, QuestionType = "mcq", DisplayOrder = 1 };
-        var q4 = new Question { GroupId = grp2.GroupId, ExamId = exam.ExamId, SectionId = sec2.SectionId, SkillId = skill.SkillId, CategoryId = cat2.CategoryId, Stem = "Q4 in P6", CefrLevel = CefrLevel.B2, QuestionType = "mcq", DisplayOrder = 2 };
-        db.Questions.AddRange(q1, q2, q3, q4);
-        await db.SaveChangesAsync();
-
-        var opt1A = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "mcq", Label = "A", Text = "Correct A", IsCorrect = true };
-        var opt1B = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "mcq", Label = "B", Text = "Wrong B", IsCorrect = false };
-
-        var opt2A = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "mcq", Label = "A", Text = "Wrong A", IsCorrect = false };
-        var opt2B = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "mcq", Label = "B", Text = "Correct B", IsCorrect = true };
-
-        var opt3A = new QuestionOption { QuestionId = q3.QuestionId, QuestionType = "mcq", Label = "A", Text = "Wrong A", IsCorrect = false };
-        var opt3B = new QuestionOption { QuestionId = q3.QuestionId, QuestionType = "mcq", Label = "B", Text = "Correct B", IsCorrect = true };
-
-        var opt4A = new QuestionOption { QuestionId = q4.QuestionId, QuestionType = "mcq", Label = "A", Text = "Correct A", IsCorrect = true };
-        var opt4B = new QuestionOption { QuestionId = q4.QuestionId, QuestionType = "mcq", Label = "B", Text = "Wrong B", IsCorrect = false };
-
-        db.QuestionOptions.AddRange(opt1A, opt1B, opt2A, opt2B, opt3A, opt3B, opt4A, opt4B);
-        await db.SaveChangesAsync();
-
-        return (cert.CertId, sec1.SectionId, sec2.SectionId, cat1.CategoryId, cat2.CategoryId, new List<int> { q1.QuestionId, q2.QuestionId, q3.QuestionId, q4.QuestionId });
+        return (cert.CertId, sec1.SectionId, sec2.SectionId);
     }
 
     [Fact]
@@ -151,58 +149,37 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
         Assert.Equal(0, view.TotalCorrect);
         Assert.Equal(0, view.GradedExamCount);
         Assert.Equal(0, view.CompletedPracticeCount);
-        Assert.Empty(view.FrequentlyMissedCategories);
+        Assert.Empty(view.FrequentlyMissedTopics);
         Assert.Null(view.PriorityPracticeSection);
         Assert.All(view.Sections, s => Assert.Equal(0, s.Answered));
     }
 
+    /// <summary>
+    /// The figures a learner sees must not move. <b>#271 changed the AXIS, not the arithmetic</b>:
+    /// <c>vw_UserTopicAccuracy</c> reports the same stored answers the retired category view did, named
+    /// by the pool's own <c>(TopicId, CefrLevel)</c>. So this pins both, and the two must agree:
+    /// <list type="bullet">
+    /// <item>the topic view's Answered/Correct for each cell,</item>
+    /// <item>the section view's totals, which are untouched by this ticket,</item>
+    /// <item>and the service's own output, which now names cells instead of categories.</item>
+    /// </list>
+    /// <b>The wrong input this catches:</b> a migration that groups by topic alone (two levels of one
+    /// topic collapse into one blended row), or a reader that divides Correct by Answered a second time
+    /// and reports a figure the view does not.
+    /// </summary>
     [Fact]
-    public async Task Numbers_come_from_vw_UserSectionAccuracyAll_and_vw_UserCategoryAccuracy()
+    public async Task Numbers_come_from_vw_UserSectionAccuracyAll_and_vw_UserTopicAccuracy()
     {
         var certCode = Unique("ACCNUM");
-        var (certId, sec1Id, sec2Id, cat1Id, cat2Id, qIds) = await SeedCertificateWithCatalogAsync(certCode);
+        var (certId, sec1Id, sec2Id, examId, p5, p6) = await SeedCertificateWithPoolPaperAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (service, _) = CreateServices();
 
         await using (var db = DbContextFactory.Create(database.ConnectionString))
         {
-            // Practice session on Section 1 (P5): 2 questions answered, 1 correct, 1 incorrect
-            var session = new PracticeSession
-            {
-                UserId = userId,
-                CertId = certId,
-                SectionId = sec1Id,
-                Modality = "reading",
-                QuestionSource = "all",
-                Status = "finished",
-                QuestionCount = 2,
-                CorrectCount = 1,
-                StartedAt = DateTimeOffset.UtcNow.AddHours(-2),
-                FinishedAt = DateTimeOffset.UtcNow.AddHours(-1)
-            };
-            db.PracticeSessions.Add(session);
-            await db.SaveChangesAsync();
-
-            var pa1 = new PracticeAnswer
-            {
-                SessionId = session.SessionId,
-                QuestionId = qIds[0],
-                SectionId = sec1Id,
-                DisplayOrder = 1,
-                IsCorrect = true
-            };
-            var pa2 = new PracticeAnswer
-            {
-                SessionId = session.SessionId,
-                QuestionId = qIds[1],
-                SectionId = sec1Id,
-                DisplayOrder = 2,
-                IsCorrect = false
-            };
-            db.PracticeAnswers.AddRange(pa1, pa2);
-
-            // Graded exam attempt on Section 2 (P6): 2 questions answered, both correct
-            var examId = await db.Questions.Where(q => q.QuestionId == qIds[2]).Select(q => q.ExamId).SingleAsync();
+            // A graded attempt spanning both sections: 2 items in P5 (1 correct, 1 wrong) and 2 in P6
+            // (both correct). That is the same four answers, and the same 3-of-4, the retired fixture
+            // recorded - so the figures must not move, only the axis that names them.
             var attempt = new ExamAttempt
             {
                 UserId = userId,
@@ -219,25 +196,27 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
             db.ExamAttempts.Add(attempt);
             await db.SaveChangesAsync();
 
-            var aa1 = new AttemptAnswer
-            {
-                AttemptId = attempt.AttemptId,
-                ExamId = examId,
-                QuestionId = qIds[2],
-                IsCorrect = true
-            };
-            var aa2 = new AttemptAnswer
-            {
-                AttemptId = attempt.AttemptId,
-                ExamId = examId,
-                QuestionId = qIds[3],
-                IsCorrect = true
-            };
-            db.AttemptAnswers.AddRange(aa1, aa2);
+            db.AttemptAnswers.AddRange(
+                Answer(attempt.AttemptId, p5[0], "A", correct: true),
+                Answer(attempt.AttemptId, p5[1], "B", correct: false),
+                Answer(attempt.AttemptId, p6[0], "A", correct: true),
+                Answer(attempt.AttemptId, p6[1], "A", correct: true));
             await db.SaveChangesAsync();
+
+            AttemptAnswer Answer(int attemptId, PoolPosition position, string label, bool correct) => new()
+            {
+                AttemptId = attemptId,
+                ExamId = examId,
+                ExamItemId = position.ExamItemId,
+                ItemId = position.ItemId,
+                ItemVersionId = position.ItemVersionId,
+                SelectedLabel = label,
+                IsCorrect = correct,
+            };
         }
 
         // Verify the SQL views directly in the DB
+        int b1TopicId, b2TopicId;
         await using (var db = DbContextFactory.Create(database.ConnectionString))
         {
             var secView = await db.vw_UserSectionAccuracyAlls
@@ -246,11 +225,27 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
             Assert.Contains(secView, v => v.SectionId == sec1Id && v.Answered == 2 && v.Correct == 1);
             Assert.Contains(secView, v => v.SectionId == sec2Id && v.Answered == 2 && v.Correct == 2);
 
-            var catView = await db.vw_UserCategoryAccuracies
+            var topicView = await db.vw_UserTopicAccuracies
                 .Where(v => v.UserId == userId)
                 .ToListAsync();
-            Assert.Contains(catView, v => v.CategoryId == cat1Id && v.Answered == 2 && v.Correct == 1);
-            Assert.Contains(catView, v => v.CategoryId == cat2Id && v.Answered == 2 && v.Correct == 2);
+
+            // Two cells, not one - and both are the SAME topic (PoolFixture authors one reading topic),
+            // so the only thing that separates them is the level. A view that grouped by topic alone
+            // would report a single blended 3-of-4 row here and fail this count.
+            Assert.Equal(2, topicView.Count);
+
+            // The counts the retired category view reported on the same answers, cell for cell:
+            // P5's two items 2 answered / 1 correct, P6's two 2 answered / 2 correct.
+            var drillCell = Assert.Single(topicView, v => v.Answered == 2 && v.Correct == 1);
+            var attemptCell = Assert.Single(topicView, v => v.Answered == 2 && v.Correct == 2);
+            b1TopicId = drillCell.TopicId;
+            b2TopicId = attemptCell.TopicId;
+            Assert.Equal(b1TopicId, b2TopicId);
+            Assert.Equal("B1", drillCell.CefrLevel);
+            Assert.Equal("B2", attemptCell.CefrLevel);
+            // The percentage is the view's, and it is the same division the retired view would give.
+            Assert.Equal(50, drillCell.AccuracyPercent);
+            Assert.Equal(100, attemptCell.AccuracyPercent);
         }
 
         // Call weakness analysis service
@@ -261,7 +256,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
         Assert.Equal(3, view.TotalCorrect);
         Assert.Equal(75, view.OverallAccuracyPercentage);
         Assert.Equal(1, view.GradedExamCount);
-        Assert.Equal(1, view.CompletedPracticeCount);
+        Assert.Equal(0, view.CompletedPracticeCount);
 
         // Section 1: 50% accuracy (weakest)
         var sec1Result = Assert.Single(view.Sections, s => s.SectionId == sec1Id);
@@ -283,20 +278,27 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
         Assert.NotNull(view.PriorityPracticeSection);
         Assert.Equal(sec1Id, view.PriorityPracticeSection!.SectionId);
 
-        // Frequently missed categories: cat1 is 50%, cat2 is 100%
-        Assert.Equal(2, view.FrequentlyMissedCategories.Count);
-        var cat1Result = view.FrequentlyMissedCategories[0]; // weakest first
-        Assert.Equal(cat1Id, cat1Result.CategoryId);
-        Assert.Equal(50, cat1Result.AccuracyPercentage);
-        Assert.Equal(2, cat1Result.Answered);
-        Assert.Equal(1, cat1Result.Correct);
+        // Frequently missed topics: the B1 cell is 50%, the B2 cell is 100% - weakest first, and the
+        // numbers are the ones the view reported above rather than a second division.
+        Assert.Equal(2, view.FrequentlyMissedTopics.Count);
+        var weakestMissed = view.FrequentlyMissedTopics[0];
+        Assert.Equal(b1TopicId, weakestMissed.TopicId);
+        Assert.Equal(CefrLevel.B1, weakestMissed.CefrLevel);
+        Assert.Equal(50, weakestMissed.AccuracyPercent);
+        Assert.Equal(2, weakestMissed.Answered);
+        Assert.Equal(1, weakestMissed.Correct);
+
+        var strongestMissed = view.FrequentlyMissedTopics[1];
+        Assert.Equal(b2TopicId, strongestMissed.TopicId);
+        Assert.Equal(CefrLevel.B2, strongestMissed.CefrLevel);
+        Assert.Equal(100, strongestMissed.AccuracyPercent);
     }
 
     [Fact]
     public async Task Recommendations_can_be_marked_resolved_and_drop_off_the_open_list()
     {
         var certCode = Unique("RECO");
-        var (certId, _, _, _, _) = await SeedCertificateAsync(certCode);
+        var (certId, _, _) = await SeedCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (service, _) = CreateServices();
 
@@ -357,7 +359,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
     public async Task ResolveRecommendation_throws_when_recommendation_belongs_to_another_user()
     {
         var certCode = Unique("ISOL");
-        var (certId, _, _, _, _) = await SeedCertificateAsync(certCode);
+        var (certId, _, _) = await SeedCertificateAsync(certCode);
         var user1 = await SeedLearnerAsync(certCode);
         var user2 = await SeedLearnerAsync(certCode);
         var (service, _) = CreateServices();
@@ -388,7 +390,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
     public async Task Empty_accuracy_learner_still_receives_open_recommendations()
     {
         var certCode = Unique("EMPTYREC");
-        var (certId, _, _, _, _) = await SeedCertificateAsync(certCode);
+        var (certId, _, _) = await SeedCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (service, _) = CreateServices();
 
@@ -418,8 +420,8 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
     {
         var certCodeA = Unique("RECA");
         var certCodeB = Unique("RECB");
-        var (certIdA, _, _, _, _) = await SeedCertificateAsync(certCodeA);
-        var (certIdB, _, _, _, _) = await SeedCertificateAsync(certCodeB);
+        var (certIdA, _, _) = await SeedCertificateAsync(certCodeA);
+        var (certIdB, _, _) = await SeedCertificateAsync(certCodeB);
         var userId = await SeedLearnerAsync(certCodeA);
         var (service, learner) = CreateServices();
 
@@ -443,26 +445,35 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
         Assert.Single(viewB.Recommendations);
         Assert.Equal("Reco in Cert B", viewB.Recommendations[0].Text);
     }
-[Fact]
-    public async Task WeaknessAnalysis_includes_practice_multi_select_and_inline_completion()
+    /// <summary>
+    /// #271: multi-select and inline-completion answers reach the weakness page on the TOPIC axis. This
+    /// used to run through <c>QuestionCategories</c> and <c>vw_UserCategoryAccuracy</c>; the pool carries
+    /// no category, so the cells are <c>Items.TopicId/CefrLevel</c> and the same two answers must land
+    /// in one cell.
+    /// <para>
+    /// <b>The wrong input this catches:</b> a view that only counts labelled MCQ answers. An
+    /// inline-completion answer records <c>AcceptedAnswersJson</c> and no key, and a multi-select answer
+    /// records a key set; a reader that assumed a single <c>KeyLabel</c> would report fewer answered
+    /// than were graded, so the figures here are asserted against the answers actually written.
+    /// </para>
+    /// <para>
+    /// It is a graded attempt rather than a practice session because a pool PRACTICE answer has no
+    /// section (<c>pa.SectionId IS NOT NULL</c> is the section view's filter), so it could not be
+    /// compared against a section figure at all. The cell is the same either way.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task WeaknessAnalysis_includes_multi_select_and_inline_completion_answers()
     {
-        // #269: NOT migrated, and the reason is production code rather than this fixture. This test is
-        // about the CATEGORY axis, which vw_UserCategoryAccuracy reaches only by joining Questions; a
-        // pool answer's QuestionId is NULL, so the three category assertions below would become
-        // assertions about an empty list. The axis moves to vw_UserTopicAccuracy under #271.
         var certCode = Unique("NC");
-        int secId, catId, q1Id, q2Id;
+        int secId, examId, topicId;
+        int multiItemId, multiVersionId, inlineItemId, inlineVersionId;
 
         await using (var db = DbContextFactory.Create(database.ConnectionString))
         {
             var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
             db.Certificates.Add(cert);
             await db.SaveChangesAsync();
-
-            var cat = new QuestionCategory { CertId = cert.CertId, Code = Unique("NCAT"), Name = "Mixed Objective Cat" };
-            db.QuestionCategories.Add(cat);
-            await db.SaveChangesAsync();
-            catId = cat.CategoryId;
 
             var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
             db.Skills.Add(skill);
@@ -476,80 +487,102 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
             var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 60, Purpose = "mock" };
             db.Exams.Add(exam);
             await db.SaveChangesAsync();
+            examId = exam.ExamId;
 
-            var grp = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = sec.SectionId, DisplayOrder = 1 };
-            db.QuestionGroups.Add(grp);
+            var topic = new Topic { Modality = "reading", Code = "R-COH", Name = "Cohesion" };
+            db.Topics.Add(topic);
             await db.SaveChangesAsync();
+            topicId = topic.TopicId;
 
-            var q1 = new Question
+            // multi_select: four options, a key set.
+            var multi = new Item
             {
-                GroupId = grp.GroupId,
-                ExamId = exam.ExamId,
-                SectionId = sec.SectionId,
-                SkillId = skill.SkillId,
-                CategoryId = cat.CategoryId,
-                Stem = "Multi select q1",
-                CefrLevel = CefrLevel.B1,
-                QuestionType = "multi_select",
-                DisplayOrder = 1
+                Modality = "reading", TopicId = topicId, CefrLevel = CefrLevel.B1,
+                ItemType = "passage_comprehension", RenderFormat = "multi_select",
+                ContentTier = "demo", LifecycleStatus = "active",
             };
-            var q2 = new Question
+            // inline_completion: no options and no key label; its answer set is AcceptedAnswersJson.
+            var inline = new Item
             {
-                GroupId = grp.GroupId,
-                ExamId = exam.ExamId,
-                SectionId = sec.SectionId,
-                SkillId = skill.SkillId,
-                CategoryId = cat.CategoryId,
-                Stem = "Inline completion q2",
-                CefrLevel = CefrLevel.B2,
-                QuestionType = "inline_completion",
-                DisplayOrder = 2
+                Modality = "reading", TopicId = topicId, CefrLevel = CefrLevel.B1,
+                ItemType = "sentence_cloze", RenderFormat = "inline_completion",
+                ContentTier = "demo", LifecycleStatus = "active",
             };
-            db.Questions.AddRange(q1, q2);
+            db.Items.AddRange(multi, inline);
             await db.SaveChangesAsync();
-            q1Id = q1.QuestionId;
-            q2Id = q2.QuestionId;
+            multiItemId = multi.ItemId;
+            inlineItemId = inline.ItemId;
+
+            var multiVersion = new ItemVersion
+            {
+                ItemId = multi.ItemId, VersionNumber = 1, Stem = "Multi select q1",
+                OptionA = "a", OptionB = "b", OptionC = "c", OptionD = "d",
+                KeyLabel = "A,C", MaxSelections = 2,
+            };
+            var inlineVersion = new ItemVersion
+            {
+                ItemId = inline.ItemId, VersionNumber = 1, Stem = "Inline completion q2",
+                AcceptedAnswersJson = "[\"telecommunications\"]", MinWords = 1, MaxWords = 2,
+            };
+            db.ItemVersions.AddRange(multiVersion, inlineVersion);
+            await db.SaveChangesAsync();
+            multiVersionId = multiVersion.ItemVersionId;
+            inlineVersionId = inlineVersion.ItemVersionId;
+
+            db.ExamItems.AddRange(
+                new ExamItem
+                {
+                    ExamId = exam.ExamId, CertId = cert.CertId, SectionId = sec.SectionId,
+                    ItemId = multi.ItemId, ItemVersionId = multiVersion.ItemVersionId,
+                    Modality = "reading", DisplayOrder = 1,
+                },
+                new ExamItem
+                {
+                    ExamId = exam.ExamId, CertId = cert.CertId, SectionId = sec.SectionId,
+                    ItemId = inline.ItemId, ItemVersionId = inlineVersion.ItemVersionId,
+                    Modality = "reading", DisplayOrder = 2,
+                });
+            await db.SaveChangesAsync();
         }
 
         var userId = await SeedLearnerAsync(certCode);
         var (service, _) = CreateServices();
 
-        // Seed a finished practice session with 2 answers (1 correct, 1 incorrect)
+        // A graded attempt: 2 answers, 1 correct (multi_select), 1 incorrect (inline_completion).
         await using (var db = DbContextFactory.Create(database.ConnectionString))
         {
-            var session = new PracticeSession
+            var attempt = new ExamAttempt
             {
                 UserId = userId,
                 CertId = (await db.Sections.Where(s => s.SectionId == secId).Select(s => s.CertId).SingleAsync()),
-                SectionId = secId,
-                Modality = "reading",
-                QuestionSource = "all",
-                Status = "finished",
-                QuestionCount = 2,
-                CorrectCount = 1,
+                ExamId = examId,
+                Status = "graded",
                 StartedAt = DateTimeOffset.UtcNow.AddHours(-1),
-                FinishedAt = DateTimeOffset.UtcNow.AddMinutes(-30)
+                SubmittedAt = DateTimeOffset.UtcNow.AddMinutes(-30),
+                TotalScore = 50,
+                WrittenByService = DerivedFactWriters.AttemptScoreAndBand,
+                ProjectionVersion = 1,
             };
-            db.PracticeSessions.Add(session);
+            db.ExamAttempts.Add(attempt);
             await db.SaveChangesAsync();
 
-            var pa1 = new PracticeAnswer
-            {
-                SessionId = session.SessionId,
-                QuestionId = q1Id,
-                SectionId = secId,
-                DisplayOrder = 1,
-                IsCorrect = true
-            };
-            var pa2 = new PracticeAnswer
-            {
-                SessionId = session.SessionId,
-                QuestionId = q2Id,
-                SectionId = secId,
-                DisplayOrder = 2,
-                IsCorrect = false
-            };
-            db.PracticeAnswers.AddRange(pa1, pa2);
+            var multiPosition = await db.ExamItems.SingleAsync(i => i.ExamId == examId && i.ItemId == multiItemId);
+            var inlinePosition = await db.ExamItems.SingleAsync(i => i.ExamId == examId && i.ItemId == inlineItemId);
+            var attemptId = attempt.AttemptId;
+
+            db.AttemptAnswers.AddRange(
+                new AttemptAnswer
+                {
+                    AttemptId = attemptId, ExamId = examId,
+                    ExamItemId = multiPosition.ExamItemId, ItemId = multiItemId, ItemVersionId = multiVersionId,
+                    SelectedOptionIdsJson = "[\"A\",\"C\"]", IsCorrect = true,
+                },
+                new AttemptAnswer
+                {
+                    AttemptId = attemptId, ExamId = examId,
+                    ExamItemId = inlinePosition.ExamItemId, ItemId = inlineItemId, ItemVersionId = inlineVersionId,
+                    ResponseText = "telecommunictions", IsCorrect = false,
+                });
             await db.SaveChangesAsync();
         }
 
@@ -557,17 +590,20 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
         Assert.True(view.HasData);
         Assert.Equal(2, view.TotalAnswered);
         Assert.Equal(1, view.TotalCorrect);
-        Assert.Equal(1, view.CompletedPracticeCount);
+        Assert.Equal(1, view.GradedExamCount);
 
-        var sectionStats = Assert.Single(view.Sections);
+        var sectionStats = Assert.Single(view.Sections, s => s.SectionId == secId);
         Assert.Equal(2, sectionStats.Answered);
         Assert.Equal(1, sectionStats.Correct);
         Assert.Equal(50, sectionStats.AccuracyPercentage);
 
-        var missedCat = Assert.Single(view.FrequentlyMissedCategories);
-        Assert.Equal(catId, missedCat.CategoryId);
-        Assert.Equal(2, missedCat.Answered);
-        Assert.Equal(1, missedCat.Correct);
-        Assert.Equal(50, missedCat.AccuracyPercentage);
+        // Both render formats sat in ONE cell, so the topic axis reports one row holding both answers -
+        // the same two figures the section reported.
+        var missedCell = Assert.Single(view.FrequentlyMissedTopics);
+        Assert.Equal(topicId, missedCell.TopicId);
+        Assert.Equal(CefrLevel.B1, missedCell.CefrLevel);
+        Assert.Equal(2, missedCell.Answered);
+        Assert.Equal(1, missedCell.Correct);
+        Assert.Equal(50, missedCell.AccuracyPercent);
     }
 }

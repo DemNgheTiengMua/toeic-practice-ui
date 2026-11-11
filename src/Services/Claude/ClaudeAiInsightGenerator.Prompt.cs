@@ -37,14 +37,14 @@ public sealed partial class ClaudeAiInsightGenerator
             prompt.AppendLine();
         }
 
-        if (request.CategoryAccuracies is { Count: > 0 })
+        if (request.TopicAccuracies is { Count: > 0 })
         {
-            var sortedCats = request.CategoryAccuracies.OrderBy(c => c.AccuracyPercentage).ToList();
-            prompt.AppendLine("[ACCURACY BY QUESTION CATEGORY - SORTED FROM WEAKEST TO STRONGEST]");
-            foreach (var cat in sortedCats.Take(10))
+            var sortedTopics = request.TopicAccuracies.OrderBy(c => c.AccuracyPercentage).ToList();
+            prompt.AppendLine("[ACCURACY BY TOPIC AND LEVEL - SORTED FROM WEAKEST TO STRONGEST]");
+            foreach (var topic in sortedTopics.Take(10))
             {
-                var tag = cat.AccuracyPercentage < 60 ? "[CRITICAL FOCUS]" : (cat.AccuracyPercentage < 80 ? "[MODERATE GAP]" : "[SOLID STRENGTH]");
-                prompt.AppendLine($"- {tag} {cat.CategoryName} ({cat.CategoryCode}): {cat.Correct}/{cat.Answered} ({cat.AccuracyPercentage}%)");
+                var tag = topic.AccuracyPercentage < 60 ? "[CRITICAL FOCUS]" : (topic.AccuracyPercentage < 80 ? "[MODERATE GAP]" : "[SOLID STRENGTH]");
+                prompt.AppendLine($"- {tag} {topic.TopicName} ({topic.TopicCode}) at {topic.LevelCode}: {topic.Correct}/{topic.Answered} ({topic.AccuracyPercentage}%)");
             }
             prompt.AppendLine();
         }
@@ -69,8 +69,8 @@ public sealed partial class ClaudeAiInsightGenerator
                 prompt.AppendLine($"- Stem: \"{fp.Stem}\"{hesitation}");
                 prompt.AppendLine($"  Learner Chose: \"{fp.ChosenOptionText}\"");
                 prompt.AppendLine($"  Correct Answer: \"{fp.CorrectOptionText}\"");
-                if (!string.IsNullOrEmpty(fp.CategoryName))
-                    prompt.AppendLine($"  Category: {fp.CategoryName}");
+                if (!string.IsNullOrEmpty(fp.TopicName))
+                    prompt.AppendLine($"  Topic: {fp.TopicName}");
                 if (!string.IsNullOrEmpty(fp.Explanation))
                     prompt.AppendLine($"  Trap Rationale: {fp.Explanation}");
             }

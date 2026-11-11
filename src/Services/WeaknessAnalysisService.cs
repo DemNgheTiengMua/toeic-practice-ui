@@ -144,47 +144,20 @@ public sealed class WeaknessAnalysisService(
             ? sortedSections.FirstOrDefault(s => s.SectionId == weakestSectionId.Value)
             : null;
 
-        // Read question category accuracy directly from the SQL view
-        var categories = await db.QuestionCategories
-            .AsNoTracking()
-            .Where(c => c.CertId == activeCertId)
-            .ToListAsync(cancellationToken);
+        var (topicCells, weakestTopic) = await BuildTopicAccuracyAsync(userId, activeCertId, cancellationToken);
 
-        var catIds = categories.Select(c => c.CategoryId).ToHashSet();
-
-        var catViewRows = await db.vw_UserCategoryAccuracies
-            .AsNoTracking()
-            .Where(v => v.UserId == userId && v.CategoryId != null && catIds.Contains(v.CategoryId.Value))
-            .ToListAsync(cancellationToken);
-
-        var catViewMap = catViewRows.ToDictionary(r => r.CategoryId!.Value);
-
-        var missedCategories = new List<CategoryAccuracy>();
-        foreach (var c in categories)
-        {
-            if (catViewMap.TryGetValue(c.CategoryId, out var row) && (row.Answered ?? 0) > 0)
-            {
-                var answered = row.Answered ?? 0;
-                var correct = row.Correct ?? 0;
-                var pct = (int)Math.Round((double)correct / answered * 100);
-                missedCategories.Add(new CategoryAccuracy(
-                    c.CategoryId,
-                    c.Code,
-                    c.Name,
-                    answered,
-                    correct,
-                    pct));
-            }
-        }
-
-        // Sort categories weakest first
-        var sortedMissedCategories = missedCategories
-            .OrderBy(c => c.AccuracyPercentage)
+        // #271: "frequently missed" is the topic axis. It used to read vw_UserCategoryAccuracy, an
+        // axis the pool does not have; the replacement view computes per (topic, level) and is the
+        // same one the ranking above reads, so the list and the named weakest cell cannot disagree.
+        //
+        // Ordering is unchanged - lowest accuracy, then most misses, then most answers - because the
+        // list is read as "what to fix first", and the old ordering is that question's answer.
+        var sortedMissedTopics = topicCells
+            .OrderBy(c => c.AccuracyPercent)
             .ThenByDescending(c => c.Answered - c.Correct)
             .ThenByDescending(c => c.Answered)
             .ToList();
 
-        var (topicCells, weakestTopic) = await BuildTopicAccuracyAsync(userId, activeCertId, cancellationToken);
         // Open recommendations for this learner and certificate
         var recos = await db.Recommendations
             .AsNoTracking()
@@ -210,7 +183,7 @@ public sealed class WeaknessAnalysisService(
             totalCorrect,
             overallPct,
             sortedSections,
-            sortedMissedCategories,
+            sortedMissedTopics,
             recos,
             priorityPracticeSection,
             topicCells,
@@ -230,37 +203,12 @@ public sealed class WeaknessAnalysisService(
     private async Task<(IReadOnlyList<TopicAccuracy> Cells, TopicAccuracy? Weakest)> BuildTopicAccuracyAsync(
         int userId, int certId, CancellationToken cancellationToken)
     {
-        var examinedModalities = await db.Skills
-            .AsNoTracking()
-            .Where(s => s.CertId == certId)
-            .Select(s => s.Modality)
-            .Distinct()
-            .ToListAsync(cancellationToken);
+        // #271: cells come from the one reader, so this page and the four AI insight payloads scope a
+        // certificate's cells the same way. It returns [] for a learner whose answers are all legacy -
+        // they have no cell at all, which is correct, not an omission.
+        var cells = await TopicAccuracyReader.ReadAsync(db, userId, certId, cancellationToken);
 
-        if (examinedModalities.Count == 0)
-        {
-            return ([], null);
-        }
-
-        // Only view rows: a cell exists here because an answer was graded in it. A topic with no items
-        // has no answers, so it has no row and can never be reported - criterion 3 by construction.
-        var rows = await db.vw_UserTopicAccuracies
-            .AsNoTracking()
-            .Where(v => v.UserId == userId)
-            .ToListAsync(cancellationToken);
-
-        if (rows.Count == 0)
-        {
-            return ([], null);
-        }
-
-        var topics = await db.Topics
-            .AsNoTracking()
-            .Where(t => examinedModalities.Contains(t.Modality))
-            .Select(t => new { t.TopicId, t.Code, t.Name, t.Modality })
-            .ToDictionaryAsync(t => t.TopicId, cancellationToken);
-
-        if (topics.Count == 0)
+        if (cells.Count == 0)
         {
             return ([], null);
         }
@@ -277,35 +225,22 @@ public sealed class WeaknessAnalysisService(
                 g => g.Key,
                 g => (int?)g.OrderBy(l => l.DisplayOrder).ThenBy(l => l.LessonId).First().LessonId);
 
-        var cells = new List<TopicAccuracy>(rows.Count);
-        foreach (var row in rows)
+        var topicCells = new List<TopicAccuracy>(cells.Count);
+        foreach (var cell in cells)
         {
-            if (!topics.TryGetValue(row.TopicId, out var topic))
-            {
-                continue;
-            }
+            lessons.TryGetValue((cell.TopicId, cell.CefrLevel), out var lessonId);
 
-            // A level this build cannot place is not a cell it can report; the row is skipped rather
-            // than crashing a read path on a code from a newer schema.
-            if (!CefrLevel.TryParseAuthored(row.CefrLevel, out var level))
-            {
-                continue;
-            }
-
-            var modality = EnumCodes.Parse<Modality>(topic.Modality);
-            lessons.TryGetValue((row.TopicId, level), out var lessonId);
-
-            cells.Add(new TopicAccuracy(
-                row.TopicId,
-                topic.Code,
-                topic.Name,
-                modality,
-                level,
-                row.Answered,
-                row.Correct,
-                row.AccuracyPercent,
+            topicCells.Add(new TopicAccuracy(
+                cell.TopicId,
+                cell.TopicCode,
+                cell.TopicName,
+                cell.Modality,
+                cell.CefrLevel,
+                cell.Answered,
+                cell.Correct,
+                cell.AccuracyPercent,
                 IsWeakest: false,
-                MasteryEstimate.MinimumObservationsFor(modality),
+                MasteryEstimate.MinimumObservationsFor(cell.Modality),
                 lessonId));
         }
 
@@ -313,7 +248,7 @@ public sealed class WeaknessAnalysisService(
         // model's own function, so there is one floor in the codebase and not two.
         bool HasEnoughEvidence(TopicAccuracy c) => c.Answered >= c.ObservationFloor;
 
-        var ranked = cells
+        var ranked = topicCells
             .Where(HasEnoughEvidence)
             .OrderBy(c => c.AccuracyPercent)
             .ThenByDescending(c => c.Answered - c.Correct)
@@ -324,7 +259,7 @@ public sealed class WeaknessAnalysisService(
 
         var weakest = ranked.FirstOrDefault();
 
-        var ordered = cells
+        var ordered = topicCells
             // Rankable cells first, weakest first; the rest after, worst-evidenced last. A cell below
             // the floor is shown with its count so the page can say why it is not ranked.
             .OrderBy(c => HasEnoughEvidence(c) ? 0 : 1)

@@ -125,6 +125,8 @@ public sealed partial class AiInsightService
         var answers = await db.PracticeAnswers
             .AsNoTracking()
             .Include(pa => pa.ItemVersion)
+                .ThenInclude(v => v!.Item)
+                    .ThenInclude(i => i.Topic)
             .Include(pa => pa.Question)
                 .ThenInclude(q => q!.Category)
             .Where(pa => pa.SessionId == session.SessionId)
@@ -150,13 +152,17 @@ public sealed partial class AiInsightService
 
             if (pinned is not null)
             {
+                // #271: the cell comes off the item the version pins, which is the join the accuracy
+                // view makes - so the detail and the cell the narrative ranks are one attribution.
+                var item = pinned.Item;
                 return new InsightQuestionDetail(
                     null,
                     pinned.Stem,
                     null,
                     scopeName,
-                    null,
-                    null,
+                    item?.TopicId,
+                    item?.Topic?.Name,
+                    item?.CefrLevel,
                     null,
                     a.SelectedLabel,
                     pinned.KeyLabel,
@@ -175,13 +181,19 @@ public sealed partial class AiInsightService
             // #187: the session's own section is the question's section - FK_PracticeAnswers_QuestionSection
             // makes that true - so the label is read from the session that was already loaded rather
             // than from a navigation this query does not include.
+            //
+            // #271: a legacy answer carries no cell. Its level is the question's authored one, but its
+            // topic does not exist - the retired CategoryId is not a topic - so the topic is null and
+            // this answer is never matched to an accuracy row. That is honest: the view has no row for
+            // it either.
             return new InsightQuestionDetail(
                 q!.QuestionId,
                 q.Stem,
                 q.SectionId,
                 scopeName,
-                q.CategoryId,
-                q.Category?.Name,
+                null,
+                null,
+                q.CefrLevel,
                 a.SelectedOptionId,
                 selectedOpt?.Label,
                 correctOpt?.Label,
@@ -211,30 +223,14 @@ public sealed partial class AiInsightService
             )).ToList();
         }
 
-        var categoryIds = answers.Where(a => a.Question?.CategoryId is not null).Select(a => a.Question!.CategoryId!.Value).Distinct().ToList();
-        var catAccuracyRows = categoryIds.Count == 0
-            ? []
-            : await db.vw_UserCategoryAccuracies
-                .AsNoTracking()
-                .Where(v => v.UserId == insight.UserId && v.CategoryId != null && categoryIds.Contains(v.CategoryId.Value))
-                .ToListAsync(cancellationToken);
-
-        var categoryAccuracies = new List<InsightCategoryAccuracy>();
-        var categories = categoryIds.Count == 0
-            ? []
-            : await db.QuestionCategories
-                .AsNoTracking()
-                .Where(c => categoryIds.Contains(c.CategoryId))
-                .ToListAsync(cancellationToken);
-
-        foreach (var c in categories)
-        {
-            var row = catAccuracyRows.FirstOrDefault(r => r.CategoryId == c.CategoryId);
-            var answered = row?.Answered ?? 0;
-            var correct = row?.Correct ?? 0;
-            var pct = answered > 0 ? (int)Math.Round((double)correct / answered * 100) : 0;
-            categoryAccuracies.Add(new InsightCategoryAccuracy(c.CategoryId, c.Code, c.Name, answered, correct, pct));
-        }
+        // #271: the topic axis, from the view that computes it. A pool drill's answers are at a cell,
+        // not at a category, so this is the whole of the "which topic is weak" block - and the
+        // certificate scoping is the reader's, so a cross-skill drill cannot report another skill's
+        // cell as this session's.
+        var topicAccuracies = (await TopicAccuracyReader.ReadAsync(db, insight.UserId, insight.CertId, cancellationToken))
+            .Select(c => new InsightTopicAccuracy(
+                c.TopicId, c.TopicCode, c.TopicName, c.CefrLevel.Code, c.Answered, c.Correct, c.AccuracyPercent))
+            .ToList();
 
         // Query user's target band if set
         var targetBand = await db.TargetBands
@@ -270,7 +266,7 @@ public sealed partial class AiInsightService
             null,
             questionDetails,
             sectionAccuracies,
-            categoryAccuracies,
+            topicAccuracies,
             attemptCount,
             Facts: facts);
     }

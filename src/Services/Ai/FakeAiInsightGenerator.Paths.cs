@@ -63,11 +63,11 @@ public partial class FakeAiInsightGenerator
                 TargetBandCode: request.TargetBandCode));
         }
 
-        var weakestCategory = request.CategoryAccuracies.Where(c => c.Answered > 0 && c.AccuracyPercentage < 70).OrderBy(c => c.AccuracyPercentage).FirstOrDefault();
-        if (weakestCategory != null)
+        var weakestTopic = request.TopicAccuracies.Where(c => c.Answered > 0 && c.AccuracyPercentage < 70).OrderBy(c => c.AccuracyPercentage).FirstOrDefault();
+        if (weakestTopic != null)
         {
             recommendations.Add(new GeneratedRecommendation(
-                $"Focus on {weakestCategory.CategoryName} question types to eliminate unforced errors.",
+                $"Focus on {weakestTopic.TopicName} at {weakestTopic.LevelCode} to eliminate unforced errors.",
                 RecommendationSeverity.Minor,
                 TargetBandCode: request.TargetBandCode));
         }

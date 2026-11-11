@@ -274,13 +274,12 @@ public static class InsightNarrativeGuard
             sectionCorrect += section.Correct;
         }
 
-        foreach (var category in request.CategoryAccuracies)
+        foreach (var topic in request.TopicAccuracies)
         {
-            Add(allowed, category.Answered, category.Correct, category.AccuracyPercentage);
-            Add(allowed, Percent(category.Correct, category.Answered));
+            Add(allowed, topic.Answered, topic.Correct, topic.AccuracyPercentage);
         }
 
-        Add(allowed, sectionAnswered, sectionCorrect, request.SectionAccuracies.Count, request.CategoryAccuracies.Count);
+        Add(allowed, sectionAnswered, sectionCorrect, request.SectionAccuracies.Count, request.TopicAccuracies.Count);
 
         // Reference numbers a narrative legitimately names: a code or name carrying a digit ("Part 5",
         // "P5", "VSTEP 6"), and the 0-100 scale every position is stated on. These are payload tokens,
@@ -291,9 +290,9 @@ public static class InsightNarrativeGuard
             AddDigits(allowed, section.SectionCode, section.SectionName);
         }
 
-        foreach (var category in request.CategoryAccuracies)
+        foreach (var topic in request.TopicAccuracies)
         {
-            AddDigits(allowed, category.CategoryCode, category.CategoryName);
+            AddDigits(allowed, topic.TopicCode, topic.TopicName);
         }
 
         if (request.Facts is { } facts)
@@ -306,7 +305,7 @@ public static class InsightNarrativeGuard
         // The deterministic narrator's own arithmetic over the payload's rows.
         var missed = request.Questions.Where(q => q.IsCorrect == false).ToList();
         Add(allowed, missed.Count);
-        foreach (var group in missed.GroupBy(q => new { q.CategoryId, q.CategoryName }))
+        foreach (var group in missed.GroupBy(q => new { q.TopicId, q.TopicName }))
         {
             Add(allowed, group.Count());
         }
@@ -346,7 +345,7 @@ public static class InsightNarrativeGuard
 
         // The narrator states its own threshold as a rule ("below 45% prior accuracy"), so the
         // threshold itself is a payload-adjacent constant rather than a claim about the learner.
-        Add(allowed, FakeAiInsightGenerator.WeakCategoryAccuracyThreshold);
+        Add(allowed, FakeAiInsightGenerator.WeakTopicAccuracyThreshold);
 
         // A prior insight is a stored fact too: the narrative may compare against its figures and its
         // date. Parsing its prose is the only form in which those numbers exist.
@@ -368,17 +367,20 @@ public static class InsightNarrativeGuard
         return allowed;
     }
 
-    /// <summary>The narrator's "fortunate guess" count: a correct answer with no hint, in a category
-    /// whose prior accuracy is weak. Recomputed here so a narrative may quote it.</summary>
+    /// <summary>The narrator's "fortunate guess" count: a correct answer with no hint, in a topic cell
+    /// whose prior accuracy is weak. Recomputed here so a narrative may quote it - and on BOTH axes,
+    /// because a weak B1 cell says nothing about the same topic at B2 (#271).</summary>
     private static int CountLuckyGuesses(AiInsightGenerationRequest request) =>
         request.Questions.Count(q =>
             q.IsCorrect == true &&
             !q.HintUsed &&
-            q.CategoryId.HasValue &&
-            request.CategoryAccuracies.Any(ca =>
-                ca.CategoryId == q.CategoryId.Value &&
-                ca.Answered >= 2 &&
-                ca.AccuracyPercentage < FakeAiInsightGenerator.WeakCategoryAccuracyThreshold));
+            q.TopicId.HasValue &&
+            q.CefrLevel is { } level &&
+            request.TopicAccuracies.Any(ta =>
+                ta.TopicId == q.TopicId.Value &&
+                ta.LevelCode == level.Code &&
+                ta.Answered >= 2 &&
+                ta.AccuracyPercentage < FakeAiInsightGenerator.WeakTopicAccuracyThreshold));
 
     private static void Add(HashSet<decimal> allowed, params int?[] values)
     {

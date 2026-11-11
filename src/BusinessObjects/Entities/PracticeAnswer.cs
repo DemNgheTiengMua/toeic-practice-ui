@@ -42,7 +42,7 @@ public partial class PracticeAnswer
     /// pool answer.
     /// <para>
     /// This is what makes a micro-check reach mastery: the answer is an ordinary <c>PracticeAnswers</c>
-    /// row, in the ledger a drill writes, so <c>vw_UserCategoryAccuracy</c> and the cell mastery the
+    /// row, in the ledger a drill writes, so <c>vw_UserTopicAccuracy</c> and the cell mastery the
     /// path sizes its steps from both see it. A private counter beside the ledger would satisfy the
     /// ticket on paper and be invisible to both.
     /// </para>

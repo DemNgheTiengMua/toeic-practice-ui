@@ -48,9 +48,11 @@ IF @answered <> 1
 DECLARE @correct INT = (SELECT Correct FROM vw_UserSectionAccuracyAll WHERE UserId=@u AND SectionId=@sec);
 IF @correct <> 1
   THROW 50000, 'EXPECT_REJECT FAILED: the accuracy view lost the one answered item''s correct mark', 1;
--- and the category view agrees, so the two axes cannot disagree about one sitting
-IF (SELECT Answered FROM vw_UserCategoryAccuracy WHERE UserId=@u AND CategoryId=@cat) <> 1
-  THROW 50000, 'EXPECT_REJECT FAILED: the category accuracy view counted an unanswered item as answered', 1;
+-- and the topic view agrees, so the two axes cannot disagree about one sitting. #271: the category
+-- view this used to read is gone; a legacy answer has no cell, and this fixture's questions are
+-- legacy, so what is asserted here is the SECTION axis plus the topic view's silence.
+IF EXISTS (SELECT 1 FROM vw_UserTopicAccuracy WHERE UserId=@u)
+  THROW 50000, 'EXPECT_REJECT FAILED: a legacy answer produced a topic cell, which no answer supports', 1;
 PRINT 'a blank is not counted as an answered item; the answered one is';
 
 -- the wrong-but-passing input, stated as a refusal: a blank written as INCORRECT inflates the denominator

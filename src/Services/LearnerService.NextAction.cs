@@ -162,24 +162,24 @@ public sealed partial class LearnerService
         if (!ceilingReached)
         {
             var weakest = skills
-                .SelectMany(skill => skill.WeakestCategories.Select(category => (Skill: skill, Category: category)))
-                .OrderBy(x => x.Category.AccuracyPercent)
-                .ThenByDescending(x => x.Category.Answered)
+                .SelectMany(skill => skill.WeakestTopics.Select(topic => (Skill: skill, Topic: topic)))
+                .OrderBy(x => x.Topic.AccuracyPercent)
+                .ThenByDescending(x => x.Topic.Answered)
                 .ThenBy(x => x.Skill.Code, StringComparer.Ordinal)
-                .ThenBy(x => x.Category.Code, StringComparer.Ordinal)
+                .ThenBy(x => x.Topic.Code, StringComparer.Ordinal)
                 .FirstOrDefault();
 
             if (weakest != default)
             {
                 return new NextAction(
                     "WEAKEST TOPIC",
-                    $"Drill {weakest.Category.Name}",
-                    $"{weakest.Category.AccuracyPercent}% accuracy over {weakest.Category.Answered} answers in {weakest.Skill.Name}. Ten questions are chosen for you, drawn from what is due for revision.",
+                    $"Drill {weakest.Topic.Name}",
+                    $"{weakest.Topic.AccuracyPercent}% accuracy over {weakest.Topic.Answered} answers in {weakest.Skill.Name}. Ten questions are chosen for you, drawn from what is due for revision.",
                     "Start practice",
                     "/practice",
-                    weakest.Category.AccuracyPercent < 50 ? "danger" : "warning",
+                    weakest.Topic.AccuracyPercent < 50 ? "danger" : "warning",
                     NextActionCascade.FreeDrill,
-                    $"{weakest.Skill.Code} · {weakest.Category.AccuracyPercent}%");
+                    $"{weakest.Skill.Code} · {weakest.Topic.AccuracyPercent}%");
             }
 
             // A certificate whose skills include speaking or writing has a whole flow the typed drill

@@ -1048,7 +1048,7 @@
   };
 
   window.deleteStudioGroup = function(groupId, secId) {
-    var ok = confirm('Delete this group and all its questions?');
+    var ok = confirm('Remove this group from the paper? Its items stay in the pool.');
     if (!ok) return;
 
     markSaving();

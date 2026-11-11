@@ -305,6 +305,233 @@ public sealed partial class AdminExamService
     }
 
     /// <summary>
+    /// #273: the Studio's group autosave, on the pool.
+    /// <para>
+    /// <b>Why this exists.</b> The editor's group card wrote <c>QuestionGroups</c> through
+    /// <c>PUT /exams/{id}/groups/{groupId}</c>, a route #265 deleted with the table it wrote - so every
+    /// passage, transcript, image-alt and audio-slice edit on a pool paper answered 404 and the screen
+    /// kept showing the old value. This is that write, addressed the way the Studio reads it: a group's
+    /// identity on a pool paper is its <c>StimulusId</c>, and a solo position's address is
+    /// <c>-ExamItemId</c> (<see cref="BuildPoolSectionDto"/>).
+    /// </para>
+    /// <para>
+    /// <b>What it may not change.</b> The stimulus is pool stock shared by every bound item, so this
+    /// writes the four chrome fields and the slice, never the items' level, topic or content. A unit is
+    /// the paper's own navigation shape, so moving a group between units is a structural edit and the
+    /// #157 lock applies; content is cosmetic and is not locked (see <see cref="ExamStructureLock"/>).
+    /// </para>
+    /// </summary>
+    public async Task UpdateExamStudioGroupAsync(
+        int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken)
+            ?? throw new ExamNotFoundException(examId);
+
+        // A legacy paper's group is its own row and keeps its own writer: the two addresses share the
+        // integer, and which table holds the id is what decides the shape (#265).
+        if (await db.QuestionGroups.AnyAsync(g => g.GroupId == groupId && g.ExamId == examId, cancellationToken))
+        {
+            await UpdateQuestionGroupAsync(examId, groupId, request, cancellationToken);
+            return;
+        }
+
+        var (stimulus, positions) = await ResolveStudioGroupAsync(examId, groupId, cancellationToken);
+        var section = await RequireOneStudioSectionAsync(exam, positions, request.SectionId, cancellationToken);
+
+        ValidateQuestionGroup(
+            exam.Purpose, section.Modality, request.ImagePath, request.ImageAlt,
+            request.AudioStartMs, request.AudioEndMs, request.PrepSeconds, request.ResponseSeconds);
+
+        var unitNumber = request.UnitNumber > 0 ? request.UnitNumber : 1;
+
+        if (stimulus is null)
+        {
+            // A solo position has no stimulus for anyone to write, and attaching one would re-group the
+            // item across every paper that binds it - a pool-wide edit, not a paper edit.
+            if (!string.IsNullOrWhiteSpace(request.Passage) || !string.IsNullOrWhiteSpace(request.Transcript)
+                || !string.IsNullOrWhiteSpace(request.AudioPath) || !string.IsNullOrWhiteSpace(request.ImagePath))
+            {
+                throw new AdminExamException(
+                    ApiError.Codes.Validation,
+                    $"Group {groupId} is one position with no stimulus, so there is no passage, transcript, audio or "
+                    + "image of its own to write. Those fields belong to the bundle its items share, and attaching one "
+                    + "here would regroup this item on every paper that binds it - add a cluster instead.");
+            }
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(request.Passage) && string.IsNullOrWhiteSpace(request.Transcript)
+                && string.IsNullOrWhiteSpace(request.AudioPath) && string.IsNullOrWhiteSpace(request.ImagePath))
+            {
+                throw new AdminExamException(
+                    ApiError.Codes.Validation,
+                    $"Group {groupId} would carry no passage, transcript, audio or image. A pooled group is exactly the "
+                    + "stimulus its positions share; remove the positions to remove the group.");
+            }
+
+            stimulus.Passage = Normalize(request.Passage);
+            stimulus.Transcript = Normalize(request.Transcript);
+            stimulus.AudioPath = Normalize(request.AudioPath);
+            stimulus.AudioStartMs = request.AudioStartMs;
+            stimulus.AudioEndMs = request.AudioEndMs;
+            stimulus.ImagePath = Normalize(request.ImagePath);
+            stimulus.ImageAlt = Normalize(request.ImageAlt);
+            stimulus.PrepSeconds = request.PrepSeconds;
+            stimulus.ResponseSeconds = request.ResponseSeconds;
+        }
+
+        // The unit is the paper's own: a position that moves between units re-locks what a finished
+        // attempt was scored over, so the lock is the one rule that applies to this half of the write.
+        if (positions.Any(p => p.UnitNumber != unitNumber))
+        {
+            await RequireStructureEditableAsync(examId, cancellationToken);
+        }
+
+        foreach (var position in positions)
+        {
+            position.UnitNumber = unitNumber;
+        }
+
+        exam.UpdatedAt = clock.GetUtcNow();
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// #273: "Remove Group" - the positions leave the paper, the stock stays in the pool.
+    /// <para>
+    /// A binding is the only thing that puts an item on a paper (<c>ExamItems</c>), so removing a group
+    /// is deleting its bindings and nothing else: the item, its versions and the stimulus it shares are
+    /// pool stock another paper may be sitting on right now. An answered position is refused by name,
+    /// because a recorded answer cites the position it was given.
+    /// </para>
+    /// </summary>
+    public async Task DeleteExamStudioGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default)
+    {
+        var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken)
+            ?? throw new ExamNotFoundException(examId);
+
+        if (await db.QuestionGroups.AnyAsync(g => g.GroupId == groupId && g.ExamId == examId, cancellationToken))
+        {
+            await DeleteQuestionGroupAsync(examId, groupId, cancellationToken);
+            return;
+        }
+
+        var (_, positions) = await ResolveStudioGroupAsync(examId, groupId, cancellationToken);
+        var positionIds = positions.Select(p => p.ExamItemId).ToList();
+
+        var answered = await db.AttemptAnswers.AnyAsync(
+                a => a.ExamItemId != null && positionIds.Contains(a.ExamItemId.Value), cancellationToken)
+            || await db.FreeResponses.AnyAsync(
+                r => r.ExamItemId != null && positionIds.Contains(r.ExamItemId.Value), cancellationToken);
+
+        if (answered)
+        {
+            throw new AdminExamException(
+                ApiError.Codes.QuestionHasAttemptAnswers,
+                $"Group {groupId} holds a position a learner has answered, so it cannot leave the paper: the answer "
+                + "cites that position. Withdraw the paper instead of editing a sitting that already happened.",
+                400);
+        }
+
+        // Removing positions shrinks the section a finished attempt was scored over (#157).
+        await RequireStructureEditableAsync(examId, cancellationToken);
+
+        db.ExamItems.RemoveRange(positions);
+        exam.UpdatedAt = clock.GetUtcNow();
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// The positions a Studio group address names. A positive address is a stimulus - the bundle the
+    /// Studio draws as one card - and a negative one is a solo position addressed as
+    /// <c>-ExamItemId</c>, the same convention <see cref="BuildPoolSectionDto"/> and the sitting use.
+    /// </summary>
+    private async Task<(Stimulus? Stimulus, List<ExamItem> Positions)> ResolveStudioGroupAsync(
+        int examId, int groupId, CancellationToken cancellationToken)
+    {
+        if (groupId == 0)
+        {
+            throw new AdminExamException(
+                ApiError.Codes.Validation,
+                "0 is not a group address. A group is a stimulus id, or a solo position's negated id.");
+        }
+
+        if (groupId < 0)
+        {
+            var solo = -groupId;
+            var single = await db.ExamItems
+                .Where(i => i.ExamId == examId && i.ExamItemId == solo)
+                .ToListAsync(cancellationToken);
+
+            if (single.Count == 0)
+            {
+                throw new AdminExamException(
+                    ApiError.Codes.Validation,
+                    $"Group {groupId} names position {solo}, which is not on exam {examId}.");
+            }
+
+            return (null, single);
+        }
+
+        var stimulus = await db.Stimuli.FirstOrDefaultAsync(s => s.StimulusId == groupId, cancellationToken)
+            ?? throw new AdminExamException(
+                ApiError.Codes.Validation,
+                $"Group {groupId} is not a stimulus and no position of exam {examId} negates to it.");
+
+        var itemIds = await db.Items.AsNoTracking()
+            .Where(item => item.StimulusId == groupId)
+            .Select(item => item.ItemId)
+            .ToListAsync(cancellationToken);
+
+        var positions = await db.ExamItems
+            .Where(i => i.ExamId == examId && itemIds.Contains(i.ItemId))
+            .ToListAsync(cancellationToken);
+
+        if (positions.Count == 0)
+        {
+            throw new AdminExamException(
+                ApiError.Codes.Validation,
+                $"Stimulus {groupId} is bound to no position of exam {examId}, so it is not a group on this paper.");
+        }
+
+        return (stimulus, positions);
+    }
+
+    /// <summary>
+    /// One section for one group, and the section the editor named. A pool group's positions could in
+    /// principle be bound into two sections of one paper, and then the card would be two cards; moving
+    /// one is a re-binding rather than a group edit, so both cases are refused by name.
+    /// </summary>
+    private async Task<Section> RequireOneStudioSectionAsync(
+        Exam exam, List<ExamItem> positions, int requestedSectionId, CancellationToken cancellationToken)
+    {
+        var sectionIds = positions.Select(p => p.SectionId).Distinct().ToList();
+        if (sectionIds.Count > 1)
+        {
+            throw new AdminExamException(
+                ApiError.Codes.Validation,
+                "This group's positions sit in more than one section, so it is not one card. Edit each section's "
+                + "positions separately.");
+        }
+
+        if (sectionIds[0] != requestedSectionId)
+        {
+            throw new AdminExamException(
+                ApiError.Codes.Validation,
+                $"This group's positions are in section {sectionIds[0]}, not {requestedSectionId}. Moving a group "
+                + "between sections is a re-binding, not a group edit.");
+        }
+
+        return await db.Sections.FirstOrDefaultAsync(
+                s => s.SectionId == requestedSectionId && s.CertId == exam.CertId, cancellationToken)
+            ?? throw new AdminExamException(
+                ApiError.Codes.Validation,
+                $"Section with id {requestedSectionId} not found for certificate {exam.CertId}.");
+    }
+
+    /// <summary>
     /// The pool's semantic type for a section. A section states a modality, not a semantic type - the
     /// pool's <c>ItemType</c> answers "what does this measure" - so the mapping is by modality, and it
     /// is the same vocabulary <c>CK_Items_Modality_Type</c> accepts.

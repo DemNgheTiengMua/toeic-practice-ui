@@ -38,6 +38,14 @@ public interface IAdminExamService
     Task<AdminQuestionGroupDto> UpdateQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default);
     Task DeleteQuestionGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// #273: the Studio's group autosave against a pool-authored paper. The address is the Studio's -
+    /// a stimulus id, or a solo position's negated id - and it writes the stimulus chrome and the
+    /// positions' unit. The legacy pair above stays for the papers still authored on <c>QuestionGroups</c>.
+    /// </summary>
+    Task UpdateExamStudioGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default);
+    Task DeleteExamStudioGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default);
+
     Task<AdminQuestionDto> CreateQuestionAsync(int examId, CreateQuestionRequest request, CancellationToken cancellationToken = default);
     Task<AdminQuestionDto> UpdateQuestionAsync(int questionId, UpdateQuestionRequest request, CancellationToken cancellationToken = default);
     Task DeleteQuestionAsync(int questionId, CancellationToken cancellationToken = default);

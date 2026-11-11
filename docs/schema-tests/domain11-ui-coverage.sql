@@ -45,7 +45,10 @@ BEGIN TRY
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected SubmittedAt on in-progress attempt'; END CATCH
 UPDATE ExamAttempts SET Status='graded', SubmittedAt=SYSDATETIMEOFFSET() WHERE AttemptId=@a;
 IF (SELECT Answered FROM vw_UserSectionAccuracyAll WHERE UserId=@u AND SectionId=@p5) <> 1 THROW 50000,'exam answers missing from combined accuracy',1;
-IF (SELECT Answered FROM vw_UserCategoryAccuracy WHERE UserId=@u AND CategoryId=@cat) <> 1 THROW 50000,'category accuracy wrong',1;
+-- #271: the category view is retired. These answers are legacy (they name a QuestionId), so the topic
+-- view must report NO cell for them - a category-to-topic guess would be a claim no answer supports.
+IF EXISTS (SELECT 1 FROM vw_UserTopicAccuracy WHERE UserId=@u)
+  THROW 50000,'a legacy answer produced a topic cell',1;
 PRINT 'combined accuracy views include graded exam answers';
 
 -- UI-3: placement must point at a placement-purpose exam

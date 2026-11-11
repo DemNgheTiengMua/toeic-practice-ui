@@ -11,7 +11,7 @@ namespace Services;
 /// <para>
 /// Grading is server-side, and the evidence is an ordinary <see cref="PracticeAnswer"/> row in an
 /// ordinary lesson <see cref="PracticeSession"/>: the same ledger a drill answer writes into, which is
-/// what makes <c>vw_UserCategoryAccuracy</c> and the cell mastery the path sizes its steps from both
+/// what makes <c>vw_UserTopicAccuracy</c> and the cell mastery the path sizes its steps from both
 /// see it. A private counter in <c>LearnerLessonMicroChecks</c> would satisfy the ticket on paper and
 /// be invisible to both.
 /// </para></summary>

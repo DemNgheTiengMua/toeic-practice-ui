@@ -46,11 +46,25 @@ public sealed partial class CompanionApiClient
     public Task<AdminQuestionGroupDto> CreateAdminQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<CreateQuestionGroupRequest, AdminQuestionGroupDto>($"api/admin/exams/{examId}/groups", request, bearerToken, cancellationToken);
 
-    public Task<AdminQuestionGroupDto> UpdateAdminQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        PutAuthorizedAsync<UpdateQuestionGroupRequest, AdminQuestionGroupDto>($"api/admin/exams/{examId}/groups/{groupId}", request, bearerToken, cancellationToken);
+    public async Task UpdateExamStudioGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        // #273: the Studio's group address is a stimulus id, or a solo position's negated id - not the
+        // QuestionGroups id its predecessor wrote, which #265 deleted along with the table.
+        using var message = new HttpRequestMessage(HttpMethod.Put, $"api/admin/exams/{examId}/studio/groups/{groupId}");
+        AttachBearer(message, bearerToken);
+        message.Content = JsonContent.Create(request, options: Json);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
 
-    public Task DeleteAdminQuestionGroupAsync(int examId, int groupId, string bearerToken, CancellationToken cancellationToken = default) =>
-        DeleteAuthorizedAsync($"api/admin/exams/{examId}/groups/{groupId}", bearerToken, cancellationToken);
+    public async Task DeleteExamStudioGroupAsync(int examId, int groupId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        // #273: removes the positions from the paper. The items stay in the pool.
+        using var message = new HttpRequestMessage(HttpMethod.Delete, $"api/admin/exams/{examId}/studio/groups/{groupId}");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
 
     public Task<AdminQuestionDto> CreateAdminQuestionAsync(int examId, CreateQuestionRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<CreateQuestionRequest, AdminQuestionDto>($"api/admin/exams/{examId}/questions", request, bearerToken, cancellationToken);
@@ -206,11 +220,11 @@ public sealed partial class CompanionApiClient
     public Task<AdminQuestionGroupDto> CreateAdminQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, CancellationToken cancellationToken = default) =>
         CreateAdminQuestionGroupAsync(examId, request, string.Empty, cancellationToken);
 
-    public Task<AdminQuestionGroupDto> UpdateAdminQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default) =>
-        UpdateAdminQuestionGroupAsync(examId, groupId, request, string.Empty, cancellationToken);
+    public Task UpdateExamStudioGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default) =>
+        UpdateExamStudioGroupAsync(examId, groupId, request, string.Empty, cancellationToken);
 
-    public Task DeleteAdminQuestionGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default) =>
-        DeleteAdminQuestionGroupAsync(examId, groupId, string.Empty, cancellationToken);
+    public Task DeleteExamStudioGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default) =>
+        DeleteExamStudioGroupAsync(examId, groupId, string.Empty, cancellationToken);
 
     public Task<AdminQuestionDto> CreateAdminQuestionAsync(int examId, CreateQuestionRequest request, CancellationToken cancellationToken = default) =>
         CreateAdminQuestionAsync(examId, request, string.Empty, cancellationToken);

@@ -154,16 +154,16 @@ public partial class FakeAiInsightGenerator
                 TargetBandCode: request.TargetBandCode));
         }
 
-        var missedCategories = request.CategoryAccuracies
+        var missedTopics = request.TopicAccuracies
             .Where(c => c.Answered > 0 && c.AccuracyPercentage < 70)
             .OrderBy(c => c.AccuracyPercentage)
             .ToList();
 
-        if (missedCategories.Count > 0)
+        if (missedTopics.Count > 0)
         {
-            var top = missedCategories[0];
+            var top = missedTopics[0];
             recommendations.Add(new GeneratedRecommendation(
-                $"Review explanations and question rules for {top.CategoryName} ({top.AccuracyPercentage}% accuracy).",
+                $"Review explanations and question rules for {top.TopicName} at {top.LevelCode} ({top.AccuracyPercentage}% accuracy).",
                 RecommendationSeverity.Minor,
                 TargetBandCode: request.TargetBandCode));
         }

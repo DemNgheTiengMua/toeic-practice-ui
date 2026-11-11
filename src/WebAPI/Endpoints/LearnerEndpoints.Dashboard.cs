@@ -57,8 +57,8 @@ public static partial class LearnerEndpoints
                     s.Modality.MapTo<ModalityDto>(),
                     s.LatestScaledScore,
                     s.MaxScaledScore,
-                    s.WeakestCategories.Select(c => new SkillCategoryDto(
-                        c.Code, c.Name, c.AccuracyPercent, c.Answered)).ToList(),
+                    s.WeakestTopics.Select(c => new SkillCategoryDto(
+                        c.Code, c.Name, c.AccuracyPercent, c.Answered, c.LevelCode)).ToList(),
                     s.ScoreDisplayFactor,
                     s.Standing?.Level?.Code,
                     s.Standing?.PositionInBand,

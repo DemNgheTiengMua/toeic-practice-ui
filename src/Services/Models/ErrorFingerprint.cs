@@ -13,5 +13,5 @@ public record ErrorFingerprint(
     string? CorrectOptionText,
     string? Explanation,
     bool WasFlagged,
-    string? CategoryName = null
+    string? TopicName = null
 );

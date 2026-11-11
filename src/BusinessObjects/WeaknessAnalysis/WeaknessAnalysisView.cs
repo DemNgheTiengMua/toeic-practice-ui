@@ -21,7 +21,12 @@ public sealed record WeaknessAnalysisView(
     int TotalCorrect,
     int OverallAccuracyPercentage,
     IReadOnlyList<SectionAccuracy> Sections,
-    IReadOnlyList<CategoryAccuracy> FrequentlyMissedCategories,
+    /// <summary>
+    /// #271: "frequently missed", on the topic axis. It used to be <c>CategoryAccuracy</c>, grouped by
+    /// the retired <c>Questions.CategoryId</c> - an axis the pool does not have. These are the same
+    /// numbers from the same view as <see cref="Topics"/>, named by the axis the product uses.
+    /// </summary>
+    IReadOnlyList<TopicAccuracy> FrequentlyMissedTopics,
     IReadOnlyList<RecommendationItem> Recommendations,
     SectionAccuracy? PriorityPracticeSection,
     IReadOnlyList<TopicAccuracy> Topics,

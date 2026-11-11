@@ -143,25 +143,11 @@ public sealed partial class AiInsightService
             return new InsightSectionAccuracy(s.SectionId, s.Code, s.Name, ans, cor, pct);
         }).ToList();
 
-        var categories = await db.QuestionCategories
-            .AsNoTracking()
-            .Where(c => c.CertId == insight.CertId)
-            .ToListAsync(cancellationToken);
-
-        var catIds = categories.Select(c => c.CategoryId).ToList();
-        var catAccuracyRows = await db.vw_UserCategoryAccuracies
-            .AsNoTracking()
-            .Where(v => v.UserId == insight.UserId && v.CategoryId != null && catIds.Contains(v.CategoryId.Value))
-            .ToListAsync(cancellationToken);
-
-        var categoryAccuracies = categories.Select(c =>
-        {
-            var row = catAccuracyRows.FirstOrDefault(r => r.CategoryId == c.CategoryId);
-            var ans = row?.Answered ?? 0;
-            var cor = row?.Correct ?? 0;
-            var pct = ans > 0 ? (int)Math.Round((double)cor / ans * 100) : 0;
-            return new InsightCategoryAccuracy(c.CategoryId, c.Code, c.Name, ans, cor, pct);
-        }).Where(ca => ca.Answered > 0).ToList();
+        // #271: the topic axis, from the view that computes it.
+        var topicAccuracies = (await TopicAccuracyReader.ReadAsync(db, insight.UserId, insight.CertId, cancellationToken))
+            .Select(c => new InsightTopicAccuracy(
+                c.TopicId, c.TopicCode, c.TopicName, c.CefrLevel.Code, c.Answered, c.Correct, c.AccuracyPercent))
+            .ToList();
 
         var latestPlacement = await db.PlacementTests
             .AsNoTracking()
@@ -189,7 +175,7 @@ public sealed partial class AiInsightService
             path.CurrentBandCode,
             Array.Empty<InsightQuestionDetail>(),
             sectionAccuracies,
-            categoryAccuracies,
+            topicAccuracies,
             attemptCount,
             LearnerPathId: path.LearnerPathId,
             Facts: facts);

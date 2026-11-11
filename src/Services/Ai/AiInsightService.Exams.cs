@@ -128,6 +128,8 @@ public sealed partial class AiInsightService
         var answers = await db.AttemptAnswers
             .AsNoTracking()
             .Include(a => a.ItemVersion)
+                .ThenInclude(v => v!.Item)
+                    .ThenInclude(i => i.Topic)
             .Include(a => a.Question)
                 .ThenInclude(q => q.Category)
             .Include(a => a.Question)
@@ -163,13 +165,22 @@ public sealed partial class AiInsightService
                 ? pinned.KeyLabel
                 : qOptions.FirstOrDefault(o => o.IsCorrect)?.Label;
 
+            // #271: the cell is the item the version pins - the same join vw_UserTopicAccuracy makes.
+            // A legacy answer has no topic at all (the retired CategoryId is not one), so it carries a
+            // level but no topic and is never matched to an accuracy row.
+            var item = pinned?.Item;
+            var topicId = item?.TopicId;
+            var topicName = item?.Topic?.Name;
+            var level = item?.CefrLevel ?? q?.CefrLevel;
+
             return new InsightQuestionDetail(
                 q?.QuestionId,
                 pinned?.Stem ?? q?.Stem ?? string.Empty,
                 q?.SectionId,
                 q?.Section?.Name ?? string.Empty,
-                q?.CategoryId,
-                q?.Category?.Name,
+                topicId,
+                topicName,
+                level,
                 a.SelectedOptionId,
                 selectedLabel,
                 correctLabel,
@@ -205,29 +216,13 @@ public sealed partial class AiInsightService
             return new InsightSectionAccuracy(s.SectionId, s.Code, s.Name, ans, cor, pct);
         }).ToList();
 
-        var categoryIds = answers
-            .Where(a => a.Question?.CategoryId is not null)
-            .Select(a => a.Question!.CategoryId!.Value)
-            .Distinct()
+        // #271: the topic axis, from the view that computes it. The weakness the narrative ranks and
+        // the cell an error is attributed to are the same rows, so a screened figure and a narrated
+        // figure cannot disagree.
+        var topicAccuracies = (await TopicAccuracyReader.ReadAsync(db, insight.UserId, insight.CertId, cancellationToken))
+            .Select(c => new InsightTopicAccuracy(
+                c.TopicId, c.TopicCode, c.TopicName, c.CefrLevel.Code, c.Answered, c.Correct, c.AccuracyPercent))
             .ToList();
-        var catAccuracyRows = await db.vw_UserCategoryAccuracies
-            .AsNoTracking()
-            .Where(v => v.UserId == insight.UserId && v.CategoryId != null && categoryIds.Contains(v.CategoryId.Value))
-            .ToListAsync(cancellationToken);
-
-        var categories = await db.QuestionCategories
-            .AsNoTracking()
-            .Where(c => categoryIds.Contains(c.CategoryId))
-            .ToListAsync(cancellationToken);
-
-        var categoryAccuracies = categories.Select(c =>
-        {
-            var row = catAccuracyRows.FirstOrDefault(r => r.CategoryId == c.CategoryId);
-            var ans = row?.Answered ?? 0;
-            var cor = row?.Correct ?? 0;
-            var pct = ans > 0 ? (int)Math.Round((double)cor / ans * 100) : 0;
-            return new InsightCategoryAccuracy(c.CategoryId, c.Code, c.Name, ans, cor, pct);
-        }).ToList();
 
         var targetBand = await db.TargetBands
             .AsNoTracking()
@@ -239,7 +234,7 @@ public sealed partial class AiInsightService
         var answeredCount = answers.Count(a =>
             AnswerContent.IsAnswered(a.SelectedOptionId, a.SelectedLabel, a.ResponseText, a.SelectedOptionIdsJson));
         var correctCount = answers.Count(a => a.IsCorrect == true);
-        var errorFingerprints = ExtractErrorFingerprints(answers, allOptions, catAccuracyRows);
+        var errorFingerprints = ExtractErrorFingerprints(answers, allOptions, topicAccuracies);
         var writingEvidences = await ExtractWritingEvidenceAsync(attempt.AttemptId, cancellationToken);
 
         var facts = await BuildFactsAsync(insight.UserId, insight.CertId, targetBand, cancellationToken);
@@ -263,7 +258,7 @@ public sealed partial class AiInsightService
             attempt.BandCode,
             questionDetails,
             sectionAccuracies,
-            categoryAccuracies,
+            topicAccuracies,
             attemptCount,
             ErrorFingerprints: errorFingerprints,
             WritingEvidences: writingEvidences,

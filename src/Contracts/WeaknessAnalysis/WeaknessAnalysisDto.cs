@@ -12,7 +12,9 @@ public sealed record WeaknessAnalysisDto(
     int TotalCorrect,
     int OverallAccuracyPercentage,
     IReadOnlyList<SectionAccuracyDto> Sections,
-    IReadOnlyList<CategoryAccuracyDto> FrequentlyMissedCategories,
+    /// <summary>#271: "frequently missed", on the topic axis - the same cells as <see cref="Topics"/>,
+    /// ordered lowest accuracy first. It was a list of categories on the retired axis.</summary>
+    IReadOnlyList<TopicAccuracyDto> FrequentlyMissedTopics,
     IReadOnlyList<RecommendationItemDto> Recommendations,
     SectionAccuracyDto? PriorityPracticeSection,
     /// <summary>#243 / D3: accuracy per <c>(topic, level)</c>, rankable cells first and weakest first.</summary>

@@ -20,8 +20,9 @@ public partial class FakeAiInsightGenerator : IAiInsightGenerator
 
     /// <summary>#244: the prior-accuracy line below which a correct answer is narrated as a lucky guess.
     /// Named so the narrative guard can allow the threshold it states as a rule, and so the two places
-    /// that apply it cannot disagree.</summary>
-    public const int WeakCategoryAccuracyThreshold = 45;
+    /// that apply it cannot disagree. #271: the prior accuracy it compares against is a topic cell's,
+    /// because that is the axis the accuracy views report.</summary>
+    public const int WeakTopicAccuracyThreshold = 45;
 
     /// <summary>
     /// Global or instance override to simulate AI insight generation failure in automated tests.
@@ -69,19 +70,23 @@ public partial class FakeAiInsightGenerator : IAiInsightGenerator
         var correctWithHint = request.CorrectWithHintCount ?? request.Questions.Count(q => q.HintUsed && q.IsCorrect == true);
 
         // Luck vs Competence analysis:
-        // Distinguish solid competence from hint-assisted and fortuitous guesses on historically weak categories
-        var luckyCategoryQuestions = request.Questions
-            .Where(q => q.IsCorrect == true && !q.HintUsed && q.CategoryId.HasValue &&
-                        request.CategoryAccuracies.Any(ca => ca.CategoryId == q.CategoryId.Value && ca.Answered >= 2 && ca.AccuracyPercentage < WeakCategoryAccuracyThreshold))
+        // Distinguish solid competence from hint-assisted and fortuitous guesses on historically weak
+        // topics. #271: the historical figure is a topic cell's, and the cell is matched on BOTH axes -
+        // a correct answer on "R-DET at B2" is not a lucky guess because "R-DET at B1" is weak.
+        var luckyTopicQuestions = request.Questions
+            .Where(q => q.IsCorrect == true && !q.HintUsed && q.TopicId.HasValue && q.CefrLevel is { } level &&
+                        request.TopicAccuracies.Any(ta =>
+                            ta.TopicId == q.TopicId.Value && ta.LevelCode == level.Code &&
+                            ta.Answered >= 2 && ta.AccuracyPercentage < WeakTopicAccuracyThreshold))
             .ToList();
 
-        var luckyGuessCount = luckyCategoryQuestions.Count;
+        var luckyGuessCount = luckyTopicQuestions.Count;
         var solidCompetenceCount = Math.Max(0, totalCorrect - correctWithHint - luckyGuessCount);
 
         string luckAnalysis;
         if (correctWithHint > 0 && luckyGuessCount > 0)
         {
-            luckAnalysis = $"Of your {totalCorrect} correct answers, {solidCompetenceCount} reflect genuine unassisted competence. However, {correctWithHint} correct answers relied on hints, and {luckyGuessCount} occurred in historically challenging question categories (under {WeakCategoryAccuracyThreshold}% prior accuracy), pointing to fortunate guesses rather than durable mastery.";
+            luckAnalysis = $"Of your {totalCorrect} correct answers, {solidCompetenceCount} reflect genuine unassisted competence. However, {correctWithHint} correct answers relied on hints, and {luckyGuessCount} occurred in historically challenging topics (under {WeakTopicAccuracyThreshold}% prior accuracy), pointing to fortunate guesses rather than durable mastery.";
         }
         else if (correctWithHint > 0)
         {
@@ -89,7 +94,7 @@ public partial class FakeAiInsightGenerator : IAiInsightGenerator
         }
         else if (luckyGuessCount > 0)
         {
-            luckAnalysis = $"You answered {totalCorrect} questions correctly ({solidCompetenceCount} solid competence). {luckyGuessCount} correct answers were on question types where your historical accuracy is below {WeakCategoryAccuracyThreshold}%, suggesting fortunate guessing that needs further reinforcement.";
+            luckAnalysis = $"You answered {totalCorrect} questions correctly ({solidCompetenceCount} solid competence). {luckyGuessCount} correct answers were on topics where your historical accuracy is below {WeakTopicAccuracyThreshold}%, suggesting fortunate guessing that needs further reinforcement.";
         }
         else if (totalCorrect > 0)
         {
@@ -168,26 +173,26 @@ public partial class FakeAiInsightGenerator : IAiInsightGenerator
         // Actionable Recommendations
         var recommendations = new List<GeneratedRecommendation>();
 
-        var missedCategories = request.Questions
-            .Where(q => q.IsCorrect == false && !string.IsNullOrEmpty(q.CategoryName))
-            .GroupBy(q => new { q.CategoryId, q.CategoryName })
+        var missedTopics = request.Questions
+            .Where(q => q.IsCorrect == false && !string.IsNullOrEmpty(q.TopicName))
+            .GroupBy(q => new { q.TopicId, q.TopicName })
             .OrderByDescending(g => g.Count())
             .ToList();
 
-        if (missedCategories.Count > 0)
+        if (missedTopics.Count > 0)
         {
-            var top = missedCategories[0];
+            var top = missedTopics[0];
             recommendations.Add(new GeneratedRecommendation(
-                $"Review {top.Key.CategoryName} rules and explanations to resolve recurring difficulties ({top.Count()} missed).",
+                $"Review {top.Key.TopicName} rules and explanations to resolve recurring difficulties ({top.Count()} missed).",
                 RecommendationSeverity.Major,
                 TargetBandCode: request.TargetBandCode));
         }
 
-        if (missedCategories.Count > 1)
+        if (missedTopics.Count > 1)
         {
-            var second = missedCategories[1];
+            var second = missedTopics[1];
             recommendations.Add(new GeneratedRecommendation(
-                $"Practice additional questions in {second.Key.CategoryName} to reinforce pattern recognition.",
+                $"Practice additional questions in {second.Key.TopicName} to reinforce pattern recognition.",
                 RecommendationSeverity.Minor,
                 TargetBandCode: request.TargetBandCode));
         }

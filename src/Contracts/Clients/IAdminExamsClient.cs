@@ -25,10 +25,15 @@ public interface IAdminExamsClient
     Task<AdminExamQuestionsDto> GetAdminExamQuestionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) => GetAdminExamQuestionsAsync(examId, cancellationToken);
     Task<AdminQuestionGroupDto> CreateAdminQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, CancellationToken cancellationToken = default);
     Task<AdminQuestionGroupDto> CreateAdminQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default) => CreateAdminQuestionGroupAsync(examId, request, cancellationToken);
-    Task<AdminQuestionGroupDto> UpdateAdminQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default);
-    Task<AdminQuestionGroupDto> UpdateAdminQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default) => UpdateAdminQuestionGroupAsync(examId, groupId, request, cancellationToken);
-    Task DeleteAdminQuestionGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default);
-    Task DeleteAdminQuestionGroupAsync(int examId, int groupId, string bearerToken, CancellationToken cancellationToken = default) => DeleteAdminQuestionGroupAsync(examId, groupId, cancellationToken);
+    /// <summary>
+    /// #273: the Studio's group write, addressed as the Studio reads it - a stimulus id, or a solo
+    /// position's negated id. The deleted <c>UpdateAdminQuestionGroupAsync</c> posted to a route #265
+    /// removed and wrote a table #269 drops.
+    /// </summary>
+    Task UpdateExamStudioGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default);
+    Task UpdateExamStudioGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default) => UpdateExamStudioGroupAsync(examId, groupId, request, cancellationToken);
+    Task DeleteExamStudioGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default);
+    Task DeleteExamStudioGroupAsync(int examId, int groupId, string bearerToken, CancellationToken cancellationToken = default) => DeleteExamStudioGroupAsync(examId, groupId, cancellationToken);
     Task<AdminQuestionDto> CreateAdminQuestionAsync(int examId, CreateQuestionRequest request, CancellationToken cancellationToken = default);
     Task<AdminQuestionDto> CreateAdminQuestionAsync(int examId, CreateQuestionRequest request, string bearerToken, CancellationToken cancellationToken = default) => CreateAdminQuestionAsync(examId, request, cancellationToken);
     Task<AdminQuestionDto> UpdateAdminQuestionAsync(int questionId, UpdateQuestionRequest request, CancellationToken cancellationToken = default);

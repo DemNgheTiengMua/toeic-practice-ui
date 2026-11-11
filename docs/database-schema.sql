@@ -1884,7 +1884,7 @@ CREATE TABLE UserCategoryMasteries (
   CertId         INT NOT NULL,
   State          VARCHAR(12) NOT NULL CONSTRAINT DF_UCM_State DEFAULT 'untested'
     CONSTRAINT CK_UCM_State CHECK (State IN ('untested','learning','reviewing','mastered')),
-  -- the same numbers vw_UserCategoryAccuracy would give, kept here so the scheduler needs no join
+  -- the same numbers vw_UserTopicAccuracy now gives, kept here so the scheduler needs no join
   -- and so a pruned practice session cannot silently rewind a state the learner already earned
   AnsweredCount  INT NOT NULL CONSTRAINT DF_UCM_Answered DEFAULT 0 CONSTRAINT CK_UCM_Answered CHECK (AnsweredCount >= 0),
   CorrectCount   INT NOT NULL CONSTRAINT DF_UCM_Correct DEFAULT 0,
@@ -4459,31 +4459,17 @@ CREATE VIEW vw_UserTopicAccuracy AS
          CAST(ROUND(100.0 * Correct / Answered, 0) AS INT) AS AccuracyPercent
   FROM cells;
 GO
--- UI-34: "Frequently missed question types" â€” same union, by category
+-- UI-34's "frequently missed question types" and the two readers that used to sit on a per-CATEGORY
+-- aggregation - the dashboard's per-skill cards (LearnerService.Skills) and the AI insight payload
+-- (AiInsightService.Dashboard / Paths / Exams / Practice) - read vw_UserTopicAccuracy above as of
+-- #271. vw_UserCategoryAccuracy is GONE rather than retained beside it: a second view computing the
+-- same answers on the retired axis is a second definition of one figure, which is the defect D3's
+-- "every reader of CategoryId moves to TopicId" exists to remove. It also could not be rewritten onto
+-- the pool - Questions carries no TopicId, so a category view can only ever see legacy answers.
 --
--- #250: unchanged in shape, and deliberately so. D3 replaces this view with vw_UserTopicAccuracy
--- grouped by (TopicId, CefrLevel) - #243 created it below, and the weakness page now reads it.
--- This view is retained because two readers still name it and neither is #243's: the dashboard's
--- per-skill cards (LearnerService.Skills) and the AI insight payload (AiInsightService.Exams /
--- Paths / Practice). It is NOT rewritten onto the pool, because the pool has no category -
--- Items.TopicId is the replacement concept - and swapping the key here would change what those two
--- readers group by. D3's "every reader of CategoryId moves to TopicId" is therefore complete for
--- the weakness page in this ticket and remains open for those two readers.
-CREATE VIEW vw_UserCategoryAccuracy AS
-  SELECT x.UserId, q.CategoryId, COUNT(x.IsCorrect) AS Answered,
-         SUM(CASE WHEN x.IsCorrect = 1 THEN 1 ELSE 0 END) AS Correct
-  FROM (
-    SELECT ps.UserId, pa.QuestionId, pa.IsCorrect
-    FROM PracticeAnswers pa JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
-    UNION ALL
-    SELECT a.UserId, aa.QuestionId, aa.IsCorrect
-    FROM AttemptAnswers aa JOIN ExamAttempts a ON a.AttemptId = aa.AttemptId
-    WHERE a.Status = 'graded'
-  ) x
-  JOIN Questions q ON q.QuestionId = x.QuestionId
-  WHERE q.CategoryId IS NOT NULL
-  GROUP BY x.UserId, q.CategoryId;
-GO
+-- A LEGACY answer therefore has no accuracy cell at all, on any screen. That is correct, not a gap to
+-- paper over: the topic vocabulary is a closed set of twenty and no mapping from a retired category
+-- to a topic exists. A screen must render "no cell yet" for such a learner, never a 0%.
 CREATE VIEW vw_UserSectionAccuracy AS
   SELECT ps.UserId, s.SectionId, s.Name AS SectionName,
          COUNT(pa.IsCorrect) AS Answered,
@@ -5361,7 +5347,7 @@ ALTER TABLE LearnerLessonProgress ADD CONSTRAINT UQ_LLP_UserLessonModule
   UNIQUE (UserId, LessonId, Module);
 GO
 -- #240 criterion 3: a micro-check answer must leave the same evidence a drill answer leaves, which is
--- a PracticeAnswers row - a private counter is invisible to vw_UserCategoryAccuracy and to the cell
+-- a PracticeAnswers row - a private counter is invisible to vw_UserTopicAccuracy and to the cell
 -- mastery the path sizes its steps from. A lesson sitting is therefore an ordinary pool-shaped
 -- PracticeSessions row (SectionId NULL, TopicId + CefrLevel from the lesson) that names its lesson,
 -- and one answer names its card.

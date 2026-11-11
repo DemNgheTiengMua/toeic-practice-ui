@@ -214,26 +214,29 @@ else
     </div>
 
     <div class="card">
-      <div class="card__header"><strong>Frequently missed question types</strong></div>
+      <div class="card__header"><strong>Frequently missed topics</strong></div>
       <div class="card__body">
-        @if (data.FrequentlyMissedCategories.Count > 0)
+        @if (data.FrequentlyMissedTopics.Count > 0)
         {
           <ul class="m-0 pl-5">
-            @foreach (var cat in data.FrequentlyMissedCategories)
+            @foreach (var cell in data.FrequentlyMissedTopics)
             {
               <li class="mb-1">
-                <strong>@cat.Name</strong>: @cat.AccuracyPercentage% (@cat.Correct/@cat.Answered correct@(cat.Answered > cat.Correct ? $", {cat.Answered - cat.Correct} missed" : ""))
+                <strong>@cell.TopicName</strong> <span class="badge">@cell.LevelCode</span>: @cell.AccuracyPercent% (@cell.Correct/@cell.Answered correct@(cell.Answered > cell.Correct ? $", {cell.Answered - cell.Correct} missed" : ""))
               </li>
             }
           </ul>
           <p class="text-sm text-muted mt-3 no-margin">
-            Grouped by the question-type label each question carries, across exams and practice.
+            Grouped by the topic and level each question sits in, across exams and practice.
           </p>
         }
         else
         {
+          @* #271: a legacy answer has no cell, and the topic axis is the only one this list has. Saying
+             "no weakness" would claim a measurement nobody took; the honest state is "nothing measured
+             in a topic yet". *@
           <p class="text-sm text-muted no-margin">
-            No question category weaknesses detected yet.
+            No topic holds a graded answer yet, so there is nothing to report here.
           </p>
         }
       </div>

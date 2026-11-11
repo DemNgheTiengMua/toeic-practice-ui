@@ -22,13 +22,6 @@ public partial class CompanionDbContext
 
 
 
-        modelBuilder.Entity<vw_UserCategoryAccuracy>(entity =>
-        {
-            entity.ToView("vw_UserCategoryAccuracy");
-        });
-
-
-
         modelBuilder.Entity<vw_UserCreditBalance>(entity =>
         {
             entity.ToView("vw_UserCreditBalance");

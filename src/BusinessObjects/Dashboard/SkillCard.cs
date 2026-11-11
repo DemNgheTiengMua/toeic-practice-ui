@@ -14,10 +14,18 @@ public sealed record SkillCard(
     Modality Modality,
     int? LatestScaledScore,
     int? MaxScaledScore,
-    IReadOnlyList<SkillCategoryAccuracy> WeakestCategories,
+    IReadOnlyList<SkillCategoryAccuracy> WeakestTopics,
     int ScoreDisplayFactor = 1,
     SkillStandingLevel? Standing = null);
 
-/// <summary>#159: a category inside a skill card, measured by the same view the weakness analysis
-/// page reads, so the two screens cannot disagree.</summary>
-public sealed record SkillCategoryAccuracy(string Code, string Name, int AccuracyPercent, int Answered);
+/// <summary>#159: a topic at a level inside a skill card, measured by the same view the weakness
+/// analysis page reads, so the two screens cannot disagree. #271 named the axis: it used to be a
+/// category, which the pool does not have.</summary>
+public sealed record SkillCategoryAccuracy(
+    string Code,
+    string Name,
+    int AccuracyPercent,
+    int Answered,
+    /// <summary>The cell's authored level. Two rows of one topic at different levels are two
+    /// different claims about the learner, so the level is part of what the card names.</summary>
+    string LevelCode);

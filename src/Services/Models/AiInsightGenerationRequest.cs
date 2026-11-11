@@ -26,7 +26,10 @@ public record AiInsightGenerationRequest(
     string? CurrentBandCode,
     IReadOnlyList<InsightQuestionDetail> Questions,
     IReadOnlyList<InsightSectionAccuracy> SectionAccuracies,
-    IReadOnlyList<InsightCategoryAccuracy> CategoryAccuracies,
+    /// <summary>#271: the learner's accuracy cells, weakest first, as <c>vw_UserTopicAccuracy</c>
+    /// reported them. The retired category axis is gone, and with it any figure a screen could compute
+    /// differently from the weakness page.</summary>
+    IReadOnlyList<InsightTopicAccuracy> TopicAccuracies,
     int AttemptCount = 1,
     bool SimulateFailure = false,
     PreviousInsightSummary? PreviousInsight = null,

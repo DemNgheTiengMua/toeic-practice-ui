@@ -16,8 +16,9 @@ public static partial class WeaknessEndpoints
         view.OverallAccuracyPercentage,
         view.Sections.Select(s => new SectionAccuracyDto(
             s.SectionId, s.Code, s.Name, s.Answered, s.Correct, s.AccuracyPercentage, s.IsWeakest, s.IsStrongest)).ToList(),
-        view.FrequentlyMissedCategories.Select(c => new CategoryAccuracyDto(
-            c.CategoryId, c.Code, c.Name, c.Answered, c.Correct, c.AccuracyPercentage)).ToList(),
+        // #271: the same cell shape as the topic table - one ToDto, so the "frequently missed" list
+        // cannot render a cell differently from the row above it.
+        view.FrequentlyMissedTopics.Select(ToDto).ToList(),
         view.Recommendations.Select(r => new RecommendationItemDto(
             r.RecId, r.Text, r.Severity.MapTo<RecommendationSeverityDto>(), r.TargetBandCode, r.SkillName, r.CreatedAt, r.IsResolved)).ToList(),
         view.PriorityPracticeSection is null ? null : new SectionAccuracyDto(

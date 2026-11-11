@@ -6,7 +6,7 @@ namespace Services;
 
 public sealed partial class LearnerService
 {
-    private const int WeakestCategoriesPerSkill = 3;
+    private const int WeakestTopicsPerSkill = 3;
 
     /// <summary>#159: one card per skill of the active certificate, in the certificate's own order.
     /// <para>
@@ -14,15 +14,11 @@ public sealed partial class LearnerService
     /// names its skills Comprehension and Expression gets those two cards. A fixed Listening/Reading
     /// pair used to render two empty cards under headings the certificate does not use.
     /// </para>
-    /// Accuracy is read from <c>vw_UserCategoryAccuracy</c> - the same view the weakness analysis page
-    /// uses - so the card and that page cannot disagree.
+    /// Accuracy is read from <c>vw_UserTopicAccuracy</c> - the same view the weakness analysis page
+    /// uses - so the card and that page cannot disagree. #271 moved it off the retired category axis;
+    /// a card therefore names a topic at a level, and a learner whose answers are all legacy has no
+    /// cell to show rather than a 0%.
     /// </summary>
-    /// <param name="standing">
-    /// #241: #211's stored per-skill state, read once by the caller and passed in. This method only
-    /// <b>joins</b> it to the certificate's skill list - it never derives a level, because a second
-    /// derivation is how two screens come to disagree about one learner's band. A skill absent from
-    /// <paramref name="standing"/> is <see cref="SkillStandingLevel.NotMeasured"/>, never A1.
-    /// </param>
     private async Task<IReadOnlyList<SkillCard>> BuildSkillCardsAsync(
         int userId,
         int certId,
@@ -61,47 +57,24 @@ public sealed partial class LearnerService
             .GroupBy(s => s.SkillId)
             .ToDictionary(g => g.Key, g => g.First().ScaledScore);
 
-        var categories = await db.QuestionCategories
-            .AsNoTracking()
-            .Where(c => c.CertId == certId)
-            .Select(c => new { c.CategoryId, c.Code, c.Name })
-            .ToDictionaryAsync(c => c.CategoryId, cancellationToken);
+        // #271: a cell belongs to a skill through its modality, which CONTEXT.md makes one-to-one with
+        // a skill on a certificate. Two skills sharing a modality is not a shape the product has; if it
+        // ever became one the first skill takes the cell, so one answer is never counted on two cards.
+        var skillByModality = new Dictionary<Modality, int>();
+        foreach (var skill in skills)
+        {
+            skillByModality.TryAdd(EnumCodes.Parse<Modality>(skill.Modality), skill.SkillId);
+        }
 
-        // A category answered through a section of a skill belongs to that skill. A category drilled
-        // from two skills is claimed by the first, so one answer is never counted on two cards.
-        var skillByCategory = categories.Count == 0
-            ? new Dictionary<int, int>()
-            : (await db.Questions
-                .AsNoTracking()
-                .Where(q => q.CategoryId != null && q.Section.CertId == certId)
-                .Select(q => new { CategoryId = q.CategoryId!.Value, q.SkillId })
-                .Distinct()
-                .ToListAsync(cancellationToken))
-                .GroupBy(c => c.CategoryId)
-                .ToDictionary(g => g.Key, g => g.Min(x => x.SkillId));
-
-        var accuracies = categories.Count == 0
-            ? []
-            : await db.vw_UserCategoryAccuracies
-                .AsNoTracking()
-                .Where(v => v.UserId == userId
-                    && v.CategoryId != null
-                    && (v.Answered ?? 0) > 0
-                    && categories.Keys.Contains(v.CategoryId.Value))
-                .ToListAsync(cancellationToken);
+        var cells = await TopicAccuracyReader.ReadAsync(db, userId, certId, cancellationToken);
 
         var weakestBySkill = new Dictionary<int, List<SkillCategoryAccuracy>>();
-        foreach (var row in accuracies)
+        foreach (var cell in cells)
         {
-            var categoryId = row.CategoryId!.Value;
-            if (!categories.TryGetValue(categoryId, out var category)
-                || !skillByCategory.TryGetValue(categoryId, out var skillId))
+            if (!skillByModality.TryGetValue(cell.Modality, out var skillId))
             {
                 continue;
             }
-
-            var answered = row.Answered ?? 0;
-            var accuracy = (int)Math.Round((double)(row.Correct ?? 0) / answered * 100);
 
             if (!weakestBySkill.TryGetValue(skillId, out var list))
             {
@@ -109,7 +82,10 @@ public sealed partial class LearnerService
                 weakestBySkill[skillId] = list;
             }
 
-            list.Add(new SkillCategoryAccuracy(category.Code, category.Name, accuracy, answered));
+            // The percentage is the view's. Dividing Correct by Answered here would be a second
+            // definition of the same figure - the defect D3 forbids.
+            list.Add(new SkillCategoryAccuracy(
+                cell.TopicCode, cell.TopicName, cell.AccuracyPercent, cell.Answered, cell.CefrLevel.Code));
         }
 
         return skills.Select(s => new SkillCard(
@@ -124,7 +100,8 @@ public sealed partial class LearnerService
                         .OrderBy(c => c.AccuracyPercent)
                         .ThenByDescending(c => c.Answered)
                         .ThenBy(c => c.Name, StringComparer.Ordinal)
-                        .Take(WeakestCategoriesPerSkill)
+                        .ThenBy(c => c.LevelCode, StringComparer.Ordinal)
+                        .Take(WeakestTopicsPerSkill)
                         .ToList()
                     : [],
                 factor,

@@ -252,9 +252,6 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<vw_MentorPayoutTotal> vw_MentorPayoutTotals { get; set; }
 
 
-    public virtual DbSet<vw_UserCategoryAccuracy> vw_UserCategoryAccuracies { get; set; }
-
-
     public virtual DbSet<vw_UserCreditBalance> vw_UserCreditBalances { get; set; }
 
 

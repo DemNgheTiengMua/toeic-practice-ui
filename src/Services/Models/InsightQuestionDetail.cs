@@ -12,8 +12,14 @@ public record InsightQuestionDetail(
     string Stem,
     int? SectionId,
     string SectionName,
-    int? CategoryId,
-    string? CategoryName,
+    /// <summary>
+    /// #271: the cell this question sits in, so the narrator can attribute a miss or a lucky guess to
+    /// the same figure the weakness page reports. It was <c>CategoryId</c>, on the retired axis; a
+    /// question the pool cannot place has nulls here and is simply never matched to a cell.
+    /// </summary>
+    int? TopicId,
+    string? TopicName,
+    CefrLevel? CefrLevel,
     int? SelectedOptionId,
     string? SelectedOptionLabel,
     string? CorrectOptionLabel,

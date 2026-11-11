@@ -84,7 +84,45 @@ public static partial class AdminEndpoints
             try
             {
                 var cluster = await exams.CreateExamClusterAsync(examId, request, cancellationToken);
-                return Results.Created($"/api/admin/exams/{examId}/groups/{cluster.GroupId}", cluster);
+                return Results.Created($"/api/admin/exams/{examId}/studio/groups/{cluster.GroupId}", cluster);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        // #273: the Studio's group card writes here. Its address is the one the read returns - a
+        // stimulus id, or a solo position's negated id - because that is the only identity a pool paper
+        // has for a "group". The route it replaces (#265) wrote QuestionGroups and is gone.
+        admin.MapPut("/exams/{examId:int}/studio/groups/{groupId:int}", async (
+            int examId,
+            int groupId,
+            UpdateQuestionGroupRequest request,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                await exams.UpdateExamStudioGroupAsync(examId, groupId, request, cancellationToken);
+                return Results.Ok(new { success = true, groupId });
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapDelete("/exams/{examId:int}/studio/groups/{groupId:int}", async (
+            int examId,
+            int groupId,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                await exams.DeleteExamStudioGroupAsync(examId, groupId, cancellationToken);
+                return Results.Ok(new { success = true });
             }
             catch (AdminExamException ex)
             {

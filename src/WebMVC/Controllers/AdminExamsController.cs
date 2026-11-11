@@ -401,8 +401,10 @@ public sealed class AdminExamsController(
     {
         try
         {
-            await api.DeleteAdminQuestionGroupAsync(id, groupId, cancellationToken);
-            TempData["Success"] = "Question group deleted.";
+            // #273: one removal path. A pool paper's group is a position set on the paper; a legacy
+            // paper's group is its own row. The API decides by which table holds the id.
+            await api.DeleteExamStudioGroupAsync(id, groupId, cancellationToken);
+            TempData["Success"] = "Question group removed.";
             return RedirectToAction(nameof(Studio), new { id, sectionId });
         }
         catch (ApiException ex)
@@ -634,17 +636,28 @@ public sealed class AdminExamsController(
         }
     }
 
+    /// <summary>
+    /// #273: "Remove Group" from the Studio. The MVC route is the old shape and the API behind it is the
+    /// pool write; what it removes is the paper's positions, never the items, and the refusal it can
+    /// return names the answered position that blocks it.
+    /// </summary>
+    /// <summary>
+    /// #273: the group card's autosave. The name changed with the write: this no longer posts a
+    /// <c>QuestionGroup</c> (#265 deleted that route), it writes the stimulus a pool group IS, plus the
+    /// unit its positions sit in.
+    /// </summary>
     [HttpPut("{id:int}/studio/group/{groupId:int}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AutosaveGroup(int id, int groupId, [FromBody] UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> SaveStudioGroup(int id, int groupId, [FromBody] UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default)
     {
         try
         {
-            var updated = await api.UpdateAdminQuestionGroupAsync(id, groupId, request, cancellationToken);
-            return Json(updated);
+            await api.UpdateExamStudioGroupAsync(id, groupId, request, cancellationToken);
+            return Json(new { success = true, groupId });
         }
         catch (ApiException ex)
         {
+            logger.LogWarning(ex, "Failed to update group {GroupId} for exam {ExamId}", groupId, id);
             return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
         }
     }
@@ -664,17 +677,22 @@ public sealed class AdminExamsController(
         }
     }
 
+    /// <summary>
+    /// #273: "Remove Group". Removes the paper's positions; the pool's items and their stimulus stay,
+    /// because another paper may bind them and a pool edit is not this screen's to make.
+    /// </summary>
     [HttpDelete("{id:int}/studio/group/{groupId:int}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteStudioGroup(int id, int groupId, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> RemoveStudioGroup(int id, int groupId, CancellationToken cancellationToken = default)
     {
         try
         {
-            await api.DeleteAdminQuestionGroupAsync(id, groupId, cancellationToken);
+            await api.DeleteExamStudioGroupAsync(id, groupId, cancellationToken);
             return Json(new { success = true });
         }
         catch (ApiException ex)
         {
+            logger.LogWarning(ex, "Failed to remove group {GroupId} from exam {ExamId}", groupId, id);
             return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
         }
     }
