@@ -43,7 +43,15 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
     private static string Unique(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
 
     /// <summary>Two objective skills and one productive skill, so "which skills are done" has three
-    /// different answers to choose between and one that is a recording.</summary>
+    /// different answers to choose between and one that is a recording.
+    /// <para>
+    /// <b>#269: NOT migrated to a pool-only paper, and the reason is production code.</b> The recording
+    /// retry reads its response with <c>FreeResponses.QuestionId == questionId</c>
+    /// (AttemptEngine.PlacementResume.cs:201); a pool response names <c>ExamItemId</c> instead, so the
+    /// lookup misses and throws "Free-response question N not found in attempt". The paper keeps its
+    /// legacy question rows, and its audio lives on the group, until that reader resolves the roster.
+    /// </para>
+    /// </summary>
     private sealed record Fixture(int CertId, int ExamId, int ListeningSkillId, int ReadingSkillId,
         int SpeakingSkillId, int Q1, int Q2, int Q3, int CorrectOption);
 

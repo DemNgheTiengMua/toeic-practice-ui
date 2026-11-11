@@ -44,7 +44,13 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
 
-    private async Task<(int certId, int sectionId, int sessionId)> SeedPracticeSessionFixtureAsync(int userId, string certCode)
+    /// <summary>
+    /// #269: a finished drill in one pool cell, its two positions answered - one plainly right, one
+    /// right after a hint. The paper is authored on the pool, and a pool drill is a <c>(topic, level)</c>
+    /// cell with no section, so the session carries the cell and each answer names the item and the
+    /// version it pinned.
+    /// </summary>
+    private async Task<(int certId, int topicId, int sessionId)> SeedPracticeSessionFixtureAsync(int userId, string certCode)
     {
         await using var db = DbContextFactory.Create(database.ConnectionString);
 
@@ -64,31 +70,25 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         db.Exams.Add(exam);
         await db.SaveChangesAsync();
 
-        var grp = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = section.SectionId, DisplayOrder = 1 };
-        db.QuestionGroups.Add(grp);
-        await db.SaveChangesAsync();
+        var q1 = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, section.SectionId, "reading",
+            "Fill preposition: We arrived ___ noon.", displayOrder: 1, keyLabel: "A", level: "B2");
+        var q2 = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, section.SectionId, "reading",
+            "Fill preposition: She sat ___ the table.", displayOrder: 2, keyLabel: "A", level: "B2");
 
-        var category = new QuestionCategory { CertId = cert.CertId, Code = "PREP", Name = "Prepositions" };
-        db.QuestionCategories.Add(category);
-        await db.SaveChangesAsync();
-
-        var q1 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId, CategoryId = category.CategoryId, Stem = "Fill preposition: We arrived ___ noon.", CefrLevel = CefrLevel.B2, QuestionType = "mcq", DisplayOrder = 1 };
-        var q2 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId, CategoryId = category.CategoryId, Stem = "Fill preposition: She sat ___ the table.", CefrLevel = CefrLevel.B2, QuestionType = "mcq", DisplayOrder = 2 };
-        db.Questions.AddRange(q1, q2);
-        await db.SaveChangesAsync();
-
-        var o1A = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "mcq", Label = "A", Text = "at", IsCorrect = true };
-        var o1B = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "mcq", Label = "B", Text = "on", IsCorrect = false };
-        var o2A = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "mcq", Label = "A", Text = "at", IsCorrect = true };
-        var o2B = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "mcq", Label = "B", Text = "to", IsCorrect = false };
-        db.QuestionOptions.AddRange(o1A, o1B, o2A, o2B);
-        await db.SaveChangesAsync();
+        var topicId = await db.Items.AsNoTracking()
+            .Where(i => i.ItemId == q1.ItemId)
+            .Select(i => i.TopicId)
+            .SingleAsync();
 
         var session = new PracticeSession
         {
             UserId = userId,
             CertId = cert.CertId,
-            SectionId = section.SectionId,
+            SectionId = null,
+            TopicId = topicId,
+            CefrLevel = CefrLevel.B2,
             Modality = "reading",
             QuestionCount = 2,
             Status = PracticeStatus.Finished.ToCode(),
@@ -103,9 +103,9 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         var a1 = new PracticeAnswer
         {
             SessionId = session.SessionId,
-            SectionId = section.SectionId,
-            QuestionId = q1.QuestionId,
-            SelectedOptionId = o1A.OptionId,
+            ItemId = q1.ItemId,
+            ItemVersionId = q1.ItemVersionId,
+            SelectedLabel = "A",
             IsCorrect = true,
             HintUsed = false,
             DisplayOrder = 1
@@ -113,9 +113,9 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         var a2 = new PracticeAnswer
         {
             SessionId = session.SessionId,
-            SectionId = section.SectionId,
-            QuestionId = q2.QuestionId,
-            SelectedOptionId = o2A.OptionId,
+            ItemId = q2.ItemId,
+            ItemVersionId = q2.ItemVersionId,
+            SelectedLabel = "A",
             IsCorrect = true,
             HintUsed = true,
             DisplayOrder = 2
@@ -123,9 +123,13 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         db.PracticeAnswers.AddRange(a1, a2);
         await db.SaveChangesAsync();
 
-        return (cert.CertId, section.SectionId, session.SessionId);
+        return (cert.CertId, topicId, session.SessionId);
     }
 
+    /// <summary>
+    /// #269: a graded sitting of a one-position pool paper. The answer names the position and pins the
+    /// version it was graded against, which is what the pool shape is.
+    /// </summary>
     private async Task<(int certId, int examId, int attemptId)> SeedExamAttemptFixtureAsync(int userId, string certCode)
     {
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -150,17 +154,9 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         db.Exams.Add(exam);
         await db.SaveChangesAsync();
 
-        var grp = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = section.SectionId, DisplayOrder = 1 };
-        db.QuestionGroups.Add(grp);
-        await db.SaveChangesAsync();
-
-        var q = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId, Stem = "Exam question stem", CefrLevel = CefrLevel.B2, QuestionType = "mcq", DisplayOrder = 1 };
-        db.Questions.Add(q);
-        await db.SaveChangesAsync();
-
-        var opt = new QuestionOption { QuestionId = q.QuestionId, QuestionType = "mcq", Label = "A", Text = "Option A", IsCorrect = true };
-        db.QuestionOptions.Add(opt);
-        await db.SaveChangesAsync();
+        var position = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, section.SectionId, "reading", "Exam question stem", displayOrder: 1);
+        var key = await PoolFixture.OptionIdAsync(db, exam.ExamId, position.ExamItemId, "A");
 
         var attempt = new ExamAttempt
         {
@@ -183,14 +179,62 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         {
             AttemptId = attempt.AttemptId,
             ExamId = exam.ExamId,
-            QuestionId = q.QuestionId,
-            SelectedOptionId = opt.OptionId,
+            ExamItemId = position.ExamItemId,
+            ItemId = position.ItemId,
+            ItemVersionId = position.ItemVersionId,
+            SelectedLabel = "A",
+            SelectedOptionId = key,
             IsCorrect = true
         };
         db.AttemptAnswers.Add(ans);
         await db.SaveChangesAsync();
 
         return (cert.CertId, exam.ExamId, attempt.AttemptId);
+    }
+
+    /// <summary>
+    /// #269: a second finished drill in the cell the first one used, with one correct answer. The
+    /// dashboard reads new activity from the session count and the answered totals, so a correct pool
+    /// answer is all the new evidence the fingerprint and the trend comparison need.
+    /// </summary>
+    private static async Task AddSecondPoolSessionAsync(
+        CompanionDbContext db, int userId, int certId, int topicId)
+    {
+        var version = await db.ItemVersions.AsNoTracking()
+            .Where(v => v.Item.TopicId == topicId && v.Item.CefrLevel == CefrLevel.B2)
+            .OrderByDescending(v => v.VersionNumber)
+            .Select(v => new { v.ItemId, v.ItemVersionId })
+            .FirstAsync();
+
+        var session = new PracticeSession
+        {
+            UserId = userId,
+            CertId = certId,
+            SectionId = null,
+            TopicId = topicId,
+            CefrLevel = CefrLevel.B2,
+            Modality = "reading",
+            QuestionCount = 1,
+            Status = PracticeStatus.Finished.ToCode(),
+            CorrectCount = 1,
+            QuestionSource = QuestionSource.All.ToCode(),
+            StartedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
+            FinishedAt = DateTimeOffset.UtcNow,
+        };
+        db.PracticeSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        db.PracticeAnswers.Add(new PracticeAnswer
+        {
+            SessionId = session.SessionId,
+            ItemId = version.ItemId,
+            ItemVersionId = version.ItemVersionId,
+            SelectedLabel = "A",
+            IsCorrect = true,
+            HintUsed = false,
+            DisplayOrder = 1,
+        });
+        await db.SaveChangesAsync();
     }
 
     [Fact]
@@ -652,7 +696,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
     {
         var certCode = Unique("FP");
         var userId = await SeedLearnerAsync();
-        var (certId, sectionId, sessionId1) = await SeedPracticeSessionFixtureAsync(userId, certCode);
+        var (certId, topicId, sessionId1) = await SeedPracticeSessionFixtureAsync(userId, certCode);
 
         var (service, _) = CreateService();
 
@@ -665,35 +709,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         // Learner completes another practice session -> new activity
         await using (var db = DbContextFactory.Create(database.ConnectionString))
         {
-            var session2 = new PracticeSession
-            {
-                UserId = userId,
-                CertId = (await db.Sections.Where(s => s.SectionId == sectionId).Select(s => s.CertId).SingleAsync()),
-                SectionId = sectionId,
-                Modality = "reading",
-                QuestionCount = 1,
-                Status = PracticeStatus.Finished.ToCode(),
-                CorrectCount = 1,
-                QuestionSource = QuestionSource.All.ToCode(),
-                StartedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
-                FinishedAt = DateTimeOffset.UtcNow
-            };
-            db.PracticeSessions.Add(session2);
-            await db.SaveChangesAsync();
-
-            var q = await db.Questions.FirstAsync(q => q.SectionId == sectionId);
-            var opt = await db.QuestionOptions.FirstAsync(o => o.QuestionId == q.QuestionId && o.IsCorrect);
-            db.PracticeAnswers.Add(new PracticeAnswer
-            {
-                SessionId = session2.SessionId,
-                SectionId = sectionId,
-                QuestionId = q.QuestionId,
-                SelectedOptionId = opt.OptionId,
-                IsCorrect = true,
-                HintUsed = false,
-                DisplayOrder = 1
-            });
-            await db.SaveChangesAsync();
+            await AddSecondPoolSessionAsync(db, userId, certId, topicId);
         }
 
         // Subsequent call -> fingerprint changes because new session and accuracy numbers changed
@@ -749,7 +765,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
     {
         var certCode = Unique("TR");
         var userId = await SeedLearnerAsync();
-        var (certId, sectionId, _) = await SeedPracticeSessionFixtureAsync(userId, certCode);
+        var (certId, topicId, _) = await SeedPracticeSessionFixtureAsync(userId, certCode);
 
         var (service, _) = CreateService();
 
@@ -767,35 +783,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         // 2. Add further practice activity to trigger new insight
         await using (var db = DbContextFactory.Create(database.ConnectionString))
         {
-            var session2 = new PracticeSession
-            {
-                UserId = userId,
-                CertId = (await db.Sections.Where(s => s.SectionId == sectionId).Select(s => s.CertId).SingleAsync()),
-                SectionId = sectionId,
-                Modality = "reading",
-                QuestionCount = 1,
-                Status = PracticeStatus.Finished.ToCode(),
-                CorrectCount = 1,
-                QuestionSource = QuestionSource.All.ToCode(),
-                StartedAt = DateTimeOffset.UtcNow,
-                FinishedAt = DateTimeOffset.UtcNow
-            };
-            db.PracticeSessions.Add(session2);
-            await db.SaveChangesAsync();
-
-            var q = await db.Questions.FirstAsync(q => q.SectionId == sectionId);
-            var opt = await db.QuestionOptions.FirstAsync(o => o.QuestionId == q.QuestionId && o.IsCorrect);
-            db.PracticeAnswers.Add(new PracticeAnswer
-            {
-                SessionId = session2.SessionId,
-                SectionId = sectionId,
-                QuestionId = q.QuestionId,
-                SelectedOptionId = opt.OptionId,
-                IsCorrect = true,
-                HintUsed = false,
-                DisplayOrder = 1
-            });
-            await db.SaveChangesAsync();
+            await AddSecondPoolSessionAsync(db, userId, certId, topicId);
         }
 
         // 3. Generate second dashboard insight -> should compare against previous insight

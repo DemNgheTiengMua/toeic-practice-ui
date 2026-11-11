@@ -55,7 +55,15 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
     private static string Unique(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
 
     /// <summary>Two objective skills (Listening, Reading) and one productive one (Writing), all on one
-    /// placement paper, which is what "a partial result" needs three different answers from.</summary>
+    /// placement paper, which is what "a partial result" needs three different answers from.
+    /// <para>
+    /// <b>#269: NOT migrated to a pool-only paper, and the reason is production code.</b> The
+    /// failed-grading test settles through <c>AttemptEngine.FinalizeAiGradedAttemptAsync</c>, which still
+    /// scores objective answers with <c>answer.Question.QuestionOptionQuestionNavigations</c>
+    /// (AttemptEngine.Submission.cs:569); a pool answer has no Question row, so that line throws. The
+    /// paper keeps its legacy question rows beside its bindings until that reader resolves the roster.
+    /// </para>
+    /// </summary>
     private sealed record Fixture(
         int CertId, int ExamId,
         int ListeningSkillId, int ReadingSkillId, int WritingSkillId,

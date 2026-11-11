@@ -149,6 +149,9 @@ finds this instead of a silent success.
 | `AiGradings.Status` | `done → pending` | A documented retry that clears its scores before reuse; `CK_AiGradings_FeedbackOnlyWhenDone` catches leftovers. |
 | `Complaints.Status` | `resolved → open` | Admin-only; no writer reopens one. |
 | `Orders.Status` | `expired/failed → paid` | A late payment confirming after the local expiry is a **supported** gateway scenario, and paying is the money-bearing direction. The dangerous direction — leaving `paid` after crediting — is refused by `trg_Orders_CreditedStaysPaid`. |
+| `AiInsights.Status` | `done → pending` | A queue retry, same shape as `AiGradings`. |
+| `MentorPayouts.Status` | `paid → pending` (clearing `PaidAt`) | **Money, and unguarded.** A settled payout can be un-paid with its stamp cleared. No writer does it — there is no payout service or admin UI at all — so it is unreachable today. It is listed here rather than fixed because inventing a payout state machine before the payout feature exists would be the wrong order; the guard belongs with the first writer. |
+| `ReviewStrata.Status` | `approved → pending` | A taken audit verdict can be un-taken at the database. `StratifiedAuditService` refuses it in code ("a taken decision is not re-taken"), so it is unreachable; the guard lives in the service, and `CK_ReviewStrata_DecisionIsStamped` keeps the stamp consistent. |
 
 ---
 

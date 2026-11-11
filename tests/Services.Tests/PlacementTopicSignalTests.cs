@@ -70,6 +70,16 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
     /// The pool binding is what makes a topic nameable at all: an answer with no <c>ItemId</c> has no
     /// topic, and the writer records nothing rather than inventing one.
     /// </para>
+    /// <para>
+    /// <b>#269: NOT migrated to a pool-only paper, and the reason is production code.</b> Every test
+    /// below settles its writing half through <c>AttemptEngine.FinalizeAiGradedAttemptAsync</c>, which
+    /// still scores the objective answers with <c>answer.Question.QuestionOptionQuestionNavigations</c>
+    /// (AttemptEngine.Submission.cs:569). A pool answer has no Question row, so that line throws a
+    /// NullReferenceException and the grading never settles. This paper therefore keeps its legacy
+    /// question rows beside the bindings - the shape the engine's own "a paper with both is legacy"
+    /// rule reads - and the bound item still supplies the topic and band these tests assert on.
+    /// Migrate it when that reader resolves the options through the roster.
+    /// </para>
     /// </summary>
     private async Task<Fixture> SeedAsync(string code)
     {
