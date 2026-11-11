@@ -60,7 +60,7 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
 
     /// <summary>One paper position, with the pool item and version the answer will pin.</summary>
     private sealed record BoundQuestion(
-        int QuestionId, int ItemId, int ItemVersionId, string TopicCode, string Band, char KeyLabel);
+        int ExamItemId, int ItemId, int ItemVersionId, string TopicCode, string Band, char KeyLabel);
 
     /// <summary>
     /// A certificate with a reading skill (three paper positions across two topics at two bands, so
@@ -71,14 +71,17 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
     /// topic, and the writer records nothing rather than inventing one.
     /// </para>
     /// <para>
-    /// <b>#269: NOT migrated to a pool-only paper, and the reason is production code.</b> Every test
-    /// below settles its writing half through <c>AttemptEngine.FinalizeAiGradedAttemptAsync</c>, which
-    /// still scores the objective answers with <c>answer.Question.QuestionOptionQuestionNavigations</c>
-    /// (AttemptEngine.Submission.cs:569). A pool answer has no Question row, so that line throws a
-    /// NullReferenceException and the grading never settles. This paper therefore keeps its legacy
-    /// question rows beside the bindings - the shape the engine's own "a paper with both is legacy"
-    /// rule reads - and the bound item still supplies the topic and band these tests assert on.
-    /// Migrate it when that reader resolves the options through the roster.
+    /// <b>#269: migrated to a pool-only paper.</b> The positions are <c>ExamItems</c> rows and the ids
+    /// a test addresses are <c>ExamItemId</c>s; the legacy QuestionGroups/Questions/QuestionOptions
+    /// rows this fixture used to insert beside them are gone, so <c>LoadSittingQuestionsAsync</c> takes
+    /// its roster branch. That was blocked until <c>FinalizeAiGradedAttemptAsync</c> stopped
+    /// dereferencing <c>answer.Question</c> for a pool answer (AttemptEngine.Submission.cs, e8e8aff).
+    /// </para>
+    /// <para>
+    /// The items are still authored in SQL rather than through <see cref="PoolFixture"/>: this fixture
+    /// needs two READING topics at two different bands, and <c>PoolFixture.AddMcqAsync</c> binds every
+    /// item of a modality to that modality's first topic, so it cannot express the paper these
+    /// assertions are about.
     /// </para>
     /// </summary>
     private async Task<Fixture> SeedAsync(string code)
@@ -135,28 +138,6 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
               (@cert, 1, @read, 'B2', 'cut', 401, 700),
               (@cert, 1, @writ, 'B1', 'cut', 0, 700);
 
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 1);
-            DECLARE @grpR INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secW, 2);
-            DECLARE @grpW INT = SCOPE_IDENTITY();
-
-            -- Reading: position 1 and 2 are R-INF at B1; position 3 is R-ATT at B2. Two bands, two
-            -- topics, so "the band this topic sat at" cannot be read off the skill.
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-              VALUES (@grpR, @exam, @secR, @read, N'R1', 'B1', 'mcq', 1),
-                     (@grpR, @exam, @secR, @read, N'R2', 'B1', 'mcq', 2),
-                     (@grpR, @exam, @secR, @read, N'R3', 'B2', 'mcq', 3);
-            DECLARE @q1 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 1);
-            DECLARE @q2 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 2);
-            DECLARE @q3 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 3);
-
-            -- Writing: two tasks, as D6 requires, so a grading failure is representable.
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-              VALUES (@grpW, @exam, @secW, @writ, N'W1', 'B1', 'free_response', 1),
-                     (@grpW, @exam, @secW, @writ, N'W2', 'B1', 'free_response', 2);
-            DECLARE @q4 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 1 AND SectionId = @secW);
-            DECLARE @q5 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 2 AND SectionId = @secW);
-
             -- Three rubric criteria, 0-6. GRAM is scored lowest BY RATIO below, not by raw score.
             INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder, RubricDescription)
               VALUES (@cert, @writ, 'GRAM', N'Grammar', 6, 1, 1, N'Descriptor'),
@@ -164,25 +145,43 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
                      (@cert, @writ, 'COH', N'Cohesion', 6, 1, 3, N'Descriptor');
 
             -- Pool items: each paper position binds one, so the answer pins a real topic and band.
-            INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('B1', N'S'), ('B1', N'S'), ('B2', N'S'), ('B1', N'S'), ('B1', N'S');
-            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus, RenderFormat) VALUES
-              ('reading', @rInf, 'B1', 'passage_comprehension', 1, 'demo', 'active', 'mcq'),
-              ('reading', @rInf, 'B1', 'passage_comprehension', 1, 'demo', 'active', 'mcq'),
-              ('reading', @rAtt, 'B2', 'passage_comprehension', 1, 'demo', 'active', 'mcq'),
-              ('writing', @wArg, 'B1', 'persuasive_essay', 1, 'demo', 'active', 'free_response'),
-              ('writing', @wArg, 'B1', 'persuasive_essay', 1, 'demo', 'active', 'free_response');
+            -- Reading: positions 1 and 2 are R-INF at B1; position 3 is R-ATT at B2. Two bands, two
+            -- topics, so "the band this topic sat at" cannot be read off the skill.
+            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus, RenderFormat)
+              VALUES ('reading', @rInf, 'B1', 'passage_comprehension', 1, 'demo', 'active', 'mcq');
+            DECLARE @i1 INT = SCOPE_IDENTITY();
+            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus, RenderFormat)
+              VALUES ('reading', @rInf, 'B1', 'passage_comprehension', 1, 'demo', 'active', 'mcq');
+            DECLARE @i2 INT = SCOPE_IDENTITY();
+            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus, RenderFormat)
+              VALUES ('reading', @rAtt, 'B2', 'passage_comprehension', 1, 'demo', 'active', 'mcq');
+            DECLARE @i3 INT = SCOPE_IDENTITY();
+            -- Writing: two tasks, as D6 requires, so a grading failure is representable.
+            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus, RenderFormat)
+              VALUES ('writing', @wArg, 'B1', 'persuasive_essay', 1, 'demo', 'active', 'free_response');
+            DECLARE @i4 INT = SCOPE_IDENTITY();
+            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus, RenderFormat)
+              VALUES ('writing', @wArg, 'B1', 'persuasive_essay', 1, 'demo', 'active', 'free_response');
+            DECLARE @i5 INT = SCOPE_IDENTITY();
+
             INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
-              SELECT i.ItemId, 1, N'Stem', N'A', N'B', N'C', N'D', 'A'
-              FROM Items i WHERE i.ItemType = 'passage_comprehension';
+              VALUES (@i1, 1, N'R1', N'A', N'B', N'C', N'D', 'A');
+            DECLARE @v1 INT = SCOPE_IDENTITY();
+            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
+              VALUES (@i2, 1, N'R2', N'A', N'B', N'C', N'D', 'A');
+            DECLARE @v2 INT = SCOPE_IDENTITY();
+            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
+              VALUES (@i3, 1, N'R3', N'A', N'B', N'C', N'D', 'A');
+            DECLARE @v3 INT = SCOPE_IDENTITY();
             -- the two productive tasks carry no options (CNT-06's other legal shape)
-            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem)
-              SELECT ItemId, 1, N'Write about it.'
-              FROM Items WHERE ItemType = 'persuasive_essay';
+            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem) VALUES (@i4, 1, N'W1');
+            DECLARE @v4 INT = SCOPE_IDENTITY();
+            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem) VALUES (@i5, 1, N'W2');
+            DECLARE @v5 INT = SCOPE_IDENTITY();
 
             -- Drillable stock at B1 for BOTH reading topics. A path drill never draws placement stock
             -- (PlacementEligible = 0), and the hint may only permute topics the block can actually
             -- serve — so without these, a hint naming R-ATT would be dropped and prove nothing.
-            INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('B1', N'D'), ('B1', N'D'), ('B1', N'D'), ('B1', N'D');
             INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus) VALUES
               ('reading', @rInf, 'B1', 'passage_comprehension', 0, 'demo', 'active'),
               ('reading', @rInf, 'B1', 'passage_comprehension', 0, 'demo', 'active'),
@@ -192,30 +191,12 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
               SELECT i.ItemId, 1, N'Drill', N'A', N'B', N'C', N'D', 'A'
               FROM Items i WHERE i.PlacementEligible = 0;
 
-            INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder)
-              SELECT @exam, @secR, @cert, v.ItemVersionId, v.ItemId, 'reading', 1
-              FROM ItemVersions v JOIN Items i ON i.ItemId = v.ItemId
-              WHERE i.TopicId = @rInf AND i.CefrLevel = 'B1' AND i.PlacementEligible = 1 AND v.VersionNumber = 1
-              ORDER BY v.ItemVersionId OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY;
-            INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder)
-              SELECT @exam, @secR, @cert, v.ItemVersionId, v.ItemId, 'reading', 2
-              FROM ItemVersions v JOIN Items i ON i.ItemId = v.ItemId
-              WHERE i.TopicId = @rInf AND i.CefrLevel = 'B1' AND i.PlacementEligible = 1 AND v.VersionNumber = 1
-              ORDER BY v.ItemVersionId OFFSET 1 ROWS FETCH NEXT 1 ROWS ONLY;
-            INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder)
-              SELECT @exam, @secR, @cert, v.ItemVersionId, v.ItemId, 'reading', 3
-              FROM ItemVersions v JOIN Items i ON i.ItemId = v.ItemId
-              WHERE i.TopicId = @rAtt AND i.CefrLevel = 'B2' AND i.PlacementEligible = 1 AND v.VersionNumber = 1;
-            INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder)
-              SELECT @exam, @secW, @cert, v.ItemVersionId, v.ItemId, 'writing', 1
-              FROM ItemVersions v JOIN Items i ON i.ItemId = v.ItemId
-              WHERE i.TopicId = @wArg AND i.PlacementEligible = 1 AND v.VersionNumber = 1
-              ORDER BY v.ItemVersionId OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY;
-            INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder)
-              SELECT @exam, @secW, @cert, v.ItemVersionId, v.ItemId, 'writing', 2
-              FROM ItemVersions v JOIN Items i ON i.ItemId = v.ItemId
-              WHERE i.TopicId = @wArg AND i.PlacementEligible = 1 AND v.VersionNumber = 1
-              ORDER BY v.ItemVersionId OFFSET 1 ROWS FETCH NEXT 1 ROWS ONLY;
+            INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder) VALUES
+              (@exam, @secR, @cert, @v1, @i1, 'reading', 1),
+              (@exam, @secR, @cert, @v2, @i2, 'reading', 2),
+              (@exam, @secR, @cert, @v3, @i3, 'reading', 3),
+              (@exam, @secW, @cert, @v4, @i4, 'writing', 1),
+              (@exam, @secW, @cert, @v5, @i5, 'writing', 2);
             IF (SELECT COUNT(*) FROM ExamItems WHERE ExamId = @exam) <> 5
               THROW 50000, 'fixture: the paper did not bind five positions, so this test would prove nothing', 1;
             """);
@@ -228,31 +209,29 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
             .Where(t => t.Code == "R-INF" || t.Code == "R-ATT" || t.Code == "W-ARG")
             .ToDictionaryAsync(t => t.Code, t => t.TopicId);
 
-        var bound = await db.Questions
-            .Where(q => q.ExamId == examId)
-            .OrderBy(q => q.SectionId).ThenBy(q => q.DisplayOrder)
-            .Select(q => new { q.QuestionId, q.SectionId, q.DisplayOrder, Skill = q.Section.SkillId })
-            .ToListAsync();
-
+        // #269: the paper IS the roster, so a position is an ExamItemId and its skill is its
+        // section's. There is no Questions row to enumerate any more.
         var bindings = await db.ExamItems
             .Where(b => b.ExamId == examId)
-            .Join(db.ItemVersions, b => b.ItemVersionId, v => v.ItemVersionId, (b, v) => new { b.SectionId, b.DisplayOrder, b.ItemId, b.ItemVersionId, v.KeyLabel })
+            .Join(db.ItemVersions, b => b.ItemVersionId, v => v.ItemVersionId,
+                (b, v) => new { b.ExamItemId, b.SectionId, b.DisplayOrder, b.ItemId, b.ItemVersionId, v.KeyLabel })
             .Join(db.Items, x => x.ItemId, i => i.ItemId, (x, i) => new
             {
-                x.SectionId, x.DisplayOrder, x.ItemId, x.ItemVersionId, i.TopicId, Band = i.CefrLevel.Code, Key = x.KeyLabel,
+                x.ExamItemId, x.SectionId, x.DisplayOrder, x.ItemId, x.ItemVersionId,
+                i.TopicId, Band = i.CefrLevel.Code, Key = x.KeyLabel,
             })
+            .Join(db.Sections, x => x.SectionId, s => s.SectionId, (x, s) => new { x, SkillId = s.SkillId })
             .ToListAsync();
 
         var topicsById = topics.ToDictionary(t => t.Value, t => t.Key);
         var reading = new List<BoundQuestion>();
         var writing = new List<BoundQuestion>();
-        foreach (var question in bound)
+        foreach (var row in bindings.OrderBy(b => b.x.DisplayOrder))
         {
-            var binding = bindings.Single(b => b.SectionId == question.SectionId && b.DisplayOrder == question.DisplayOrder);
-            var row = new BoundQuestion(
-                question.QuestionId, binding.ItemId, binding.ItemVersionId,
-                topicsById[binding.TopicId], binding.Band, binding.Key?[0] ?? 'A');
-            (question.Skill == skillIds["READ"] ? reading : writing).Add(row);
+            var bound = new BoundQuestion(
+                row.x.ExamItemId, row.x.ItemId, row.x.ItemVersionId,
+                topicsById[row.x.TopicId], row.x.Band, row.x.Key?[0] ?? 'A');
+            (row.SkillId == skillIds["READ"] ? reading : writing).Add(bound);
         }
 
         var criteria = await db.GradingCriteria
@@ -275,13 +254,12 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
 
-    /// <summary>The option id the sitting projection renders for a pinned version (AttemptEngine.PoolOptionId).</summary>
-    private static int OptionId(int itemVersionId, char label) => itemVersionId * 10 + (label - 'A') + 1;
-
-    private async Task AdvanceToSkillAsync(int attemptId, int questionId) =>
+    private async Task AdvanceToSkillAsync(int attemptId, int examItemId) =>
         await SqlAsync($$"""
             UPDATE a
-            SET a.ActiveSkillId = (SELECT q.SkillId FROM Questions q WHERE q.QuestionId = {{questionId}}),
+            SET a.ActiveSkillId = (SELECT s.SkillId
+                                   FROM ExamItems ei JOIN Sections s ON s.SectionId = ei.SectionId
+                                   WHERE ei.ExamItemId = {{examItemId}}),
                 a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
             FROM ExamAttempts a
             WHERE a.AttemptId = {{attemptId}};
@@ -310,23 +288,26 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
             var question = fixture.ReadingQuestions[i];
             if (i > 0)
             {
-                await AdvanceToSkillAsync(attemptId, question.QuestionId);
+                await AdvanceToSkillAsync(attemptId, question.ExamItemId);
             }
 
-            // 'A' is the key; 'B' is wrong, so the fixture's wrong answer is genuinely wrong.
+            // 'A' is the key; 'B' is wrong, so the fixture's wrong answer is genuinely wrong. A pool
+            // answer is addressed by its roster position and echoes the option id the sitting renders.
             var label = wrongReadingPositions.Contains(i) ? 'B' : question.KeyLabel;
             await using var db = Db();
             var service = new PlacementService(db, new LearnerService(db));
             await service.SaveAnswerAsync(
-                userId, placementId, question.QuestionId, OptionId(question.ItemVersionId, label), isFlagged: false);
+                userId, placementId, question.ExamItemId,
+                await PoolFixture.OptionIdAsync(db, fixture.ExamId, question.ExamItemId, label.ToString()),
+                isFlagged: false);
         }
 
-        await AdvanceToSkillAsync(attemptId, fixture.WritingQuestions[0].QuestionId);
+        await AdvanceToSkillAsync(attemptId, fixture.WritingQuestions[0].ExamItemId);
         foreach (var question in fixture.WritingQuestions)
         {
             await using var db = Db();
             var service = new PlacementService(db, new LearnerService(db));
-            await service.SaveDraftAsync(userId, placementId, question.QuestionId,
+            await service.SaveDraftAsync(userId, placementId, question.ExamItemId,
                 "A written response that is long enough to grade.");
         }
 
@@ -409,12 +390,12 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
 
         // Answer only the writing half: the reading positions are untouched, so the only reason a
         // reading row exists at all is the carry-over.
-        await AdvanceToSkillAsync(attemptId, fixture.WritingQuestions[0].QuestionId);
+        await AdvanceToSkillAsync(attemptId, fixture.WritingQuestions[0].ExamItemId);
         foreach (var question in fixture.WritingQuestions)
         {
             await using var db = Db();
             var service = new PlacementService(db, new LearnerService(db));
-            await service.SaveDraftAsync(userId, placementId, question.QuestionId,
+            await service.SaveDraftAsync(userId, placementId, question.ExamItemId,
                 "A written response that is long enough to grade.");
         }
 
@@ -451,11 +432,12 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
         var (placementId, attemptId) = await SitAsync(userId, fixture, wrongReadingPositions: []);
 
         // A writing position that carries a response text but was never judged — the row shape #253
-        // describes. It is bound to the W-ARG item, so a naive tally would name that topic.
+        // describes. It is bound to the W-ARG item, so a naive tally would name that topic. #269: the
+        // row names its roster position, the only identity a pool paper has.
         var writing = fixture.WritingQuestions[0];
         await SqlAsync($$"""
-            INSERT INTO AttemptAnswers (AttemptId, QuestionId, ExamId, ItemId, ItemVersionId, ResponseText, IsCorrect, IsFlagged)
-              SELECT {{attemptId}}, {{writing.QuestionId}}, ExamId, {{writing.ItemId}}, {{writing.ItemVersionId}},
+            INSERT INTO AttemptAnswers (AttemptId, ExamItemId, ExamId, ItemId, ItemVersionId, ResponseText, IsCorrect, IsFlagged)
+              SELECT {{attemptId}}, {{writing.ExamItemId}}, ExamId, {{writing.ItemId}}, {{writing.ItemVersionId}},
                      N'A written response that was never judged.', NULL, 0
               FROM ExamAttempts WHERE AttemptId = {{attemptId}};
             """);
@@ -569,12 +551,13 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
         for (var i = 0; i < fixture.ReadingQuestions.Count; i++)
         {
             var question = fixture.ReadingQuestions[i];
-            if (i > 0) await AdvanceToSkillAsync(attemptId, question.QuestionId);
+            if (i > 0) await AdvanceToSkillAsync(attemptId, question.ExamItemId);
             await using var db = Db();
             var service = new PlacementService(db, new LearnerService(db));
             await service.SaveAnswerAsync(
-                userId, placementId, question.QuestionId,
-                OptionId(question.ItemVersionId, question.KeyLabel), isFlagged: false);
+                userId, placementId, question.ExamItemId,
+                await PoolFixture.OptionIdAsync(db, fixture.ExamId, question.ExamItemId, question.KeyLabel.ToString()),
+                isFlagged: false);
         }
 
         // The listening skill has no positions on this paper at all: the sitting is submitted with the

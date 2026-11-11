@@ -77,7 +77,6 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder) VALUES
               (@sR, @cert, 'reading', 'P5', N'Incomplete Sentences', 4, 1, 1);
-            DECLARE @sec INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
             UPDATE Skills SET MinScaledScore = 0, MaxScaledScore = 990, ScoreStep = 1 WHERE SkillId = @sR;
 

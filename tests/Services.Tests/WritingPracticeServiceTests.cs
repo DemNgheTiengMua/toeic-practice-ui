@@ -379,14 +379,17 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
     public async Task GetAttemptTake_refuses_a_speaking_paper_through_the_writing_route()
     {
         var certCode = Unique("WRMod");
-        var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
-
         int speakingAttemptId;
+        int userId = 0;
         await using (var db = DbContextFactory.Create(database.ConnectionString))
         {
             var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
             db.Certificates.Add(cert);
             await db.SaveChangesAsync();
+
+            // Seeded AFTER the certificate: a practice attempt starts for the learner's ACTIVE
+            // certificate, and seeding first leaves ActiveCertId null - "exam not found".
+            userId = await SeedLearnerAsync(certCode, startingCredits: 3);
 
             var skill = new Skill
             {

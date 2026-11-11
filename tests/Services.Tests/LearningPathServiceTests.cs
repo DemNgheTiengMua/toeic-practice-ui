@@ -187,7 +187,6 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder) VALUES
               (@sR, @cert, 'reading', 'P5', N'Sentences', 4, 1, 1);
-            DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder, CumulativeStudyHours) VALUES
               (@cert, 'A1', N'Beginner', 0, 200, 1, 100),
