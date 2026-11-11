@@ -117,35 +117,35 @@ SET Status = 'graded', WrittenByService = 'AttemptEngine', ProjectionVersion = 1
 WHERE AttemptId IN (@legacyAttempt, @poolAttempt);
 
 -- ---------------------------------------------------------------------------------------------
--- 3. the view reports BOTH shapes. Each section is 4 answered (2 legacy + 2 pool).
+-- 3. the view reports the POOL shape only, and says so. #264 removed the legacy branch: a legacy
+--    attempt answer (one that names a question but pins no version) must contribute NOTHING, and the
+--    pool answer in the same section must still be counted. Asserting the exact figures proves both at
+--    once - a view that counted the legacy row would read 4, and one that dropped the pool row would
+--    read 0.
 -- ---------------------------------------------------------------------------------------------
-IF (SELECT Answered FROM vw_UserSectionAccuracyAll WHERE UserId = @user AND SectionId = @sec1) <> 4
-  THROW 50000, 'EXPECT_REJECT FAILED: section 1 should hold 4 answers across both shapes; the pool branch is not contributing', 1;
-IF (SELECT Correct FROM vw_UserSectionAccuracyAll WHERE UserId = @user AND SectionId = @sec1) <> 2
-  THROW 50000, 'EXPECT_REJECT FAILED: section 1 should hold 2 correct answers', 1;
-IF (SELECT Answered FROM vw_UserSectionAccuracyAll WHERE UserId = @user AND SectionId = @sec2) <> 4
-  THROW 50000, 'EXPECT_REJECT FAILED: section 2 should hold 4 answers across both shapes', 1;
-IF (SELECT Correct FROM vw_UserSectionAccuracyAll WHERE UserId = @user AND SectionId = @sec2) <> 4
-  THROW 50000, 'EXPECT_REJECT FAILED: section 2 should hold 4 correct answers', 1;
-PRINT 'the view counts a legacy answer and a pool answer in the same section total';
+IF (SELECT Answered FROM vw_UserSectionAccuracyAll WHERE UserId = @user AND SectionId = @sec1) <> 2
+  THROW 50000, 'EXPECT_REJECT FAILED: section 1 should hold exactly the 2 POOL answers; the legacy attempt answer must not be counted', 1;
+IF (SELECT Correct FROM vw_UserSectionAccuracyAll WHERE UserId = @user AND SectionId = @sec1) <> 1
+  THROW 50000, 'EXPECT_REJECT FAILED: section 1 should hold 1 correct POOL answer', 1;
+IF (SELECT Answered FROM vw_UserSectionAccuracyAll WHERE UserId = @user AND SectionId = @sec2) <> 2
+  THROW 50000, 'EXPECT_REJECT FAILED: section 2 should hold exactly the 2 POOL answers', 1;
+IF (SELECT Correct FROM vw_UserSectionAccuracyAll WHERE UserId = @user AND SectionId = @sec2) <> 2
+  THROW 50000, 'EXPECT_REJECT FAILED: section 2 should hold 2 correct POOL answers', 1;
+PRINT 'the view counts a pool answer and IGNORES a legacy one (#264)';
 
 -- ---------------------------------------------------------------------------------------------
--- 4. the same numbers, proved per shape. A branch that attributed the pool answer to the wrong
---    section would still total 4 above by symmetry, so this compares the two branches alone.
+-- 4. the pool branch attributes the position to the right section. #264 deleted the legacy branch, so
+--    this asserts the pool side only - the comparison against a legacy tally no longer has a second
+--    side to compare to, and pretending otherwise would be the vacuous proof the ticket warns about.
 -- ---------------------------------------------------------------------------------------------
-DECLARE @legacySec1 INT = (
-  SELECT COUNT(*) FROM AttemptAnswers aa
-  JOIN ExamAttempts a ON a.AttemptId = aa.AttemptId
-  JOIN Questions q ON q.QuestionId = aa.QuestionId
-  WHERE a.AttemptId = @legacyAttempt AND q.SectionId = @sec1);
 DECLARE @poolSec1 INT = (
   SELECT COUNT(*) FROM AttemptAnswers aa
   JOIN ExamAttempts a ON a.AttemptId = aa.AttemptId
   JOIN ExamItems ei ON ei.ExamId = aa.ExamId AND ei.ItemVersionId = aa.ItemVersionId
   WHERE a.AttemptId = @poolAttempt AND ei.SectionId = @sec1);
-IF @legacySec1 <> 2 OR @poolSec1 <> 2
-  THROW 50000, 'EXPECT_REJECT FAILED: the two shapes did not attribute 2 answers each to section 1', 1;
-PRINT 'each shape attributes the same two positions to the same section';
+IF @poolSec1 <> 2
+  THROW 50000, 'EXPECT_REJECT FAILED: the pool branch did not attribute 2 answers to section 1', 1;
+PRINT 'the pool branch attributes both positions to the section the binding names';
 
 -- ---------------------------------------------------------------------------------------------
 -- 5. an UNGRADED attempt contributes nothing, in either shape. The wrong input a shape-blind test
@@ -157,9 +157,9 @@ DECLARE @live INT = SCOPE_IDENTITY();
 INSERT INTO AttemptAnswers (AttemptId, QuestionId, ExamId, ItemId, ItemVersionId, SelectedLabel, IsCorrect)
 VALUES (@live, @q1, @exam, @i1, @v1, 'A', 0);
 
-IF (SELECT Answered FROM vw_UserSectionAccuracyAll WHERE UserId = @user AND SectionId = @sec1) <> 4
+IF (SELECT Answered FROM vw_UserSectionAccuracyAll WHERE UserId = @user AND SectionId = @sec1) <> 2
   THROW 50000, 'EXPECT_REJECT FAILED: an in-progress attempt changed the accuracy denominator', 1;
-PRINT 'an in-progress attempt contributes no row, in either shape';
+PRINT 'an in-progress attempt contributes no row';
 
 -- ---------------------------------------------------------------------------------------------
 -- 6. and the count once more: no refused row was left behind by this file

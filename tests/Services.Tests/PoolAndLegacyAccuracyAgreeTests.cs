@@ -133,15 +133,18 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
                 .Where(v => v.UserId == legacyUser || v.UserId == poolUser)
                 .ToListAsync();
 
-            var legacySection = Assert.Single(sections, s => s.UserId == legacyUser);
+            // #264: the view reports the POOL shape only. The old assertion compared the two shapes for
+            // equality; with the legacy branch gone there is no second shape to compare against, and
+            // asserting "the pool learner still gets 2" is the stronger claim anyway - a view that
+            // silently returned nothing would read 0 here, while two views both reading 0 would have
+            // passed the old equality check.
             var poolSection = Assert.Single(sections, s => s.UserId == poolUser);
+            Assert.Equal(2, poolSection.Answered);
+            Assert.Equal(1, poolSection.Correct);
 
-            // Equality, not presence: a double-counted pool row would report 4 answered here.
-            Assert.Equal(2, legacySection.Answered);
-            Assert.Equal(1, legacySection.Correct);
-            Assert.Equal(legacySection.Answered, poolSection.Answered);
-            Assert.Equal(legacySection.Correct, poolSection.Correct);
-            Assert.Equal(legacySection.SectionId, poolSection.SectionId);
+            // And a legacy-only answer contributes NO row: the shape this product no longer produces
+            // must not inflate a denominator.
+            Assert.DoesNotContain(sections, s => s.UserId == legacyUser);
 
             var topics = await read.vw_UserTopicAccuracies.AsNoTracking()
                 .Where(v => v.UserId == legacyUser || v.UserId == poolUser)

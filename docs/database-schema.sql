@@ -4377,23 +4377,15 @@ CREATE VIEW vw_UserSectionAccuracyAll AS
     FROM PracticeAnswers pa JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
     WHERE pa.SectionId IS NOT NULL
     UNION ALL
-    -- shortcut: the legacy attempt-answer branch. It stays until #269 drops Questions, because
-    -- PoolAndLegacyAccuracyAgreeTests proves the two shapes agree by holding BOTH in one database and
-    -- asserting equal figures - removing this branch now would make that proof vacuous rather than
-    -- make the product more correct. A pool answer never reaches it (ItemVersionId IS NOT NULL), so it
-    -- cannot double count; #269 deletes the branch with the table.
+    -- #264: the legacy attempt-answer branch is gone. A section's accuracy is a fact about the POOL: an
+    -- answer names the binding it was written against, and the binding names the section. The old branch
+    -- read QuestionId -> Questions.SectionId, which only a paper authored before the pool migration
+    -- carried, so keeping it would have counted two shapes for one product and kept Questions alive in
+    -- the schema for a paper no sitting can produce.
     --
-    -- legacy attempt answer: the question row carries the section. Excludes a row that also pins a
-    -- version, because such a row is a POOL answer and is counted by the branch below - counting it
-    -- here too is exactly the double count that doubled every total when this view was first
-    -- rewritten. A pool answer keeps a QuestionId for the legacy reader that still resolves it, so
-    -- the shapes overlap unless each branch states which one it owns.
-    SELECT a.UserId, q.SectionId, aa.IsCorrect
-    FROM AttemptAnswers aa
-    JOIN ExamAttempts a ON a.AttemptId = aa.AttemptId
-    JOIN Questions q    ON q.QuestionId = aa.QuestionId
-    WHERE a.Status = 'graded' AND aa.ItemVersionId IS NULL
-    UNION ALL
+    -- PoolAndLegacyAccuracyAgreeTests used to prove the two branches agreed; it now proves the pool view
+    -- against a directly computed figure, which is the stronger check (a view that silently returns
+    -- nothing fails it, where two views agreeing on zero would not).
     -- #250: pool attempt answer - the binding names the section the item sat in
     SELECT a.UserId, ei.SectionId, aa.IsCorrect
     FROM AttemptAnswers aa

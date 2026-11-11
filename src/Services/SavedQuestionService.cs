@@ -228,9 +228,55 @@ public sealed class SavedQuestionService(
         return ToItem(row);
     }
 
+    /// <summary>
+    /// Files a POSITION into the bank. The address is whatever the client was handed - a question id on a
+    /// legacy paper, an ExamItemId on a pool one - exactly as every other answer-shape call in this
+    /// codebase resolves it.
+    /// <para>
+    /// <b>#264: this used to be a legacy-only door.</b> It validated through
+    /// <c>db.Questions.AnyAsync</c> and wrote <c>QuestionId</c> alone, so an item on a pool paper could
+    /// not be filed at all. It now resolves the position from the roster, takes the certificate scope
+    /// from the BINDING (an item is certificate-agnostic by D2, so the item cannot supply it), and pins
+    /// the version the learner was looking at.
+    /// </para>
+    /// </summary>
     public async Task<SaveQuestionResult> SaveQuestionAsync(int userId, int questionId, SavedQuestionSource source = SavedQuestionSource.Manual, CancellationToken cancellationToken = default)
     {
         var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
+
+        // A position is a roster row on a pool paper. The scope lives on the binding, not the item.
+        var position = await db.ExamItems
+            .AsNoTracking()
+            .Where(i => i.ExamItemId == questionId && i.CertId == activeCertId)
+            .Select(i => new { i.ExamItemId, i.ItemId, i.ItemVersionId, i.CertId })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (position is not null)
+        {
+            var alreadyFiled = await db.SavedQuestions
+                .FirstOrDefaultAsync(sq => sq.UserId == userId && sq.ItemId == position.ItemId, cancellationToken);
+
+            if (alreadyFiled is not null)
+            {
+                return await PromoteAsync(alreadyFiled, source, cancellationToken);
+            }
+
+            // A second save keeps the version already pinned; a first save pins the one on screen.
+            var pinned = new SavedQuestion
+            {
+                UserId = userId,
+                CertId = position.CertId,
+                ItemId = position.ItemId,
+                ItemVersionId = position.ItemVersionId,
+                Source = source.ToCode(),
+                SavedAt = DateTimeOffset.UtcNow,
+            };
+
+            db.SavedQuestions.Add(pinned);
+            await db.SaveChangesAsync(cancellationToken);
+            return new SaveQuestionResult(true, source, pinned.SavedAt, pinned.SavedQuestionId);
+        }
+
         var questionExists = await db.Questions
             .AnyAsync(q => q.QuestionId == questionId && q.Section.CertId == activeCertId, cancellationToken);
         if (!questionExists)
