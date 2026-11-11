@@ -562,11 +562,16 @@ public sealed partial class AttemptEngine
                 // #217 / PLC-18: a blank stays unjudged, exactly as in the objective pass above. It is
                 // still incorrect for the skill's raw score (only `IsCorrect == true` counts, over every
                 // delivered item) but it does not read as an ANSWERED row to the accuracy views.
+                // #269: a pool answer has no Question row, so the legacy options lookup is empty for it.
+                // EvaluateAnswer reads the pinned version for such an answer and never touches this
+                // lookup, but building it dereferenced the null navigation and threw
+                // NullReferenceException - so finalising ANY attempt containing a pool answer failed.
+                var legacyOptions = answer.Question is { } question
+                    ? question.QuestionOptionQuestionNavigations.ToLookup(o => o.QuestionId)
+                    : ((IEnumerable<BusinessObjects.Entities.QuestionOption>)[]).ToLookup(o => o.QuestionId);
+
                 answer.IsCorrect = IsAnswered(answer)
-                    ? EvaluateAnswer(
-                        answer,
-                        pinnedVersions,
-                        answer.Question.QuestionOptionQuestionNavigations.ToLookup(o => o.QuestionId))
+                    ? EvaluateAnswer(answer, pinnedVersions, legacyOptions)
                     : null;
             }
 

@@ -34,6 +34,18 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
 
+    /// <summary>
+    /// A certificate with a legacy paper of three <c>Questions</c> rows.
+    /// <para>
+    /// <b>#269: NOT migrated, and the reason is production code rather than this fixture.</b> Every test
+    /// that uses it drives <c>SavedQuestionService.SaveQuestionAsync</c>, which resolves the id it is
+    /// given with <c>db.Questions.AnyAsync(q =&gt; q.QuestionId == questionId)</c> - a pool item id is
+    /// not a question id, so the call would answer <c>QuestionNotFound</c> and the test would fail for a
+    /// reason this ticket does not own. That method is the legacy half of the bank and has no pool
+    /// caller to migrate to; the pool half is <c>SaveItemVersionAsync</c>, which this file already
+    /// covers in its own tests below. #269 deletes these rows with the table.
+    /// </para>
+    /// </summary>
     private async Task<(int CertId, int SectionId, List<int> QuestionIds, List<int> CorrectOptionIds, List<int> WrongOptionIds)> SeedCertificateWithQuestionsAsync(string certCode)
     {
         await using var db = DbContextFactory.Create(database.ConnectionString);

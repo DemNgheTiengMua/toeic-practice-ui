@@ -1107,6 +1107,10 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (service, _) = CreateService();
 
+        // #269: NOT migrated, and the reason is production code rather than this fixture. The only
+        // call site of ExtractErrorFingerprints passes QuestionOption rows because the method's own
+        // signature takes them; the pool branch inside it reads the pinned version. Nothing here
+        // touches the database. It stays legacy until that parameter moves; #269 deletes it with the table.
         var q1 = new Question { QuestionId = 1, Stem = "Question 1 stem", CategoryId = 10, Explanation = "Exp 1" };
         var q2 = new Question { QuestionId = 2, Stem = "Question 2 stem", CategoryId = 20, Explanation = "Exp 2" };
 

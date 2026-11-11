@@ -39,11 +39,18 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
 
     /// <summary>
     /// One reading skill at B2 by its own cut-score row, four canonical topics holding two active B2
-    /// items each, one lesson with one card, and one published mock exam with one question. Every
-    /// activity type the planner can place is sat-able here.
+    /// items each, one lesson with one card, and one published mock exam with one question.
+    /// Every activity type the planner can place is sat-able here.
     ///
     /// The cell is B2 on purpose: `PoolIngestionTests` counts R-DET at B1 exactly, so a fixture that
     /// stocked there would shift a number another test asserts.
+    ///
+    /// <b>#269: the mock paper stays on a legacy <c>Questions</c> row, and the reason is production code
+    /// rather than this fixture.</b> <c>LearningPathService.LoadMockExamForSkillAsync</c> decides whether
+    /// a certificate plans a mock step with <c>e.QuestionGroups.Any(g =&gt; g.Section.SkillId == skillId)</c>,
+    /// so a paper bound only through <c>ExamItems</c> plans no mock step and there is nothing to sit.
+    /// Migrating it here would delete the test's subject rather than port it; #269 deletes this row with
+    /// the table, when that reader moves to the roster.
     /// </summary>
     private async Task<(int certId, int skillId, int topicId, int questionId, int examId, int lessonId, int cardId)> SeedCertAsync(string certCode)
     {

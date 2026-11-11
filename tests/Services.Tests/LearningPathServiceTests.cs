@@ -207,6 +207,13 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             VALUES (@cert, N'Mock Exam 1', 'published', 120, 'mock');
             DECLARE @exam INT = SCOPE_IDENTITY();
 
+            -- #269: NOT migrated, and the reason is production code rather than this fixture.
+            -- `LearningPathService.LoadMockExamForSkillAsync` decides whether a certificate plans a mock
+            -- step with `e.QuestionGroups.Any(g => g.Section.SkillId == skillId)`, so a paper bound only
+            -- through ExamItems plans no mock step at all and `StartStepAsync_ForAMockSection_...` would
+            -- have nothing to open. Everything else in this fixture - the drillable stock below - is
+            -- already the pool, because the drill reads Items. #269 deletes these rows with the table,
+            -- when that reader moves to the roster.
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
             VALUES (@exam, @cert, @secR, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();

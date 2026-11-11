@@ -118,18 +118,25 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
     private async Task SeedPracticeAsync(
         int userId, int sectionId, int total, int correct, int secondsApart, int rushed = 0)
     {
-        var questionIds = await EnsureQuestionsAsync(sectionId, total);
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var section = await db.Sections.AsNoTracking()
+            .Where(s => s.SectionId == sectionId)
+            .Select(s => new { s.CertId, s.Modality })
+            .SingleAsync();
+
+        // #269: the answers are pool answers - the shape a section drill now writes (#263). The cell
+        // comes from the item, and a section drill's session names its section, so the paper the items
+        // are bound into is the section's own.
+        var bank = await EnsurePoolPositionsAsync(section.CertId, sectionId, section.Modality, total);
 
         await database.SqlAsync($"""
             DECLARE @sec INT = {sectionId};
             DECLARE @cert INT = (SELECT CertId FROM Sections WHERE SectionId = @sec);
             INSERT INTO PracticeSessions (UserId, CertId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
-              VALUES ({userId}, @cert, @sec, 'reading', {total}, 'finished', {correct},
+              VALUES ({userId}, @cert, @sec, '{section.Modality}', {total}, 'finished', {correct},
                       DATEADD(DAY, -1, SYSDATETIMEOFFSET()), DATEADD(DAY, -1, SYSDATETIMEOFFSET()));
-            DECLARE @session INT = SCOPE_IDENTITY();
             """);
 
-        await using var db = DbContextFactory.Create(database.ConnectionString);
         var sessionId = await db.PracticeSessions.Where(s => s.UserId == userId).MaxAsync(s => s.SessionId);
 
         // A running clock: each answer is `secondsApart` after the one before it, except the rushed
@@ -152,8 +159,11 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
             db.PracticeAnswers.Add(new PracticeAnswer
             {
                 SessionId = sessionId,
-                QuestionId = questionIds[i],
-                SectionId = sectionId,
+                QuestionId = null,
+                SectionId = null,
+                ItemId = bank.ItemIds[i],
+                ItemVersionId = bank.VersionIds[i],
+                SelectedLabel = null,
                 SelectedOptionId = null,
                 ResponseText = "x",
                 IsCorrect = i < correct,
@@ -165,41 +175,58 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
         await db.SaveChangesAsync();
     }
 
-    private async Task<int[]> EnsureQuestionsAsync(int sectionId, int count)
+    /// <summary>
+    /// #269: the drill bank is the pool. A placement certificate with a section, and a paper that binds
+    /// <paramref name="count"/> four-option items into it, so a section drill draws pool stock.
+    /// <para>
+    /// The items are <c>B1</c> on a topic <c>PoolFixture</c> provisions, and the paper is
+    /// <paramref name="purpose"/>-purpose so a placement fixture and a drill fixture do not collide on
+    /// <c>UX_Exams_Cert_Name</c>.
+    /// </para>
+    /// </summary>
+    private async Task<(int ExamId, int[] ItemIds, int[] VersionIds, int[] ExamItemIds)> EnsurePoolPositionsAsync(
+        int certId, int sectionId, string sectionModality, int count, string purpose = "mock")
     {
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var existing = await db.Questions.Where(q => q.SectionId == sectionId).Select(q => q.QuestionId).ToListAsync();
-        if (existing.Count >= count)
-        {
-            return existing.Take(count).ToArray();
-        }
 
-        var section = await db.Sections.SingleAsync(s => s.SectionId == sectionId);
-        await database.SqlAsync($"""
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
-              SELECT TOP 1 e.ExamId, {section.CertId}, {sectionId}, 99 FROM Exams e WHERE e.CertId = {section.CertId};
-            """);
+        var examId = await db.Exams
+            .Where(e => e.CertId == certId && e.Purpose == purpose)
+            .Select(e => (int?)e.ExamId)
+            .FirstOrDefaultAsync();
 
-        var groupId = await db.QuestionGroups.Where(g => g.SectionId == sectionId).Select(g => g.GroupId).FirstAsync();
-        var examId = await db.Exams.Where(e => e.CertId == section.CertId).Select(e => e.ExamId).FirstAsync();
-        for (var i = existing.Count; i < count; i++)
+        if (examId is null)
         {
-            db.Questions.Add(new Question
+            var exam = new Exam
             {
-                GroupId = groupId,
-                ExamId = examId,
-                SectionId = sectionId,
-                SkillId = section.SkillId,
-                Stem = $"Question {i + 1}",
-                CefrLevel = CefrLevel.B1,
-                QuestionType = QuestionType.Mcq.ToCode(),
-                DisplayOrder = 100 + i,
-            });
+                CertId = certId, Name = $"Drill bank {Guid.NewGuid():N}", Status = "published",
+                DurationMinutes = 60, Purpose = purpose,
+            };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+            examId = exam.ExamId;
         }
 
-        await db.SaveChangesAsync();
-        return await db.Questions.Where(q => q.SectionId == sectionId).OrderBy(q => q.QuestionId)
-            .Select(q => q.QuestionId).Take(count).ToArrayAsync();
+        var existing = await db.ExamItems.AsNoTracking()
+            .Where(ei => ei.ExamId == examId.Value && ei.SectionId == sectionId)
+            .OrderBy(ei => ei.DisplayOrder)
+            .Select(ei => new { ei.ExamItemId, ei.ItemId, ei.ItemVersionId })
+            .ToListAsync();
+
+        var positions = existing
+            .Select(p => (p.ExamItemId, p.ItemId, p.ItemVersionId))
+            .ToList();
+
+        for (var i = positions.Count; i < count; i++)
+        {
+            var position = await PoolFixture.AddMcqAsync(
+                db, examId.Value, certId, sectionId, sectionModality, $"Question {i + 1}",
+                displayOrder: i + 1, keyLabel: "A", level: "B1");
+            positions.Add((position.ExamItemId, position.ItemId, position.ItemVersionId));
+        }
+
+        var taken = positions.Take(count).ToList();
+        return (examId.Value, taken.Select(p => p.ItemId).ToArray(),
+            taken.Select(p => p.ItemVersionId).ToArray(), taken.Select(p => p.ExamItemId).ToArray());
     }
 
     [Fact]
@@ -399,25 +426,28 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
     {
         var certCode = Unique("CALSTAMP");
         var (userId, _, sectionId) = await SeedPlacedLearnerAsync(certCode);
-        var questionId = (await EnsureQuestionsAsync(sectionId, 1))[0];
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
+        var section = await db.Sections.AsNoTracking()
+            .Where(s => s.SectionId == sectionId)
+            .Select(s => new { s.CertId, s.Modality })
+            .SingleAsync();
+
+        // #269: the drill draws pool stock, so the fixture authors one position the drill can serve and
+        // addresses the answer the way the pool does - by the version it pinned.
+        var bank = await EnsurePoolPositionsAsync(section.CertId, sectionId, section.Modality, 1);
+        var versionId = bank.VersionIds[0];
+
         var learners = new LearnerService(db);
         var practice = new PracticeService(db, learners);
-        // The drill only serves questions with options; the fixture's are bare mcq, so give this
-        // one a keyed option to be drillable.
-        await database.SqlAsync($"""
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
-              VALUES ({questionId}, 'mcq', 'A', N'Option A', 1);
-            """);
         var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
 
         var before = DateTime.UtcNow.AddSeconds(-1);
-        await practice.SubmitAnswerAsync(userId, session.SessionId, questionId, new SubmitPracticeAnswerInput { SelectedOptionId = null });
+        await practice.SubmitAnswerAsync(userId, session.SessionId, versionId, new SubmitPracticeAnswerInput { SelectedOptionId = null });
         var after = DateTime.UtcNow.AddSeconds(1);
 
         var answer = await db.PracticeAnswers.AsNoTracking()
-            .SingleAsync(a => a.SessionId == session.SessionId && a.QuestionId == questionId);
+            .SingleAsync(a => a.SessionId == session.SessionId && a.ItemVersionId == versionId);
         Assert.NotNull(answer.AnsweredAt);
         Assert.InRange(answer.AnsweredAt!.Value, before, after);
     }

@@ -39,6 +39,47 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
 
+    /// <summary>
+    /// The certificate, its skill and both sections (P5, P6), with no paper behind them. The tests that
+    /// assert on recommendations or on an empty reading need a certificate to be active and nothing
+    /// else, so they author no content rows at all.
+    /// </summary>
+    private async Task<(int CertId, int Sec1Id, int Sec2Id, int Cat1Id, int Cat2Id)> SeedCertificateAsync(string certCode)
+    {
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+        db.Certificates.Add(cert);
+        await db.SaveChangesAsync();
+
+        var cat1 = new QuestionCategory { CertId = cert.CertId, Code = Unique("CAT1"), Name = "Grammar: Tenses" };
+        var cat2 = new QuestionCategory { CertId = cert.CertId, Code = Unique("CAT2"), Name = "Vocabulary: Synonyms" };
+        db.QuestionCategories.AddRange(cat1, cat2);
+        await db.SaveChangesAsync();
+
+        var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
+        db.Skills.Add(skill);
+        await db.SaveChangesAsync();
+
+        var sec1 = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
+        var sec2 = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Text Completion", DisplayOrder = 2, OptionCount = 4, ExpectedQuestionCount = 1 };
+        db.Sections.AddRange(sec1, sec2);
+        await db.SaveChangesAsync();
+
+        return (cert.CertId, sec1.SectionId, sec2.SectionId, cat1.CategoryId, cat2.CategoryId);
+    }
+
+    /// <summary>
+    /// The catalog plus a legacy paper of four <c>Questions</c> rows, two per section.
+    /// <para>
+    /// <b>#269: NOT migrated, and the reason is production code rather than this fixture.</b> The two
+    /// tests that use it assert on the <b>category</b> axis, which only the legacy store carries:
+    /// <c>vw_UserCategoryAccuracy</c> joins <c>Questions</c> to reach a <c>CategoryId</c>, and a pool
+    /// answer's <c>QuestionId</c> is NULL. Migrating the rows would silently drop every
+    /// <c>FrequentlyMissedCategories</c> assertion, which is a weakened test rather than a ported one.
+    /// The category axis moves to <c>vw_UserTopicAccuracy</c> under #271; these rows go with the tables.
+    /// </para>
+    /// </summary>
     private async Task<(int CertId, int Sec1Id, int Sec2Id, int Cat1Id, int Cat2Id, List<int> QIds)> SeedCertificateWithCatalogAsync(string certCode)
     {
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -99,7 +140,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
     public async Task Empty_state_when_learner_has_no_practice_or_exam_answers()
     {
         var certCode = Unique("EMPTY");
-        await SeedCertificateWithCatalogAsync(certCode);
+        await SeedCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (service, _) = CreateServices();
 
@@ -255,7 +296,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
     public async Task Recommendations_can_be_marked_resolved_and_drop_off_the_open_list()
     {
         var certCode = Unique("RECO");
-        var (certId, _, _, _, _, _) = await SeedCertificateWithCatalogAsync(certCode);
+        var (certId, _, _, _, _) = await SeedCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (service, _) = CreateServices();
 
@@ -316,7 +357,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
     public async Task ResolveRecommendation_throws_when_recommendation_belongs_to_another_user()
     {
         var certCode = Unique("ISOL");
-        var (certId, _, _, _, _, _) = await SeedCertificateWithCatalogAsync(certCode);
+        var (certId, _, _, _, _) = await SeedCertificateAsync(certCode);
         var user1 = await SeedLearnerAsync(certCode);
         var user2 = await SeedLearnerAsync(certCode);
         var (service, _) = CreateServices();
@@ -347,7 +388,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
     public async Task Empty_accuracy_learner_still_receives_open_recommendations()
     {
         var certCode = Unique("EMPTYREC");
-        var (certId, _, _, _, _, _) = await SeedCertificateWithCatalogAsync(certCode);
+        var (certId, _, _, _, _) = await SeedCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (service, _) = CreateServices();
 
@@ -377,8 +418,8 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
     {
         var certCodeA = Unique("RECA");
         var certCodeB = Unique("RECB");
-        var (certIdA, _, _, _, _, _) = await SeedCertificateWithCatalogAsync(certCodeA);
-        var (certIdB, _, _, _, _, _) = await SeedCertificateWithCatalogAsync(certCodeB);
+        var (certIdA, _, _, _, _) = await SeedCertificateAsync(certCodeA);
+        var (certIdB, _, _, _, _) = await SeedCertificateAsync(certCodeB);
         var userId = await SeedLearnerAsync(certCodeA);
         var (service, learner) = CreateServices();
 
@@ -405,6 +446,10 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
 [Fact]
     public async Task WeaknessAnalysis_includes_practice_multi_select_and_inline_completion()
     {
+        // #269: NOT migrated, and the reason is production code rather than this fixture. This test is
+        // about the CATEGORY axis, which vw_UserCategoryAccuracy reaches only by joining Questions; a
+        // pool answer's QuestionId is NULL, so the three category assertions below would become
+        // assertions about an empty list. The axis moves to vw_UserTopicAccuracy under #271.
         var certCode = Unique("NC");
         int secId, catId, q1Id, q2Id;
 

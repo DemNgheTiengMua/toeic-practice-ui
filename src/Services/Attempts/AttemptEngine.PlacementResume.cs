@@ -197,8 +197,12 @@ public sealed partial class AttemptEngine
 
         var attempt = await LoadSittingAttemptAsync(db.ExamAttempts, attemptId, userId, cancellationToken);
 
+        // #269: a pool response names a roster position, not a question row. Looking it up by
+        // `QuestionId` alone threw "Free-response question N not found in attempt" for every pool
+        // placement recording, so an interrupted recording could not be resumed at all.
         var response = await db.FreeResponses
-            .SingleOrDefaultAsync(r => r.AttemptId == attemptId && r.QuestionId == questionId, cancellationToken)
+            .SingleOrDefaultAsync(r => r.AttemptId == attemptId
+                && (r.QuestionId == questionId || r.ExamItemId == questionId), cancellationToken)
             ?? throw new AttemptEngineException(
                 AttemptEngineException.QuestionNotFound,
                 $"Free-response question {questionId} not found in attempt.");
