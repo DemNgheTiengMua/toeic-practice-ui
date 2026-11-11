@@ -462,12 +462,13 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
 
             var loadedAttempt = await db.ExamAttempts
                 .Include(a => a.ActiveSkill)
-                .Include(a => a.ActiveGroup)
                 .SingleAsync(a => a.AttemptId == attempt.AttemptId);
 
             Assert.Equal(skill.SkillId, loadedAttempt.ActiveSkillId);
             Assert.Equal("READ", loadedAttempt.ActiveSkill!.Code);
             Assert.Equal(2, loadedAttempt.ActiveUnitNumber);
+            // #269: the block address round-trips as a value. It is no longer a navigation, because a
+            // solo position's address is its own negated ExamItemId and names no row.
             Assert.Equal(group.GroupId, loadedAttempt.ActiveGroupId);
             Assert.Equal("AUTH-9876543210-CRASH-REC", loadedAttempt.AuthorizationCode);
             Assert.Equal(15400, loadedAttempt.LastAudioOffsetMs);

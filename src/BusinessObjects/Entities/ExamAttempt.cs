@@ -139,6 +139,7 @@ public partial class ExamAttempt
     [ForeignKey("ActiveSkillId")]
     public virtual Skill? ActiveSkill { get; set; }
 
-    [ForeignKey("ActiveGroupId")]
-    public virtual QuestionGroup? ActiveGroup { get; set; }
+    // #269: ActiveGroup is gone with the FK. ActiveGroupId is a block ADDRESS - a stimulus id, or the
+    // negated position id for a solo block - so it names no QuestionGroup and no Stimuli row that a
+    // navigation could follow.
 }

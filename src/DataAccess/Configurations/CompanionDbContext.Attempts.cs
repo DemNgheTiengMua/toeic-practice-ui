@@ -56,7 +56,8 @@ public partial class CompanionDbContext
             // solo block - so it is not a reference and has no navigation. Keeping the FK here made a
             // solo block's address unsatisfiable: InsertPlacementTest threw
             // "FK_Attempts_ActiveGroup conflicted in table Stimuli".
-            entity.Ignore(d => d.ActiveGroup);
+            // #269: ActiveGroup is no longer a navigation. ActiveGroupId is a block address (a stimulus
+            // id, or the negated position id for a solo block), so the test reads the column itself.
 
             entity.HasOne(d => d.Cert).WithMany(p => p.ExamAttempts)
                 .OnDelete(DeleteBehavior.ClientSetNull)

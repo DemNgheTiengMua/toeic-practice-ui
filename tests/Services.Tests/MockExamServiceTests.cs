@@ -532,6 +532,43 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
             service.GetAttemptResultAsync(userId, attempt.AttemptId));
     }
 
+    /// <summary>
+    /// The cancel endpoint moves an attempt to 'abandoned', and that transition is only meaningful for an
+    /// attempt still being sat. <c>CancelAttemptAsync</c> set the status with no precondition at all, so
+    /// POST /attempts/{id}/cancel on a GRADED attempt erased a result the learner had earned: the score,
+    /// the band and the submitted stamp all disappeared and the attempt read as abandoned. The endpoint
+    /// already maps <c>AttemptNotActive</c>, which is the branch that was meant to answer this.
+    /// </summary>
+    [Fact]
+    public async Task CancelAttempt_refuses_to_abandon_a_graded_attempt_and_keeps_its_result()
+    {
+        var certCode = Unique("MC07B");
+        var (_, examId, q1Id, q2Id, opt1CorrectId, opt2CorrectId) = await SeedMockExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 2);
+        var (service, _) = CreateServices();
+
+        var attempt = await service.StartAttemptAsync(userId, examId);
+        await service.SaveAnswerAsync(userId, attempt.AttemptId, q1Id, opt1CorrectId, isFlagged: false);
+        await service.SubmitAttemptAsync(userId, attempt.AttemptId, false);
+
+        await using (var before = DbContextFactory.Create(database.ConnectionString))
+        {
+            Assert.Equal("graded", (await before.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId)).Status);
+        }
+
+        var ex = await Assert.ThrowsAsync<MockExamException>(() =>
+            service.CancelAttemptAsync(userId, attempt.AttemptId));
+        Assert.Equal(MockExamException.AttemptNotActive, ex.Code);
+
+        // The result is still there, intact.
+        await using var after = DbContextFactory.Create(database.ConnectionString);
+        var survived = await after.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
+        Assert.Equal("graded", survived.Status);
+        Assert.NotNull(survived.TotalScore);
+        Assert.NotNull(survived.BandCode);
+        Assert.NotNull(survived.SubmittedAt);
+    }
+
     [Fact]
     public async Task SubmitAttempt_ComputesScaledScoresAndSnapshotsBand()
     {

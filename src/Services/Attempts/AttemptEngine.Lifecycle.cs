@@ -204,6 +204,17 @@ public sealed partial class AttemptEngine
     {
         var attempt = await LoadSittingAttemptAsync(db.ExamAttempts, attemptId, userId, cancellationToken);
 
+        // A cancel is only meaningful for an attempt still being sat. Without this precondition the
+        // endpoint erased a finished result: the score, the band and the submitted stamp were all
+        // cleared and the attempt read as abandoned, on a paper the learner had already completed. The
+        // endpoint already maps AttemptNotActive, which is the answer this branch gives.
+        if (attempt.Status != AttemptStatus.InProgress.ToCode())
+        {
+            throw new AttemptEngineException(
+                AttemptEngineException.AttemptNotActive,
+                "Only an attempt in progress can be cancelled.");
+        }
+
         attempt.Status = AttemptStatus.Abandoned.ToCode();
         await db.SaveChangesAsync(cancellationToken);
     }

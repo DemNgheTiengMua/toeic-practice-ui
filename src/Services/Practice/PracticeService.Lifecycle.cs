@@ -155,19 +155,23 @@ public sealed partial class PracticeService
         var versionByItem = new Dictionary<int, int>();
         if (isPool)
         {
+            // Which version is live is GateContext's answer, not a second ordering here. A correlated
+            // subquery used to order the versions itself, which is the shape OneSelectorCallSiteTests
+            // refuses: two orderings can disagree about WHICH row is live, and this one decided the
+            // version a whole session is pinned to.
             var drawnItems = await db.Items
                 .AsNoTracking()
                 .Where(i => selectedIds.Contains(i.ItemId))
                 .Select(i => new
                 {
                     i.ItemId,
-                    VersionId = i.ItemVersions
-                        .OrderByDescending(v => v.VersionNumber)
-                        .Select(v => (int?)v.ItemVersionId)
-                        .FirstOrDefault(),
+                    Versions = i.ItemVersions.Select(v => new { v.ItemVersionId, v.VersionNumber }).ToList(),
                 })
                 .ToListAsync(cancellationToken);
-            versionByItem = drawnItems.ToDictionary(d => d.ItemId, d => d.VersionId!.Value);
+
+            versionByItem = drawnItems.ToDictionary(
+                d => d.ItemId,
+                d => GateContext.Newest(d.Versions, v => v.VersionNumber)!.ItemVersionId);
         }
 
         await AbandonInProgressAsync(userId, certId, cancellationToken);

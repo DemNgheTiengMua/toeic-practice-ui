@@ -515,9 +515,19 @@ public sealed class CefrProjectionServiceTests(DatabaseFixture database)
     [Fact]
     public async Task The_seeded_cut_scores_carry_three_row_kinds_and_no_C2_level_for_TOEIC()
     {
-        await database.SqlCmdFileAsync(Path.Combine(DatabaseFixture.RepoRootPath, "docs", "seed-demo.sql"));
+        // #269: on its OWN database. This used to run the whole seed against the shared fixture
+        // database, twice if two runs overlapped, and a second load inserting ScoreBands beside the
+        // first trips trg_ScoreBands_NoOverlap - "ranges may not overlap within a certificate". The
+        // test then failed for a reason that had nothing to do with the fact it names. DemoSeedTests
+        // already uses a per-test database for exactly this reason.
+        var dbName = $"EE_CefrSeed_{Guid.NewGuid():N}"[..24];
+        var connectionString = await database.CreateFreshDatabaseAsync(dbName);
+        try
+        {
+            await database.SqlCmdFileToDatabaseAsync(
+                dbName, Path.Combine(DatabaseFixture.RepoRootPath, "docs", "seed-demo.sql"));
 
-        await using var db = DbContextFactory.Create(database.ConnectionString);
+            await using var db = DbContextFactory.Create(connectionString);
 
         var toeicId = await db.Certificates.Where(c => c.Code == "TOEIC").Select(c => c.CertId).SingleAsync();
 
@@ -570,5 +580,10 @@ public sealed class CefrProjectionServiceTests(DatabaseFixture database)
 
         Assert.Equal(400, listeningB2.MinScaled);
         Assert.Equal(385, readingB2.MinScaled);
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(dbName);
+        }
     }
 }

@@ -130,7 +130,10 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // #246: one more, 65 -> 66 - trg_Attempts_EpochIsReadOnly, so a preserved attempt
         // (EpochTag = 'legacy_v1') can be read forever and written never: its score came from a scoring
         // model this build no longer has, and a recomputation would silently disagree with the record.
-        Assert.Equal(66, triggerCount);
+        // #269 audit: one more, 66 -> 67 - trg_PracticeSessions_StatusTransitions. A finished or
+        // abandoned practice session is terminal; before it, a finished drill could be reopened with its
+        // stamp cleared and its already-counted answers still in place.
+        Assert.Equal(67, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
@@ -175,6 +178,8 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
                      // #237: the ninth covered derived fact, and the four-state transition table.
                      "trg_UserCellMasteries_SingleWriter",
                      "trg_UserCellMasteries_StateIsEarned",
+                     // #269 audit: a finished practice session is terminal.
+                     "trg_PracticeSessions_StatusTransitions",
                  })
         {
             var present = await db.Database
