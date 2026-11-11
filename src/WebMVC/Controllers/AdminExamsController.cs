@@ -637,11 +637,6 @@ public sealed class AdminExamsController(
     }
 
     /// <summary>
-    /// #273: "Remove Group" from the Studio. The MVC route is the old shape and the API behind it is the
-    /// pool write; what it removes is the paper's positions, never the items, and the refusal it can
-    /// return names the answered position that blocks it.
-    /// </summary>
-    /// <summary>
     /// #273: the group card's autosave. The name changed with the write: this no longer posts a
     /// <c>QuestionGroup</c> (#265 deleted that route), it writes the stimulus a pool group IS, plus the
     /// unit its positions sit in.

@@ -143,6 +143,21 @@ test('an end marked before the start is refused and nothing is saved', async () 
   assert.match(p.get('slice-status-42').textContent, /End must come after start/);
   assert.equal(p.get('slice-status-42').hidden, false);
 });
+test('remove group warns that only the paper loses the group and posts to the group route', async () => {
+  // #273: the confirm used to promise "delete this group and all its questions", which the pool
+  // cannot do - the items are stock another paper may bind. The copy and the route must agree.
+  const confirms = [];
+  const p = page('exam-studio', { confirm: message => { confirms.push(message); return true; } });
+
+  p.context.deleteStudioGroup(42, 7);
+  await flush();
+
+  assert.match(confirms[0], /stay in the pool/);
+  assert.doesNotMatch(confirms[0], /all its questions/);
+  const removed = p.requests.find(r => r.url === '/admin/exams/42/studio/group/42');
+  assert.equal(removed.init.method, 'DELETE');
+  assert.equal(removed.init.headers.RequestVerificationToken, 'csrf');
+});
 test('a structurally locked exam shows the #157 refusal message, not a bare HTTP 400', async () => {
   // #159 rebuilt the studio's add-question path. The structural lock still refuses — but the
   // author must be told why, with the message that names the finished attempts (#157).

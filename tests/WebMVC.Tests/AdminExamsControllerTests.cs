@@ -611,6 +611,8 @@ public sealed class AdminExamsControllerTests
 
         var json = Assert.IsType<JsonResult>(result);
         Assert.NotNull(json.Value);
+        Assert.NotNull(api.RemovedStudioGroup);
+        Assert.Equal((5, 1), api.RemovedStudioGroup!.Value);
     }
 
     [Fact]
@@ -938,7 +940,7 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
-    public async Task SaveStudioGroup_WhenSuccessful_ReturnsJsonSuccess()
+    public async Task SaveStudioGroup_ForwardsTheEditToTheStudioWrite()
     {
         var api = new TestApiClient();
         var controller = CreateController(api);
@@ -949,9 +951,33 @@ public sealed class AdminExamsControllerTests
 
         var result = await controller.SaveStudioGroup(17, 76, request, CancellationToken.None);
 
-        var jsonResult = Assert.IsType<JsonResult>(result);
-        Assert.NotNull(api.LastStudioGroupUpdate);
-        Assert.Equal(2, api.LastStudioGroupUpdate!.Value.Request.UnitNumber);
+        Assert.IsType<JsonResult>(result);
+        Assert.NotNull(api.UpdatedStudioGroup);
+        Assert.Equal((17, 76), api.UpdatedStudioGroup!.Value.Group);
+        Assert.Equal("New passage", api.UpdatedStudioGroup.Value.Request.Passage);
+        Assert.Equal(2, api.UpdatedStudioGroup.Value.Request.UnitNumber);
+    }
+
+    /// <summary>
+    /// The refusal the screen has to show: a group holding an answered position cannot be removed, and
+    /// the message names it. A 400 with no sentence is the failure this asserts against.
+    /// </summary>
+    [Fact]
+    public async Task RemoveStudioGroup_ForwardsTheApisRefusalInsteadOfSwallowingIt()
+    {
+        var api = new TestApiClient
+        {
+            StudioGroupException = new ApiException(
+                ApiError.Codes.QuestionHasAttemptAnswers,
+                "Group 76 holds a position a learner has answered.", 400),
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.RemoveStudioGroup(17, 76, CancellationToken.None);
+
+        var status = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(400, status.StatusCode);
+        Assert.Contains("a learner has answered", status.Value!.ToString(), StringComparison.Ordinal);
     }
 
     internal sealed class EmptyTempDataProvider : ITempDataProvider
@@ -971,6 +997,8 @@ public sealed class AdminExamsControllerTests
         public UpdateAdminExamRequest? UpdatedExamRequest { get; set; }
         public CreateQuestionGroupRequest? CreatedQuestionGroupRequest { get; set; }
         public UpdateQuestionGroupRequest? UpdatedQuestionGroupRequest { get; set; }
+        public ((int, int) Group, UpdateQuestionGroupRequest Request)? UpdatedStudioGroup { get; set; }
+        public (int ExamId, int GroupId)? RemovedStudioGroup { get; set; }
         public CreateQuestionRequest? CreatedQuestionRequest { get; set; }
         public UpdateQuestionRequest? UpdatedQuestionRequest { get; set; }
         public int? DeletedExamId { get; set; }
@@ -981,6 +1009,7 @@ public sealed class AdminExamsControllerTests
         public ApiException? ExportException { get; set; }
         public ApiException? UpdateQuestionException { get; set; }
         public ApiException? UpdateGroupException { get; set; }
+        public ApiException? StudioGroupException { get; set; }
         public int? LastCertIdFilter { get; set; }
         public string? LastPurposeFilter { get; set; }
         public SaveExamSectionAudioRequest? LastSavedAudioRequest { get; set; }
@@ -1036,34 +1065,19 @@ public sealed class AdminExamsControllerTests
                 1001, examId, 1, request.SectionId, "SEC", "Section", ModalityDto.Reading, request.Passage, request.AudioPath, request.AudioStartMs, request.AudioEndMs, request.ImagePath, request.ImageAlt, request.Transcript, request.PrepSeconds, request.ResponseSeconds, request.DisplayOrder, [], request.UnitNumber));
         }
 
-        public Task<AdminQuestionGroupDto> UpdateAdminQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default)
-        {
-            if (UpdateGroupException != null) throw UpdateGroupException;
-            UpdatedQuestionGroupRequest = request;
-            return Task.FromResult(new AdminQuestionGroupDto(
-                groupId, examId, 1, request.SectionId, "SEC", "Section", ModalityDto.Reading, request.Passage, request.AudioPath, request.AudioStartMs, request.AudioEndMs, request.ImagePath, request.ImageAlt, request.Transcript, request.PrepSeconds, request.ResponseSeconds, request.DisplayOrder, [], request.UnitNumber));
-        }
-
-        public Task DeleteAdminQuestionGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
-
-        // #273: the Studio's group write surface. The legacy group PUT/DELETE are gone; these are the
-        // pool-native pair the controller now calls.
         public Task UpdateExamStudioGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default)
         {
-            LastStudioGroupUpdate = (examId, groupId, request);
+            if (StudioGroupException != null) throw StudioGroupException;
+            UpdatedStudioGroup = ((examId, groupId), request);
             return Task.CompletedTask;
         }
-
-        public (int ExamId, int GroupId, UpdateQuestionGroupRequest Request)? LastStudioGroupUpdate { get; private set; }
 
         public Task DeleteExamStudioGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default)
         {
-            LastStudioGroupDelete = (examId, groupId);
+            if (StudioGroupException != null) throw StudioGroupException;
+            RemovedStudioGroup = (examId, groupId);
             return Task.CompletedTask;
         }
-
-        public (int ExamId, int GroupId)? LastStudioGroupDelete { get; private set; }
 
         public Task<AdminQuestionDto> CreateAdminQuestionAsync(int examId, CreateQuestionRequest request, CancellationToken cancellationToken = default)
         {
