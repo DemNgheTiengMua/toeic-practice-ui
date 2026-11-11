@@ -85,6 +85,7 @@ public sealed class SpeakingReferenceAuthoringTests(DatabaseFixture database)
         Assert.Equal(ReferenceKindDto.Script, studioQuestion.ReferenceKind);
 
         // And it is really in the column, not only on the DTO.
+        // #272: left legacy - the subject is the LEGACY authoring service's write, so its row is what proves it.
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var stored = await db.Questions.AsNoTracking().SingleAsync(q => q.QuestionId == created.QuestionId);
         Assert.Equal("Attention all shoppers. The sale ends today at 9:00 PM.", stored.SampleAnswerOrImageDesc);

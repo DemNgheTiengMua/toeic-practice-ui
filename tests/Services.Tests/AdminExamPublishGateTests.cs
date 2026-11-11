@@ -293,6 +293,8 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         Assert.Contains("2 learner attempts have already finished it", ex.Message, StringComparison.Ordinal);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
+        // #272: left legacy - an ABSENCE assertion: the refused commit added no question row, and the
+        // service under test is the legacy authoring door, which is this file's subject.
         Assert.Equal(2, await db.Questions.CountAsync(q => q.ExamId == examId));
     }
 

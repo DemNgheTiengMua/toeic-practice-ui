@@ -514,11 +514,15 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
     /// the legacy question row there deliberately carries a different key and stem so only the pool
     /// path can produce the expected answer.
     /// <para>
-    /// The legacy row is present on purpose. #186 resolves a binding to a paper position by
-    /// (section, 1-based order) against the legacy question list, so a position with no question row
-    /// is a paper with a hole in it and is refused before it renders. That is the expand state: the
-    /// binding decides the content, the legacy row is still the skeleton, and #225/#231 remove the
-    /// skeleton.
+    /// <b>#272: the legacy row STAYS, because it is this test's subject.</b> The claim is a precedence
+    /// claim between two content sources - the authored version must win over the legacy skeleton - so
+    /// authoring only the pool would leave one source and the assertion could no longer fail. #269
+    /// deletes these rows with the table.
+    /// </para>
+    /// <para>
+    /// The skeleton was also load-bearing until #269: #186 resolved a binding to a paper position by
+    /// (section, 1-based order) against the legacy question list, so a position with no question row was
+    /// a paper with a hole in it and was refused before it rendered.
     /// </para>
     /// </summary>
     [Fact]

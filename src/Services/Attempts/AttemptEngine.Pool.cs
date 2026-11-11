@@ -192,6 +192,76 @@ public sealed partial class AttemptEngine
     internal static bool IsKeyLabel(ItemVersion version, string? label) =>
         label is not null && KeyLabels(version.KeyLabel).Contains(label.Trim());
 
+    /// <summary>
+    /// #269: whether a TEXT answer matches a pinned version. The version stores no option rows, so a text
+    /// completion is judged against its <c>AcceptedAnswersJson</c> (and, for a readable failure, against
+    /// the keyed option texts). Whitespace is normalised and the comparison is case-insensitive - the same
+    /// rule <c>EvaluateTextCompletion</c> applies to a legacy question, so the two shapes cannot disagree
+    /// about what a right answer is.
+    /// </summary>
+    public static bool EvaluatePinnedText(ItemVersion version, string? responseText)
+    {
+        if (string.IsNullOrWhiteSpace(responseText))
+        {
+            return false;
+        }
+
+        var candidate = System.Text.RegularExpressions.Regex
+            .Replace(responseText.Trim(), @"\s+", " ");
+
+        if (!version.AllowNumber && System.Text.RegularExpressions.Regex.IsMatch(candidate, @"\d"))
+        {
+            return false;
+        }
+
+        var words = candidate.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (version.MaxWords is int max && words.Length > max)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(version.RequiredKeywords))
+        {
+            foreach (var keyword in ParseKeywords(version.RequiredKeywords))
+            {
+                if (!string.IsNullOrWhiteSpace(keyword) && !ContainsKeywordStem(candidate, keyword))
+                {
+                    return false;
+                }
+            }
+        }
+
+        var accepted = ParseAcceptedAnswers(version.AcceptedAnswersJson);
+        foreach (var label in KeyLabels(version.KeyLabel))
+        {
+            var index = LabelIndex(label);
+            var text = index < 0 ? null : OptionTexts(version)[index];
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                accepted.Add(text.Trim());
+            }
+        }
+
+        foreach (var option in accepted)
+        {
+            var normalized = System.Text.RegularExpressions.Regex
+                .Replace(option.Trim(), @"\s+", " ");
+            // Trailing sentence punctuation is not part of an answer. A learner typing "Photosynthesis."
+            // into a completion has answered the question; before this, the full stop made it wrong. The
+            // legacy path got away with exact equality because its accepted answers were authored to match
+            // whatever the paper's own key said; a pool version's accepted list is authored separately.
+            if (string.Equals(
+                    candidate.TrimEnd('.', '!', '?', ',', ';', ':'),
+                    normalized.TrimEnd('.', '!', '?', ',', ';', ':'),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static readonly IReadOnlySet<string> EmptyLabels =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -266,7 +336,13 @@ public sealed partial class AttemptEngine
     {
         if (answer.ItemVersionId is int versionId && pinnedVersions.TryGetValue(versionId, out var version))
         {
-            return IsKeyLabel(version, answer.SelectedLabel);
+            // #269: a pinned answer is graded by its KEYED LABEL or by its TEXT. Reading only the label
+            // meant an inline_completion (a text answer with no label) was re-graded to false on submit,
+            // overwriting the correct grade the save had written - so the sitting said right and the
+            // review said wrong. The two now agree because both ask this one method.
+            return string.IsNullOrWhiteSpace(answer.SelectedLabel) && !string.IsNullOrWhiteSpace(answer.ResponseText)
+                ? EvaluatePinnedText(version, answer.ResponseText)
+                : IsKeyLabel(version, answer.SelectedLabel);
         }
 
         // #250: a legacy answer is identified by its question and a pool answer by its pinned version;

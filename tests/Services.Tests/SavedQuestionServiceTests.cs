@@ -37,13 +37,16 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
     /// <summary>
     /// A certificate with a legacy paper of three <c>Questions</c> rows.
     /// <para>
-    /// <b>#269: NOT migrated, and the reason is production code rather than this fixture.</b> Every test
-    /// that uses it drives <c>SavedQuestionService.SaveQuestionAsync</c>, which resolves the id it is
-    /// given with <c>db.Questions.AnyAsync(q =&gt; q.QuestionId == questionId)</c> - a pool item id is
-    /// not a question id, so the call would answer <c>QuestionNotFound</c> and the test would fail for a
-    /// reason this ticket does not own. That method is the legacy half of the bank and has no pool
-    /// caller to migrate to; the pool half is <c>SaveItemVersionAsync</c>, which this file already
-    /// covers in its own tests below. #269 deletes these rows with the table.
+    /// <b>#272: stays legacy - reason 1, the subject is the legacy half of the bank.</b> The tests above
+    /// drive <c>SaveQuestionAsync</c> with a QUESTION id and then assert the legacy link's own
+    /// projection: <c>item.QuestionId</c>, <c>item.Hint</c>, the legacy section filter, and the two-option
+    /// set. A pool link carries <c>ItemId</c>/<c>ItemVersionId</c> instead and renders four options with
+    /// no hint, so migrating these would blank the question id, drop the hint assertion and widen the
+    /// option count - a weaker test, not a translated one.
+    /// </para>
+    /// <para>
+    /// The pool half of the same service is <c>SaveItemVersionAsync</c>, and it has its own tests in this
+    /// file (#224, from <c>SeedPoolCellAsync</c> down). #269 deletes these rows with the table.
     /// </para>
     /// </summary>
     private async Task<(int CertId, int SectionId, List<int> QuestionIds, List<int> CorrectOptionIds, List<int> WrongOptionIds)> SeedCertificateWithQuestionsAsync(string certCode)

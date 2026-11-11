@@ -441,6 +441,7 @@ public sealed class PoolImportTests(DatabaseFixture database)
 
         Assert.Equal(2, items.Count);
         Assert.All(items, i => Assert.Equal(CefrLevel.B1, i.CefrLevel));
+        // #272: left legacy - this proves an ABSENCE (the import wrote no legacy question row).
         Assert.Equal(0, await db.Questions.CountAsync(q => q.ExamId == second.ExamId));
     }
 
@@ -751,6 +752,7 @@ public sealed class PoolImportTests(DatabaseFixture database)
 
         await using var db = Db();
         Assert.Equal(0, await db.Items.CountAsync(i => db.ExamItems.Any(b => b.ExamId == result.ExamId && b.ItemId == i.ItemId)));
+        // #272: left legacy - an ABSENCE assertion, the refused batch wrote no legacy question row.
         Assert.Equal(0, await db.Questions.CountAsync(q => q.SectionId == listeningSectionId));
     }
 
@@ -800,6 +802,7 @@ public sealed class PoolImportTests(DatabaseFixture database)
 
     // ---- helpers ----
 
+    /// <summary>#272: left legacy - an ABSENCE probe, read only to prove the importer wrote no question row.</summary>
     private async Task<int> CountLegacyQuestionsAsync()
     {
         await using var db = Db();

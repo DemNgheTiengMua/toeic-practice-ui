@@ -59,11 +59,9 @@ public sealed partial class AttemptEngine
                 .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.QuestionId == questionId, cancellationToken);
 
         if (answer is null)
-        {
-            return await SaveFreeResponseInternalAsync(
+        {            return await SaveFreeResponseInternalAsync(
                 attempt, attemptId, questionId, selectedOptionId, responseText, isFlagged, null, cancellationToken);
         }
-
         // #250: the question's type comes from the paper, not from a joined Questions row - a pool
         // answer has no such row.
         if (sittingQuestion.RenderFormat == QuestionType.FreeResponse.ToCode())
@@ -100,7 +98,13 @@ public sealed partial class AttemptEngine
                 answer.SelectedOptionId = null;
                 answer.SelectedOptionIdsJson = selectedOptionIdsJson;
                 answer.ResponseText = responseText;
-                answer.IsCorrect = IsKeyLabel(pinnedVersion, label);
+                // #269: a pinned version is graded by its key AND its accepted answers. `IsKeyLabel` alone
+                // judges only a lettered choice, so an inline_completion (or any text answer) on the pool
+                // could never be correct - the version carries AcceptedAnswersJson and the sitting projects
+                // it, but nothing read it back.
+                answer.IsCorrect = string.IsNullOrWhiteSpace(responseText)
+                    ? IsKeyLabel(pinnedVersion, label)
+                    : EvaluatePinnedText(pinnedVersion, responseText);
             }
             else
             {

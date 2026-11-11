@@ -8,6 +8,14 @@ namespace Services.Tests;
 /// #250 criterion 2: <b>the seed loads and every exam still has the questions it had - the count per
 /// exam is unchanged by the migration.</b>
 /// <para>
+/// <b>Untouched by #272, and both its tests currently fail on a <c>docs/</c> script bug outside this
+/// ticket.</b> Measured: <c>docs/migrate-paper-to-pool.sql:143</c> reads <c>g.PromptCopy</c>, but
+/// <c>docs/database-schema.sql:1493</c> defines <c>QuestionGroups</c> without that column - it exists
+/// only on <c>Stimuli</c> (line 778). The migration aborts with 'Invalid column name PromptCopy'
+/// (Msg 207) before any assertion runs. This predates the change and is not in its diff; neither this
+/// file nor either script is.
+/// </para>
+/// <para>
 /// <b>Why this is the criterion that catches a silent partial migration.</b> A migration that copies
 /// 114 of 116 questions produces a database that loads, has rows in every table, and looks finished.
 /// The missing two surface as an unreachable question on a real sitting, weeks later. So the assertion

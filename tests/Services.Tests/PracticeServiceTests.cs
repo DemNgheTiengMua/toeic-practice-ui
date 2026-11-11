@@ -67,7 +67,8 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         List<int> CorrectOptionIds,
         List<int> WrongOptionIds);
 
-    private async Task<PooledCertificate> SeedPoolCertificateAsync(string certCode)
+    private async Task<PooledCertificate> SeedPoolCertificateAsync(
+        string certCode, string? firstHint = null, string? firstPassage = null)
     {
         await EnsureTopicsAsync();
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -99,7 +100,11 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         {
             var position = await PoolFixture.AddMcqAsync(
                 db, exam.ExamId, cert.CertId, readSec.SectionId, "reading", $"Stem {i + 1}",
-                displayOrder: i + 1, keyLabel: keys[i], level: "B2", explanation: $"Explanation {i + 1}");
+                displayOrder: i + 1, keyLabel: keys[i], level: "B2", explanation: $"Explanation {i + 1}",
+                // #269/#272: a drill's hint and its audio slice live on the pinned version and the
+                // stimulus - the two readers that reload a question and a summary.
+                hint: i == 0 ? firstHint : null,
+                passage: i == 0 ? firstPassage : null);
             examItemIds.Add(position.ExamItemId);
             itemIds.Add(position.ItemId);
             versionIds.Add(position.ItemVersionId);

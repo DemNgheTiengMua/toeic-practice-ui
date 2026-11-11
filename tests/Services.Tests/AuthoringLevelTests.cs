@@ -101,6 +101,7 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     private async Task<(string Level, int Rows)> StoredLevelAsync(int questionId)
     {
         await using var db = Db();
+        // #272: left legacy - the subject is the LEGACY authoring service, whose write is a `Questions` row.
         // SqlQuery (not SqlQueryRaw) so the id is a parameter, not spliced text.
         var level = await db.Database
             .SqlQuery<string>($"SELECT ISNULL(CefrLevel, '(null)') AS [Value] FROM Questions WHERE QuestionId = {questionId}")
@@ -446,6 +447,7 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
         Assert.Contains("A1-C2", error, StringComparison.Ordinal);
         // D1 is an absolute, and the message has to say so where the author will read it.
         Assert.Contains("no difficulty-to-level mapping", error, StringComparison.Ordinal);
+        // #272: left legacy - an ABSENCE assertion about the legacy import door, which is this file's subject.
         Assert.Equal(0, await db.Questions.CountAsync(q => q.Stem == "What time does the depot open?" && q.CefrLevel == null));
     }
 

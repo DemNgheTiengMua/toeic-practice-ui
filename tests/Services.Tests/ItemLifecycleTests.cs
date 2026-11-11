@@ -217,17 +217,9 @@ public sealed class ItemLifecycleTests(DatabaseFixture database)
             VALUES ({certId}, N'Retired-item paper', 'published', 60, 'mock', 1, 'production');
             DECLARE @exam INT = SCOPE_IDENTITY();
 
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, {certId}, @sec, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, @sec, (SELECT SkillId FROM Skills WHERE CertId = {certId}),
-                    N'The legacy stem nobody should render.', 'A2', 'mcq', 1);
-            DECLARE @q INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q, 'mcq', 'A', N'legacy-a', 1), (@q, 'mcq', 'B', N'legacy-b', 0),
-              (@q, 'mcq', 'C', N'legacy-c', 0), (@q, 'mcq', 'D', N'legacy-d', 0);
-
+            -- #272: the position is a pool binding only. The legacy question and its options that used to
+            -- sit beside it are gone, so the sitting takes the roster branch - which is the shape
+            -- production produces and the one this test is about.
             INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, BatchTag)
             VALUES ('reading', {topicId}, 'B1', 'sentence_cloze', 'production', 'active', '{tag}-item');
             DECLARE @item INT = SCOPE_IDENTITY();
@@ -239,7 +231,7 @@ public sealed class ItemLifecycleTests(DatabaseFixture database)
             INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder)
             VALUES (@exam, @sec, {certId}, @ver, @item, 'reading', 1);
 
-            SELECT @exam AS ExamId, @item AS ItemId, @ver AS ItemVersionId;
+            SELECT @exam AS ExamId, @item AS ItemId, @ver AS ItemVersionId, @ver AS Ver;
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -247,8 +239,8 @@ public sealed class ItemLifecycleTests(DatabaseFixture database)
 
         var engine = CreateEngine();
         var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
-        var questions = await db.Questions.Where(q => q.ExamId == examId).ToListAsync();
-        var questionId = questions.Single().QuestionId;
+        // #272: the position is its ExamItems row, so that is what the sitting is addressed by.
+        var questionId = await db.ExamItems.Where(b => b.ExamId == examId).Select(b => b.ExamItemId).SingleAsync();
         var versionId = await db.ExamItems.Where(b => b.ExamId == examId).Select(b => b.ItemVersionId).SingleAsync();
 
         // answer C: the pinned version's key, so the review has something correct to show

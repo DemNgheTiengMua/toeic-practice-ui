@@ -840,9 +840,13 @@ public sealed class SpeakingPracticeService(
             throw new SpeakingPracticeException(SpeakingPracticeException.Forbidden, "You do not have permission to access audio for this attempt.");
         }
 
+        // #269: the address is a POSITION - a question id on a legacy paper, an ExamItemId on a pool one.
+        // Matching on QuestionId alone left a pool recording unanswered, so a learner could not hear back
+        // the take they had just made: "Audio recording not found for this question".
         var fr = await db.FreeResponses
             .AsNoTracking()
-            .Where(r => r.AttemptId == attemptId && r.QuestionId == questionId)
+            .Where(r => r.AttemptId == attemptId
+                && (r.QuestionId == questionId || r.ExamItemId == questionId))
             .SingleOrDefaultAsync(cancellationToken);
 
         if (fr is null || string.IsNullOrWhiteSpace(fr.AudioPath))

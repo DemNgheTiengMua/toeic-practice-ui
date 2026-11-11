@@ -536,7 +536,16 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
             return null;
         }
 
-        var skillIds = answers.Select(a => a.Question.Section.SkillId).Distinct().ToList();
+        // #269: the skill of an answer comes from its own row - the roster position on a pool paper, the
+        // legacy question otherwise - never from a navigation that is null on half the rows. Reading
+        // `a.Question.Section.SkillId` threw NullReferenceException for every pool answer, so a defective
+        // item's recomputation could not run at all.
+        var skillByAnswer = await RosterSkills.ByAnswerAsync(db, attempt.AttemptId, cancellationToken);
+        var skillIds = answers
+            .Where(a => skillByAnswer.ContainsKey(a.AnswerId))
+            .Select(a => skillByAnswer[a.AnswerId])
+            .Distinct()
+            .ToList();
         var bands = await db.ScoreBands
             .AsNoTracking()
             .Where(b => b.CertId == attempt.CertId)
@@ -554,7 +563,9 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
         var newScores = new List<AttemptSkillScore>();
         foreach (var skillId in skillIds)
         {
-            var skillAnswers = answers.Where(a => a.Question.Section.SkillId == skillId).ToList();
+            var skillAnswers = answers
+                .Where(a => skillByAnswer.GetValueOrDefault(a.AnswerId) == skillId)
+                .ToList();
 
             var correct = 0;
             var denominator = 0;

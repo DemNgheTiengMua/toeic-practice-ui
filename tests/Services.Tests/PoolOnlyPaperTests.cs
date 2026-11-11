@@ -46,6 +46,7 @@ public sealed class PoolOnlyPaperTests(DatabaseFixture database)
             await using var db = DbContextFactory.Create(connectionString);
 
             // The precondition, asserted rather than assumed.
+            // #272: left legacy - reason 2, this proves an ABSENCE (a pool-only paper has no such rows).
             Assert.Equal(0, await db.Questions.CountAsync(q => q.ExamId == fixture.ExamId));
             Assert.Equal(0, await db.QuestionGroups.CountAsync(g => g.ExamId == fixture.ExamId));
             Assert.Equal(3, await db.ExamItems.CountAsync(i => i.ExamId == fixture.ExamId));

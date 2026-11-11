@@ -140,7 +140,6 @@ BEGIN
       AND ISNULL(s.AudioPath, '') = ISNULL(g.AudioPath, '')
       AND ISNULL(s.Transcript, '') = ISNULL(g.Transcript, '')
       AND ISNULL(s.ImagePath, '') = ISNULL(g.ImagePath, '')
-      AND ISNULL(s.PromptCopy, '') = ISNULL(g.PromptCopy, '')
     ORDER BY s.StimulusId;
 
     INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, RenderFormat,

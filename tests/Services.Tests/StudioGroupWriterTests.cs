@@ -48,6 +48,7 @@ public sealed class StudioGroupWriterTests(DatabaseFixture database)
 
             // The precondition the whole ticket rests on: this paper has no legacy rows at all, so a
             // writer that lands on one writes to nothing and the screen never changes.
+            // #272: left legacy - reason 2, an ABSENCE assertion; it is what makes the writer's target real.
             Assert.Equal(0, await db.Questions.CountAsync(q => q.ExamId == fixture.ExamId));
 
             await service.UpdateExamStudioGroupAsync(
@@ -333,6 +334,7 @@ public sealed class StudioGroupWriterTests(DatabaseFixture database)
             var fixture = await SeedAsync(connectionString);
 
             await using var db = DbContextFactory.Create(connectionString);
+            // #272: left legacy - reason 2, both lines are ABSENCE assertions (#273 removed the writer).
             Assert.Equal(0, await db.QuestionGroups.CountAsync(g => g.ExamId == fixture.ExamId));
 
             var service = new AdminExamService(db, TimeProvider.System);

@@ -45,6 +45,7 @@ public static class PoolFixture
         string? explanation = null,
         int? stimulusId = null,
         int unitNumber = 1,
+        string? hint = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(db);
@@ -91,6 +92,7 @@ public static class PoolFixture
             OptionD = "Option D",
             KeyLabel = keyLabel,
             Explanation = explanation ?? $"The key is {keyLabel}.",
+            Hint = hint,
             RationaleA = "Rationale A.",
             RationaleB = "Rationale B.",
             RationaleC = "Rationale C.",
