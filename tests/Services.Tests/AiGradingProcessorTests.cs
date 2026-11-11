@@ -569,4 +569,110 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
                 Scores: scores));
         }
     }
+
+    /// <summary>
+    /// #269: grading a free response authored on the pool.
+    /// <para>
+    /// A pool response names a roster position and has no Question row, and the processor read
+    /// <c>fr.Question.SectionId</c> to find the section's rubric - so the EF parameter evaluation threw
+    /// NullReferenceException and every pool writing/speaking submission failed grading. The learner had
+    /// already been charged for the grading at submit, so the charge stood and the result never arrived.
+    /// Found by driving the real browser flow, not by a unit test.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task ProcessPendingGradingsAsync_grades_a_pool_response_that_has_no_question_row()
+    {
+        var certCode = Unique("GPPool");
+        int userId = 0;
+
+        int attemptId;
+        int positionExamItemId;
+        int examId;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            // A writing_practice paper authored on the POOL: Items/ItemVersions/ExamItems and no
+            // Questions rows at all, which is the shape that broke the processor.
+            var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+            db.Certificates.Add(cert);
+            await db.SaveChangesAsync();
+
+            // Seeded AFTER the certificate, so the learner's ActiveCertId is this one - a writing
+            // attempt starts for the active certificate and nothing else.
+            userId = await SeedLearnerAsync(certCode, startingCredits: 3);
+
+            var skill = new Skill
+            {
+                CertId = cert.CertId, Code = "WRIT", Name = "Writing", Modality = "writing",
+                DisplayOrder = 1, MinScaledScore = 0, MaxScaledScore = 100, ScoreStep = 1,
+            };
+            db.Skills.Add(skill);
+            await db.SaveChangesAsync();
+
+            var section = new Section
+            {
+                CertId = cert.CertId, SkillId = skill.SkillId, Modality = "writing",
+                Code = "W1", Name = "Sentence from picture", DisplayOrder = 1,
+                ExpectedQuestionCount = 1, LastWrittenBy = userId,
+            };
+            db.Sections.Add(section);
+            await db.SaveChangesAsync();
+
+            var criterion = new GradingCriterion
+            {
+                SkillId = skill.SkillId,
+                CertId = cert.CertId,
+                Code = "W_TASK",
+                Name = "Task achievement",
+                MaxScore = 3m,
+                Weight = 1m,
+                DisplayOrder = 1,
+                RubricDescription = "How fully the task is achieved.",
+            };
+            db.GradingCriteria.Add(criterion);
+            await db.SaveChangesAsync();
+
+            var exam = new Exam
+            {
+                CertId = cert.CertId, Name = $"Writing {certCode}", Status = "published",
+                DurationMinutes = 60, Purpose = "writing_practice", QuestionCount = 1,
+                LastWrittenBy = userId,
+            };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+            examId = exam.ExamId;
+
+            var position = await PoolFixture.AddProductiveAsync(
+                db, exam.ExamId, cert.CertId, section.SectionId, "writing",
+                "Write a sentence about the picture.", displayOrder: 1, minWords: 5, maxWords: 40);
+            positionExamItemId = position.ExamItemId;
+
+            var learners = new LearnerService(db);
+            var writing = new WritingPracticeService(db, learners);
+            var info = await writing.StartAttemptAsync(userId, exam.ExamId);
+            attemptId = info.AttemptId;
+            await writing.SaveDraftAsync(userId, attemptId, positionExamItemId,
+                "The team is discussing the new proposal in the meeting room.");
+            await writing.SubmitAttemptAsync(userId, attemptId);
+
+            // The shape that makes this test mean something.
+            Assert.Empty(await db.Questions.Where(q => q.ExamId == examId).ToListAsync());
+        }
+
+        await using var gradeDb = DbContextFactory.Create(database.ConnectionString);
+        var processor = new AiGradingProcessor(gradeDb, new CustomScoreGrader(2.0m));
+        var processed = await processor.ProcessPendingGradingsAsync(10);
+        Assert.True(processed >= 1);
+
+        await using var check = DbContextFactory.Create(database.ConnectionString);
+        var grading = await check.AiGradings
+            .Include(g => g.FreeResponse)
+            .SingleAsync(g => g.FreeResponse.AttemptId == attemptId);
+
+        // A failed grading here is the defect: nothing was scored and the charge stood. The reason is
+        // asserted FIRST, because "failed" alone cannot tell this defect from a fixture with no rubric.
+        Assert.Null(grading.FailureReason);
+        Assert.Equal(AiGradingStatus.Done.ToCode(), grading.Status);
+        Assert.NotEmpty(await check.AiGradingScores.Where(s => s.GradingId == grading.GradingId).ToListAsync());
+    }
 }

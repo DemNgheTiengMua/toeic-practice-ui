@@ -486,8 +486,25 @@ public sealed class WritingPracticeService(
             .Where(fr => fr.AttemptId == attemptId)
             .Include(fr => fr.Question)
             .Include(fr => fr.AiGradingFreeResponse)
-            .OrderBy(fr => fr.Question.DisplayOrder)
             .ToListAsync(cancellationToken);
+
+        // #269: a pool response has no QuestionId and no Question row, so `fr.QuestionId!.Value` threw
+        // "Nullable object must have a value" and the grading-status page could not load at all - for a
+        // sitting whose grading had just succeeded. The address and the order come from the roster
+        // position the response names, falling back to the question row for a legacy response.
+        var positions = await LoadPaperPositionsAsync(attempt.ExamId, cancellationToken);
+        var positionByExamItemId = positions
+            .Where(p => p.ExamItemId.HasValue)
+            .ToDictionary(p => p.ExamItemId!.Value);
+
+        int AddressOf(FreeResponse fr) => fr.QuestionId ?? fr.ExamItemId ?? 0;
+
+        int OrderOf(FreeResponse fr) => fr.ExamItemId is int examItemId
+            && positionByExamItemId.TryGetValue(examItemId, out var position)
+                ? positions.IndexOf(position)
+                : fr.Question?.DisplayOrder ?? 0;
+
+        freeResponses = freeResponses.OrderBy(OrderOf).ToList();
 
         var items = new List<FreeResponseGradingStatus>();
         int gradedCount = 0;
@@ -512,8 +529,8 @@ public sealed class WritingPracticeService(
 
             items.Add(new FreeResponseGradingStatus(
                 fr.FreeResponseId,
-                fr.QuestionId!.Value,
-                fr.Question.DisplayOrder,
+                AddressOf(fr),
+                OrderOf(fr),
                 status,
                 grading?.AttemptCount ?? 0,
                 grading?.FailureReason));
@@ -590,8 +607,28 @@ public sealed class WritingPracticeService(
             .Where(fr => fr.AttemptId == attemptId)
             .Include(fr => fr.Question).ThenInclude(q => q.Section)
             .Include(fr => fr.AiGradingFreeResponse).ThenInclude(g => g!.AiGradingScores).ThenInclude(s => s.GradingCriterion)
-            .OrderBy(fr => fr.Question.DisplayOrder)
             .ToListAsync(cancellationToken);
+
+        // #269: a pool response names a roster position, not a question row. Reading fr.Question for one
+        // threw on QuestionId!.Value, so the review page of a pool writing sitting could not open.
+        var reviewPositions = await LoadPaperPositionsAsync(attempt.ExamId, cancellationToken);
+        var reviewPositionByExamItemId = reviewPositions
+            .Where(p => p.ExamItemId.HasValue)
+            .ToDictionary(p => p.ExamItemId!.Value);
+
+        int ReviewAddressOf(FreeResponse fr) => fr.QuestionId ?? fr.ExamItemId ?? 0;
+
+        int ReviewOrderOf(FreeResponse fr) => fr.ExamItemId is int examItemId
+            && reviewPositionByExamItemId.TryGetValue(examItemId, out var pos)
+                ? reviewPositions.IndexOf(pos) + 1
+                : fr.Question?.DisplayOrder ?? 0;
+
+        int ReviewSectionOf(FreeResponse fr) => fr.ExamItemId is int examItemId
+            && reviewPositionByExamItemId.TryGetValue(examItemId, out var pos)
+                ? pos.SectionId
+                : fr.Question?.SectionId ?? 0;
+
+        freeResponses = freeResponses.OrderBy(ReviewOrderOf).ToList();
 
         var sectionCriteria = await db.SectionCriteria
             .AsNoTracking()
@@ -624,7 +661,7 @@ public sealed class WritingPracticeService(
                 if (words > 0) gradedCount++;
                 foreach (var critScore in scores.OrderBy(s => s.GradingCriterion.DisplayOrder))
                 {
-                    var overrideMax = sectionCriteria.FirstOrDefault(c => c.SectionId == fr.Question.SectionId && c.CriterionId == critScore.CriterionId)?.MaxScore;
+                    var overrideMax = sectionCriteria.FirstOrDefault(c => c.SectionId == ReviewSectionOf(fr) && c.CriterionId == critScore.CriterionId)?.MaxScore;
                     var criterionMax = overrideMax ?? critScore.GradingCriterion.MaxScore;
 
                     criteriaScores.Add(new WritingCriterionScoreItem(
@@ -646,10 +683,14 @@ public sealed class WritingPracticeService(
             var (qScore, _) = AttemptEngine.WeightedRubricTotal(marks);
 
             questionItems.Add(new WritingQuestionReviewItem(
-                fr.QuestionId!.Value,
-                fr.Question.DisplayOrder,
-                fr.Question.Section.Name,
-                fr.Question.Stem,
+                ReviewAddressOf(fr),
+                ReviewOrderOf(fr),
+                fr.ExamItemId is int reviewItemId && reviewPositionByExamItemId.TryGetValue(reviewItemId, out var reviewPos)
+                    ? reviewPos.Section.Name
+                    : fr.Question?.Section?.Name ?? string.Empty,
+                fr.ExamItemId is int reviewStemId && reviewPositionByExamItemId.TryGetValue(reviewStemId, out var stemPos)
+                    ? stemPos.Stem
+                    : fr.Question?.Stem ?? string.Empty,
                 fr.ResponseText,
                 words,
                 qScore,

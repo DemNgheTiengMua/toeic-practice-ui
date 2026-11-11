@@ -381,27 +381,60 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
             .Where(g => g.Status == AiGradingStatus.Done.ToCode())
             .Select(g => new
             {
-                // #250: a grading belongs to a legacy free response here - the position map this feeds
-                // is built from Questions rows. A pool grading has no row in that map and is skipped
-                // below, so the nullable id is filtered rather than coerced.
-                QuestionId = g.FreeResponse.QuestionId!.Value,
-                ExamId = g.FreeResponse.Question!.ExamId,
-                SectionId = g.FreeResponse.Question!.SectionId,
+                g.FreeResponse.QuestionId,
+                g.FreeResponse.ExamItemId,
+                ExamId = g.FreeResponse.ExamId,
+                // #269: a pool grading names an ExamItemId, not a question; its section comes from the
+                // roster. The projection used `QuestionId!.Value` and `Question!.ExamId`, which throw
+                // while reading the RESULT SET - so the whole telemetry pass died before the "skip
+                // below" this comment used to promise could ever run.
+                SectionId = g.FreeResponse.Question != null
+                    ? g.FreeResponse.Question.SectionId
+                    : (int?)null,
                 SittingTotal = (double)(g.FreeResponse.Attempt.TotalScore ?? 0),
                 MeanBand = g.AiGradingScores.Average(s => (double?)s.Score),
             })
             .Where(g => g.MeanBand != null)
             .ToListAsync(cancellationToken);
 
+        // A pool grading's section, resolved from the position it names.
+        var poolPositionIds = graded
+            .Where(g => g.QuestionId is null && g.ExamItemId.HasValue)
+            .Select(g => g.ExamItemId!.Value)
+            .Distinct()
+            .ToList();
+        var poolSectionByPosition = poolPositionIds.Count == 0
+            ? []
+            : await db.ExamItems.AsNoTracking()
+                .Where(i => poolPositionIds.Contains(i.ExamItemId))
+                .Select(i => new { i.ExamItemId, i.SectionId })
+                .ToDictionaryAsync(x => x.ExamItemId, x => x.SectionId, cancellationToken);
+
         var byItem = new Dictionary<int, List<ItemObservation>>();
         foreach (var grading in graded)
         {
-            if (!positionOf.TryGetValue((grading.ExamId, grading.SectionId, grading.QuestionId), out var position))
+            // The position map is keyed by (exam, section, question). A pool row has no question id, so
+            // it resolves through its position instead - and only then is it skippable.
+            int sectionId = grading.SectionId
+                ?? (grading.ExamItemId is int poolItemId
+                    ? poolSectionByPosition.GetValueOrDefault(poolItemId)
+                    : 0);
+
+            if (sectionId <= 0)
             {
                 continue;
             }
 
-            if (!versionAtPosition.TryGetValue((grading.ExamId, grading.SectionId, position), out var versionId))
+            var position = grading.QuestionId is int questionId
+                ? positionOf.GetValueOrDefault((grading.ExamId, sectionId, questionId))
+                : 0;
+
+            if (position <= 0)
+            {
+                continue;
+            }
+
+            if (!versionAtPosition.TryGetValue((grading.ExamId, sectionId, position), out var versionId))
             {
                 continue;
             }

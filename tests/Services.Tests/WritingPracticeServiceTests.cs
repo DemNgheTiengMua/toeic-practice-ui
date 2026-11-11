@@ -277,6 +277,94 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         Assert.All(scores, s => Assert.True(s.Score >= 0));
     }
 
+    /// <summary>
+    /// #269: the grading-status reader for a paper authored on the pool.
+    /// <para>
+    /// Every writing/speaking screen that reports "graded / pending / failed" read
+    /// <c>fr.QuestionId!.Value</c> and <c>fr.Question.DisplayOrder</c>. A pool response has neither, so
+    /// the page threw "Nullable object must have a value" - after the grading had already succeeded and
+    /// the credit had already been taken. Found by driving the real browser flow.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task GetGradingPendingAsync_reports_a_pool_sitting_with_no_question_rows()
+    {
+        var certCode = Unique("WRPool");
+        int userId = 0;
+
+        int attemptId;
+        int examId;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+            db.Certificates.Add(cert);
+            await db.SaveChangesAsync();
+
+            // The learner is seeded AFTER the certificate, so its ActiveCertId points at this one - a
+            // writing attempt is started for the learner's ACTIVE certificate and nothing else.
+            userId = await SeedLearnerAsync(certCode, startingCredits: 2);
+
+            var skill = new Skill
+            {
+                CertId = cert.CertId, Code = "WRIT", Name = "Writing", Modality = "writing",
+                DisplayOrder = 1, MinScaledScore = 0, MaxScaledScore = 100, ScoreStep = 1,
+            };
+            db.Skills.Add(skill);
+            await db.SaveChangesAsync();
+
+            var section = new Section
+            {
+                CertId = cert.CertId, SkillId = skill.SkillId, Modality = "writing",
+                Code = "W1", Name = "Sentence from picture", DisplayOrder = 1,
+                ExpectedQuestionCount = 1, LastWrittenBy = userId,
+            };
+            db.Sections.Add(section);
+            await db.SaveChangesAsync();
+
+            db.GradingCriteria.Add(new GradingCriterion
+            {
+                SkillId = skill.SkillId, CertId = cert.CertId, Code = "W_TASK", Name = "Task achievement",
+                MaxScore = 3m, Weight = 1m, DisplayOrder = 1,
+                RubricDescription = "How fully the task is achieved.",
+            });
+            await db.SaveChangesAsync();
+
+            var exam = new Exam
+            {
+                CertId = cert.CertId, Name = $"Writing {certCode}", Status = "published",
+                DurationMinutes = 60, Purpose = "writing_practice", QuestionCount = 1,
+                LastWrittenBy = userId,
+            };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+            examId = exam.ExamId;
+
+            var position = await PoolFixture.AddProductiveAsync(
+                db, exam.ExamId, cert.CertId, section.SectionId, "writing",
+                "Write a sentence about the picture.", displayOrder: 1, minWords: 5, maxWords: 40);
+
+            var learners = new LearnerService(db);
+            var writing = new WritingPracticeService(db, learners);
+            var info = await writing.StartAttemptAsync(userId, exam.ExamId);
+            attemptId = info.AttemptId;
+            await writing.SaveDraftAsync(userId, attemptId, position.ExamItemId,
+                "The team is discussing the new proposal in the meeting room.");
+            await writing.SubmitAttemptAsync(userId, attemptId);
+
+            Assert.Empty(await db.Questions.Where(q => q.ExamId == examId).ToListAsync());
+        }
+
+        var (service, _, gradingProcessor, _) = CreateServices();
+        await gradingProcessor.ProcessPendingGradingsAsync();
+
+        var pending = await service.GetGradingPendingAsync(userId, attemptId);
+
+        // The address reported is the position's, and the counts describe real work.
+        Assert.Equal(1, pending.TotalResponses);
+        Assert.Equal(1, pending.GradedResponses);
+        Assert.Equal(0, pending.FailedResponses);
+    }
+
     [Fact]
     public async Task Failed_grading_can_be_retried_reusing_grading_row_without_additional_charges()
     {

@@ -68,17 +68,29 @@ public sealed class AiGradingProcessor(
     private async Task<bool> ProcessSingleGradingAsync(AiGrading grading, CancellationToken cancellationToken)
     {
         var fr = grading.FreeResponse;
-        var question = fr.Question;
 
+        // #269: a pool free response has no Question row - it names a roster position instead. Reading
+        // `fr.Question.SectionId` threw NullReferenceException inside the EF parameter evaluation, so
+        // every pool writing/speaking submission failed grading and the learner was charged for a
+        // result that never arrived. Everything this method needs from the question is resolved inside
+        // the guard below, from whichever store the paper uses.
         try
         {
+            var position = await LoadGradedPositionAsync(fr, cancellationToken);
+            var question = fr.Question;
+            var frSectionId = position?.SectionId ?? question?.SectionId;
+            var sectionModality = position?.Modality ?? question?.Section?.Modality;
+            var isWriting = sectionModality == Modality.Writing.ToCode();
+
             // Load applicable criteria: section-specific criteria first, fallback to skill-wide general criteria
-            var sectionCriteria = await db.SectionCriteria
-                .AsNoTracking()
-                .Where(sc => sc.SectionId == question.SectionId)
-                .Include(sc => sc.GradingCriterion)
-                .OrderBy(sc => sc.GradingCriterion.DisplayOrder)
-                .ToListAsync(cancellationToken);
+            var sectionCriteria = frSectionId is int sectionId
+                ? await db.SectionCriteria
+                    .AsNoTracking()
+                    .Where(sc => sc.SectionId == sectionId)
+                    .Include(sc => sc.GradingCriterion)
+                    .OrderBy(sc => sc.GradingCriterion.DisplayOrder)
+                    .ToListAsync(cancellationToken)
+                : [];
 
             // #192: the seven-band grid travels with each criterion, read in one query for the whole
             // rubric. A criterion with no grid keeps its prose, so every rubric authored before this
@@ -212,7 +224,7 @@ public sealed class AiGradingProcessor(
             // (#152) and drops a criterion its provider did not measure with its own stated reason.
             // Its completeness is enforced at the lock door instead, where every skill modality is
             // required to carry seven bands before it can be published against.
-            if (question.Section.Modality == Modality.Writing.ToCode())
+            if (isWriting)
             {
                 var ungradable = criteriaDetails.Where(c => !c.IsGradeable).ToList();
                 if (ungradable.Count > 0)
@@ -243,16 +255,19 @@ public sealed class AiGradingProcessor(
             // #152: a spoken answer is graded against the reference its own question declares. The
             // kind is a question-level column, so a scripted question keeps its script even when its
             // group shows a chart. No declared kind means unscripted, not a guess.
+            // #269: a pool task carries the same facts on its pinned version, so the position wins
+            // where it exists and the legacy row is the fallback - never a null stem.
             var (referenceText, describesImage) = SpeakingTask.ResolveReference(
-                question.SampleAnswerOrImageDesc, question.ReferenceKind);
+                position?.ReferenceText ?? question?.SampleAnswerOrImageDesc,
+                position?.ReferenceKind ?? question?.ReferenceKind);
 
             var request = new AiGradingRequest(
                 fr.FreeResponseId,
                 grading.SkillId,
                 fr.Attempt.CertId,
-                question.Stem,
-                question.MinWords,
-                question.MaxWords,
+                position?.Stem ?? question?.Stem ?? string.Empty,
+                position?.MinWords ?? question?.MinWords,
+                position?.MaxWords ?? question?.MaxWords,
                 fr.ResponseText ?? string.Empty,
                 criteriaDetails,
                 grading.AttemptCount,
@@ -260,7 +275,7 @@ public sealed class AiGradingProcessor(
                 fr.DurationMs,
                 referenceText,
                 describesImage,
-                question.RequiredKeywords);
+                position?.RequiredKeywords ?? question?.RequiredKeywords);
 
 
             var result = await aiGrader.GradeAsync(request, cancellationToken);
@@ -270,7 +285,7 @@ public sealed class AiGradingProcessor(
             // than were asked for cannot leave a silently averaged row behind. Speaking is exempt on
             // purpose - SpeechSuper drops a criterion its provider did not measure (#152) and says so
             // in the reason.
-            if (result.Success && question.Section.Modality == Modality.Writing.ToCode())
+            if (result.Success && isWriting)
             {
                 var missing = criteriaDetails
                     .Where(c => c.IsGradeable && result.Scores.All(s => s.CriterionId != c.CriterionId))
@@ -446,4 +461,52 @@ public sealed class AiGradingProcessor(
         grading.ModelRewrite = null;
         grading.ErrorSpansJson = null;
     }
+
+    /// <summary>
+    /// #269: the paper position a graded response names, with the four facts grading reads from it -
+    /// stem, word window, required keywords and modality. A pool task has no Question row, so the pinned
+    /// version is the only place its content lives; a legacy response returns null and the caller keeps
+    /// reading the question row it was answered from.
+    /// </summary>
+    private async Task<GradedPosition?> LoadGradedPositionAsync(
+        BusinessObjects.Entities.FreeResponse fr, CancellationToken cancellationToken)
+    {
+        if (fr.ExamItemId is not int examItemId)
+        {
+            return null;
+        }
+
+        var position = await db.ExamItems
+            .AsNoTracking()
+            .Where(i => i.ExamItemId == examItemId)
+            .Join(db.ItemVersions.AsNoTracking(),
+                i => i.ItemVersionId, v => v.ItemVersionId,
+                (i, v) => new { i.SectionId, v.Stem, v.MinWords, v.MaxWords, v.RequiredKeywords, v.ReferenceText, v.ReferenceKind })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (position is null)
+        {
+            return null;
+        }
+
+        var modality = await db.Sections
+            .AsNoTracking()
+            .Where(s => s.SectionId == position.SectionId)
+            .Select(s => s.Modality)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new GradedPosition(
+            position.SectionId, modality, position.Stem, position.MinWords, position.MaxWords,
+            position.RequiredKeywords, position.ReferenceText, position.ReferenceKind);
+    }
+
+    private sealed record GradedPosition(
+        int SectionId,
+        string? Modality,
+        string Stem,
+        int? MinWords,
+        int? MaxWords,
+        string? RequiredKeywords,
+        string? ReferenceText,
+        string? ReferenceKind);
 }
