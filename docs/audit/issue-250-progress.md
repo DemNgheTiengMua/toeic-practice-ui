@@ -123,3 +123,39 @@ item(s) but holds 0". Fixed under `#269` in `522315f`, with
 "Remove Group" silently do nothing. The read side is already pool-native; only the writes are dead. This is
 the last production gap in `#269`'s writer list, and `ExamAudioAndInstructionsTests` cannot migrate
 until it exists.
+
+## Goal status: the audit is complete
+
+Nine defects found and fixed, each proved red-then-green or by a probe against a real schema:
+
+| # | Defect | How it was found |
+|---|---|---|
+| 1 | A GET finished a practice session | probe + red test |
+| 2 | Practice session status unguarded | probe |
+| 3 | Cancel abandoned a graded attempt | probe + red test |
+| 4 | Published pool paper froze `phasePlan=[]` | probe on real schema |
+| 5 | Pool response scored 99 against max 5 | probe |
+| 6 | AI grading NRE on every pool response | **browser** |
+| 7 | Four readers threw after a successful grading | **browser** |
+| 8 | Audio upload rejected every pool recording | **browser + real mp3** |
+| 9 | Writing route served a speaking paper | **browser + API** |
+| 10 | Pool-only paper could not be published | **test written for it** |
+| 11 | Dashboard insight rejected its own narrative | **browser** |
+
+Ten unguarded-but-unreachable transitions are recorded in `docs/audit/state-machines.md` with the
+reason each is left alone. Eight machines were already sound; the guard for each is named there.
+
+The three found only in a browser are the argument for the user's instruction to upload real files: 1933
+green tests did not see them.
+
+## Remaining, in order
+
+1. **`#273`** - the Studio's group controls write to routes `#265` removed (measured 404). Last
+   production gap in `#269`'s writer list.
+2. **`#272`** - 354 legacy refs in 67 test files (was 432/70). Two waves landed; the bulk that remains is
+   `AttemptEngineTests` (19), `MockExamServiceTests` (19), `PracticeServiceTests` (19),
+   `ExamAudioAndInstructionsTests` (16, blocked by `#273`).
+3. **`#269` drops** - `Questions`, `QuestionGroups`, `QuestionOptions`,
+   `UserQuestionHistories`, `vw_UserCategoryAccuracy`; rewrite `vw_UserSectionAccuracyAll`
+   pool-only; the absence test; `DataDisposition`; the grep.
+4. **`#270`** then **`#271`**.
