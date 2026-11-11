@@ -672,14 +672,18 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             Assert.True(pAnsResult.IsSessionFinished);
 
             // Verify Weakness Analysis Views
-            // 1. Direct query against vw_UserCategoryAccuracy
-            var catAcc = await dbPractice.vw_UserCategoryAccuracies
+            // 1. #271: this seam authors a LEGACY paper (QuestionGroups/Questions), so the answers it
+            //    produces carry no ItemId and therefore no accuracy cell. vw_UserTopicAccuracy has
+            //    nothing to report for them, and that is the documented behaviour rather than a gap:
+            //    the retired CategoryId is not a topic and no mapping exists. Asserting the absence is
+            //    what keeps a future "helpful" guess from attributing these answers to a topic nobody
+            //    was asked about.
+            var topicAcc = await dbPractice.vw_UserTopicAccuracies
                 .AsNoTracking()
-                .SingleOrDefaultAsync(v => v.UserId == learnerId && v.CategoryId == catId);
+                .Where(v => v.UserId == learnerId)
+                .ToListAsync();
 
-            Assert.NotNull(catAcc);
-            Assert.True(catAcc.Answered >= 1, "Category accuracy view must aggregate practice and exam answers.");
-            Assert.True(catAcc.Correct >= 1);
+            Assert.Empty(topicAcc);
 
             // 2. Direct query against vw_UserSectionAccuracyAll
             var secAcc = await dbPractice.vw_UserSectionAccuracyAlls

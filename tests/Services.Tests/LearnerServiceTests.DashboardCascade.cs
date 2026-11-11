@@ -158,9 +158,9 @@ public sealed partial class LearnerServiceTests
         await SeedCompletedPlacementAsync(userId, code, 120, "LOW", "2026-09-01T10:00:00+07:00");
         await SeedSetTargetBandAsync(userId, code, "HIGH");
 
-        // A weak topic exists - so step 4 WOULD fire on its own condition. The ceiling is what stops it.
-        await SeedSectionPracticeHistoryAsync(userId, code, sectionId, correctCount: 3, totalCount: 10,
-            categoryCode: "TENSE", categoryName: "Verb tense");
+        // A weak cell exists - so step 4 WOULD fire on its own condition. The ceiling is what stops it.
+        await SeedCellPracticeHistoryAsync(userId, code, sectionId,
+            correctCount: 3, totalCount: 10, topicCode: "R-GRAM");
         await SeedAnsweredTodayAsync(userId, code, sectionId,
             FreeDrillState.DailyObjectiveCeiling);
 

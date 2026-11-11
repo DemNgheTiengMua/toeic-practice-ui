@@ -34,9 +34,12 @@ public sealed class WeaknessAnalysisControllerTests
             : [
                 new SectionAccuracyDto(1, "P7", "Reading Comprehension", 0, 0, 0, IsWeakest: false, IsStrongest: false)
               ],
-        FrequentlyMissedCategories: hasData
+        // #271: "frequently missed" is the topic axis now, and it carries the same cell shape the
+        // topic table renders - so the list cannot print a cell differently from a row above it.
+        FrequentlyMissedTopics: hasData
             ? [
-                new CategoryAccuracyDto(1, "inference", "Inference questions", 10, 4, 40)
+                new TopicAccuracyDto(4, "R-DET", "Local detail", ModalityDto.Reading, "B1", 10, 4, 40,
+                    IsWeakest: false, ObservationFloor: 12, LessonId: 41)
               ]
             : [],
         Recommendations: hasData

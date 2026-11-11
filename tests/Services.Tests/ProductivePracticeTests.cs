@@ -87,7 +87,7 @@ public sealed class ProductivePracticeTests(DatabaseFixture database)
         Assert.Equal(q1Id, saved.QuestionId);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var fr = await db.FreeResponses.SingleAsync(r => r.AttemptId == attempt.AttemptId && r.QuestionId == q1Id);
+        var fr = await db.FreeResponses.SingleAsync(r => r.AttemptId == attempt.AttemptId && r.ExamItemId == q1Id);
         Assert.Equal(30_000, fr.DurationMs);
     }
 
@@ -135,7 +135,7 @@ public sealed class ProductivePracticeTests(DatabaseFixture database)
         await using (var db2 = DbContextFactory.Create(database.ConnectionString))
         {
             var grading = await db2.AiGradings.SingleAsync(g =>
-                g.FreeResponse.AttemptId == attempt.AttemptId && g.FreeResponse.QuestionId == q1Id);
+                g.FreeResponse.AttemptId == attempt.AttemptId && g.FreeResponse.ExamItemId == q1Id);
             Assert.Equal("failed", grading.Status);
             Assert.NotNull(grading.FailureReason);
             Assert.Null(grading.OverallScaled);
@@ -295,123 +295,128 @@ public sealed class ProductivePracticeTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// A writing practice paper as two legacy tasks.
-    /// <para>
-    /// <b>#269: NOT migrated to the pool, and the reason is production code rather than this
-    /// fixture.</b> The ids this fixture returns are the addresses the tests pass to
-    /// <c>WritingPracticeService</c>, and the service reads <c>fr.Question</c> on four paths that a pool
-    /// answer leaves null:
-    /// <list type="bullet">
-    /// <item><c>SaveDraftAsync</c> resolves the position through <c>LoadPaperPositionAsync</c>, which
-    /// works, but <c>GetGradingPendingAsync</c> dereferences <c>fr.Question.DisplayOrder</c> and
-    /// <c>fr.QuestionId!.Value</c> — the probe throws "Nullable object must have a value".</item>
-    /// <item><c>GetAttemptReviewAsync</c> orders by <c>fr.Question.DisplayOrder</c> and reads
-    /// <c>fr.Question.Stem</c>/<c>.Section.Name</c>, so it throws before the review exists.</item>
-    /// <item><c>AiGradingProcessor</c> reads <c>grading.FreeResponse.Question.SectionId</c> and
-    /// <c>.Section.Modality</c>; on a pool answer both are null and every grading fails with a
-    /// NullReferenceException, which then keeps the attempt <c>submitted</c> rather than graded.</item>
-    /// <item><c>SpeakingPracticeService.SaveAudioAsync</c> looks the task up in <c>db.Questions</c>
-    /// directly, so a pool speaking take renders but cannot be saved ("Speaking question N not found
-    /// in this exam").</item>
-    /// </list>
-    /// Migrating the fixture before those four readers move would turn four green tests red for a
-    /// reason this ticket does not own. The fixture stays legacy until they do; #269 deletes it with
-    /// the tables.
-    /// </para>
+    /// A writing practice paper whose two tasks live only on the pool. The ids returned are the
+    /// <c>ExamItemId</c> addresses the tests pass to <c>WritingPracticeService</c> — on a pool paper
+    /// that is what a position's <c>Id</c> is, exactly as on a legacy paper it is the question id.
     /// </summary>
     private async Task<(int certId, int examId, int q1Id, int q2Id)> SeedWritingExamAsync(string certCode)
     {
-        await database.SqlAsync($"""
-            INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
-            DECLARE @cert INT = SCOPE_IDENTITY();
-
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes) VALUES
-              (@cert, 'WRIT', N'Writing', 'writing', 1, 60);
-            DECLARE @sW INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'WRIT');
-
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
-              (@sW, @cert, 'writing', 'W1', N'Sentence from picture', 1, 1),
-              (@sW, @cert, 'writing', 'W2', N'Essay', 1, 2);
-            DECLARE @sec1 INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'W1');
-            DECLARE @sec2 INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'W2');
-
-            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder) VALUES
-              (@cert, @sW, 'GRAM', N'Grammar', N'Band 5: accurate simple sentences. Band 3: frequent errors.', 5.0, 1.0, 1),
-              (@cert, @sW, 'VOCAB', N'Vocabulary', N'Band 5: adequate range. Band 3: limited range.', 5.0, 1.0, 2);
-
-            INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount) VALUES
-              (@cert, N'Writing Practice {certCode}', 'published', 60, 'writing_practice', 2);
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec1, 1);
-            DECLARE @grp1 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, RequiredKeywords, DisplayOrder)
-            VALUES (@grp1, @exam, @sec1, @sW, N'Write a sentence describing the picture.', 'A2', 'free_response', 5, 25, N'woman, window', 1);
-            DECLARE @q1 INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec2, 2);
-            DECLARE @grp2 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
-            VALUES (@grp2, @exam, @sec2, @sW, N'Write an essay giving your opinion on remote work.', 'B2', 'free_response', 30, 300, 2);
-            DECLARE @q2 INT = SCOPE_IDENTITY();
-            """);
-
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
-        var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).ToListAsync();
 
-        return (cert.CertId, exam.ExamId, questions[0].QuestionId, questions[1].QuestionId);
+        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+        db.Certificates.Add(cert);
+        await db.SaveChangesAsync();
+
+        var skill = new Skill
+        {
+            CertId = cert.CertId, Code = "WRIT", Name = "Writing", Modality = "writing",
+            DisplayOrder = 1, DurationMinutes = 60,
+        };
+        db.Skills.Add(skill);
+        await db.SaveChangesAsync();
+
+        var sec1 = new Section
+        {
+            SkillId = skill.SkillId, CertId = cert.CertId, Modality = "writing", Code = "W1",
+            Name = "Sentence from picture", ExpectedQuestionCount = 1, DisplayOrder = 1,
+        };
+        var sec2 = new Section
+        {
+            SkillId = skill.SkillId, CertId = cert.CertId, Modality = "writing", Code = "W2",
+            Name = "Essay", ExpectedQuestionCount = 1, DisplayOrder = 2,
+        };
+        db.Sections.AddRange(sec1, sec2);
+        await db.SaveChangesAsync();
+
+        // Prose-only criteria: a criterion with no descriptor grid is graded on this text, and a
+        // writing rubric demands that every criterion it lists is gradeable.
+        db.GradingCriteria.AddRange(
+            new GradingCriterion
+            {
+                CertId = cert.CertId, SkillId = skill.SkillId, Code = "GRAM", Name = "Grammar",
+                RubricDescription = "Band 5: accurate simple sentences. Band 3: frequent errors.",
+                MaxScore = 5.0m, Weight = 1.0m, DisplayOrder = 1,
+            },
+            new GradingCriterion
+            {
+                CertId = cert.CertId, SkillId = skill.SkillId, Code = "VOCAB", Name = "Vocabulary",
+                RubricDescription = "Band 5: adequate range. Band 3: limited range.",
+                MaxScore = 5.0m, Weight = 1.0m, DisplayOrder = 2,
+            });
+        await db.SaveChangesAsync();
+
+        var exam = new Exam
+        {
+            CertId = cert.CertId, Name = $"Writing Practice {certCode}", Status = "published",
+            DurationMinutes = 60, Purpose = "writing_practice", QuestionCount = 2,
+        };
+        db.Exams.Add(exam);
+        await db.SaveChangesAsync();
+
+        var first = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, sec1.SectionId, "writing",
+            "Write a sentence describing the picture.", displayOrder: 1,
+            minWords: 5, maxWords: 25, level: "A2");
+        var second = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, sec2.SectionId, "writing",
+            "Write an essay giving your opinion on remote work.", displayOrder: 2,
+            minWords: 30, maxWords: 300, level: "B2");
+
+        return (cert.CertId, exam.ExamId, first.ExamItemId, second.ExamItemId);
     }
 
     /// <summary>
-    /// A speaking practice paper as two legacy tasks. See <see cref="SeedWritingExamAsync"/> for why
-    /// #269 leaves this fixture legacy: <c>SpeakingPracticeService.SaveAudioAsync</c> resolves the
-    /// recording window from <c>db.Questions</c>, so a pool speaking take cannot be saved at all.
+    /// A speaking practice paper whose two tasks live only on the pool. The recording windows are the
+    /// versions' own, which is where <c>SaveAudioAsync</c> enforces them from.
     /// </summary>
     private async Task<(int certId, int examId, int q1Id, int q2Id)> SeedSpeakingExamAsync(
         string certCode, int prepSeconds, int responseSeconds)
     {
-        await database.SqlAsync($"""
-            INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
-            DECLARE @cert INT = SCOPE_IDENTITY();
-
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes) VALUES
-              (@cert, 'SPEA', N'Speaking', 'speaking', 1, 20);
-            DECLARE @sS INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'SPEA');
-
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
-              (@sS, @cert, 'speaking', 'S1', N'Read aloud', 1, 1),
-              (@sS, @cert, 'speaking', 'S2', N'Describe picture', 1, 2);
-            DECLARE @sec1 INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'S1');
-            DECLARE @sec2 INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'S2');
-
-            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
-              (@cert, @sS, 'PRON', N'Pronunciation', 3.0, 1.0, 1);
-
-            INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount) VALUES
-              (@cert, N'Speaking Practice {certCode}', 'published', 20, 'speaking_practice', 2);
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec1, 1);
-            DECLARE @grp1 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
-            VALUES (@grp1, @exam, @sec1, @sS, N'Read the announcement aloud.', 'A2', 'free_response', {prepSeconds}, {responseSeconds}, 1);
-            DECLARE @q1 INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec2, 2);
-            DECLARE @grp2 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
-            VALUES (@grp2, @exam, @sec2, @sS, N'Describe what you see.', 'B1', 'free_response', {prepSeconds}, {responseSeconds}, 2);
-            DECLARE @q2 INT = SCOPE_IDENTITY();
-            """);
-
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
-        var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).ToListAsync();
 
-        return (cert.CertId, exam.ExamId, questions[0].QuestionId, questions[1].QuestionId);
+        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+        db.Certificates.Add(cert);
+        await db.SaveChangesAsync();
+
+        var skill = new Skill
+        {
+            CertId = cert.CertId, Code = "SPEA", Name = "Speaking", Modality = "speaking",
+            DisplayOrder = 1, DurationMinutes = 20,
+        };
+        db.Skills.Add(skill);
+        await db.SaveChangesAsync();
+
+        var sec1 = new Section
+        {
+            SkillId = skill.SkillId, CertId = cert.CertId, Modality = "speaking", Code = "S1",
+            Name = "Read aloud", ExpectedQuestionCount = 1, DisplayOrder = 1,
+        };
+        var sec2 = new Section
+        {
+            SkillId = skill.SkillId, CertId = cert.CertId, Modality = "speaking", Code = "S2",
+            Name = "Describe picture", ExpectedQuestionCount = 1, DisplayOrder = 2,
+        };
+        db.Sections.AddRange(sec1, sec2);
+        await db.SaveChangesAsync();
+
+        var exam = new Exam
+        {
+            CertId = cert.CertId, Name = $"Speaking Practice {certCode}", Status = "published",
+            DurationMinutes = 20, Purpose = "speaking_practice", QuestionCount = 2,
+        };
+        db.Exams.Add(exam);
+        await db.SaveChangesAsync();
+
+        var first = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, sec1.SectionId, "speaking",
+            "Read the announcement aloud.", displayOrder: 1,
+            prepSeconds: prepSeconds, responseSeconds: responseSeconds, level: "A2");
+        var second = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, sec2.SectionId, "speaking",
+            "Describe what you see.", displayOrder: 2,
+            prepSeconds: prepSeconds, responseSeconds: responseSeconds, level: "B1");
+
+        return (cert.CertId, exam.ExamId, first.ExamItemId, second.ExamItemId);
     }
 
     /// <summary>

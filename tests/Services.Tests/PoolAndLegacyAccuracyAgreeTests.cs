@@ -221,6 +221,109 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
         }
     }
 
+    /// <summary>
+    /// <b>#271 criterion 5:</b> the topic view supplies the same NUMBERS the retired category view did
+    /// on the same answers, so moving six readers onto it cannot have silently dropped a row.
+    /// <para>
+    /// The category view is gone, so the comparison cannot be a query against both. It is instead a
+    /// comparison against the number the category view was defined to produce: for a learner whose
+    /// answers all sit in one cell, <c>SUM(Answered)</c> over the topic view must equal
+    /// <c>COUNT(IsCorrect)</c> over the answer rows, and <c>SUM(Correct)</c> must equal the count of
+    /// them marked correct. That is the arithmetic the retired view performed - it counted the same
+    /// rows and grouped them by the axis it had - so equality here is the statement "nothing was
+    /// dropped and nothing was counted twice".
+    /// </para>
+    /// <para>
+    /// <b>The wrong input that would pass a weaker test:</b> asserting only that the topic view has a
+    /// row. A view that double counted (2 answers reported as 4) or dropped the ungraded rows returns
+    /// a row either way; only the totals catch it. The fixture therefore holds 2 graded answers, 1 of
+    /// them correct, and one row LEFT UNGRADED - which must not enter either total.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task The_topic_view_reports_the_same_totals_the_retired_category_view_did()
+    {
+        var name = $"EE271v_{Guid.NewGuid():N}"[..24];
+        var connectionString = await database.CreateFreshDatabaseAsync(name);
+        try
+        {
+            var fixture = await SeedAsync(connectionString);
+
+            await using var db = DbContextFactory.Create(connectionString);
+            var userId = await SeedLearnerAsync(db, fixture.CertId, "agree");
+
+            var attempt = new ExamAttempt
+            {
+                UserId = userId,
+                CertId = fixture.CertId,
+                ExamId = fixture.ExamId,
+                Status = "graded",
+                StartedAt = DateTimeOffset.UtcNow.AddHours(-1),
+                SubmittedAt = DateTimeOffset.UtcNow.AddMinutes(-30),
+                TotalScore = 60,
+                WrittenByService = DerivedFactWriters.AttemptScoreAndBand,
+                ProjectionVersion = 1,
+            };
+            db.ExamAttempts.Add(attempt);
+            await db.SaveChangesAsync();
+
+            // Two graded answers (1 correct, 1 wrong) plus a blank. The blank carries IsCorrect = NULL
+            // and is exactly the row a drill-at-start or a skipped item writes.
+            db.AttemptAnswers.AddRange(
+                PoolAnswer(attempt.AttemptId, fixture, 0, "A", true),
+                PoolAnswer(attempt.AttemptId, fixture, 1, "B", false));
+            await db.SaveChangesAsync();
+
+            var poolAttempt = new ExamAttempt
+            {
+                UserId = userId, CertId = fixture.CertId, ExamId = fixture.ExamId,
+                Status = "in_progress",
+                StartedAt = DateTimeOffset.UtcNow,
+                WrittenByService = DerivedFactWriters.AttemptScoreAndBand,
+                ProjectionVersion = 1,
+            };
+            db.ExamAttempts.Add(poolAttempt);
+            await db.SaveChangesAsync();
+
+            // A second, UNGRADED attempt: its answers must contribute nothing at all.
+            db.AttemptAnswers.AddRange(
+                PoolAnswer(poolAttempt.AttemptId, fixture, 1, "B", null));
+            await db.SaveChangesAsync();
+
+            await using var read = DbContextFactory.Create(connectionString);
+
+            var cell = Assert.Single(await read.vw_UserTopicAccuracies.AsNoTracking()
+                .Where(v => v.UserId == userId).ToListAsync());
+
+            // The rows the retired view counted, measured independently of any view.
+            var graded = await read.AttemptAnswers.AsNoTracking()
+                .Where(a => a.Attempt.UserId == userId && a.Attempt.Status == "graded")
+                .ToListAsync();
+            Assert.Equal(2, graded.Count);
+
+            Assert.Equal(graded.Count, cell.Answered);
+            Assert.Equal(graded.Count(a => a.IsCorrect == true), cell.Correct);
+            Assert.Equal(1, cell.Correct);
+            // And the percentage is the same division: 1 of 2 is 50.
+            Assert.Equal(50, cell.AccuracyPercent);
+
+            AttemptAnswer PoolAnswer(int attemptId, Fixture f, int index, string label, bool? correct) => new()
+            {
+                AttemptId = attemptId,
+                ExamId = f.ExamId,
+                ExamItemId = f.ExamItemIds[index],
+                ItemId = f.ItemIds[index],
+                ItemVersionId = f.ItemVersionIds[index],
+                SelectedLabel = label,
+                IsCorrect = correct,
+            };
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(name);
+        }
+    }
+
     // ---- fixture ---------------------------------------------------------------------------
 
     private sealed record Fixture(
@@ -231,7 +334,8 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
         IReadOnlyList<int> CorrectOptionIds,
         IReadOnlyList<int> WrongOptionIds,
         IReadOnlyList<int> ItemIds,
-        IReadOnlyList<int> ItemVersionIds);
+        IReadOnlyList<int> ItemVersionIds,
+        IReadOnlyList<int> ExamItemIds);
 
     /// <summary>
     /// One certificate, one paper with two questions, and TWO pool items bound to the same exam - so a
@@ -325,6 +429,7 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
 
         var itemIds = new List<int>();
         var versionIds = new List<int>();
+        var examItemIds = new List<int>();
         for (var i = 0; i < 2; i++)
         {
             var item = new Item
@@ -356,7 +461,7 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
             db.ItemVersions.Add(version);
             await db.SaveChangesAsync();
 
-            db.ExamItems.Add(new ExamItem
+            var binding = new ExamItem
             {
                 ExamId = exam.ExamId,
                 CertId = cert.CertId,
@@ -365,11 +470,13 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
                 ItemVersionId = version.ItemVersionId,
                 Modality = "reading",
                 DisplayOrder = i + 1,
-            });
+            };
+            db.ExamItems.Add(binding);
             await db.SaveChangesAsync();
 
             itemIds.Add(item.ItemId);
             versionIds.Add(version.ItemVersionId);
+            examItemIds.Add(binding.ExamItemId);
         }
 
         return new Fixture(
@@ -380,7 +487,8 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
             [q1Correct.OptionId, q2Correct.OptionId],
             [q1Wrong.OptionId, q2Wrong.OptionId],
             itemIds,
-            versionIds);
+            versionIds,
+            examItemIds);
     }
 
     private static async Task<int> SeedLearnerAsync(CompanionDbContext db, int certId, string tag)

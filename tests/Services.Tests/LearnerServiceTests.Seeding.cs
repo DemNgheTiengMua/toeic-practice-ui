@@ -195,33 +195,31 @@ public sealed partial class LearnerServiceTests
             END
             """);
 
-    /// <summary>A practice session whose answers carry a category, so the category accuracy view has
-    /// a row and the skill card has a weak topic to name.</summary>
-    private Task SeedSectionPracticeHistoryAsync(
-        int userId,
-        string certCode,
-        int sectionId,
-        int correctCount,
-        int totalCount,
-        string? categoryCode = null,
-        string? categoryName = null) =>
-        database.SqlAsync($"""
+    /// <summary>
+    /// A finished practice drill at one pool cell - <paramref name="topicCode"/> at
+    /// <paramref name="level"/> - with <paramref name="totalCount"/> graded answers of which
+    /// <paramref name="correctCount"/> are right. Returns the topic's stored name, so a test asserts on
+    /// the row it seeded rather than on a name another fixture may have chosen for the same code.
+    /// <para>
+    /// <b>#271: pool-shaped, because the accuracy axis is.</b> It used to author legacy <c>Questions</c>
+    /// rows carrying a <c>CategoryId</c>; the dashboard card now reads <c>vw_UserTopicAccuracy</c>,
+    /// which reaches a cell only through <c>Items</c>. A legacy answer would therefore render an empty
+    /// card - and the test would pass on an assertion about nothing.
+    /// </para>
+    /// </summary>
+    private async Task<string> SeedCellPracticeHistoryAsync(
+        int userId, string certCode, int sectionId, int correctCount, int totalCount, string topicCode, string level = "B1")
+    {
+        await database.SqlAsync($"""
             DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
-            DECLARE @skill INT = (SELECT SkillId FROM Sections WHERE SectionId = {sectionId});
             DECLARE @mod VARCHAR(10) = (SELECT Modality FROM Sections WHERE SectionId = {sectionId});
-            DECLARE @exam INT = (SELECT TOP 1 ExamId FROM Exams WHERE CertId = @cert AND Purpose = 'mock');
-            DECLARE @cat INT = NULL;
 
-            IF {(categoryCode is null ? "0 = 1" : "1 = 1")}
-            BEGIN
-              IF NOT EXISTS (SELECT 1 FROM QuestionCategories WHERE CertId = @cert AND Code = '{categoryCode}')
-                INSERT INTO QuestionCategories (CertId, Code, Name) VALUES (@cert, '{categoryCode}', N'{categoryName ?? categoryCode}');
-              SELECT @cat = CategoryId FROM QuestionCategories WHERE CertId = @cert AND Code = '{categoryCode}';
-            END
+            -- The vocabulary is a closed twenty. A code this database has not seen yet needs its row;
+            -- trg_Topics_ClosedVocabulary is what keeps an invented one out.
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = @mod AND Code = '{topicCode}')
+              INSERT INTO Topics (Modality, Code, Name) VALUES (@mod, '{topicCode}', N'{topicCode}');
 
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
-            VALUES (@exam, @cert, {sectionId}, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
+            DECLARE @topic INT = (SELECT TopicId FROM Topics WHERE Modality = @mod AND Code = '{topicCode}');
 
             INSERT INTO PracticeSessions (UserId, CertId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
             VALUES ({userId}, @cert, {sectionId}, @mod, {totalCount}, 'finished', {correctCount},
@@ -231,21 +229,25 @@ public sealed partial class LearnerServiceTests
             DECLARE @i INT = 1;
             WHILE @i <= {totalCount}
             BEGIN
-              INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, CategoryId, DisplayOrder)
-              VALUES (@grp, @exam, {sectionId}, @skill, CONCAT(N'Stem ', @i), 'B1', 'mcq', @cat, @i);
-              DECLARE @q INT = SCOPE_IDENTITY();
+              INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, RenderFormat)
+              VALUES (@mod, @topic, '{level}',
+                      CASE WHEN @mod = 'reading' THEN 'sentence_cloze' ELSE 'short_exchange' END,
+                      'demo', 'active', 'mcq');
+              DECLARE @item INT = SCOPE_IDENTITY();
 
-              INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-                (@q, 'mcq', 'A', N'Right', 1),
-                (@q, 'mcq', 'B', N'Wrong', 0);
+              INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, KeyLabel)
+              VALUES (@item, 1, CONCAT(N'Stem ', @i), N'Right', N'Wrong', 'A');
+              DECLARE @ver INT = SCOPE_IDENTITY();
 
               DECLARE @isCorr BIT = CASE WHEN @i <= {correctCount} THEN 1 ELSE 0 END;
-              DECLARE @opt INT = (SELECT OptionId FROM QuestionOptions WHERE QuestionId = @q AND IsCorrect = @isCorr);
-
-              INSERT INTO PracticeAnswers (SessionId, QuestionId, SectionId, SelectedOptionId, IsCorrect, DisplayOrder)
-              VALUES (@sess, @q, {sectionId}, @opt, @isCorr, @i);
+              INSERT INTO PracticeAnswers (SessionId, ItemId, ItemVersionId, SelectedLabel, IsCorrect, DisplayOrder)
+              VALUES (@sess, @item, @ver, CASE WHEN @isCorr = 1 THEN 'A' ELSE 'B' END, @isCorr, @i);
 
               SET @i = @i + 1;
             END
             """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        return await db.Topics.Where(t => t.Code == topicCode).Select(t => t.Name).SingleAsync();
+    }
 }

@@ -16,10 +16,10 @@ public sealed class FakeAiInsightGeneratorTests
 
         var questions = new List<InsightQuestionDetail>
         {
-            new(1, "Question 1", 10, "Incomplete Sentences", 101, "Prepositions", 1, "A", "A", true, false, "Preposition rule"),
-            new(2, "Question 2", 10, "Incomplete Sentences", 101, "Prepositions", 2, "B", "A", false, false, "Preposition rule"),
-            new(3, "Question 3", 10, "Incomplete Sentences", 102, "Conjunctions", 3, "A", "A", true, true, "Conjunction hint used"),
-            new(4, "Question 4", 10, "Incomplete Sentences", 103, "Verb Tense", 4, "B", "B", true, false, "Verb tense rule"),
+            new(1, "Question 1", 10, "Incomplete Sentences", 101, "Prepositions", CefrLevel.B1, 1, "A", "A", true, false, "Preposition rule"),
+            new(2, "Question 2", 10, "Incomplete Sentences", 101, "Prepositions", CefrLevel.B1, 2, "B", "A", false, false, "Preposition rule"),
+            new(3, "Question 3", 10, "Incomplete Sentences", 102, "Conjunctions", CefrLevel.B1, 3, "A", "A", true, true, "Conjunction hint used"),
+            new(4, "Question 4", 10, "Incomplete Sentences", 103, "Verb Tense", CefrLevel.B1, 4, "B", "B", true, false, "Verb tense rule"),
         };
 
         var sectionAccuracies = new List<InsightSectionAccuracy>
@@ -27,11 +27,11 @@ public sealed class FakeAiInsightGeneratorTests
             new(10, "P5", "Incomplete Sentences", 20, 10, 50)
         };
 
-        var categoryAccuracies = new List<InsightCategoryAccuracy>
+        var topicAccuracies = new List<InsightTopicAccuracy>
         {
-            new(101, "PREP", "Prepositions", 10, 3, 30), // historically weak
-            new(102, "CONJ", "Conjunctions", 10, 6, 60),
-            new(103, "TENSE", "Verb Tense", 10, 8, 80)
+            new(101, "R-GRAM", "Prepositions", "B1", 10, 3, 30), // historically weak
+            new(102, "R-COH", "Conjunctions", "B1", 10, 6, 60),
+            new(103, "R-DET", "Verb Tense", "B1", 10, 8, 80)
         };
 
         var request = new AiInsightGenerationRequest(
@@ -53,7 +53,7 @@ public sealed class FakeAiInsightGeneratorTests
             CurrentBandCode: null,
             Questions: questions,
             SectionAccuracies: sectionAccuracies,
-            CategoryAccuracies: categoryAccuracies);
+            TopicAccuracies: topicAccuracies);
 
         var result = await generator.GenerateInsightAsync(request);
 
@@ -103,7 +103,7 @@ public sealed class FakeAiInsightGeneratorTests
             CurrentBandCode: null,
             Questions: Array.Empty<InsightQuestionDetail>(),
             SectionAccuracies: sectionAccuracies,
-            CategoryAccuracies: Array.Empty<InsightCategoryAccuracy>());
+            TopicAccuracies: Array.Empty<InsightTopicAccuracy>());
 
         var result = await generator.GenerateInsightAsync(request);
 
@@ -118,7 +118,7 @@ public sealed class FakeAiInsightGeneratorTests
 
         var questions = new List<InsightQuestionDetail>
         {
-            new(1, "Question stem with [simulate_fail] marker", 10, "P5", null, null, 1, "A", "A", true, false, null)
+            new(1, "Question stem with [simulate_fail] marker", 10, "P5", null, null, null, 1, "A", "A", true, false, null)
         };
 
         var requestAttempt1 = new AiInsightGenerationRequest(
@@ -140,7 +140,7 @@ public sealed class FakeAiInsightGeneratorTests
             CurrentBandCode: null,
             Questions: questions,
             SectionAccuracies: Array.Empty<InsightSectionAccuracy>(),
-            CategoryAccuracies: Array.Empty<InsightCategoryAccuracy>(),
+            TopicAccuracies: Array.Empty<InsightTopicAccuracy>(),
             AttemptCount: 1);
 
         var resultAttempt1 = await generator.GenerateInsightAsync(requestAttempt1);
@@ -182,7 +182,7 @@ public sealed class FakeAiInsightGeneratorTests
             CurrentBandCode: null,
             Questions: Array.Empty<InsightQuestionDetail>(),
             SectionAccuracies: Array.Empty<InsightSectionAccuracy>(),
-            CategoryAccuracies: Array.Empty<InsightCategoryAccuracy>(),
+            TopicAccuracies: Array.Empty<InsightTopicAccuracy>(),
             AttemptCount: 1);
 
         var result = await generator.GenerateInsightAsync(request);
@@ -202,9 +202,9 @@ public sealed class FakeAiInsightGeneratorTests
             new(2, "P5", "Incomplete Sentences", 20, 10, 50)
         };
 
-        var categories = new List<InsightCategoryAccuracy>
+        var topics = new List<InsightTopicAccuracy>
         {
-            new(101, "PREP", "Prepositions", 10, 4, 40)
+            new(101, "R-GRAM", "Prepositions", "B1", 10, 4, 40)
         };
 
         var request = new AiInsightGenerationRequest(
@@ -226,7 +226,7 @@ public sealed class FakeAiInsightGeneratorTests
             CurrentBandCode: "B2",
             Questions: Array.Empty<InsightQuestionDetail>(),
             SectionAccuracies: sections,
-            CategoryAccuracies: categories,
+            TopicAccuracies: topics,
             PreviousInsight: null);
 
         var result = await generator.GenerateInsightAsync(request);
@@ -278,7 +278,7 @@ public sealed class FakeAiInsightGeneratorTests
             CurrentBandCode: "B2",
             Questions: Array.Empty<InsightQuestionDetail>(),
             SectionAccuracies: sections,
-            CategoryAccuracies: Array.Empty<InsightCategoryAccuracy>(),
+            TopicAccuracies: Array.Empty<InsightTopicAccuracy>(),
             PreviousInsight: previousInsight);
 
         var result = await generator.GenerateInsightAsync(request);
@@ -325,7 +325,7 @@ public sealed class FakeAiInsightGeneratorTests
             CurrentBandCode: "B1",
             Questions: Array.Empty<InsightQuestionDetail>(),
             SectionAccuracies: sections,
-            CategoryAccuracies: Array.Empty<InsightCategoryAccuracy>(),
+            TopicAccuracies: Array.Empty<InsightTopicAccuracy>(),
             PreviousInsight: previousInsight);
 
         var result = await generator.GenerateInsightAsync(request);

@@ -1441,7 +1441,8 @@ GO
 -- 11. Practice Sessions & Weakness Analysis
 -- ============================================================================
 -- Completed standalone practice sessions across multiple sections (P1, P2, P5)
--- with real questions and answers so vw_UserSectionAccuracyAll and vw_UserCategoryAccuracy populate.
+-- with real questions and answers so vw_UserSectionAccuracyAll populates, and pool stock so
+-- vw_UserTopicAccuracy does (#271: a legacy answer has no topic cell).
 
 DECLARE @learner INT = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local');
 DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');

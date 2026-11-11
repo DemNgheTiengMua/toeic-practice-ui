@@ -270,7 +270,7 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
                 Demo, HasData: true, GradedExamCount: 1, CompletedPracticeCount: 2, TotalAnswered: 20,
                 TotalCorrect: 10, OverallAccuracyPercentage: 50,
                 Sections: [new SectionAccuracyDto(1, "C1", "First passage", 20, 10, 50, IsWeakest: true, IsStrongest: false)],
-                FrequentlyMissedCategories: [], Recommendations: [],
+                FrequentlyMissedTopics: [], Recommendations: [],
                 PriorityPracticeSection: new SectionAccuracyDto(1, "C1", "First passage", 20, 10, 50, true, false),
                 Topics:
                 [

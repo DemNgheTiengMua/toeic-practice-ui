@@ -67,7 +67,7 @@ public sealed class InsightNarrativeGuardTests
         CurrentBandCode: "B2",
         Questions: Array.Empty<InsightQuestionDetail>(),
         SectionAccuracies: [new(5, "P5", "Incomplete Sentences", 20, 13, 65)],
-        CategoryAccuracies: [new(9, "TENSE", "Verb tense", 10, 6, 60)],
+        TopicAccuracies: [new(9, "R-GRAM", "Verb tense", "B1", 10, 6, 60)],
         Facts: facts ?? Facts());
 
     // =============================================================================================

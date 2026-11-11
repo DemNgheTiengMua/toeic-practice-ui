@@ -85,23 +85,24 @@ public sealed partial class LearnerServiceTests
     }
 
     [Fact]
-    public async Task A_skill_card_carries_the_latest_graded_score_and_its_three_weakest_categories()
+    public async Task A_skill_card_carries_the_latest_graded_score_and_its_three_weakest_topics()
     {
         var code = Unique("S");
         var (_, skillId, sectionId) = await SeedCertWithNamedSkillsAsync(code, ("READ", "Reading", "reading"));
         var userId = await SeedLearnerAsync(code);
 
-        // Five categories answered to five different accuracies. The view unions practice answers,
-        // so the card's accuracy comes from the same rows the weakness page reads.
-        foreach (var (catCode, catName, correct) in new[]
+        // Five pool cells answered to five different accuracies. The card reads
+        // vw_UserTopicAccuracy, the same view the weakness page ranks, so the two cannot disagree.
+        // #271: the cells are topics at a level, not categories - the axis the pool actually has.
+        var expectedWeakest = new List<string>();
+        foreach (var (topicCode, weight, correct) in new[]
         {
-            ("C1", "Weak one", 1), ("C2", "Weak two", 2), ("C3", "Weak three", 3),
-            ("C4", "Weak four", 4), ("C5", "Strong", 10),
+            ("R-GIST", 1, 1), ("R-INF", 2, 2), ("R-ATT", 3, 3), ("R-COH", 4, 4), ("R-DET", 5, 10),
         })
         {
-            await SeedSectionPracticeHistoryAsync(userId, code, sectionId,
-                correctCount: correct, totalCount: 10,
-                categoryCode: catCode, categoryName: catName);
+            expectedWeakest.Add(await SeedCellPracticeHistoryAsync(userId, code, sectionId,
+                correctCount: correct, totalCount: 10, topicCode: topicCode));
+            _ = weight;
         }
 
         // One graded score for the skill itself, from a real graded attempt. The trigger requires the
@@ -122,9 +123,11 @@ public sealed partial class LearnerServiceTests
         Assert.Equal(350, card.LatestScaledScore);
         Assert.Equal(500, card.MaxScaledScore);
         // Three at most, lowest accuracy first - the same ordering the weakness page uses.
-        Assert.Equal(new[] { "Weak one", "Weak two", "Weak three" }, card.WeakestCategories.Select(c => c.Name));
-        Assert.Equal(new[] { 10, 20, 30 }, card.WeakestCategories.Select(c => c.AccuracyPercent));
-        Assert.All(card.WeakestCategories, c => Assert.Equal(10, c.Answered));
+        Assert.Equal(expectedWeakest.Take(3), card.WeakestTopics.Select(c => c.Name));
+        Assert.Equal(new[] { 10, 20, 30 }, card.WeakestTopics.Select(c => c.AccuracyPercent));
+        Assert.All(card.WeakestTopics, c => Assert.Equal(10, c.Answered));
+        // #271: a card names the cell, so the level travels with the topic.
+        Assert.All(card.WeakestTopics, c => Assert.Equal("B1", c.LevelCode));
     }
 
     [Fact]
@@ -210,13 +213,13 @@ public sealed partial class LearnerServiceTests
         var userId = await SeedLearnerAsync(code);
         await SeedCompletedPlacementAsync(userId, code, 120, "LOW", "2026-09-01T10:00:00+07:00");
         await SeedSetTargetBandAsync(userId, code, "HIGH");
-        await SeedSectionPracticeHistoryAsync(userId, code, sectionId, correctCount: 3, totalCount: 10,
-            categoryCode: "TENSE", categoryName: "Verb tense");
+        var topicName = await SeedCellPracticeHistoryAsync(userId, code, sectionId,
+            correctCount: 3, totalCount: 10, topicCode: "R-GRAM");
 
         var dashboard = await CreateService().GetDashboardAsync(userId);
 
         Assert.Equal("/practice", dashboard.NextAction.ActionUrl);
-        Assert.Contains("Verb tense", dashboard.NextAction.Title);
+        Assert.Contains(topicName, dashboard.NextAction.Title);
         Assert.Equal("danger", dashboard.NextAction.Severity);
     }
 

@@ -242,7 +242,7 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
 
             await using (var cmd = conn.CreateCommand())
             {
-                cmd.CommandText = @"SELECT COUNT(*) FROM vw_UserCategoryAccuracy
+                cmd.CommandText = @"SELECT COUNT(*) FROM vw_UserTopicAccuracy
                                     WHERE UserId = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local')";
                 Assert.True(Convert.ToInt32(await cmd.ExecuteScalarAsync()) >= 0);
             }

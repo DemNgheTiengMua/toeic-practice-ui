@@ -56,7 +56,7 @@ public sealed class DashboardControllerTests
         [
             new SkillCardDto(1, "LIST", "Listening", ModalityDto.Listening, 380, 495, []),
             new SkillCardDto(2, "READ", "Reading", ModalityDto.Reading, 370, 495,
-                [new SkillCategoryDto("P5", "Incomplete Sentences", 58, 12)])
+                [new SkillCategoryDto("R-DET", "Local detail", 58, 12, "B1")])
         ],
         AttemptCount: 3,
         PracticeCount: 5);

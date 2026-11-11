@@ -138,6 +138,9 @@ public sealed class PoolItemEndpointTests
         public Task<AdminQuestionGroupDto> CreateQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<AdminQuestionGroupDto> UpdateQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeleteQuestionGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+  // #273: the Studio's pool-native group write surface. Not exercised here.
+  public Task UpdateExamStudioGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+  public Task DeleteExamStudioGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<AdminQuestionDto> CreateQuestionAsync(int examId, CreateQuestionRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<AdminQuestionDto> UpdateQuestionAsync(int questionId, UpdateQuestionRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeleteQuestionAsync(int questionId, CancellationToken cancellationToken = default) => throw new NotSupportedException();

@@ -1101,43 +1101,98 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         }
     }
     [Fact]
-    public async Task ExtractErrorFingerprints_PrioritizesFlaggedErrors_AndLowestCategoryAccuracy()
+    public async Task ExtractErrorFingerprints_PrioritizesFlaggedErrors_AndLowestTopicCellAccuracy()
     {
         var certCode = Unique("INSERR");
         var userId = await SeedLearnerAsync(certCode);
         var (service, _) = CreateService();
 
-        // #269: NOT migrated, and the reason is production code rather than this fixture. The only
-        // call site of ExtractErrorFingerprints passes QuestionOption rows because the method's own
-        // signature takes them; the pool branch inside it reads the pinned version. Nothing here
-        // touches the database. It stays legacy until that parameter moves; #269 deletes it with the table.
-        var q1 = new Question { QuestionId = 1, Stem = "Question 1 stem", CategoryId = 10, Explanation = "Exp 1" };
-        var q2 = new Question { QuestionId = 2, Stem = "Question 2 stem", CategoryId = 20, Explanation = "Exp 2" };
+        // #271: the ranking is by the learner's weakest TOPIC CELL, and an answer joins its cell
+        // through the item version it pins - the same join vw_UserTopicAccuracy makes. So the fixture
+        // is a pool fixture: two items at two topics, each with its own cell, one weak and one strong.
+        // <b>The wrong input this catches:</b> a ranker that matched on topic alone (both answers would
+        // land in one bucket) or one that still read Question.CategoryId, which no longer exists as an
+        // axis - either way the strong answer would be chosen first.
+        var weakItem = new Item { ItemId = 1, Modality = "reading", TopicId = 20, CefrLevel = CefrLevel.B2, ItemType = "sentence_cloze", RenderFormat = "mcq", ContentTier = "demo", LifecycleStatus = "active" };
+        var strongItem = new Item { ItemId = 2, Modality = "reading", TopicId = 10, CefrLevel = CefrLevel.B1, ItemType = "sentence_cloze", RenderFormat = "mcq", ContentTier = "demo", LifecycleStatus = "active" };
 
-        var opt1 = new QuestionOption { OptionId = 101, QuestionId = 1, Text = "Opt 1 Wrong", IsCorrect = false };
-        var opt1Correct = new QuestionOption { OptionId = 102, QuestionId = 1, Text = "Opt 1 Correct", IsCorrect = true };
-        var opt2 = new QuestionOption { OptionId = 201, QuestionId = 2, Text = "Opt 2 Wrong", IsCorrect = false };
-        var opt2Correct = new QuestionOption { OptionId = 202, QuestionId = 2, Text = "Opt 2 Correct", IsCorrect = true };
+        var weakVersion = new ItemVersion { ItemVersionId = 201, ItemId = 1, VersionNumber = 1, Stem = "Question 1 stem", OptionA = "Opt 1 Wrong", OptionB = "Opt 1 Correct", KeyLabel = "B", Explanation = "Exp 1", Item = weakItem };
+        var strongVersion = new ItemVersion { ItemVersionId = 202, ItemId = 2, VersionNumber = 1, Stem = "Question 2 stem", OptionA = "Opt 2 Wrong", OptionB = "Opt 2 Correct", KeyLabel = "B", Explanation = "Exp 2", Item = strongItem };
 
         var answers = new List<AttemptAnswer>
         {
-            new AttemptAnswer { QuestionId = 1, SelectedOptionId = 101, IsCorrect = false, IsFlagged = true, Question = q1 },
-            new AttemptAnswer { QuestionId = 2, SelectedOptionId = 201, IsCorrect = false, IsFlagged = false, Question = q2 }
+            new AttemptAnswer { ItemId = 1, ItemVersionId = 201, SelectedLabel = "A", IsCorrect = false, IsFlagged = true, ItemVersion = weakVersion },
+            new AttemptAnswer { ItemId = 2, ItemVersionId = 202, SelectedLabel = "A", IsCorrect = false, IsFlagged = false, ItemVersion = strongVersion }
         };
 
-        var allOptions = new List<QuestionOption> { opt1, opt1Correct, opt2, opt2Correct };
-        var catAccuracyRows = new List<vw_UserCategoryAccuracy>
+        // The strong cell (B1) is listed first and the weak one (B2) second only by insertion; the
+        // order the method reads is its own ordering by accuracy, not the payload's.
+        var topicAccuracies = new List<InsightTopicAccuracy>
         {
-            new vw_UserCategoryAccuracy { UserId = userId, CategoryId = 20, Answered = 10, Correct = 2 },
-            new vw_UserCategoryAccuracy { UserId = userId, CategoryId = 10, Answered = 10, Correct = 8 }
+            new(10, "R-DET", "Local detail", "B1", 10, 8, 80),
+            new(20, "R-INF", "Bridging inference", "B2", 10, 2, 20)
         };
 
-        var fingerprints = service.ExtractErrorFingerprints(answers, allOptions, catAccuracyRows);
+        var fingerprints = service.ExtractErrorFingerprints(answers, Array.Empty<QuestionOption>(), topicAccuracies);
         Assert.Equal(2, fingerprints.Count);
-        // Flagged error should be first
+
+        // Flagged error stays first even though its cell is not the weakest one.
         Assert.True(fingerprints[0].WasFlagged);
         Assert.Equal("Question 1 stem", fingerprints[0].Stem);
         Assert.Equal("Opt 1 Wrong", fingerprints[0].ChosenOptionText);
         Assert.Equal("Opt 1 Correct", fingerprints[0].CorrectOptionText);
+        // The cell the fingerprint names is the topic at its level, not a retired category label.
+        Assert.Equal("Bridging inference at B2", fingerprints[0].TopicName);
+        Assert.Equal("Local detail at B1", fingerprints[1].TopicName);
+    }
+
+    /// <summary>
+    /// <b>The wrong input this catches:</b> a ranker that throws or silently drops an answer when the
+    /// answer has no cell. A legacy answer pins no version, so it belongs to no accuracy row - it must
+    /// rank last, not crash the insight and not be attributed to whichever topic happens to be first.
+    /// </summary>
+    [Fact]
+    public async Task ExtractErrorFingerprints_ranks_an_answer_with_no_cell_last_without_throwing()
+    {
+        var certCode = Unique("INSERR2");
+        await SeedLearnerAsync(certCode);
+        var (service, _) = CreateService();
+
+        var q1 = new Question { QuestionId = 1, Stem = "Legacy stem", Explanation = "Exp" };
+        var answers = new List<AttemptAnswer>
+        {
+            // Legacy answer: no ItemVersion, so no cell.
+            new AttemptAnswer { QuestionId = 1, SelectedOptionId = 101, IsCorrect = false, IsFlagged = false, Question = q1 },
+            new AttemptAnswer
+            {
+                ItemId = 2,
+                ItemVersionId = 202,
+                SelectedLabel = "A",
+                IsCorrect = false,
+                IsFlagged = false,
+                ItemVersion = new ItemVersion
+                {
+                    ItemVersionId = 202, ItemId = 2, VersionNumber = 1, Stem = "Pool stem",
+                    OptionA = "Wrong", OptionB = "Right", KeyLabel = "B",
+                    Item = new Item { ItemId = 2, Modality = "reading", TopicId = 10, CefrLevel = CefrLevel.B1, ItemType = "sentence_cloze", RenderFormat = "mcq", ContentTier = "demo", LifecycleStatus = "active" },
+                },
+            },
+        };
+
+        var topicAccuracies = new List<InsightTopicAccuracy>
+        {
+            new(10, "R-DET", "Local detail", "B1", 10, 2, 20)
+        };
+
+        var fingerprints = service.ExtractErrorFingerprints(
+            answers, new List<QuestionOption> { new() { OptionId = 101, QuestionId = 1, Text = "Legacy wrong", IsCorrect = false } },
+            topicAccuracies);
+
+        Assert.Equal(2, fingerprints.Count);
+        Assert.Equal("Pool stem", fingerprints[0].Stem);
+        Assert.Equal("Local detail at B1", fingerprints[0].TopicName);
+        // The cell-less answer is kept, ranked after the one that has a cell.
+        Assert.Equal("Legacy stem", fingerprints[1].Stem);
+        Assert.Null(fingerprints[1].TopicName);
     }
 }

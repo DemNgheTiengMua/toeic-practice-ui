@@ -33,7 +33,7 @@ The backend is a .NET 10 solution (`ExtraEfficiency.slnx`) structured in six str
    - One certificate's content, scoring, or rubric can never leak into another.
 5. **Practice Session Retention & Logging Bound (`CONTEXT.md`, `PRODUCT.md`)**:
    - Practice drilling generates free diagnostic data (`PracticeSessions` and `PracticeAnswers`).
-   - To keep storage bounded in the long run while retaining enough data for AI mentor insights and weakness analysis (`vw_UserSectionAccuracyAll`, `vw_UserCategoryAccuracy`), standalone sessions are capped per certificate per learner (default: 20 sessions).
+   - To keep storage bounded in the long run while retaining enough data for AI mentor insights and weakness analysis (`vw_UserSectionAccuracyAll`, `vw_UserTopicAccuracy`), standalone sessions are capped per certificate per learner (default: 20 sessions).
    - Sessions exceeding the limit, along with their answer logs, hint records, and attached insights/recommendations, are automatically pruned FIFO.
    - Learning-path practice sessions (`LearnerPathStepId IS NOT NULL`) are never pruned.
    - Unanswered in-progress sessions are cleaned up immediately when starting a new session; partially answered ones are marked `abandoned`.
@@ -184,7 +184,7 @@ Always use the domain terms defined in `CONTEXT.md`. Never use the terms marked 
 - **Credit**, **Ledger**, **Order**, **Gateway**, **Payment event**
 - **Grading** (AI scoring of a free response against rubric criteria)
 - **Insight** (AI narrative over learner accuracy history)
-- **Weakness analysis** (Deterministic SQL views: `vw_UserSectionAccuracyAll`, `vw_UserCategoryAccuracy`)
+- **Weakness analysis** (Deterministic SQL views: `vw_UserSectionAccuracyAll`, `vw_UserTopicAccuracy`)
 
 ---
 

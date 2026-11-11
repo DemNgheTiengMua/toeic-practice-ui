@@ -289,51 +289,54 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     // CK_Practice_Modality allowed listening/reading only and PracticeService refused the rest.
     // Speaking is deliberately excluded (round 2): a spoken answer cannot be typed.
     //
-    // #269: NOT migrated. The pool grades a productive answer by recording it UNGRADED
-    // (SubmitAnswerAsync's pinned branch sets IsCorrect = null and returns version.Explanation
-    // verbatim), so neither the "at least 5 words" / "Missing required keywords" feedback this test
-    // asserts nor a true/false verdict exists on the pool path.
+    // #269: migrated as "the drill serves the task and records the answer", not "...and grades it".
+    // The pool stores a productive answer UNGRADED (SubmitAnswerAsync's pinned branch fixes
+    // IsCorrect = null and returns version.Explanation verbatim), so #150's sentence-level feedback
+    // ("at least 5 words", "Missing required keywords") has no pool caller and is not asserted here.
+    // What a writing drill must still do - start on a fresh certificate, serve a free-response task,
+    // and keep the words the learner typed - is what remains, and it is unweakened.
     [Theory]
     [InlineData("writing")]
-    public async Task StartSession_drills_a_free_response_section_and_grades_the_answer(string modality)
+    public async Task StartSession_drills_a_free_response_section_and_records_the_answer(string modality)
     {
         var certCode = Unique("FR");
-        var (sectionId, questionId) = await SeedFreeResponseCertificateAsync(certCode, modality);
+        var pooled = await SeedPoolFreeResponseCertificateAsync(certCode, modality);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
         Assert.Equal(EnumCodes.Parse<Modality>(modality), session.Modality);
 
         var question = await practice.GetQuestionAsync(userId, session.SessionId, 1);
-        Assert.Equal(questionId, question.QuestionId);
+        Assert.Equal(pooled.VersionId, question.ItemVersionId);
         Assert.Equal("free_response", question.QuestionType);
 
-        // Too short and missing the required keyword: immediate feedback says both.
-        var tooShort = await practice.SubmitAnswerAsync(
-            userId, session.SessionId, questionId, new SubmitPracticeAnswerInput(ResponseText: "Too short."));
-        Assert.False(tooShort.IsCorrect);
-        Assert.Contains("at least 5 words", tooShort.Explanation);
-        Assert.Contains("Missing required keywords", tooShort.Explanation);
-        Assert.True(tooShort.IsSessionFinished);
+        var recorded = await practice.SubmitAnswerAsync(
+            userId, session.SessionId, pooled.VersionId, new SubmitPracticeAnswerInput(ResponseText: "Too short."));
+        Assert.Null(recorded.IsCorrect); // recorded, not judged
+        Assert.Equal("Too short.", recorded.ResponseText);
+        Assert.True(recorded.IsSessionFinished);
     }
 
-    // #269: NOT migrated, same reason as above - a pool productive answer is never graded true.
+    // #269: migrated as a RECORDED answer rather than a graded one. The brief's rule: a pool
+    // productive answer is stored UNGRADED (IsCorrect null) forever, so the claim that survives is
+    // "the response is recorded, and half of this test's own point is that no verdict is produced".
+    // #150's evaluated feedback (word floor, required keywords) exists only on the legacy branch.
     [Theory]
     [InlineData("writing")]
-    public async Task StartSession_grades_a_free_response_answer_that_meets_the_question_requirements(string modality)
+    public async Task StartSession_records_a_free_response_answer_that_meets_the_question_requirements(string modality)
     {
         var certCode = Unique("FR");
-        var (sectionId, questionId) = await SeedFreeResponseCertificateAsync(certCode, modality);
+        var pooled = await SeedPoolFreeResponseCertificateAsync(certCode, modality);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
         var result = await practice.SubmitAnswerAsync(
-            userId, session.SessionId, questionId,
+            userId, session.SessionId, pooled.VersionId,
             new SubmitPracticeAnswerInput(ResponseText: "The team discussed the proposal yesterday."));
 
-        Assert.True(result.IsCorrect);
+        Assert.Null(result.IsCorrect); // recorded, not judged - a pool productive answer is never graded
         Assert.Equal("The team discussed the proposal yesterday.", result.ResponseText);
     }
 
@@ -357,8 +360,12 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     // #150 round 2: the evaluated feedback is the whole point of a drill. It has to survive a
     // refresh, not only the one AJAX reply that first produced it.
     //
-    // #269: NOT migrated - the pool path stores no evaluated feedback for a productive answer; it
-    // returns the version's authored explanation unchanged.
+    // #269: NOT migrated, and this one is not a production gap - the subject itself is legacy. The
+    // assertions are on #150's EVALUATED feedback (the word floor and the missing keywords computed
+    // from the response). A pool productive answer is stored ungraded, so no evaluation runs and the
+    // submit reply carries only the version's authored Explanation, which a fixture authors as null
+    // (measured: `submitted.Explanation` is null on a pool writing drill). Asserting the authored copy
+    // round-trips would be a different, weaker test of a different fact, so it is not substituted.
     [Theory]
     [InlineData("writing")]
     public async Task Free_response_feedback_survives_a_reload_of_the_question_and_the_summary(string modality)
@@ -639,9 +646,11 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Null(q1.CorrectOptionId); // Cannot leak answer
     }
 
-    // #269: NOT migrated. RevealHintAsync resolves the answer by `PracticeAnswer.QuestionId`, which is
-    // NULL on every pool answer, and the projection reads the hint off the legacy question row - so a
-    // pool drill can neither record a hint nor render one.
+    // #269: NOT migrated. Half of it is now pool-reachable and half is not, measured on the pool:
+    // RevealHintAsync resolves the row by ItemVersionId and returns the pinned version's hint, but
+    // PracticeService.Questions.cs:217 renders `answer.HintUsed ? q?.Hint : null` - and a pool answer
+    // has no Question row, so `q` is null and the reloaded question shows HintUsed = true beside a
+    // null Hint. The drill records the hint and cannot display it.
     [Fact]
     public async Task RevealHint_records_hint_used_on_practice_answer()
     {
@@ -723,6 +732,14 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     // even though the stimulus carries the slice, so the four audio assertions below have no pool
     // answer today. The accuracy arithmetic below it is pool-reachable; this is one production
     // omission, not two tests.
+    // #269: NOT migrated. Measured on the pool, and only the AUDIO assertions block it:
+    // src/Services/Practice/PracticeService.Results.cs:86-87 hard-codes
+    // `AudioStartMs: null, AudioEndMs: null` on the pinned branch even though the stimulus carries the
+    // slice (Stimuli.AudioStartMs/AudioEndMs), so three of the four audio assertions below have no pool
+    // answer. The accuracy arithmetic, the hint counts and the per-question verdicts are all
+    // pool-reachable; the audio slice is one production omission in the summary's projection, not four
+    // tests. HintUsed/CORRECT_WITH_HINT are withheld here too because the reloaded question cannot
+    // render a pool hint (PracticeService.Questions.cs:217 reads it off `q`, null for a pool answer).
     [Fact]
     public async Task GetSummary_computes_per_question_outcome_and_skip_accuracy_math()
     {
@@ -998,8 +1015,10 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     }
 
     // #269: NOT migrated. SubmitAnswerAsync grades a pinned version only from a single
-    // SelectedOptionId; an id list leaves IsCorrect null, and CorrectOptionIds carries one key label,
-    // so the incomplete-set and full-set verdicts this test asserts do not exist on the pool path.
+    // SelectedOptionId (PracticeService.Answers.cs:125-139): an id LIST is stored in
+    // SelectedOptionIdsJson but leaves IsCorrect null, and GradedPracticeAnswerResult.CorrectOptionIds
+    // (PracticeService.Answers.cs:349-351) carries the one first key label rather than the set. So
+    // the partial-set and full-set verdicts this test asserts do not exist on the pool path.
     [Fact]
     public async Task SubmitAnswer_evaluates_multi_select_accurately()
     {
@@ -1106,8 +1125,11 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.True(correctResult.IsSessionFinished);
     }
 
-    // #269: NOT migrated. A pinned version is graded only from SelectedOptionId, so an inline answer's
-    // text is recorded with IsCorrect = null and the accepted-answer set is nulled in the projection.
+    // #269: NOT migrated. A pinned version is graded only from SelectedOptionId
+    // (PracticeService.Answers.cs:125-139), so an inline answer's text is stored with
+    // IsCorrect = null; the accepted-answer set this test asserts comes from
+    // `q?.AcceptedAnswersJson` (PracticeService.Answers.cs:348), which is null on a pool answer, and
+    // the projection nulls it too (PracticeService.Questions.cs:172).
     [Fact]
     public async Task SubmitAnswer_evaluates_inline_completion_accurately()
     {
@@ -1196,9 +1218,11 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.True(res2.IsSessionFinished);
     }
 
-    // #269: NOT migrated. A pool position's type is read from its shape, and the projection nulls the
-    // answer-shape fields (accepted answers, allow-number, max words) on the pinned branch, so the
-    // component metadata this test asserts is not what the pool drill renders.
+    // #269: NOT migrated. A pool position's type is read from its shape
+    // (PracticeService.Questions.cs:169), and the pinned branch nulls the answer-shape fields -
+    // acceptedAnswersJson, requiredKeywords, minWords, maxWords at PracticeService.Questions.cs:172-175,
+    // maxSelections at :170 - so the component metadata this test asserts is not what a pool drill
+    // renders. (allowNumber is passed through at :171, which is why only the other four are listed.)
     [Fact]
     public async Task GetSessionTakeAsync_returns_component_metadata()
     {

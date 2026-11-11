@@ -602,12 +602,12 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
-    public async Task DeleteStudioGroup_CallsApi_ReturnsSuccess()
+    public async Task RemoveStudioGroup_CallsApi_ReturnsSuccess()
     {
         var api = new TestApiClient();
         var controller = CreateController(api);
 
-        var result = await controller.DeleteStudioGroup(5, 1, CancellationToken.None);
+        var result = await controller.RemoveStudioGroup(5, 1, CancellationToken.None);
 
         var json = Assert.IsType<JsonResult>(result);
         Assert.NotNull(json.Value);
@@ -938,7 +938,7 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
-    public async Task AutosaveGroup_WhenSuccessful_ReturnsJsonUpdatedDto()
+    public async Task SaveStudioGroup_WhenSuccessful_ReturnsJsonSuccess()
     {
         var api = new TestApiClient();
         var controller = CreateController(api);
@@ -947,11 +947,11 @@ public sealed class AdminExamsControllerTests
             Passage: "New passage",
             UnitNumber: 2);
 
-        var result = await controller.AutosaveGroup(17, 76, request, CancellationToken.None);
+        var result = await controller.SaveStudioGroup(17, 76, request, CancellationToken.None);
 
         var jsonResult = Assert.IsType<JsonResult>(result);
-        Assert.NotNull(api.UpdatedQuestionGroupRequest);
-        Assert.Equal(2, api.UpdatedQuestionGroupRequest.UnitNumber);
+        Assert.NotNull(api.LastStudioGroupUpdate);
+        Assert.Equal(2, api.LastStudioGroupUpdate!.Value.Request.UnitNumber);
     }
 
     internal sealed class EmptyTempDataProvider : ITempDataProvider
@@ -1046,6 +1046,24 @@ public sealed class AdminExamsControllerTests
 
         public Task DeleteAdminQuestionGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+
+        // #273: the Studio's group write surface. The legacy group PUT/DELETE are gone; these are the
+        // pool-native pair the controller now calls.
+        public Task UpdateExamStudioGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default)
+        {
+            LastStudioGroupUpdate = (examId, groupId, request);
+            return Task.CompletedTask;
+        }
+
+        public (int ExamId, int GroupId, UpdateQuestionGroupRequest Request)? LastStudioGroupUpdate { get; private set; }
+
+        public Task DeleteExamStudioGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default)
+        {
+            LastStudioGroupDelete = (examId, groupId);
+            return Task.CompletedTask;
+        }
+
+        public (int ExamId, int GroupId)? LastStudioGroupDelete { get; private set; }
 
         public Task<AdminQuestionDto> CreateAdminQuestionAsync(int examId, CreateQuestionRequest request, CancellationToken cancellationToken = default)
         {

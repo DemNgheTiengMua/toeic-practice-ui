@@ -212,7 +212,7 @@ public sealed partial class LearnerServiceTests(DatabaseFixture database)
         // #159: a cold start has no graded score and no weak topic, so the cards say so instead of
         // inventing zeros.
         Assert.All(dashboard.Skills, s => Assert.Null(s.LatestScaledScore));
-        Assert.All(dashboard.Skills, s => Assert.Empty(s.WeakestCategories));
+        Assert.All(dashboard.Skills, s => Assert.Empty(s.WeakestTopics));
         Assert.Equal("/placement", dashboard.NextAction.ActionUrl);
     }
 

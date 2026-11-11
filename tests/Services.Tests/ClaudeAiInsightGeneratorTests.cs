@@ -9,7 +9,7 @@ public sealed class ClaudeAiInsightGeneratorTests
         7, 1, "TOEIC", AiInsightScope.PracticeSession, 42, null, "Reading practice session", 10, 5, 3,
         1, 1, "B2", "Vantage", null, null, [],
         [new(5, "P5", "Reading", 5, 3, 60)],
-        [new(9, "TENSE", "Verb tense", 5, 3, 60)]);
+        [new(9, "R-GRAM", "Verb tense", "B1", 5, 3, 60)]);
 
     [Theory]
     [InlineData("{\"narrative\":\"Review verb tense.\",\"trend\":\"Improving\",\"recommendations\":[{\"text\":\"Drill verb tense\",\"severity\":\"High\"}]}")]
@@ -27,7 +27,7 @@ public sealed class ClaudeAiInsightGeneratorTests
         Assert.Equal(RecommendationSeverity.Major, recommendation.Severity);
         Assert.Equal("B2", recommendation.TargetBandCode);
         Assert.Contains("3 correct out of 5 answered (60%) across 10 questions", client.Prompt);
-        Assert.Contains("Verb tense (TENSE): 3/5 (60%)", client.Prompt);
+        Assert.Contains("Verb tense (R-GRAM) at B1: 3/5 (60%)", client.Prompt);
         Assert.Contains("Reading (P5): 3/5 (60%)", client.Prompt);
         Assert.Contains("Target Band / Goal: B2 (Vantage)", client.Prompt);
         Assert.Equal(4000, client.MaxTokens);

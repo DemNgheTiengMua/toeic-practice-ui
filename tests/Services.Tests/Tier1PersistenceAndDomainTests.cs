@@ -81,7 +81,10 @@ public sealed class Tier1PersistenceAndDomainTests(DatabaseFixture database)
         Assert.Contains("ExamAttempts", schemaContent);
         Assert.Contains("CreditTransactions", schemaContent);
         Assert.Contains("vw_UserSectionAccuracyAll", schemaContent);
-        Assert.Contains("vw_UserCategoryAccuracy", schemaContent);
+        // #271: the category view is retired; the topic view is the axis every reader moved to. The
+        // comment that replaced the view names it, so assert on the DEFINITION rather than the string.
+        Assert.Contains("vw_UserTopicAccuracy", schemaContent);
+        Assert.DoesNotContain("CREATE VIEW vw_UserCategoryAccuracy", schemaContent);
     }
 
     [Fact]
@@ -93,7 +96,7 @@ public sealed class Tier1PersistenceAndDomainTests(DatabaseFixture database)
         Type[] keylessViewTypes =
         [
             typeof(vw_UserSectionAccuracyAll),
-            typeof(vw_UserCategoryAccuracy),
+            typeof(vw_UserTopicAccuracy),
             typeof(vw_UserCreditBalance)
         ];
 

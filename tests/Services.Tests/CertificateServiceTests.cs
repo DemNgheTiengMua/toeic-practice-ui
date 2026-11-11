@@ -197,6 +197,7 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // #235: vw_DailyPracticeVolume is the tenth - the daily ceiling, derived from answers (D12).
         // #243: vw_UserTopicAccuracy is the eleventh - accuracy per (topic, level), the axis D3
         // replaces the flat category aggregation with.
-        Assert.Equal(11, viewCount);
+        // #271: and it is the tenth view now, because the category aggregation it replaces is gone.
+        Assert.Equal(10, viewCount);
     }
 }
