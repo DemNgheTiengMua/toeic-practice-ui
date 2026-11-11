@@ -197,6 +197,15 @@ public sealed partial class AdminExamService
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// #269: a cluster - one bundle plus its children - authored on the pool.
+    /// <para>
+    /// The bundle is a <c>Stimulus</c> when it carries a passage, audio or an image, and nothing when it
+    /// does not; the children are items bound to consecutive positions. The stems, the default options
+    /// and the free-response rules are unchanged - they are the editor's behaviour, and every one of
+    /// them is asserted by an existing test.
+    /// </para>
+    /// </summary>
     public async Task<AdminQuestionGroupDto> CreateExamClusterAsync(int examId, CreateExamClusterRequest request, CancellationToken cancellationToken = default)
     {
         var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
@@ -211,43 +220,28 @@ public sealed partial class AdminExamService
             throw new AdminExamException(ApiError.Codes.Validation, $"Section with id {request.SectionId} not found for certificate {exam.CertId}.");
         }
 
-        var maxOrder = await db.QuestionGroups
-            .Where(g => g.ExamId == examId && g.SectionId == request.SectionId)
-            .Select(g => (int?)g.DisplayOrder)
-            .MaxAsync(cancellationToken) ?? 0;
-
-        var qMaxOrder = await db.Questions
-            .Where(q => q.ExamId == examId && q.SectionId == request.SectionId)
-            .Select(q => (int?)q.DisplayOrder)
-            .MaxAsync(cancellationToken) ?? 0;
-
         var isFreeResponse = section.Modality is "speaking" or "writing"
             || (section.AllowedComponentTypesJson != null && section.AllowedComponentTypesJson.Contains("free_response") && !section.AllowedComponentTypesJson.Contains("mcq"));
 
-        var group = new QuestionGroup
-        {
-            ExamId = examId,
-            CertId = exam.CertId,
-            SectionId = request.SectionId,
-            Passage = Normalize(request.Passage),
-            Transcript = Normalize(request.Transcript),
-            AudioPath = Normalize(request.AudioPath),
-            AudioStartMs = request.AudioStartMs,
-            AudioEndMs = request.AudioEndMs,
-            DisplayOrder = maxOrder + 1,
-            UnitNumber = request.UnitNumber > 0 ? request.UnitNumber : 1
-        };
+        var firstPosition = await NextPoolPositionAsync(examId, request.SectionId, cancellationToken);
 
-        db.QuestionGroups.Add(group);
-        await db.SaveChangesAsync(cancellationToken);
+        var (stimulusId, groupDto) = await CreatePoolGroupAsync(
+            exam, section, examId,
+            request.Passage, request.Transcript, request.AudioPath,
+            request.AudioStartMs, request.AudioEndMs,
+            imagePath: null, imageAlt: null,
+            prepSeconds: null, responseSeconds: null,
+            displayOrder: firstPosition,
+            unitNumber: request.UnitNumber > 0 ? request.UnitNumber : 1,
+            cancellationToken);
 
         var count = request.QuestionCount > 0 ? Math.Clamp(request.QuestionCount, 1, 10) : (section.ClusterSize > 0 ? section.ClusterSize : 3);
         // #229 / D1: a cluster is content, so it states its level once and every child is authored at
         // it. There is no default: the previous fixture wrote difficulty 2 for every cluster, which is
         // exactly the silent choice this ticket removes.
         var level = ParseAuthoredLevel(request.CefrLevelCode);
-        var questions = new List<Question>();
 
+        var questionDtos = new List<AdminQuestionDto>();
         for (var i = 0; i < count; i++)
         {
             string stem;
@@ -265,113 +259,62 @@ public sealed partial class AdminExamService
             }
             else
             {
-                stem = $"Question {qMaxOrder + i + 1}";
+                stem = $"Question {firstPosition + i}";
             }
 
             var qType = isFreeResponse ? QuestionTypeDto.FreeResponse
                 : (section.OptionCount == 3 ? QuestionTypeDto.Mcq_3 : QuestionTypeDto.Mcq);
 
-            var q = new Question
-            {
-                GroupId = group.GroupId,
-                ExamId = examId,
-                SectionId = request.SectionId,
-                SkillId = section.SkillId,
-                Stem = stem,
-                CefrLevel = level,
-                QuestionType = qType.ToCode(),
-                Explanation = section.HideOptionText ? "Option A is the most appropriate response." : "Correct answer option A.",
-                PrepSeconds = isFreeResponse ? (section.Modality == "speaking" ? 15 : 60) : null,
-                ResponseSeconds = isFreeResponse ? (section.Modality == "speaking" ? 45 : 1800) : null,
-                MinWords = section.Modality == "writing" ? 150 : null,
-                MaxWords = section.Modality == "writing" ? 300 : null,
-                DisplayOrder = qMaxOrder + i + 1
-            };
-            db.Questions.Add(q);
-            questions.Add(q);
-        }
+            var optionLabels = section.OptionCount == 3 ? new[] { "A", "B", "C" } : new[] { "A", "B", "C", "D" };
+            var defaultOptions = isFreeResponse
+                ? null
+                : optionLabels
+                    .Select(lbl => new AdminQuestionOptionInput(
+                        null, lbl, $"Option {lbl}",
+                        lbl == "A",
+                        lbl == "A" ? "Correct response" : "Distractor response"))
+                    .ToList();
 
-        await db.SaveChangesAsync(cancellationToken);
-
-        var questionDtos = new List<AdminQuestionDto>();
-
-        foreach (var q in questions)
-        {
-            var optionsList = new List<AdminQuestionOptionDto>();
-            if (!isFreeResponse)
-            {
-                var optionLabels = section.OptionCount == 3 ? new[] { "A", "B", "C" } : new[] { "A", "B", "C", "D" };
-                foreach (var lbl in optionLabels)
-                {
-                    var opt = new QuestionOption
-                    {
-                        QuestionId = q.QuestionId,
-                        QuestionType = q.QuestionType,
-                        Label = lbl,
-                        Text = $"Option {lbl}",
-                        IsCorrect = lbl == "A",
-                        Rationale = lbl == "A" ? "Correct response" : "Distractor response"
-                    };
-                    db.QuestionOptions.Add(opt);
-                    await db.SaveChangesAsync(cancellationToken);
-                    optionsList.Add(new AdminQuestionOptionDto(opt.OptionId, q.QuestionId, opt.Label, opt.Text, opt.IsCorrect, opt.Rationale));
-                }
-            }
-
-            questionDtos.Add(new AdminQuestionDto(
-                q.QuestionId,
-                group.GroupId,
-                examId,
-                request.SectionId,
-                section.Code,
-                section.Name,
-                section.SkillId,
-                section.Skill?.Code ?? "skill",
-                q.Stem,
-                EnumCodes.Parse<QuestionTypeDto>(q.QuestionType),
-                q.Explanation,
-                q.CategoryId,
-                null,
-                q.PrepSeconds,
-                q.ResponseSeconds,
-                q.MinWords,
-                q.MaxWords,
-                q.Hint,
-                q.DisplayOrder,
-                clock.GetUtcNow(),
-                optionsList,
-                HasAnswers: false,
-                MaxSelections: q.MaxSelections,
-                AllowNumber: q.AllowNumber,
-                AcceptedAnswersJson: q.AcceptedAnswersJson,
-                RequiredKeywords: q.RequiredKeywords,
-                SampleAnswerOrImageDesc: q.SampleAnswerOrImageDesc,
-                ReferenceKind: ParseReferenceKind(q.ReferenceKind),
-                CefrLevelCode: q.CefrLevel?.Code));
+            questionDtos.Add(await CreatePoolPositionAsync(
+                exam, section, examId, stimulusId,
+                stem: stem,
+                renderFormat: qType.ToCode(),
+                itemType: ItemTypeFor(section, isFreeResponse),
+                level: level,
+                explanation: section.HideOptionText ? "Option A is the most appropriate response." : "Correct answer option A.",
+                prepSeconds: isFreeResponse ? (section.Modality == "speaking" ? 15 : 60) : null,
+                responseSeconds: isFreeResponse ? (section.Modality == "speaking" ? 45 : 1800) : null,
+                minWords: section.Modality == "writing" ? 150 : null,
+                maxWords: section.Modality == "writing" ? 300 : null,
+                maxSelections: null,
+                allowNumber: true,
+                acceptedAnswersJson: null,
+                requiredKeywords: null,
+                hint: null,
+                referenceText: null,
+                referenceKind: null,
+                displayOrder: firstPosition + i,
+                options: defaultOptions,
+                cancellationToken));
         }
 
         exam.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(cancellationToken);
 
-        return new AdminQuestionGroupDto(
-            group.GroupId,
-            group.ExamId,
-            group.CertId,
-            group.SectionId,
-            section.Code,
-            section.Name,
-            EnumCodes.Parse<ModalityDto>(section.Modality),
-            group.Passage,
-            group.AudioPath,
-            group.AudioStartMs,
-            group.AudioEndMs,
-            group.ImagePath,
-            group.ImageAlt,
-            group.Transcript,
-            group.PrepSeconds,
-            group.ResponseSeconds,
-            group.DisplayOrder,
-            questionDtos,
-            group.UnitNumber);
+        return groupDto with { Questions = questionDtos };
     }
+
+    /// <summary>
+    /// The pool's semantic type for a section. A section states a modality, not a semantic type - the
+    /// pool's <c>ItemType</c> answers "what does this measure" - so the mapping is by modality, and it
+    /// is the same vocabulary <c>CK_Items_Modality_Type</c> accepts.
+    /// </summary>
+    private static string ItemTypeFor(Section section, bool isFreeResponse) => section.Modality switch
+    {
+        "listening" => "short_exchange",
+        "reading" => "sentence_cloze",
+        "speaking" => "descriptive_monologue",
+        "writing" => "transactional_correspondence",
+        _ => isFreeResponse ? "descriptive_monologue" : "sentence_cloze",
+    };
 }
