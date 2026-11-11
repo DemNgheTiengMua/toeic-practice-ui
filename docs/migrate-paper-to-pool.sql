@@ -127,12 +127,20 @@ BEGIN
     END
 
     -- The shared stimulus, if this group carries one.
+    --
+    -- #272: the image is part of the stimulus identity. Matching on passage/audio/transcript alone let a
+    -- writing task whose group is a PICTURE (W1) and a task whose group is a PASSAGE (W2) resolve to the
+    -- same all-NULL placeholder row, because neither carried the compared fields. The result was measured:
+    -- two writing tasks reported the same GroupId, so the take page's group-boundary check never fired and
+    -- the candidate was never carried from W2 into W3.
     SELECT TOP 1 @stimulusId = s.StimulusId
     FROM Stimuli s
     JOIN QuestionGroups g ON g.GroupId = @groupId
     WHERE ISNULL(s.Passage, '') = ISNULL(g.Passage, '')
       AND ISNULL(s.AudioPath, '') = ISNULL(g.AudioPath, '')
       AND ISNULL(s.Transcript, '') = ISNULL(g.Transcript, '')
+      AND ISNULL(s.ImagePath, '') = ISNULL(g.ImagePath, '')
+      AND ISNULL(s.PromptCopy, '') = ISNULL(g.PromptCopy, '')
     ORDER BY s.StimulusId;
 
     INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, RenderFormat,

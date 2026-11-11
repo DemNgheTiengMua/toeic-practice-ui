@@ -386,6 +386,10 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
         db.Exams.Add(exam);
         await db.SaveChangesAsync();
 
+        // #272: the legacy question/option rows below STAY, because the shape they produce is this
+        // file's subject - A_pool_answer_that_also_names_a_question_is_counted_once writes a pool answer
+        // whose QuestionId is ALSO resolvable, which is the double-count #250 found. A pool-only fixture
+        // could not express it. #269 deletes the rows with the table.
         var group = new QuestionGroup
         {
             ExamId = exam.ExamId, CertId = cert.CertId, SectionId = section.SectionId,

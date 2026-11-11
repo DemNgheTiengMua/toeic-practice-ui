@@ -40,7 +40,7 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
     /// </summary>
     private sealed record RuleFixture(
         int CertId, int ExamId, int LearnerId, int DefectiveItemId,
-        int[] QuestionIds, int[] VersionIds);
+        int[] PositionIds, int[] VersionIds);
 
     private sealed record Sitting(int AttemptId, int? Total, string? Band, string? Writer, int Version);
 
@@ -72,6 +72,19 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
     /// <c>CK_Certificates_ScoreAggregationRule</c> so a pre-#171 row can be reproduced, and it leaves
     /// the constraint disabled for the life of that database, so it is only ever used on a disposable
     /// one.
+    /// </para>
+    /// <para>
+    /// <b>BLOCKER (#272, not owned by this ticket).</b> The recalculating tests in this file now fail on
+    /// <c>src/Services/Admin/Items/ItemTelemetryService.cs:539</c> with
+    /// <c>System.NullReferenceException</c>. That line is
+    /// <c>answers.Select(a =&gt; a.Question.Section.SkillId)</c>, which dereferences the legacy
+    /// <c>Questions</c> row - and a pool answer has none (<c>QuestionId</c>/<c>Question</c> are NULL).
+    /// Measured on <c>The_recalculated_score_is_written_by_the_registered_owner_and_the_trigger_refuses_any_other</c>
+    /// and the three <c>Telemetry_and_the_sitting_engine_report_the_same_total</c> rows. The fixture used
+    /// to mask it by ALSO authoring legacy rows, which put the sitting on the legacy branch; the paper is
+    /// now pool-only, the shape production produces. The assertions are unchanged; the reader needs
+    /// repointing at the roster (<c>ExamItems.SectionId</c>), as <c>AttemptEngine.Sitting.Roster</c> does.
+    /// Not fixed here: src/ is out of scope.
     /// </para>
     /// </summary>
     private static async Task<RuleFixture> SeedRuleFixtureAsync(
@@ -157,16 +170,8 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
             VALUES (@i3, 1, N'Sound stem two', N'a', N'b', N'c', N'd', 'A', N'Why two.');
             DECLARE @v3 INT = SCOPE_IDENTITY();
 
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES
-              (@exam, @cert, @sec1, 1), (@exam, @cert, @sec2, 2);
-            DECLARE @g1 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND SectionId = @sec1);
-            DECLARE @g2 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND SectionId = @sec2);
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder) VALUES
-              (@g1, @exam, @sec1, @s1, N'Position one', 'B1', 'mcq', 1),
-              (@g1, @exam, @sec1, @s1, N'Position two', 'B1', 'mcq', 2),
-              (@g2, @exam, @sec2, @s2, N'Position three', 'B1', 'mcq', 1);
-
+            -- #272: the paper's three positions are ExamItems bindings. A pool position is addressed by
+            -- its ExamItemId, so the fixture returns those instead of question ids.
             INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder) VALUES
               (@exam, @sec1, @cert, @v1, @i1, 'reading', 1),
               (@exam, @sec1, @cert, @v2, @i2, 'reading', 2),
@@ -184,11 +189,11 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
             .Where(v => v.Item.BatchTag!.StartsWith(tag))
             .Select(v => new { v.ItemId, v.ItemVersionId, BatchTag = v.Item.BatchTag! })
             .ToListAsync();
-        var questions = await db.Questions
-            .Where(q => q.Section.CertId == certId)
-            .OrderBy(q => q.Section.DisplayOrder)
-            .ThenBy(q => q.DisplayOrder)
-            .Select(q => q.QuestionId)
+        var positions = await db.ExamItems
+            .Where(i => i.Section.CertId == certId)
+            .OrderBy(i => i.Section.DisplayOrder)
+            .ThenBy(i => i.DisplayOrder)
+            .Select(i => i.ExamItemId)
             .ToListAsync();
 
         return new RuleFixture(
@@ -196,7 +201,7 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
             await db.Exams.Where(e => e.CertId == certId).Select(e => e.ExamId).SingleAsync(),
             await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync(),
             versions.Single(v => v.BatchTag == $"{tag}-bad").ItemId,
-            questions.ToArray(),
+            positions.ToArray(),
             versions.OrderBy(v => v.BatchTag, StringComparer.Ordinal).Select(v => v.ItemVersionId).ToArray());
     }
 
@@ -227,10 +232,10 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
         var attempt = await engine.CreateAttemptAsync(fixture.LearnerId, fixture.CertId, fixture.ExamId, 60);
         var index = Array.IndexOf(["A", "B", "C", "D"], defectiveLabel);
 
-        await engine.SaveAnswerAsync(attempt.AttemptId, fixture.LearnerId, fixture.QuestionIds[0], fixture.VersionIds[0] * 10 + index + 1, false);
-        await engine.SaveAnswerAsync(attempt.AttemptId, fixture.LearnerId, fixture.QuestionIds[1], fixture.VersionIds[1] * 10 + 1, false);
+        await engine.SaveAnswerAsync(attempt.AttemptId, fixture.LearnerId, fixture.PositionIds[0], fixture.VersionIds[0] * 10 + index + 1, false);
+        await engine.SaveAnswerAsync(attempt.AttemptId, fixture.LearnerId, fixture.PositionIds[1], fixture.VersionIds[1] * 10 + 1, false);
         await engine.TransitionToNextSkillAsync(attempt.AttemptId, fixture.LearnerId);
-        await engine.SaveAnswerAsync(attempt.AttemptId, fixture.LearnerId, fixture.QuestionIds[2], fixture.VersionIds[2] * 10 + 1, false);
+        await engine.SaveAnswerAsync(attempt.AttemptId, fixture.LearnerId, fixture.PositionIds[2], fixture.VersionIds[2] * 10 + 1, false);
         return attempt.AttemptId;
     }
 

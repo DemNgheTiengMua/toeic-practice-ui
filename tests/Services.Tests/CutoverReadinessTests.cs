@@ -134,6 +134,15 @@ public sealed class CutoverReadinessTests(DatabaseFixture database)
 
     // ---- fixtures ---------------------------------------------------------------------------
 
+    /// <summary>
+    /// A certificate and one exam, optionally with a pool roster.
+    /// <para>
+    /// #272: the legacy <c>Questions</c> rows here STAY, because they are this file's subject, not its
+    /// scaffolding - <paramref name="withRoster"/> = false builds exactly the "paper the pool cannot
+    /// rebuild" that <see cref="CutoverReadinessService"/> must block on. Migrating them would delete the
+    /// case under test. They are deleted with the table in #269.
+    /// </para>
+    /// </summary>
     private static async Task<int> SeedCertAndExamAsync(string connectionString, bool withRoster)
     {
         await using var db = DbContextFactory.Create(connectionString);

@@ -654,7 +654,7 @@ BEGIN CATCH
 END CATCH
 SET IDENTITY_INSERT [Skills] OFF;
 
--- ---- Stimuli (68 rows)
+-- ---- Stimuli (78 rows)
 SET IDENTITY_INSERT [Stimuli] ON;
 BEGIN TRY
   INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (1, N'A2', NULL, N'/audio/vstep/sample1-listening.mp3', NULL, NULL, N'Speaker: Good afternoon listeners. The annual Da Nang International Fireworks Festival will open next month on June 8th along the Han River.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:02.8064239+07:00');
@@ -1060,6 +1060,66 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (68, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/images/toeic/test1-p1-q1.jpg', N'Conference meeting room', NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (70, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a team meeting', NULL, NULL, 0, '2026-11-12T01:46:30.3110559+07:00');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (71, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a team meeting', NULL, NULL, 0, '2026-11-12T01:46:30.3231864+07:00');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (72, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a team meeting', NULL, NULL, 0, '2026-11-12T01:46:30.3231864+07:00');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (73, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a team meeting', NULL, NULL, 0, '2026-11-12T01:46:30.3231864+07:00');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (74, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a team meeting', NULL, NULL, 0, '2026-11-12T01:46:30.3231864+07:00');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (75, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a team meeting', NULL, NULL, 0, '2026-11-12T01:46:30.3231864+07:00');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (76, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a team meeting', NULL, NULL, 0, '2026-11-12T01:46:30.3231864+07:00');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (77, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a team meeting', NULL, NULL, 0, '2026-11-12T01:46:30.3267986+07:00');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (78, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a team meeting', NULL, NULL, 0, '2026-11-12T01:46:30.3267986+07:00');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (79, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a team meeting', NULL, NULL, 0, '2026-11-12T01:46:30.3267986+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -1741,19 +1801,19 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (37, 20, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1188603+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (37, 70, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1188603+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (38, 20, N'speaking', 13, N'B2', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1188603+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (38, 71, N'speaking', 13, N'B2', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1188603+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (39, 20, N'writing', 19, N'B1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1198611+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (39, 72, N'writing', 19, N'B1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1198611+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -1789,7 +1849,7 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (45, 20, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1253700+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (45, 73, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1253700+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -1825,7 +1885,7 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (51, 20, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1293815+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (51, 74, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1293815+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -2029,13 +2089,13 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (85, 20, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1559794+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (85, 75, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1559794+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (86, 20, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1564819+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (86, 76, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1564819+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -2203,19 +2263,19 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (114, 20, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1782242+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (114, 77, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1782242+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (115, 20, N'writing', 19, N'B1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1792242+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (115, 78, N'writing', 19, N'B1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1792242+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (116, 20, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1792242+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (116, 79, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1792242+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -4695,13 +4755,13 @@ SET IDENTITY_INSERT [CefrCutScores] OFF;
 -- ---- ExamAttempts (2 rows)
 SET IDENTITY_INSERT [ExamAttempts] ON;
 BEGIN TRY
-  INSERT INTO [ExamAttempts] ([AttemptId], [UserId], [ExamId], [CertId], [ActiveSkillId], [ActiveUnitNumber], [ActiveGroupId], [AuthorizationCode], [PhaseDeadlineAt], [LastAudioOffsetMs], [CandidateNotesJson], [PreflightVerifiedAt], [Status], [StartedAt], [ExpiresAt], [LastActivityAt], [IsAutoSubmitted], [SubmittedAt], [TotalScore], [BandCode], [WrittenByService], [ProjectionVersion], [EpochTag], [CurrentExamItemId]) VALUES (1, 2, 2, 1, NULL, 1, NULL, NULL, NULL, 0, NULL, NULL, N'graded', '2026-10-20T01:44:01.5425880+07:00', '2026-10-20T02:44:01.5425880+07:00', NULL, 0, '2026-10-20T02:22:01.5425880+07:00', 650, N'B1', N'AttemptEngine', 1, NULL, NULL);
+  INSERT INTO [ExamAttempts] ([AttemptId], [UserId], [ExamId], [CertId], [ActiveSkillId], [ActiveUnitNumber], [ActiveGroupId], [AuthorizationCode], [PhaseDeadlineAt], [LastAudioOffsetMs], [CandidateNotesJson], [PreflightVerifiedAt], [Status], [StartedAt], [ExpiresAt], [LastActivityAt], [IsAutoSubmitted], [SubmittedAt], [CurrentExamItemId], [TotalScore], [BandCode], [WrittenByService], [ProjectionVersion], [EpochTag]) VALUES (1, 2, 2, 1, NULL, 1, NULL, NULL, NULL, 0, NULL, NULL, N'graded', '2026-10-20T01:44:01.5425880+07:00', '2026-10-20T02:44:01.5425880+07:00', NULL, 0, '2026-10-20T02:22:01.5425880+07:00', NULL, 650, N'B1', N'AttemptEngine', 1, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamAttempts] ([AttemptId], [UserId], [ExamId], [CertId], [ActiveSkillId], [ActiveUnitNumber], [ActiveGroupId], [AuthorizationCode], [PhaseDeadlineAt], [LastAudioOffsetMs], [CandidateNotesJson], [PreflightVerifiedAt], [Status], [StartedAt], [ExpiresAt], [LastActivityAt], [IsAutoSubmitted], [SubmittedAt], [TotalScore], [BandCode], [WrittenByService], [ProjectionVersion], [EpochTag], [CurrentExamItemId]) VALUES (2, 2, 1, 1, NULL, 1, NULL, NULL, NULL, 0, NULL, NULL, N'graded', '2026-11-08T01:44:01.7977460+07:00', '2026-11-08T03:44:01.7977460+07:00', NULL, 0, '2026-11-08T03:29:01.7977460+07:00', 720, N'B1', N'AttemptEngine', 1, NULL, NULL);
+  INSERT INTO [ExamAttempts] ([AttemptId], [UserId], [ExamId], [CertId], [ActiveSkillId], [ActiveUnitNumber], [ActiveGroupId], [AuthorizationCode], [PhaseDeadlineAt], [LastAudioOffsetMs], [CandidateNotesJson], [PreflightVerifiedAt], [Status], [StartedAt], [ExpiresAt], [LastActivityAt], [IsAutoSubmitted], [SubmittedAt], [CurrentExamItemId], [TotalScore], [BandCode], [WrittenByService], [ProjectionVersion], [EpochTag]) VALUES (2, 2, 1, 1, NULL, 1, NULL, NULL, NULL, 0, NULL, NULL, N'graded', '2026-11-08T01:44:01.7977460+07:00', '2026-11-08T03:44:01.7977460+07:00', NULL, 0, '2026-11-08T03:29:01.7977460+07:00', NULL, 720, N'B1', N'AttemptEngine', 1, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -4710,103 +4770,103 @@ SET IDENTITY_INSERT [ExamAttempts] OFF;
 
 -- ---- ExamEditions (17 rows)
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (1, 1, 1, 7200, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T13:02:27.6297324+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (1, 1, 1, 7200, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-12T01:45:26.2499562+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (2, 1, 1, 2700, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T13:02:27.6398747+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (2, 1, 1, 2700, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (3, 1, 1, 1200, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T13:02:27.6398747+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (3, 1, 1, 1200, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (4, 1, 1, 3600, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T13:02:27.6398747+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (4, 1, 1, 3600, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (5, 2, 1, 10200, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T13:02:27.6398747+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (5, 2, 1, 10200, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (6, 2, 1, 3600, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T13:02:27.6398747+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (6, 2, 1, 3600, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (7, 2, 1, 900, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T13:02:27.6398747+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (7, 2, 1, 900, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (8, 2, 1, 3600, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T13:02:27.6398747+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (8, 2, 1, 3600, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (9, 3, 1, 10800, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T13:02:27.6443424+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (9, 3, 1, 10800, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (10, 3, 1, 2700, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T13:02:27.6443424+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (10, 3, 1, 2700, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (11, 3, 1, 900, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T13:02:27.6443424+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (11, 3, 1, 900, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (12, 3, 1, 3600, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T13:02:27.6443424+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (12, 3, 1, 3600, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (13, 1, 1, 2700, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T13:02:27.6443424+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (13, 1, 1, 2700, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (14, 2, 1, 3600, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T13:02:27.6443424+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (14, 2, 1, 3600, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (15, 3, 1, 2700, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T13:02:27.6443424+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (15, 3, 1, 2700, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (16, 4, 1, 5400, N'[]', N'sum', NULL, N'[{"Code":"CAT_B1","Name":"Intermediate","MinTotal":400,"MaxTotal":695},{"Code":"CAT_B2","Name":"Professional","MinTotal":700,"MaxTotal":990}]', '2026-11-11T13:02:27.6443424+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (16, 4, 1, 5400, N'[]', N'sum', NULL, N'[{"Code":"CAT_B1","Name":"Intermediate","MinTotal":400,"MaxTotal":695},{"Code":"CAT_B2","Name":"Professional","MinTotal":700,"MaxTotal":990}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (17, 5, 1, 4800, N'[]', N'sum', 1, N'[{"Code":"SW_B1","Name":"Basic Working","MinTotal":160,"MaxTotal":250},{"Code":"SW_B2","Name":"Advanced Working","MinTotal":260,"MaxTotal":400}]', '2026-11-11T13:02:27.6443424+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (17, 5, 1, 4800, N'[]', N'sum', 1, N'[{"Code":"SW_B1","Name":"Basic Working","MinTotal":160,"MaxTotal":250},{"Code":"SW_B2","Name":"Advanced Working","MinTotal":260,"MaxTotal":400}]', '2026-11-12T01:45:26.2700085+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;

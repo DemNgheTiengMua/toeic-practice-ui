@@ -241,9 +241,11 @@ public sealed class ConcurrentSubmissionTests(DatabaseFixture database)
         db.AttemptAnswers.Add(new BusinessObjects.Entities.AttemptAnswer
         {
             AttemptId = attempt.AttemptId,
-            QuestionId = question.QuestionId,
+            ExamItemId = position.ExamItemId,
+            ItemId = position.ItemId,
+            ItemVersionId = position.ItemVersionId,
             ExamId = exam.ExamId,
-            SelectedOptionId = option.OptionId,
+            SelectedLabel = "A",
             IsCorrect = true,
         });
         await db.SaveChangesAsync();

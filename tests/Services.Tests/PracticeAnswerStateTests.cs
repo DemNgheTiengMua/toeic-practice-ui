@@ -188,6 +188,76 @@ public sealed class PracticeAnswerStateTests(DatabaseFixture database)
     /// <summary>The option id <c>AttemptEngine</c>'s bijection derives for a label of a version.</summary>
     private static int OptionId(int itemVersionId, char label) => itemVersionId * 10 + (label - 'A') + 1;
 
+    /// <summary>
+    /// One objective position on a pool paper, in the render format the caller names.
+    /// <para>
+    /// #272: the three formats this file needs - <c>mcq</c>, <c>multi_select</c> and
+    /// <c>inline_completion</c> - are all objective, so each is an <c>ItemVersion</c> whose columns carry
+    /// what the legacy question row used to. <c>PoolFixture.AddMcqAsync</c> covers only the plain mcq, so
+    /// the other two are authored here rather than widening the shared fixture for one caller.
+    /// </para>
+    /// </summary>
+    private static async Task<PoolFixture.Position> AddPoolPositionAsync(
+        CompanionDbContext db, int examId, int certId, int sectionId, int skillId,
+        string renderFormat, string stem, int displayOrder)
+    {
+        var topicId = await db.Topics
+            .Where(t => t.Modality == "reading")
+            .OrderBy(t => t.TopicId)
+            .Select(t => (int?)t.TopicId)
+            .FirstOrDefaultAsync()
+            ?? throw new InvalidOperationException("This fixture needs the reading topic seeded first.");
+
+        var item = new Item
+        {
+            Modality = "reading",
+            TopicId = topicId,
+            CefrLevel = CefrLevel.B1,
+            ItemType = "sentence_cloze",
+            RenderFormat = renderFormat,
+            ContentTier = ContentTiers.Demo,
+            LifecycleStatus = "active",
+            BatchTag = Unique("ans"),
+        };
+        db.Items.Add(item);
+        await db.SaveChangesAsync();
+
+        // CK_ItemVersions_OptionsComplete has two legal shapes: a keyed item with options and no accepted
+        // answers, or a blank with AcceptedAnswersJson and neither options nor a key.
+        var isBlank = renderFormat == "inline_completion";
+        var version = new ItemVersion
+        {
+            ItemId = item.ItemId,
+            VersionNumber = 1,
+            Stem = stem,
+            OptionA = isBlank ? null : "right",
+            OptionB = isBlank ? null : "wrong",
+            OptionC = isBlank ? null : "wrong",
+            OptionD = isBlank ? null : "wrong",
+            KeyLabel = isBlank ? null : "A",
+            AcceptedAnswersJson = isBlank ? "[\"photosynthesis\"]" : null,
+            MaxSelections = renderFormat == "multi_select" ? 2 : null,
+        };
+        db.ItemVersions.Add(version);
+        await db.SaveChangesAsync();
+
+        var binding = new ExamItem
+        {
+            ExamId = examId,
+            CertId = certId,
+            SectionId = sectionId,
+            ItemId = item.ItemId,
+            ItemVersionId = version.ItemVersionId,
+            Modality = "reading",
+            DisplayOrder = displayOrder,
+            UnitNumber = 1,
+        };
+        db.ExamItems.Add(binding);
+        await db.SaveChangesAsync();
+
+        return new PoolFixture.Position(binding.ExamItemId, item.ItemId, version.ItemVersionId);
+    }
+
     private static PracticeService CreatePractice(CompanionDbContext db) =>
         new(db, new LearnerService(db));
 
@@ -440,6 +510,17 @@ public sealed class PracticeAnswerStateTests(DatabaseFixture database)
     /// The chain the issue opened with: one attempt, two screens. A text-only answer and an id-list-only
     /// answer are answered on the review, carry the correctness the grader stored, and the review's own
     /// count agrees with the sitting's. A blank third question stays unanswered and ungraded.
+    /// <para>
+    /// <b>BLOCKER (#272, not owned by this ticket).</b> This now fails on the assertion at
+    /// <c>Assert.True(text.IsCorrect, ...)</c> for a pool paper. Cause:
+    /// <c>src/Services/Attempts/AttemptEngine.Answers.cs:103</c> sets
+    /// <c>answer.IsCorrect = IsKeyLabel(pinnedVersion, label)</c> and <c>label</c> is null for a text-only
+    /// answer, so a pool <c>inline_completion</c> can never be judged correct - even though the version
+    /// carries <c>AcceptedAnswersJson</c> and the sitting projects it
+    /// (<c>AttemptEngine.Sitting.Roster.cs:154</c>). The legacy branch evaluates against the question row
+    /// instead. The fixture used to mask it by authoring legacy rows; the paper is now pool-only, the shape
+    /// production produces. The assertion is kept as written. Not fixed here: src/ is out of scope.
+    /// </para>
     /// </summary>
     [Fact]
     public async Task The_sitting_and_the_review_agree_about_a_text_and_an_id_list_answer()
@@ -495,71 +576,28 @@ public sealed class PracticeAnswerStateTests(DatabaseFixture database)
                     new ScoreScale { CertId = certId, SkillId = seeded.SkillId, ExamId = exam.ExamId, RawScore = 2, ScaledScore = 450 },
                     new ScoreScale { CertId = certId, SkillId = seeded.SkillId, ExamId = exam.ExamId, RawScore = 3, ScaledScore = 450 });
 
-                var group = new QuestionGroup
-                {
-                    ExamId = exam.ExamId,
-                    CertId = certId,
-                    SectionId = section.SectionId,
-                    DisplayOrder = 1,
-                };
-                seedDb.QuestionGroups.Add(group);
-                await seedDb.SaveChangesAsync();
+                // #272: three pool positions. The render formats the test needs - multi_select,
+                // inline_completion and a plain mcq - are all objective, so each is an ItemVersion whose
+                // columns carry what the old question row did.
+                var multi = await AddPoolPositionAsync(
+                    seedDb, exam.ExamId, certId, section.SectionId, seeded.SkillId, "multi_select",
+                    "Choose every correct option.", displayOrder: 1);
+                var inline = await AddPoolPositionAsync(
+                    seedDb, exam.ExamId, certId, section.SectionId, seeded.SkillId, "inline_completion",
+                    "Complete the sentence.", displayOrder: 2);
+                var blank = await AddPoolPositionAsync(
+                    seedDb, exam.ExamId, certId, section.SectionId, seeded.SkillId, "mcq",
+                    "Never answered.", displayOrder: 3);
 
-                var multi = new Question
-                {
-                    GroupId = group.GroupId,
-                    ExamId = exam.ExamId,
-                    SectionId = section.SectionId,
-                    SkillId = seeded.SkillId,
-                    Stem = "Choose every correct option.",
-                    CefrLevel = CefrLevel.B1,
-                    QuestionType = "multi_select",
-                    DisplayOrder = 1,
-                };
-                var inline = new Question
-                {
-                    GroupId = group.GroupId,
-                    ExamId = exam.ExamId,
-                    SectionId = section.SectionId,
-                    SkillId = seeded.SkillId,
-                    Stem = "Complete the sentence.",
-                    CefrLevel = CefrLevel.B1,
-                    QuestionType = "inline_completion",
-                    AcceptedAnswersJson = "[\"photosynthesis\"]",
-                    DisplayOrder = 2,
-                };
-                var blank = new Question
-                {
-                    GroupId = group.GroupId,
-                    ExamId = exam.ExamId,
-                    SectionId = section.SectionId,
-                    SkillId = seeded.SkillId,
-                    Stem = "Never answered.",
-                    CefrLevel = CefrLevel.B1,
-                    QuestionType = "mcq",
-                    DisplayOrder = 3,
-                };
-                seedDb.Questions.AddRange(multi, inline, blank);
-                await seedDb.SaveChangesAsync();
-
-                seedDb.QuestionOptions.AddRange(
-                    new QuestionOption { QuestionId = multi.QuestionId, QuestionType = "multi_select", Label = "A", Text = "right", IsCorrect = true },
-                    new QuestionOption { QuestionId = multi.QuestionId, QuestionType = "multi_select", Label = "B", Text = "wrong", IsCorrect = false },
-                    new QuestionOption { QuestionId = blank.QuestionId, QuestionType = "mcq", Label = "A", Text = "never", IsCorrect = true });
-                await seedDb.SaveChangesAsync();
-
-                multiQuestionId = multi.QuestionId;
-                textQuestionId = inline.QuestionId;
-                blankQuestionId = blank.QuestionId;
+                multiQuestionId = multi.ExamItemId;
+                textQuestionId = inline.ExamItemId;
+                blankQuestionId = blank.ExamItemId;
 
                 var engine = new AttemptEngine(seedDb);
                 var attempt = await engine.CreateAttemptAsync(learnerId, certId, exam.ExamId, 60);
                 attemptId = attempt.AttemptId;
 
-                var multiOptionId = await seedDb.QuestionOptions
-                    .Where(o => o.QuestionId == multiQuestionId && o.IsCorrect)
-                    .Select(o => o.OptionId)
-                    .SingleAsync();
+                var multiOptionId = await PoolFixture.OptionIdAsync(seedDb, exam.ExamId, multi.ExamItemId, "A");
 
                 // text only, no option
                 await engine.SaveAnswerAsync(attemptId, learnerId, textQuestionId, null, false,

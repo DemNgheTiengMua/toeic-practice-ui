@@ -285,6 +285,9 @@ public sealed class PoolAnswerShapesTests(DatabaseFixture database)
         await db.SaveChangesAsync();
 
         // One legacy question, so the legacy shape can be proved beside the pool one.
+        // #272: this row STAYS legacy because it is the subject of
+        // A_legacy_answer_still_names_its_question_and_no_version - the test asserts that the nullable
+        // column still admits the shape the pool replaced, which needs a row in that shape.
         var group = new QuestionGroup
         {
             ExamId = exam.ExamId, CertId = cert.CertId, SectionId = section.SectionId,

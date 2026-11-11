@@ -162,30 +162,41 @@ public sealed class ItemTelemetryServiceTests(DatabaseFixture database)
 
     /// <summary>
     /// Two items bound to the certificate's paper, so an attempt answers them through the pool pin.
-    /// Returns their version ids in paper order.
+    /// Returns their version ids in paper order, and the <c>ExamItemId</c>s the sitting addresses them by.
+    /// <para>
+    /// #272: a pool position is its binding, so the positions are <c>ExamItemId</c>s, not question ids.
+    /// </para>
+    /// <para>
+    /// <b>BLOCKER (#272, not owned by this ticket).</b> Three tests below now fail on
+    /// <c>src/Services/Admin/Items/ItemTelemetryService.cs:539</c> with
+    /// <c>System.NullReferenceException</c>. That line is
+    /// <c>answers.Select(a =&gt; a.Question.Section.SkillId)</c> and it dereferences the legacy
+    /// <c>Questions</c> row, which a pool answer does not have (<c>QuestionId</c> and <c>Question</c> are
+    /// NULL). Measured: <c>A_confirmed_defect_upgrades_a_learner_who_lost_a_band_to_it</c>,
+    /// <c>A_recalculation_that_would_lower_a_band_never_downgrades_the_learner</c>, and every
+    /// <c>Telemetry_and_the_sitting_engine_report_the_same_total_for_each_real_rule</c> row. The fixture
+    /// used to mask it by ALSO authoring legacy rows, which put the sitting on the legacy branch; the
+    /// paper is now pool-only, which is the shape production produces. The assertions are unchanged and
+    /// the reader needs repointing at the roster (<c>ExamItems.SectionId</c>), exactly as
+    /// <c>AttemptEngine.Sitting.Roster</c> already does. Not fixed here: src/ is out of scope.
+    /// </para>
     /// </summary>
-    private async Task<(int[] VersionIds, int[] QuestionIds)> SeedPaperAsync(
+    private async Task<(int[] VersionIds, int[] PositionIds)> SeedPaperAsync(
         int certId, int skillId, int examId, int sectionId, int version1, int item1, int version2, int item2)
     {
         await database.SqlAsync($"""
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES ({examId}, {certId}, {sectionId}, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, {examId}, {sectionId}, {skillId}, N'Legacy position one', 'A2', 'mcq', 1),
-                   (@grp, {examId}, {sectionId}, {skillId}, N'Legacy position two', 'A2', 'mcq', 2);
-
             INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder) VALUES
               ({examId}, {sectionId}, {certId}, {version1}, {item1}, 'reading', 1),
               ({examId}, {sectionId}, {certId}, {version2}, {item2}, 'reading', 2);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var questions = await db.Questions
-            .Where(q => q.ExamId == examId)
-            .OrderBy(q => q.DisplayOrder)
-            .Select(q => q.QuestionId)
+        var positions = await db.ExamItems
+            .Where(i => i.ExamId == examId)
+            .OrderBy(i => i.DisplayOrder)
+            .Select(i => i.ExamItemId)
             .ToListAsync();
-        return ([version1, version2], questions.ToArray());
+        return ([version1, version2], positions.ToArray());
     }
 
     // =============================================================================================
@@ -422,7 +433,7 @@ public sealed class ItemTelemetryServiceTests(DatabaseFixture database)
 
         var (defectiveItem, defectiveVersion) = await SeedItemAsync(topicId, "B1", "production", "active", $"{tag}-bad", "D");
         var (soundItem, soundVersion) = await SeedItemAsync(topicId, "B1", "production", "active", $"{tag}-ok", "A");
-        var (versions, questions) = await SeedPaperAsync(certId, skillId, examId, sectionId, defectiveVersion, defectiveItem, soundVersion, soundItem);
+        var (versions, positions) = await SeedPaperAsync(certId, skillId, examId, sectionId, defectiveVersion, defectiveItem, soundVersion, soundItem);
 
         var learner = await SeedLearnerAsync(certId);
         var engine = CreateEngine();
@@ -430,8 +441,8 @@ public sealed class ItemTelemetryServiceTests(DatabaseFixture database)
 
         // position 1 is the defective item (stored key D, true key A -> choose A and be marked wrong);
         // position 2 is sound (key A -> choose A and be right)
-        await engine.SaveAnswerAsync(attempt.AttemptId, learner, questions[0], versions[0] * 10 + 1, false);
-        await engine.SaveAnswerAsync(attempt.AttemptId, learner, questions[1], versions[1] * 10 + 1, false);
+        await engine.SaveAnswerAsync(attempt.AttemptId, learner, positions[0], versions[0] * 10 + 1, false);
+        await engine.SaveAnswerAsync(attempt.AttemptId, learner, positions[1], versions[1] * 10 + 1, false);
 
         var scored = await engine.SubmitAttemptAsync(attempt.AttemptId, learner, isAutoSubmit: false);
         Assert.Equal("LOW", scored.Attempt.BandCode);
@@ -471,15 +482,15 @@ public sealed class ItemTelemetryServiceTests(DatabaseFixture database)
 
         var (defectiveItem, defectiveVersion) = await SeedItemAsync(topicId, "B1", "production", "active", $"{tag}-bad", "A");
         var (soundItem, soundVersion) = await SeedItemAsync(topicId, "B1", "production", "active", $"{tag}-ok", "A");
-        var (versions, questions) = await SeedPaperAsync(certId, skillId, examId, sectionId, defectiveVersion, defectiveItem, soundVersion, soundItem);
+        var (versions, positions) = await SeedPaperAsync(certId, skillId, examId, sectionId, defectiveVersion, defectiveItem, soundVersion, soundItem);
 
         var learner = await SeedLearnerAsync(certId);
         var engine = CreateEngine();
         var attempt = await engine.CreateAttemptAsync(learner, certId, examId, 60);
 
         // both right: 2 of 2 -> 50 -> HIGH
-        await engine.SaveAnswerAsync(attempt.AttemptId, learner, questions[0], versions[0] * 10 + 1, false);
-        await engine.SaveAnswerAsync(attempt.AttemptId, learner, questions[1], versions[1] * 10 + 1, false);
+        await engine.SaveAnswerAsync(attempt.AttemptId, learner, positions[0], versions[0] * 10 + 1, false);
+        await engine.SaveAnswerAsync(attempt.AttemptId, learner, positions[1], versions[1] * 10 + 1, false);
 
         var scored = await engine.SubmitAttemptAsync(attempt.AttemptId, learner, isAutoSubmit: false);
         Assert.Equal("HIGH", scored.Attempt.BandCode);
