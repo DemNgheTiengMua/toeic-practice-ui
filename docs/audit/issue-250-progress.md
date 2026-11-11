@@ -99,3 +99,27 @@ legacy authoring methods in `AdminExamService` that their tests still exercise.
 Three of the nine defects - 6, 7, 8 - were invisible to 1933 green tests and only appeared when a real
 browser uploaded a real file. That is the strongest argument for the user's instruction to upload real
 images and audio: a green code path is not a working feature.
+
+## Added after the first commit
+
+Two more, both found by driving the product rather than by reading it:
+
+**A certificate named for its skills broke its own dashboard insight.** `TOEIC Listening & Reading` is the
+certificate's *name*, and the dashboard insight titled its activity `"{certName} Dashboard"`. The
+narrative echoes that title, so `InsightNarrativeGuard` read the echo as a claim about two unmeasured
+skills and rejected a correct narrative - the demo learner saw "AI Insight Generation Did Not Complete /
+Narrative describes Listening, Reading, which has no measurement in the payload" on every retry. The
+builder titles the activity with the certificate CODE now. The guard is right; the input was lying.
+
+**The publish door counted only legacy positions.** INV-1 and the audit's own totals read
+`Questions` alone, so a complete pool-authored paper answered `CanPublish=false` - "section declares 1
+item(s) but holds 0". Fixed under `#269` in `522315f`, with
+`PoolPaperPublishTests.A_paper_with_only_pool_positions_passes_the_publish_audit`.
+
+## Filed, not fixed
+
+**`#273`** - the Studio's group controls write to routes `#265` removed. Measured: `PUT
+/admin/exams/1/studio/group/1` answers 404 while the page renders the paper correctly, so autosave and
+"Remove Group" silently do nothing. The read side is already pool-native; only the writes are dead. This is
+the last production gap in `#269`'s writer list, and `ExamAudioAndInstructionsTests` cannot migrate
+until it exists.

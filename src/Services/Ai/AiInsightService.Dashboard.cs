@@ -168,6 +168,14 @@ public sealed partial class AiInsightService
 
         var certName = cert?.Name ?? "Dashboard";
 
+        // The activity title is the CERTIFICATE CODE, not its name. A certificate may be named for the
+        // skills it examines ("TOEIC Listening & Reading"), so putting the name in the title made every
+        // narrative echo it - and InsightNarrativeGuard then read that echo as a claim about two
+        // unmeasured skills and rejected the whole insight. Measured: the demo learner's dashboard
+        // insight failed on every retry with "Narrative describes Listening, Reading, which has no
+        // measurement in the payload", on a correct narrative.
+        var activityTitle = $"{cert?.Code ?? certName} dashboard";
+
         // Query previous completed dashboard insight using index IX_AiInsights_Latest
         var previousInsight = await db.AiInsights
             .AsNoTracking()
@@ -255,7 +263,7 @@ public sealed partial class AiInsightService
             AiInsightScope.Dashboard,
             null,
             null,
-            $"{certName} Dashboard",
+            $"{activityTitle}",
             totalAnswered,
             totalAnswered,
             totalCorrect,
