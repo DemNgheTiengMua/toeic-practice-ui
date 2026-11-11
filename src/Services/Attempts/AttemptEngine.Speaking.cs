@@ -51,15 +51,21 @@ public sealed partial class AttemptEngine
         }
         var relativePath = await _fileStore.SaveAudioAsync(attemptId, questionId, stream, contentType, ext, cancellationToken);
 
+        // #269: the address is a POSITION - a question id on a legacy paper, an ExamItemId on a pool one.
+        // Matching on QuestionId alone missed the pool row, and the create branch below then wrote a
+        // QuestionId that does not exist, which FK_FreeResp_QuestionExam refused.
         var fr = await db.FreeResponses
-            .SingleOrDefaultAsync(r => r.AttemptId == attemptId && r.QuestionId == questionId, cancellationToken);
+            .SingleOrDefaultAsync(r => r.AttemptId == attemptId
+                && (r.QuestionId == questionId || r.ExamItemId == questionId), cancellationToken);
 
         if (fr is null)
         {
             fr = new FreeResponse
             {
                 AttemptId = attemptId,
-                QuestionId = questionId,
+                // A pool position carries no QuestionId at all; the paper decides which identity it is.
+                QuestionId = question.LegacyQuestion is null ? null : questionId,
+                ExamItemId = question.ExamItemId,
                 ExamId = attempt.ExamId,
                 SkillId = question.Section.SkillId,
                 QuestionType = QuestionType.FreeResponse.ToCode(),
@@ -93,7 +99,7 @@ public sealed partial class AttemptEngine
 
         return new SaveSpeakingAudioResult(
             fr.FreeResponseId,
-            fr.QuestionId!.Value,
+            fr.QuestionId ?? fr.ExamItemId ?? questionId,
             relativePath,
             durationMs,
             now);

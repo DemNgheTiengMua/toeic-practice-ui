@@ -82,7 +82,12 @@ public sealed partial class AttemptEngine
                 : [];
             if (finalDrafts is { Count: > 0 })
             {
-                if (finalDrafts.Select(draft => draft.QuestionId).Distinct().Count() != finalDrafts.Count)
+                // #269: a draft's `QuestionId` is the POSITION the client was handed - a question id on a
+                // legacy paper, an ExamItemId on a pool one. The wire field keeps its name (the client did
+                // not change); `Address` says what the value actually means.
+                int Address(AttemptFinalDraft draft) => draft.QuestionId;
+
+                if (finalDrafts.Select(Address).Distinct().Count() != finalDrafts.Count)
                 {
                     throw new AttemptEngineException(
                         AttemptEngineException.QuestionNotFound,
@@ -91,13 +96,18 @@ public sealed partial class AttemptEngine
 
                 foreach (var finalDraft in finalDrafts)
                 {
-                    var response = freeResponses.SingleOrDefault(item => item.QuestionId == finalDraft.QuestionId);
+                    // #269: the draft names a POSITION, which is a QuestionId on a legacy paper and an
+                    // ExamItemId on a pool one. Matching on QuestionId alone missed every pool draft, so
+                    // the create branch below inserted a second row for a position CreateAttemptAsync had
+                    // already seeded - and UX_FreeResponses_ExamItem refused it with a duplicate key.
+                    var response = freeResponses.SingleOrDefault(item => item.QuestionId == Address(finalDraft)
+                        || item.ExamItemId == Address(finalDraft));
                     if (response is null)
                     {
                         // #250: the position comes from the paper, so a pool-only productive task
                         // resolves too. A response row names whichever identity its paper uses, and
                         // CK_FreeResp_HasShape guarantees at least one is set.
-                        var question = await FindSittingQuestionAsync(attempt, finalDraft.QuestionId, cancellationToken);
+                        var question = await FindSittingQuestionAsync(attempt, Address(finalDraft), cancellationToken);
 
                         if (question.RenderFormat != QuestionType.FreeResponse.ToCode())
                         {

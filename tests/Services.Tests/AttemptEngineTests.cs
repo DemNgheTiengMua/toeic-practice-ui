@@ -130,17 +130,18 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     /// <summary>
     /// The same two-skill paper as two legacy <c>Questions</c> rows.
     /// <para>
-    /// <b>#269: NOT migrated, and the reason is production code rather than this fixture.</b> Four tests
-    /// below need a WHOLE legacy paper, not just a legacy task, because three readers they drive still
-    /// resolve a free response through <c>fr.Question</c>:
+    /// <b>#269/#272: NOT migrated, and the reason is production code rather than this fixture.</b> Two
+    /// tests below need a WHOLE legacy paper, not just a legacy task, because the reader they drive still
+    /// resolves a free response through <c>fr.Question</c>:
     /// <list type="bullet">
-    /// <item><c>AttemptEngine.Submission</c> matches a final draft by
-    /// <c>item.QuestionId == finalDraft.QuestionId</c>, so a pool response is never found and the insert
-    /// hits <c>UX_FreeResponses_ExamItem</c> as a duplicate.</item>
-    /// <item><c>AiGradingProcessor</c> reads <c>grading.FreeResponse.Question.SectionId</c>, so a pool
-    /// grading fails and the attempt stays <c>submitted</c> instead of <c>graded</c>.</item>
-    /// <item><c>AttemptEngine.Speaking</c> keys its response by <c>QuestionId</c> and returns
-    /// <c>fr.QuestionId!.Value</c>.</item>
+    /// <item><c>AttemptEngine.Submission.cs:94</c> matches a final draft by
+    /// <c>item.QuestionId == finalDraft.QuestionId</c> against that same <c>QuestionId</c> column, so a
+    /// pool response is never found at line 94. The code then falls through to the create branch at
+    /// line 109 and inserts a SECOND row for a position the sitting already seeded, which
+    /// <c>UX_FreeResponses_ExamItem</c> refuses as a duplicate. Measured on this file by migrating
+    /// <c>SubmitAttempt_Flushes_Final_Drafts_And_Queues_Ai_Gradings</c> alone: DbUpdateException,
+    /// "Cannot insert duplicate key row in object 'dbo.FreeResponses' with unique index
+    /// 'UX_FreeResponses_ExamItem'. The duplicate key value is (1, 3)."</item>
     /// </list>
     /// A paper carrying BOTH shapes is not an option either: <c>LoadSittingQuestionsAsync</c> picks the
     /// legacy branch the moment one question row exists, and <c>EnsureBindingsRender</c> then refuses the
@@ -220,19 +221,18 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     /// <summary>
     /// The same writing task as a legacy <c>Questions</c> row.
     /// <para>
-    /// <b>#269: NOT migrated, and the reason is production code rather than this fixture.</b> Three
-    /// tests below hand a free response to <c>WritingPracticeService</c>, to a final-draft submit, and
-    /// to <c>AiGradingProcessor</c>; each dereferences <c>fr.Question</c>, which a pool answer leaves
-    /// null:
-    /// <list type="bullet">
-    /// <item><c>AttemptEngine.Submission</c> matches a final draft by
-    /// <c>item.QuestionId == finalDraft.QuestionId</c>, so a pool response is never found and the
-    /// insert hits <c>UX_FreeResponses_ExamItem</c> as a duplicate.</item>
-    /// <item><c>AiGradingProcessor</c> reads <c>grading.FreeResponse.Question.SectionId</c>, so every
-    /// pool grading fails and the attempt stays <c>submitted</c> instead of <c>graded</c>.</item>
-    /// </list>
-    /// Migrating before those readers move would turn green tests red for a reason this ticket does
-    /// not own. The helper stays legacy until they do; #269 deletes it with the tables.
+    /// <b>#269/#272: NOT migrated, and the reason is production code rather than this fixture.</b> One
+    /// test below submits a final draft and is caught by <c>AttemptEngine.Submission.cs:94</c>, which
+    /// matches a draft by <c>QuestionId</c> only; a pool response is missed, the create branch at line 109
+    /// writes a second row for the same position, and <c>UX_FreeResponses_ExamItem</c> refuses it as a
+    /// duplicate. Measured: DbUpdateException "The duplicate key value is (1, 3)".
+    /// </para>
+    /// <para>
+    /// The other two tests that used to be listed here (<c>AiGradingCompletion_...</c> and
+    /// <c>FinalizeAiGradedAttempt_...</c>) ARE migrated to <see cref="AddWritingQuestionAsync"/>: the
+    /// <c>AiGradingProcessor</c> blocker they cited was fixed in #269
+    /// (<c>AiGradingProcessor.LoadGradedPositionAsync</c> now reads the section from the roster), and both
+    /// pass on a pool paper.
     /// </para>
     /// </summary>
     private async Task<int> AddLegacyWritingQuestionAsync(int certId, int examId)
@@ -269,10 +269,19 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     /// <summary>
     /// The same speaking task as a legacy <c>Questions</c> row.
     /// <para>
-    /// <b>#269: NOT migrated.</b> <c>AttemptEngine.Speaking</c> keys its response lookup by
-    /// <c>QuestionId</c> and returns <c>fr.QuestionId!.Value</c>, so a pool position's take is written
-    /// against the wrong identity and then read back through a null. The helper stays legacy until
-    /// that reader moves; #269 deletes it with the tables.
+    /// <b>#269/#272: NOT migrated, and the reason is production code rather than this fixture.</b>
+    /// <c>AttemptEngine.Speaking.cs:62</c> writes <c>QuestionId = questionId</c> into every new
+    /// <c>FreeResponse</c> unconditionally - it never sets <c>ExamItemId</c> - and line 96 returns
+    /// <c>fr.QuestionId!.Value</c>. On a pool paper the id the client sends is an <c>ExamItemId</c>, so the
+    /// insert names a <c>Questions</c> row that does not exist. Measured by migrating
+    /// <c>SaveSpeakingAudio_and_submit_queues_ai_grading_cleanly</c> alone: DbUpdateException at
+    /// <c>AttemptEngine.Speaking.cs:92</c>, "The INSERT statement conflicted with the FOREIGN KEY constraint
+    /// \"FK__FreeRespo__Quest__52AE4273\". The conflict occurred in database ..., table \"dbo.Questions\",
+    /// column 'QuestionId'."
+    /// </para>
+    /// <para>
+    /// Both <c>SaveSpeakingAudioAsync</c> overloads have the same defect, so this is one fix in the shared
+    /// reader rather than a test change; the helper stays legacy until it lands.
     /// </para>
     /// </summary>
     private async Task<int> AddLegacySpeakingQuestionAsync(int certId, int examId)
@@ -496,14 +505,15 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     public async Task AiGradingCompletion_Preserves_Hybrid_Exam_Objective_Score()
     {
         var certCode = Unique("ATTE");
-        var (certId, examId, _, _, _, _) = await SeedLegacyExamFixtureAsync(certCode);
-        // #269: legacy paper - see SeedLegacyExamFixtureAsync. AiGradingProcessor reads fr.Question.
-        var freeResponseQuestionId = await AddLegacyWritingQuestionAsync(certId, examId);
+        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
+        var freeResponseQuestionId = await AddWritingQuestionAsync(certId, examId);
         var userId = await SeedLearnerAsync(certCode);
         var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, 120);
         var engine = CreateEngine();
         await database.SqlAsync($"""
-            DECLARE @skillId INT = (SELECT SkillId FROM Questions WHERE QuestionId = {freeResponseQuestionId});
+            DECLARE @skillId INT = (SELECT sec.SkillId FROM ExamItems ei
+                JOIN Sections sec ON sec.SectionId = ei.SectionId
+                WHERE ei.ExamItemId = {freeResponseQuestionId});
 
             UPDATE a
             SET a.StartedAt = DATEADD(minute, -90, SYSDATETIMEOFFSET()),
@@ -550,9 +560,8 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     public async Task FinalizeAiGradedAttempt_UnderLength_Writing_Records_Penalty_Flag_And_Weighted_Score()
     {
         var certCode = Unique("ATTE");
-        var (certId, examId, _, _, _, _) = await SeedLegacyExamFixtureAsync(certCode);
-        // #269: legacy paper - see SeedLegacyExamFixtureAsync. AiGradingProcessor reads fr.Question.
-        var freeResponseQuestionId = await AddLegacyWritingQuestionAsync(certId, examId);
+        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
+        var freeResponseQuestionId = await AddWritingQuestionAsync(certId, examId);
         var userId = await SeedLearnerAsync(certCode);
         var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, 120);
         var engine = CreateEngine();
@@ -560,7 +569,9 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             UPDATE a
             SET a.StartedAt = DATEADD(minute, -90, SYSDATETIMEOFFSET()),
                 a.ExpiresAt = DATEADD(minute, 30, SYSDATETIMEOFFSET()),
-                a.ActiveSkillId = (SELECT SkillId FROM Questions WHERE QuestionId = {freeResponseQuestionId}),
+                a.ActiveSkillId = (SELECT sec.SkillId FROM ExamItems ei
+                    JOIN Sections sec ON sec.SectionId = ei.SectionId
+                    WHERE ei.ExamItemId = {freeResponseQuestionId}),
                 a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
             FROM ExamAttempts a
             WHERE a.AttemptId = {attempt.AttemptId};
