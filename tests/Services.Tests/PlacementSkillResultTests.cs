@@ -55,19 +55,55 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>
-    /// A certificate with the named skills, one section and one question per skill, a band table, and a
-    /// placement exam with one question per skill. Returns the ids the tests drive.
+    /// <summary>
+    /// A certificate with the named skills, one section per skill, a band table, a cut-score table and
+    /// a placement exam with one position per skill (two for a productive one). Returns the ids the
+    /// tests drive.
+    /// <para>
+    /// #269: the paper is authored on the pool - a stimulus-less item per position, bound to the
+    /// section. The legacy QuestionGroups/Questions/QuestionOptions rows this used to insert are the
+    /// tables being dropped.
+    /// </para>
     /// </summary>
     private async Task<Fixture> SeedAsync(string code, params (string Code, string Modality, string QuestionType)[] skills)
     {
         await _database.SqlCmdFileToDatabaseAsync(_dbName, WriteScript(code, skills));
-        return await ReadFixtureAsync(code);
+
+        await using var db = Db();
+        var certId = await db.Certificates.Where(c => c.Code == code).Select(c => c.CertId).SingleAsync();
+        var examId = await db.Exams.Where(e => e.CertId == certId).Select(e => e.ExamId).SingleAsync();
+        var skillIds = await db.Skills.Where(s => s.CertId == certId).ToDictionaryAsync(s => s.Code, s => s.SkillId);
+
+        foreach (var (skillCode, modality, questionType) in skills)
+        {
+            var sectionId = await db.Sections
+                .Where(s => s.CertId == certId && s.SkillId == skillIds[skillCode])
+                .Select(s => s.SectionId).SingleAsync();
+
+            if (questionType == "free_response")
+            {
+                // D6: a productive skill gets TWO tasks. The second is what makes "estimated from one
+                // task" a real state rather than a hypothetical one - with one task, the first grading
+                // would be a full measurement and the estimated status unreachable.
+                await PoolFixture.AddProductiveAsync(
+                    db, examId, certId, sectionId, modality, $"Q{skillCode}", displayOrder: 1);
+                await PoolFixture.AddProductiveAsync(
+                    db, examId, certId, sectionId, modality, $"Q{skillCode}b", displayOrder: 2);
+            }
+            else
+            {
+                await PoolFixture.AddMcqAsync(
+                    db, examId, certId, sectionId, modality, $"Q{skillCode}", displayOrder: 1);
+            }
+        }
+
+        return await ReadFixtureAsync(code, examId);
     }
 
     /// <summary>
     /// The fixture as a .sql file rather than one <c>-Q</c> batch, because it declares variables that a
     /// later batch in the same script refers to (<c>GO</c> would split them, so it is one batch and one
-    /// file). The exam is declared first: the questions reference it.
+    /// file). The exam is declared first: the sections reference it.
     /// </summary>
     private static string WriteScript(string code, (string Code, string Modality, string QuestionType)[] skills)
     {
@@ -78,7 +114,6 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
             "DECLARE @cert INT = SCOPE_IDENTITY();",
             "INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount)",
             "  VALUES (@cert, N'Placement', 'published', 30, 'placement', 90);",
-            "DECLARE @exam INT = SCOPE_IDENTITY();",
         };
 
         var index = 0;
@@ -88,34 +123,10 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
             lines.Add($"""
                 INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep)
                   VALUES (@cert, '{skillCode}', N'{skillCode}', '{modality}', {index}, 0, 100, 1);
-                DECLARE @{skillCode} INT = SCOPE_IDENTITY();
                 INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder)
-                  VALUES (@{skillCode}, @cert, '{modality}', 'S{index}', N'Section {index}', {(questionType == "free_response" ? 2 : 1)}, {index});
-                DECLARE @sec{skillCode} INT = SCOPE_IDENTITY();
-                INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec{skillCode}, {index});
-                DECLARE @grp{skillCode} INT = SCOPE_IDENTITY();
-                INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-                  VALUES (@grp{skillCode}, @exam, @sec{skillCode}, @{skillCode}, N'Q{index}', 'B1', '{questionType}', {index});
-                DECLARE @q{skillCode} INT = SCOPE_IDENTITY();
+                  VALUES ((SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = '{skillCode}'),
+                          @cert, '{modality}', 'S{index}', N'Section {index}', {(questionType == "free_response" ? 2 : 1)}, {index});
                 """);
-
-            if (questionType == "mcq")
-            {
-                lines.Add($"""
-                INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
-                  VALUES (@q{skillCode}, 'mcq', 'A', N'Right', 1), (@q{skillCode}, 'mcq', 'B', N'Wrong', 0);
-                """);
-            }
-            else
-            {
-                // D6: a productive skill gets TWO tasks. The second is what makes "estimated from one
-                // task" a real state rather than a hypothetical one - with one task, the first grading
-                // would be a full measurement and the estimated status unreachable.
-                lines.Add($"""
-                INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-                  VALUES (@grp{skillCode}, @exam, @sec{skillCode}, @{skillCode}, N'Q{index}b', 'B1', 'free_response', {index * 100});
-                """);
-            }
         }
 
         lines.Add("""
@@ -141,37 +152,38 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
         return path;
     }
 
-    private async Task<Fixture> ReadFixtureAsync(string code)
+    private async Task<Fixture> ReadFixtureAsync(string code, int examId)
     {
         await using var db = Db();
         var certId = await db.Certificates.Where(c => c.Code == code).Select(c => c.CertId).SingleAsync();
-        var examId = await db.Exams.Where(e => e.CertId == certId).Select(e => e.ExamId).SingleAsync();
         var skillIds = await db.Skills.Where(s => s.CertId == certId).ToDictionaryAsync(s => s.Code, s => s.SkillId);
-        var questionIds = await db.Questions.Where(q => q.ExamId == examId)
-            .Join(db.Skills, q => q.SkillId, s => s.SkillId, (q, s) => new { s.Code, q.QuestionId, q.DisplayOrder })
+
+        // #269: the paper is the roster, so a position is an ExamItemId and its skill is the section's.
+        var positions = await db.ExamItems.AsNoTracking()
+            .Where(i => i.ExamId == examId)
+            .Join(db.Sections.AsNoTracking(), i => i.SectionId, s => s.SectionId, (i, s) => new { i, s })
+            .Join(db.Skills.AsNoTracking(), x => x.s.SkillId, sk => sk.SkillId, (x, sk) => new { x.i, Code = sk.Code })
+            .OrderBy(x => x.i.DisplayOrder)
+            .Select(x => new { Code = x.Code, x.i.ExamItemId, x.i.DisplayOrder })
             .ToListAsync();
-        var first = questionIds
+
+        var first = positions
             .GroupBy(x => x.Code)
-            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.DisplayOrder).First().QuestionId);
-        // the second task a productive skill carries (D6); absent for an objective skill, which the
-        // two-task test does not ask for
-        var second = questionIds
+            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.DisplayOrder).First().ExamItemId);
+        var second = positions
             .GroupBy(x => x.Code)
             .Where(g => g.Count() > 1)
-            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.DisplayOrder).ElementAt(1).QuestionId);
-        var optionIds = await db.QuestionOptions.Where(o => o.IsCorrect == true)
-            .Join(db.Questions, o => o.QuestionId, q => q.QuestionId, (o, q) => new { q.SkillId, o.OptionId })
-            .ToDictionaryAsync(x => x.SkillId, x => x.OptionId);
-        return new Fixture(certId, examId, skillIds, first, second, optionIds);
+            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.DisplayOrder).ElementAt(1).ExamItemId);
+
+        return new Fixture(certId, examId, skillIds, first, second);
     }
 
     private sealed record Fixture(
         int CertId,
         int ExamId,
         IReadOnlyDictionary<string, int> SkillIds,
-        IReadOnlyDictionary<string, int> QuestionIds,
-        IReadOnlyDictionary<string, int> SecondQuestionIds,
-        IReadOnlyDictionary<int, int> CorrectOptionBySkillId);
+        IReadOnlyDictionary<string, int> PositionIds,
+        IReadOnlyDictionary<string, int> SecondPositionIds);
 
     private async Task<int> SeedLearnerAsync(string certCode)
     {
@@ -188,6 +200,20 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
     }
 
     private PlacementResultWriter Writer(CompanionDbContext db) => new(db);
+
+    /// <summary>
+    /// Answers one objective position with the label its pinned version marks correct. #269: a pool
+    /// row is addressed by <c>ExamItemId</c> and records <c>SelectedLabel</c> - the version stores
+    /// labels A-D, not option rows, so there is no legacy option id to point at.
+    /// </summary>
+    private async Task AnswerCorrectlyAsync(int attemptId, int examItemId)
+    {
+        await using var db = Db();
+        var answer = await db.AttemptAnswers
+            .SingleAsync(a => a.AttemptId == attemptId && a.ExamItemId == examItemId);
+        answer.SelectedLabel = "A";
+        await db.SaveChangesAsync();
+    }
 
     /// <summary>
     /// Starts a placement through the real service, so the attempt's answer sheet exists. A hand-written
@@ -221,10 +247,7 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
         var attemptId = await AttemptIdAsync(placementId);
         foreach (var skill in new[] { "LIST", "READ" })
         {
-            await SqlAsync($"""
-                UPDATE AttemptAnswers SET SelectedOptionId = {fixture.CorrectOptionBySkillId[fixture.SkillIds[skill]]}
-                  WHERE AttemptId = {attemptId} AND QuestionId = {fixture.QuestionIds[skill]};
-                """);
+            await AnswerCorrectlyAsync(attemptId, fixture.PositionIds[skill]);
         }
 
         await using (var engineDb = Db())
@@ -297,10 +320,7 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
         var placementId = await StartPlacementAsync(userId, fixture);
         var attemptId = await AttemptIdAsync(placementId);
 
-        await SqlAsync($"""
-            UPDATE AttemptAnswers SET SelectedOptionId = {fixture.CorrectOptionBySkillId[skillId]}
-              WHERE AttemptId = {attemptId} AND QuestionId = {fixture.QuestionIds["LIST"]};
-            """);
+        await AnswerCorrectlyAsync(attemptId, fixture.PositionIds["LIST"]);
 
         // One writer pass, through the real engine. The gap is present from the start, so no done
         // placement is ever flipped - the guard in trg_PlacementSkillResults_CompletionIsEarned exists
@@ -367,10 +387,7 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
         var placementId = await StartPlacementAsync(userId, fixture);
         var attemptId = await AttemptIdAsync(placementId);
 
-        await SqlAsync($"""
-            UPDATE AttemptAnswers SET SelectedOptionId = {fixture.CorrectOptionBySkillId[skillId]}
-              WHERE AttemptId = {attemptId} AND QuestionId = {fixture.QuestionIds["LIST"]};
-            """);
+        await AnswerCorrectlyAsync(attemptId, fixture.PositionIds["LIST"]);
 
         await using (var engineDb = Db())
         {
@@ -418,16 +435,13 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
         var attemptId = await AttemptIdAsync(placementId);
 
         // the objective half is answered, then the sitting crosses into the productive skill
-        await SqlAsync($"""
-            UPDATE AttemptAnswers SET SelectedOptionId = {fixture.CorrectOptionBySkillId[fixture.SkillIds["LIST"]]}
-              WHERE AttemptId = {attemptId} AND QuestionId = {fixture.QuestionIds["LIST"]};
-            """);
-        await AdvanceToSkillOfAsync(attemptId, fixture.QuestionIds["WRIT"]);
+        await AnswerCorrectlyAsync(attemptId, fixture.PositionIds["LIST"]);
+        await AdvanceToSkillOfAsync(attemptId, fixture.PositionIds["WRIT"]);
 
         await using (var db = Db())
         {
             var service = new PlacementService(db, new LearnerService(db));
-            await service.SaveDraftAsync(userId, placementId, fixture.QuestionIds["WRIT"],
+            await service.SaveDraftAsync(userId, placementId, fixture.PositionIds["WRIT"],
                 "A written response that is long enough to grade.");
         }
 
@@ -468,7 +482,7 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
         var userId = await SeedLearnerAsync(code);
 
         var placementId = await StartPlacementAsync(userId, fixture);
-        var attemptId = await SubmitWithDraftAsync(userId, placementId, fixture.QuestionIds["WRIT"]);
+        var attemptId = await SubmitWithDraftAsync(userId, placementId, fixture.PositionIds["WRIT"]);
 
         // the worker ran and the model failed on BOTH tasks this productive skill carries
         await SqlAsync($"""
@@ -515,10 +529,7 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
         var attemptId = await AttemptIdAsync(placementId);
 
         // one skill answered, the other untouched
-        await SqlAsync($"""
-            UPDATE AttemptAnswers SET SelectedOptionId = {fixture.CorrectOptionBySkillId[fixture.SkillIds["LIST"]]}
-              WHERE AttemptId = {attemptId} AND QuestionId = {fixture.QuestionIds["LIST"]};
-            """);
+        await AnswerCorrectlyAsync(attemptId, fixture.PositionIds["LIST"]);
 
         await using (var db = Db())
         {
@@ -584,23 +595,23 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
         var userId = await SeedLearnerAsync(code);
 
         var placementId = await StartPlacementAsync(userId, fixture);
-        var attemptId = await SubmitWithDraftAsync(userId, placementId, fixture.QuestionIds["WRIT"]);
+        var attemptId = await SubmitWithDraftAsync(userId, placementId, fixture.PositionIds["WRIT"]);
         var skillId = fixture.SkillIds["WRIT"];
 
         // D6: two tasks on the one writing skill. The engine pre-creates one draft per free-response
-        // question when the sitting starts, so the second task's row already exists - it is the GRADING
+        // position when the sitting starts, so the second task's row already exists - it is the GRADING
         // that is inserted here. Had this fixture carried one task, the first grading would have been a
         // full measurement and the estimated status unreachable.
         await SqlAsync($"""
             DECLARE @fr1 INT = (SELECT FreeResponseId FROM FreeResponses
-                                WHERE AttemptId = {attemptId} AND QuestionId = {fixture.QuestionIds["WRIT"]});
+                                WHERE AttemptId = {attemptId} AND ExamItemId = {fixture.PositionIds["WRIT"]});
             UPDATE AiGradings SET Status = 'done', CompletedAt = SYSDATETIMEOFFSET(), OverallScaled = 4.5
               WHERE FreeResponseId = @fr1;
             UPDATE FreeResponses SET Status = 'graded', SubmittedAt = SYSDATETIMEOFFSET()
               WHERE FreeResponseId = @fr1;
 
             DECLARE @fr2 INT = (SELECT FreeResponseId FROM FreeResponses
-                                WHERE AttemptId = {attemptId} AND QuestionId = {fixture.SecondQuestionIds["WRIT"]});
+                                WHERE AttemptId = {attemptId} AND ExamItemId = {fixture.SecondPositionIds["WRIT"]});
             UPDATE FreeResponses SET Status = 'graded', SubmittedAt = SYSDATETIMEOFFSET(),
                    ResponseText = N'Second response.' WHERE FreeResponseId = @fr2;
             UPDATE AiGradings SET Status = 'failed', CompletedAt = SYSDATETIMEOFFSET(), FailureReason = N'The model timed out.'
@@ -675,10 +686,7 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
 
         var placementId = await StartPlacementAsync(userId, fixture);
         var attemptId = await AttemptIdAsync(placementId);
-        await SqlAsync($"""
-            UPDATE AttemptAnswers SET SelectedOptionId = {fixture.CorrectOptionBySkillId[skillId]}
-              WHERE AttemptId = {attemptId} AND QuestionId = {fixture.QuestionIds["LIST"]};
-            """);
+        await AnswerCorrectlyAsync(attemptId, fixture.PositionIds["LIST"]);
 
         await using (var db = Db())
         {
@@ -730,14 +738,14 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
         await using (var db = Db())
         {
             var service = new PlacementService(db, new LearnerService(db));
-            await service.SaveDraftAsync(userId, placementId, fixture.QuestionIds["WRIT"],
+            await service.SaveDraftAsync(userId, placementId, fixture.PositionIds["WRIT"],
                 "A written response that is long enough to grade.");
             // #217 / PLC-35: BOTH tasks this paper carries must be answered for the settled result to be
             // a full measurement. It used to be one: the blank second task was given a grading row of its
             // own at submission, and "2 of 2 gradings done" read as `measured`. Counting the grading
             // rows rather than the tasks the paper DELIVERED is exactly the fabricated denominator D7
             // forbids, so the fixture now answers both - which is what this test's name claims.
-            await service.SaveDraftAsync(userId, placementId, fixture.SecondQuestionIds["WRIT"],
+            await service.SaveDraftAsync(userId, placementId, fixture.SecondPositionIds["WRIT"],
                 "A second written response, also long enough to be graded.");
         }
 
@@ -789,10 +797,7 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
 
         var placementId = await StartPlacementAsync(userId, fixture);
         var attemptId = await AttemptIdAsync(placementId);
-        await SqlAsync($"""
-            UPDATE AttemptAnswers SET SelectedOptionId = {fixture.CorrectOptionBySkillId[skillId]}
-              WHERE AttemptId = {attemptId} AND QuestionId = {fixture.QuestionIds["LIST"]};
-            """);
+        await AnswerCorrectlyAsync(attemptId, fixture.PositionIds["LIST"]);
 
         await using (var db = Db())
         {
@@ -824,15 +829,17 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// The sitting's one-way skill lock: a placement paper serves one skill's questions until the
+    /// The sitting's one-way skill lock: a placement paper serves one skill's positions until the
     /// learner crosses into the next. This advances the attempt to the skill holding
-    /// <paramref name="questionId"/>, which is what the take screen does when the objective half is
-    /// finished. Without it, writing to a later skill's question is refused - correctly.
+    /// <paramref name="examItemId"/>, which is what the take screen does when the objective half is
+    /// finished. Without it, writing to a later skill's position is refused - correctly.
     /// </summary>
-    private Task AdvanceToSkillOfAsync(int attemptId, int questionId) =>
+    private Task AdvanceToSkillOfAsync(int attemptId, int examItemId) =>
         SqlAsync($"""
             UPDATE a
-            SET a.ActiveSkillId = (SELECT q.SkillId FROM Questions q WHERE q.QuestionId = {questionId}),
+            SET a.ActiveSkillId = (SELECT s.SkillId
+                                   FROM ExamItems ei JOIN Sections s ON s.SectionId = ei.SectionId
+                                   WHERE ei.ExamItemId = {examItemId}),
                 a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
             FROM ExamAttempts a
             WHERE a.AttemptId = {attemptId};
@@ -842,15 +849,15 @@ public sealed class PlacementSkillResultTests : IAsyncLifetime
     /// Submits the placement with one written draft, which is what creates the attempt's free-response
     /// row and its pending AiGrading. Returns the attempt id.
     /// </summary>
-    private async Task<int> SubmitWithDraftAsync(int userId, int placementId, int questionId)
+    private async Task<int> SubmitWithDraftAsync(int userId, int placementId, int examItemId)
     {
         var attemptId = await AttemptIdAsync(placementId);
-        await AdvanceToSkillOfAsync(attemptId, questionId);
+        await AdvanceToSkillOfAsync(attemptId, examItemId);
 
         await using (var db = Db())
         {
             var service = new PlacementService(db, new LearnerService(db));
-            await service.SaveDraftAsync(userId, placementId, questionId,
+            await service.SaveDraftAsync(userId, placementId, examItemId,
                 "A written response that is long enough to grade.");
         }
 

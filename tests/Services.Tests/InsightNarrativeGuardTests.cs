@@ -415,4 +415,32 @@ public sealed class InsightNarrativeGuardTests
         Assert.Null(InsightNarrativeGuard.Rejection(
             Request(), "Your goal is B2, and your target B2 is reachable this term."));
     }
+
+    /// <summary>
+    /// A certificate may be NAMED for the skills it examines, and the narrative echoes the activity
+    /// title. When the title carried the certificate's name ("TOEIC Listening &amp; Reading dashboard"),
+    /// `InsightNarrativeGuard` read that echo as a claim about two unmeasured skills and rejected a
+    /// correct narrative - so the demo learner's dashboard insight failed on every retry with
+    /// "Narrative describes Listening, Reading, which has no measurement in the payload".
+    /// <para>
+    /// The fix is in the BUILDER, which now titles the activity with the certificate CODE. This test
+    /// pins the guard's half of the contract: an input that names only the certificate does not
+    /// license claims about its unmeasured skills.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void A_claim_about_an_unmeasured_skill_is_still_refused()
+    {
+        // Writing and Speaking are examined but unmeasured in the payload, so a LEVEL attached to one
+        // is the fabricated-bottom-band failure #211 forbids. The fix for the dashboard bug was to stop
+        // the activity title naming skills - not to let a narrative name a level for one.
+        var reason = InsightNarrativeGuard.Rejection(
+            Request(), "Your writing is at B1, so focus there next.");
+
+        // It is refused, and the reason is the level token: 'B1' is not a level the payload holds for
+        // writing, so the narrative is citing a level that does not exist. (The "no measurement" arm is
+        // a second, weaker guard behind this one.)
+        Assert.NotNull(reason);
+        Assert.Contains("level 'B1'", reason);
+    }
 }

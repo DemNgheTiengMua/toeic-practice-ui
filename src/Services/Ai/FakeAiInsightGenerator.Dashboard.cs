@@ -185,7 +185,11 @@ public partial class FakeAiInsightGenerator
         }
 
         // 5. Full prose narrative
-        var narrative = $"**Performance Summary**: Overall accuracy of {accuracyPct}% ({totalCorrect}/{totalAnswered} questions answered across {request.CertName}).\n\n"
+        // The activity title, which the dashboard builds from the certificate CODE - never `CertName`.
+        // A certificate may be named for the skills it examines (TOEIC's is literally "TOEIC Listening &
+        // Reading"), and InsightNarrativeGuard reads a skill name in the narrative as a claim about that
+        // skill, so naming an unmeasured one rejected a correct narrative on every dashboard insight.
+        var narrative = $"**Performance Summary**: Overall accuracy of {accuracyPct}% ({totalCorrect}/{totalAnswered} questions answered on {request.ActivityTitle}).\n\n"
             + $"**Progress & Trend**: {trendComparison}\n\n"
             + $"**Section Breakdown**: {sectionAnalysis}\n\n"
             + $"**Target Band Alignment**: {targetBandText}";

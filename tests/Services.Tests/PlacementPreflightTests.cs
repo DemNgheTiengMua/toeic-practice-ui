@@ -54,13 +54,18 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         int CertId,
         int ExamId,
         IReadOnlyDictionary<string, int> SkillIds,
-        IReadOnlyDictionary<int, int> QuestionIds,
+        IReadOnlyDictionary<int, int> PositionIds,
         IReadOnlyDictionary<int, int> CorrectOptionBySkillId);
 
     /// <summary>
-    /// A certificate with the named skills, one objective question per skill, a band table, and one
+    /// A certificate with the named skills, one objective position per skill, a band table, and one
     /// placement exam. <c>freeResponse</c> skills get two tasks, which is what makes a grading failure
     /// representable (both tasks must fail before the skill is <c>not_measured</c>).
+    /// <para>
+    /// #269: the paper is authored on the pool - the positions are <c>ExamItems</c> rows and the ids a
+    /// test addresses are <c>ExamItemId</c>s. The legacy QuestionGroups/Questions/QuestionOptions rows
+    /// this fixture used to insert are the tables being dropped.
+    /// </para>
     /// </summary>
     private async Task<Fixture> SeedAsync(string code, params (string Code, string Modality, bool FreeResponse)[] skills)
     {
@@ -70,43 +75,19 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
             "DECLARE @cert INT = SCOPE_IDENTITY();",
             "INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount)",
             "  VALUES (@cert, N'Placement', 'published', 30, 'placement', 90);",
-            "DECLARE @exam INT = SCOPE_IDENTITY();",
         };
 
         var index = 0;
         foreach (var (skillCode, modality, freeResponse) in skills)
         {
             index++;
-            var questionType = freeResponse ? "free_response" : "mcq";
             lines.Add($"""
                 INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep)
                   VALUES (@cert, '{skillCode}', N'{skillCode}', '{modality}', {index}, 0, 100, 1);
-                DECLARE @{skillCode} INT = SCOPE_IDENTITY();
                 INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder)
-                  VALUES (@{skillCode}, @cert, '{modality}', 'S{index}', N'Section {index}', {(freeResponse ? 2 : 1)}, {index});
-                DECLARE @sec{skillCode} INT = SCOPE_IDENTITY();
-                INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec{skillCode}, {index});
-                DECLARE @grp{skillCode} INT = SCOPE_IDENTITY();
-                INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-                  VALUES (@grp{skillCode}, @exam, @sec{skillCode}, @{skillCode}, N'Q{index}', 'B1', '{questionType}', {index});
+                  VALUES ((SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = '{skillCode}'),
+                          @cert, '{modality}', 'S{index}', N'Section {index}', {(freeResponse ? 2 : 1)}, {index});
                 """);
-
-            if (freeResponse)
-            {
-                lines.Add($"""
-                INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-                  VALUES (@grp{skillCode}, @exam, @sec{skillCode}, @{skillCode}, N'Q{index}b', 'B1', 'free_response', {index * 100});
-                """);
-            }
-            else
-            {
-                lines.Add($"""
-                INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
-                  SELECT QuestionId, 'mcq', 'A', N'Right', 1 FROM Questions WHERE GroupId = @grp{skillCode}
-                  UNION ALL
-                  SELECT QuestionId, 'mcq', 'B', N'Wrong', 0 FROM Questions WHERE GroupId = @grp{skillCode};
-                """);
-            }
         }
 
         lines.Add("""
@@ -132,17 +113,36 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         var certId = await db.Certificates.Where(c => c.Code == code).Select(c => c.CertId).SingleAsync();
         var examId = await db.Exams.Where(e => e.CertId == certId).Select(e => e.ExamId).SingleAsync();
         var skillIds = await db.Skills.Where(s => s.CertId == certId).ToDictionaryAsync(s => s.Code, s => s.SkillId);
-        var options = await db.QuestionOptions.Where(o => o.IsCorrect == true)
-            .Join(db.Questions, o => o.QuestionId, q => q.QuestionId, (o, q) => new { q.SkillId, o.OptionId })
-            .ToDictionaryAsync(x => x.SkillId, x => x.OptionId);
-        var questions = await db.Questions.Where(q => q.ExamId == examId)
-            .OrderBy(q => q.DisplayOrder)
-            .Select(q => new { q.QuestionId, q.SkillId })
-            .ToListAsync();
-        var firstQuestion = questions
-            .GroupBy(q => q.SkillId)
-            .ToDictionary(g => g.Key, g => g.OrderBy(q => q.QuestionId).First().QuestionId);
-        return new Fixture(code, certId, examId, skillIds, firstQuestion, options);
+
+        // One objective position per skill; a productive one gets two tasks (D6) and no option, because
+        // CK_Items_Modality_RenderFormat pins a productive modality to 'free_response'.
+        var positionIds = new Dictionary<int, int>();
+        var correctOptionBySkillId = new Dictionary<int, int>();
+        foreach (var (skillCode, modality, freeResponse) in skills)
+        {
+            var sectionId = await db.Sections
+                .Where(s => s.CertId == certId && s.SkillId == skillIds[skillCode])
+                .Select(s => s.SectionId).SingleAsync();
+
+            if (freeResponse)
+            {
+                var first = await PoolFixture.AddProductiveAsync(
+                    db, examId, certId, sectionId, modality, $"Q{skillCode}", displayOrder: 1);
+                await PoolFixture.AddProductiveAsync(
+                    db, examId, certId, sectionId, modality, $"Q{skillCode}b", displayOrder: 2);
+                positionIds[skillIds[skillCode]] = first.ExamItemId;
+            }
+            else
+            {
+                var position = await PoolFixture.AddMcqAsync(
+                    db, examId, certId, sectionId, modality, $"Q{skillCode}", displayOrder: 1);
+                positionIds[skillIds[skillCode]] = position.ExamItemId;
+                correctOptionBySkillId[skillIds[skillCode]] =
+                    await PoolFixture.OptionIdAsync(db, examId, position.ExamItemId, "A");
+            }
+        }
+
+        return new Fixture(code, certId, examId, skillIds, positionIds, correctOptionBySkillId);
     }
 
     private async Task<int> SeedLearnerAsync(string certCode)
@@ -213,26 +213,28 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
 
             if (i > 0)
             {
-                await AdvanceToSkillAsync(attemptId, fixture.QuestionIds[skillId]);
+                await AdvanceToSkillAsync(attemptId, fixture.PositionIds[skillId]);
             }
 
             await using var db = Db();
             await Service(db).SaveAnswerAsync(
-                userId, placementId, QuestionOf(fixture, skillId), optionId, isFlagged: false);
+                userId, placementId, PositionOf(fixture, skillId), optionId, isFlagged: false);
         }
     }
 
-    private static int QuestionOf(Fixture fixture, int skillId) => fixture.QuestionIds[skillId];
+    private static int PositionOf(Fixture fixture, int skillId) => fixture.PositionIds[skillId];
 
     /// <summary>
-    /// The sitting's one-way skill lock: a placement paper serves one skill's questions until the learner
+    /// The sitting's one-way skill lock: a placement paper serves one skill's positions until the learner
     /// crosses into the next. This is the same move the take screen makes when the previous skill's
     /// objective half is finished.
     /// </summary>
-    private Task AdvanceToSkillAsync(int attemptId, int questionId) =>
+    private Task AdvanceToSkillAsync(int attemptId, int examItemId) =>
         SqlAsync($"""
             UPDATE a
-            SET a.ActiveSkillId = (SELECT q.SkillId FROM Questions q WHERE q.QuestionId = {questionId}),
+            SET a.ActiveSkillId = (SELECT s.SkillId
+                                   FROM ExamItems ei JOIN Sections s ON s.SectionId = ei.SectionId
+                                   WHERE ei.ExamItemId = {examItemId}),
                 a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
             FROM ExamAttempts a
             WHERE a.AttemptId = {attemptId};
@@ -331,7 +333,7 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         await using (var db = Db())
         {
             await Service(db, clock).SaveAnswerAsync(
-                userId, placementId, fixture.QuestionIds[fixture.SkillIds["LIST"]],
+                userId, placementId, fixture.PositionIds[fixture.SkillIds["LIST"]],
                 fixture.CorrectOptionBySkillId[fixture.SkillIds["LIST"]], isFlagged: false);
         }
 
@@ -779,7 +781,7 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         await using (var db = Db())
         {
             await Service(db, clock).SaveAnswerAsync(
-                userId, placementId, fixture.QuestionIds[fixture.SkillIds["LIST"]],
+                userId, placementId, fixture.PositionIds[fixture.SkillIds["LIST"]],
                 fixture.CorrectOptionBySkillId[fixture.SkillIds["LIST"]], isFlagged: false);
         }
 
@@ -829,11 +831,14 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
 
         // D6: a productive skill carries two tasks. Both must fail before the skill is not_measured, so
         // both are drafted - a one-task sitting would go `estimated_from_one_task` and measure something.
-        var questions = await QuestionIdsAsync(attemptId);
-        foreach (var questionId in questions)
+        var positions = await PositionIdsAsync(attemptId);
+        foreach (var examItemId in positions)
         {
+            // #269: the sitting's one-way skill lock still applies - crossing to Writing is what the take
+            // screen does when the objective half is finished.
+            await AdvanceToSkillAsync(attemptId, examItemId);
             await using var db = Db();
-            await Service(db).SaveDraftAsync(userId, placementId, questionId, "A written response long enough to grade.");
+            await Service(db).SaveDraftAsync(userId, placementId, examItemId, "A written response long enough to grade.");
         }
 
         await using (var db = Db())
@@ -856,15 +861,16 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         return placementId;
     }
 
-    private async Task<List<int>> QuestionIdsAsync(int attemptId)
+    /// <summary>The paper's positions, in sitting order - the ids a pool draft is addressed by.</summary>
+    private async Task<List<int>> PositionIdsAsync(int attemptId)
     {
         await using var db = Db();
         var examId = await db.PlacementTests.Where(p => p.AttemptId == attemptId)
             .Select(p => p.ExamId!.Value).SingleAsync();
-        return await db.Questions
-            .Where(q => q.ExamId == examId)
-            .OrderBy(q => q.DisplayOrder)
-            .Select(q => q.QuestionId)
+        return await db.ExamItems
+            .Where(i => i.ExamId == examId)
+            .OrderBy(i => i.DisplayOrder)
+            .Select(i => i.ExamItemId)
             .ToListAsync();
     }
 

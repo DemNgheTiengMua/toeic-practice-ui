@@ -52,22 +52,21 @@ public sealed partial class LearnerServiceTests
         var code = Unique("FRBAND");
         var (certId, skillId, sectionId) = await SeedCertWithNamedSkillsAsync(code, ("WRIT", "Writing", "writing"));
 
-        int examId;
         await database.SqlAsync($"""
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
               VALUES ({certId}, N'Free response placement {code}', 'published', 30, 'placement');
-            DECLARE @exam INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
-              VALUES (@exam, {certId}, {sectionId}, 1);
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-              SELECT GroupId, ExamId, SectionId, {skillId}, N'Write an email.', 'B2', 'free_response', 1
-              FROM QuestionGroups WHERE ExamId = @exam;
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        examId = await db.Exams.AsNoTracking()
+        var examId = await db.Exams.AsNoTracking()
             .Where(e => e.CertId == certId && e.Purpose == "placement")
             .Select(e => e.ExamId).SingleAsync();
+
+        // #269: the paper's one position is a pool productive task. A pool version carries no options
+        // (CNT-06's other legal shape), which is what makes the task render as a free response -
+        // the fact the legacy Questions.QuestionType column used to state.
+        await PoolFixture.AddProductiveAsync(
+            db, examId, certId, sectionId, "writing", "Write an email.", displayOrder: 1, level: "B2");
 
         // The precondition of the defect: a placement exam whose only question is a free response,
         // so submitting it cannot produce a band synchronously.
@@ -75,8 +74,14 @@ public sealed partial class LearnerServiceTests
             .Where(e => e.ExamId == examId).Select(e => e.Purpose).SingleAsync();
         Assert.Equal(ExamPurpose.Placement.ToCode(), purpose);
 
-        var freeResponses = await db.Questions.AsNoTracking()
-            .CountAsync(q => q.ExamId == examId && q.QuestionType == "free_response");
+        var freeResponses = await db.ExamItems.AsNoTracking()
+            .Where(i => i.ExamId == examId)
+            .Join(db.Items.AsNoTracking(), i => i.ItemId, item => item.ItemId, (i, item) => item)
+            .CountAsync(item => item.RenderFormat == "free_response");
         Assert.Equal(1, freeResponses);
+        Assert.Equal(skillId, await db.ExamItems.AsNoTracking()
+            .Where(i => i.ExamId == examId)
+            .Join(db.Sections.AsNoTracking(), i => i.SectionId, s => s.SectionId, (i, s) => s.SkillId)
+            .SingleAsync());
     }
 }
