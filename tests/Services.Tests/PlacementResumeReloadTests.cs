@@ -558,7 +558,7 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
             answers.Count,
             answers.Count(a => a.SelectedOptionId != null || a.SelectedOptionIdsJson != null),
             await db.FreeResponses.CountAsync(r => r.AttemptId == attemptId && r.ResponseText != null && r.ResponseText != ""),
-            attempt.LastQuestionId,
+            attempt.CurrentExamItemId,
             attempt.StartedAt,
             attempt.ExpiresAt,
             attempt.LastActivityAt,

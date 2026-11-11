@@ -36,7 +36,8 @@ INSERT INTO QuestionOptions (QuestionId,QuestionType,Label,Text,IsCorrect) VALUE
 PRINT 'accepted per-option rationale and category';
 
 -- UI-15/16: resume position must be in the attempt's exam; flags persist
-INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt,LastQuestionId) VALUES (@u,@ex,@c,SYSDATETIMEOFFSET(),@q); DECLARE @a INT=SCOPE_IDENTITY();
+-- #269: the remembered position is a ROSTER id (CurrentExamItemId), not a Questions row.
+INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt) VALUES (@u,@ex,@c,SYSDATETIMEOFFSET()); DECLARE @a INT=SCOPE_IDENTITY();
 INSERT INTO AttemptAnswers (AttemptId,QuestionId,ExamId,SelectedOptionId,IsCorrect,IsFlagged) VALUES (@a,@q,@ex,@optB,0,1);
 BEGIN TRY
   UPDATE ExamAttempts SET SubmittedAt=SYSDATETIMEOFFSET() WHERE AttemptId=@a;  -- still in_progress

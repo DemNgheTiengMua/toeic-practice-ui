@@ -55,7 +55,11 @@ public partial class ExamAttempt
 
     public DateTimeOffset? SubmittedAt { get; set; }
 
-    public int? LastQuestionId { get; set; }
+    /// <summary>
+    /// #269: the roster position the learner is on. This replaces <c>LastQuestionId</c>, which was a
+    /// foreign key into <c>Questions</c> and therefore could not hold a pool position at all.
+    /// </summary>
+    public int? CurrentExamItemId { get; set; }
 
     public int? TotalScore { get; set; }
 
@@ -124,10 +128,6 @@ public partial class ExamAttempt
 
     [InverseProperty("ExamAttempt")]
     public virtual ICollection<PlacementTest> PlacementTests { get; set; } = new List<PlacementTest>();
-
-    [ForeignKey("LastQuestionId, ExamId")]
-    [InverseProperty("ExamAttempts")]
-    public virtual Question? Question { get; set; }
 
     [InverseProperty("ExamAttempt")]
     public virtual ICollection<Recommendation> Recommendations { get; set; } = new List<Recommendation>();

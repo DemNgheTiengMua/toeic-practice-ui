@@ -160,7 +160,10 @@ public sealed partial class AttemptEngine
                 ReferenceKind: version.ReferenceKind,
                 // A pool position's grouping identity is its stimulus: the navigation locks compare
                 // "am I in the same bundle", and a stimulus IS the bundle.
-                GroupId: row.item.StimulusId,
+                // #269: a solo position has no stimulus to share, so its block address is its own negated
+                // position id - the same convention the Studio rail and the exporter use. A null GroupId
+                // would make a locked-unit paper unreachable by TransitionGroupAsync.
+                GroupId: row.item.StimulusId ?? -row.i.ExamItemId,
                 Section: new SittingSection(
                     SectionId: row.s.SectionId,
                     Code: row.s.Code,
@@ -192,7 +195,10 @@ public sealed partial class AttemptEngine
                     ImageAlt: stimulus?.ImageAlt,
                     AudioPath: audio?.Path,
                     AudioStartMs: audio?.StartMs,
-                    AudioEndMs: audio?.EndMs)));
+                    AudioEndMs: audio?.EndMs,
+                    // #269: a locked unit's clock is the stimulus's own window. Without this the sub-timer
+                    // fell through to the paper's overall duration and a 480-second unit showed 3600.
+                    ResponseSeconds: stimulus?.ResponseSeconds)));
         }
 
         return list;
@@ -346,11 +352,13 @@ public sealed partial class AttemptEngine
     /// tables go: a pool-only paper cannot yet remember a mid-paper position across a reload.
     /// </para>
     /// </summary>
+    /// <summary>
+    /// #269: remember where the learner is. The column is a roster position, so a pool paper records its
+    /// <c>ExamItemId</c> and a legacy paper records its question id - one column, and which id it holds is
+    /// decided by the paper, exactly as every other answer-shape table does.
+    /// </summary>
     private static void RecordLastPosition(ExamAttempt attempt, SittingQuestion q)
     {
-        if (q.LegacyQuestion is not null)
-        {
-            attempt.LastQuestionId = q.Id;
-        }
+        attempt.CurrentExamItemId = q.ExamItemId ?? q.Id;
     }
 }

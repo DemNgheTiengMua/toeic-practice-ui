@@ -1,4 +1,4 @@
-﻿using BusinessObjects;
+using BusinessObjects;
 using DataAccess;
 using BusinessObjects.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +12,7 @@ namespace Services.Tests;
 /// <para>
 /// Both services enumerated an exam's tasks with a legacy query. On a paper assembled from the pool that
 /// query returns nothing, so the screen reported "no questions found" for a paper the engine can sit -
-/// and both stamped <c>Attempts.LastQuestionId</c>, a column this epic retires.
+/// and both stamped <c>Attempts.CurrentExamItemId</c>, a column this epic retires.
 /// </para>
 /// <para>
 /// <b>What this pins.</b> The precondition (zero question rows) is asserted first, because without it the

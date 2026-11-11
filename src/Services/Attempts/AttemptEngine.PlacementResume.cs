@@ -143,7 +143,7 @@ public sealed partial class AttemptEngine
             TotalStages: skills.Count,
             SyncedAnswerCount: questions.Count(Answered),
             TotalQuestions: questions.Count,
-            LastQuestionId: attempt.LastQuestionId);
+            LastQuestionId: attempt.CurrentExamItemId);
     }
 
     /// <summary>

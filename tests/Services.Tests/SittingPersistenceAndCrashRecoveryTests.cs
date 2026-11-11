@@ -142,7 +142,7 @@ public sealed class SittingPersistenceAndCrashRecoveryTests(DatabaseFixture data
         var reloadedAttempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
         Assert.Equal(14250, reloadedAttempt.LastAudioOffsetMs);
         Assert.Equal("{\"notes\":[{\"q\":1,\"text\":\"flagged question\"}]}", reloadedAttempt.CandidateNotesJson);
-        Assert.Equal(q1Id, reloadedAttempt.LastQuestionId);
+        Assert.Equal(q1Id, reloadedAttempt.CurrentExamItemId);
 
         var answer = await db.AttemptAnswers.SingleAsync(a => a.AttemptId == attempt.AttemptId && a.QuestionId == q1Id);
         Assert.Equal(opt1Id, answer.SelectedOptionId);

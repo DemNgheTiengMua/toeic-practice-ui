@@ -75,10 +75,8 @@ public partial class CompanionDbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Attempts_ExamCert");
 
-            entity.HasOne(d => d.Question).WithMany(p => p.ExamAttempts)
-                .HasPrincipalKey(p => new { p.QuestionId, p.ExamId })
-                .HasForeignKey(d => new { d.LastQuestionId, d.ExamId })
-                .HasConstraintName("FK_Attempts_LastQuestionExam");
+            // #269: the remembered position is a roster id, not a Questions row, so it carries no
+            // navigation and no foreign key. LastQuestionId and its FK went with the legacy tables.
         });
 
 

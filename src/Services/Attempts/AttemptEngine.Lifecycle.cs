@@ -286,8 +286,8 @@ public sealed partial class AttemptEngine
             var targetIdx = orderedQuestions.FindIndex(q => q.Id == request.LastQuestionId.Value);
             if (targetIdx >= 0 && !IsPhaseOrUnitOrGroupLocked(attempt, orderedQuestions[targetIdx]))
             {
-                var currentIdx = attempt.LastQuestionId.HasValue
-                    ? orderedQuestions.FindIndex(q => q.Id == attempt.LastQuestionId.Value)
+                var currentIdx = attempt.CurrentExamItemId.HasValue
+                    ? orderedQuestions.FindIndex(q => q.Id == attempt.CurrentExamItemId.Value)
                     : -1;
                 var targetQuestion = orderedQuestions[targetIdx];
                 var isBackwardInAudio = string.Equals(targetQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase)
@@ -409,7 +409,7 @@ public sealed partial class AttemptEngine
             attempt.ActiveSkillId,
             attempt.ActiveUnitNumber,
             attempt.ActiveGroupId,
-            attempt.LastQuestionId,
+            attempt.CurrentExamItemId,
             attempt.LastAudioOffsetMs,
             attempt.CandidateNotesJson,
             remainingSeconds,

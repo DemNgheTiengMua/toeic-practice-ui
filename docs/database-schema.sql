@@ -1935,7 +1935,12 @@ CREATE TABLE ExamAttempts (
   -- UI-14: result "Completed 20 Sep 2026 Â· 11:42 Â· time taken 01:53:29"
   SubmittedAt     DATETIMEOFFSET NULL,
   -- UI-15: resume "You returned to question 8"
-  LastQuestionId  INT NULL,
+  -- #269: the paper position the learner is on, as a ROSTER id. This replaces LastQuestionId, which was a
+  -- foreign key into Questions and therefore could not hold a pool position at all - a pool paper then
+  -- resumed at its first unlocked position, which broke one-way AUDIO_DRIVEN navigation (the learner could
+  -- step back over audio they had already heard). No FK: a position is addressed by its ExamItemId, and a
+  -- binding retired mid-sitting must not delete the attempt that was sitting on it.
+  CurrentExamItemId INT NULL,
   TotalScore      INT NULL,
   BandCode        VARCHAR(20) NULL,                 -- snapshot at grading
   -- #191 / D14: the writer identity and the ordering token. Both are required by the trigger below
@@ -1959,14 +1964,17 @@ CREATE TABLE ExamAttempts (
   -- H-5: ExamId's CertId must be the attempt's own (pins the carried-down value)
   CONSTRAINT FK_Attempts_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
   CONSTRAINT FK_Attempts_ActiveSkill FOREIGN KEY (ActiveSkillId, CertId) REFERENCES Skills(SkillId, CertId),
-  CONSTRAINT FK_Attempts_ActiveGroup FOREIGN KEY (ActiveGroupId, CertId) REFERENCES QuestionGroups(GroupId, CertId),
+  -- #269: the unit a locked-phase sitting is currently inside. On the pool a "group" IS the stimulus its
+  -- positions share, so this names a Stimuli row - the FK below says so. A solo position (no stimulus)
+  -- has no group to name and leaves this NULL, which the locks already treat as "not group-scoped".
+  CONSTRAINT FK_Attempts_ActiveGroup FOREIGN KEY (ActiveGroupId) REFERENCES Stimuli(StimulusId),
   -- composite target so CreditTransactions can prove the charged user owns the attempt (H-1):
   CONSTRAINT UQ_Attempts_Id_User UNIQUE (AttemptId, UserId),
   -- H-5: composite targets so AttemptAnswers/FreeResponses/AttemptSkillScores can pin containment
   CONSTRAINT UQ_Attempts_Id_Exam UNIQUE (AttemptId, ExamId),
   CONSTRAINT UQ_Attempts_Id_Cert UNIQUE (AttemptId, CertId),
   -- UI-15: the resume position must be a question of this attempt's own exam
-  CONSTRAINT FK_Attempts_LastQuestionExam FOREIGN KEY (LastQuestionId, ExamId) REFERENCES Questions(QuestionId, ExamId),
+  -- #269: FK_Attempts_LastQuestionExam is gone with the column; a roster position is not a Questions row.
   CONSTRAINT CK_Attempts_SubmittedAt CHECK (SubmittedAt IS NULL OR Status IN ('submitted','graded'))
 );
 GO

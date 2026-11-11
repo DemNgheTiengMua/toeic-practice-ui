@@ -76,9 +76,10 @@ public sealed class MigratedPaperIsSittableTests(DatabaseFixture database)
             // deleting them.
             await using (var purge = DbContextFactory.Create(connectionString))
             {
-                // Detach the attempts. Both columns are FKs into the legacy tables.
+                // Detach the attempts. #269: the remembered position is a roster id now, so only
+                // ActiveGroupId still names a legacy row.
                 await purge.Database.ExecuteSqlRawAsync(
-                    "UPDATE ExamAttempts SET LastQuestionId = NULL, ActiveGroupId = NULL WHERE ExamId = {0}",
+                    "UPDATE ExamAttempts SET ActiveGroupId = NULL WHERE ExamId = {0}",
                     examId);
 
                 // Answers and responses record what was asked, so they go with the questions.

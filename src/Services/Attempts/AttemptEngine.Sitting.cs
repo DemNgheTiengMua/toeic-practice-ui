@@ -318,11 +318,22 @@ public sealed partial class AttemptEngine
                 : IsAnswered(AnswerFor(q)));
         int flaggedCount = answers.Count(a => a.IsFlagged);
 
-        // Determine authoritative saved question index within the active phase/unit/group
+        // Determine authoritative saved question index within the active phase/unit/group.
+        //
+        // #269: a pool paper has no LastQuestionId - the column is an FK into Questions and is being
+        // dropped - so the position is derived from the answers it already holds. That is the same fact,
+        // read from the ledger instead of a denormalised column, and it is what keeps one-way AUDIO_DRIVEN
+        // navigation working: without it every pool paper resumed at position 1 and a learner could
+        // navigate backwards over audio they had already heard.
         int savedIndex = -1;
-        if (attempt.LastQuestionId.HasValue)
+        if (attempt.CurrentExamItemId.HasValue)
         {
-            savedIndex = questions.FindIndex(q => q.Id == attempt.LastQuestionId.Value);
+            savedIndex = questions.FindIndex(q => q.Id == attempt.CurrentExamItemId.Value);
+        }
+
+        if (savedIndex < 0)
+        {
+            savedIndex = questions.FindLastIndex(q => AnswerFor(q) is not null || ResponseFor(q) is not null);
         }
 
         if (savedIndex < 0 || IsPhaseOrUnitOrGroupLocked(attempt, questions[savedIndex]))

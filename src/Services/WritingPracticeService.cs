@@ -371,7 +371,7 @@ public sealed class WritingPracticeService(
 
         if (position.ExamItemId is null)
         {
-            attempt.LastQuestionId = questionId;
+            attempt.CurrentExamItemId = questionId;
         }
         await db.SaveChangesAsync(cancellationToken);
 

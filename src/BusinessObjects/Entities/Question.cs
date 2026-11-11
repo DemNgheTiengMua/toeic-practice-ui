@@ -87,9 +87,6 @@ public partial class Question
     [InverseProperty("Questions")]
     public virtual QuestionCategory? Category { get; set; }
 
-    [InverseProperty("Question")]
-    public virtual ICollection<ExamAttempt> ExamAttempts { get; set; } = new List<ExamAttempt>();
-
     [InverseProperty("Question1")]
     public virtual ICollection<FreeResponse> FreeResponseQuestion1s { get; set; } = new List<FreeResponse>();
 

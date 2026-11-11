@@ -206,7 +206,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
 
         Assert.NotNull(attempt);
         Assert.Equal(AttemptStatus.InProgress.ToCode(), attempt.Status);
-        Assert.Equal(q1Id, attempt.LastQuestionId);
+        Assert.Equal(q1Id, attempt.CurrentExamItemId);
         Assert.True(attempt.ExpiresAt > DateTimeOffset.UtcNow);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -315,7 +315,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         Assert.Equal("A saved exam response with several words.", response.ResponseText);
         Assert.Equal(result.SavedAt, response.DraftSavedAt);
         Assert.Equal(freeResponseQuestionId,
-            await resultDb.ExamAttempts.Where(a => a.AttemptId == attempt.AttemptId).Select(a => a.LastQuestionId).SingleAsync());
+            await resultDb.ExamAttempts.Where(a => a.AttemptId == attempt.AttemptId).Select(a => a.CurrentExamItemId).SingleAsync());
     }
 
     [Fact]
@@ -541,7 +541,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         Assert.True(savedAnswer.IsFlagged);
 
         var savedAttempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
-        Assert.Equal(q1Id, savedAttempt.LastQuestionId);
+        Assert.Equal(q1Id, savedAttempt.CurrentExamItemId);
     }
 
     [Fact]

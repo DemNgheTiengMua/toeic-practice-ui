@@ -213,29 +213,33 @@ public sealed partial class AttemptEngine
     {
         var attempt = await LoadSittingAttemptAsync(db.ExamAttempts, attemptId, userId, cancellationToken);
 
-        var targetGroup = await db.QuestionGroups
-            .Include(g => g.Section)
-            .SingleOrDefaultAsync(g => g.GroupId == targetGroupId && g.ExamId == attempt.ExamId, cancellationToken)
-            ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question group {targetGroupId} not found.");
+        // #269: a "group" is the block of positions a paper shares, and on the pool that block IS the
+        // stimulus. A solo position has no block id, so a caller addresses it by its own negated position
+        // id - the same convention the projection uses for GroupId.
+        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var groupQuestions = paperQuestions.Where(q => q.GroupId == targetGroupId).ToList();
 
-        if (attempt.ActiveSkillId.HasValue && targetGroup.Section.SkillId != attempt.ActiveSkillId.Value)
+        var firstGroupQuestion = groupQuestions.FirstOrDefault()
+            ?? throw new AttemptEngineException(
+                AttemptEngineException.QuestionNotFound, $"Question group {targetGroupId} not found.");
+
+        if (attempt.ActiveSkillId.HasValue
+            && firstGroupQuestion.Section.SkillId != attempt.ActiveSkillId.Value)
         {
             throw new AttemptEngineException(AttemptEngineException.WrongPhase, "Target group belongs to a different skill.");
         }
 
         attempt.ActiveGroupId = targetGroupId;
-
-        // #250: the group's window and its first position come from the paper, not from a Questions
-        // query. A pool-only paper has no row here, so the sub-timer fell to the 600s default and the
-        // first position was never recorded.
-        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
-        var groupQuestions = paperQuestions.Where(q => q.GroupId == targetGroupId).ToList();
+        // #269: on the pool a group belongs to a unit, so entering it enters that unit too. The legacy
+        // shape carried UnitNumber on the group row but never moved the attempt with it, and a
+        // UNIT_LOCKED paper then refused the very unit it had just transitioned into.
+        attempt.ActiveUnitNumber = firstGroupQuestion.Group.UnitNumber ?? attempt.ActiveUnitNumber;
 
         // #214 / PLC-12: a placement has no clock, so entering a locked group starts no sub-timer.
         // A mock keeps its per-group window exactly as before.
         if (await RunsAClockAsync(attempt, cancellationToken))
         {
-            int subTimerSeconds = targetGroup.ResponseSeconds
+            int subTimerSeconds = firstGroupQuestion.Group.ResponseSeconds
                 ?? groupQuestions.Where(q => q.ResponseSeconds.HasValue).Select(q => q.ResponseSeconds!.Value).FirstOrDefault();
             if (subTimerSeconds <= 0)
             {
@@ -246,11 +250,7 @@ public sealed partial class AttemptEngine
         }
 
         // The group's first position in sitting order - the loader already sorted the paper.
-        var firstGroupQuestion = groupQuestions.FirstOrDefault();
-        if (firstGroupQuestion is not null)
-        {
-            RecordLastPosition(attempt, firstGroupQuestion);
-        }
+        RecordLastPosition(attempt, firstGroupQuestion);
 
         await db.SaveChangesAsync(cancellationToken);
 

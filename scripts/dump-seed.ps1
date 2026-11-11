@@ -67,6 +67,9 @@ WHERE t.is_ms_shipped = 0
     -- ledger's sum. The answers and per-skill snapshots of those attempts are not shipped: they are
     -- measurements nobody took in a fresh demo.
     'AttemptAnswers', 'AttemptSkillScores', 'FreeResponses',
+    -- #269: an attempt row and a complaint about one are kept: a `mock_exam_start` charge and a
+    -- make-good grant are unrepresentable without them, and the demo balance is the ledger's sum. The
+    -- attempt's answers and per-skill snapshots are not shipped - those are measurements nobody took.
     -- Infrastructure, not demo data.
     'sysdiagrams'
   )

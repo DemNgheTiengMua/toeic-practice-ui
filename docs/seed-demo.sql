@@ -657,409 +657,409 @@ SET IDENTITY_INSERT [Skills] OFF;
 -- ---- Stimuli (68 rows)
 SET IDENTITY_INSERT [Stimuli] ON;
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (1, N'A2', NULL, N'/audio/vstep/sample1-listening.mp3', NULL, NULL, N'Speaker: Good afternoon listeners. The annual Da Nang International Fireworks Festival will open next month on June 8th along the Han River.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:02.8064239+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (1, N'A2', NULL, N'/audio/vstep/sample1-listening.mp3', NULL, NULL, N'Speaker: Good afternoon listeners. The annual Da Nang International Fireworks Festival will open next month on June 8th along the Han River.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:22.5935689+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (2, N'B1', N'Community-based tourism has expanded significantly in the northern mountainous provinces of Vietnam. Local homestays in Ha Giang and Yen Bai allow visitors to experience ethnic cultural traditions while generating sustainable income for rural families.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:02.8146559+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (2, N'B1', N'Community-based tourism has expanded significantly in the northern mountainous provinces of Vietnam. Local homestays in Ha Giang and Yen Bai allow visitors to experience ethnic cultural traditions while generating sustainable income for rural families.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:22.6013850+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (3, N'B1', NULL, N'/audio/toeic/test1-p1.mp3', NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers gathered around a whiteboard', NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (3, N'B1', NULL, N'/audio/toeic/test1-p1.mp3', NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers gathered around a whiteboard', NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (4, N'B1', NULL, N'/audio/toeic/test1-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (4, N'B1', NULL, N'/audio/toeic/test1-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (5, N'B2', NULL, N'/audio/toeic/test1-p3.mp3', NULL, NULL, N'Woman: Good morning, Mr. Evans. Did the catering team confirm the order for Friday''s banquet?' + CHAR(10) + N'Man: Yes, they did, but they said they need our final head count by tomorrow noon.' + CHAR(10) + N'Woman: I will email the department heads right away to get their RSVPs.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (5, N'B2', NULL, N'/audio/toeic/test1-p3.mp3', NULL, NULL, N'Woman: Good morning, Mr. Evans. Did the catering team confirm the order for Friday''s banquet?' + CHAR(10) + N'Man: Yes, they did, but they said they need our final head count by tomorrow noon.' + CHAR(10) + N'Woman: I will email the department heads right away to get their RSVPs.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (6, N'B1', NULL, N'/audio/toeic/test1-p4.mp3', NULL, NULL, N'Attention all passengers on flight VN 214 to Tokyo. Due to routine aircraft inspection, boarding will be delayed by approximately twenty minutes. Please remain seated near Gate 12 until boarding begins.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (6, N'B1', NULL, N'/audio/toeic/test1-p4.mp3', NULL, NULL, N'Attention all passengers on flight VN 214 to Tokyo. Due to routine aircraft inspection, boarding will be delayed by approximately twenty minutes. Please remain seated near Gate 12 until boarding begins.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (7, N'B1', N'Dear Valued Customer, We ------- your recent order and your package is being prepared for shipment.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (7, N'B1', N'Dear Valued Customer, We ------- your recent order and your package is being prepared for shipment.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (8, N'B1', N'MEMORANDUM' + CHAR(10) + N'To: All Branch Employees' + CHAR(10) + N'From: Facilities Management' + CHAR(10) + N'Date: October 14' + CHAR(10) + N'Subject: Elevator Maintenance' + CHAR(10) + N'Please note that the main elevators will undergo safety upgrades this Saturday between 8:00 A.M. and 2:00 P.M. The service elevator near the loading dock will remain accessible throughout this period.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (8, N'B1', N'MEMORANDUM' + CHAR(10) + N'To: All Branch Employees' + CHAR(10) + N'From: Facilities Management' + CHAR(10) + N'Date: October 14' + CHAR(10) + N'Subject: Elevator Maintenance' + CHAR(10) + N'Please note that the main elevators will undergo safety upgrades this Saturday between 8:00 A.M. and 2:00 P.M. The service elevator near the loading dock will remain accessible throughout this period.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (9, N'A2', NULL, N'/audio/toeic/placement-p1.mp3', NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a meeting room', NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (9, N'A2', NULL, N'/audio/toeic/placement-p1.mp3', NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a meeting room', NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (10, N'B1', NULL, N'/audio/toeic/placement-p1.mp3', NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a meeting room', NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (10, N'B1', NULL, N'/audio/toeic/placement-p1.mp3', NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a meeting room', NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (11, N'A2', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (11, N'A2', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (12, N'B1', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (12, N'B1', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (13, N'B1', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (13, N'B1', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (14, N'B2', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (14, N'B2', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (15, N'B1', NULL, N'/audio/toeic/test1-p3.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (15, N'B1', NULL, N'/audio/toeic/test1-p3.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (16, N'B2', NULL, N'/audio/toeic/test1-p3.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (16, N'B2', NULL, N'/audio/toeic/test1-p3.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (17, N'B1', NULL, N'/audio/toeic/test1-p4.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (17, N'B1', NULL, N'/audio/toeic/test1-p4.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (18, N'B2', NULL, N'/audio/toeic/test1-p4.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (18, N'B2', NULL, N'/audio/toeic/test1-p4.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (19, N'B1', N'Attention all shoppers. The annual summer clearance sale will end today at 9:00 PM. Please bring all selected items to the front registers.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (19, N'B1', N'Attention all shoppers. The annual summer clearance sale will end today at 9:00 PM. Please bring all selected items to the front registers.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (20, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a team meeting', NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (20, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Office workers in a team meeting', NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (21, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Meeting in conference room', NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (21, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/img/part1-sample.svg', N'Meeting in conference room', NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (22, N'C1', N'Some companies offer employees the option of flexible working hours. In your opinion, what are the advantages and disadvantages of flexible working schedules?', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (22, N'C1', N'Some companies offer employees the option of flexible working hours. In your opinion, what are the advantages and disadvantages of flexible working schedules?', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (23, N'B1', NULL, N'/audio/ielts/cambridge18-t1-listening.mp3', NULL, NULL, N'Guide: Welcome to the University Library induction. Daily guided tours depart every half hour from the information desk starting at 9:30 AM.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (23, N'B1', NULL, N'/audio/ielts/cambridge18-t1-listening.mp3', NULL, NULL, N'Guide: Welcome to the University Library induction. Daily guided tours depart every half hour from the information desk starting at 9:30 AM.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (24, N'B2', N'Urban reforestation initiatives have demonstrated measurable cooling effects in metropolitan centres. Studies in Singapore and Seoul indicate that rooftop gardens and street canopy trees reduce localized surface temperatures by up to 2.8 degrees Celsius during peak summer months.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (24, N'B2', N'Urban reforestation initiatives have demonstrated measurable cooling effects in metropolitan centres. Studies in Singapore and Seoul indicate that rooftop gardens and street canopy trees reduce localized surface temperatures by up to 2.8 degrees Celsius during peak summer months.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (25, N'B1', NULL, N'/audio/ielts/placement-diagnostic.mp3', NULL, NULL, N'Officer: The student housing office is open Monday to Thursday from 9 AM to 4 PM. On Fridays we close at 1 PM for staff training.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (25, N'B1', NULL, N'/audio/ielts/placement-diagnostic.mp3', NULL, NULL, N'Officer: The student housing office is open Monday to Thursday from 9 AM to 4 PM. On Fridays we close at 1 PM for staff training.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (26, N'B1', N'Renewable energy capacity expanded by 50% in 2023 worldwide, with solar photovoltaics accounting for three-quarters of new installations globally.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (26, N'B1', N'Renewable energy capacity expanded by 50% in 2023 worldwide, with solar photovoltaics accounting for three-quarters of new installations globally.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (27, N'C1', N'Describe a piece of technology you find difficult to use.' + CHAR(10) + N'You should say:' + CHAR(10) + N'- What it is' + CHAR(10) + N'- When you got it' + CHAR(10) + N'- What you use it for' + CHAR(10) + N'And explain why you find it difficult to use.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (27, N'C1', N'Describe a piece of technology you find difficult to use.' + CHAR(10) + N'You should say:' + CHAR(10) + N'- What it is' + CHAR(10) + N'- When you got it' + CHAR(10) + N'- What you use it for' + CHAR(10) + N'And explain why you find it difficult to use.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (28, N'B2', N'The chart below shows the percentage of households with internet access in three European countries between 2010 and 2020.' + CHAR(10) + N'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (28, N'B2', N'The chart below shows the percentage of households with internet access in three European countries between 2010 and 2020.' + CHAR(10) + N'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (29, N'C1', N'Some people believe that unpaid community service should be a compulsory part of high school programmes (such as working for a charity, improving the neighborhood, or coaching younger children).' + CHAR(10) + N'To what extent do you agree or disagree? Give reasons for your answer and include any relevant examples from your own knowledge or experience.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (29, N'C1', N'Some people believe that unpaid community service should be a compulsory part of high school programmes (such as working for a charity, improving the neighborhood, or coaching younger children).' + CHAR(10) + N'To what extent do you agree or disagree? Give reasons for your answer and include any relevant examples from your own knowledge or experience.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (30, N'B1', NULL, N'/audio/vstep/placement-diagnostic.mp3', NULL, NULL, N'Lecturer: Please submit your research proposals by Friday 5 PM through the faculty portal.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (30, N'B1', NULL, N'/audio/vstep/placement-diagnostic.mp3', NULL, NULL, N'Lecturer: Please submit your research proposals by Friday 5 PM through the faculty portal.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (31, N'B1', N'Artificial intelligence is being integrated into medical imaging across hospital networks, providing diagnostic assistance for radiology scans.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (31, N'B1', N'Artificial intelligence is being integrated into medical imaging across hospital networks, providing diagnostic assistance for radiology scans.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (32, N'B2', N'Topic: Should universities make physical education courses compulsory for all undergraduate students?' + CHAR(10) + N'- Health benefits' + CHAR(10) + N'- Academic stress relief' + CHAR(10) + N'- Student freedom of choice', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (32, N'B2', N'Topic: Should universities make physical education courses compulsory for all undergraduate students?' + CHAR(10) + N'- Health benefits' + CHAR(10) + N'- Academic stress relief' + CHAR(10) + N'- Student freedom of choice', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (33, N'B2', N'You received an email from an international friend asking for recommendations on historical places to visit in Hanoi.' + CHAR(10) + N'Write an email of at least 120 words suggesting two places, explaining why they are interesting, and giving advice on when to visit.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (33, N'B2', N'You received an email from an international friend asking for recommendations on historical places to visit in Hanoi.' + CHAR(10) + N'Write an email of at least 120 words suggesting two places, explaining why they are interesting, and giving advice on when to visit.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (34, N'C1', N'Some people think that online learning will eventually replace traditional classrooms. To what extent do you agree or disagree?', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (34, N'C1', N'Some people think that online learning will eventually replace traditional classrooms. To what extent do you agree or disagree?', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (35, N'B1', NULL, N'/audio/toeic/placement-p1.mp3', 0, 18000, N'(A) They are boarding a commuter train. (B) They are examining a blueprint on the desk. (C) They are hanging a picture on the wall. (D) The projector screen is being rolled up.', N'general', NULL, N'/img/part1-sample.svg', N'Two engineers standing near an office desk looking closely at an architectural blueprint', NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (35, N'B1', NULL, N'/audio/toeic/placement-p1.mp3', 0, 18000, N'(A) They are boarding a commuter train. (B) They are examining a blueprint on the desk. (C) They are hanging a picture on the wall. (D) The projector screen is being rolled up.', N'general', NULL, N'/img/part1-sample.svg', N'Two engineers standing near an office desk looking closely at an architectural blueprint', NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (36, N'B1', NULL, N'/audio/toeic/placement-p1.mp3', 18000, 36000, N'(A) Some chairs are stacked in the corner. (B) A technician is repairing the light fixture. (C) Documents are being distributed to attendees. (D) Monitor screens are arranged in a row on the table.', N'general', NULL, N'/img/part1-sample.svg', N'An empty modern conference room with computer monitors lined up neatly along the table', NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (36, N'B1', NULL, N'/audio/toeic/placement-p1.mp3', 18000, 36000, N'(A) Some chairs are stacked in the corner. (B) A technician is repairing the light fixture. (C) Documents are being distributed to attendees. (D) Monitor screens are arranged in a row on the table.', N'general', NULL, N'/img/part1-sample.svg', N'An empty modern conference room with computer monitors lined up neatly along the table', NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (37, N'B1', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (37, N'B1', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (38, N'B1', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (38, N'B1', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (39, N'B1', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (39, N'B1', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (40, N'B1', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (40, N'B1', NULL, N'/audio/toeic/placement-p2.mp3', NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (41, N'B1', N'Questions 7 through 9 refer to the following conversation.', N'/audio/toeic/test1-p3.mp3', 0, 48000, N'Man: Hi, Clara. I just received a call from Apex Logistics regarding our shipment of ergonomic office chairs for the new Seattle branch. Unfortunately, two of the delivery trucks are stuck in Denver due to severe weather.' + CHAR(10) + N'Woman: Oh no! Our interior setup team is scheduled to assemble the workstations this Thursday morning. Did they say when the trucks will arrive?' + CHAR(10) + N'Man: They estimate a forty-eight-hour delay, which means the chairs won''t get there until Friday afternoon.' + CHAR(10) + N'Woman: In that case, I''d better contact the setup agency right away to reschedule their technicians for Saturday so we don''t get charged a standby fee.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (41, N'B1', N'Questions 7 through 9 refer to the following conversation.', N'/audio/toeic/test1-p3.mp3', 0, 48000, N'Man: Hi, Clara. I just received a call from Apex Logistics regarding our shipment of ergonomic office chairs for the new Seattle branch. Unfortunately, two of the delivery trucks are stuck in Denver due to severe weather.' + CHAR(10) + N'Woman: Oh no! Our interior setup team is scheduled to assemble the workstations this Thursday morning. Did they say when the trucks will arrive?' + CHAR(10) + N'Man: They estimate a forty-eight-hour delay, which means the chairs won''t get there until Friday afternoon.' + CHAR(10) + N'Woman: In that case, I''d better contact the setup agency right away to reschedule their technicians for Saturday so we don''t get charged a standby fee.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (42, N'B1', N'Questions 10 through 12 refer to the following announcement.', N'/audio/toeic/test1-p4.mp3', 0, 52000, N'Attention, attendees of the Global FinTech Summit. Due to an unexpected audio-visual malfunction in Ballroom A, this morning''s keynote address by Dr. Elena Rostova on cybersecurity trends has been relocated to the Sapphire Auditorium on the mezzanine level. Because the Sapphire Auditorium has a slightly smaller seating capacity, overflow seating with a live video feed will be available in Room 204. Also, please remember to scan your digital conference badge at the entrance of the auditorium if you wish to receive Continuing Professional Education credits for attending this session. Thank you for your cooperation.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (42, N'B1', N'Questions 10 through 12 refer to the following announcement.', N'/audio/toeic/test1-p4.mp3', 0, 52000, N'Attention, attendees of the Global FinTech Summit. Due to an unexpected audio-visual malfunction in Ballroom A, this morning''s keynote address by Dr. Elena Rostova on cybersecurity trends has been relocated to the Sapphire Auditorium on the mezzanine level. Because the Sapphire Auditorium has a slightly smaller seating capacity, overflow seating with a live video feed will be available in Room 204. Also, please remember to scan your digital conference badge at the entrance of the auditorium if you wish to receive Continuing Professional Education credits for attending this session. Thank you for your cooperation.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (43, N'B1', N'Questions 21 through 24 refer to the following memorandum.' + CHAR(10) + N'' + CHAR(10) + N'To: All Regional Sales Representatives' + CHAR(10) + N'From: Marcus Vance, Director of Operations' + CHAR(10) + N'Date: October 12' + CHAR(10) + N'Subject: Transition to CloudSync Expense Portal' + CHAR(10) + N'' + CHAR(10) + N'Effective November 1, our company will retire the legacy spreadsheet system used for travel expense reporting and transition fully to the CloudSync Expense Portal. This upgrade is designed to [21] ------- the reimbursement process so that employees receive their funds within three business days rather than two weeks.' + CHAR(10) + N'' + CHAR(10) + N'To ensure a smooth transition, all sales staff are required to complete a 30-minute interactive tutorial before October 25. [22] -------. Once you have finished the module, your login credentials will be activated automatically.' + CHAR(10) + N'' + CHAR(10) + N'Please note that any paper receipts dated prior to November 1 must still be processed through the old system. [23] -------, expenses incurred on or after that date will only be accepted via the CloudSync mobile app or web dashboard. Should you encounter any technical difficulties during registration, please contact the IT Help Desk [24] ------- extension 4402.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (43, N'B1', N'Questions 21 through 24 refer to the following memorandum.' + CHAR(10) + N'' + CHAR(10) + N'To: All Regional Sales Representatives' + CHAR(10) + N'From: Marcus Vance, Director of Operations' + CHAR(10) + N'Date: October 12' + CHAR(10) + N'Subject: Transition to CloudSync Expense Portal' + CHAR(10) + N'' + CHAR(10) + N'Effective November 1, our company will retire the legacy spreadsheet system used for travel expense reporting and transition fully to the CloudSync Expense Portal. This upgrade is designed to [21] ------- the reimbursement process so that employees receive their funds within three business days rather than two weeks.' + CHAR(10) + N'' + CHAR(10) + N'To ensure a smooth transition, all sales staff are required to complete a 30-minute interactive tutorial before October 25. [22] -------. Once you have finished the module, your login credentials will be activated automatically.' + CHAR(10) + N'' + CHAR(10) + N'Please note that any paper receipts dated prior to November 1 must still be processed through the old system. [23] -------, expenses incurred on or after that date will only be accepted via the CloudSync mobile app or web dashboard. Should you encounter any technical difficulties during registration, please contact the IT Help Desk [24] ------- extension 4402.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (44, N'B1', N'Questions 25 through 27 refer to the following workshop schedule.' + CHAR(10) + N'' + CHAR(10) + N'====================================================================' + CHAR(10) + N'PACIFIC NORTHWEST SMALL BUSINESS SYMPOSIUM' + CHAR(10) + N'Date: Friday, November 14 | Venue: Grand Harbor Convention Center' + CHAR(10) + N'====================================================================' + CHAR(10) + N'' + CHAR(10) + N'09:00 A.M. – 10:15 A.M. | Session 1: Mastering Supply Chain Resilience' + CHAR(10) + N'Speaker: Marcus Thorne (COO, Cascade Freight Solutions)' + CHAR(10) + N'Room: Olympic Hall' + CHAR(10) + N'Overview: Learn practical strategies for diversifying suppliers and reducing shipping bottlenecks for regional retailers.' + CHAR(10) + N'' + CHAR(10) + N'10:30 A.M. – 11:45 A.M. | Session 2: Digital Marketing on a Shoestring Budget' + CHAR(10) + N'Speaker: Priya Patel (Founder, Spark Media Agency)' + CHAR(10) + N'Room: Rainier Suite' + CHAR(10) + N'Overview: Discover how to maximize customer engagement using targeted social media campaigns without hiring an external agency. *Note: Attendees should bring a fully charged laptop for the hands-on analytics exercise.*' + CHAR(10) + N'' + CHAR(10) + N'01:00 P.M. – 02:15 P.M. | Session 3: Navigating Commercial Tax Reforms' + CHAR(10) + N'Speaker: Evelyn Cho, CPA (Senior Partner, Cho & Associates)' + CHAR(10) + N'Room: Columbia Room' + CHAR(10) + N'Overview: A detailed breakdown of upcoming state tax incentives for businesses with fewer than 50 full-time employees.' + CHAR(10) + N'' + CHAR(10) + N'*Registration includes complimentary morning coffee and a buffet lunch served in the Emerald Atrium from 11:45 A.M. to 1:00 P.M. Seating for Session 2 is limited to 40 participants; advance sign-up via the symposium mobile app is mandatory.*', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (44, N'B1', N'Questions 25 through 27 refer to the following workshop schedule.' + CHAR(10) + N'' + CHAR(10) + N'====================================================================' + CHAR(10) + N'PACIFIC NORTHWEST SMALL BUSINESS SYMPOSIUM' + CHAR(10) + N'Date: Friday, November 14 | Venue: Grand Harbor Convention Center' + CHAR(10) + N'====================================================================' + CHAR(10) + N'' + CHAR(10) + N'09:00 A.M. – 10:15 A.M. | Session 1: Mastering Supply Chain Resilience' + CHAR(10) + N'Speaker: Marcus Thorne (COO, Cascade Freight Solutions)' + CHAR(10) + N'Room: Olympic Hall' + CHAR(10) + N'Overview: Learn practical strategies for diversifying suppliers and reducing shipping bottlenecks for regional retailers.' + CHAR(10) + N'' + CHAR(10) + N'10:30 A.M. – 11:45 A.M. | Session 2: Digital Marketing on a Shoestring Budget' + CHAR(10) + N'Speaker: Priya Patel (Founder, Spark Media Agency)' + CHAR(10) + N'Room: Rainier Suite' + CHAR(10) + N'Overview: Discover how to maximize customer engagement using targeted social media campaigns without hiring an external agency. *Note: Attendees should bring a fully charged laptop for the hands-on analytics exercise.*' + CHAR(10) + N'' + CHAR(10) + N'01:00 P.M. – 02:15 P.M. | Session 3: Navigating Commercial Tax Reforms' + CHAR(10) + N'Speaker: Evelyn Cho, CPA (Senior Partner, Cho & Associates)' + CHAR(10) + N'Room: Columbia Room' + CHAR(10) + N'Overview: A detailed breakdown of upcoming state tax incentives for businesses with fewer than 50 full-time employees.' + CHAR(10) + N'' + CHAR(10) + N'*Registration includes complimentary morning coffee and a buffet lunch served in the Emerald Atrium from 11:45 A.M. to 1:00 P.M. Seating for Session 2 is limited to 40 participants; advance sign-up via the symposium mobile app is mandatory.*', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (45, N'B1', N'Questions 28 through 30 refer to the following invoice and e-mail.' + CHAR(10) + N'' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N' PASSAGE 1: INVOICE #INV-8841' + CHAR(10) + N' Vendor: Lumina Botanicals Wholesale' + CHAR(10) + N' Client: Serenity Day Spa (Attn: Hannah Abbott)' + CHAR(10) + N' Order Date: March 3 | Delivery Date: March 6' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N' Item Code | Description                        | Qty | Unit Price | Total' + CHAR(10) + N' LB-102    | Organic Lavender Essential Oil 1L  |  5  | $40.00     | $200.00' + CHAR(10) + N' LB-205    | Eucalyptus Massage Lotion 5L       |  4  | $55.00     | $220.00' + CHAR(10) + N' LB-310    | Bamboo Facial Towels (Pack of 50)  |  6  | $30.00     | $180.00' + CHAR(10) + N' LB-408    | Chamomile Soothing Serum 500ml     |  2  | $65.00     | $130.00' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N' Subtotal: $730.00' + CHAR(10) + N' Shipping (Express Courier): $0.00 (Waived for orders over $500)' + CHAR(10) + N' Total Charged: $730.00' + CHAR(10) + N' *Return Policy: Claims for damaged or incorrect items must be submitted within 5 business days of delivery to qualify for a full refund or free replacement.*' + CHAR(10) + N'' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N' PASSAGE 2: E-MAIL' + CHAR(10) + N' To: billing@luminabotanicals.com' + CHAR(10) + N' From: h.abbott@serenitydayspa.com' + CHAR(10) + N' Date: March 7' + CHAR(10) + N' Subject: Issue with Order #INV-8841' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N' Dear Customer Support,' + CHAR(10) + N'' + CHAR(10) + N' Thank you for the prompt delivery of our wholesale order yesterday. Everything arrived intact except for one item. While the invoice correctly lists the Bamboo Facial Towels we ordered, the boxes we actually received contained standard cotton hand towels instead.' + CHAR(10) + N'' + CHAR(10) + N' Because we have a VIP wellness retreat scheduled for next weekend, we urgently need the correct towels sent out via express courier. Alternatively, if that item is currently out of stock, please issue a refund for that portion of the order to our corporate credit card so we can source them locally. We have left the unopened boxes of cotton towels at our reception desk for your driver to pick up.' + CHAR(10) + N'' + CHAR(10) + N' Sincerely,' + CHAR(10) + N' Hannah Abbott' + CHAR(10) + N' Operations Manager, Serenity Day Spa', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (45, N'B1', N'Questions 28 through 30 refer to the following invoice and e-mail.' + CHAR(10) + N'' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N' PASSAGE 1: INVOICE #INV-8841' + CHAR(10) + N' Vendor: Lumina Botanicals Wholesale' + CHAR(10) + N' Client: Serenity Day Spa (Attn: Hannah Abbott)' + CHAR(10) + N' Order Date: March 3 | Delivery Date: March 6' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N' Item Code | Description                        | Qty | Unit Price | Total' + CHAR(10) + N' LB-102    | Organic Lavender Essential Oil 1L  |  5  | $40.00     | $200.00' + CHAR(10) + N' LB-205    | Eucalyptus Massage Lotion 5L       |  4  | $55.00     | $220.00' + CHAR(10) + N' LB-310    | Bamboo Facial Towels (Pack of 50)  |  6  | $30.00     | $180.00' + CHAR(10) + N' LB-408    | Chamomile Soothing Serum 500ml     |  2  | $65.00     | $130.00' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N' Subtotal: $730.00' + CHAR(10) + N' Shipping (Express Courier): $0.00 (Waived for orders over $500)' + CHAR(10) + N' Total Charged: $730.00' + CHAR(10) + N' *Return Policy: Claims for damaged or incorrect items must be submitted within 5 business days of delivery to qualify for a full refund or free replacement.*' + CHAR(10) + N'' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N' PASSAGE 2: E-MAIL' + CHAR(10) + N' To: billing@luminabotanicals.com' + CHAR(10) + N' From: h.abbott@serenitydayspa.com' + CHAR(10) + N' Date: March 7' + CHAR(10) + N' Subject: Issue with Order #INV-8841' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N' Dear Customer Support,' + CHAR(10) + N'' + CHAR(10) + N' Thank you for the prompt delivery of our wholesale order yesterday. Everything arrived intact except for one item. While the invoice correctly lists the Bamboo Facial Towels we ordered, the boxes we actually received contained standard cotton hand towels instead.' + CHAR(10) + N'' + CHAR(10) + N' Because we have a VIP wellness retreat scheduled for next weekend, we urgently need the correct towels sent out via express courier. Alternatively, if that item is currently out of stock, please issue a refund for that portion of the order to our corporate credit card so we can source them locally. We have left the unopened boxes of cotton towels at our reception desk for your driver to pick up.' + CHAR(10) + N'' + CHAR(10) + N' Sincerely,' + CHAR(10) + N' Hannah Abbott' + CHAR(10) + N' Operations Manager, Serenity Day Spa', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (46, N'B2', N'The line chart shows the percentage of households with access to three energy sources in a European country from 2010 to 2020: solar rose from 10% to 50%, wind from 20% to 35%, and coal fell from 60% to 25%.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (46, N'B2', N'The line chart shows the percentage of households with access to three energy sources in a European country from 2010 to 2020: solar rose from 10% to 50%, wind from 20% to 35%, and coal fell from 60% to 25%.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (47, N'C1', N'Some people believe that universities should focus on practical job skills, while others think academic knowledge is more important. Discuss both views and give your own opinion.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (47, N'C1', N'Some people believe that universities should focus on practical job skills, while others think academic knowledge is more important. Discuss both views and give your own opinion.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (48, N'B2', N'You have received an email from the coordinator of a local community project. Reply to explain which weekend activity you can join, ask for the meeting details, and suggest one way to prepare.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (48, N'B2', N'You have received an email from the coordinator of a local community project. Reply to explain which weekend activity you can join, ask for the meeting details, and suggest one way to prepare.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (49, N'C1', N'Some people think that cities should invest more in public parks than in shopping centres. Do you agree or disagree? Give reasons and examples.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (49, N'C1', N'Some people think that cities should invest more in public parks than in shopping centres. Do you agree or disagree? Give reasons and examples.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (50, N'B2', NULL, N'/audio/ielts/placement-diagnostic.mp3', 30000, 60000, N'Applicant: I can attend the laboratory induction on Tuesday. Is the 10 o''clock session still available?' + CHAR(10) + N'Coordinator: It is full, but there are two places in the 2:30 session. Please bring your student card.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (50, N'B2', NULL, N'/audio/ielts/placement-diagnostic.mp3', 30000, 60000, N'Applicant: I can attend the laboratory induction on Tuesday. Is the 10 o''clock session still available?' + CHAR(10) + N'Coordinator: It is full, but there are two places in the 2:30 session. Please bring your student card.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (51, N'B2', NULL, N'/audio/ielts/placement-diagnostic.mp3', 60000, 90000, N'Tutor: Your draft is well researched. Before Friday, reorganise the second section around the comparison rather than the dates.' + CHAR(10) + N'Student: Should I add another source?' + CHAR(10) + N'Tutor: Not yet. Make the contrast clearer first.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (51, N'B2', NULL, N'/audio/ielts/placement-diagnostic.mp3', 60000, 90000, N'Tutor: Your draft is well researched. Before Friday, reorganise the second section around the comparison rather than the dates.' + CHAR(10) + N'Student: Should I add another source?' + CHAR(10) + N'Tutor: Not yet. Make the contrast clearer first.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (52, N'B2', NULL, N'/audio/ielts/placement-diagnostic.mp3', 90000, 120000, N'Guide: The north gallery is closed for lighting work this morning. The sculpture collection has moved upstairs, beside the reading room.' + CHAR(10) + N'Visitor: Is the café affected?' + CHAR(10) + N'Guide: No, it opens at the usual time.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (52, N'B2', NULL, N'/audio/ielts/placement-diagnostic.mp3', 90000, 120000, N'Guide: The north gallery is closed for lighting work this morning. The sculpture collection has moved upstairs, beside the reading room.' + CHAR(10) + N'Visitor: Is the café affected?' + CHAR(10) + N'Guide: No, it opens at the usual time.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (53, N'B2', NULL, N'/audio/ielts/placement-diagnostic.mp3', 120000, 150000, N'Researcher: We expected the survey to finish in May, but the final interviews were delayed.' + CHAR(10) + N'Manager: Does that change the publication date?' + CHAR(10) + N'Researcher: By only one week. The report should be ready in early July, not late June.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (53, N'B2', NULL, N'/audio/ielts/placement-diagnostic.mp3', 120000, 150000, N'Researcher: We expected the survey to finish in May, but the final interviews were delayed.' + CHAR(10) + N'Manager: Does that change the publication date?' + CHAR(10) + N'Researcher: By only one week. The report should be ready in early July, not late June.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (54, N'B2', N'Urban tree cover can reduce surface temperatures during heatwaves. A city study found the greatest cooling in streets where mature trees shaded continuous sections of pavement; isolated trees produced smaller local effects.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (54, N'B2', N'Urban tree cover can reduce surface temperatures during heatwaves. A city study found the greatest cooling in streets where mature trees shaded continuous sections of pavement; isolated trees produced smaller local effects.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (55, N'B2', N'In a survey of 1,200 commuters, 48% travelled by bus in 2018, compared with 30% by rail and 22% by bicycle. By 2024, rail had risen to 41%, cycling to 25%, while bus use had fallen to 34%.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (55, N'B2', N'In a survey of 1,200 commuters, 48% travelled by bus in 2018, compared with 30% by rail and 22% by bicycle. By 2024, rail had risen to 41%, cycling to 25%, while bus use had fallen to 34%.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (56, N'B2', N'The archive digitised its fragile maps first, not because they were the most requested items, but because repeated handling was causing irreversible damage. Popularity rankings were therefore set aside in the initial phase.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (56, N'B2', N'The archive digitised its fragile maps first, not because they were the most requested items, but because repeated handling was causing irreversible damage. Popularity rankings were therefore set aside in the initial phase.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (57, N'B2', N'A field experiment compared two restoration sites. Site A received more rain but recovered slowly because compacted soil restricted drainage. Site B received less rain; after its soil was loosened, native plants spread quickly.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (57, N'B2', N'A field experiment compared two restoration sites. Site A received more rain but recovered slowly because compacted soil restricted drainage. Site B received less rain; after its soil was loosened, native plants spread quickly.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (58, N'B2', NULL, N'/audio/vstep/placement-diagnostic.mp3', 30000, 60000, N'Lecturer: The field trip leaves from the main gate at 7:15 on Saturday. Please arrive fifteen minutes early because the bus cannot wait.' + CHAR(10) + N'Student: Do we need to bring lunch?' + CHAR(10) + N'Lecturer: Yes, and wear shoes suitable for walking.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (58, N'B2', NULL, N'/audio/vstep/placement-diagnostic.mp3', 30000, 60000, N'Lecturer: The field trip leaves from the main gate at 7:15 on Saturday. Please arrive fifteen minutes early because the bus cannot wait.' + CHAR(10) + N'Student: Do we need to bring lunch?' + CHAR(10) + N'Lecturer: Yes, and wear shoes suitable for walking.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (59, N'B2', NULL, N'/audio/vstep/placement-diagnostic.mp3', 60000, 90000, N'Office staff: The language club meeting has moved from Room 204 to Room 118 because the projector in 204 is being repaired.' + CHAR(10) + N'Student: Is the time still 3 p.m.?' + CHAR(10) + N'Office staff: Yes, the schedule is unchanged.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (59, N'B2', NULL, N'/audio/vstep/placement-diagnostic.mp3', 60000, 90000, N'Office staff: The language club meeting has moved from Room 204 to Room 118 because the projector in 204 is being repaired.' + CHAR(10) + N'Student: Is the time still 3 p.m.?' + CHAR(10) + N'Office staff: Yes, the schedule is unchanged.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (60, N'B2', NULL, N'/audio/vstep/placement-diagnostic.mp3', 90000, 120000, N'Announcer: The community clean-up will take place on 18 June, not 16 June as printed on the first notice. Volunteers should register at the library desk by 5 p.m. on Friday.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (60, N'B2', NULL, N'/audio/vstep/placement-diagnostic.mp3', 90000, 120000, N'Announcer: The community clean-up will take place on 18 June, not 16 June as printed on the first notice. Volunteers should register at the library desk by 5 p.m. on Friday.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (61, N'B2', NULL, N'/audio/vstep/placement-diagnostic.mp3', 120000, 150000, N'Student: I cannot attend the computer workshop on Wednesday.' + CHAR(10) + N'Advisor: The Friday group still has spaces. You can transfer online before noon tomorrow; there is no extra fee.' + CHAR(10) + N'Student: I will do that tonight.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (61, N'B2', NULL, N'/audio/vstep/placement-diagnostic.mp3', 120000, 150000, N'Student: I cannot attend the computer workshop on Wednesday.' + CHAR(10) + N'Advisor: The Friday group still has spaces. You can transfer online before noon tomorrow; there is no extra fee.' + CHAR(10) + N'Student: I will do that tonight.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (62, N'B2', N'A town library introduced a book-delivery service for older residents who cannot travel easily. Volunteers collect requested titles twice a week and leave them at each resident''s home. The service is free, but readers must register by phone.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (62, N'B2', N'A town library introduced a book-delivery service for older residents who cannot travel easily. Volunteers collect requested titles twice a week and leave them at each resident''s home. The service is free, but readers must register by phone.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (63, N'B2', N'The college offers evening classes in basic accounting, workplace communication, and computer skills. Learners may enrol in one course at a time. Applications close on 30 September, and classes begin two weeks later.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (63, N'B2', N'The college offers evening classes in basic accounting, workplace communication, and computer skills. Learners may enrol in one course at a time. Applications close on 30 September, and classes begin two weeks later.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (64, N'B2', N'Although the sports centre extended its opening hours, attendance did not rise during the first month. Managers later learned that the last bus left before the new closing time. They are discussing a revised shuttle schedule with the transport office.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (64, N'B2', N'Although the sports centre extended its opening hours, attendance did not rise during the first month. Managers later learned that the last bus left before the new closing time. They are discussing a revised shuttle schedule with the transport office.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (65, N'B2', N'An adult-learning programme originally met every Saturday. After many learners reported shift-work conflicts, the organiser added a Wednesday evening class. The Saturday class remains available for those who prefer it.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (65, N'B2', N'An adult-learning programme originally met every Saturday. After many learners reported shift-work conflicts, the organiser added a Wednesday evening class. The Saturday class remains available for those who prefer it.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (66, N'B1', N'Unit 1 foundational stage for incomplete sentences and completion items.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (66, N'B1', N'Unit 1 foundational stage for incomplete sentences and completion items.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (67, N'B2', N'The corporate merger announced yesterday between Apex Technologies and Horizon Logistics will create the region''s largest supply chain network. Analysts project a 15% reduction in freight overhead over the upcoming fiscal quarters.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (67, N'B2', N'The corporate merger announced yesterday between Apex Technologies and Horizon Logistics will create the region''s largest supply chain network. Analysts project a 15% reduction in freight overhead over the upcoming fiscal quarters.', NULL, NULL, NULL, NULL, N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (68, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/images/toeic/test1-p1-q1.jpg', N'Conference meeting room', NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (68, N'B1', NULL, NULL, NULL, NULL, NULL, N'general', NULL, N'/images/toeic/test1-p1-q1.jpg', N'Conference meeting room', NULL, NULL, 0, '2026-11-11T11:25:46.8903077+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -1193,25 +1193,25 @@ SET IDENTITY_INSERT [Topics] OFF;
 -- ---- Users (4 rows)
 SET IDENTITY_INSERT [Users] ON;
 BEGIN TRY
-  INSERT INTO [Users] ([UserId], [RoleId], [Email], [PasswordHash], [ActiveCertId], [FullName], [Phone], [IsLocked], [SecurityStamp], [FailedAttempts], [LockoutEnd], [EmailVerifiedAt], [LastLoginAt], [TermsAcceptedAt], [TimeZoneId], [IsDeleted], [CreatedAt]) VALUES (1, 2, N'admin@demo.local', 0x0100000002000186A0000000103C900F405E0EA707A8C20B5D134127259871478D350B03660E6C246E724D8C436A9004C3BA672FE5A2481FAB2C3223E9, NULL, N'Admin User', NULL, 0, N'06DCBA49-B30A-4DB9-979D-BE3805E3B1A4', 0, NULL, '2026-11-11T01:44:00.6628359+07:00', NULL, '2026-11-11T01:44:00.6628359+07:00', N'Asia/Ho_Chi_Minh', 0, '2026-11-11T01:44:00.6628359+07:00');
+  INSERT INTO [Users] ([UserId], [RoleId], [Email], [PasswordHash], [ActiveCertId], [FullName], [Phone], [IsLocked], [SecurityStamp], [FailedAttempts], [LockoutEnd], [EmailVerifiedAt], [LastLoginAt], [TermsAcceptedAt], [TimeZoneId], [IsDeleted], [CreatedAt]) VALUES (1, 2, N'admin@demo.local', 0x0100000002000186A0000000103C900F405E0EA707A8C20B5D134127259871478D350B03660E6C246E724D8C436A9004C3BA672FE5A2481FAB2C3223E9, NULL, N'Admin User', NULL, 0, N'A74A6E8A-B47F-48A1-A5B8-93CE9F0E054B', 0, NULL, '2026-11-11T11:25:20.4316760+07:00', NULL, '2026-11-11T11:25:20.4316760+07:00', N'Asia/Ho_Chi_Minh', 0, '2026-11-11T11:25:20.4316760+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Users] ([UserId], [RoleId], [Email], [PasswordHash], [ActiveCertId], [FullName], [Phone], [IsLocked], [SecurityStamp], [FailedAttempts], [LockoutEnd], [EmailVerifiedAt], [LastLoginAt], [TermsAcceptedAt], [TimeZoneId], [IsDeleted], [CreatedAt]) VALUES (2, 1, N'learner@demo.local', 0x0100000002000186A0000000103C900F405E0EA707A8C20B5D134127259871478D350B03660E6C246E724D8C436A9004C3BA672FE5A2481FAB2C3223E9, 1, N'Demo Learner', N'+84 901 000 001', 0, N'E8EA41FD-32FC-4868-A9BF-B9A57A17D4F8', 0, NULL, '2026-11-11T01:44:00.6628359+07:00', NULL, '2026-11-11T01:44:00.6628359+07:00', N'Asia/Ho_Chi_Minh', 0, '2026-11-11T01:44:00.6653393+07:00');
+  INSERT INTO [Users] ([UserId], [RoleId], [Email], [PasswordHash], [ActiveCertId], [FullName], [Phone], [IsLocked], [SecurityStamp], [FailedAttempts], [LockoutEnd], [EmailVerifiedAt], [LastLoginAt], [TermsAcceptedAt], [TimeZoneId], [IsDeleted], [CreatedAt]) VALUES (2, 1, N'learner@demo.local', 0x0100000002000186A0000000103C900F405E0EA707A8C20B5D134127259871478D350B03660E6C246E724D8C436A9004C3BA672FE5A2481FAB2C3223E9, 1, N'Demo Learner', N'+84 901 000 001', 0, N'FB5D0866-1CB6-4A15-BC8D-A41B6567DB6C', 0, NULL, '2026-11-11T11:25:20.4316760+07:00', NULL, '2026-11-11T11:25:20.4316760+07:00', N'Asia/Ho_Chi_Minh', 0, '2026-11-11T11:25:20.4316760+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Users] ([UserId], [RoleId], [Email], [PasswordHash], [ActiveCertId], [FullName], [Phone], [IsLocked], [SecurityStamp], [FailedAttempts], [LockoutEnd], [EmailVerifiedAt], [LastLoginAt], [TermsAcceptedAt], [TimeZoneId], [IsDeleted], [CreatedAt]) VALUES (3, 1, N'learner.fresh@demo.local', 0x0100000002000186A0000000103C900F405E0EA707A8C20B5D134127259871478D350B03660E6C246E724D8C436A9004C3BA672FE5A2481FAB2C3223E9, NULL, N'Fresh Student', NULL, 0, N'8B038155-2ACA-4151-B11A-1CE51EAD44B6', 0, NULL, '2026-11-11T01:44:00.6628359+07:00', NULL, '2026-11-11T01:44:00.6628359+07:00', N'Asia/Ho_Chi_Minh', 0, '2026-11-11T01:44:00.6663443+07:00');
+  INSERT INTO [Users] ([UserId], [RoleId], [Email], [PasswordHash], [ActiveCertId], [FullName], [Phone], [IsLocked], [SecurityStamp], [FailedAttempts], [LockoutEnd], [EmailVerifiedAt], [LastLoginAt], [TermsAcceptedAt], [TimeZoneId], [IsDeleted], [CreatedAt]) VALUES (3, 1, N'learner.fresh@demo.local', 0x0100000002000186A0000000103C900F405E0EA707A8C20B5D134127259871478D350B03660E6C246E724D8C436A9004C3BA672FE5A2481FAB2C3223E9, NULL, N'Fresh Student', NULL, 0, N'CF950B5B-BB22-49A8-A25C-D25E5578284B', 0, NULL, '2026-11-11T11:25:20.4316760+07:00', NULL, '2026-11-11T11:25:20.4316760+07:00', N'Asia/Ho_Chi_Minh', 0, '2026-11-11T11:25:20.4316760+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Users] ([UserId], [RoleId], [Email], [PasswordHash], [ActiveCertId], [FullName], [Phone], [IsLocked], [SecurityStamp], [FailedAttempts], [LockoutEnd], [EmailVerifiedAt], [LastLoginAt], [TermsAcceptedAt], [TimeZoneId], [IsDeleted], [CreatedAt]) VALUES (4, 1, N'mentor.khoa@demo.local', 0x0100000002000186A0000000103C900F405E0EA707A8C20B5D134127259871478D350B03660E6C246E724D8C436A9004C3BA672FE5A2481FAB2C3223E9, NULL, N'Dr. Trần Minh Khoa', N'+84 901 000 002', 0, N'2DABEAE8-1AF3-4421-BDDE-232D9EBD3C47', 0, NULL, '2026-11-11T01:44:00.6628359+07:00', NULL, '2026-11-11T01:44:00.6628359+07:00', N'Asia/Ho_Chi_Minh', 0, '2026-11-11T01:44:00.6678821+07:00');
+  INSERT INTO [Users] ([UserId], [RoleId], [Email], [PasswordHash], [ActiveCertId], [FullName], [Phone], [IsLocked], [SecurityStamp], [FailedAttempts], [LockoutEnd], [EmailVerifiedAt], [LastLoginAt], [TermsAcceptedAt], [TimeZoneId], [IsDeleted], [CreatedAt]) VALUES (4, 1, N'mentor.khoa@demo.local', 0x0100000002000186A0000000103C900F405E0EA707A8C20B5D134127259871478D350B03660E6C246E724D8C436A9004C3BA672FE5A2481FAB2C3223E9, NULL, N'Dr. Trần Minh Khoa', N'+84 901 000 002', 0, N'900DE10D-4CA2-4B83-8D67-8AD9215BD7E9', 0, NULL, '2026-11-11T11:25:20.4316760+07:00', NULL, '2026-11-11T11:25:20.4316760+07:00', N'Asia/Ho_Chi_Minh', 0, '2026-11-11T11:25:20.4316760+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -1247,103 +1247,103 @@ END CATCH
 -- ---- Exams (17 rows)
 SET IDENTITY_INSERT [Exams] ON;
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (1, 1, N'ETS 2024 — Test 1', N'published', 120, N'mock', N'strict_exam', NULL, N'A full TOEIC Listening & Reading form.', N'ETS 2024', NULL, 200, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.1857920+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (1, 1, N'ETS 2024 — Test 1', N'published', 120, N'mock', N'strict_exam', NULL, N'A full TOEIC Listening & Reading form.', N'ETS 2024', NULL, 200, N'demo', 1, NULL, 0, '2026-11-11T11:25:20.9647987+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (2, 1, N'TOEIC Placement Test — Diagnostic', N'published', 45, N'placement', N'strict_exam', NULL, N'A 24-question diagnostic across all seven Listening and Reading parts. It sets your starting CEFR band, and your practice answers keep checking that band afterwards.', N'ETS Diagnostic 2024', NULL, 24, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.2670809+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (2, 1, N'TOEIC Placement Test — Diagnostic', N'published', 45, N'placement', N'strict_exam', NULL, N'A 24-question diagnostic across all seven Listening and Reading parts. It sets your starting CEFR band, and your practice answers keep checking that band afterwards.', N'ETS Diagnostic 2024', NULL, 24, N'demo', 1, NULL, 0, '2026-11-11T11:25:21.0435775+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (3, 1, N'ETS TOEIC Speaking Practice Exam 1', N'published', 20, N'speaking_practice', N'strict_exam', NULL, N'Workplace English speaking practice with read-aloud, image description, and question response.', N'ETS Official 2024', NULL, 3, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.4797638+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (3, 1, N'ETS TOEIC Speaking Practice Exam 1', N'published', 20, N'speaking_practice', N'strict_exam', NULL, N'Workplace English speaking practice with read-aloud, image description, and question response.', N'ETS Official 2024', NULL, 3, N'demo', 1, NULL, 0, '2026-11-11T11:25:21.2587769+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (4, 1, N'ETS TOEIC Writing Practice Test 1', N'published', 60, N'writing_practice', N'strict_exam', NULL, N'Workplace English writing practice: sentence writing and opinion essay.', N'ETS Official 2024', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.4832693+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (4, 1, N'ETS TOEIC Writing Practice Test 1', N'published', 60, N'writing_practice', N'strict_exam', NULL, N'Workplace English writing practice: sentence writing and opinion essay.', N'ETS Official 2024', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T11:25:21.2650483+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (5, 2, N'Cambridge IELTS 18 — Academic Test 1', N'published', 170, N'mock', N'strict_exam', NULL, N'Academic Listening, Reading, Writing and Speaking form.', N'Cambridge 18', NULL, 40, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.4857774+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (5, 2, N'Cambridge IELTS 18 — Academic Test 1', N'published', 170, N'mock', N'strict_exam', NULL, N'Academic Listening, Reading, Writing and Speaking form.', N'Cambridge 18', NULL, 40, N'demo', 1, NULL, 0, '2026-11-11T11:25:21.2677923+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (6, 2, N'IELTS-DIAG-01', N'published', 60, N'placement', N'strict_exam', NULL, N'Free IELTS baseline benchmark: Listening and Academic Reading, followed by a separately graded free diagnostic Writing extension.', N'Cambridge Assessment', NULL, 10, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.4937789+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (6, 2, N'IELTS-DIAG-01', N'published', 60, N'placement', N'strict_exam', NULL, N'Free IELTS baseline benchmark: Listening and Academic Reading, followed by a separately graded free diagnostic Writing extension.', N'Cambridge Assessment', NULL, 10, N'demo', 1, NULL, 0, '2026-11-11T11:25:21.2779507+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (7, 2, N'Cambridge IELTS 18 — Speaking Practice Test 1', N'published', 15, N'speaking_practice', N'strict_exam', NULL, N'Complete Academic Speaking test with Part 1 interview questions and Part 2 long-turn cue card topic.', N'Cambridge 18', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.4972873+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (7, 2, N'Cambridge IELTS 18 — Speaking Practice Test 1', N'published', 15, N'speaking_practice', N'strict_exam', NULL, N'Complete Academic Speaking test with Part 1 interview questions and Part 2 long-turn cue card topic.', N'Cambridge 18', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T11:25:21.2827813+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (8, 2, N'Cambridge IELTS 18 — Writing Practice Test 1', N'published', 60, N'writing_practice', N'strict_exam', NULL, N'Complete Academic Writing test with Task 1 (visual chart report) and Task 2 (argumentative essay). Scored with AI against official IELTS criteria.', N'Cambridge 18', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.5002873+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (8, 2, N'Cambridge IELTS 18 — Writing Practice Test 1', N'published', 60, N'writing_practice', N'strict_exam', NULL, N'Complete Academic Writing test with Task 1 (visual chart report) and Task 2 (argumentative essay). Scored with AI against official IELTS criteria.', N'Cambridge 18', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T11:25:21.2827813+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (9, 3, N'VSTEP Sample Test 1', N'published', 180, N'mock', N'strict_exam', NULL, N'Four-skill national examination form.', N'VSTEP 2024', NULL, 75, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.5032873+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (9, 3, N'VSTEP Sample Test 1', N'published', 180, N'mock', N'strict_exam', NULL, N'Four-skill national examination form.', N'VSTEP 2024', NULL, 75, N'demo', 1, NULL, 0, '2026-11-11T11:25:21.2879722+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (10, 3, N'VSTEP-DIAG-01', N'published', 45, N'placement', N'strict_exam', NULL, N'Free VSTEP baseline benchmark: Listening and Reading, followed by a separately graded free diagnostic Writing extension.', N'VSTEP Center', NULL, 10, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.5119845+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (10, 3, N'VSTEP-DIAG-01', N'published', 45, N'placement', N'strict_exam', NULL, N'Free VSTEP baseline benchmark: Listening and Reading, followed by a separately graded free diagnostic Writing extension.', N'VSTEP Center', NULL, 10, N'demo', 1, NULL, 0, '2026-11-11T11:25:21.2999912+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (11, 3, N'VSTEP Speaking Practice Test 1', N'published', 15, N'speaking_practice', N'strict_exam', NULL, N'Complete VSTEP Speaking practice with social interaction and topic presentation.', N'VSTEP Center', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.5164923+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (11, 3, N'VSTEP Speaking Practice Test 1', N'published', 15, N'speaking_practice', N'strict_exam', NULL, N'Complete VSTEP Speaking practice with social interaction and topic presentation.', N'VSTEP Center', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T11:25:21.3032067+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (12, 3, N'VSTEP Writing Practice Test 1', N'published', 60, N'writing_practice', N'strict_exam', NULL, N'Complete VSTEP Writing practice with Task 1 (informal/formal letter) and Task 2 (essay).', N'VSTEP Center', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.5184920+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (12, 3, N'VSTEP Writing Practice Test 1', N'published', 60, N'writing_practice', N'strict_exam', NULL, N'Complete VSTEP Writing practice with Task 1 (informal/formal letter) and Task 2 (essay).', N'VSTEP Center', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T11:25:21.3075991+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (13, 1, N'Diagnostic Benchmark 45M', N'published', 45, N'placement', N'strict_exam', NULL, N'Bài thi chẩn đoán toàn diện 3 kỹ năng (Nghe, Đọc, Viết) được thiết kế để phân tích lỗ hổng kiến thức, đo lường năng lực CEFR ban đầu và tự động kiến tạo lộ trình học tập tối ưu.', N'ETS Benchmark Suite 2026', NULL, 32, N'demo', 1, NULL, 0, '2026-11-11T01:44:02.3611871+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (13, 1, N'Diagnostic Benchmark 45M', N'published', 45, N'placement', N'strict_exam', NULL, N'Bài thi chẩn đoán toàn diện 3 kỹ năng (Nghe, Đọc, Viết) được thiết kế để phân tích lỗ hổng kiến thức, đo lường năng lực CEFR ban đầu và tự động kiến tạo lộ trình học tập tối ưu.', N'ETS Benchmark Suite 2026', NULL, 32, N'demo', 1, NULL, 0, '2026-11-11T11:25:22.1679085+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (14, 2, N'IELTS-DIAG-01 Writing Extension', N'published', 60, N'writing_practice', N'strict_exam', NULL, N'Free diagnostic extension: IELTS Academic Task 1 trend report and Task 2 opinion essay, graded against the four IELTS writing criteria.', N'Free diagnostic benchmark', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:02.5391107+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (14, 2, N'IELTS-DIAG-01 Writing Extension', N'published', 60, N'writing_practice', N'strict_exam', NULL, N'Free diagnostic extension: IELTS Academic Task 1 trend report and Task 2 opinion essay, graded against the four IELTS writing criteria.', N'Free diagnostic benchmark', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T11:25:22.3478067+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (15, 3, N'VSTEP-DIAG-01 Writing Extension', N'published', 45, N'writing_practice', N'strict_exam', NULL, N'Free diagnostic extension: formal email response and a developed opinion essay, graded against the four VSTEP writing criteria.', N'Free diagnostic benchmark', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:02.5411108+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (15, 3, N'VSTEP-DIAG-01 Writing Extension', N'published', 45, N'writing_practice', N'strict_exam', NULL, N'Free diagnostic extension: formal email response and a developed opinion essay, graded against the four VSTEP writing criteria.', N'Free diagnostic benchmark', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T11:25:22.3478067+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (16, 4, N'TOEIC CAT Benchmark Test 1', N'published', 90, N'mock', N'strict_exam', N'TOEIC', N'Representative multi-component exam showcasing all 11 standardized question items across adaptive units.', NULL, NULL, 11, N'demo', 1, NULL, 0, '2026-11-11T01:44:02.7538862+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (16, 4, N'TOEIC CAT Benchmark Test 1', N'published', 90, N'mock', N'strict_exam', N'TOEIC', N'Representative multi-component exam showcasing all 11 standardized question items across adaptive units.', NULL, NULL, 11, N'demo', 1, NULL, 0, '2026-11-11T11:25:22.5402692+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (17, 5, N'TOEIC Speaking & Writing Mock Test 1', N'published', 80, N'mock', N'strict_exam', N'TOEIC', N'Full TOEIC S&W mock sitting with SYSTEM_PACED_AUTO speaking pacer, HYBRID_GROUP_LOCKED writing, mandatory keywords, and on-screen Cut/Paste toolbar.', NULL, NULL, 3, N'demo', 1, NULL, 0, '2026-11-11T01:44:02.7653951+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (17, 5, N'TOEIC Speaking & Writing Mock Test 1', N'published', 80, N'mock', N'strict_exam', N'TOEIC', N'Full TOEIC S&W mock sitting with SYSTEM_PACED_AUTO speaking pacer, HYBRID_GROUP_LOCKED writing, mandatory keywords, and on-screen Cut/Paste toolbar.', NULL, NULL, 3, N'demo', 1, NULL, 0, '2026-11-11T11:25:22.5519019+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -1522,1688 +1522,1400 @@ BEGIN CATCH
 END CATCH
 SET IDENTITY_INSERT [GradingCriteria] OFF;
 
--- ---- Items (140 rows)
+-- ---- Items (116 rows)
 SET IDENTITY_INSERT [Items] ON;
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (1, 1, N'listening', 2, N'A2', N'short_exchange', N'mcq', 0, N'demo', N'active', N'seed-vstep-sample-1', '2026-11-11T01:44:02.8064239+07:00', NULL);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (1, 1, N'listening', 2, N'A2', N'short_exchange', N'mcq', 0, N'demo', N'active', N'seed-vstep-sample-1', '2026-11-11T11:25:22.5935689+07:00', NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (2, 2, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', N'seed-vstep-sample-1', '2026-11-11T01:44:02.8156557+07:00', NULL);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (2, 2, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', N'seed-vstep-sample-1', '2026-11-11T11:25:22.6013850+07:00', NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (3, 3, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0905658+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (3, 3, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9048546+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (4, 4, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0925664+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (4, 4, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9225945+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (5, 5, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0935658+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (5, 5, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9225945+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (6, 6, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0945657+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (6, 6, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9225945+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (7, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0945657+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (7, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (8, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0955657+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (8, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (9, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0960710+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (9, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (10, 7, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0970728+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (10, 7, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (11, 8, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0970728+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (11, 8, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (12, 9, N'listening', 2, N'A2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0985774+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (12, 9, N'listening', 2, N'A2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (13, 9, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0985774+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (13, 9, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (14, 11, N'listening', 2, N'A2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0995808+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (14, 11, N'listening', 2, N'A2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (15, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1005852+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (15, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (16, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1005852+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (16, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (17, 11, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1015853+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (17, 11, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (18, 15, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1025851+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (18, 15, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (19, 15, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1035852+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (19, 15, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9374055+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (20, 17, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1035852+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (20, 17, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9390138+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (21, 17, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1045851+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (21, 17, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9390138+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (22, 20, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1055851+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (22, 20, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9403787+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (23, 20, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1060901+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (23, 20, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9403787+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (24, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1070918+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (24, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9414905+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (25, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1070918+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (25, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9419339+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (26, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1080931+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (26, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9429522+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (27, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1085966+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (27, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9434626+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (28, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1096028+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (28, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9434626+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (29, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1106079+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (29, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9447410+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (30, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1106079+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (30, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9447410+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (31, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1116072+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (31, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9447410+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (32, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1126103+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (32, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (33, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1153611+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (33, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (34, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1168502+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (34, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (35, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1178519+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (35, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (36, 19, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1178519+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (36, 19, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (37, 20, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1188603+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (37, 20, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (38, 20, N'speaking', 13, N'B2', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1188603+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (38, 20, N'speaking', 13, N'B2', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (39, 20, N'writing', 19, N'B1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1198611+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (39, 20, N'writing', 19, N'B1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (40, 22, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1208609+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (40, 22, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (41, 23, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1208609+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (41, 23, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (42, 24, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1218611+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (42, 24, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (43, 25, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1228609+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (43, 25, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (44, 26, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1238641+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (44, 26, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (45, 20, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1253700+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (45, 20, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (46, 27, N'speaking', 13, N'C1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1253700+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (46, 27, N'speaking', 13, N'C1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (47, 28, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1263764+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (47, 28, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (48, 29, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1273762+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (48, 29, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (49, 30, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1273762+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (49, 30, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (50, 31, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1283811+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (50, 31, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (51, 20, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1293815+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (51, 20, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (52, 32, N'speaking', 13, N'B2', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1293815+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (52, 32, N'speaking', 13, N'B2', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (53, 33, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1303815+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (53, 33, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (54, 34, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1313813+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (54, 34, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (55, 35, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1313813+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (55, 35, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (56, 36, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1323818+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (56, 36, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (57, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1333816+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (57, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (58, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1343816+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (58, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (59, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1343816+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (59, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (60, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1358864+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (60, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9683739+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (61, 41, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1358864+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (61, 41, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9683739+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (62, 41, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1368924+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (62, 41, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9701187+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (63, 41, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1378978+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (63, 41, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9701187+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (64, 42, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1388980+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (64, 42, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9701187+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (65, 42, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1388980+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (65, 42, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9701187+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (66, 42, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1398978+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (66, 42, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (67, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1408973+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (67, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (68, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1418972+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (68, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (69, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1428977+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (69, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (70, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1428977+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (70, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (71, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1438977+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (71, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (72, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1448973+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (72, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (73, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1454026+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (73, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (74, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1464088+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (74, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9781851+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (75, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1469138+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (75, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9787206+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (76, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1479187+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (76, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9787206+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (77, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1479187+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (77, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9802807+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (78, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1494661+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (78, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9802807+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (79, 44, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1504726+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (79, 44, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9817004+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (80, 44, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1514729+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (80, 44, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9817004+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (81, 44, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1514729+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (81, 44, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9817004+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (82, 45, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1524730+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (82, 45, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9836228+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (83, 45, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1534728+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (83, 45, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9850381+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (84, 45, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1544730+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (84, 45, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9860460+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (85, 20, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1559794+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (85, 20, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9860460+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (86, 20, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1564819+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (86, 20, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9860460+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (87, 46, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1575543+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (87, 46, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (88, 47, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1575543+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (88, 47, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (89, 48, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1589292+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (89, 48, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (90, 49, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1589292+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (90, 49, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (91, 50, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1602111+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (91, 50, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (92, 51, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1612089+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (92, 51, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (93, 52, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1612089+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (93, 52, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (94, 53, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1622086+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (94, 53, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (95, 54, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1632085+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (95, 54, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (96, 55, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1642086+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (96, 55, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (97, 56, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1642086+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (97, 56, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (98, 57, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1657118+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (98, 57, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (99, 58, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1667175+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (99, 58, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (100, 59, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1667175+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (100, 59, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (101, 60, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1677166+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (101, 60, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (102, 61, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1687165+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (102, 61, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9982417+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (103, 62, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1697180+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (103, 62, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9982417+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (104, 63, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1707167+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (104, 63, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:46.9982417+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (105, 64, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1707167+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (105, 64, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:47.0002613+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (106, 65, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1717165+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (106, 65, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:47.0002613+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (107, 66, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1727164+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (107, 66, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (108, 66, N'reading', 8, N'B1', N'passage_comprehension', N'mcq_3', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1737164+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (108, 66, N'reading', 8, N'B1', N'passage_comprehension', N'mcq_3', 0, N'demo', N'active', NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (109, 66, N'reading', 8, N'B2', N'passage_comprehension', N'multi_select', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1747166+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (109, 66, N'reading', 8, N'B2', N'passage_comprehension', N'multi_select', 0, N'demo', N'active', NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (110, 66, N'reading', 8, N'B1', N'passage_comprehension', N'inline_completion', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1747166+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (110, 66, N'reading', 8, N'B1', N'passage_comprehension', N'inline_completion', 0, N'demo', N'active', NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (111, 66, N'reading', 8, N'B2', N'passage_comprehension', N'dropdown', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1762225+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (111, 66, N'reading', 8, N'B2', N'passage_comprehension', N'dropdown', 0, N'demo', N'active', NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (112, 66, N'reading', 8, N'B2', N'passage_comprehension', N'drag_drop', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1762225+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (112, 66, N'reading', 8, N'B2', N'passage_comprehension', N'drag_drop', 0, N'demo', N'active', NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (113, 67, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1772244+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (113, 67, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (114, 20, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1782242+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (114, 20, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (115, 20, N'writing', 19, N'B1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1792242+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (115, 20, N'writing', 19, N'B1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (116, 20, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1792242+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (118, NULL, N'listening', 2, N'A1', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9218259+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (119, NULL, N'listening', 2, N'A1', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9387647+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (120, NULL, N'listening', 2, N'A2', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9397649+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (121, NULL, N'listening', 2, N'A2', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9397649+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (122, NULL, N'listening', 3, N'B1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9407647+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (123, NULL, N'listening', 3, N'B1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9417644+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (124, NULL, N'listening', 3, N'B2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9422700+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (125, NULL, N'listening', 3, N'B2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9422700+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (126, NULL, N'listening', 6, N'C1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9422700+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (127, NULL, N'listening', 6, N'C1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9432717+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (128, NULL, N'listening', 6, N'C2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9432717+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (129, NULL, N'listening', 6, N'C2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9442715+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (130, NULL, N'reading', 8, N'A1', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9442715+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (131, NULL, N'reading', 8, N'A1', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9452714+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (132, NULL, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9452714+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (133, NULL, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9452714+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (134, NULL, N'reading', 9, N'B1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9462717+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (135, NULL, N'reading', 9, N'B1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9462717+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (136, NULL, N'reading', 9, N'B2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9472713+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (137, NULL, N'reading', 9, N'B2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9477761+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (138, NULL, N'reading', 7, N'C1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9477761+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (139, NULL, N'reading', 7, N'C1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9487794+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (140, NULL, N'reading', 7, N'C2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9492906+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (141, NULL, N'reading', 7, N'C2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9492906+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (116, 20, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 SET IDENTITY_INSERT [Items] OFF;
 
--- ---- ItemVersions (140 rows)
+-- ---- ItemVersions (116 rows)
 SET IDENTITY_INSERT [ItemVersions] ON;
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (1, 1, 1, N'On what date will the festival open?', N'June 1st', N'June 8th', N'June 15th', N'July 8th', N'B', N'The speaker explicitly states June 8th.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:02.8106557+07:00', NULL);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (1, 1, 1, N'On what date will the festival open?', N'June 1st', N'June 8th', N'June 15th', N'July 8th', N'B', N'The speaker explicitly states June 8th.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:22.5976303+07:00', NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (2, 2, 1, N'What is a primary benefit of community-based tourism described in the text?', N'Rapid industrialization of rural areas', N'Sustainable income for local families', N'Construction of new international airports', N'Government subsidies for tour operators', N'B', N'The passage notes it provides sustainable income for local families while sharing cultural traditions.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:02.8161623+07:00', NULL);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (2, 2, 1, N'What is a primary benefit of community-based tourism described in the text?', N'Rapid industrialization of rural areas', N'Sustainable income for local families', N'Construction of new international airports', N'Government subsidies for tour operators', N'B', N'The passage notes it provides sustainable income for local families while sharing cultural traditions.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:22.6013850+07:00', NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (3, 3, 1, N'Look at the photograph and choose the statement that best describes what you see in the image.', N'They are leaving the meeting room.', N'A laptop is being repaired on the desk.', N'A woman is writing on a whiteboard.', N'Some chairs are stacked against the wall.', N'C', N'Option C correctly describes the action: the woman is writing notes on the whiteboard.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Focus on what the person in the centre is holding and doing.', '2026-11-11T01:44:03.0925664+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (3, 3, 1, N'Look at the photograph and choose the statement that best describes what you see in the image.', N'They are leaving the meeting room.', N'A laptop is being repaired on the desk.', N'A woman is writing on a whiteboard.', N'Some chairs are stacked against the wall.', N'C', N'Option C correctly describes the action: the woman is writing notes on the whiteboard.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Focus on what the person in the centre is holding and doing.', '2026-11-11T11:25:46.9137610+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (4, 4, 1, N'Where did you leave the project folders?', N'Yes, I folded them neatly.', N'On the conference room table.', N'No later than five o''clock.', NULL, N'B', N'Option B directly answers where the folders are placed.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Listen for a location word that answers "Where".', '2026-11-11T01:44:03.0935658+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (4, 4, 1, N'Where did you leave the project folders?', N'Yes, I folded them neatly.', N'On the conference room table.', N'No later than five o''clock.', NULL, N'B', N'Option B directly answers where the folders are placed.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Listen for a location word that answers "Where".', '2026-11-11T11:25:46.9225945+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (5, 5, 1, N'What deadline does the catering team have for the banquet?', N'By the end of today', N'By tomorrow noon', N'On Friday morning', N'Next Monday afternoon', N'B', N'The man says they need the final head count by tomorrow noon.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Pay attention to what the man says about when they need the count.', '2026-11-11T01:44:03.0935658+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (5, 5, 1, N'What deadline does the catering team have for the banquet?', N'By the end of today', N'By tomorrow noon', N'On Friday morning', N'Next Monday afternoon', N'B', N'The man says they need the final head count by tomorrow noon.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Pay attention to what the man says about when they need the count.', '2026-11-11T11:25:46.9225945+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (6, 6, 1, N'What is the reason for the flight delay?', N'Adverse weather conditions', N'Routine aircraft inspection', N'A gate reassignment', N'Crew scheduling changes', N'B', N'The speaker explicitly announces that the delay is due to routine aircraft inspection.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Listen for the phrase following "Due to".', '2026-11-11T01:44:03.0945657+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (6, 6, 1, N'What is the reason for the flight delay?', N'Adverse weather conditions', N'Routine aircraft inspection', N'A gate reassignment', N'Crew scheduling changes', N'B', N'The speaker explicitly announces that the delay is due to routine aircraft inspection.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Listen for the phrase following "Due to".', '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (7, 7, 1, N'The regional manager ------- the quarterly figures before the board meeting.', N'review', N'reviewing', N'will review', N'to review', N'C', N'The sentence lacks a main verb. "will review" expresses future scheduled action.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Look at the time marker and sentence structure.', '2026-11-11T01:44:03.0955657+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (7, 7, 1, N'The regional manager ------- the quarterly figures before the board meeting.', N'review', N'reviewing', N'will review', N'to review', N'C', N'The sentence lacks a main verb. "will review" expresses future scheduled action.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Look at the time marker and sentence structure.', '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (8, 8, 1, N'All client inquiries must be resolved ------- forty-eight hours of submission.', N'in', N'during', N'along', N'within', N'D', N'"within" + time duration indicates action must take place before that span elapses.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Which preposition indicates within a time span?', '2026-11-11T01:44:03.0960710+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (8, 8, 1, N'All client inquiries must be resolved ------- forty-eight hours of submission.', N'in', N'during', N'along', N'within', N'D', N'"within" + time duration indicates action must take place before that span elapses.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Which preposition indicates within a time span?', '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (9, 9, 1, N'The design studio provides ------- solutions for modern office spaces.', N'innovation', N'innovative', N'innovatively', N'innovate', N'B', N'"innovative" is the adjective modifying "solutions".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'The blank modifies the plural noun "solutions".', '2026-11-11T01:44:03.0960710+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (9, 9, 1, N'The design studio provides ------- solutions for modern office spaces.', N'innovation', N'innovative', N'innovatively', N'innovate', N'B', N'"innovative" is the adjective modifying "solutions".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'The blank modifies the plural noun "solutions".', '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (10, 10, 1, N'Choose the word or phrase that best completes the sentence in the customer letter.', N'have received', N'will receive', N'are receiving', N'to receive', N'A', N'The present perfect "have received" describes an action that occurred recently with present impact.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'The action happened recently with present relevance.', '2026-11-11T01:44:03.0970728+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (10, 10, 1, N'Choose the word or phrase that best completes the sentence in the customer letter.', N'have received', N'will receive', N'are receiving', N'to receive', N'A', N'The present perfect "have received" describes an action that occurred recently with present impact.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'The action happened recently with present relevance.', '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (11, 11, 1, N'What is the primary purpose of the memorandum?', N'To announce staff promotions', N'To notify employees of maintenance work', N'To schedule an annual fire drill', N'To request feedback on office amenities', N'B', N'The memo announces temporary elevator upgrades and directs staff to an alternate service elevator.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Look at the subject line and the main announcement.', '2026-11-11T01:44:03.0980725+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (11, 11, 1, N'What is the primary purpose of the memorandum?', N'To announce staff promotions', N'To notify employees of maintenance work', N'To schedule an annual fire drill', N'To request feedback on office amenities', N'B', N'The memo announces temporary elevator upgrades and directs staff to an alternate service elevator.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Look at the subject line and the main announcement.', '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (12, 12, 1, N'Look at the photograph and choose the statement that best describes what you see.', N'A woman is writing on a whiteboard.', N'Some chairs are stacked against the wall.', N'A laptop is being repaired on the desk.', N'The room has been emptied for cleaning.', N'A', N'Only option A describes what the photograph shows.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.0985774+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (12, 12, 1, N'Look at the photograph and choose the statement that best describes what you see.', N'A woman is writing on a whiteboard.', N'Some chairs are stacked against the wall.', N'A laptop is being repaired on the desk.', N'The room has been emptied for cleaning.', N'A', N'Only option A describes what the photograph shows.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (13, 13, 1, N'Look at the photograph and choose the statement that best describes what you see.', N'Passengers are waiting on a platform.', N'A train is leaving the station.', N'Two people are buying tickets.', N'Luggage is lined up beside the counter.', N'D', N'The photograph shows luggage beside the counter; the other options describe actions that are not visible.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.0995808+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (13, 13, 1, N'Look at the photograph and choose the statement that best describes what you see.', N'Passengers are waiting on a platform.', N'A train is leaving the station.', N'Two people are buying tickets.', N'Luggage is lined up beside the counter.', N'D', N'The photograph shows luggage beside the counter; the other options describe actions that are not visible.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (14, 14, 1, N'Where did you leave the project folders?', N'Yes, I folded them neatly.', N'On the conference room table.', N'No later than five o''clock.', NULL, N'B', N'The question asks for a place, and only B names one.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.0995808+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (14, 14, 1, N'Where did you leave the project folders?', N'Yes, I folded them neatly.', N'On the conference room table.', N'No later than five o''clock.', NULL, N'B', N'The question asks for a place, and only B names one.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (15, 15, 1, N'Why was the shipment delayed?', N'In the loading bay.', N'It arrived on Tuesday.', N'Because the courier misread the postcode.', NULL, N'C', N'The question asks for a reason; only C gives one.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1005852+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (15, 15, 1, N'Why was the shipment delayed?', N'In the loading bay.', N'It arrived on Tuesday.', N'Because the courier misread the postcode.', NULL, N'C', N'The question asks for a reason; only C gives one.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (16, 16, 1, N'Should we book the larger room for the workshop?', N'That would be a good idea.', N'About twenty people.', N'It finished early.', NULL, N'A', N'The question asks for a recommendation, and A answers it.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1015853+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (16, 16, 1, N'Should we book the larger room for the workshop?', N'That would be a good idea.', N'About twenty people.', N'It finished early.', NULL, N'A', N'The question asks for a recommendation, and A answers it.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (17, 17, 1, N'How long has the client been with the firm?', N'At the downtown office.', N'Since 2019.', N'Yes, she renewed last month.', NULL, N'B', N'The question asks for a duration, and only B provides one.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1015853+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (17, 17, 1, N'How long has the client been with the firm?', N'At the downtown office.', N'Since 2019.', N'Yes, she renewed last month.', NULL, N'B', N'The question asks for a duration, and only B provides one.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (18, 18, 1, N'Woman: Did the catering team confirm the order for Friday''s banquet? Man: Yes, but they need our final head count by tomorrow noon. Woman: I will email the department heads right away.' + CHAR(10) + N'' + CHAR(10) + N'What deadline does the catering team have?', N'By the end of today.', N'By tomorrow noon.', N'On Friday morning.', NULL, N'B', N'The man states the head count is needed by tomorrow noon.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1025851+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (18, 18, 1, N'Woman: Did the catering team confirm the order for Friday''s banquet? Man: Yes, but they need our final head count by tomorrow noon. Woman: I will email the department heads right away.' + CHAR(10) + N'' + CHAR(10) + N'What deadline does the catering team have?', N'By the end of today.', N'By tomorrow noon.', N'On Friday morning.', NULL, N'B', N'The man states the head count is needed by tomorrow noon.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9374055+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (19, 19, 1, N'Man: I''m afraid the 3 p.m. train has been cancelled. Woman: Then I''ll take the 3:40 instead. Can I change my ticket at the counter? Man: Yes, at no extra charge.' + CHAR(10) + N'' + CHAR(10) + N'What will the woman do?', N'Ask for a refund.', N'Wait for the 3 p.m. train.', N'Change her ticket at the counter.', NULL, N'C', N'She asks whether she can change the ticket at the counter and the man confirms it is free.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1035852+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (19, 19, 1, N'Man: I''m afraid the 3 p.m. train has been cancelled. Woman: Then I''ll take the 3:40 instead. Can I change my ticket at the counter? Man: Yes, at no extra charge.' + CHAR(10) + N'' + CHAR(10) + N'What will the woman do?', N'Ask for a refund.', N'Wait for the 3 p.m. train.', N'Change her ticket at the counter.', NULL, N'C', N'She asks whether she can change the ticket at the counter and the man confirms it is free.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9384406+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (20, 20, 1, N'Attention, passengers. The north gallery is closed for lighting work this morning. The sculpture collection has moved upstairs, beside the reading room. The café is unaffected.' + CHAR(10) + N'' + CHAR(10) + N'Where can visitors find the sculpture collection?', N'Upstairs beside the reading room.', N'In the closed north gallery.', N'Behind the café counter.', NULL, N'A', N'The announcement says the collection has moved upstairs beside the reading room.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1045851+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (20, 20, 1, N'Attention, passengers. The north gallery is closed for lighting work this morning. The sculpture collection has moved upstairs, beside the reading room. The café is unaffected.' + CHAR(10) + N'' + CHAR(10) + N'Where can visitors find the sculpture collection?', N'Upstairs beside the reading room.', N'In the closed north gallery.', N'Behind the café counter.', NULL, N'A', N'The announcement says the collection has moved upstairs beside the reading room.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9390138+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (21, 21, 1, N'A memorandum to all staff: from next month, expense claims must be submitted through the finance portal rather than by email. Claims received by the tenth of the month will be processed in that month''s payroll.' + CHAR(10) + N'' + CHAR(10) + N'How should staff submit expense claims from next month?', N'By email to their manager.', N'Through the finance portal.', N'In person at payroll.', NULL, N'B', N'The memorandum replaces email with the finance portal from next month.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1045851+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (21, 21, 1, N'A memorandum to all staff: from next month, expense claims must be submitted through the finance portal rather than by email. Claims received by the tenth of the month will be processed in that month''s payroll.' + CHAR(10) + N'' + CHAR(10) + N'How should staff submit expense claims from next month?', N'By email to their manager.', N'Through the finance portal.', N'In person at payroll.', NULL, N'B', N'The memorandum replaces email with the finance portal from next month.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9390138+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (22, 22, 1, N'Customer satisfaction surveys must be submitted ------- Friday afternoon to be included in the quarterly review.', N'before', N'during', N'between', N'among', N'A', N'Only ''before'' marks a deadline relative to a point in time.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1055851+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (22, 22, 1, N'Customer satisfaction surveys must be submitted ------- Friday afternoon to be included in the quarterly review.', N'before', N'during', N'between', N'among', N'A', N'Only ''before'' marks a deadline relative to a point in time.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9403787+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (23, 23, 1, N'All employees are required to wear their identification badges ------- visiting the research floor.', N'despite', N'although', N'while', N'unless', N'C', N'The badge is worn during the visit, so ''while'' fits.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1060901+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (23, 23, 1, N'All employees are required to wear their identification badges ------- visiting the research floor.', N'despite', N'although', N'while', N'unless', N'C', N'The badge is worn during the visit, so ''while'' fits.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9403787+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (24, 24, 1, N'The marketing team will ------- the campaign results at Thursday''s meeting.', N'presentation', N'present', N'presented', N'presenting', N'B', N'After the modal ''will'', the base form of the verb is required.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1070918+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (24, 24, 1, N'The marketing team will ------- the campaign results at Thursday''s meeting.', N'presentation', N'present', N'presented', N'presenting', N'B', N'After the modal ''will'', the base form of the verb is required.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9419339+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (25, 25, 1, N'Ms. Alvarez has asked that the revised budget ------- to her by the end of the week.', N'be sent', N'sends', N'sending', N'will send', N'A', N'''Ask that'' takes the subjunctive, so the base form ''be sent'' is correct.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1080931+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (25, 25, 1, N'Ms. Alvarez has asked that the revised budget ------- to her by the end of the week.', N'be sent', N'sends', N'sending', N'will send', N'A', N'''Ask that'' takes the subjunctive, so the base form ''be sent'' is correct.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9419339+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (26, 26, 1, N'The delay was caused not by the supplier ------- by the customs inspection.', N'and', N'or', N'but', N'so', N'C', N'''Not by ... but by ...'' is the parallel construction the sentence needs.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1085966+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (26, 26, 1, N'The delay was caused not by the supplier ------- by the customs inspection.', N'and', N'or', N'but', N'so', N'C', N'''Not by ... but by ...'' is the parallel construction the sentence needs.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9429522+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (27, 27, 1, N'------- the branch had reported record sales, the regional office remained cautious about the next quarter.', N'Because', N'Since', N'Unless', N'Although', N'D', N'The two clauses contrast, which is what ''Although'' signals.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1096028+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (27, 27, 1, N'------- the branch had reported record sales, the regional office remained cautious about the next quarter.', N'Because', N'Since', N'Unless', N'Although', N'D', N'The two clauses contrast, which is what ''Although'' signals.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9434626+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (28, 28, 1, N'Thank you for contacting Apex Support. We have received your inquiry regarding account renewal. A representative will review your request and ------- within 24 business hours.', N'respond', N'response', N'responded', N'responding', N'A', N'The modal ''will'' requires the base verb.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1096028+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (28, 28, 1, N'Thank you for contacting Apex Support. We have received your inquiry regarding account renewal. A representative will review your request and ------- within 24 business hours.', N'respond', N'response', N'responded', N'responding', N'A', N'The modal ''will'' requires the base verb.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9447410+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (29, 29, 1, N'Please note that the service centre closes at 5 p.m. on weekdays, ------- it remains open until 7 p.m. on Saturdays.', N'so', N'but', N'unless', N'because', N'B', N'The two clauses contrast weekdays with Saturdays.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1106079+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (29, 29, 1, N'Please note that the service centre closes at 5 p.m. on weekdays, ------- it remains open until 7 p.m. on Saturdays.', N'so', N'but', N'unless', N'because', N'B', N'The two clauses contrast weekdays with Saturdays.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9447410+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (30, 30, 1, N'Customers who ------- their invoices before the due date are eligible for a two per cent discount.', N'paying', N'are paid', N'pay', N'have paid for', N'C', N'The relative clause needs a finite verb, ''pay'', agreeing with ''Customers''.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1116072+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (30, 30, 1, N'Customers who ------- their invoices before the due date are eligible for a two per cent discount.', N'paying', N'are paid', N'pay', N'have paid for', N'C', N'The relative clause needs a finite verb, ''pay'', agreeing with ''Customers''.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9447410+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (31, 31, 1, N'The new policy applies to all contractors ------- their length of service.', N'instead of', N'in place of', N'except for', N'regardless of', N'D', N'The policy covers everyone, so ''regardless of'' is the only fit.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1116072+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (31, 31, 1, N'The new policy applies to all contractors ------- their length of service.', N'instead of', N'in place of', N'except for', N'regardless of', N'D', N'The policy covers everyone, so ''regardless of'' is the only fit.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9447410+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (32, 32, 1, N'Notice: The staff car park will be resurfaced from Monday to Wednesday. Employees are asked to use the visitor car park on those days and to display a temporary permit.' + CHAR(10) + N'' + CHAR(10) + N'What are employees asked to do?', N'Resurface the car park themselves.', N'Use the visitor car park with a permit.', N'Work from home for three days.', NULL, N'B', N'The notice redirects staff to the visitor car park and requires a temporary permit.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1138486+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (32, 32, 1, N'Notice: The staff car park will be resurfaced from Monday to Wednesday. Employees are asked to use the visitor car park on those days and to display a temporary permit.' + CHAR(10) + N'' + CHAR(10) + N'What are employees asked to do?', N'Resurface the car park themselves.', N'Use the visitor car park with a permit.', N'Work from home for three days.', NULL, N'B', N'The notice redirects staff to the visitor car park and requires a temporary permit.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (33, 33, 1, N'Email: I have reviewed the draft proposal and have two comments. First, the timeline should include the client review week. Second, the budget table needs the contingency line. Otherwise the structure is strong.' + CHAR(10) + N'' + CHAR(10) + N'What does the writer want added to the timeline?', N'The client review week.', N'A contingency line.', N'A stronger structure.', NULL, N'A', N'The contingency line belongs to the budget table; the client review week is the timeline comment.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1153611+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (33, 33, 1, N'Email: I have reviewed the draft proposal and have two comments. First, the timeline should include the client review week. Second, the budget table needs the contingency line. Otherwise the structure is strong.' + CHAR(10) + N'' + CHAR(10) + N'What does the writer want added to the timeline?', N'The client review week.', N'A contingency line.', N'A stronger structure.', NULL, N'A', N'The contingency line belongs to the budget table; the client review week is the timeline comment.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (34, 34, 1, N'An article reports that a city''s bicycle-sharing scheme grew from 400 to 5,000 bicycles in four years, and that journeys rose from 900 to 41,000 a day. The operator attributes the growth to docking stations near rail terminals.' + CHAR(10) + N'' + CHAR(10) + N'What does the operator say caused the growth?', N'A fall in the price of bicycles.', N'A reduction in rail services.', N'Docking stations near rail terminals.', NULL, N'C', N'The article attributes growth to the placement of docking stations near rail terminals.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1168502+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (34, 34, 1, N'An article reports that a city''s bicycle-sharing scheme grew from 400 to 5,000 bicycles in four years, and that journeys rose from 900 to 41,000 a day. The operator attributes the growth to docking stations near rail terminals.' + CHAR(10) + N'' + CHAR(10) + N'What does the operator say caused the growth?', N'A fall in the price of bicycles.', N'A reduction in rail services.', N'Docking stations near rail terminals.', NULL, N'C', N'The article attributes growth to the placement of docking stations near rail terminals.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (35, 35, 1, N'Memo: Because the audit will occupy the fifth floor all week, the finance team will work from the second-floor meeting rooms. Printers on the fifth floor will be unavailable; please use the shared printer on the second floor.' + CHAR(10) + N'' + CHAR(10) + N'Why is the finance team moving?', N'Their printers have been removed.', N'The second floor is being renovated.', N'They need to meet clients.', N'The audit will occupy their floor.', N'D', N'The audit occupies the fifth floor, which is why the team moves.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1178519+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (35, 35, 1, N'Memo: Because the audit will occupy the fifth floor all week, the finance team will work from the second-floor meeting rooms. Printers on the fifth floor will be unavailable; please use the shared printer on the second floor.' + CHAR(10) + N'' + CHAR(10) + N'Why is the finance team moving?', N'Their printers have been removed.', N'The second floor is being renovated.', N'They need to meet clients.', N'The audit will occupy their floor.', N'D', N'The audit occupies the fifth floor, which is why the team moves.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (36, 36, 1, N'Read the announcement aloud as clearly and naturally as possible.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 45, 45, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1178519+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (36, 36, 1, N'Read the announcement aloud as clearly and naturally as possible.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 45, 45, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (37, 37, 1, N'Look at the picture and describe it in as much detail as you can.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 45, 30, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1188603+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (37, 37, 1, N'Look at the picture and describe it in as much detail as you can.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 45, 30, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (38, 38, 1, N'How often do you go shopping for clothes, and what is your favorite clothing store?', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 3, 15, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1198611+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (38, 38, 1, N'How often do you go shopping for clothes, and what is your favorite clothing store?', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 3, 15, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (39, 39, 1, N'Write ONE sentence based on the picture using two given words: "discuss" and "proposal".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 8, 35, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1198611+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (39, 39, 1, N'Write ONE sentence based on the picture using two given words: "discuss" and "proposal".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 8, 35, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (40, 40, 1, N'Write an opinion essay of at least 250 words explaining your viewpoint with specific reasons and examples.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 250, 450, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1208609+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (40, 40, 1, N'Write an opinion essay of at least 250 words explaining your viewpoint with specific reasons and examples.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 250, 450, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (41, 41, 1, N'At what time does the first library induction tour depart?', N'9:00 AM', N'9:30 AM', N'10:00 AM', N'10:30 AM', N'B', N'The guide states that the tours start at 9:30 AM.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Listen for the starting time mentioned by the guide.', '2026-11-11T01:44:03.1218611+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (41, 41, 1, N'At what time does the first library induction tour depart?', N'9:00 AM', N'9:30 AM', N'10:00 AM', N'10:30 AM', N'B', N'The guide states that the tours start at 9:30 AM.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Listen for the starting time mentioned by the guide.', '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (42, 42, 1, N'According to the passage, by how much can urban surface temperatures be reduced through green canopies?', N'Up to 1.5 °C', N'Up to 2.8 °C', N'Up to 3.5 °C', N'Up to 4.2 °C', N'B', N'The text explicitly mentions a reduction of up to 2.8 degrees Celsius.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Scan the passage for specific numbers and degrees Celsius.', '2026-11-11T01:44:03.1218611+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (42, 42, 1, N'According to the passage, by how much can urban surface temperatures be reduced through green canopies?', N'Up to 1.5 °C', N'Up to 2.8 °C', N'Up to 3.5 °C', N'Up to 4.2 °C', N'B', N'The text explicitly mentions a reduction of up to 2.8 degrees Celsius.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, N'Scan the passage for specific numbers and degrees Celsius.', '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (43, 43, 1, N'What time does the student housing office close on Fridays?', N'12:00 PM', N'1:00 PM', N'4:00 PM', N'5:00 PM', N'B', N'The officer says: "On Fridays we close at 1 PM".', N'12:00 PM is not the Friday closing time; the recording specifies 1:00 PM.', N'Correct: the housing office closes at 1:00 PM on Fridays.', N'4:00 PM applies Monday through Thursday, not Friday.', N'5:00 PM is never given as a closing time.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1238641+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (43, 43, 1, N'What time does the student housing office close on Fridays?', N'12:00 PM', N'1:00 PM', N'4:00 PM', N'5:00 PM', N'B', N'The officer says: "On Fridays we close at 1 PM".', N'12:00 PM is not the Friday closing time; the recording specifies 1:00 PM.', N'Correct: the housing office closes at 1:00 PM on Fridays.', N'4:00 PM applies Monday through Thursday, not Friday.', N'5:00 PM is never given as a closing time.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (44, 44, 1, N'What energy source accounted for the majority of new capacity?', N'Wind power', N'Solar photovoltaics', N'Hydroelectricity', N'Geothermal energy', N'B', N'The passage states solar photovoltaics accounted for three-quarters of installations.', N'Wind is not the source identified as the majority of new capacity.', N'Correct: solar photovoltaics accounted for three-quarters of new installations.', N'Hydroelectricity is not named in the passage.', N'Geothermal energy is not named in the passage.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1238641+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (44, 44, 1, N'What energy source accounted for the majority of new capacity?', N'Wind power', N'Solar photovoltaics', N'Hydroelectricity', N'Geothermal energy', N'B', N'The passage states solar photovoltaics accounted for three-quarters of installations.', N'Wind is not the source identified as the majority of new capacity.', N'Correct: solar photovoltaics accounted for three-quarters of new installations.', N'Hydroelectricity is not named in the passage.', N'Geothermal energy is not named in the passage.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (45, 45, 1, N'Part 1: Do you work or are you a student? What do you enjoy most about your studies or job?', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 60, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1253700+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (45, 45, 1, N'Part 1: Do you work or are you a student? What do you enjoy most about your studies or job?', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 60, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (46, 46, 1, N'Part 2: Speak for 1 to 2 minutes on the cue card topic. You have 1 minute to prepare.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 60, 120, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1263764+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (46, 46, 1, N'Part 2: Speak for 1 to 2 minutes on the cue card topic. You have 1 minute to prepare.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 60, 120, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (47, 47, 1, N'Write at least 150 words summarizing the main features and comparisons in the chart.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 150, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1263764+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (47, 47, 1, N'Write at least 150 words summarizing the main features and comparisons in the chart.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 150, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (48, 48, 1, N'Write an essay of at least 250 words discussing your opinion with supporting arguments.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 250, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1273762+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (48, 48, 1, N'Write an essay of at least 250 words discussing your opinion with supporting arguments.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 250, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (49, 49, 1, N'How should students submit their research proposals?', N'Printed copy to the office', N'Through the faculty portal', N'By email to the teaching assistant', N'During Monday class', N'B', N'The lecturer specifies "through the faculty portal".', N'The lecturer asks students to submit through the faculty portal, not on paper.', N'Correct: students should submit their proposals through the faculty portal.', N'Emailing the teaching assistant is not the stated submission route.', N'The deadline is Friday at 5 PM, not during Monday class.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1283811+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (49, 49, 1, N'How should students submit their research proposals?', N'Printed copy to the office', N'Through the faculty portal', N'By email to the teaching assistant', N'During Monday class', N'B', N'The lecturer specifies "through the faculty portal".', N'The lecturer asks students to submit through the faculty portal, not on paper.', N'Correct: students should submit their proposals through the faculty portal.', N'Emailing the teaching assistant is not the stated submission route.', N'The deadline is Friday at 5 PM, not during Monday class.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (50, 50, 1, N'What role does artificial intelligence play in medical imaging according to the passage?', N'Replacing hospital doctors completely', N'Providing diagnostic assistance', N'Manufacturing hospital equipment', N'Managing billing departments', N'B', N'The passage states AI provides diagnostic assistance for radiology scans.', N'The passage describes support for radiology, not replacing doctors.', N'Correct: AI provides diagnostic assistance for radiology scans.', N'The passage discusses interpreting scans, not manufacturing equipment.', N'Billing is not mentioned as an AI function.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1283811+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (50, 50, 1, N'What role does artificial intelligence play in medical imaging according to the passage?', N'Replacing hospital doctors completely', N'Providing diagnostic assistance', N'Manufacturing hospital equipment', N'Managing billing departments', N'B', N'The passage states AI provides diagnostic assistance for radiology scans.', N'The passage describes support for radiology, not replacing doctors.', N'Correct: AI provides diagnostic assistance for radiology scans.', N'The passage discusses interpreting scans, not manufacturing equipment.', N'Billing is not mentioned as an AI function.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (51, 51, 1, N'Part 1: Social Interaction: Talk about your favorite leisure activity. Why do you enjoy it?', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 60, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1293815+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (51, 51, 1, N'Part 1: Social Interaction: Talk about your favorite leisure activity. Why do you enjoy it?', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 60, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (52, 52, 1, N'Part 2: Topic Development: Present your opinion in 3 minutes based on the prompt.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 60, 180, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1303815+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (52, 52, 1, N'Part 2: Topic Development: Present your opinion in 3 minutes based on the prompt.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 60, 180, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (53, 53, 1, N'Write an email responding to your friend (at least 120 words).', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 120, 250, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1303815+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (53, 53, 1, N'Write an email responding to your friend (at least 120 words).', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 120, 250, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (54, 54, 1, N'Write an essay of at least 250 words discussing both sides and giving your opinion with reasons.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 250, 450, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1313813+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (54, 54, 1, N'Write an essay of at least 250 words discussing both sides and giving your opinion with reasons.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 250, 450, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (55, 55, 1, N'Look at the picture marked Number 1 in your test book and select the statement that best describes what you see.', N'(A) They are boarding a commuter train.', N'(B) They are examining a blueprint on the desk.', N'(C) They are hanging a picture on the wall.', N'(D) The projector screen is being rolled up.', N'B', N'Hai nhân vật trong ảnh đang cúi nhìn vào bản thiết kế trải trên bàn làm việc (examining a blueprint on the desk).', N'Bẫy đồng âm (Homophone trap): Từ "boarding" dễ gây nhầm lẫn âm thanh với "board" (bảng/bàn họp) trong phòng.', N'Đáp án đúng: Mô tả chính xác hành động của hai người đang xem xét bản thiết kế trên mặt bàn.', N'Bẫy hành động sai (Wrong action trap): Có bức tranh/biểu đồ trên tường nhưng đã được treo sẵn, không có ai đang treo.', N'Bẫy bị động hiện tại tiếp diễn (being + V-ed): Màn chiếu đang ở trạng thái tĩnh, không có tác động cuộn lên.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1323818+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (55, 55, 1, N'Look at the picture marked Number 1 in your test book and select the statement that best describes what you see.', N'(A) They are boarding a commuter train.', N'(B) They are examining a blueprint on the desk.', N'(C) They are hanging a picture on the wall.', N'(D) The projector screen is being rolled up.', N'B', N'Hai nhân vật trong ảnh đang cúi nhìn vào bản thiết kế trải trên bàn làm việc (examining a blueprint on the desk).', N'Bẫy đồng âm (Homophone trap): Từ "boarding" dễ gây nhầm lẫn âm thanh với "board" (bảng/bàn họp) trong phòng.', N'Đáp án đúng: Mô tả chính xác hành động của hai người đang xem xét bản thiết kế trên mặt bàn.', N'Bẫy hành động sai (Wrong action trap): Có bức tranh/biểu đồ trên tường nhưng đã được treo sẵn, không có ai đang treo.', N'Bẫy bị động hiện tại tiếp diễn (being + V-ed): Màn chiếu đang ở trạng thái tĩnh, không có tác động cuộn lên.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (56, 56, 1, N'Look at the picture marked Number 2 in your test book and select the statement that best describes what you see.', N'(A) Some chairs are stacked in the corner.', N'(B) A technician is repairing the light fixture.', N'(C) Documents are being distributed to attendees.', N'(D) Monitor screens are arranged in a row on the table.', N'D', N'Tranh tả vật trong phòng họp trống: các màn hình máy tính được xếp thành hàng trên bàn (arranged in a row).', N'Bẫy trạng thái sai: Ghế được xếp quanh bàn làm việc chứ không chồng lên nhau (stacked) ở góc phòng.', N'Bẫy suy diễn chủ thể không tồn tại: Trong hình hoàn toàn không có kỹ thuật viên nào.', N'Bẫy "being + V3/ed" cho tranh tĩnh: Không có người tham dự nên không thể có hành động đang phát tài liệu.', N'Đáp án đúng: Diễn tả chính xác trạng thái tĩnh của các màn hình máy tính xếp dọc theo bàn.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1333816+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (56, 56, 1, N'Look at the picture marked Number 2 in your test book and select the statement that best describes what you see.', N'(A) Some chairs are stacked in the corner.', N'(B) A technician is repairing the light fixture.', N'(C) Documents are being distributed to attendees.', N'(D) Monitor screens are arranged in a row on the table.', N'D', N'Tranh tả vật trong phòng họp trống: các màn hình máy tính được xếp thành hàng trên bàn (arranged in a row).', N'Bẫy trạng thái sai: Ghế được xếp quanh bàn làm việc chứ không chồng lên nhau (stacked) ở góc phòng.', N'Bẫy suy diễn chủ thể không tồn tại: Trong hình hoàn toàn không có kỹ thuật viên nào.', N'Bẫy "being + V3/ed" cho tranh tĩnh: Không có người tham dự nên không thể có hành động đang phát tài liệu.', N'Đáp án đúng: Diễn tả chính xác trạng thái tĩnh của các màn hình máy tính xếp dọc theo bàn.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (57, 57, 1, N'When is the quarterly budget proposal due? — Listen and choose the best response (A, B, or C).', N'(A) Yes, the proposal was approved.', N'(B) Check the schedule Ms. Lin e-mailed this morning.', N'(C) About twenty thousand dollars.', NULL, N'B', N'Câu hỏi "When" nhưng được trả lời gián tiếp bằng cách đẩy trách nhiệm kiểm tra sang lịch trình mà giám đốc tài chính đã gửi.', N'Bẫy Yes/No cho câu hỏi Wh- (When) kết hợp bẫy lặp từ "proposal" (Same-word trap).', N'Đáp án đúng: Phản hồi gián tiếp (Indirect response) chuẩn ETS — chỉ dẫn người hỏi nơi tra cứu thời hạn.', N'Bẫy liên tưởng từ vựng (Associative trap): Nghe thấy "budget" nên đưa ra con số tiền tệ, nhưng câu hỏi hỏi về thời gian "When".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1333816+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (57, 57, 1, N'When is the quarterly budget proposal due? — Listen and choose the best response (A, B, or C).', N'(A) Yes, the proposal was approved.', N'(B) Check the schedule Ms. Lin e-mailed this morning.', N'(C) About twenty thousand dollars.', NULL, N'B', N'Câu hỏi "When" nhưng được trả lời gián tiếp bằng cách đẩy trách nhiệm kiểm tra sang lịch trình mà giám đốc tài chính đã gửi.', N'Bẫy Yes/No cho câu hỏi Wh- (When) kết hợp bẫy lặp từ "proposal" (Same-word trap).', N'Đáp án đúng: Phản hồi gián tiếp (Indirect response) chuẩn ETS — chỉ dẫn người hỏi nơi tra cứu thời hạn.', N'Bẫy liên tưởng từ vựng (Associative trap): Nghe thấy "budget" nên đưa ra con số tiền tệ, nhưng câu hỏi hỏi về thời gian "When".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (58, 58, 1, N'Who is leading the new client orientation session tomorrow? — Listen and choose the best response (A, B, or C).', N'(A) In the main conference room on the third floor.', N'(B) Mr. Takahashi volunteered to take it over.', N'(C) It was a very informative session.', NULL, N'B', N'Câu hỏi "Who" yêu cầu xác định nhân sự hoặc sự thay đổi phân công công việc.', N'Bẫy sai từ để hỏi: Trả lời cho câu hỏi "Where" thay vì "Who".', N'Đáp án đúng: Nêu tên người phụ trách buổi định hướng khách hàng mới.', N'Bẫy sai thì (Wrong tense trap) và lặp từ "session": Sự kiện diễn ra vào ngày mai (tomorrow) nhưng đáp án lại dùng thì quá khứ "was".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1343816+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (58, 58, 1, N'Who is leading the new client orientation session tomorrow? — Listen and choose the best response (A, B, or C).', N'(A) In the main conference room on the third floor.', N'(B) Mr. Takahashi volunteered to take it over.', N'(C) It was a very informative session.', NULL, N'B', N'Câu hỏi "Who" yêu cầu xác định nhân sự hoặc sự thay đổi phân công công việc.', N'Bẫy sai từ để hỏi: Trả lời cho câu hỏi "Where" thay vì "Who".', N'Đáp án đúng: Nêu tên người phụ trách buổi định hướng khách hàng mới.', N'Bẫy sai thì (Wrong tense trap) và lặp từ "session": Sự kiện diễn ra vào ngày mai (tomorrow) nhưng đáp án lại dùng thì quá khứ "was".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (59, 59, 1, N'Why don''t we postpone the product launch until the packaging is finalized? — Listen and choose the best response (A, B, or C).', N'(A) Because the factory is located in Osaka.', N'(B) A light lunch at the cafeteria.', N'(C) That makes sense, given the printing delays.', NULL, N'C', N'"Why don''t we..." là câu đề xuất (suggestion), không phải câu hỏi nguyên nhân "Why" thông thường.', N'Bẫy "Because" kinh điển cho câu đề xuất "Why don''t we...": Nội dung không ăn nhập với đề xuất lùi ngày ra mắt.', N'Bẫy phát âm gần giống (Near-homophone trap): Từ "lunch" (bữa trưa) phát âm gần giống với "launch" (ra mắt sản phẩm).', N'Đáp án đúng: Đồng tình với lời đề xuất và bổ sung lý do thực tế về việc chậm trễ in ấn bao bì.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1353815+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (59, 59, 1, N'Why don''t we postpone the product launch until the packaging is finalized? — Listen and choose the best response (A, B, or C).', N'(A) Because the factory is located in Osaka.', N'(B) A light lunch at the cafeteria.', N'(C) That makes sense, given the printing delays.', NULL, N'C', N'"Why don''t we..." là câu đề xuất (suggestion), không phải câu hỏi nguyên nhân "Why" thông thường.', N'Bẫy "Because" kinh điển cho câu đề xuất "Why don''t we...": Nội dung không ăn nhập với đề xuất lùi ngày ra mắt.', N'Bẫy phát âm gần giống (Near-homophone trap): Từ "lunch" (bữa trưa) phát âm gần giống với "launch" (ra mắt sản phẩm).', N'Đáp án đúng: Đồng tình với lời đề xuất và bổ sung lý do thực tế về việc chậm trễ in ấn bao bì.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9683739+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (60, 60, 1, N'You''ve already updated the inventory database, haven''t you? — Listen and choose the best response (A, B, or C).', N'(A) The server was down all afternoon, so I couldn''t.', N'(B) In the warehouse next to the loading dock.', N'(C) Yes, the software update is free of charge.', NULL, N'A', N'Câu hỏi đuôi (Tag question) kiểm tra trạng thái hoàn thành công việc, thường được trả lời bằng lý do chưa thể thực hiện.', N'Đáp án đúng: Phản hồi gián tiếp giải thích nguyên nhân chưa thể cập nhật cơ sở dữ liệu.', N'Bẫy liên tưởng từ vựng: Nghe thấy "inventory" (hàng tồn kho) nên gán địa điểm nhà kho (warehouse).', N'Bẫy lặp từ "update": Đánh tráo khái niệm giữa cập nhật dữ liệu kho và bản cập nhật phần mềm miễn phí.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1358864+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (60, 60, 1, N'You''ve already updated the inventory database, haven''t you? — Listen and choose the best response (A, B, or C).', N'(A) The server was down all afternoon, so I couldn''t.', N'(B) In the warehouse next to the loading dock.', N'(C) Yes, the software update is free of charge.', NULL, N'A', N'Câu hỏi đuôi (Tag question) kiểm tra trạng thái hoàn thành công việc, thường được trả lời bằng lý do chưa thể thực hiện.', N'Đáp án đúng: Phản hồi gián tiếp giải thích nguyên nhân chưa thể cập nhật cơ sở dữ liệu.', N'Bẫy liên tưởng từ vựng: Nghe thấy "inventory" (hàng tồn kho) nên gán địa điểm nhà kho (warehouse).', N'Bẫy lặp từ "update": Đánh tráo khái niệm giữa cập nhật dữ liệu kho và bản cập nhật phần mềm miễn phí.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9683739+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (61, 61, 1, N'What problem does the man mention?', N'Some office furniture was damaged in transit.', N'A delivery of office chairs has been delayed.', N'A branch office failed a safety inspection.', N'An invoice contains an incorrect standby fee.', N'B', N'Người đàn ông thông báo lô hàng ghế văn phòng bị kẹt ở Denver do thời tiết xấu dẫn đến giao hàng trễ.', N'Bẫy suy diễn quá đà: Lô hàng bị kẹt do thời tiết chứ không hề bị hư hỏng.', N'Đáp án đúng: Paraphrase từ "shipment of ergonomic office chairs... stuck in Denver... forty-eight-hour delay".', N'Bẫy thông tin nhiễu không có trong bài nghe.', N'Bẫy ghép từ (Word-matching trap): Có nhắc tới "standby fee" ở cuối bài nhưng đó là khoản phí người phụ nữ muốn tránh, không phải lỗi hóa đơn.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1368924+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (61, 61, 1, N'What problem does the man mention?', N'Some office furniture was damaged in transit.', N'A delivery of office chairs has been delayed.', N'A branch office failed a safety inspection.', N'An invoice contains an incorrect standby fee.', N'B', N'Người đàn ông thông báo lô hàng ghế văn phòng bị kẹt ở Denver do thời tiết xấu dẫn đến giao hàng trễ.', N'Bẫy suy diễn quá đà: Lô hàng bị kẹt do thời tiết chứ không hề bị hư hỏng.', N'Đáp án đúng: Paraphrase từ "shipment of ergonomic office chairs... stuck in Denver... forty-eight-hour delay".', N'Bẫy thông tin nhiễu không có trong bài nghe.', N'Bẫy ghép từ (Word-matching trap): Có nhắc tới "standby fee" ở cuối bài nhưng đó là khoản phí người phụ nữ muốn tránh, không phải lỗi hóa đơn.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9683739+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (62, 62, 1, N'When is the shipment now expected to arrive?', N'On Thursday morning', N'On Thursday afternoon', N'On Friday afternoon', N'On Saturday morning', N'C', N'Ban đầu dự kiến lắp đặt sáng thứ Năm, nhưng bị trễ 48 giờ nên chiều thứ Sáu hàng mới tới.', N'Bẫy mốc thời gian cũ (Original schedule trap): Thứ Năm là lịch lắp đặt ban đầu của đội kỹ thuật.', N'Bẫy trộn lẫn thông tin giữa "Thursday morning" và "Friday afternoon".', N'Đáp án đúng: Người đàn ông nói rõ "the chairs won''t get there until Friday afternoon".', N'Bẫy mốc thời gian của hành động khác: Thứ Bảy là ngày dời lịch cho đội kỹ thuật viên lắp đặt.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1368924+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (62, 62, 1, N'When is the shipment now expected to arrive?', N'On Thursday morning', N'On Thursday afternoon', N'On Friday afternoon', N'On Saturday morning', N'C', N'Ban đầu dự kiến lắp đặt sáng thứ Năm, nhưng bị trễ 48 giờ nên chiều thứ Sáu hàng mới tới.', N'Bẫy mốc thời gian cũ (Original schedule trap): Thứ Năm là lịch lắp đặt ban đầu của đội kỹ thuật.', N'Bẫy trộn lẫn thông tin giữa "Thursday morning" và "Friday afternoon".', N'Đáp án đúng: Người đàn ông nói rõ "the chairs won''t get there until Friday afternoon".', N'Bẫy mốc thời gian của hành động khác: Thứ Bảy là ngày dời lịch cho đội kỹ thuật viên lắp đặt.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9701187+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (63, 63, 1, N'What will the woman most likely do next?', N'Order chairs from a local supplier in Seattle', N'Travel to Denver to inspect the merchandise', N'Reschedule an appointment with a service provider', N'Approve an overtime payment for the drivers', N'C', N'Người phụ nữ quyết định liên hệ ngay với bên lắp đặt (setup agency) để đổi lịch sang thứ Bảy.', N'Bẫy suy diễn không có căn cứ: Hai người chỉ chờ hàng tới chứ không hủy đơn để mua nhà cung cấp khác.', N'Bẫy địa danh: Denver chỉ là nơi xe tải bị kẹt lại do thời tiết.', N'Đáp án đúng: Paraphrase từ "contact the setup agency right away to reschedule their technicians".', N'Bẫy suy diễn từ ngữ cảnh vận tải và chi phí.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1378978+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (63, 63, 1, N'What will the woman most likely do next?', N'Order chairs from a local supplier in Seattle', N'Travel to Denver to inspect the merchandise', N'Reschedule an appointment with a service provider', N'Approve an overtime payment for the drivers', N'C', N'Người phụ nữ quyết định liên hệ ngay với bên lắp đặt (setup agency) để đổi lịch sang thứ Bảy.', N'Bẫy suy diễn không có căn cứ: Hai người chỉ chờ hàng tới chứ không hủy đơn để mua nhà cung cấp khác.', N'Bẫy địa danh: Denver chỉ là nơi xe tải bị kẹt lại do thời tiết.', N'Đáp án đúng: Paraphrase từ "contact the setup agency right away to reschedule their technicians".', N'Bẫy suy diễn từ ngữ cảnh vận tải và chi phí.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9701187+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (64, 64, 1, N'Why is the keynote address being moved to a different location?', N'More people registered than originally anticipated.', N'There is a technical problem with the room''s equipment.', N'The keynote speaker requested a smaller stage.', N'Renovation work is taking place on the mezzanine level.', N'B', N'Bài phát biểu chính phải chuyển phòng vì sự cố thiết bị nghe nhìn (audio-visual malfunction) tại Ballroom A.', N'Bẫy đảo ngược nguyên nhân: Bài nói có nhắc tới "smaller seating capacity" ở phòng mới, dễ làm thí sinh tưởng nhầm là đổi phòng vì quá đông người.', N'Đáp án đúng: Paraphrase chuẩn xác cụm "unexpected audio-visual malfunction in Ballroom A".', N'Bẫy thông tin sai lệch: Diễn giả Dr. Elena Rostova không hề yêu cầu đổi sân khấu.', N'Bẫy ghép từ: "mezzanine level" là tầng của hội trường mới (Sapphire Auditorium), không phải nơi đang sửa chữa.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1388980+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (64, 64, 1, N'Why is the keynote address being moved to a different location?', N'More people registered than originally anticipated.', N'There is a technical problem with the room''s equipment.', N'The keynote speaker requested a smaller stage.', N'Renovation work is taking place on the mezzanine level.', N'B', N'Bài phát biểu chính phải chuyển phòng vì sự cố thiết bị nghe nhìn (audio-visual malfunction) tại Ballroom A.', N'Bẫy đảo ngược nguyên nhân: Bài nói có nhắc tới "smaller seating capacity" ở phòng mới, dễ làm thí sinh tưởng nhầm là đổi phòng vì quá đông người.', N'Đáp án đúng: Paraphrase chuẩn xác cụm "unexpected audio-visual malfunction in Ballroom A".', N'Bẫy thông tin sai lệch: Diễn giả Dr. Elena Rostova không hề yêu cầu đổi sân khấu.', N'Bẫy ghép từ: "mezzanine level" là tầng của hội trường mới (Sapphire Auditorium), không phải nơi đang sửa chữa.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9701187+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (65, 65, 1, N'What is available in Room 204?', N'Complimentary refreshments', N'Printed copies of the presentation slides', N'A live broadcast of the speech', N'Technical support for digital badges', N'C', N'Phòng 204 được bố trí làm phòng dự phòng (overflow seating) có truyền hình trực tiếp (live video feed).', N'Bẫy kịch bản hội thảo quen thuộc nhưng không được đề cập trong bài.', N'Bẫy suy diễn không có trong transcript.', N'Đáp án đúng: "A live broadcast" tương đương với "a live video feed" trong bài thông báo.', N'Bẫy trộn từ: "digital badge" xuất hiện ở câu sau nhưng dùng để quét tại cửa hội trường.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1398978+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (65, 65, 1, N'What is available in Room 204?', N'Complimentary refreshments', N'Printed copies of the presentation slides', N'A live broadcast of the speech', N'Technical support for digital badges', N'C', N'Phòng 204 được bố trí làm phòng dự phòng (overflow seating) có truyền hình trực tiếp (live video feed).', N'Bẫy kịch bản hội thảo quen thuộc nhưng không được đề cập trong bài.', N'Bẫy suy diễn không có trong transcript.', N'Đáp án đúng: "A live broadcast" tương đương với "a live video feed" trong bài thông báo.', N'Bẫy trộn từ: "digital badge" xuất hiện ở câu sau nhưng dùng để quét tại cửa hội trường.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9701187+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (66, 66, 1, N'How can attendees earn professional credits?', N'By completing an online feedback survey', N'By signing a registration sheet at the front desk', N'By scanning their badges at the auditorium entrance', N'By submitting a summary to Dr. Rostova', N'C', N'Người tham dự cần quét thẻ hội nghị điện tử (scan digital conference badge) tại lối vào hội trường.', N'Bẫy thông lệ thực tế nhưng không có trong bài nói.', N'Bẫy phương thức điểm danh truyền thống (signing a sheet) thay vì quét thẻ kỹ thuật số.', N'Đáp án đúng: Trùng khớp trực tiếp với chỉ dẫn "scan your digital conference badge at the entrance of the auditorium".', N'Bẫy ghép tên nhân vật trong bài vào hành động sai.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1408973+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (66, 66, 1, N'How can attendees earn professional credits?', N'By completing an online feedback survey', N'By signing a registration sheet at the front desk', N'By scanning their badges at the auditorium entrance', N'By submitting a summary to Dr. Rostova', N'C', N'Người tham dự cần quét thẻ hội nghị điện tử (scan digital conference badge) tại lối vào hội trường.', N'Bẫy thông lệ thực tế nhưng không có trong bài nói.', N'Bẫy phương thức điểm danh truyền thống (signing a sheet) thay vì quét thẻ kỹ thuật số.', N'Đáp án đúng: Trùng khớp trực tiếp với chỉ dẫn "scan your digital conference badge at the entrance of the auditorium".', N'Bẫy ghép tên nhân vật trong bài vào hành động sai.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (67, 67, 1, N'All reimbursement requests must be submitted to the accounting department ------- the fifteenth of each month.', N'by', N'until', N'during', N'among', N'A', N'Phân biệt giới từ chỉ hạn chót "by" (trước hoặc muộn nhất là thời điểm nào) và "until" (kéo dài liên tục đến thời điểm nào). Động từ "submit" là hành động điểm nên bắt buộc đi với "by".', N'Đáp án đúng: Giới từ "by + mốc thời gian" diễn tả hạn chót (deadline) cho một hành động hoàn tất như "submitted".', N'Bẫy giới từ kinh điển: "until" chỉ hành động kéo dài liên tục, không dùng cho động từ hoàn tất một lần như "submit".', N'Bẫy giới từ: "during" phải đi với một khoảng thời gian danh từ (e.g., during the month), không đi với ngày cụ thể "the fifteenth".', N'Bẫy nghĩa giới từ: "among" mang nghĩa "trong số (từ 3 đối tượng trở lên)", không dùng để chỉ mốc thời gian.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1418972+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (67, 67, 1, N'All reimbursement requests must be submitted to the accounting department ------- the fifteenth of each month.', N'by', N'until', N'during', N'among', N'A', N'Phân biệt giới từ chỉ hạn chót "by" (trước hoặc muộn nhất là thời điểm nào) và "until" (kéo dài liên tục đến thời điểm nào). Động từ "submit" là hành động điểm nên bắt buộc đi với "by".', N'Đáp án đúng: Giới từ "by + mốc thời gian" diễn tả hạn chót (deadline) cho một hành động hoàn tất như "submitted".', N'Bẫy giới từ kinh điển: "until" chỉ hành động kéo dài liên tục, không dùng cho động từ hoàn tất một lần như "submit".', N'Bẫy giới từ: "during" phải đi với một khoảng thời gian danh từ (e.g., during the month), không đi với ngày cụ thể "the fifteenth".', N'Bẫy nghĩa giới từ: "among" mang nghĩa "trong số (từ 3 đối tượng trở lên)", không dùng để chỉ mốc thời gian.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (68, 68, 1, N'By the time the chief executive officer arrives at the Tokyo headquarters tomorrow, the legal team ------- the merger contract.', N'finalized', N'will have finalized', N'had finalized', N'is finalizing', N'B', N'Cấu trúc "By the time + S + V(hiện tại đơn), S + will have + V3/ed (tương lai hoàn thành)" diễn tả hành động sẽ hoàn tất trước một thời điểm hoặc hành động khác trong tương lai.', N'Bẫy sai thì: Thì quá khứ đơn mâu thuẫn với trạng từ chỉ tương lai "tomorrow" và mệnh đề "arrives".', N'Đáp án đúng: Thì tương lai hoàn thành (will have + V3) đi chuẩn với mệnh đề trạng ngữ "By the time + Hiện tại đơn".', N'Bẫy công thức máy móc: Nhiều thí sinh học vẹt "By the time" đi với "had V3" mà quên nhìn động từ "arrives ... tomorrow".', N'Bẫy thì hiện tại tiếp diễn: Không phản ánh được tính hoàn tất trước một mốc tương lai của cấu trúc "By the time".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1418972+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (68, 68, 1, N'By the time the chief executive officer arrives at the Tokyo headquarters tomorrow, the legal team ------- the merger contract.', N'finalized', N'will have finalized', N'had finalized', N'is finalizing', N'B', N'Cấu trúc "By the time + S + V(hiện tại đơn), S + will have + V3/ed (tương lai hoàn thành)" diễn tả hành động sẽ hoàn tất trước một thời điểm hoặc hành động khác trong tương lai.', N'Bẫy sai thì: Thì quá khứ đơn mâu thuẫn với trạng từ chỉ tương lai "tomorrow" và mệnh đề "arrives".', N'Đáp án đúng: Thì tương lai hoàn thành (will have + V3) đi chuẩn với mệnh đề trạng ngữ "By the time + Hiện tại đơn".', N'Bẫy công thức máy móc: Nhiều thí sinh học vẹt "By the time" đi với "had V3" mà quên nhìn động từ "arrives ... tomorrow".', N'Bẫy thì hiện tại tiếp diễn: Không phản ánh được tính hoàn tất trước một mốc tương lai của cấu trúc "By the time".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (69, 69, 1, N'The newly installed inventory tracking software has made warehouse operations ------- more efficient.', N'consider', N'considerable', N'considerably', N'consideration', N'C', N'Trước tính từ so sánh hơn "more efficient" cần một trạng từ (adverb) để nhấn mạnh mức độ.', N'Bẫy từ loại: Động từ nguyên mẫu không thể đứng bổ nghĩa cho cụm tính từ so sánh "more efficient".', N'Bẫy cấu trúc make + O + Adj: Thí sinh nhìn thấy "made warehouse operations" nên vội chọn tính từ mà bỏ sót cụm tính từ chính "more efficient" ở phía sau.', N'Đáp án đúng: Trạng từ "considerably" bổ nghĩa mức độ cho tính từ so sánh hơn "more efficient".', N'Bẫy từ loại: Danh từ không thể đứng giữa tân ngữ "operations" và cụm tính từ "more efficient".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1428977+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (69, 69, 1, N'The newly installed inventory tracking software has made warehouse operations ------- more efficient.', N'consider', N'considerable', N'considerably', N'consideration', N'C', N'Trước tính từ so sánh hơn "more efficient" cần một trạng từ (adverb) để nhấn mạnh mức độ.', N'Bẫy từ loại: Động từ nguyên mẫu không thể đứng bổ nghĩa cho cụm tính từ so sánh "more efficient".', N'Bẫy cấu trúc make + O + Adj: Thí sinh nhìn thấy "made warehouse operations" nên vội chọn tính từ mà bỏ sót cụm tính từ chính "more efficient" ở phía sau.', N'Đáp án đúng: Trạng từ "considerably" bổ nghĩa mức độ cho tính từ so sánh hơn "more efficient".', N'Bẫy từ loại: Danh từ không thể đứng giữa tân ngữ "operations" và cụm tính từ "more efficient".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (70, 70, 1, N'Although the marketing interns were given guidance, they designed the social media campaign entirely by -------.', N'they', N'them', N'their', N'themselves', N'D', N'Cụm cố định "by + đại từ phản thân (oneself)" mang nghĩa "tự lực / một mình không ai giúp đỡ". Chủ ngữ là "they" nên dùng "themselves".', N'Bẫy sai hình thái đại từ: Đại từ nhân xưng chủ ngữ không thể đứng sau giới từ "by".', N'Bẫy đại từ tân ngữ: Khi chủ ngữ và tân ngữ cùng chỉ một đối tượng ("they") và đi sau giới từ "by" để chỉ sự tự lực, phải dùng đại từ phản thân.', N'Bẫy tính từ sở hữu: "their" không thể đứng độc lập ở cuối câu mà không có danh từ theo sau.', N'Đáp án đúng: Cấu trúc "by themselves" = "on their own" (tự chính họ thực hiện).', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1438977+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (70, 70, 1, N'Although the marketing interns were given guidance, they designed the social media campaign entirely by -------.', N'they', N'them', N'their', N'themselves', N'D', N'Cụm cố định "by + đại từ phản thân (oneself)" mang nghĩa "tự lực / một mình không ai giúp đỡ". Chủ ngữ là "they" nên dùng "themselves".', N'Bẫy sai hình thái đại từ: Đại từ nhân xưng chủ ngữ không thể đứng sau giới từ "by".', N'Bẫy đại từ tân ngữ: Khi chủ ngữ và tân ngữ cùng chỉ một đối tượng ("they") và đi sau giới từ "by" để chỉ sự tự lực, phải dùng đại từ phản thân.', N'Bẫy tính từ sở hữu: "their" không thể đứng độc lập ở cuối câu mà không có danh từ theo sau.', N'Đáp án đúng: Cấu trúc "by themselves" = "on their own" (tự chính họ thực hiện).', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (71, 71, 1, N'------- the rising cost of raw materials, Falcon Manufacturing managed to keep its retail prices stable this year.', N'Although', N'Despite', N'Because of', N'Unless', N'B', N'Phía sau chỗ trống là một cụm danh từ ("the rising cost of raw materials", không có động từ chia thì) và mang nghĩa nhượng bộ tương phản, do đó cần giới từ "Despite".', N'Bẫy liên từ vs giới từ: "Although" cùng nghĩa tương phản nhưng là liên từ phụ thuộc, bắt buộc theo sau bởi một mệnh đề (S + V).', N'Đáp án đúng: Giới từ chỉ sự nhượng bộ "Despite + Cụm danh từ (Noun Phrase)".', N'Bẫy ngữ nghĩa: Đúng ngữ pháp giới từ nhưng sai logic nhân quả.', N'Bẫy liên từ điều kiện: "Unless" phải đi với mệnh đề (S + V) và không hợp nghĩa câu.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1438977+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (71, 71, 1, N'------- the rising cost of raw materials, Falcon Manufacturing managed to keep its retail prices stable this year.', N'Although', N'Despite', N'Because of', N'Unless', N'B', N'Phía sau chỗ trống là một cụm danh từ ("the rising cost of raw materials", không có động từ chia thì) và mang nghĩa nhượng bộ tương phản, do đó cần giới từ "Despite".', N'Bẫy liên từ vs giới từ: "Although" cùng nghĩa tương phản nhưng là liên từ phụ thuộc, bắt buộc theo sau bởi một mệnh đề (S + V).', N'Đáp án đúng: Giới từ chỉ sự nhượng bộ "Despite + Cụm danh từ (Noun Phrase)".', N'Bẫy ngữ nghĩa: Đúng ngữ pháp giới từ nhưng sai logic nhân quả.', N'Bẫy liên từ điều kiện: "Unless" phải đi với mệnh đề (S + V) và không hợp nghĩa câu.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (72, 72, 1, N'Any employee ------- to attend the leadership seminar in Chicago must obtain written approval from a department head.', N'wishes', N'wished', N'wishing', N'to wish', N'C', N'Rút gọn mệnh đề quan hệ: Câu gốc là "Any employee who wishes to attend...". Động từ chính của câu đã là "must obtain", nên chỗ trống cần hiện tại phân từ chủ động "wishing".', N'Bẫy hai động từ chia thì trong một mệnh đề đơn: Câu đã có động từ chính "must obtain".', N'Bẫy phân từ bị động: Động từ "wish" ở đây mang nghĩa chủ động, không thể rút gọn dạng V-ed bị động.', N'Đáp án đúng: Rút gọn mệnh đề quan hệ chủ động (who wishes -> wishing).', N'Bẫy động từ nguyên mẫu có "to": Không dùng "to V" để rút gọn mệnh đề quan hệ thông thường khi không có số thứ tự.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1454026+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (72, 72, 1, N'Any employee ------- to attend the leadership seminar in Chicago must obtain written approval from a department head.', N'wishes', N'wished', N'wishing', N'to wish', N'C', N'Rút gọn mệnh đề quan hệ: Câu gốc là "Any employee who wishes to attend...". Động từ chính của câu đã là "must obtain", nên chỗ trống cần hiện tại phân từ chủ động "wishing".', N'Bẫy hai động từ chia thì trong một mệnh đề đơn: Câu đã có động từ chính "must obtain".', N'Bẫy phân từ bị động: Động từ "wish" ở đây mang nghĩa chủ động, không thể rút gọn dạng V-ed bị động.', N'Đáp án đúng: Rút gọn mệnh đề quan hệ chủ động (who wishes -> wishing).', N'Bẫy động từ nguyên mẫu có "to": Không dùng "to V" để rút gọn mệnh đề quan hệ thông thường khi không có số thứ tự.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (73, 73, 1, N'A comprehensive review of the company''s cybersecurity protocols and backup systems ------- conducted every six months.', N'are', N'is', N'have', N'were', N'B', N'Sự hòa hợp Chủ ngữ - Vị ngữ: Chủ ngữ chính là danh từ số ít "A comprehensive review", không phải cụm danh từ số nhiều đứng ngay trước chỗ trống ("protocols and backup systems").', N'Bẫy danh từ gần nhất (Proximity trap): Thí sinh nhìn thấy "protocols and backup systems" số nhiều nên chọn "are".', N'Đáp án đúng: Động từ to-be số ít "is" hòa hợp với chủ ngữ chính "A comprehensive review" và tạo thể bị động "is conducted".', N'Bẫy sai cả số lẫn thể.', N'Bẫy sai số và sai thì (câu có "every six months" chỉ thói quen định kỳ ở hiện tại).', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1454026+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (73, 73, 1, N'A comprehensive review of the company''s cybersecurity protocols and backup systems ------- conducted every six months.', N'are', N'is', N'have', N'were', N'B', N'Sự hòa hợp Chủ ngữ - Vị ngữ: Chủ ngữ chính là danh từ số ít "A comprehensive review", không phải cụm danh từ số nhiều đứng ngay trước chỗ trống ("protocols and backup systems").', N'Bẫy danh từ gần nhất (Proximity trap): Thí sinh nhìn thấy "protocols and backup systems" số nhiều nên chọn "are".', N'Đáp án đúng: Động từ to-be số ít "is" hòa hợp với chủ ngữ chính "A comprehensive review" và tạo thể bị động "is conducted".', N'Bẫy sai cả số lẫn thể.', N'Bẫy sai số và sai thì (câu có "every six months" chỉ thói quen định kỳ ở hiện tại).', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9781851+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (74, 74, 1, N'The new biodegradable packaging is ------- durable enough for international shipping and cost-effective to produce.', N'either', N'neither', N'whether', N'both', N'D', N'Cặp liên từ tương quan: Phía sau có liên từ "and" nối hai tính từ, do đó vị trí phía trước bắt buộc là "both".', N'Bẫy cặp liên từ: "either" phải đi với "or", không đi với "and".', N'Bẫy cặp liên từ: "neither" phải đi với "nor", không đi với "and".', N'Bẫy cặp liên từ: "whether" đi với "or".', N'Đáp án đúng: Cặp liên từ tương quan chuẩn "both A and B".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1469138+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (74, 74, 1, N'The new biodegradable packaging is ------- durable enough for international shipping and cost-effective to produce.', N'either', N'neither', N'whether', N'both', N'D', N'Cặp liên từ tương quan: Phía sau có liên từ "and" nối hai tính từ, do đó vị trí phía trước bắt buộc là "both".', N'Bẫy cặp liên từ: "either" phải đi với "or", không đi với "and".', N'Bẫy cặp liên từ: "neither" phải đi với "nor", không đi với "and".', N'Bẫy cặp liên từ: "whether" đi với "or".', N'Đáp án đúng: Cặp liên từ tương quan chuẩn "both A and B".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9787206+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (75, 75, 1, N'Select the best word to fill in blank [21].', N'streamline', N'postpone', N'complicate', N'reimburse', N'A', N'Ngữ cảnh phía sau giải thích nhân viên sẽ nhận được tiền hoàn lại trong 3 ngày thay vì 2 tuần, tức là quy trình được đẩy nhanh / tinh gọn ("streamline").', N'Đáp án đúng: "streamline" (hợp lý hóa, tinh gọn) khớp hoàn hảo với việc rút ngắn thời gian từ 2 tuần xuống 3 ngày.', N'Bẫy từ vựng ngược nghĩa: "postpone" (trì hoãn) mâu thuẫn với mục đích nâng cấp hệ thống.', N'Bẫy ngữ nghĩa: Không ai nâng cấp phần mềm với mục đích làm phức tạp hóa ("complicate") quy trình.', N'Bẫy lặp từ trong ngữ cảnh: Phía sau đã có danh từ "reimbursement process".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1469138+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (75, 75, 1, N'Select the best word to fill in blank [21].', N'streamline', N'postpone', N'complicate', N'reimburse', N'A', N'Ngữ cảnh phía sau giải thích nhân viên sẽ nhận được tiền hoàn lại trong 3 ngày thay vì 2 tuần, tức là quy trình được đẩy nhanh / tinh gọn ("streamline").', N'Đáp án đúng: "streamline" (hợp lý hóa, tinh gọn) khớp hoàn hảo với việc rút ngắn thời gian từ 2 tuần xuống 3 ngày.', N'Bẫy từ vựng ngược nghĩa: "postpone" (trì hoãn) mâu thuẫn với mục đích nâng cấp hệ thống.', N'Bẫy ngữ nghĩa: Không ai nâng cấp phần mềm với mục đích làm phức tạp hóa ("complicate") quy trình.', N'Bẫy lặp từ trong ngữ cảnh: Phía sau đã có danh từ "reimbursement process".', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9787206+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (76, 76, 1, N'Select the best sentence to fill in blank [22].', N'The quarterly sales targets have been adjusted accordingly.', N'A link to the training video has been sent to your corporate e-mail address.', N'Several clients have requested digital copies of their contracts.', N'Travel allowances will be reduced by ten percent next fiscal year.', N'B', N'Câu trước nhắc tới "a 30-minute interactive tutorial", câu sau nhắc tới "Once you have finished the module...". Do đó câu ở vị trí [22] phải kết nối cách truy cập bài hướng dẫn.', N'Bẫy lạc đề dựa trên đối tượng người nhận: Đoạn văn đang nói về phần mềm hoàn ứng chi phí, không phải chỉ tiêu doanh số.', N'Đáp án đúng: Liên kết mạch lạc giữa "complete a 30-minute interactive tutorial" ở câu trước và "finished the module" ở câu sau.', N'Bẫy từ vựng "digital": Không liên quan đến quy trình đào tạo nội bộ.', N'Bẫy liên tưởng từ "travel expense": Đưa thông tin cắt giảm ngân sách không ăn nhập với mạch hướng dẫn kích hoạt tài khoản.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1479187+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (76, 76, 1, N'Select the best sentence to fill in blank [22].', N'The quarterly sales targets have been adjusted accordingly.', N'A link to the training video has been sent to your corporate e-mail address.', N'Several clients have requested digital copies of their contracts.', N'Travel allowances will be reduced by ten percent next fiscal year.', N'B', N'Câu trước nhắc tới "a 30-minute interactive tutorial", câu sau nhắc tới "Once you have finished the module...". Do đó câu ở vị trí [22] phải kết nối cách truy cập bài hướng dẫn.', N'Bẫy lạc đề dựa trên đối tượng người nhận: Đoạn văn đang nói về phần mềm hoàn ứng chi phí, không phải chỉ tiêu doanh số.', N'Đáp án đúng: Liên kết mạch lạc giữa "complete a 30-minute interactive tutorial" ở câu trước và "finished the module" ở câu sau.', N'Bẫy từ vựng "digital": Không liên quan đến quy trình đào tạo nội bộ.', N'Bẫy liên tưởng từ "travel expense": Đưa thông tin cắt giảm ngân sách không ăn nhập với mạch hướng dẫn kích hoạt tài khoản.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9802807+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (77, 77, 1, N'Select the best transition word to fill in blank [23].', N'For instance', N'Similarly', N'However', N'Therefore', N'C', N'Câu trước nói hóa đơn trước ngày 1/11 vẫn xử lý qua hệ thống cũ; câu sau nói chi phí từ ngày 1/11 trở đi chỉ được nhận qua ứng dụng mới. Hai mệnh đề đối lập nhau nên dùng "However".', N'Bẫy trạng từ liên kết: Câu sau không phải là ví dụ minh họa mà là quy định ngược lại.', N'Bẫy quan hệ tương đồng: Đây là sự tương phản, không phải tương đồng.', N'Đáp án đúng: Thể hiện rõ sự đối lập quy trình giữa các hóa đơn trước ngày 1/11 và từ ngày 1/11 trở đi.', N'Bẫy quan hệ nhân quả: Quy định sau không phải là hệ quả suy ra từ quy định trước.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1494661+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (77, 77, 1, N'Select the best transition word to fill in blank [23].', N'For instance', N'Similarly', N'However', N'Therefore', N'C', N'Câu trước nói hóa đơn trước ngày 1/11 vẫn xử lý qua hệ thống cũ; câu sau nói chi phí từ ngày 1/11 trở đi chỉ được nhận qua ứng dụng mới. Hai mệnh đề đối lập nhau nên dùng "However".', N'Bẫy trạng từ liên kết: Câu sau không phải là ví dụ minh họa mà là quy định ngược lại.', N'Bẫy quan hệ tương đồng: Đây là sự tương phản, không phải tương đồng.', N'Đáp án đúng: Thể hiện rõ sự đối lập quy trình giữa các hóa đơn trước ngày 1/11 và từ ngày 1/11 trở đi.', N'Bẫy quan hệ nhân quả: Quy định sau không phải là hệ quả suy ra từ quy định trước.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9802807+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (78, 78, 1, N'Select the best word to fill in blank [24].', N'at', N'to', N'with', N'for', N'A', N'Trong tiếng Anh thương mại, khi liên hệ qua số máy lẻ nội bộ (extension + số), giới từ chuẩn luôn là "at" (contact someone at extension 4402).', N'Đáp án đúng: Collocation chuẩn "reach/contact someone at extension + [number]".', N'Bẫy dịch từng từ: Động từ "contact" là ngoại động từ không đi với "to".', N'Bẫy giới từ: "contact with" là lỗi sai phổ biến khi "contact" đóng vai trò là động từ.', N'Bẫy giới từ chỉ mục đích.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1494661+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (78, 78, 1, N'Select the best word to fill in blank [24].', N'at', N'to', N'with', N'for', N'A', N'Trong tiếng Anh thương mại, khi liên hệ qua số máy lẻ nội bộ (extension + số), giới từ chuẩn luôn là "at" (contact someone at extension 4402).', N'Đáp án đúng: Collocation chuẩn "reach/contact someone at extension + [number]".', N'Bẫy dịch từng từ: Động từ "contact" là ngoại động từ không đi với "to".', N'Bẫy giới từ: "contact with" là lỗi sai phổ biến khi "contact" đóng vai trò là động từ.', N'Bẫy giới từ chỉ mục đích.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9817004+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (79, 79, 1, N'Who would most likely benefit from attending Session 3?', N'International freight forwarders', N'Freelance graphic designers seeking agency jobs', N'Owners of companies with a small workforce', N'Software developers building mobile applications', N'C', N'Session 3 trình bày về ưu đãi thuế bang dành cho các doanh nghiệp có dưới 50 nhân viên toàn thời gian (fewer than 50 full-time employees).', N'Bẫy thông tin của phần khác: Liên quan tới nội dung chuỗi cung ứng ở Session 1.', N'Bẫy từ khóa "agency" lấy từ Session 2.', N'Đáp án đúng: Paraphrase cụm "businesses with fewer than 50 full-time employees" thành "companies with a small workforce".', N'Bẫy từ khóa "mobile app" xuất hiện ở dòng chú thích cuối bài.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1504726+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (79, 79, 1, N'Who would most likely benefit from attending Session 3?', N'International freight forwarders', N'Freelance graphic designers seeking agency jobs', N'Owners of companies with a small workforce', N'Software developers building mobile applications', N'C', N'Session 3 trình bày về ưu đãi thuế bang dành cho các doanh nghiệp có dưới 50 nhân viên toàn thời gian (fewer than 50 full-time employees).', N'Bẫy thông tin của phần khác: Liên quan tới nội dung chuỗi cung ứng ở Session 1.', N'Bẫy từ khóa "agency" lấy từ Session 2.', N'Đáp án đúng: Paraphrase cụm "businesses with fewer than 50 full-time employees" thành "companies with a small workforce".', N'Bẫy từ khóa "mobile app" xuất hiện ở dòng chú thích cuối bài.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9817004+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (80, 80, 1, N'What is indicated about Ms. Patel''s session?', N'It will take place in the Emerald Atrium.', N'It requires participants to register in advance.', N'It is the first session of the morning.', N'It charges an additional fee for laptop rentals.', N'B', N'Ms. Patel phụ trách Session 2. Chú thích trong Session 2 yêu cầu mang laptop, và chú thích cuối bài ghi rõ Session 2 giới hạn 40 chỗ ngồi và bắt buộc đăng ký trước qua ứng dụng.', N'Bẫy địa điểm: Emerald Atrium là nơi phục vụ bữa trưa buffet, còn phiên của Ms. Patel diễn ra tại Rainier Suite.', N'Đáp án đúng: Kết nối thông tin "Ms. Patel" -> "Session 2" -> "advance sign-up via the symposium mobile app is mandatory".', N'Bẫy thứ tự: Phiên đầu tiên lúc 9:00 sáng là của Mr. Marcus Thorne.', N'Bẫy suy diễn sai: Người tham gia được nhắc tự mang theo laptop đã sạc đầy, không có dịch vụ cho thuê thu phí.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1514729+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (80, 80, 1, N'What is indicated about Ms. Patel''s session?', N'It will take place in the Emerald Atrium.', N'It requires participants to register in advance.', N'It is the first session of the morning.', N'It charges an additional fee for laptop rentals.', N'B', N'Ms. Patel phụ trách Session 2. Chú thích trong Session 2 yêu cầu mang laptop, và chú thích cuối bài ghi rõ Session 2 giới hạn 40 chỗ ngồi và bắt buộc đăng ký trước qua ứng dụng.', N'Bẫy địa điểm: Emerald Atrium là nơi phục vụ bữa trưa buffet, còn phiên của Ms. Patel diễn ra tại Rainier Suite.', N'Đáp án đúng: Kết nối thông tin "Ms. Patel" -> "Session 2" -> "advance sign-up via the symposium mobile app is mandatory".', N'Bẫy thứ tự: Phiên đầu tiên lúc 9:00 sáng là của Mr. Marcus Thorne.', N'Bẫy suy diễn sai: Người tham gia được nhắc tự mang theo laptop đã sạc đầy, không có dịch vụ cho thuê thu phí.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9817004+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (81, 81, 1, N'What is included with the symposium registration?', N'A private consultation with a tax accountant', N'Free parking at the Grand Harbor Convention Center', N'A complimentary midday meal', N'A one-year subscription to analytics software', N'C', N'Dòng cuối cùng ghi rõ: "Registration includes complimentary morning coffee and a buffet lunch".', N'Bẫy suy diễn từ diễn giả Evelyn Cho, CPA ở Session 3.', N'Bẫy thông tin không được đề cập (Not mentioned trap).', N'Đáp án đúng: Paraphrase chuẩn từ "complimentary ... buffet lunch" thành "complimentary midday meal".', N'Bẫy từ khóa "analytics" lấy từ bài tập thực hành ở Session 2.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1524730+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (81, 81, 1, N'What is included with the symposium registration?', N'A private consultation with a tax accountant', N'Free parking at the Grand Harbor Convention Center', N'A complimentary midday meal', N'A one-year subscription to analytics software', N'C', N'Dòng cuối cùng ghi rõ: "Registration includes complimentary morning coffee and a buffet lunch".', N'Bẫy suy diễn từ diễn giả Evelyn Cho, CPA ở Session 3.', N'Bẫy thông tin không được đề cập (Not mentioned trap).', N'Đáp án đúng: Paraphrase chuẩn từ "complimentary ... buffet lunch" thành "complimentary midday meal".', N'Bẫy từ khóa "analytics" lấy từ bài tập thực hành ở Session 2.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9836228+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (82, 82, 1, N'Why did Ms. Abbott send the e-mail?', N'To complain about an unexpected shipping charge', N'To report that some glass bottles were broken', N'To notify the vendor that an incorrect product was delivered', N'To increase the quantity of lotion before the shipment goes out', N'C', N'Trong email, bà Abbott báo rằng thay vì nhận được Bamboo Facial Towels như trên hóa đơn, spa lại nhận nhầm sang khăn tay cotton thông thường.', N'Bẫy thông tin ngược: Hóa đơn ghi rõ phí giao hàng là $0.00 (được miễn phí).', N'Bẫy từ khóa "damaged" ở phần chính sách đổi trả, nhưng email ghi rõ "Everything arrived intact".', N'Đáp án đúng: Spa đặt khăn mặt sợi tre nhưng lại bị giao nhầm khăn tay cotton.', N'Bẫy sai trình tự thời gian: Đơn hàng đã được giao vào ngày hôm qua (March 6).', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1534728+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (82, 82, 1, N'Why did Ms. Abbott send the e-mail?', N'To complain about an unexpected shipping charge', N'To report that some glass bottles were broken', N'To notify the vendor that an incorrect product was delivered', N'To increase the quantity of lotion before the shipment goes out', N'C', N'Trong email, bà Abbott báo rằng thay vì nhận được Bamboo Facial Towels như trên hóa đơn, spa lại nhận nhầm sang khăn tay cotton thông thường.', N'Bẫy thông tin ngược: Hóa đơn ghi rõ phí giao hàng là $0.00 (được miễn phí).', N'Bẫy từ khóa "damaged" ở phần chính sách đổi trả, nhưng email ghi rõ "Everything arrived intact".', N'Đáp án đúng: Spa đặt khăn mặt sợi tre nhưng lại bị giao nhầm khăn tay cotton.', N'Bẫy sai trình tự thời gian: Đơn hàng đã được giao vào ngày hôm qua (March 6).', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9836228+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (83, 83, 1, N'If the requested item is out of stock, how much money should be refunded to Serenity Day Spa?', N'$30.00', N'$130.00', N'$180.00', N'$220.00', N'C', N'Suy luận chéo 2 văn bản: Trong email (Passage 2), mặt hàng bị giao sai cần hoàn tiền nếu hết hàng là "Bamboo Facial Towels". Đối chiếu lên Hóa đơn (Passage 1), mục "LB-310 | Bamboo Facial Towels" có tổng tiền (Total) là $180.00.', N'Bẫy đơn giá (Unit Price trap): $30.00 chỉ là giá của 1 gói khăn, trong khi spa đặt 6 gói (Tổng $180.00).', N'Bẫy nhầm dòng trên bảng hóa đơn: $130.00 là tổng tiền của mục LB-408 (Chamomile Soothing Serum).', N'Đáp án đúng: Suy luận chéo từ "Bamboo Facial Towels" trong email sang cột Total của mã LB-310 trên hóa đơn ($30.00 x 6 = $180.00).', N'Bẫy nhầm dòng trên bảng hóa đơn: $220.00 là tổng tiền của mục LB-205 (Eucalyptus Massage Lotion).', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1544730+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (83, 83, 1, N'If the requested item is out of stock, how much money should be refunded to Serenity Day Spa?', N'$30.00', N'$130.00', N'$180.00', N'$220.00', N'C', N'Suy luận chéo 2 văn bản: Trong email (Passage 2), mặt hàng bị giao sai cần hoàn tiền nếu hết hàng là "Bamboo Facial Towels". Đối chiếu lên Hóa đơn (Passage 1), mục "LB-310 | Bamboo Facial Towels" có tổng tiền (Total) là $180.00.', N'Bẫy đơn giá (Unit Price trap): $30.00 chỉ là giá của 1 gói khăn, trong khi spa đặt 6 gói (Tổng $180.00).', N'Bẫy nhầm dòng trên bảng hóa đơn: $130.00 là tổng tiền của mục LB-408 (Chamomile Soothing Serum).', N'Đáp án đúng: Suy luận chéo từ "Bamboo Facial Towels" trong email sang cột Total của mã LB-310 trên hóa đơn ($30.00 x 6 = $180.00).', N'Bẫy nhầm dòng trên bảng hóa đơn: $220.00 là tổng tiền của mục LB-205 (Eucalyptus Massage Lotion).', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9850381+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (84, 84, 1, N'Why is Serenity Day Spa eligible for a free replacement?', N'Because the total order exceeded $500.00', N'Because Ms. Abbott submitted the claim within five business days of delivery', N'Because Serenity Day Spa is a first-time wholesale customer', N'Because the spa paid an extra fee for shipping insurance', N'B', N'Suy luận chéo: Chính sách cuối hóa đơn (Passage 1) quy định khiếu nại gửi trong vòng 5 ngày làm việc kể từ ngày giao hàng (March 6) sẽ được đổi miễn phí. Email (Passage 2) được gửi ngay ngày March 7 (1 ngày sau khi nhận hàng).', N'Bẫy nhầm điều kiện khuyến mãi: Đơn trên $500 là điều kiện để được miễn phí vận chuyển ban đầu, không phải điều kiện đổi trả hàng lỗi.', N'Đáp án đúng: Kết hợp ngày giao hàng (March 6) + chính sách 5 ngày trên Hóa đơn với ngày gửi email khiếu nại (March 7).', N'Bẫy thông tin không có trong cả hai văn bản.', N'Bẫy suy diễn không có thật: Không có khoản phí bảo hiểm vận chuyển nào trên hóa đơn.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1554736+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (84, 84, 1, N'Why is Serenity Day Spa eligible for a free replacement?', N'Because the total order exceeded $500.00', N'Because Ms. Abbott submitted the claim within five business days of delivery', N'Because Serenity Day Spa is a first-time wholesale customer', N'Because the spa paid an extra fee for shipping insurance', N'B', N'Suy luận chéo: Chính sách cuối hóa đơn (Passage 1) quy định khiếu nại gửi trong vòng 5 ngày làm việc kể từ ngày giao hàng (March 6) sẽ được đổi miễn phí. Email (Passage 2) được gửi ngay ngày March 7 (1 ngày sau khi nhận hàng).', N'Bẫy nhầm điều kiện khuyến mãi: Đơn trên $500 là điều kiện để được miễn phí vận chuyển ban đầu, không phải điều kiện đổi trả hàng lỗi.', N'Đáp án đúng: Kết hợp ngày giao hàng (March 6) + chính sách 5 ngày trên Hóa đơn với ngày gửi email khiếu nại (March 7).', N'Bẫy thông tin không có trong cả hai văn bản.', N'Bẫy suy diễn không có thật: Không có khoản phí bảo hiểm vận chuyển nào trên hóa đơn.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9860460+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (85, 85, 1, N'Directions: Read the e-mail below. You will have 10 minutes to read the e-mail and write your response. Your response should be between 60 and 100 words.' + CHAR(10) + N'' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N'From: David Kowalski, Procurement Manager, Apex Retail Group' + CHAR(10) + N'To: Customer Fulfillment Team, Vanguard Electronics' + CHAR(10) + N'Subject: Urgent – Delayed Delivery of Order #VE-9042' + CHAR(10) + N'Sent: October 19, 10:15 A.M.' + CHAR(10) + N'' + CHAR(10) + N'Dear Fulfillment Team,' + CHAR(10) + N'' + CHAR(10) + N'We have still not received our shipment of 200 wireless barcode scanners (Order #VE-9042), which was guaranteed to arrive at our Chicago warehouse yesterday. Because our seasonal inventory audit begins this Thursday, this delay is disrupting our operations. Please explain why our shipment has been delayed and let us know what compensation or expedited shipping solution you can offer.' + CHAR(10) + N'' + CHAR(10) + N'Regards,' + CHAR(10) + N'David Kowalski' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N'' + CHAR(10) + N'Directions: Respond to the e-mail as if you are a Customer Fulfillment Representative at Vanguard Electronics. In your e-mail, do the following:' + CHAR(10) + N'1. Apologize professionally and explain the specific reason for the shipping delay.' + CHAR(10) + N'2. Confirm the exact new delivery date before Thursday.' + CHAR(10) + N'3. Offer a clear form of compensation (e.g., partial refund, discount voucher, or waived shipping fee).' + CHAR(10) + N'(Target length: 60–100 words | Time limit: 10 minutes)', NULL, NULL, NULL, NULL, NULL, N'Tiêu chí chấm điểm ETS Writing Part 2: (1) Giải quyết trọn vẹn cả 3 yêu cầu trong đề bài; (2) Văn phong email thương mại lịch sự, trang trọng; (3) Sử dụng chính xác các từ nối và cấu trúc câu phức; (4) Đạt độ dài tiêu chuẩn 60–100 từ.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 60, 100, NULL, 600, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1559794+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (85, 85, 1, N'Directions: Read the e-mail below. You will have 10 minutes to read the e-mail and write your response. Your response should be between 60 and 100 words.' + CHAR(10) + N'' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N'From: David Kowalski, Procurement Manager, Apex Retail Group' + CHAR(10) + N'To: Customer Fulfillment Team, Vanguard Electronics' + CHAR(10) + N'Subject: Urgent – Delayed Delivery of Order #VE-9042' + CHAR(10) + N'Sent: October 19, 10:15 A.M.' + CHAR(10) + N'' + CHAR(10) + N'Dear Fulfillment Team,' + CHAR(10) + N'' + CHAR(10) + N'We have still not received our shipment of 200 wireless barcode scanners (Order #VE-9042), which was guaranteed to arrive at our Chicago warehouse yesterday. Because our seasonal inventory audit begins this Thursday, this delay is disrupting our operations. Please explain why our shipment has been delayed and let us know what compensation or expedited shipping solution you can offer.' + CHAR(10) + N'' + CHAR(10) + N'Regards,' + CHAR(10) + N'David Kowalski' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N'' + CHAR(10) + N'Directions: Respond to the e-mail as if you are a Customer Fulfillment Representative at Vanguard Electronics. In your e-mail, do the following:' + CHAR(10) + N'1. Apologize professionally and explain the specific reason for the shipping delay.' + CHAR(10) + N'2. Confirm the exact new delivery date before Thursday.' + CHAR(10) + N'3. Offer a clear form of compensation (e.g., partial refund, discount voucher, or waived shipping fee).' + CHAR(10) + N'(Target length: 60–100 words | Time limit: 10 minutes)', NULL, NULL, NULL, NULL, NULL, N'Tiêu chí chấm điểm ETS Writing Part 2: (1) Giải quyết trọn vẹn cả 3 yêu cầu trong đề bài; (2) Văn phong email thương mại lịch sự, trang trọng; (3) Sử dụng chính xác các từ nối và cấu trúc câu phức; (4) Đạt độ dài tiêu chuẩn 60–100 từ.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 60, 100, NULL, 600, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9860460+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (86, 86, 1, N'Directions: Read the question below. You have 20 minutes to plan, write, and revise your essay. Your essay should be between 150 and 220 words.' + CHAR(10) + N'' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N'PROMPT:' + CHAR(10) + N'Do you agree or disagree with the following statement?' + CHAR(10) + N'"Remote work increases employee productivity more than working in a traditional office."' + CHAR(10) + N'Use specific reasons and examples to support your answer.' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N'' + CHAR(10) + N'Essay Guidelines:' + CHAR(10) + N'- State your position clearly in the introductory paragraph.' + CHAR(10) + N'- Develop at least two well-structured body paragraphs with concrete business examples.' + CHAR(10) + N'- Include a concise concluding paragraph summarizing your main argument.' + CHAR(10) + N'(Target length: 150–220 words | Time limit: 20 minutes)', NULL, NULL, NULL, NULL, NULL, N'Tiêu chí chấm điểm ETS Writing Part 3: (1) Bố cục 3 phần (Introduction - Body Paragraphs - Conclusion) mạch lạc; (2) Lập luận nhất quán kèm ví dụ thực tiễn nơi công sở; (3) Đa dạng hóa cấu trúc ngữ pháp và từ vựng học thuật/thương mại; (4) Đạt độ dài 150–220 từ.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 150, 220, NULL, 1200, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1564819+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (86, 86, 1, N'Directions: Read the question below. You have 20 minutes to plan, write, and revise your essay. Your essay should be between 150 and 220 words.' + CHAR(10) + N'' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N'PROMPT:' + CHAR(10) + N'Do you agree or disagree with the following statement?' + CHAR(10) + N'"Remote work increases employee productivity more than working in a traditional office."' + CHAR(10) + N'Use specific reasons and examples to support your answer.' + CHAR(10) + N'--------------------------------------------------------------------' + CHAR(10) + N'' + CHAR(10) + N'Essay Guidelines:' + CHAR(10) + N'- State your position clearly in the introductory paragraph.' + CHAR(10) + N'- Develop at least two well-structured body paragraphs with concrete business examples.' + CHAR(10) + N'- Include a concise concluding paragraph summarizing your main argument.' + CHAR(10) + N'(Target length: 150–220 words | Time limit: 20 minutes)', NULL, NULL, NULL, NULL, NULL, N'Tiêu chí chấm điểm ETS Writing Part 3: (1) Bố cục 3 phần (Introduction - Body Paragraphs - Conclusion) mạch lạc; (2) Lập luận nhất quán kèm ví dụ thực tiễn nơi công sở; (3) Đa dạng hóa cấu trúc ngữ pháp và từ vựng học thuật/thương mại; (4) Đạt độ dài 150–220 từ.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 150, 220, NULL, 1200, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9860460+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (87, 87, 1, N'Summarise the main trends, select the most important features, and make relevant comparisons. Write at least 150 words.', NULL, NULL, NULL, NULL, NULL, N'Assessment focus: a clear overview, accurate comparisons, selective data, and a coherent progression from 2010 to 2020.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 150, 220, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1575543+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (87, 87, 1, N'Summarise the main trends, select the most important features, and make relevant comparisons. Write at least 150 words.', NULL, NULL, NULL, NULL, NULL, N'Assessment focus: a clear overview, accurate comparisons, selective data, and a coherent progression from 2010 to 2020.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 150, 220, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (88, 88, 1, N'Discuss both views and give your own opinion. Support your position with reasons and relevant examples. Write at least 250 words.', NULL, NULL, NULL, NULL, NULL, N'Assessment focus: address both views, state a consistent position, develop supported ideas, and control paragraph cohesion.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 250, 350, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1575543+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (88, 88, 1, N'Discuss both views and give your own opinion. Support your position with reasons and relevant examples. Write at least 250 words.', NULL, NULL, NULL, NULL, NULL, N'Assessment focus: address both views, state a consistent position, develop supported ideas, and control paragraph cohesion.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 250, 350, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (89, 89, 1, N'Write a polite email reply covering all three points. Use an appropriate greeting, clear paragraphs, and a suitable closing. Write 120–150 words.', NULL, NULL, NULL, NULL, NULL, N'Assessment focus: fulfil every communicative purpose, maintain an appropriate formal register, and organize a clear email.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 120, 150, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1589292+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (89, 89, 1, N'Write a polite email reply covering all three points. Use an appropriate greeting, clear paragraphs, and a suitable closing. Write 120–150 words.', NULL, NULL, NULL, NULL, NULL, N'Assessment focus: fulfil every communicative purpose, maintain an appropriate formal register, and organize a clear email.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 120, 150, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (90, 90, 1, N'Write an opinion essay with a clear position, two developed reasons, and relevant examples. Write 250–300 words.', NULL, NULL, NULL, NULL, NULL, N'Assessment focus: build a logical argument, explain examples, use cohesive paragraphs, and maintain accurate language.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 250, 300, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1602111+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (90, 90, 1, N'Write an opinion essay with a clear position, two developed reasons, and relevant examples. Write 250–300 words.', NULL, NULL, NULL, NULL, NULL, N'Assessment focus: build a logical argument, explain examples, use cohesive paragraphs, and maintain accurate language.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 250, 300, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (91, 91, 1, N'Which induction session can the applicant attend?', N'The 10 o''clock session', N'The 2:30 session', N'The Tuesday evening session', N'Any session without a student card', N'B', N'The 10 o''clock session is full; the coordinator offers two places in the 2:30 session.', N'This repeats the applicant''s first choice, but the coordinator says it is full.', N'This is the alternative session with two available places.', N'No evening session is mentioned in the recording.', N'The card is something to bring, not a condition for choosing a session.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1602111+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (91, 91, 1, N'Which induction session can the applicant attend?', N'The 10 o''clock session', N'The 2:30 session', N'The Tuesday evening session', N'Any session without a student card', N'B', N'The 10 o''clock session is full; the coordinator offers two places in the 2:30 session.', N'This repeats the applicant''s first choice, but the coordinator says it is full.', N'This is the alternative session with two available places.', N'No evening session is mentioned in the recording.', N'The card is something to bring, not a condition for choosing a session.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (92, 92, 1, N'What does the tutor advise the student to do first?', N'Add another source', N'Correct every date', N'Reorganise the section around the comparison', N'Submit the draft on Thursday', N'C', N'The tutor explicitly prioritizes reorganising the section to make the comparison clearer.', N'The tutor says not to add a source yet.', N'The advice is about the comparison, not date accuracy.', N'This paraphrases the tutor''s instruction to make the contrast clearer.', N'The tutor gives a Friday deadline and no Thursday submission instruction.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1612089+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (92, 92, 1, N'What does the tutor advise the student to do first?', N'Add another source', N'Correct every date', N'Reorganise the section around the comparison', N'Submit the draft on Thursday', N'C', N'The tutor explicitly prioritizes reorganising the section to make the comparison clearer.', N'The tutor says not to add a source yet.', N'The advice is about the comparison, not date accuracy.', N'This paraphrases the tutor''s instruction to make the contrast clearer.', N'The tutor gives a Friday deadline and no Thursday submission instruction.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (93, 93, 1, N'Where can visitors now find the sculpture collection?', N'Upstairs beside the reading room', N'In the closed north gallery', N'Inside the café', N'Outside the building', N'A', N'The guide says the collection has moved upstairs beside the reading room.', N'This is the new location stated by the guide.', N'The gallery is closed and no longer holds the collection.', N'The café is unaffected and is not the collection location.', N'No outdoor relocation is mentioned.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1622086+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (93, 93, 1, N'Where can visitors now find the sculpture collection?', N'Upstairs beside the reading room', N'In the closed north gallery', N'Inside the café', N'Outside the building', N'A', N'The guide says the collection has moved upstairs beside the reading room.', N'This is the new location stated by the guide.', N'The gallery is closed and no longer holds the collection.', N'The café is unaffected and is not the collection location.', N'No outdoor relocation is mentioned.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (94, 94, 1, N'What changed because of the delayed interviews?', N'The survey will be cancelled', N'The interviews ended one month early', N'The report will be ready in May', N'The report is expected one week later', N'D', N'The report is now expected in early July rather than late June, a one-week shift.', N'The researcher says only the timeline changed.', N'The interviews were delayed, not completed early.', N'May was the expected survey completion, not the report date.', N'This captures the stated shift to early July.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1632085+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (94, 94, 1, N'What changed because of the delayed interviews?', N'The survey will be cancelled', N'The interviews ended one month early', N'The report will be ready in May', N'The report is expected one week later', N'D', N'The report is now expected in early July rather than late June, a one-week shift.', N'The researcher says only the timeline changed.', N'The interviews were delayed, not completed early.', N'May was the expected survey completion, not the report date.', N'This captures the stated shift to early July.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (95, 95, 1, N'Which condition produced the greatest cooling in the study?', N'Mature trees shading continuous pavement', N'Newly planted trees in parks', N'Isolated trees beside buildings', N'Any street with a wide road', N'A', N'The passage contrasts continuous shade from mature trees with the smaller effects of isolated trees.', N'This matches the reported condition with the greatest cooling.', N'Neither newly planted trees nor parks are identified as the strongest condition.', N'The passage says isolated trees produced smaller effects.', N'Road width is not identified as a factor.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1632085+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (95, 95, 1, N'Which condition produced the greatest cooling in the study?', N'Mature trees shading continuous pavement', N'Newly planted trees in parks', N'Isolated trees beside buildings', N'Any street with a wide road', N'A', N'The passage contrasts continuous shade from mature trees with the smaller effects of isolated trees.', N'This matches the reported condition with the greatest cooling.', N'Neither newly planted trees nor parks are identified as the strongest condition.', N'The passage says isolated trees produced smaller effects.', N'Road width is not identified as a factor.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (96, 96, 1, N'Which option correctly matches the 2024 transport mode with its share? (Matching)', N'Bus — 41%', N'Bicycle — 34%', N'Rail — 41%', N'Bus — 25%', N'C', N'Rail is matched with 41%; the other options pair the wrong mode and percentage.', N'41% is the rail figure; bus use fell to 34%.', N'Cycling is reported at 25%, not 34%.', N'This correctly matches the mode to the 2024 percentage.', N'25% is the bicycle share, while bus use was 34%.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1642086+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (96, 96, 1, N'Which option correctly matches the 2024 transport mode with its share? (Matching)', N'Bus — 41%', N'Bicycle — 34%', N'Rail — 41%', N'Bus — 25%', N'C', N'Rail is matched with 41%; the other options pair the wrong mode and percentage.', N'41% is the rail figure; bus use fell to 34%.', N'Cycling is reported at 25%, not 34%.', N'This correctly matches the mode to the 2024 percentage.', N'25% is the bicycle share, while bus use was 34%.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (97, 97, 1, N'Why were the maps digitised first?', N'They had the highest online readership', N'They were inexpensive to replace', N'They contained no historical information', N'To prevent damage from repeated handling', N'D', N'The passage says preservation needs, rather than popularity, determined the order.', N'The passage explicitly distinguishes preservation from popularity.', N'The maps are described as fragile and at risk of irreversible damage.', N'The passage does not say this.', N'This is the stated preservation reason.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1642086+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (97, 97, 1, N'Why were the maps digitised first?', N'They had the highest online readership', N'They were inexpensive to replace', N'They contained no historical information', N'To prevent damage from repeated handling', N'D', N'The passage says preservation needs, rather than popularity, determined the order.', N'The passage explicitly distinguishes preservation from popularity.', N'The maps are described as fragile and at risk of irreversible damage.', N'The passage does not say this.', N'This is the stated preservation reason.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (98, 98, 1, N'What can be inferred about the restoration at Site B?', N'More rainfall alone guarantees rapid recovery', N'Improved soil drainage may support plant recovery', N'Native plants cannot grow in dry conditions', N'Site A had no compacted soil', N'B', N'The comparison suggests soil condition supported recovery even with less rainfall.', N'Site A had more rainfall but recovered slowly.', N'Site B recovered quickly after the compacted soil problem was addressed.', N'Native plants spread at the site receiving less rain.', N'The passage identifies compacted soil at Site A.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1657118+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (98, 98, 1, N'What can be inferred about the restoration at Site B?', N'More rainfall alone guarantees rapid recovery', N'Improved soil drainage may support plant recovery', N'Native plants cannot grow in dry conditions', N'Site A had no compacted soil', N'B', N'The comparison suggests soil condition supported recovery even with less rainfall.', N'Site A had more rainfall but recovered slowly.', N'Site B recovered quickly after the compacted soil problem was addressed.', N'Native plants spread at the site receiving less rain.', N'The passage identifies compacted soil at Site A.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (99, 99, 1, N'When should students arrive at the main gate?', N'7:00 on Saturday', N'7:15 on Sunday', N'7:30 on Saturday', N'8:15 on Saturday', N'A', N'The trip leaves at 7:15 and students must arrive fifteen minutes earlier, at 7:00.', N'Arriving fifteen minutes before the 7:15 departure means 7:00.', N'The trip is on Saturday, not Sunday.', N'This is after departure and contradicts the instruction.', N'The departure is at 7:15, so this is an hour too late.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1667175+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (99, 99, 1, N'When should students arrive at the main gate?', N'7:00 on Saturday', N'7:15 on Sunday', N'7:30 on Saturday', N'8:15 on Saturday', N'A', N'The trip leaves at 7:15 and students must arrive fifteen minutes earlier, at 7:00.', N'Arriving fifteen minutes before the 7:15 departure means 7:00.', N'The trip is on Saturday, not Sunday.', N'This is after departure and contradicts the instruction.', N'The departure is at 7:15, so this is an hour too late.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (100, 100, 1, N'Why has the language club changed rooms?', N'The club meeting has been cancelled', N'Room 118 has a better projector', N'The meeting time has changed', N'The projector in Room 204 needs repair', N'D', N'The projector in Room 204 is being repaired; the meeting time remains unchanged.', N'The staff confirms that only the room changed.', N'The reason given is repair work in Room 204.', N'The time remains 3 p.m.', N'This is the reason stated by the office staff.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1677166+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (100, 100, 1, N'Why has the language club changed rooms?', N'The club meeting has been cancelled', N'Room 118 has a better projector', N'The meeting time has changed', N'The projector in Room 204 needs repair', N'D', N'The projector in Room 204 is being repaired; the meeting time remains unchanged.', N'The staff confirms that only the room changed.', N'The reason given is repair work in Room 204.', N'The time remains 3 p.m.', N'This is the reason stated by the office staff.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (101, 101, 1, N'What should volunteers do by Friday?', N'Clean the library on 16 June', N'Register at the library desk', N'Bring the first notice to the event', N'Arrive at the clean-up by 5 p.m.', N'B', N'The announcer asks volunteers to register at the library desk by 5 p.m.', N'The event date was corrected to 18 June; the task is registration.', N'This is the action and location stated in the announcement.', N'No instruction to bring a notice is given.', N'5 p.m. Friday is the registration deadline, not the event time.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1687165+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (101, 101, 1, N'What should volunteers do by Friday?', N'Clean the library on 16 June', N'Register at the library desk', N'Bring the first notice to the event', N'Arrive at the clean-up by 5 p.m.', N'B', N'The announcer asks volunteers to register at the library desk by 5 p.m.', N'The event date was corrected to 18 June; the task is registration.', N'This is the action and location stated in the announcement.', N'No instruction to bring a notice is given.', N'5 p.m. Friday is the registration deadline, not the event time.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9982417+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (102, 102, 1, N'How can the student change workshop groups?', N'Pay for a new registration at the office', N'Ask the student group to change its date', N'Transfer online before noon tomorrow', N'Wait until the Friday workshop begins', N'C', N'The advisor says to transfer online before noon tomorrow; the student plans to do it tonight.', N'The advisor says there is no extra fee.', N'The advisor offers a different group, not a date change.', N'This is the required process and deadline.', N'The transfer must be made before noon tomorrow.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1687165+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (102, 102, 1, N'How can the student change workshop groups?', N'Pay for a new registration at the office', N'Ask the student group to change its date', N'Transfer online before noon tomorrow', N'Wait until the Friday workshop begins', N'C', N'The advisor says to transfer online before noon tomorrow; the student plans to do it tonight.', N'The advisor says there is no extra fee.', N'The advisor offers a different group, not a date change.', N'This is the required process and deadline.', N'The transfer must be made before noon tomorrow.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9982417+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (103, 103, 1, N'Who is the delivery service mainly designed to help?', N'Older residents who cannot travel easily', N'Volunteers who want free books', N'Visitors who have not joined the library', N'People who live outside the town', N'A', N'The first sentence identifies older residents with limited ability to travel.', N'This restates the group named in the passage.', N'Volunteers deliver the books; they are not the intended readers.', N'The passage says users need to register, but does not identify visitors as the target group.', N'The service is described for residents of the town.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1697180+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (103, 103, 1, N'Who is the delivery service mainly designed to help?', N'Older residents who cannot travel easily', N'Volunteers who want free books', N'Visitors who have not joined the library', N'People who live outside the town', N'A', N'The first sentence identifies older residents with limited ability to travel.', N'This restates the group named in the passage.', N'Volunteers deliver the books; they are not the intended readers.', N'The passage says users need to register, but does not identify visitors as the target group.', N'The service is described for residents of the town.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:46.9982417+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (104, 104, 1, N'Which option correctly matches a course with its start date? (Matching)', N'Computer skills — 30 September', N'Accounting — one week after applications close', N'Workplace communication — two weeks after 30 September', N'All courses — the application deadline', N'C', N'Classes begin two weeks after applications close on 30 September, so the start is in October.', N'30 September is the application deadline, not the class start date.', N'The passage states a two-week interval.', N'This correctly matches the course schedule stated in the notice.', N'The deadline is for applying; classes begin later.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1707167+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (104, 104, 1, N'Which option correctly matches a course with its start date? (Matching)', N'Computer skills — 30 September', N'Accounting — one week after applications close', N'Workplace communication — two weeks after 30 September', N'All courses — the application deadline', N'C', N'Classes begin two weeks after applications close on 30 September, so the start is in October.', N'30 September is the application deadline, not the class start date.', N'The passage states a two-week interval.', N'This correctly matches the course schedule stated in the notice.', N'The deadline is for applying; classes begin later.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:47.0002613+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (105, 105, 1, N'Why did attendance probably fail to increase?', N'The sports centre reduced its opening hours', N'The transport office closed permanently', N'There were no activities at the centre', N'Public transport was unavailable at closing time', N'D', N'The last bus left before the centre closed, making the extended hours difficult to use.', N'The centre extended, rather than reduced, its hours.', N'The passage says a schedule is being discussed, not that the office closed.', N'No information about activities is provided.', N'The last bus left before the new closing time.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1717165+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (105, 105, 1, N'Why did attendance probably fail to increase?', N'The sports centre reduced its opening hours', N'The transport office closed permanently', N'There were no activities at the centre', N'Public transport was unavailable at closing time', N'D', N'The last bus left before the centre closed, making the extended hours difficult to use.', N'The centre extended, rather than reduced, its hours.', N'The passage says a schedule is being discussed, not that the office closed.', N'No information about activities is provided.', N'The last bus left before the new closing time.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:47.0002613+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (106, 106, 1, N'What was the main reason for adding a Wednesday class?', N'The Saturday class was too expensive', N'To accommodate learners with shift-work conflicts', N'The organiser wanted to remove the Saturday class', N'The programme changed to online teaching', N'B', N'The additional class responds to learners'' reported work schedules while keeping the original option.', N'No course fee is mentioned.', N'This is the stated reason for adding an evening alternative.', N'The passage says Saturday remains available.', N'Both options are described as classes; online delivery is not mentioned.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1717165+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (106, 106, 1, N'What was the main reason for adding a Wednesday class?', N'The Saturday class was too expensive', N'To accommodate learners with shift-work conflicts', N'The organiser wanted to remove the Saturday class', N'The programme changed to online teaching', N'B', N'The additional class responds to learners'' reported work schedules while keeping the original option.', N'No course fee is mentioned.', N'This is the stated reason for adding an evening alternative.', N'The passage says Saturday remains available.', N'Both options are described as classes; online delivery is not mentioned.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:47.0002613+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (107, 107, 1, N'The quarterly budget report must be submitted _____ Friday at 5:00 PM.', N'before', N'prior', N'advance', N'ahead', N'A', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1727164+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (107, 107, 1, N'The quarterly budget report must be submitted _____ Friday at 5:00 PM.', N'before', N'prior', N'advance', N'ahead', N'A', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (108, 108, 1, N'Where did Ms. Chen leave the presentation handouts?', N'On the conference table', N'Yes, yesterday', N'To meet the client', NULL, N'A', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1737164+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (108, 108, 1, N'Where did Ms. Chen leave the presentation handouts?', N'On the conference table', N'Yes, yesterday', N'To meet the client', NULL, N'A', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (109, 109, 1, N'Select TWO benefits resulting from the newly installed automated inventory system:', N'Decreased fulfillment errors', N'Real-time stock level visibility', N'Immediate relocation to another province', N'Elimination of electricity costs', N'A,B', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 2, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1747166+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (109, 109, 1, N'Select TWO benefits resulting from the newly installed automated inventory system:', N'Decreased fulfillment errors', N'Real-time stock level visibility', N'Immediate relocation to another province', N'Elimination of electricity costs', N'A,B', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 2, 1, NULL, NULL, NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (110, 110, 1, N'The express shuttle departs every [blank] minutes from terminal two.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, NULL, NULL, NULL, 1, N'["15","fifteen"]', NULL, NULL, '2026-11-11T01:44:03.1757164+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (110, 110, 1, N'The express shuttle departs every [blank] minutes from terminal two.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, NULL, NULL, NULL, 1, N'["15","fifteen"]', NULL, NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (111, 111, 1, N'Choose the best connective word to complete the sentence clause.', N'consequently', N'otherwise', N'nevertheless', NULL, N'A', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1762225+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (111, 111, 1, N'Choose the best connective word to complete the sentence clause.', N'consequently', N'otherwise', N'nevertheless', NULL, N'A', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (112, 112, 1, N'Drag the appropriate department heading to the organizational slot.', N'Quality Assurance', N'Investor Relations', N'Facilities Maintenance', NULL, N'A', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1772244+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (112, 112, 1, N'Drag the appropriate department heading to the organizational slot.', N'Quality Assurance', N'Investor Relations', N'Facilities Maintenance', NULL, N'A', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (113, 113, 1, N'What is mentioned as a key benefit of the Apex-Horizon merger?', N'Reduced shipping overhead costs', N'Higher retail retail shelf prices', N'Cancellation of overseas contracts', N'Downsizing regional warehouses', N'A', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1772244+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (113, 113, 1, N'What is mentioned as a key benefit of the Apex-Horizon merger?', N'Reduced shipping overhead costs', N'Higher retail retail shelf prices', N'Cancellation of overseas contracts', N'Downsizing regional warehouses', N'A', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (114, 114, 1, N'Read the announcement aloud: Welcome to the annual Global Tech Conference. Please pick up your registration badge at the front desk.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 5, 5, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1782242+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (114, 114, 1, N'Read the announcement aloud: Welcome to the annual Global Tech Conference. Please pick up your registration badge at the front desk.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 5, 5, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (115, 115, 1, N'Write ONE sentence based on the picture using the two mandatory keywords: conference / yesterday.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 5, 35, NULL, 480, NULL, 1, NULL, N'conference, yesterday', NULL, '2026-11-11T01:44:03.1792242+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (115, 115, 1, N'Write ONE sentence based on the picture using the two mandatory keywords: conference / yesterday.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 5, 35, NULL, 480, NULL, 1, NULL, N'conference, yesterday', NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (116, 116, 1, N'Write an opinion essay explaining whether remote work improves employee productivity.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 15, 300, NULL, 1800, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1792242+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (117, 118, 1, N'Listen: where is the meeting being held?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'A', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9347648+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (118, 119, 1, N'Listen: what time does the shop close?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'B', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9397649+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (119, 120, 1, N'Listen: which platform does the train leave from?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'C', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9397649+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (120, 121, 1, N'Listen: what did the caller ask to change?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'D', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9407647+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (121, 122, 1, N'Listen: why is the shipment delayed?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'A', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9407647+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (122, 123, 1, N'Listen: what will the woman do next?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'B', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9417644+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (123, 124, 1, N'Listen: what does the man imply about the budget?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'C', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9422700+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (124, 125, 1, N'Listen: what concern does the second speaker raise?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'D', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9422700+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (125, 126, 1, N'Listen: what does she imply about the deadline she was given?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'A', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9432717+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (126, 127, 1, N'Listen: which assumption does the negotiation depend on?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'B', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9432717+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (127, 128, 1, N'Listen: the speaker''s tone shifts twice. Which pair of attitudes fits?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'C', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9442715+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (128, 129, 1, N'Listen: what does the concession at the end actually concede?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'D', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9442715+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (129, 130, 1, N'The office opens _____ nine o''clock.', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'A', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9442715+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (130, 131, 1, N'Please sign _____ the bottom of the form.', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'B', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9452714+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (131, 132, 1, N'The delivery arrived _____ Tuesday morning.', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'C', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9452714+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (132, 133, 1, N'She has worked here _____ 2019.', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'D', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9462717+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (133, 134, 1, N'The notice says the car park closes early. What should staff do?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'A', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9462717+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (134, 135, 1, N'The memo changes the meeting room. Where will the meeting be held?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'B', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9472713+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (135, 136, 1, N'The report qualifies its forecast twice. What does it imply about the second half?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'C', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9472713+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (136, 137, 1, N'The author cites two studies that disagree. What does that disagreement support?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'D', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9477761+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (137, 138, 1, N'The author concedes a point in the second paragraph chiefly to what end?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'A', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9477761+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (138, 139, 1, N'Which claim about the reform does the passage leave standing?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'B', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9487794+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (139, 140, 1, N'Which reading of "the proposal was quietly shelved" does the argument require?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'C', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9492906+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (140, 141, 1, N'The final sentence reverses the analogy. What does that reversal license?', N'The option marked correct for this item.', N'Second option.', N'Third option.', N'Fourth option.', N'D', N'See the key.', N'Correct.', N'Incorrect: wrong reference.', N'Incorrect: wrong scope.', N'Incorrect: wrong register.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T02:12:01.9492906+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (116, 116, 1, N'Write an opinion essay explaining whether remote work improves employee productivity.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 15, 300, NULL, 1800, NULL, 1, NULL, NULL, NULL, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -3213,79 +2925,79 @@ SET IDENTITY_INSERT [ItemVersions] OFF;
 -- ---- Lessons (13 rows)
 SET IDENTITY_INSERT [Lessons] ON;
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (1, 1, 2, 1, N'Present Continuous Tense', N'Master the present continuous tense for temporary and ongoing actions in TOEIC Part 5.', 5, 1, '2026-11-11T01:44:01.6437563+07:00', N'reading', 12, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (1, 1, 2, 1, N'Present Continuous Tense', N'Master the present continuous tense for temporary and ongoing actions in TOEIC Part 5.', 5, 1, '2026-11-11T11:25:21.4325768+07:00', N'reading', 12, N'B1');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (2, 1, 2, NULL, N'Tense & Aspect Mastery in Business Contexts', N'Phương pháp 3 giây nhận diện dấu hiệu phối hợp thì (Time Markers) và phân biệt chủ động - bị động trong Part 5.', 15, 1, '2026-11-11T01:44:02.3963832+07:00', N'reading', 12, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (2, 1, 2, NULL, N'Tense & Aspect Mastery in Business Contexts', N'Phương pháp 3 giây nhận diện dấu hiệu phối hợp thì (Time Markers) và phân biệt chủ động - bị động trong Part 5.', 15, 1, '2026-11-11T11:25:22.2031722+07:00', N'reading', 12, N'B1');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (3, 1, 1, NULL, N'Eliminating Auditory Traps & Mastering Indirect Responses', N'Kỹ thuật loại trừ đáp án lặp âm/lặp từ và nhận diện các mẫu câu trả lời gián tiếp đạt điểm tuyệt đối Part 2.', 15, 2, '2026-11-11T01:44:02.3983832+07:00', N'listening', 5, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (3, 1, 1, NULL, N'Eliminating Auditory Traps & Mastering Indirect Responses', N'Kỹ thuật loại trừ đáp án lặp âm/lặp từ và nhận diện các mẫu câu trả lời gián tiếp đạt điểm tuyệt đối Part 2.', 15, 2, '2026-11-11T11:25:22.2031722+07:00', N'listening', 5, N'B1');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (4, 1, 4, NULL, N'High-Scoring Business Email Architecture (Writing W2)', N'Khung sườn 4 bước viết email giải quyết sự cố thương mại trong 10 phút với văn phong trang trọng chuẩn ETS.', 20, 3, '2026-11-11T01:44:02.3993830+07:00', N'writing', 17, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (4, 1, 4, NULL, N'High-Scoring Business Email Architecture (Writing W2)', N'Khung sườn 4 bước viết email giải quyết sự cố thương mại trong 10 phút với văn phong trang trọng chuẩn ETS.', 20, 3, '2026-11-11T11:25:22.2078029+07:00', N'writing', 17, N'B1');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (5, 1, 2, NULL, N'Cross-Text Inference in Multi-Passage Reading (Part 7)', N'Phương pháp tìm "Từ khóa cầu nối" (Bridge Keywords) để giải quyết câu hỏi suy luận chéo giữa Hóa đơn, Lịch trình và Email.', 20, 4, '2026-11-11T01:44:02.4003832+07:00', N'reading', 9, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (5, 1, 2, NULL, N'Cross-Text Inference in Multi-Passage Reading (Part 7)', N'Phương pháp tìm "Từ khóa cầu nối" (Bridge Keywords) để giải quyết câu hỏi suy luận chéo giữa Hóa đơn, Lịch trình và Email.', 20, 4, '2026-11-11T11:25:22.2098610+07:00', N'reading', 9, N'B1');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (6, 2, 5, NULL, N'IELTS Listening: Follow Signposts and Corrections', N'Track the speaker''s purpose, changes, and final answer rather than matching isolated words.', 12, 1, '2026-11-11T01:44:02.5741463+07:00', N'listening', 1, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (6, 2, 5, NULL, N'IELTS Listening: Follow Signposts and Corrections', N'Track the speaker''s purpose, changes, and final answer rather than matching isolated words.', 12, 1, '2026-11-11T11:25:22.3853012+07:00', N'listening', 1, N'B1');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (7, 2, 6, NULL, N'IELTS Reading: Paraphrase Claims and Match Evidence', N'Connect question wording to synonyms, references, and evidence across academic passages.', 12, 2, '2026-11-11T01:44:02.5741463+07:00', N'reading', 7, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (7, 2, 6, NULL, N'IELTS Reading: Paraphrase Claims and Match Evidence', N'Connect question wording to synonyms, references, and evidence across academic passages.', 12, 2, '2026-11-11T11:25:22.3853012+07:00', N'reading', 7, N'B1');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (8, 2, 7, NULL, N'IELTS Task 1: Select and Describe Trends', N'Write a concise overview, group key features, and compare data without listing every figure.', 12, 3, '2026-11-11T01:44:02.5756495+07:00', N'writing', 17, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (8, 2, 7, NULL, N'IELTS Task 1: Select and Describe Trends', N'Write a concise overview, group key features, and compare data without listing every figure.', 12, 3, '2026-11-11T11:25:22.3853012+07:00', N'writing', 17, N'B1');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (9, 2, 7, NULL, N'IELTS Writing: Coherence, Cohesion, and Position', N'Build a clear Task 2 position with purposeful paragraphs and controlled linking.', 12, 4, '2026-11-11T01:44:02.5756495+07:00', N'writing', 17, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (9, 2, 7, NULL, N'IELTS Writing: Coherence, Cohesion, and Position', N'Build a clear Task 2 position with purposeful paragraphs and controlled linking.', 12, 4, '2026-11-11T11:25:22.3880584+07:00', N'writing', 17, N'B1');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (10, 3, 9, NULL, N'VSTEP Listening: Catch Purpose, Time, and Changes', N'Identify the speaker''s main purpose and distinguish confirmed details from corrected plans.', 12, 1, '2026-11-11T01:44:02.5766542+07:00', N'listening', 1, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (10, 3, 9, NULL, N'VSTEP Listening: Catch Purpose, Time, and Changes', N'Identify the speaker''s main purpose and distinguish confirmed details from corrected plans.', 12, 1, '2026-11-11T11:25:22.3880584+07:00', N'listening', 1, N'B1');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (11, 3, 10, NULL, N'VSTEP Reading: Locate Paraphrases and References', N'Scan for names, dates, and synonyms, then check pronouns and nearby evidence.', 12, 2, '2026-11-11T01:44:02.5766542+07:00', N'reading', 7, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (11, 3, 10, NULL, N'VSTEP Reading: Locate Paraphrases and References', N'Scan for names, dates, and synonyms, then check pronouns and nearby evidence.', 12, 2, '2026-11-11T11:25:22.3880584+07:00', N'reading', 7, N'B1');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (12, 3, 11, NULL, N'VSTEP Writing: Organise a Formal Email', N'Use an appropriate greeting, answer every point, request or suggest details, and close politely.', 12, 3, '2026-11-11T01:44:02.5781597+07:00', N'writing', 17, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (12, 3, 11, NULL, N'VSTEP Writing: Organise a Formal Email', N'Use an appropriate greeting, answer every point, request or suggest details, and close politely.', 12, 3, '2026-11-11T11:25:22.3880584+07:00', N'writing', 17, N'B1');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (13, 3, 11, NULL, N'VSTEP Writing: Build and Support an Argument', N'State a position, develop reasons, and connect each example to the argument.', 12, 4, '2026-11-11T01:44:02.5785977+07:00', N'writing', 17, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (13, 3, 11, NULL, N'VSTEP Writing: Build and Support an Argument', N'State a position, develop reasons, and connect each example to the argument.', 12, 4, '2026-11-11T11:25:22.3880584+07:00', N'writing', 17, N'B1');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -3311,37 +3023,37 @@ SET IDENTITY_INSERT [MentorProfiles] OFF;
 -- ---- MentorSlots (6 rows)
 SET IDENTITY_INSERT [MentorSlots] ON;
 BEGIN TRY
-  INSERT INTO [MentorSlots] ([SlotId], [MentorId], [StartAt], [EndAt], [Status]) VALUES (1, 1, '2026-11-12T01:44:01.8487237+07:00', '2026-11-12T02:44:01.8487237+07:00', N'open');
+  INSERT INTO [MentorSlots] ([SlotId], [MentorId], [StartAt], [EndAt], [Status]) VALUES (1, 1, '2026-11-12T11:25:21.6418052+07:00', '2026-11-12T12:25:21.6418052+07:00', N'open');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [MentorSlots] ([SlotId], [MentorId], [StartAt], [EndAt], [Status]) VALUES (2, 1, '2026-11-13T01:44:01.8487237+07:00', '2026-11-13T02:44:01.8487237+07:00', N'open');
+  INSERT INTO [MentorSlots] ([SlotId], [MentorId], [StartAt], [EndAt], [Status]) VALUES (2, 1, '2026-11-13T11:25:21.6418052+07:00', '2026-11-13T12:25:21.6418052+07:00', N'open');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [MentorSlots] ([SlotId], [MentorId], [StartAt], [EndAt], [Status]) VALUES (3, 1, '2026-11-14T01:44:01.8487237+07:00', '2026-11-14T02:44:01.8487237+07:00', N'open');
+  INSERT INTO [MentorSlots] ([SlotId], [MentorId], [StartAt], [EndAt], [Status]) VALUES (3, 1, '2026-11-14T11:25:21.6418052+07:00', '2026-11-14T12:25:21.6418052+07:00', N'open');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [MentorSlots] ([SlotId], [MentorId], [StartAt], [EndAt], [Status]) VALUES (4, 1, '2026-11-16T01:44:01.8487237+07:00', '2026-11-16T02:44:01.8487237+07:00', N'open');
+  INSERT INTO [MentorSlots] ([SlotId], [MentorId], [StartAt], [EndAt], [Status]) VALUES (4, 1, '2026-11-16T11:25:21.6418052+07:00', '2026-11-16T12:25:21.6418052+07:00', N'open');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [MentorSlots] ([SlotId], [MentorId], [StartAt], [EndAt], [Status]) VALUES (5, 1, '2026-11-06T01:44:01.8497237+07:00', '2026-11-06T02:44:01.8497237+07:00', N'booked');
+  INSERT INTO [MentorSlots] ([SlotId], [MentorId], [StartAt], [EndAt], [Status]) VALUES (5, 1, '2026-11-06T11:25:21.6418052+07:00', '2026-11-06T12:25:21.6418052+07:00', N'booked');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [MentorSlots] ([SlotId], [MentorId], [StartAt], [EndAt], [Status]) VALUES (6, 1, '2026-11-13T01:44:01.8702933+07:00', '2026-11-13T02:44:01.8702933+07:00', N'booked');
+  INSERT INTO [MentorSlots] ([SlotId], [MentorId], [StartAt], [EndAt], [Status]) VALUES (6, 1, '2026-11-13T11:25:21.6625305+07:00', '2026-11-13T12:25:21.6625305+07:00', N'booked');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -3351,13 +3063,13 @@ SET IDENTITY_INSERT [MentorSlots] OFF;
 -- ---- Orders (2 rows)
 SET IDENTITY_INSERT [Orders] ON;
 BEGIN TRY
-  INSERT INTO [Orders] ([OrderId], [UserId], [PackageId], [Status], [Amount], [OrderCode], [PaymentNo], [Gateway], [GatewayTxnRef], [GatewayErrorCode], [CreatedAt], [PaidAt]) VALUES (1, 2, 1, N'paid', 190000.00, N'DH-20261014-0001', 1, N'mock', N'plink-demo-10', NULL, '2026-10-17T01:44:00.6939290+07:00', '2026-10-17T01:44:00.6939290+07:00');
+  INSERT INTO [Orders] ([OrderId], [UserId], [PackageId], [Status], [Amount], [OrderCode], [PaymentNo], [Gateway], [GatewayTxnRef], [GatewayErrorCode], [CreatedAt], [PaidAt]) VALUES (1, 2, 1, N'paid', 190000.00, N'DH-20261014-0001', 1, N'mock', N'plink-demo-10', NULL, '2026-10-17T11:25:20.4640251+07:00', '2026-10-17T11:25:20.4640251+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Orders] ([OrderId], [UserId], [PackageId], [Status], [Amount], [OrderCode], [PaymentNo], [Gateway], [GatewayTxnRef], [GatewayErrorCode], [CreatedAt], [PaidAt]) VALUES (2, 2, 2, N'paid', 100000.00, N'DH-20261014-0002', 2, N'mock', N'plink-demo-5', NULL, '2026-10-24T01:44:00.7236021+07:00', '2026-10-24T01:44:00.7236021+07:00');
+  INSERT INTO [Orders] ([OrderId], [UserId], [PackageId], [Status], [Amount], [OrderCode], [PaymentNo], [Gateway], [GatewayTxnRef], [GatewayErrorCode], [CreatedAt], [PaidAt]) VALUES (2, 2, 2, N'paid', 100000.00, N'DH-20261014-0002', 2, N'mock', N'plink-demo-5', NULL, '2026-10-24T11:25:20.4977527+07:00', '2026-10-24T11:25:20.4977527+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -3367,13 +3079,13 @@ SET IDENTITY_INSERT [Orders] OFF;
 -- ---- PaymentEvents (2 rows)
 SET IDENTITY_INSERT [PaymentEvents] ON;
 BEGIN TRY
-  INSERT INTO [PaymentEvents] ([EventId], [OrderId], [Source], [ReportedStatus], [SignatureValid], [WasApplied], [Payload], [Note], [CreatedAt]) VALUES (1, 1, N'webhook', N'paid', 1, 1, NULL, N'payOS webhook simulation — 10 credits', '2026-10-17T01:44:00.6954322+07:00');
+  INSERT INTO [PaymentEvents] ([EventId], [OrderId], [Source], [ReportedStatus], [SignatureValid], [WasApplied], [Payload], [Note], [CreatedAt]) VALUES (1, 1, N'webhook', N'paid', 1, 1, NULL, N'payOS webhook simulation — 10 credits', '2026-10-17T11:25:20.4668263+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [PaymentEvents] ([EventId], [OrderId], [Source], [ReportedStatus], [SignatureValid], [WasApplied], [Payload], [Note], [CreatedAt]) VALUES (2, 2, N'webhook', N'paid', 1, 1, NULL, N'payOS webhook simulation — 5 credits', '2026-10-24T01:44:00.7236021+07:00');
+  INSERT INTO [PaymentEvents] ([EventId], [OrderId], [Source], [ReportedStatus], [SignatureValid], [WasApplied], [Payload], [Note], [CreatedAt]) VALUES (2, 2, N'webhook', N'paid', 1, 1, NULL, N'payOS webhook simulation — 5 credits', '2026-10-24T11:25:20.4977527+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -3415,13 +3127,13 @@ END CATCH
 -- ---- SavedQuestions (2 rows)
 SET IDENTITY_INSERT [SavedQuestions] ON;
 BEGIN TRY
-  INSERT INTO [SavedQuestions] ([SavedQuestionId], [UserId], [CertId], [QuestionId], [ItemId], [ItemVersionId], [Source], [SavedAt]) VALUES (1, 2, 1, NULL, 2, 2, N'manual', '2026-11-08T01:44:02.8616810+07:00');
+  INSERT INTO [SavedQuestions] ([SavedQuestionId], [UserId], [CertId], [QuestionId], [ItemId], [ItemVersionId], [Source], [SavedAt]) VALUES (1, 2, 1, NULL, 2, 2, N'manual', '2026-11-08T11:25:22.6479128+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [SavedQuestions] ([SavedQuestionId], [UserId], [CertId], [QuestionId], [ItemId], [ItemVersionId], [Source], [SavedAt]) VALUES (2, 2, 1, NULL, 1, 1, N'incorrect', '2026-11-07T01:44:02.8671889+07:00');
+  INSERT INTO [SavedQuestions] ([SavedQuestionId], [UserId], [CertId], [QuestionId], [ItemId], [ItemVersionId], [Source], [SavedAt]) VALUES (2, 2, 1, NULL, 1, 1, N'incorrect', '2026-11-07T11:25:22.6533299+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -4171,13 +3883,13 @@ SET IDENTITY_INSERT [Sections] OFF;
 -- ---- Bookings (2 rows)
 SET IDENTITY_INSERT [Bookings] ON;
 BEGIN TRY
-  INSERT INTO [Bookings] ([BookingId], [UserId], [MentorId], [SlotId], [MentorType], [Status], [MeetLink], [FocusArea], [CancelledAt], [CreatedAt]) VALUES (1, 2, 1, 5, N'human', N'done', NULL, N'Listening strategies Part 3 & 4', NULL, '2026-11-06T01:44:01.8497237+07:00');
+  INSERT INTO [Bookings] ([BookingId], [UserId], [MentorId], [SlotId], [MentorType], [Status], [MeetLink], [FocusArea], [CancelledAt], [CreatedAt]) VALUES (1, 2, 1, 5, N'human', N'done', NULL, N'Listening strategies Part 3 & 4', NULL, '2026-11-06T11:25:21.6418052+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Bookings] ([BookingId], [UserId], [MentorId], [SlotId], [MentorType], [Status], [MeetLink], [FocusArea], [CancelledAt], [CreatedAt]) VALUES (2, 2, 1, 6, N'human', N'confirmed', N'https://meet.google.com/abc-defg-hij', N'Exam strategy & timing for Reading Part 7', NULL, '2026-11-10T01:44:01.8702933+07:00');
+  INSERT INTO [Bookings] ([BookingId], [UserId], [MentorId], [SlotId], [MentorType], [Status], [MeetLink], [FocusArea], [CancelledAt], [CreatedAt]) VALUES (2, 2, 1, 6, N'human', N'confirmed', N'https://meet.google.com/abc-defg-hij', N'Exam strategy & timing for Reading Part 7', NULL, '2026-11-10T11:25:21.6625305+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -4695,13 +4407,13 @@ SET IDENTITY_INSERT [CefrCutScores] OFF;
 -- ---- ExamAttempts (2 rows)
 SET IDENTITY_INSERT [ExamAttempts] ON;
 BEGIN TRY
-  INSERT INTO [ExamAttempts] ([AttemptId], [UserId], [ExamId], [CertId], [ActiveSkillId], [ActiveUnitNumber], [ActiveGroupId], [AuthorizationCode], [PhaseDeadlineAt], [LastAudioOffsetMs], [CandidateNotesJson], [PreflightVerifiedAt], [Status], [StartedAt], [ExpiresAt], [LastActivityAt], [IsAutoSubmitted], [SubmittedAt], [LastQuestionId], [TotalScore], [BandCode], [WrittenByService], [ProjectionVersion], [EpochTag]) VALUES (1, 2, 2, 1, NULL, 1, NULL, NULL, NULL, 0, NULL, NULL, N'graded', '2026-10-20T01:44:01.5425880+07:00', '2026-10-20T02:44:01.5425880+07:00', NULL, 0, '2026-10-20T02:22:01.5425880+07:00', NULL, 650, N'B1', N'AttemptEngine', 1, NULL);
+  INSERT INTO [ExamAttempts] ([AttemptId], [UserId], [ExamId], [CertId], [ActiveSkillId], [ActiveUnitNumber], [ActiveGroupId], [AuthorizationCode], [PhaseDeadlineAt], [LastAudioOffsetMs], [CandidateNotesJson], [PreflightVerifiedAt], [Status], [StartedAt], [ExpiresAt], [LastActivityAt], [IsAutoSubmitted], [SubmittedAt], [CurrentExamItemId], [TotalScore], [BandCode], [WrittenByService], [ProjectionVersion], [EpochTag]) VALUES (1, 2, 2, 1, NULL, 1, NULL, NULL, NULL, 0, NULL, NULL, N'graded', '2026-10-20T11:25:21.3299615+07:00', '2026-10-20T12:25:21.3299615+07:00', NULL, 0, '2026-10-20T12:03:21.3299615+07:00', NULL, 650, N'B1', N'AttemptEngine', 1, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamAttempts] ([AttemptId], [UserId], [ExamId], [CertId], [ActiveSkillId], [ActiveUnitNumber], [ActiveGroupId], [AuthorizationCode], [PhaseDeadlineAt], [LastAudioOffsetMs], [CandidateNotesJson], [PreflightVerifiedAt], [Status], [StartedAt], [ExpiresAt], [LastActivityAt], [IsAutoSubmitted], [SubmittedAt], [LastQuestionId], [TotalScore], [BandCode], [WrittenByService], [ProjectionVersion], [EpochTag]) VALUES (2, 2, 1, 1, NULL, 1, NULL, NULL, NULL, 0, NULL, NULL, N'graded', '2026-11-08T01:44:01.7977460+07:00', '2026-11-08T03:44:01.7977460+07:00', NULL, 0, '2026-11-08T03:29:01.7977460+07:00', NULL, 720, N'B1', N'AttemptEngine', 1, NULL);
+  INSERT INTO [ExamAttempts] ([AttemptId], [UserId], [ExamId], [CertId], [ActiveSkillId], [ActiveUnitNumber], [ActiveGroupId], [AuthorizationCode], [PhaseDeadlineAt], [LastAudioOffsetMs], [CandidateNotesJson], [PreflightVerifiedAt], [Status], [StartedAt], [ExpiresAt], [LastActivityAt], [IsAutoSubmitted], [SubmittedAt], [CurrentExamItemId], [TotalScore], [BandCode], [WrittenByService], [ProjectionVersion], [EpochTag]) VALUES (2, 2, 1, 1, NULL, 1, NULL, NULL, NULL, 0, NULL, NULL, N'graded', '2026-11-08T11:25:21.5876501+07:00', '2026-11-08T13:25:21.5876501+07:00', NULL, 0, '2026-11-08T13:10:21.5876501+07:00', NULL, 720, N'B1', N'AttemptEngine', 1, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -4710,103 +4422,103 @@ SET IDENTITY_INSERT [ExamAttempts] OFF;
 
 -- ---- ExamEditions (17 rows)
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (1, 1, 1, 7200, N'[]', N'sum', NULL, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T01:44:01.2095874+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (1, 1, 1, 7200, N'[]', N'sum', NULL, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T11:25:20.9844636+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (2, 1, 1, 2700, N'[]', N'sum', NULL, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T01:44:01.2866630+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (2, 1, 1, 2700, N'[]', N'sum', NULL, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T11:25:21.0642553+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (3, 1, 1, 1200, N'[]', N'sum', NULL, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T01:44:01.4797638+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (3, 1, 1, 1200, N'[]', N'sum', NULL, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T11:25:21.2587769+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (4, 1, 1, 3600, N'[]', N'sum', NULL, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T01:44:01.4832693+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (4, 1, 1, 3600, N'[]', N'sum', NULL, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T11:25:21.2650483+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (5, 2, 1, 10200, N'[]', N'avg_half_step', NULL, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T01:44:01.4857774+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (5, 2, 1, 10200, N'[]', N'avg_half_step', NULL, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T11:25:21.2677923+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (6, 2, 1, 2700, N'[]', N'avg_half_step', NULL, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T01:44:01.4937789+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (6, 2, 1, 2700, N'[]', N'avg_half_step', NULL, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T11:25:21.2779507+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (7, 2, 1, 900, N'[]', N'avg_half_step', NULL, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T01:44:01.4982874+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (7, 2, 1, 900, N'[]', N'avg_half_step', NULL, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T11:25:21.2827813+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (8, 2, 1, 3600, N'[]', N'avg_half_step', NULL, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T01:44:01.5002873+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (8, 2, 1, 3600, N'[]', N'avg_half_step', NULL, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T11:25:21.2827813+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (9, 3, 1, 10800, N'[]', N'avg_whole', NULL, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T01:44:01.5032873+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (9, 3, 1, 10800, N'[]', N'avg_whole', NULL, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T11:25:21.2879722+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (10, 3, 1, 2700, N'[]', N'avg_whole', NULL, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T01:44:01.5129846+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (10, 3, 1, 2700, N'[]', N'avg_whole', NULL, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T11:25:21.2999912+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (11, 3, 1, 900, N'[]', N'avg_whole', NULL, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T01:44:01.5164923+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (11, 3, 1, 900, N'[]', N'avg_whole', NULL, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T11:25:21.3032067+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (12, 3, 1, 3600, N'[]', N'avg_whole', NULL, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T01:44:01.5184920+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (12, 3, 1, 3600, N'[]', N'avg_whole', NULL, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T11:25:21.3075991+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (13, 1, 1, 2700, N'[]', N'sum', NULL, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T01:44:02.3621871+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (13, 1, 1, 2700, N'[]', N'sum', NULL, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-11T11:25:22.1679085+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (14, 2, 1, 3600, N'[]', N'avg_half_step', NULL, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T01:44:02.5401109+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (14, 2, 1, 3600, N'[]', N'avg_half_step', NULL, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-11T11:25:22.3478067+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (15, 3, 1, 2700, N'[]', N'avg_whole', NULL, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T01:44:02.5411108+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (15, 3, 1, 2700, N'[]', N'avg_whole', NULL, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-11T11:25:22.3478067+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (16, 4, 1, 5400, N'[]', N'sum', NULL, N'[{"Code":"CAT_B1","Name":"Intermediate","MinTotal":400,"MaxTotal":695},{"Code":"CAT_B2","Name":"Professional","MinTotal":700,"MaxTotal":990}]', '2026-11-11T01:44:02.7553895+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (16, 4, 1, 5400, N'[]', N'sum', NULL, N'[{"Code":"CAT_B1","Name":"Intermediate","MinTotal":400,"MaxTotal":695},{"Code":"CAT_B2","Name":"Professional","MinTotal":700,"MaxTotal":990}]', '2026-11-11T11:25:22.5402692+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (17, 5, 1, 4800, N'[]', N'sum', NULL, N'[{"Code":"SW_B1","Name":"Basic Working","MinTotal":160,"MaxTotal":250},{"Code":"SW_B2","Name":"Advanced Working","MinTotal":260,"MaxTotal":400}]', '2026-11-11T01:44:02.7653951+07:00', N'ExamEditionFreeze', 1);
+  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (17, 5, 1, 4800, N'[]', N'sum', NULL, N'[{"Code":"SW_B1","Name":"Basic Working","MinTotal":160,"MaxTotal":250},{"Code":"SW_B2","Name":"Advanced Working","MinTotal":260,"MaxTotal":400}]', '2026-11-11T11:25:22.5519019+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -4815,697 +4527,697 @@ END CATCH
 -- ---- ExamItems (116 rows)
 SET IDENTITY_INSERT [ExamItems] ON;
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (1, 9, 21, 3, 1, 1, N'listening', 1, 1, '2026-11-11T01:44:02.8291799+07:00', NULL);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (1, 9, 21, 3, 1, 1, N'listening', 1, 1, '2026-11-11T11:25:22.6169336+07:00', NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (2, 9, 22, 3, 2, 2, N'reading', 1, 1, '2026-11-11T01:44:02.8476407+07:00', NULL);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (2, 9, 22, 3, 2, 2, N'reading', 1, 1, '2026-11-11T11:25:22.6321258+07:00', NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (3, 1, 1, 1, 3, 3, N'listening', 1, 1, '2026-11-11T01:44:03.0925664+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (3, 1, 1, 1, 3, 3, N'listening', 1, 1, '2026-11-11T11:25:46.9188372+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (4, 1, 2, 1, 4, 4, N'listening', 1, 1, '2026-11-11T01:44:03.0935658+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (4, 1, 2, 1, 4, 4, N'listening', 1, 1, '2026-11-11T11:25:46.9225945+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (5, 1, 3, 1, 5, 5, N'listening', 1, 1, '2026-11-11T01:44:03.0935658+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (5, 1, 3, 1, 5, 5, N'listening', 1, 1, '2026-11-11T11:25:46.9225945+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (6, 1, 4, 1, 6, 6, N'listening', 1, 1, '2026-11-11T01:44:03.0945657+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (6, 1, 4, 1, 6, 6, N'listening', 1, 1, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (7, 1, 5, 1, 7, 7, N'reading', 1, 1, '2026-11-11T01:44:03.0955657+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (7, 1, 5, 1, 7, 7, N'reading', 1, 1, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (8, 1, 5, 1, 8, 8, N'reading', 2, 1, '2026-11-11T01:44:03.0960710+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (8, 1, 5, 1, 8, 8, N'reading', 2, 1, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (9, 1, 5, 1, 9, 9, N'reading', 3, 1, '2026-11-11T01:44:03.0970728+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (9, 1, 5, 1, 9, 9, N'reading', 3, 1, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (10, 1, 6, 1, 10, 10, N'reading', 1, 1, '2026-11-11T01:44:03.0970728+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (10, 1, 6, 1, 10, 10, N'reading', 1, 1, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (11, 1, 7, 1, 11, 11, N'reading', 1, 1, '2026-11-11T01:44:03.0980725+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (11, 1, 7, 1, 11, 11, N'reading', 1, 1, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (12, 2, 1, 1, 12, 12, N'listening', 1, 1, '2026-11-11T01:44:03.0985774+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (12, 2, 1, 1, 12, 12, N'listening', 1, 1, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (13, 2, 1, 1, 13, 13, N'listening', 2, 1, '2026-11-11T01:44:03.0995808+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (13, 2, 1, 1, 13, 13, N'listening', 2, 1, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (14, 2, 2, 1, 14, 14, N'listening', 1, 1, '2026-11-11T01:44:03.1005852+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (14, 2, 2, 1, 14, 14, N'listening', 1, 1, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (15, 2, 2, 1, 15, 15, N'listening', 2, 1, '2026-11-11T01:44:03.1005852+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (15, 2, 2, 1, 15, 15, N'listening', 2, 1, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (16, 2, 2, 1, 16, 16, N'listening', 3, 1, '2026-11-11T01:44:03.1015853+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (16, 2, 2, 1, 16, 16, N'listening', 3, 1, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (17, 2, 2, 1, 17, 17, N'listening', 4, 1, '2026-11-11T01:44:03.1025851+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (17, 2, 2, 1, 17, 17, N'listening', 4, 1, '2026-11-11T11:25:46.9284825+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (18, 2, 3, 1, 18, 18, N'listening', 1, 1, '2026-11-11T01:44:03.1025851+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (18, 2, 3, 1, 18, 18, N'listening', 1, 1, '2026-11-11T11:25:46.9374055+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (19, 2, 3, 1, 19, 19, N'listening', 2, 1, '2026-11-11T01:44:03.1035852+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (19, 2, 3, 1, 19, 19, N'listening', 2, 1, '2026-11-11T11:25:46.9384406+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (20, 2, 4, 1, 20, 20, N'listening', 1, 1, '2026-11-11T01:44:03.1045851+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (20, 2, 4, 1, 20, 20, N'listening', 1, 1, '2026-11-11T11:25:46.9390138+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (21, 2, 4, 1, 21, 21, N'listening', 2, 1, '2026-11-11T01:44:03.1045851+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (21, 2, 4, 1, 21, 21, N'listening', 2, 1, '2026-11-11T11:25:46.9390138+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (22, 2, 5, 1, 22, 22, N'reading', 1, 1, '2026-11-11T01:44:03.1060901+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (22, 2, 5, 1, 22, 22, N'reading', 1, 1, '2026-11-11T11:25:46.9403787+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (23, 2, 5, 1, 23, 23, N'reading', 2, 1, '2026-11-11T01:44:03.1060901+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (23, 2, 5, 1, 23, 23, N'reading', 2, 1, '2026-11-11T11:25:46.9414905+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (24, 2, 5, 1, 24, 24, N'reading', 3, 1, '2026-11-11T01:44:03.1070918+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (24, 2, 5, 1, 24, 24, N'reading', 3, 1, '2026-11-11T11:25:46.9419339+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (25, 2, 5, 1, 25, 25, N'reading', 4, 1, '2026-11-11T01:44:03.1080931+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (25, 2, 5, 1, 25, 25, N'reading', 4, 1, '2026-11-11T11:25:46.9419339+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (26, 2, 5, 1, 26, 26, N'reading', 5, 1, '2026-11-11T01:44:03.1085966+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (26, 2, 5, 1, 26, 26, N'reading', 5, 1, '2026-11-11T11:25:46.9434626+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (27, 2, 5, 1, 27, 27, N'reading', 6, 1, '2026-11-11T01:44:03.1096028+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (27, 2, 5, 1, 27, 27, N'reading', 6, 1, '2026-11-11T11:25:46.9434626+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (28, 2, 6, 1, 28, 28, N'reading', 1, 1, '2026-11-11T01:44:03.1096028+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (28, 2, 6, 1, 28, 28, N'reading', 1, 1, '2026-11-11T11:25:46.9447410+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (29, 2, 6, 1, 29, 29, N'reading', 2, 1, '2026-11-11T01:44:03.1106079+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (29, 2, 6, 1, 29, 29, N'reading', 2, 1, '2026-11-11T11:25:46.9447410+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (30, 2, 6, 1, 30, 30, N'reading', 3, 1, '2026-11-11T01:44:03.1116072+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (30, 2, 6, 1, 30, 30, N'reading', 3, 1, '2026-11-11T11:25:46.9447410+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (31, 2, 6, 1, 31, 31, N'reading', 4, 1, '2026-11-11T01:44:03.1126103+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (31, 2, 6, 1, 31, 31, N'reading', 4, 1, '2026-11-11T11:25:46.9447410+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (32, 2, 7, 1, 32, 32, N'reading', 1, 1, '2026-11-11T01:44:03.1153611+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (32, 2, 7, 1, 32, 32, N'reading', 1, 1, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (33, 2, 7, 1, 33, 33, N'reading', 2, 1, '2026-11-11T01:44:03.1168502+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (33, 2, 7, 1, 33, 33, N'reading', 2, 1, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (34, 2, 7, 1, 34, 34, N'reading', 3, 1, '2026-11-11T01:44:03.1168502+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (34, 2, 7, 1, 34, 34, N'reading', 3, 1, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (35, 2, 7, 1, 35, 35, N'reading', 4, 1, '2026-11-11T01:44:03.1178519+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (35, 2, 7, 1, 35, 35, N'reading', 4, 1, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (36, 3, 8, 1, 36, 36, N'speaking', 1, 1, '2026-11-11T01:44:03.1188603+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (36, 3, 8, 1, 36, 36, N'speaking', 1, 1, '2026-11-11T11:25:46.9481903+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (37, 3, 9, 1, 37, 37, N'speaking', 1, 1, '2026-11-11T01:44:03.1188603+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (37, 3, 9, 1, 37, 37, N'speaking', 1, 1, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (38, 3, 10, 1, 38, 38, N'speaking', 1, 1, '2026-11-11T01:44:03.1198611+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (38, 3, 10, 1, 38, 38, N'speaking', 1, 1, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (39, 4, 13, 1, 39, 39, N'writing', 1, 1, '2026-11-11T01:44:03.1208609+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (39, 4, 13, 1, 39, 39, N'writing', 1, 1, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (40, 4, 14, 1, 40, 40, N'writing', 1, 1, '2026-11-11T01:44:03.1208609+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (40, 4, 14, 1, 40, 40, N'writing', 1, 1, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (41, 5, 16, 2, 41, 41, N'listening', 1, 1, '2026-11-11T01:44:03.1218611+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (41, 5, 16, 2, 41, 41, N'listening', 1, 1, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (42, 5, 17, 2, 42, 42, N'reading', 1, 1, '2026-11-11T01:44:03.1228609+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (42, 5, 17, 2, 42, 42, N'reading', 1, 1, '2026-11-11T11:25:46.9542870+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (43, 6, 16, 2, 43, 43, N'listening', 1, 1, '2026-11-11T01:44:03.1238641+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (43, 6, 16, 2, 43, 43, N'listening', 1, 1, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (44, 6, 17, 2, 44, 44, N'reading', 1, 1, '2026-11-11T01:44:03.1238641+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (44, 6, 17, 2, 44, 44, N'reading', 1, 1, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (45, 7, 20, 2, 45, 45, N'speaking', 1, 1, '2026-11-11T01:44:03.1253700+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (45, 7, 20, 2, 45, 45, N'speaking', 1, 1, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (46, 7, 20, 2, 46, 46, N'speaking', 2, 1, '2026-11-11T01:44:03.1263764+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (46, 7, 20, 2, 46, 46, N'speaking', 2, 1, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (47, 8, 18, 2, 47, 47, N'writing', 1, 1, '2026-11-11T01:44:03.1263764+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (47, 8, 18, 2, 47, 47, N'writing', 1, 1, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (48, 8, 19, 2, 48, 48, N'writing', 1, 1, '2026-11-11T01:44:03.1273762+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (48, 8, 19, 2, 48, 48, N'writing', 1, 1, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (49, 10, 21, 3, 49, 49, N'listening', 1, 1, '2026-11-11T01:44:03.1283811+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (49, 10, 21, 3, 49, 49, N'listening', 1, 1, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (50, 10, 22, 3, 50, 50, N'reading', 1, 1, '2026-11-11T01:44:03.1283811+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (50, 10, 22, 3, 50, 50, N'reading', 1, 1, '2026-11-11T11:25:46.9581763+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (51, 11, 25, 3, 51, 51, N'speaking', 1, 1, '2026-11-11T01:44:03.1293815+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (51, 11, 25, 3, 51, 51, N'speaking', 1, 1, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (52, 11, 25, 3, 52, 52, N'speaking', 2, 1, '2026-11-11T01:44:03.1303815+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (52, 11, 25, 3, 52, 52, N'speaking', 2, 1, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (53, 12, 23, 3, 53, 53, N'writing', 1, 1, '2026-11-11T01:44:03.1303815+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (53, 12, 23, 3, 53, 53, N'writing', 1, 1, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (54, 12, 24, 3, 54, 54, N'writing', 1, 1, '2026-11-11T01:44:03.1313813+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (54, 12, 24, 3, 54, 54, N'writing', 1, 1, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (55, 13, 1, 1, 55, 55, N'listening', 1, 1, '2026-11-11T01:44:03.1323818+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (55, 13, 1, 1, 55, 55, N'listening', 1, 1, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (56, 13, 1, 1, 56, 56, N'listening', 2, 1, '2026-11-11T01:44:03.1333816+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (56, 13, 1, 1, 56, 56, N'listening', 2, 1, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (57, 13, 2, 1, 57, 57, N'listening', 1, 1, '2026-11-11T01:44:03.1343816+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (57, 13, 2, 1, 57, 57, N'listening', 1, 1, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (58, 13, 2, 1, 58, 58, N'listening', 2, 1, '2026-11-11T01:44:03.1343816+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (58, 13, 2, 1, 58, 58, N'listening', 2, 1, '2026-11-11T11:25:46.9631273+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (59, 13, 2, 1, 59, 59, N'listening', 3, 1, '2026-11-11T01:44:03.1353815+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (59, 13, 2, 1, 59, 59, N'listening', 3, 1, '2026-11-11T11:25:46.9683739+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (60, 13, 2, 1, 60, 60, N'listening', 4, 1, '2026-11-11T01:44:03.1358864+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (60, 13, 2, 1, 60, 60, N'listening', 4, 1, '2026-11-11T11:25:46.9683739+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (61, 13, 3, 1, 61, 61, N'listening', 1, 1, '2026-11-11T01:44:03.1368924+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (61, 13, 3, 1, 61, 61, N'listening', 1, 1, '2026-11-11T11:25:46.9683739+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (62, 13, 3, 1, 62, 62, N'listening', 2, 1, '2026-11-11T01:44:03.1378978+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (62, 13, 3, 1, 62, 62, N'listening', 2, 1, '2026-11-11T11:25:46.9701187+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (63, 13, 3, 1, 63, 63, N'listening', 3, 1, '2026-11-11T01:44:03.1388980+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (63, 13, 3, 1, 63, 63, N'listening', 3, 1, '2026-11-11T11:25:46.9701187+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (64, 13, 4, 1, 64, 64, N'listening', 1, 1, '2026-11-11T01:44:03.1388980+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (64, 13, 4, 1, 64, 64, N'listening', 1, 1, '2026-11-11T11:25:46.9701187+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (65, 13, 4, 1, 65, 65, N'listening', 2, 1, '2026-11-11T01:44:03.1398978+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (65, 13, 4, 1, 65, 65, N'listening', 2, 1, '2026-11-11T11:25:46.9701187+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (66, 13, 4, 1, 66, 66, N'listening', 3, 1, '2026-11-11T01:44:03.1408973+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (66, 13, 4, 1, 66, 66, N'listening', 3, 1, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (67, 13, 5, 1, 67, 67, N'reading', 1, 1, '2026-11-11T01:44:03.1418972+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (67, 13, 5, 1, 67, 67, N'reading', 1, 1, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (68, 13, 5, 1, 68, 68, N'reading', 2, 1, '2026-11-11T01:44:03.1418972+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (68, 13, 5, 1, 68, 68, N'reading', 2, 1, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (69, 13, 5, 1, 69, 69, N'reading', 3, 1, '2026-11-11T01:44:03.1428977+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (69, 13, 5, 1, 69, 69, N'reading', 3, 1, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (70, 13, 5, 1, 70, 70, N'reading', 4, 1, '2026-11-11T01:44:03.1438977+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (70, 13, 5, 1, 70, 70, N'reading', 4, 1, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (71, 13, 5, 1, 71, 71, N'reading', 5, 1, '2026-11-11T01:44:03.1448973+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (71, 13, 5, 1, 71, 71, N'reading', 5, 1, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (72, 13, 5, 1, 72, 72, N'reading', 6, 1, '2026-11-11T01:44:03.1454026+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (72, 13, 5, 1, 72, 72, N'reading', 6, 1, '2026-11-11T11:25:46.9731752+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (73, 13, 5, 1, 73, 73, N'reading', 7, 1, '2026-11-11T01:44:03.1464088+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (73, 13, 5, 1, 73, 73, N'reading', 7, 1, '2026-11-11T11:25:46.9781851+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (74, 13, 5, 1, 74, 74, N'reading', 8, 1, '2026-11-11T01:44:03.1469138+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (74, 13, 5, 1, 74, 74, N'reading', 8, 1, '2026-11-11T11:25:46.9787206+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (75, 13, 6, 1, 75, 75, N'reading', 1, 1, '2026-11-11T01:44:03.1479187+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (75, 13, 6, 1, 75, 75, N'reading', 1, 1, '2026-11-11T11:25:46.9787206+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (76, 13, 6, 1, 76, 76, N'reading', 2, 1, '2026-11-11T01:44:03.1479187+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (76, 13, 6, 1, 76, 76, N'reading', 2, 1, '2026-11-11T11:25:46.9802807+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (77, 13, 6, 1, 77, 77, N'reading', 3, 1, '2026-11-11T01:44:03.1494661+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (77, 13, 6, 1, 77, 77, N'reading', 3, 1, '2026-11-11T11:25:46.9802807+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (78, 13, 6, 1, 78, 78, N'reading', 4, 1, '2026-11-11T01:44:03.1504726+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (78, 13, 6, 1, 78, 78, N'reading', 4, 1, '2026-11-11T11:25:46.9817004+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (79, 13, 7, 1, 79, 79, N'reading', 1, 1, '2026-11-11T01:44:03.1504726+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (79, 13, 7, 1, 79, 79, N'reading', 1, 1, '2026-11-11T11:25:46.9817004+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (80, 13, 7, 1, 80, 80, N'reading', 2, 1, '2026-11-11T01:44:03.1514729+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (80, 13, 7, 1, 80, 80, N'reading', 2, 1, '2026-11-11T11:25:46.9817004+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (81, 13, 7, 1, 81, 81, N'reading', 3, 1, '2026-11-11T01:44:03.1524730+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (81, 13, 7, 1, 81, 81, N'reading', 3, 1, '2026-11-11T11:25:46.9836228+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (82, 13, 7, 1, 82, 82, N'reading', 4, 1, '2026-11-11T01:44:03.1534728+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (82, 13, 7, 1, 82, 82, N'reading', 4, 1, '2026-11-11T11:25:46.9850381+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (83, 13, 7, 1, 83, 83, N'reading', 5, 1, '2026-11-11T01:44:03.1544730+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (83, 13, 7, 1, 83, 83, N'reading', 5, 1, '2026-11-11T11:25:46.9850381+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (84, 13, 7, 1, 84, 84, N'reading', 6, 1, '2026-11-11T01:44:03.1554736+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (84, 13, 7, 1, 84, 84, N'reading', 6, 1, '2026-11-11T11:25:46.9860460+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (85, 13, 14, 1, 85, 85, N'writing', 1, 1, '2026-11-11T01:44:03.1564819+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (85, 13, 14, 1, 85, 85, N'writing', 1, 1, '2026-11-11T11:25:46.9860460+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (86, 13, 15, 1, 86, 86, N'writing', 1, 1, '2026-11-11T01:44:03.1575543+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (86, 13, 15, 1, 86, 86, N'writing', 1, 1, '2026-11-11T11:25:46.9860460+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (87, 14, 18, 2, 87, 87, N'writing', 1, 1, '2026-11-11T01:44:03.1575543+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (87, 14, 18, 2, 87, 87, N'writing', 1, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (88, 14, 19, 2, 88, 88, N'writing', 1, 1, '2026-11-11T01:44:03.1589292+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (88, 14, 19, 2, 88, 88, N'writing', 1, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (89, 15, 23, 3, 89, 89, N'writing', 1, 1, '2026-11-11T01:44:03.1589292+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (89, 15, 23, 3, 89, 89, N'writing', 1, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (90, 15, 24, 3, 90, 90, N'writing', 1, 1, '2026-11-11T01:44:03.1602111+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (90, 15, 24, 3, 90, 90, N'writing', 1, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (91, 6, 16, 2, 91, 91, N'listening', 2, 1, '2026-11-11T01:44:03.1602111+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (91, 6, 16, 2, 91, 91, N'listening', 2, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (92, 6, 16, 2, 92, 92, N'listening', 3, 1, '2026-11-11T01:44:03.1612089+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (92, 6, 16, 2, 92, 92, N'listening', 3, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (93, 6, 16, 2, 93, 93, N'listening', 4, 1, '2026-11-11T01:44:03.1622086+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (93, 6, 16, 2, 93, 93, N'listening', 4, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (94, 6, 16, 2, 94, 94, N'listening', 5, 1, '2026-11-11T01:44:03.1632085+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (94, 6, 16, 2, 94, 94, N'listening', 5, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (95, 6, 17, 2, 95, 95, N'reading', 2, 1, '2026-11-11T01:44:03.1632085+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (95, 6, 17, 2, 95, 95, N'reading', 2, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (96, 6, 17, 2, 96, 96, N'reading', 3, 1, '2026-11-11T01:44:03.1642086+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (96, 6, 17, 2, 96, 96, N'reading', 3, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (97, 6, 17, 2, 97, 97, N'reading', 4, 1, '2026-11-11T01:44:03.1657118+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (97, 6, 17, 2, 97, 97, N'reading', 4, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (98, 6, 17, 2, 98, 98, N'reading', 5, 1, '2026-11-11T01:44:03.1657118+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (98, 6, 17, 2, 98, 98, N'reading', 5, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (99, 10, 21, 3, 99, 99, N'listening', 2, 1, '2026-11-11T01:44:03.1667175+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (99, 10, 21, 3, 99, 99, N'listening', 2, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (100, 10, 21, 3, 100, 100, N'listening', 3, 1, '2026-11-11T01:44:03.1677166+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (100, 10, 21, 3, 100, 100, N'listening', 3, 1, '2026-11-11T11:25:46.9880500+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (101, 10, 21, 3, 101, 101, N'listening', 4, 1, '2026-11-11T01:44:03.1687165+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (101, 10, 21, 3, 101, 101, N'listening', 4, 1, '2026-11-11T11:25:46.9982417+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (102, 10, 21, 3, 102, 102, N'listening', 5, 1, '2026-11-11T01:44:03.1697180+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (102, 10, 21, 3, 102, 102, N'listening', 5, 1, '2026-11-11T11:25:46.9982417+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (103, 10, 22, 3, 103, 103, N'reading', 2, 1, '2026-11-11T01:44:03.1697180+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (103, 10, 22, 3, 103, 103, N'reading', 2, 1, '2026-11-11T11:25:46.9982417+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (104, 10, 22, 3, 104, 104, N'reading', 3, 1, '2026-11-11T01:44:03.1707167+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (104, 10, 22, 3, 104, 104, N'reading', 3, 1, '2026-11-11T11:25:47.0002613+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (105, 10, 22, 3, 105, 105, N'reading', 4, 1, '2026-11-11T01:44:03.1717165+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (105, 10, 22, 3, 105, 105, N'reading', 4, 1, '2026-11-11T11:25:47.0002613+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (106, 10, 22, 3, 106, 106, N'reading', 5, 1, '2026-11-11T01:44:03.1727164+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (106, 10, 22, 3, 106, 106, N'reading', 5, 1, '2026-11-11T11:25:47.0002613+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (107, 16, 28, 4, 107, 107, N'reading', 1, 1, '2026-11-11T01:44:03.1727164+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (107, 16, 28, 4, 107, 107, N'reading', 1, 1, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (108, 16, 28, 4, 108, 108, N'reading', 2, 1, '2026-11-11T01:44:03.1737164+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (108, 16, 28, 4, 108, 108, N'reading', 2, 1, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (109, 16, 28, 4, 109, 109, N'reading', 3, 1, '2026-11-11T01:44:03.1747166+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (109, 16, 28, 4, 109, 109, N'reading', 3, 1, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (110, 16, 28, 4, 110, 110, N'reading', 4, 1, '2026-11-11T01:44:03.1757164+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (110, 16, 28, 4, 110, 110, N'reading', 4, 1, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (111, 16, 28, 4, 111, 111, N'reading', 5, 1, '2026-11-11T01:44:03.1762225+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (111, 16, 28, 4, 111, 111, N'reading', 5, 1, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (112, 16, 28, 4, 112, 112, N'reading', 6, 1, '2026-11-11T01:44:03.1772244+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (112, 16, 28, 4, 112, 112, N'reading', 6, 1, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (113, 16, 29, 4, 113, 113, N'reading', 1, 2, '2026-11-11T01:44:03.1782242+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (113, 16, 29, 4, 113, 113, N'reading', 1, 2, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (114, 17, 30, 5, 114, 114, N'speaking', 1, 1, '2026-11-11T01:44:03.1782242+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (114, 17, 30, 5, 114, 114, N'speaking', 1, 1, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (115, 17, 32, 5, 115, 115, N'writing', 1, 1, '2026-11-11T01:44:03.1792242+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (115, 17, 32, 5, 115, 115, N'writing', 1, 1, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (116, 17, 33, 5, 116, 116, N'writing', 1, 1, '2026-11-11T01:44:03.1802239+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (116, 17, 33, 5, 116, 116, N'writing', 1, 1, '2026-11-11T11:25:47.0020303+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -5514,85 +5226,85 @@ SET IDENTITY_INSERT [ExamItems] OFF;
 
 -- ---- ExamSectionAudio (14 rows)
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (1, 1, 1, N'/audio/toeic/test1-p1.mp3', 180, 2880000, '2026-11-11T01:44:01.2200944+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (1, 1, 1, N'/audio/toeic/test1-p1.mp3', 180, 2880000, '2026-11-11T11:25:20.9977385+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (1, 2, 1, N'/audio/toeic/test1-p2.mp3', 300, 4800000, '2026-11-11T01:44:01.2210944+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (1, 2, 1, N'/audio/toeic/test1-p2.mp3', 300, 4800000, '2026-11-11T11:25:20.9977385+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (1, 3, 1, N'/audio/toeic/test1-p3.mp3', 600, 9600000, '2026-11-11T01:44:01.2210944+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (1, 3, 1, N'/audio/toeic/test1-p3.mp3', 600, 9600000, '2026-11-11T11:25:20.9977385+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (1, 4, 1, N'/audio/toeic/test1-p4.mp3', 600, 9600000, '2026-11-11T01:44:01.2210944+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (1, 4, 1, N'/audio/toeic/test1-p4.mp3', 600, 9600000, '2026-11-11T11:25:20.9977385+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (2, 1, 1, N'/audio/toeic/placement-p1.mp3', 120, 1920000, '2026-11-11T01:44:01.2886738+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (2, 1, 1, N'/audio/toeic/placement-p1.mp3', 120, 1920000, '2026-11-11T11:25:21.0642553+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (2, 2, 1, N'/audio/toeic/placement-p2.mp3', 180, 2880000, '2026-11-11T01:44:01.2886738+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (2, 2, 1, N'/audio/toeic/placement-p2.mp3', 180, 2880000, '2026-11-11T11:25:21.0642553+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (5, 16, 2, N'/audio/ielts/cambridge18-t1-listening.mp3', 1800, 28800000, '2026-11-11T01:44:01.4867791+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (5, 16, 2, N'/audio/ielts/cambridge18-t1-listening.mp3', 1800, 28800000, '2026-11-11T11:25:21.2677923+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (6, 16, 2, N'/audio/ielts/placement-diagnostic.mp3', 600, 9600000, '2026-11-11T01:44:01.4937789+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (6, 16, 2, N'/audio/ielts/placement-diagnostic.mp3', 600, 9600000, '2026-11-11T11:25:21.2779507+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (9, 21, 3, N'/audio/vstep/sample1-listening.mp3', 2400, 38400000, '2026-11-11T01:44:01.5052873+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (9, 21, 3, N'/audio/vstep/sample1-listening.mp3', 2400, 38400000, '2026-11-11T11:25:21.2879722+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (10, 21, 3, N'/audio/vstep/placement-diagnostic.mp3', 600, 9600000, '2026-11-11T01:44:01.5129846+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (10, 21, 3, N'/audio/vstep/placement-diagnostic.mp3', 600, 9600000, '2026-11-11T11:25:21.2999912+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (13, 1, 1, N'/audio/toeic/placement-p1.mp3', 180, 2880000, '2026-11-11T01:44:02.3621871+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (13, 1, 1, N'/audio/toeic/placement-p1.mp3', 180, 2880000, '2026-11-11T11:25:22.1692576+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (13, 2, 1, N'/audio/toeic/placement-p2.mp3', 300, 4800000, '2026-11-11T01:44:02.3631872+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (13, 2, 1, N'/audio/toeic/placement-p2.mp3', 300, 4800000, '2026-11-11T11:25:22.1692576+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (13, 3, 1, N'/audio/toeic/test1-p3.mp3', 600, 9600000, '2026-11-11T01:44:02.3631872+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (13, 3, 1, N'/audio/toeic/test1-p3.mp3', 600, 9600000, '2026-11-11T11:25:22.1692576+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (13, 4, 1, N'/audio/toeic/test1-p4.mp3', 600, 9600000, '2026-11-11T01:44:02.3631872+07:00');
+  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (13, 4, 1, N'/audio/toeic/test1-p4.mp3', 600, 9600000, '2026-11-11T11:25:22.1692576+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -5917,7 +5629,7 @@ SET IDENTITY_INSERT [LessonCards] OFF;
 -- ---- Reviews (1 rows)
 SET IDENTITY_INSERT [Reviews] ON;
 BEGIN TRY
-  INSERT INTO [Reviews] ([ReviewId], [BookingId], [UserId], [Rating], [Text], [CreatedAt]) VALUES (1, 1, 2, 5, N'Very patient and explains listening strategies clearly. Score improved significantly in 2 months.', '2026-11-07T01:44:01.8642311+07:00');
+  INSERT INTO [Reviews] ([ReviewId], [BookingId], [UserId], [Rating], [Text], [CreatedAt]) VALUES (1, 1, 2, 5, N'Very patient and explains listening strategies clearly. Score improved significantly in 2 months.', '2026-11-07T11:25:21.6560019+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -5927,37 +5639,37 @@ SET IDENTITY_INSERT [Reviews] OFF;
 -- ---- CreditTransactions (6 rows)
 SET IDENTITY_INSERT [CreditTransactions] ON;
 BEGIN TRY
-  INSERT INTO [CreditTransactions] ([TxnId], [UserId], [Reason], [Delta], [OrderId], [AttemptId], [BookingId], [AdminUserId], [Note], [CreatedAt]) VALUES (1, 2, N'purchase', 10, 1, NULL, NULL, NULL, NULL, '2026-10-17T01:44:00.6954322+07:00');
+  INSERT INTO [CreditTransactions] ([TxnId], [UserId], [Reason], [Delta], [OrderId], [AttemptId], [BookingId], [AdminUserId], [Note], [CreatedAt]) VALUES (1, 2, N'purchase', 10, 1, NULL, NULL, NULL, NULL, '2026-10-17T11:25:20.4668263+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [CreditTransactions] ([TxnId], [UserId], [Reason], [Delta], [OrderId], [AttemptId], [BookingId], [AdminUserId], [Note], [CreatedAt]) VALUES (2, 2, N'purchase', 5, 2, NULL, NULL, NULL, NULL, '2026-10-24T01:44:00.7246020+07:00');
+  INSERT INTO [CreditTransactions] ([TxnId], [UserId], [Reason], [Delta], [OrderId], [AttemptId], [BookingId], [AdminUserId], [Note], [CreatedAt]) VALUES (2, 2, N'purchase', 5, 2, NULL, NULL, NULL, NULL, '2026-10-24T11:25:20.4987651+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [CreditTransactions] ([TxnId], [UserId], [Reason], [Delta], [OrderId], [AttemptId], [BookingId], [AdminUserId], [Note], [CreatedAt]) VALUES (3, 2, N'mock_exam_start', -1, NULL, 2, NULL, NULL, NULL, '2026-11-08T01:44:01.7988621+07:00');
+  INSERT INTO [CreditTransactions] ([TxnId], [UserId], [Reason], [Delta], [OrderId], [AttemptId], [BookingId], [AdminUserId], [Note], [CreatedAt]) VALUES (3, 2, N'mock_exam_start', -1, NULL, 2, NULL, NULL, NULL, '2026-11-08T11:25:21.5876501+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [CreditTransactions] ([TxnId], [UserId], [Reason], [Delta], [OrderId], [AttemptId], [BookingId], [AdminUserId], [Note], [CreatedAt]) VALUES (4, 2, N'mentor_booking', -1, NULL, NULL, 1, NULL, NULL, '2026-11-06T01:44:01.8642311+07:00');
+  INSERT INTO [CreditTransactions] ([TxnId], [UserId], [Reason], [Delta], [OrderId], [AttemptId], [BookingId], [AdminUserId], [Note], [CreatedAt]) VALUES (4, 2, N'mentor_booking', -1, NULL, NULL, 1, NULL, NULL, '2026-11-06T11:25:21.6560019+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [CreditTransactions] ([TxnId], [UserId], [Reason], [Delta], [OrderId], [AttemptId], [BookingId], [AdminUserId], [Note], [CreatedAt]) VALUES (5, 2, N'mentor_booking', -1, NULL, NULL, 2, NULL, NULL, '2026-11-10T01:44:01.8712985+07:00');
+  INSERT INTO [CreditTransactions] ([TxnId], [UserId], [Reason], [Delta], [OrderId], [AttemptId], [BookingId], [AdminUserId], [Note], [CreatedAt]) VALUES (5, 2, N'mentor_booking', -1, NULL, NULL, 2, NULL, NULL, '2026-11-10T11:25:21.6625305+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [CreditTransactions] ([TxnId], [UserId], [Reason], [Delta], [OrderId], [AttemptId], [BookingId], [AdminUserId], [Note], [CreatedAt]) VALUES (6, 2, N'admin_grant', 1, NULL, NULL, NULL, 1, N'Complaint make-good: audio stream stutter refund', '2026-11-09T01:44:01.8868215+07:00');
+  INSERT INTO [CreditTransactions] ([TxnId], [UserId], [Reason], [Delta], [OrderId], [AttemptId], [BookingId], [AdminUserId], [Note], [CreatedAt]) VALUES (6, 2, N'admin_grant', 1, NULL, NULL, NULL, 1, N'Complaint make-good: audio stream stutter refund', '2026-11-09T11:25:21.6797577+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -5967,13 +5679,13 @@ SET IDENTITY_INSERT [CreditTransactions] OFF;
 -- ---- Complaints (2 rows)
 SET IDENTITY_INSERT [Complaints] ON;
 BEGIN TRY
-  INSERT INTO [Complaints] ([ComplaintId], [BookingId], [AttemptId], [OrderId], [UserId], [Type], [Reason], [Status], [Resolution], [InternalNotes], [ResolvedByUserId], [ResolvedAt], [ResolvedByGrantTxnId], [CreatedAt]) VALUES (1, NULL, 2, NULL, 2, N'technical_error', N'Audio stream froze momentarily during listening Part 4, causing a missed question.', N'resolved', N'Audio stream logs confirmed a 4-second network stutter. Granted 1 make-good credit to student wallet.', N'Verified CDN latency spike at 14:22. Compensatory credit issued.', 1, '2026-11-09T01:44:01.8883268+07:00', 6, '2026-11-09T01:44:01.8883268+07:00');
+  INSERT INTO [Complaints] ([ComplaintId], [BookingId], [AttemptId], [OrderId], [UserId], [Type], [Reason], [Status], [Resolution], [InternalNotes], [ResolvedByUserId], [ResolvedAt], [ResolvedByGrantTxnId], [CreatedAt]) VALUES (1, NULL, 2, NULL, 2, N'technical_error', N'Audio stream froze momentarily during listening Part 4, causing a missed question.', N'resolved', N'Audio stream logs confirmed a 4-second network stutter. Granted 1 make-good credit to student wallet.', N'Verified CDN latency spike at 14:22. Compensatory credit issued.', 1, '2026-11-09T11:25:21.6797577+07:00', 6, '2026-11-09T11:25:21.6797577+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Complaints] ([ComplaintId], [BookingId], [AttemptId], [OrderId], [UserId], [Type], [Reason], [Status], [Resolution], [InternalNotes], [ResolvedByUserId], [ResolvedAt], [ResolvedByGrantTxnId], [CreatedAt]) VALUES (2, 1, NULL, NULL, 2, N'mentor_quality', N'Session started 5 minutes late due to mentor connection troubles.', N'reviewing', NULL, N'Discussed with Dr. Khoa; mentor will provide 15 extra minutes on the upcoming booking.', NULL, NULL, NULL, '2026-11-10T01:44:01.8953390+07:00');
+  INSERT INTO [Complaints] ([ComplaintId], [BookingId], [AttemptId], [OrderId], [UserId], [Type], [Reason], [Status], [Resolution], [InternalNotes], [ResolvedByUserId], [ResolvedAt], [ResolvedByGrantTxnId], [CreatedAt]) VALUES (2, 1, NULL, NULL, 2, N'mentor_quality', N'Session started 5 minutes late due to mentor connection troubles.', N'reviewing', NULL, N'Discussed with Dr. Khoa; mentor will provide 15 extra minutes on the upcoming booking.', NULL, NULL, NULL, '2026-11-10T11:25:21.6877008+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;

@@ -86,7 +86,7 @@ public sealed partial class AttemptEngine
             }
         }
 
-        attempt.LastQuestionId = questionId;
+        attempt.CurrentExamItemId = questionId;
         // #216 / PLC-13: the stream upload is the other activity write on this path.
         await MarkPlacementActivityAsync(attempt, cancellationToken, now);
         await db.SaveChangesAsync(cancellationToken);
@@ -155,7 +155,7 @@ public sealed partial class AttemptEngine
             fr.SubmittedAt = null;
         }
 
-        attempt.LastQuestionId = questionId;
+        attempt.CurrentExamItemId = questionId;
         // #216 / PLC-13: uploading a recorded answer is activity, so the placement's clock moves.
         await MarkPlacementActivityAsync(attempt, cancellationToken, now);
         await db.SaveChangesAsync(cancellationToken);
