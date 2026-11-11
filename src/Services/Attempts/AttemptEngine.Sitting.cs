@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -131,26 +131,6 @@ public sealed partial class AttemptEngine
         int? DurationMinutes,
         bool LockNavigationOneWay);
 
-    private static ResolvedGroupAudio? ResolveGroupAudio(QuestionGroup group, Dictionary<int, string> sectionMasters) =>
-        ExamAudio.Resolve(
-            group.AudioPath,
-            group.AudioStartMs,
-            group.AudioEndMs,
-            sectionMasters.GetValueOrDefault(group.SectionId));
-
-    /// <summary>The exam's questions in sitting order, with everything the sitting projection reads.</summary>
-    private Task<List<Question>> LoadExamQuestionsAsync(int examId, CancellationToken cancellationToken) =>
-        db.Questions
-            .Where(q => q.ExamId == examId)
-            .Include(q => q.Group)
-            .Include(q => q.Section).ThenInclude(s => s.Skill)
-            .Include(q => q.QuestionOptionQuestionNavigations)
-            .OrderBy(q => q.Section.Skill.DisplayOrder)
-            .ThenBy(q => q.Section.DisplayOrder)
-            .ThenBy(q => q.Group.DisplayOrder)
-            .ThenBy(q => q.DisplayOrder)
-            .ToListAsync(cancellationToken);
-
     public async Task<AttemptTakeView> GetAttemptTakeAsync(
         int attemptId,
         int userId,
@@ -276,40 +256,25 @@ public sealed partial class AttemptEngine
             throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Exam {attempt.ExamId} has no questions.");
         }
 
-        // #250: a legacy answer names QuestionId and a pool answer names ExamItemId;
-        // CK_AttemptAnswers_HasShape guarantees at least one. Two maps, because the numbers are
-        // independent id spaces and must never stand in for each other.
+        // #269: an answer names the roster position it was recorded against. That is the only
+        // identity an answer has now.
         var answers = await db.AttemptAnswers
             .Where(a => a.AttemptId == attempt.AttemptId)
             .ToListAsync(cancellationToken);
-        var answerByQuestionId = answers
-            .Where(a => a.QuestionId.HasValue)
-            .ToDictionary(a => a.QuestionId!.Value);
         var answerByExamItemId = answers
-            .Where(a => a.ExamItemId.HasValue)
-            .ToDictionary(a => a.ExamItemId!.Value);
+            .ToDictionary(a => a.ExamItemId);
 
-        AttemptAnswer? AnswerFor(SittingQuestion q) => q.ExamItemId is int examItemId
-            ? answerByExamItemId.GetValueOrDefault(examItemId)
-            : answerByQuestionId.GetValueOrDefault(q.Id);
+        AttemptAnswer? AnswerFor(SittingQuestion q) => answerByExamItemId.GetValueOrDefault(q.ExamItemId);
 
-        // #261: a response names its position by whichever identity its paper uses, so this is keyed
-        // twice rather than by the nullable legacy column - keying a dictionary by a null column throws
-        // on the second pool row, and the sitting then fails for a paper it just created.
+        // #261: a response names its roster position, so the map is keyed by that one identity.
         var freeResponses = await db.FreeResponses
             .AsNoTracking()
             .Where(r => r.AttemptId == attempt.AttemptId)
             .ToListAsync(cancellationToken);
-        var responseByQuestionId = freeResponses
-            .Where(r => r.QuestionId.HasValue)
-            .ToDictionary(r => r.QuestionId!.Value);
         var responseByExamItemId = freeResponses
-            .Where(r => r.ExamItemId.HasValue)
-            .ToDictionary(r => r.ExamItemId!.Value);
+            .ToDictionary(r => r.ExamItemId);
 
-        FreeResponse? ResponseFor(SittingQuestion q) => q.ExamItemId is int examItemId
-            ? responseByExamItemId.GetValueOrDefault(examItemId)
-            : responseByQuestionId.GetValueOrDefault(q.Id);
+        FreeResponse? ResponseFor(SittingQuestion q) => responseByExamItemId.GetValueOrDefault(q.ExamItemId);
 
         int answeredCount = questions.Count(q =>
             q.RenderFormat == QuestionType.FreeResponse.ToCode()

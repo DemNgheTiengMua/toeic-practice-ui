@@ -75,26 +75,18 @@ public sealed partial class AdminExamService
             .Join(db.Items.AsNoTracking(), b => b.ItemId, i => i.ItemId, (b, i) => new { Binding = b, Item = i })
             .ToListAsync(cancellationToken);
 
-        var legacyCounts = await db.Questions.AsNoTracking()
-            .Where(q => q.ExamId == exam.ExamId)
-            .GroupBy(q => q.SectionId)
-            .Select(g => new { SectionId = g.Key, Count = g.Count() })
-            .ToListAsync(cancellationToken);
-        var legacyBySection = legacyCounts.ToDictionary(x => x.SectionId, x => x.Count);
-
-        // #269: a position is a ROSTER row. Counting only `Questions` made a pool-authored paper report
-        // "holds 0" for every section and therefore unpublishable - measured: the audit answered
-        // CanPublish=false for a paper whose roster was complete. The roster is what the sitting
-        // renders, so it is what a section holds.
+        // #269: a position is a ROSTER row. It used to be "the larger of the legacy Questions count and
+        // the roster", because a paper authored before the pool had no bindings. The legacy table is
+        // gone, so the roster is not one of two answers - it is the answer, and a section holds exactly
+        // the positions the sitting renders.
         var rosterBySection = await db.ExamItems.AsNoTracking()
             .Where(i => i.ExamId == exam.ExamId)
             .GroupBy(i => i.SectionId)
             .Select(g => new { SectionId = g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken);
 
-        int RenderedIn(int sectionId) => Math.Max(
-            legacyBySection.GetValueOrDefault(sectionId),
-            rosterBySection.FirstOrDefault(r => r.SectionId == sectionId)?.Count ?? 0);
+        int RenderedIn(int sectionId) =>
+            rosterBySection.FirstOrDefault(r => r.SectionId == sectionId)?.Count ?? 0;
 
         var sectionsBySkill = sections.GroupBy(s => s.SkillId).ToDictionary(g => g.Key, g => g.ToList());
 
@@ -126,7 +118,17 @@ public sealed partial class AdminExamService
                 var declared = sec.ExpectedQuestionCount;
                 var rendered = RenderedIn(sec.SectionId);
 
-                if (rendered != declared)
+                // #269: a PLACEMENT paper's size is its draw, not the section's blueprint. The stock is
+                // chosen per (skill, band), so this paper legitimately binds 7 items where the section
+                // declares 16 for a full mock form - and `ExpectedQuestionCount` is a CERTIFICATE-level
+                // declaration, shared by every paper on that section. Measured: the imported Reading B2
+                // form was refused with "section [P6] declares 16 but holds 7", although those 7 were the
+                // whole placement stock it was drawn with.
+                //
+                // The check that still means something is the ORPHAN check below: every binding must have
+                // a position behind it. And a placement paper is still held to "declares something",
+                // which `totalQuestions` enforces.
+                if (exam.Purpose != "placement" && rendered != declared)
                 {
                     var msg = rendered < declared
                         ? $"INV-1: section [{sec.Code}] '{sec.Name}' declares {declared} item(s) but holds {rendered} ({declared - rendered} short)."
@@ -377,8 +379,7 @@ public sealed partial class AdminExamService
         // which is also what makes the check mean something for a two-skill paper drawn from a
         // four-skill certificate.
         var servedSkillIds = sections
-            .Where(s => legacyBySection.GetValueOrDefault(s.SectionId) > 0
-                || bindings.Any(b => b.Binding.SectionId == s.SectionId))
+            .Where(s => rosterBySection.Any(r => r.SectionId == s.SectionId && r.Count > 0))
             .Select(s => s.SkillId)
             .Distinct()
             .ToList();

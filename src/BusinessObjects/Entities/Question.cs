@@ -120,9 +120,6 @@ public partial class Question
     [InverseProperty("QuestionNavigation")]
     public virtual ICollection<QuestionOption> QuestionOptionQuestionNavigations { get; set; } = new List<QuestionOption>();
 
-    [InverseProperty("Question")]
-    public virtual ICollection<SavedQuestion> SavedQuestions { get; set; } = new List<SavedQuestion>();
-
     [ForeignKey("SectionId, SkillId")]
     [InverseProperty("Questions")]
     public virtual Section Section { get; set; } = null!;

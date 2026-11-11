@@ -33,37 +33,6 @@ public sealed partial class PracticeService
         row.MasteredAt);
 
     /// <summary>
-    /// Records one graded drill answer. <paramref name="isCorrect"/> null is a skip: the learner made no
-    /// claim, so neither the question's cooldown nor its category's mastery moves.
-    /// </summary>
-    private async Task RecordAnswerAsync(
-        int userId, Question question, int certId, bool? isCorrect, CancellationToken cancellationToken)
-    {
-        if (isCorrect is not { } correct)
-        {
-            return;
-        }
-
-        // #263: a POOL answer writes no per-question history - the cooldown for a pool item is derived
-        // from the answer rows themselves, because #237 made the CELL the unit of mastery and the
-        // selector already refuses this table as a source.
-        //
-        // shortcut: a legacy answer still writes it, because the legacy candidate loader (kept for a
-        // section the pool has not stocked) still reads it. #269 deletes the table, the loader and this
-        // line together; writing it for a pool answer is the part that had to stop now.
-        if (question is not null)
-        {
-            var now = _clock.GetUtcNow();
-            await RecordQuestionHistoryAsync(userId, question.QuestionId, correct, now, cancellationToken);
-
-            if (question.CategoryId is { } categoryId)
-            {
-                await ApplyMasteryAsync(userId, categoryId, certId, correct, now, cancellationToken);
-            }
-        }
-    }
-
-    /// <summary>
     /// Moves one category's mastery by one answer. The transition itself is
     /// <see cref="MasteryMachine.Apply"/>; everything here is persistence.
     /// </summary>
@@ -101,26 +70,5 @@ public sealed partial class PracticeService
 
         await db.SaveChangesAsync(cancellationToken);
         return step.Next;
-    }
-
-    private async Task RecordQuestionHistoryAsync(
-        int userId, int questionId, bool isCorrect, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        var history = await db.UserQuestionHistories
-            .FirstOrDefaultAsync(h => h.UserId == userId && h.QuestionId == questionId, cancellationToken);
-
-        if (history is null)
-        {
-            history = new UserQuestionHistory { UserId = userId, QuestionId = questionId };
-            db.UserQuestionHistories.Add(history);
-        }
-
-        history.LastAnsweredAt = now;
-        history.LastIsCorrect = isCorrect;
-        // A right answer clears the hold outright; a wrong one keeps the question out for a day. The
-        // filter compares this against "now", so an expired cooldown needs no write to expire.
-        history.CooldownUntil = isCorrect ? null : now + MasterySchedule.WrongAnswerCooldown;
-
-        await db.SaveChangesAsync(cancellationToken);
     }
 }

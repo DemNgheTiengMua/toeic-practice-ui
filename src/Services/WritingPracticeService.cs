@@ -190,7 +190,6 @@ public sealed class WritingPracticeService(
                 db.FreeResponses.Add(new FreeResponse
                 {
                     AttemptId = attempt.AttemptId,
-                    QuestionId = q.ExamItemId is null ? q.Id : null,
                     ExamItemId = q.ExamItemId,
                     ExamId = examId,
                     SkillId = q.Section.SkillId,
@@ -258,10 +257,9 @@ public sealed class WritingPracticeService(
             .Where(fr => fr.AttemptId == attemptId)
             .ToListAsync(cancellationToken);
 
-        // #262: a response names its position by whichever identity its paper uses.
-        FreeResponse? ResponseFor(SittingQuestion q) => q.ExamItemId is int examItemId
-            ? freeResponses.FirstOrDefault(fr => fr.ExamItemId == examItemId)
-            : freeResponses.FirstOrDefault(fr => fr.QuestionId == q.Id);
+        // #262: a response names its roster position.
+        FreeResponse? ResponseFor(SittingQuestion q) =>
+            freeResponses.FirstOrDefault(fr => fr.ExamItemId == q.ExamItemId);
 
         var targetQuestion = questionId.HasValue
             ? questions.FirstOrDefault(q => q.Id == questionId.Value) ?? questions[0]
@@ -335,17 +333,13 @@ public sealed class WritingPracticeService(
             throw new WritingPracticeException(WritingPracticeException.AttemptExpired, "Attempt has expired.");
         }
 
-        // #262: the position is resolved from the paper, so a pool task resolves to its roster row and
-        // a legacy task to its question. LastQuestionId is a foreign key to Questions and cannot hold a
-        // roster position, so it is only stamped for a legacy paper - it retires with the tables.
+        // #262 / #269: the position is resolved from the paper, and it is the only address a response
+        // has - `CurrentExamItemId` is a roster position, so the position is always the fact to record.
         var position = await LoadPaperPositionAsync(attempt.ExamId, questionId, cancellationToken);
 
         var positionExamItemId = position.ExamItemId;
         var freeResponse = await db.FreeResponses
-            .Where(fr => fr.AttemptId == attemptId
-                && (positionExamItemId.HasValue
-                    ? fr.ExamItemId == positionExamItemId
-                    : fr.QuestionId == questionId))
+            .Where(fr => fr.AttemptId == attemptId && fr.ExamItemId == positionExamItemId)
             .SingleOrDefaultAsync(cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
@@ -356,7 +350,6 @@ public sealed class WritingPracticeService(
             freeResponse = new FreeResponse
             {
                 AttemptId = attemptId,
-                QuestionId = position.ExamItemId is null ? questionId : null,
                 ExamItemId = position.ExamItemId,
                 ExamId = attempt.ExamId,
                 SkillId = position.Section.SkillId,
@@ -376,10 +369,7 @@ public sealed class WritingPracticeService(
             freeResponse.Status = FreeResponseStatus.Draft.ToCode();
         }
 
-        if (position.ExamItemId is null)
-        {
-            attempt.CurrentExamItemId = questionId;
-        }
+        attempt.CurrentExamItemId = position.ExamItemId;
         await db.SaveChangesAsync(cancellationToken);
 
         var wordCount = WordCount.Count(text);
@@ -491,25 +481,20 @@ public sealed class WritingPracticeService(
         var freeResponses = await db.FreeResponses
             .AsNoTracking()
             .Where(fr => fr.AttemptId == attemptId)
-            .Include(fr => fr.Question)
             .Include(fr => fr.AiGradingFreeResponse)
             .ToListAsync(cancellationToken);
 
-        // #269: a pool response has no QuestionId and no Question row, so `fr.QuestionId!.Value` threw
-        // "Nullable object must have a value" and the grading-status page could not load at all - for a
-        // sitting whose grading had just succeeded. The address and the order come from the roster
-        // position the response names, falling back to the question row for a legacy response.
+        // #269: the address and the order come from the roster position the response names; there is no
+        // question row to fall back to.
         var positions = await LoadPaperPositionsAsync(attempt.ExamId, cancellationToken);
         var positionByExamItemId = positions
-            .Where(p => p.ExamItemId.HasValue)
-            .ToDictionary(p => p.ExamItemId!.Value);
+            .ToDictionary(p => p.ExamItemId);
 
-        int AddressOf(FreeResponse fr) => fr.QuestionId ?? fr.ExamItemId ?? 0;
+        int AddressOf(FreeResponse fr) => fr.ExamItemId;
 
-        int OrderOf(FreeResponse fr) => fr.ExamItemId is int examItemId
-            && positionByExamItemId.TryGetValue(examItemId, out var position)
-                ? positions.IndexOf(position)
-                : fr.Question?.DisplayOrder ?? 0;
+        int OrderOf(FreeResponse fr) => positionByExamItemId.TryGetValue(fr.ExamItemId, out var position)
+            ? positions.IndexOf(position)
+            : 0;
 
         freeResponses = freeResponses.OrderBy(OrderOf).ToList();
 
@@ -612,28 +597,23 @@ public sealed class WritingPracticeService(
         var freeResponses = await db.FreeResponses
             .AsNoTracking()
             .Where(fr => fr.AttemptId == attemptId)
-            .Include(fr => fr.Question).ThenInclude(q => q.Section)
             .Include(fr => fr.AiGradingFreeResponse).ThenInclude(g => g!.AiGradingScores).ThenInclude(s => s.GradingCriterion)
             .ToListAsync(cancellationToken);
 
-        // #269: a pool response names a roster position, not a question row. Reading fr.Question for one
-        // threw on QuestionId!.Value, so the review page of a pool writing sitting could not open.
+        // #269: the address, the order and the section come from the roster position the response names.
         var reviewPositions = await LoadPaperPositionsAsync(attempt.ExamId, cancellationToken);
         var reviewPositionByExamItemId = reviewPositions
-            .Where(p => p.ExamItemId.HasValue)
-            .ToDictionary(p => p.ExamItemId!.Value);
+            .ToDictionary(p => p.ExamItemId);
 
-        int ReviewAddressOf(FreeResponse fr) => fr.QuestionId ?? fr.ExamItemId ?? 0;
+        int ReviewAddressOf(FreeResponse fr) => fr.ExamItemId;
 
-        int ReviewOrderOf(FreeResponse fr) => fr.ExamItemId is int examItemId
-            && reviewPositionByExamItemId.TryGetValue(examItemId, out var pos)
-                ? reviewPositions.IndexOf(pos) + 1
-                : fr.Question?.DisplayOrder ?? 0;
+        int ReviewOrderOf(FreeResponse fr) => reviewPositionByExamItemId.TryGetValue(fr.ExamItemId, out var pos)
+            ? reviewPositions.IndexOf(pos) + 1
+            : 0;
 
-        int ReviewSectionOf(FreeResponse fr) => fr.ExamItemId is int examItemId
-            && reviewPositionByExamItemId.TryGetValue(examItemId, out var pos)
-                ? pos.SectionId
-                : fr.Question?.SectionId ?? 0;
+        int ReviewSectionOf(FreeResponse fr) => reviewPositionByExamItemId.TryGetValue(fr.ExamItemId, out var pos)
+            ? pos.SectionId
+            : 0;
 
         freeResponses = freeResponses.OrderBy(ReviewOrderOf).ToList();
 
@@ -692,12 +672,12 @@ public sealed class WritingPracticeService(
             questionItems.Add(new WritingQuestionReviewItem(
                 ReviewAddressOf(fr),
                 ReviewOrderOf(fr),
-                fr.ExamItemId is int reviewItemId && reviewPositionByExamItemId.TryGetValue(reviewItemId, out var reviewPos)
+                reviewPositionByExamItemId.TryGetValue(fr.ExamItemId, out var reviewPos)
                     ? reviewPos.Section.Name
-                    : fr.Question?.Section?.Name ?? string.Empty,
-                fr.ExamItemId is int reviewStemId && reviewPositionByExamItemId.TryGetValue(reviewStemId, out var stemPos)
+                    : string.Empty,
+                reviewPositionByExamItemId.TryGetValue(fr.ExamItemId, out var stemPos)
                     ? stemPos.Stem
-                    : fr.Question?.Stem ?? string.Empty,
+                    : string.Empty,
                 fr.ResponseText,
                 words,
                 qScore,

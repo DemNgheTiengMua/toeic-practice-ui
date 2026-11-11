@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
@@ -56,15 +56,13 @@ public sealed partial class AttemptEngine
         // QuestionId that does not exist, which FK_FreeResp_QuestionExam refused.
         var fr = await db.FreeResponses
             .SingleOrDefaultAsync(r => r.AttemptId == attemptId
-                && (r.QuestionId == questionId || r.ExamItemId == questionId), cancellationToken);
+                && r.ExamItemId == questionId, cancellationToken);
 
         if (fr is null)
         {
             fr = new FreeResponse
             {
                 AttemptId = attemptId,
-                // A pool position carries no QuestionId at all; the paper decides which identity it is.
-                QuestionId = question.LegacyQuestion is null ? null : questionId,
                 ExamItemId = question.ExamItemId,
                 ExamId = attempt.ExamId,
                 SkillId = question.Section.SkillId,
@@ -99,7 +97,7 @@ public sealed partial class AttemptEngine
 
         return new SaveSpeakingAudioResult(
             fr.FreeResponseId,
-            fr.QuestionId ?? fr.ExamItemId ?? questionId,
+            fr.ExamItemId,
             relativePath,
             durationMs,
             now);
@@ -133,14 +131,14 @@ public sealed partial class AttemptEngine
         }
 
         var fr = await db.FreeResponses
-            .SingleOrDefaultAsync(r => r.AttemptId == attemptId && r.QuestionId == questionId, cancellationToken);
+            .SingleOrDefaultAsync(r => r.AttemptId == attemptId && r.ExamItemId == questionId, cancellationToken);
 
         if (fr is null)
         {
             fr = new FreeResponse
             {
                 AttemptId = attemptId,
-                QuestionId = questionId,
+                ExamItemId = question.ExamItemId,
                 ExamId = attempt.ExamId,
                 SkillId = question.Section.SkillId,
                 QuestionType = QuestionType.FreeResponse.ToCode(),
@@ -168,7 +166,7 @@ public sealed partial class AttemptEngine
 
         return new SaveSpeakingAudioResult(
             fr.FreeResponseId,
-            fr.QuestionId!.Value,
+            fr.ExamItemId,
             audioPath,
             durationMs,
             now);

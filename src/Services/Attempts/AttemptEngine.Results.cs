@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -148,34 +148,24 @@ public sealed partial class AttemptEngine
         // was sat and graded.
         var questions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
 
-        // Answers are keyed by whichever identity their paper uses: a legacy position names QuestionId,
-        // a pool position names ExamItemId. Two maps, because the id spaces are independent.
+        // #269: an answer names the roster position it was recorded against.
         var answers = await db.AttemptAnswers
             .AsNoTracking()
             .Where(a => a.AttemptId == attemptId)
             .ToListAsync(cancellationToken);
-        var answerByQuestionId = answers
-            .Where(a => a.QuestionId.HasValue)
-            .ToDictionary(a => a.QuestionId!.Value);
+        // #269: an answer names the roster position it was recorded against, always.
         var answerByExamItemId = answers
-            .Where(a => a.ExamItemId.HasValue)
-            .ToDictionary(a => a.ExamItemId!.Value);
+            .ToDictionary(a => a.ExamItemId);
 
-        AttemptAnswer? AnswerFor(SittingQuestion q) => q.ExamItemId is int examItemId
-            ? answerByExamItemId.GetValueOrDefault(examItemId)
-            : answerByQuestionId.GetValueOrDefault(q.Id);
+        AttemptAnswer? AnswerFor(SittingQuestion q) => answerByExamItemId.GetValueOrDefault(q.ExamItemId);
 
         // #186: the version each answer pinned is what review renders. Not the item's current version,
         // and not the paper's binding as it stands today: a later correction creates version 2 and a
         // later assembly edit can re-point the binding, and neither may move a finished attempt.
         //
-        // The answer's own pin decides, and nothing else does. An answer with no pin is one recorded
-        // before the pool reached this paper, so the learner answered from the question row and the
-        // review must render that row — falling back to today's binding would show options the learner
-        // was never offered, and lose the one they actually picked.
+        // #269: every answer pins a version now, so the answer's own pin always decides.
         var pinnedVersionIds = answers
-            .Where(a => a.ItemVersionId.HasValue)
-            .Select(a => a.ItemVersionId!.Value)
+            .Select(a => a.ItemVersionId)
             .Distinct()
             .ToList();
         var pinnedVersions = pinnedVersionIds.Count == 0
@@ -231,19 +221,16 @@ public sealed partial class AttemptEngine
 
             var ans = AnswerFor(q);
 
-            // #186: the pinned version wins. A reviewed attempt renders the stem, options and
-            // explanation the learner actually sat. An answer with NO pin was recorded before the pool
-            // reached this paper, so it renders the legacy question row - not today's binding, which
-            // would show options the learner was never offered and lose the one they picked. That is
-            // why the loader carries both beside each other instead of overlaying one onto the other.
+            // #186: a reviewed attempt renders the stem, options and explanation the learner actually sat,
+            // read from the version its answer pinned.
             var pinnedVersion = ans?.ItemVersionId is int pinnedVersionId
                 ? pinnedVersions.GetValueOrDefault(pinnedVersionId)
                 : null;
 
-            var stem = pinnedVersion?.Stem ?? q.LegacyStem ?? q.Stem;
-            var explanation = pinnedVersion?.Explanation ?? q.LegacyExplanation ?? q.Explanation;
+            var stem = pinnedVersion?.Stem ?? q.Stem;
+            var explanation = pinnedVersion?.Explanation ?? q.Explanation;
             var options = pinnedVersion is null
-                ? (q.LegacyOptions ?? q.Options)
+                ? q.Options
                     .Select(o => new AttemptReviewOption(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
                     .ToList()
                 : PoolReviewOptions(pinnedVersion.ItemVersionId, pinnedVersion);

@@ -13,12 +13,11 @@ using Microsoft.EntityFrameworkCore;
 namespace Services;
 
 /// <summary>
-/// #224: the saved bank, in its two shapes.
+/// #224: the saved bank, pool-native.
 /// <para>
-/// A pool link renders the version it pinned (<see cref="SavedQuestion.ItemVersionId"/>), never the
-/// item's latest one, and never through the legacy <c>Questions</c> row an item does not have. Its
-/// lifecycle is read separately so a withdrawn item still renders — flagged when it was withdrawn as
-/// defective (D21).
+/// A link renders the version it pinned (<see cref="SavedQuestion.ItemVersionId"/>), never the item's
+/// latest one. Its lifecycle is read separately so a withdrawn item still renders — flagged when it was
+/// withdrawn as defective (D21).
 /// </para>
 /// </summary>
 public sealed class SavedQuestionService(
@@ -38,7 +37,6 @@ public sealed class SavedQuestionService(
     private static readonly Expression<Func<SavedQuestion, SavedRow>> RowProjection = sq => new SavedRow
     {
         SavedQuestionId = sq.SavedQuestionId,
-        QuestionId = sq.QuestionId,
         ItemId = sq.ItemId,
         ItemVersionId = sq.ItemVersionId,
         Source = sq.Source,
@@ -61,37 +59,13 @@ public sealed class SavedQuestionService(
         TopicCode = sq.ItemVersion != null ? sq.ItemVersion.Item.Topic.Code : null,
         TopicName = sq.ItemVersion != null ? sq.ItemVersion.Item.Topic.Name : null,
 
-        LegacySectionId = sq.Question != null ? sq.Question.SectionId : (int?)null,
-        LegacySectionCode = sq.Question != null ? sq.Question.Section.Code : null,
-        LegacySectionName = sq.Question != null ? sq.Question.Section.Name : null,
-        LegacyCategoryId = sq.Question != null ? sq.Question.CategoryId : null,
-        LegacyCategoryName = sq.Question != null && sq.Question.Category != null ? sq.Question.Category.Name : null,
-        LegacyStem = sq.Question != null ? sq.Question.Stem : null,
-        LegacyPassage = sq.Question != null && sq.Question.Group != null ? sq.Question.Group.Passage : null,
-        LegacyImagePath = sq.Question != null && sq.Question.Group != null ? sq.Question.Group.ImagePath : null,
-        LegacyAudioPath = sq.Question != null && sq.Question.Group != null ? sq.Question.Group.AudioPath : null,
-        LegacyHint = sq.Question != null ? sq.Question.Hint : null,
-        LegacyExplanation = sq.Question != null ? sq.Question.Explanation : null,
-        LegacyTranscript = sq.Question != null && sq.Question.Group != null ? sq.Question.Group.Transcript : null,
-        LegacyOptions = sq.Question != null
-            ? sq.Question.QuestionOptionQuestionNavigations
-                .OrderBy(o => o.Label)
-                .Select(o => new LegacyOptionRow
-                {
-                    OptionId = o.OptionId,
-                    Label = o.Label,
-                    Text = o.Text,
-                    IsCorrect = o.IsCorrect,
-                })
-                .ToList()
-            : null,
+        VersionHint = sq.ItemVersion != null ? sq.ItemVersion.Hint : null,
     };
 
     /// <summary>The projection's own shape. A class, not an anonymous type, so both reads share it.</summary>
     private sealed class SavedRow
     {
         public int SavedQuestionId { get; set; }
-        public int? QuestionId { get; set; }
         public int? ItemId { get; set; }
         public int? ItemVersionId { get; set; }
         public string Source { get; set; } = null!;
@@ -111,28 +85,7 @@ public sealed class SavedQuestionService(
         public string? StimulusTranscript { get; set; }
         public string? TopicCode { get; set; }
         public string? TopicName { get; set; }
-
-        public int? LegacySectionId { get; set; }
-        public string? LegacySectionCode { get; set; }
-        public string? LegacySectionName { get; set; }
-        public int? LegacyCategoryId { get; set; }
-        public string? LegacyCategoryName { get; set; }
-        public string? LegacyStem { get; set; }
-        public string? LegacyPassage { get; set; }
-        public string? LegacyImagePath { get; set; }
-        public string? LegacyAudioPath { get; set; }
-        public string? LegacyHint { get; set; }
-        public string? LegacyExplanation { get; set; }
-        public string? LegacyTranscript { get; set; }
-        public List<LegacyOptionRow>? LegacyOptions { get; set; }
-    }
-
-    private sealed class LegacyOptionRow
-    {
-        public int OptionId { get; set; }
-        public string Label { get; set; } = null!;
-        public string Text { get; set; } = null!;
-        public bool IsCorrect { get; set; }
+        public string? VersionHint { get; set; }
     }
 
     public async Task<SavedQuestionsView> GetSavedQuestionsAsync(int userId, SavedQuestionFilterInput filter, CancellationToken cancellationToken = default)
@@ -144,57 +97,26 @@ public sealed class SavedQuestionService(
             .Select(c => new CertificateOption(c.Code, c.Name, c.SectionNoun))
             .SingleAsync(cancellationToken);
 
-        // Strict isolation: only this user's rows for this certificate. A legacy link is scoped through
-        // its question's section; a pool link carries the certificate itself, because an item has none.
+        // Strict isolation: only this user's rows for this certificate. An item is certificate-agnostic
+        // (D2), so the link carries the certificate itself.
         var baseQuery = db.SavedQuestions
             .AsNoTracking()
-            .Where(sq => sq.UserId == userId
-                && (sq.Question != null ? sq.Question.Section.CertId == activeCertId : sq.CertId == activeCertId));
+            .Where(sq => sq.UserId == userId && sq.CertId == activeCertId);
 
         var totalSaved = await baseQuery.CountAsync(cancellationToken);
         var manualSaved = await baseQuery.CountAsync(sq => sq.Source == SavedQuestionSource.Manual.ToCode(), cancellationToken);
         var incorrectSaved = await baseQuery.CountAsync(sq => sq.Source == SavedQuestionSource.Incorrect.ToCode(), cancellationToken);
 
-        var sectionFilters = (await baseQuery
-            .Where(sq => sq.QuestionId != null)
-            .Select(sq => new
-            {
-                sq.Question!.SectionId,
-                sq.Question.Section.Code,
-                sq.Question.Section.Name,
-                sq.Question.Section.DisplayOrder
-            })
-            .ToListAsync(cancellationToken))
-            .GroupBy(s => new { s.SectionId, s.Code, s.Name, s.DisplayOrder })
-            .OrderBy(g => g.Key.DisplayOrder)
-            .ThenBy(g => g.Key.Code)
-            .Select(g => new SavedQuestionSectionFilter(g.Key.SectionId, g.Key.Code, g.Key.Name, g.Count()))
-            .ToList();
-
-        var categoryFilters = (await baseQuery
-            .Where(sq => sq.Question != null && sq.Question.CategoryId != null)
-            .Select(sq => new { CategoryId = sq.Question!.CategoryId!.Value, Name = sq.Question.Category!.Name })
-            .ToListAsync(cancellationToken))
-            .GroupBy(c => new { c.CategoryId, c.Name })
-            .OrderBy(g => g.Key.Name)
-            .Select(g => new SavedQuestionCategoryFilter(g.Key.CategoryId, g.Key.Name, g.Count()))
-            .ToList();
+        // #269: an item is section-free and category-free by design, so the bank has no per-section or
+        // per-category facet left to build. The two lists stay in the view's shape and are empty.
+        var sectionFilters = new List<SavedQuestionSectionFilter>();
+        var categoryFilters = new List<SavedQuestionCategoryFilter>();
 
         var query = baseQuery;
         if (filter.Source is { } sourceFilter)
         {
             var sourceCode = sourceFilter.ToCode();
             query = query.Where(sq => sq.Source == sourceCode);
-        }
-
-        if (filter.SectionId.HasValue)
-        {
-            query = query.Where(sq => sq.Question != null && sq.Question.SectionId == filter.SectionId.Value);
-        }
-
-        if (filter.CategoryId.HasValue)
-        {
-            query = query.Where(sq => sq.Question != null && sq.Question.CategoryId == filter.CategoryId.Value);
         }
 
         var questions = (await query
@@ -220,7 +142,7 @@ public sealed class SavedQuestionService(
         var row = await db.SavedQuestions
             .AsNoTracking()
             .Where(sq => sq.UserId == userId && sq.SavedQuestionId == savedQuestionId
-                && (sq.Question != null ? sq.Question.Section.CertId == activeCertId : sq.CertId == activeCertId))
+                && sq.CertId == activeCertId)
             .Select(RowProjection)
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new SavedQuestionException(SavedQuestionException.SavedQuestionNotFound, $"Saved question {savedQuestionId} is not in your bank.");
@@ -229,81 +151,49 @@ public sealed class SavedQuestionService(
     }
 
     /// <summary>
-    /// Files a POSITION into the bank. The address is whatever the client was handed - a question id on a
-    /// legacy paper, an ExamItemId on a pool one - exactly as every other answer-shape call in this
-    /// codebase resolves it.
+    /// Files a POSITION into the bank. The address is the <c>ExamItemId</c> the client was handed,
+    /// exactly as every other answer-shape call in this codebase resolves it.
     /// <para>
-    /// <b>#264: this used to be a legacy-only door.</b> It validated through
-    /// <c>db.Questions.AnyAsync</c> and wrote <c>QuestionId</c> alone, so an item on a pool paper could
-    /// not be filed at all. It now resolves the position from the roster, takes the certificate scope
-    /// from the BINDING (an item is certificate-agnostic by D2, so the item cannot supply it), and pins
-    /// the version the learner was looking at.
+    /// <b>#264: this used to be a legacy-only door.</b> It validated through the legacy question table
+    /// and wrote a question id alone, so an item on a paper could not be filed at all. It resolves the
+    /// position from the roster, takes the certificate scope from the BINDING (an item is
+    /// certificate-agnostic by D2, so the item cannot supply it), and pins the version on screen.
     /// </para>
     /// </summary>
     public async Task<SaveQuestionResult> SaveQuestionAsync(int userId, int questionId, SavedQuestionSource source = SavedQuestionSource.Manual, CancellationToken cancellationToken = default)
     {
         var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
 
-        // A position is a roster row on a pool paper. The scope lives on the binding, not the item.
+        // A position is a roster row. The scope lives on the binding, not the item.
         var position = await db.ExamItems
             .AsNoTracking()
             .Where(i => i.ExamItemId == questionId && i.CertId == activeCertId)
             .Select(i => new { i.ExamItemId, i.ItemId, i.ItemVersionId, i.CertId })
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new SavedQuestionException(SavedQuestionException.QuestionNotFound, $"Question {questionId} does not exist.");
 
-        if (position is not null)
+        var alreadyFiled = await db.SavedQuestions
+            .FirstOrDefaultAsync(sq => sq.UserId == userId && sq.ItemId == position.ItemId, cancellationToken);
+
+        if (alreadyFiled is not null)
         {
-            var alreadyFiled = await db.SavedQuestions
-                .FirstOrDefaultAsync(sq => sq.UserId == userId && sq.ItemId == position.ItemId, cancellationToken);
-
-            if (alreadyFiled is not null)
-            {
-                return await PromoteAsync(alreadyFiled, source, cancellationToken);
-            }
-
-            // A second save keeps the version already pinned; a first save pins the one on screen.
-            var pinned = new SavedQuestion
-            {
-                UserId = userId,
-                CertId = position.CertId,
-                ItemId = position.ItemId,
-                ItemVersionId = position.ItemVersionId,
-                Source = source.ToCode(),
-                SavedAt = DateTimeOffset.UtcNow,
-            };
-
-            db.SavedQuestions.Add(pinned);
-            await db.SaveChangesAsync(cancellationToken);
-            return new SaveQuestionResult(true, source, pinned.SavedAt, pinned.SavedQuestionId);
+            return await PromoteAsync(alreadyFiled, source, cancellationToken);
         }
 
-        var questionExists = await db.Questions
-            .AnyAsync(q => q.QuestionId == questionId && q.Section.CertId == activeCertId, cancellationToken);
-        if (!questionExists)
-        {
-            throw new SavedQuestionException(SavedQuestionException.QuestionNotFound, $"Question {questionId} does not exist.");
-        }
-
-        var existing = await db.SavedQuestions
-            .FirstOrDefaultAsync(sq => sq.UserId == userId && sq.QuestionId == questionId, cancellationToken);
-
-        if (existing != null)
-        {
-            return await PromoteAsync(existing, source, cancellationToken);
-        }
-
-        var saved = new SavedQuestion
+        // A second save keeps the version already pinned; a first save pins the one on screen.
+        var pinned = new SavedQuestion
         {
             UserId = userId,
-            QuestionId = questionId,
+            CertId = position.CertId,
+            ItemId = position.ItemId,
+            ItemVersionId = position.ItemVersionId,
             Source = source.ToCode(),
-            SavedAt = DateTimeOffset.UtcNow
+            SavedAt = DateTimeOffset.UtcNow,
         };
 
-        db.SavedQuestions.Add(saved);
+        db.SavedQuestions.Add(pinned);
         await db.SaveChangesAsync(cancellationToken);
-
-        return new SaveQuestionResult(true, source, saved.SavedAt, saved.SavedQuestionId);
+        return new SaveQuestionResult(true, source, pinned.SavedAt, pinned.SavedQuestionId);
     }
 
     /// <summary>
@@ -366,10 +256,16 @@ public sealed class SavedQuestionService(
         return new SaveQuestionResult(false, null, null);
     }
 
+    /// <summary>
+    /// Whether the item at this roster position is already in the learner's bank. The address is an
+    /// <c>ExamItemId</c>, resolved to the item because a bookmark names the item, not a position.
+    /// </summary>
     public async Task<bool> IsQuestionSavedAsync(int userId, int questionId, CancellationToken cancellationToken = default)
     {
         return await db.SavedQuestions
-            .AnyAsync(sq => sq.UserId == userId && sq.QuestionId == questionId, cancellationToken);
+            .AnyAsync(sq => sq.UserId == userId
+                && db.ExamItems.Any(i => i.ExamItemId == questionId && i.ItemId == sq.ItemId),
+                cancellationToken);
     }
 
     /// <summary>
@@ -387,38 +283,30 @@ public sealed class SavedQuestionService(
         return new SaveQuestionResult(true, EnumCodes.Parse<SavedQuestionSource>(existing.Source), existing.SavedAt, existing.SavedQuestionId);
     }
 
-    private static SavedQuestionItem ToItem(SavedRow row)
-    {
-        var isPool = row.ItemVersionId is not null;
-
-        return new SavedQuestionItem(
+    private static SavedQuestionItem ToItem(SavedRow row) =>
+        new(
             SavedQuestionId: row.SavedQuestionId,
-            QuestionId: row.QuestionId,
+            QuestionId: null,
             ItemId: row.ItemId,
             ItemVersionId: row.ItemVersionId,
             IsRetiredDefective: string.Equals(row.LifecycleStatus, RetiredDefective, StringComparison.Ordinal),
             Source: EnumCodes.Parse<SavedQuestionSource>(row.Source),
             SavedAt: row.SavedAt,
-            SectionId: row.LegacySectionId,
-            SectionCode: row.LegacySectionCode,
-            SectionName: row.LegacySectionName,
+            SectionId: null,
+            SectionCode: null,
+            SectionName: null,
             TopicCode: row.TopicCode,
             TopicName: row.TopicName,
-            CategoryId: row.LegacyCategoryId,
-            CategoryName: row.LegacyCategoryName,
-            Stem: (isPool ? row.VersionStem : row.LegacyStem) ?? string.Empty,
-            Passage: isPool ? row.StimulusPassage : row.LegacyPassage,
-            ImagePath: isPool ? row.StimulusImagePath : row.LegacyImagePath,
-            AudioPath: isPool ? row.StimulusAudioPath : row.LegacyAudioPath,
-            Hint: row.LegacyHint,
-            Explanation: isPool ? row.VersionExplanation : row.LegacyExplanation,
-            Transcript: isPool ? row.StimulusTranscript : row.LegacyTranscript,
-            Options: isPool
-                ? PoolOptions(row.ItemVersionId!.Value, row.KeyLabel, row.OptionA, row.OptionB, row.OptionC, row.OptionD)
-                : (row.LegacyOptions ?? [])
-                    .Select(o => new SavedQuestionOption(o.OptionId, o.Label, o.Text, o.IsCorrect))
-                    .ToList());
-    }
+            CategoryId: null,
+            CategoryName: null,
+            Stem: row.VersionStem ?? string.Empty,
+            Passage: row.StimulusPassage,
+            ImagePath: row.StimulusImagePath,
+            AudioPath: row.StimulusAudioPath,
+            Hint: row.VersionHint,
+            Explanation: row.VersionExplanation,
+            Transcript: row.StimulusTranscript,
+            Options: PoolOptions(row.ItemVersionId!.Value, row.KeyLabel, row.OptionA, row.OptionB, row.OptionC, row.OptionD));
 
     /// <summary>
     /// A version stores labels A-D rather than option rows, so the id is derived from

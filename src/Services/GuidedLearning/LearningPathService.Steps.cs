@@ -128,8 +128,6 @@ public sealed partial class LearningPathService
             db.PracticeAnswers.Add(new PracticeAnswer
             {
                 SessionId = session.SessionId,
-                QuestionId = null,
-                SectionId = null,
                 ItemId = selected[i].ItemId,
                 ItemVersionId = selected[i].ItemVersionId,
                 SelectedLabel = null,

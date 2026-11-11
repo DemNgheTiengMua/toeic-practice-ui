@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -12,60 +12,19 @@ namespace Services;
 public sealed partial class AttemptEngine
 {
     /// <summary>
-    /// #250 / #262: the paper's questions, read from the pool when the paper was authored there and
-    /// from the legacy rows otherwise.
+    /// #250 / #262 / #269: the paper's questions, from the one source a paper has - its roster.
     /// <para>
-    /// <b>Why this is the whole ticket in one method.</b> <see cref="LoadExamQuestionsAsync"/> reads
-    /// <c>db.Questions</c>, and every downstream reader - navigation locks, clustering, the take view,
-    /// the navigator, submission - was written against a <c>Question</c> row. That made the legacy table
-    /// impossible to drop: even a fully migrated paper still had to read it, because the projection had
-    /// no other source for <i>where a question sits</i>.
+    /// A roster row carries every field the projection needs from the paper - section, position, unit,
+    /// modality - and the pinned <c>ItemVersion</c> carries the scored content, so every downstream
+    /// reader (navigation locks, clustering, the take view, the navigator, submission) is shape-blind.
     /// </para>
     /// <para>
-    /// This method supplies that source. A roster row already carries every field the projection needs
-    /// from the paper - section, position, unit, modality - and the pinned <c>ItemVersion</c> carries
-    /// the scored content. So a paper built from <c>ExamItems</c> and one built from <c>Questions</c>
-    /// arrive at the same <see cref="SittingQuestion"/> shape, and every reader after this point is
-    /// shape-blind.
-    /// </para>
-    /// <para>
-    /// <b>Which branch, and why it is decided this way.</b> A paper is pool-authored only when it has NO
-    /// legacy <c>Questions</c> rows. That is what criterion 1 states - "builds a paper from ExamItems
-    /// ALONE" - and it is the only rule that is safe during the transition, because a paper that has
-    /// BOTH (the seed's assembled paper does: bindings beside question rows) has answers recorded
-    /// against <c>QuestionId</c>, and reading it through the roster would look for an <c>ExamItemId</c>
-    /// those answers do not carry. Measured: the first draft preferred the roster whenever bindings
-    /// existed, and
-    /// <c>Saving_an_answer_records_the_pinned_label_and_scores_against_the_pinned_key</c> came back with
-    /// a null selected option, because the answer's legacy key never met the roster's position key.
-    /// </para>
-    /// <para>
-    /// The count query is the transition's cost, and criterion 5 pays it off: when the three legacy
-    /// tables are dropped, this becomes "read the roster" and nothing else.
+    /// Ordering is by skill, then section, then the binding's own position, because the roster's
+    /// <c>DisplayOrder</c> is defined as "the paper's position, 1-based within its section" and the
+    /// navigator's numbering must not move when a paper migrates.
     /// </para>
     /// </summary>
     internal async Task<List<SittingQuestion>> LoadSittingQuestionsAsync(
-        int examId, CancellationToken cancellationToken)
-    {
-        var legacyCount = await db.Questions
-            .AsNoTracking()
-            .CountAsync(q => q.ExamId == examId, cancellationToken);
-
-        return legacyCount > 0
-            ? await LoadLegacyQuestionsAsync(examId, cancellationToken)
-            : await LoadRosterAsync(examId, cancellationToken);
-    }
-
-    /// <summary>
-    /// The paper as the pool describes it: one row per <c>ExamItems</c> binding, in sitting order.
-    /// Reads no <c>Questions</c> row at all.
-    /// <para>
-    /// Ordering is by skill, then section, then the binding's own position - the same order the legacy
-    /// branch produced, because the roster's <c>DisplayOrder</c> is defined as "the paper's position,
-    /// 1-based within its section" and the navigator's numbering must not move when a paper migrates.
-    /// </para>
-    /// </summary>
-    private async Task<List<SittingQuestion>> LoadRosterAsync(
         int examId, CancellationToken cancellationToken)
     {
         var rows = await db.ExamItems
@@ -135,16 +94,13 @@ public sealed partial class AttemptEngine
                 SectionId: row.s.SectionId,
                 RenderFormat: row.item.RenderFormat,
                 Stem: version.Stem,
-                LegacyStem: null,
                 Explanation: version.Explanation,
-                LegacyExplanation: null,
                 Options: PoolOptions(version.ItemVersionId, version)
                     .Select(o => new SittingOption(
                         o.OptionId, o.Label, o.Text,
                         IsCorrect: IsKeyLabel(version, o.Label),
                         Rationale: OptionRationale(version, o.Label)))
                     .ToList(),
-                LegacyOptions: null,
                 MinWords: version.MinWords,
                 MaxWords: version.MaxWords,
                 PrepSeconds: version.PrepSeconds ?? stimulus?.PrepSeconds,
@@ -205,127 +161,11 @@ public sealed partial class AttemptEngine
     }
 
     /// <summary>
-    /// The paper as the legacy rows describe it. Unchanged behaviour, but mapped into the same
-    /// <see cref="SittingQuestion"/> shape so no downstream reader branches on which source it came
-    /// from. This is the branch criterion 5 deletes along with the tables.
-    /// <para>
-    /// <b>The pinned version is overlaid here, once.</b> A legacy paper may still carry
-    /// <c>ExamItems</c> bindings (the seed's assembled paper does), and #186 says the bound version's
-    /// stem and options are what the sitting renders. Doing that overlay at load time is what lets the
-    /// projection stay free of bindings entirely: it reads a <see cref="SittingQuestion"/> and cannot
-    /// tell whether the content came from a question row or a pinned version.
-    /// </para>
-    /// </summary>
-    private async Task<List<SittingQuestion>> LoadLegacyQuestionsAsync(
-        int examId, CancellationToken cancellationToken)
-    {
-        var questions = await LoadExamQuestionsAsync(examId, cancellationToken);
-
-        var bindings = await LoadPaperBindingsAsync(examId, cancellationToken);
-        EnsureBindingsRender(questions, bindings);
-        var boundByQuestion = PlaceBindings(questions, bindings);
-
-        // The legacy audio chain, resolved here rather than in the projection: a group's own slice
-        // wins, and the section's uploaded master track is the fallback. Both are properties of the
-        // paper, so they belong to the loader.
-        var sectionMasterAudio = await LoadSectionMasterAudioAsync(examId, cancellationToken);
-
-        return questions
-            .Select(q => FromLegacyQuestion(
-                q,
-                boundByQuestion.GetValueOrDefault(q.QuestionId),
-                ResolveGroupAudio(q.Group, sectionMasterAudio)))
-            .ToList();
-    }
-
-    /// <summary>One legacy <c>Question</c> row as a <see cref="SittingQuestion"/>.</summary>
-    private SittingQuestion FromLegacyQuestion(
-        Question q, BoundPaperPosition? bound, ResolvedGroupAudio? audio) => new(
-        Id: q.QuestionId,
-        ExamId: q.ExamId,
-        ExamItemId: null,
-        ItemVersionId: bound?.ItemVersionId,
-        ItemId: bound?.ItemId ?? 0,
-        SectionId: q.SectionId,
-        // #186: the pinned version's stem and options are the scored content. Everything else - type,
-        // word limits, timers, the section's chrome - is the paper's, so it still comes from the row.
-        RenderFormat: q.QuestionType,
-        Stem: bound?.Version.Stem ?? q.Stem,
-        LegacyStem: q.Stem,
-        Explanation: bound?.Version.Explanation ?? q.Explanation,
-        LegacyExplanation: q.Explanation,
-        Options: bound is null
-            ? q.QuestionOptionQuestionNavigations
-                .OrderBy(o => o.Label)
-                .Select(o => new SittingOption(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
-                .ToList()
-            : PoolOptions(bound.ItemVersionId, bound.Version)
-                .Select(o => new SittingOption(
-                    o.OptionId, o.Label, o.Text,
-                    IsCorrect: IsKeyLabel(bound.Version, o.Label),
-                    Rationale: OptionRationale(bound.Version, o.Label)))
-                .ToList(),
-        // The row's own options, kept beside the scored ones so review can render what the learner
-        // answered rather than what the paper binds today.
-        LegacyOptions: q.QuestionOptionQuestionNavigations
-            .OrderBy(o => o.Label)
-            .Select(o => new SittingOption(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
-            .ToList(),
-        MinWords: q.MinWords,
-        MaxWords: q.MaxWords,
-        PrepSeconds: q.PrepSeconds,
-        ResponseSeconds: q.ResponseSeconds,
-        MaxSelections: q.MaxSelections,
-        AllowNumber: q.AllowNumber,
-        AcceptedAnswersJson: q.AcceptedAnswersJson,
-        RequiredKeywords: q.RequiredKeywords,
-        Hint: q.Hint,
-        GroupId: q.GroupId,
-        ReferenceText: q.SampleAnswerOrImageDesc,
-        ReferenceKind: q.ReferenceKind,
-        Section: new SittingSection(
-            SectionId: q.SectionId,
-            Code: q.Section?.Code ?? "",
-            Name: q.Section?.Name ?? "",
-            SkillId: q.Section?.SkillId ?? 0,
-            Modality: q.Section?.Modality ?? "reading",
-            LayoutType: q.Section?.LayoutType,
-            RequirePassage: q.Section?.RequirePassage ?? false,
-            NavigationMode: q.Section?.NavigationMode,
-            ToolsConfigJson: q.Section?.ToolsConfigJson,
-            HideOptionText: q.Section?.HideOptionText ?? false,
-            OptionCount: q.Section is { OptionCount: > 0 } s ? s.OptionCount : 4,
-            ClusterSize: q.Section is { ClusterSize: > 0 } c ? c.ClusterSize : 1,
-            RequireImage: q.Section?.RequireImage ?? false,
-            TimerPolicyJson: q.Section?.TimerPolicyJson,
-            ScoreWeight: q.Section?.ScoreWeight ?? 1.0m,
-            Skill: new SittingSkill(
-                SkillId: q.Section?.SkillId ?? 0,
-                Code: q.Section?.Skill?.Code ?? "",
-                Name: q.Section?.Skill?.Name ?? "",
-                DisplayOrder: q.Section?.Skill?.DisplayOrder ?? 0,
-                DurationMinutes: q.Section?.Skill?.DurationMinutes,
-                LockNavigationOneWay: q.Section?.Skill?.LockNavigationOneWay ?? false)),
-        Group: new SittingGroup(
-            UnitNumber: q.Group?.UnitNumber ?? 1,
-            Passage: q.Group?.Passage,
-            Transcript: q.Group?.Transcript,
-            ImagePath: q.Group?.ImagePath,
-            ImageAlt: q.Group?.ImageAlt,
-            AudioPath: audio?.Path,
-            AudioStartMs: audio?.StartMs,
-            AudioEndMs: audio?.EndMs,
-            ResponseSeconds: q.Group?.ResponseSeconds),
-        // The legacy scoring path needs the row itself; nothing else may branch on it.
-        LegacyQuestion: q);
-
-    /// <summary>
     /// #250: the paper position a request names, resolved through the same seam the projection uses.
     /// <para>
-    /// The client sends back the id the projection gave it, and that id is a <c>QuestionId</c> on a
-    /// legacy paper and an <c>ExamItemId</c> on a pool paper. Resolving it here means every writer -
-    /// answer, draft, flag, navigation - agrees with the reader about what a position is, instead of
-    /// each querying <c>Questions</c> on its own.
+    /// The client sends back the id the projection gave it, an <c>ExamItemId</c>. Resolving it here
+    /// means every writer - answer, draft, flag, navigation - agrees with the reader about what a
+    /// position is.
     /// </para>
     /// </summary>
     private async Task<SittingQuestion> FindSittingQuestionAsync(
@@ -339,26 +179,12 @@ public sealed partial class AttemptEngine
     }
 
     /// <summary>
-    /// #250: remember where the learner is, for the one column that can hold it.
-    /// <para>
-    /// <b>The limit, stated rather than hidden.</b> <c>ExamAttempts.LastQuestionId</c> carries a foreign
-    /// key to <c>Questions(QuestionId, ExamId)</c>. A pool position's id is an <c>ExamItemId</c>, which
-    /// is not a question id, so writing it here would either fail the foreign key or - worse, on a
-    /// database whose id spaces overlap - silently point at an unrelated question. So this records the
-    /// position only for a legacy paper, and a pool paper resumes at its first unlocked position.
-    /// </para>
-    /// <para>
-    /// That is a real limitation and it is why criterion 5 has to repoint the column before the legacy
-    /// tables go: a pool-only paper cannot yet remember a mid-paper position across a reload.
-    /// </para>
-    /// </summary>
-    /// <summary>
-    /// #269: remember where the learner is. The column is a roster position, so a pool paper records its
-    /// <c>ExamItemId</c> and a legacy paper records its question id - one column, and which id it holds is
-    /// decided by the paper, exactly as every other answer-shape table does.
+    /// #269: remember where the learner is. <c>ExamAttempts.CurrentExamItemId</c> is a roster position,
+    /// so the recorded value is the position's <c>ExamItemId</c> - the same id every answer-shape table
+    /// carries.
     /// </summary>
     private static void RecordLastPosition(ExamAttempt attempt, SittingQuestion q)
     {
-        attempt.CurrentExamItemId = q.ExamItemId ?? q.Id;
+        attempt.CurrentExamItemId = q.ExamItemId;
     }
 }

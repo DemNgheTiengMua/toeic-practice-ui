@@ -26,9 +26,6 @@ public sealed class AiGradingProcessor(
 
         var pendingGradings = await db.AiGradings
             .Include(g => g.FreeResponse)
-                .ThenInclude(fr => fr.Question)
-                    .ThenInclude(q => q.Section)
-            .Include(g => g.FreeResponse)
                 .ThenInclude(fr => fr.Attempt)
                     .ThenInclude(a => a.Exam)
             .Where(g => g.Status == AiGradingStatus.Pending.ToCode())
@@ -52,9 +49,6 @@ public sealed class AiGradingProcessor(
     {
         var grading = await db.AiGradings
             .Include(g => g.FreeResponse)
-                .ThenInclude(fr => fr.Question)
-                    .ThenInclude(q => q.Section)
-            .Include(g => g.FreeResponse)
                 .ThenInclude(fr => fr.Attempt)
                     .ThenInclude(a => a.Exam)
             .Where(g => g.FreeResponseId == freeResponseId && g.Status == AiGradingStatus.Pending.ToCode())
@@ -77,9 +71,11 @@ public sealed class AiGradingProcessor(
         try
         {
             var position = await LoadGradedPositionAsync(fr, cancellationToken);
-            var question = fr.Question;
-            var frSectionId = position?.SectionId ?? question?.SectionId;
-            var sectionModality = position?.Modality ?? question?.Section?.Modality;
+            // #269: the question row is gone, so the section, its modality and the task's own content
+            // come only from the position the response names. A response whose position left the paper
+            // has no rubric to grade against, which the section test below states.
+            var frSectionId = position?.SectionId;
+            var sectionModality = position?.Modality;
             var isWriting = sectionModality == Modality.Writing.ToCode();
 
             // Load applicable criteria: section-specific criteria first, fallback to skill-wide general criteria
@@ -252,22 +248,21 @@ public sealed class AiGradingProcessor(
                 }
             }
 
-            // #152: a spoken answer is graded against the reference its own question declares. The
-            // kind is a question-level column, so a scripted question keeps its script even when its
-            // group shows a chart. No declared kind means unscripted, not a guess.
-            // #269: a pool task carries the same facts on its pinned version, so the position wins
-            // where it exists and the legacy row is the fallback - never a null stem.
+            // #152: a spoken answer is graded against the reference its own task declares. No declared
+            // kind means unscripted, not a guess.
+            // #269: a free response names a roster position and no question row, so the position's pinned
+            // version is the only place this content lives.
             var (referenceText, describesImage) = SpeakingTask.ResolveReference(
-                position?.ReferenceText ?? question?.SampleAnswerOrImageDesc,
-                position?.ReferenceKind ?? question?.ReferenceKind);
+                position?.ReferenceText,
+                position?.ReferenceKind);
 
             var request = new AiGradingRequest(
                 fr.FreeResponseId,
                 grading.SkillId,
                 fr.Attempt.CertId,
-                position?.Stem ?? question?.Stem ?? string.Empty,
-                position?.MinWords ?? question?.MinWords,
-                position?.MaxWords ?? question?.MaxWords,
+                position?.Stem ?? string.Empty,
+                position?.MinWords,
+                position?.MaxWords,
                 fr.ResponseText ?? string.Empty,
                 criteriaDetails,
                 grading.AttemptCount,
@@ -275,7 +270,7 @@ public sealed class AiGradingProcessor(
                 fr.DurationMs,
                 referenceText,
                 describesImage,
-                position?.RequiredKeywords ?? question?.RequiredKeywords);
+                position?.RequiredKeywords);
 
 
             var result = await aiGrader.GradeAsync(request, cancellationToken);
@@ -465,16 +460,12 @@ public sealed class AiGradingProcessor(
     /// <summary>
     /// #269: the paper position a graded response names, with the four facts grading reads from it -
     /// stem, word window, required keywords and modality. A pool task has no Question row, so the pinned
-    /// version is the only place its content lives; a legacy response returns null and the caller keeps
-    /// reading the question row it was answered from.
+    /// version is the only place its content lives.
     /// </summary>
     private async Task<GradedPosition?> LoadGradedPositionAsync(
         BusinessObjects.Entities.FreeResponse fr, CancellationToken cancellationToken)
     {
-        if (fr.ExamItemId is not int examItemId)
-        {
-            return null;
-        }
+        var examItemId = fr.ExamItemId;
 
         var position = await db.ExamItems
             .AsNoTracking()

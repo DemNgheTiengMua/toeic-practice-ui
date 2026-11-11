@@ -320,14 +320,9 @@ public sealed partial class AdminExamService
             .AsSplitQuery()
             .ToListAsync(cancellationToken);
 
-        var allQuestionIds = groups.SelectMany(g => g.QuestionGroups.Select(q => q.QuestionId)).ToList();
-        // #250: a pool answer has a NULL QuestionId and belongs to no legacy question, so it must not
-        // appear in this set. Filtering on the nullable column is what states that.
-        var answeredQuestionIds = new HashSet<int>(await db.AttemptAnswers.AsNoTracking()
-            .Where(a => a.QuestionId != null && allQuestionIds.Contains(a.QuestionId.Value))
-            .Select(a => a.QuestionId!.Value)
-            .Concat(db.FreeResponses.AsNoTracking().Where(r => r.QuestionId != null && allQuestionIds.Contains(r.QuestionId.Value)).Select(r => r.QuestionId!.Value))
-            .ToListAsync(cancellationToken));
+        // #269: an answer names a roster position, never a legacy question, so no row can cite one of
+        // these questions. The set stays empty and the per-question flag reads false, which is the fact.
+        var answeredQuestionIds = new HashSet<int>();
 
         var groupDtos = groups.Select(g => new AdminQuestionGroupDto(
             g.GroupId,
@@ -427,17 +422,16 @@ public sealed partial class AdminExamService
         var positionIds = roster.Select(i => i.ExamItemId).ToList();
 
         var answeredIds = new HashSet<int>(await db.AttemptAnswers.AsNoTracking()
-            .Where(a => a.ExamItemId != null && positionIds.Contains(a.ExamItemId.Value))
-            .Select(a => a.ExamItemId!.Value)
+            .Where(a => positionIds.Contains(a.ExamItemId))
+            .Select(a => a.ExamItemId)
             .Concat(db.FreeResponses.AsNoTracking()
-                .Where(r => r.ExamItemId != null && positionIds.Contains(r.ExamItemId.Value))
-                .Select(r => r.ExamItemId!.Value))
+                .Where(r => positionIds.Contains(r.ExamItemId))
+                .Select(r => r.ExamItemId))
             .ToListAsync(cancellationToken));
 
         var sitting = await new AttemptEngine(db).LoadSittingQuestionsAsync(exam.ExamId, cancellationToken);
         var byPosition = sitting
-            .Where(p => p.ExamItemId.HasValue)
-            .ToDictionary(p => p.ExamItemId!.Value);
+            .ToDictionary(p => p.ExamItemId);
 
         var versions = await db.ItemVersions.AsNoTracking()
             .Where(v => roster.Select(i => i.ItemVersionId).Contains(v.ItemVersionId))
@@ -745,8 +739,9 @@ public sealed partial class AdminExamService
         ValidateQuestionInputs(request.Stem, request.CefrLevelCode, request.QuestionType, request.PrepSeconds, request.ResponseSeconds, request.MinWords, request.MaxWords, request.Hint, request.Options, request.MaxSelections, request.AllowNumber, request.AcceptedAnswersJson, request.RequiredKeywords);
         ValidateReference(request.QuestionType, request.SampleAnswerOrImageDesc, request.ReferenceKind);
 
-        var hasAnswers = await db.AttemptAnswers.AnyAsync(a => a.QuestionId == questionId, cancellationToken)
-            || await db.FreeResponses.AnyAsync(r => r.QuestionId == questionId, cancellationToken);
+        // #269: no attempt answer can cite a legacy question id - the column is gone with the table - so
+        // this question has no recorded answers and the type-change refusal cannot apply.
+        const bool hasAnswers = false;
 
         if (hasAnswers && question.QuestionType != request.QuestionType.ToCode())
         {
@@ -789,7 +784,10 @@ public sealed partial class AdminExamService
                     throw new AdminExamException(ApiError.Codes.QuestionHasAttemptAnswers, "Cannot move a question with recorded answers to a different section.");
                 }
 
-                var hasPracticeAnswers = await db.PracticeAnswers.AnyAsync(p => p.QuestionId == questionId, cancellationToken);
+                // #269: a practice answer names the item and version it answered, not a question, so the
+                // practice-answer history of this legacy question cannot be read - and one cannot exist,
+                // because the old rows are gone with the column.
+                const bool hasPracticeAnswers = false;
                 if (hasPracticeAnswers)
                 {
                     throw new AdminExamException(ApiError.Codes.Validation, "Cannot move a question with recorded practice answers to a different section.");
@@ -966,8 +964,9 @@ public sealed partial class AdminExamService
             throw new QuestionNotFoundException(questionId);
         }
 
-        var hasAnswers = await db.AttemptAnswers.AnyAsync(a => a.QuestionId == questionId, cancellationToken)
-            || await db.FreeResponses.AnyAsync(r => r.QuestionId == questionId, cancellationToken);
+        // #269: no attempt answer can cite a legacy question id - the column is gone with the table - so
+        // this question has no recorded answers to protect.
+        const bool hasAnswers = false;
 
         // The question-level refusal is more specific than the exam-wide lock, and it was the one
         // reported before #157, so it keeps precedence: an admin looking at one question wants to
@@ -980,11 +979,7 @@ public sealed partial class AdminExamService
         // #157: deleting a question shrinks the section a finished attempt was scored on.
         await RequireStructureEditableAsync(question.ExamId, cancellationToken);
 
-        var saved = await db.SavedQuestions.Where(s => s.QuestionId == questionId).ToListAsync(cancellationToken);
-        if (saved.Count > 0) db.SavedQuestions.RemoveRange(saved);
-
-        var pa = await db.PracticeAnswers.Where(p => p.QuestionId == questionId).ToListAsync(cancellationToken);
-        if (pa.Count > 0) db.PracticeAnswers.RemoveRange(pa);
+        // #269: practice answers name an item, not a question, so there is no per-question row to cascade.
 
         db.QuestionOptions.RemoveRange(question.QuestionOptionQuestionNavigations);
         db.Questions.Remove(question);

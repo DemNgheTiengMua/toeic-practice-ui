@@ -18,17 +18,19 @@ public sealed partial class ExamQuickIngestService
 {
 
     /// <summary>
-    /// #189: writes the pasted questions, then the pool stock they become.
+    /// #189: writes the pasted questions as pool stock, and binds them to the paper.
     /// <para>
-    /// The legacy rows come first because they are what a paper renders, and because the
-    /// pool binding is placed by the position those rows give a question. Each paste group - a
-    /// passage plus its children - becomes <em>one</em> stimulus row shared by all of its children,
-    /// which is the difference between a shared passage and a copy per question.
+    /// #269: the pool is the only model this importer writes. Each paste group - a passage plus its
+    /// children - becomes <em>one</em> stimulus shared by all of its children, which is the difference
+    /// between a shared passage and a copy per question. A position's rank within its section is
+    /// computed by <see cref="PoolImportWriter"/> from the roster, so nothing here needs a legacy
+    /// question row to name.
     /// </para>
     /// <para>
-    /// A question the pool cannot hold (three options, a multi-select, a typed answer) is still
-    /// written in the legacy shape and named in the message. This is the expand half: a commit must
-    /// not fail because the pool is narrower than the old formats.
+    /// A question the pool cannot hold (three options, a multi-select, a typed answer) is a REFUSAL
+    /// the author must read, not a row in a second model. The whole upload is refused rather than
+    /// half-written: a pack that imported "most of" its questions would look successful and leave a
+    /// paper short by an amount only the log knows.
     /// </para>
     /// </summary>
     public async Task<QuickIngestCommitResultDto> CommitStagedAsync(
@@ -143,71 +145,35 @@ public sealed partial class ExamQuickIngestService
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
 
         var isReplace = string.Equals(request.Mode, "replace", StringComparison.OrdinalIgnoreCase);
-        int currentDisplayOrder = 1;
 
         if (isReplace)
         {
-            var existingGroups = await db.QuestionGroups
-                .Include(g => g.QuestionGroups)
-                    .ThenInclude(q => q.QuestionOptionQuestionNavigations)
-                .Where(g => g.ExamId == examId && g.SectionId == request.SectionId)
-                .ToListAsync(cancellationToken);
-
-            var existingQuestionIds = existingGroups.SelectMany(g => g.QuestionGroups.Select(q => q.QuestionId)).ToList();
-
-            // #250: a pool answer carries a NULL QuestionId and can never match a legacy question id.
-            var hasAnswers = await db.AttemptAnswers.AnyAsync(
-                    a => a.QuestionId != null && existingQuestionIds.Contains(a.QuestionId.Value), cancellationToken)
-                || await db.FreeResponses.AnyAsync(r => r.QuestionId != null && existingQuestionIds.Contains(r.QuestionId.Value), cancellationToken);
-
-            if (hasAnswers)
-            {
-                throw new AdminExamException(ApiError.Codes.QuestionHasAttemptAnswers, "Cannot replace section content because completed or active learner attempts exist.", 400);
-            }
-
-            // #189: a re-paste of a section replaces what the paper shows, so its bindings go with the
-            // rows they were placed on. Leaving them would bind a version to a position that no longer
-            // exists, which is a paper with a hole in it.
+            // #269: a re-paste of a section replaces what the paper holds, and what it holds is its
+            // roster. The bindings go first: leaving them would bind a version to a position whose
+            // section was just cleared. The items stay in the pool - another paper may bind them, and
+            // an import is not the place to retire pool stock.
             var existingBindings = await db.ExamItems
                 .Where(b => b.ExamId == examId && b.SectionId == request.SectionId)
                 .ToListAsync(cancellationToken);
+
             if (existingBindings.Count > 0)
             {
+                var answered = await db.AttemptAnswers.AnyAsync(
+                        a => existingBindings.Select(b => b.ExamItemId).Contains(a.ExamItemId),
+                        cancellationToken)
+                    || await db.FreeResponses.AnyAsync(
+                        r => existingBindings.Select(b => b.ExamItemId).Contains(r.ExamItemId),
+                        cancellationToken);
+
+                if (answered)
+                {
+                    throw new AdminExamException(ApiError.Codes.QuestionHasAttemptAnswers, "Cannot replace section content because completed or active learner attempts exist.", 400);
+                }
+
                 db.ExamItems.RemoveRange(existingBindings);
             }
 
-            foreach (var g in existingGroups)
-            {
-                foreach (var q in g.QuestionGroups)
-                {
-                    var saved = await db.SavedQuestions.Where(s => s.QuestionId == q.QuestionId).ToListAsync(cancellationToken);
-                    if (saved.Count > 0) db.SavedQuestions.RemoveRange(saved);
-
-                    var pa = await db.PracticeAnswers.Where(p => p.QuestionId == q.QuestionId).ToListAsync(cancellationToken);
-                    if (pa.Count > 0) db.PracticeAnswers.RemoveRange(pa);
-
-                    db.QuestionOptions.RemoveRange(q.QuestionOptionQuestionNavigations);
-                    db.Questions.Remove(q);
-                }
-                db.QuestionGroups.Remove(g);
-            }
-
             await db.SaveChangesAsync(cancellationToken);
-            currentDisplayOrder = 1;
-        }
-        else
-        {
-            var maxGroupOrder = await db.QuestionGroups
-                .Where(g => g.ExamId == examId && g.SectionId == request.SectionId)
-                .Select(g => (int?)g.DisplayOrder)
-                .MaxAsync(cancellationToken) ?? 0;
-
-            var maxQuestionOrder = await db.Questions
-                .Where(q => q.ExamId == examId && q.SectionId == request.SectionId)
-                .Select(q => (int?)q.DisplayOrder)
-                .MaxAsync(cancellationToken) ?? 0;
-
-            currentDisplayOrder = Math.Max(maxGroupOrder, maxQuestionOrder) + 1;
         }
 
         var categories = await db.QuestionCategories

@@ -81,9 +81,11 @@ public sealed partial class AdminExamService
         var examIds = examEntities.Select(e => e.ExamId).ToList();
         var certIds = examEntities.Select(e => e.CertId).Distinct().ToList();
 
-        var questionsCountByExam = await db.Questions.AsNoTracking()
-            .Where(q => examIds.Contains(q.ExamId))
-            .GroupBy(q => q.ExamId)
+        // #269: a paper's item count is its roster. The legacy table is dropped, so this is the only
+        // count there is - and it is the same one the detail read and the publish audit use.
+        var questionsCountByExam = await db.ExamItems.AsNoTracking()
+            .Where(i => examIds.Contains(i.ExamId))
+            .GroupBy(i => i.ExamId)
             .Select(g => new { ExamId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.ExamId, x => x.Count, cancellationToken);
 
@@ -183,9 +185,10 @@ public sealed partial class AdminExamService
             .OrderBy(s => s.DisplayOrder)
             .ToListAsync(cancellationToken);
 
-        var questionsBySection = await db.Questions.AsNoTracking()
-            .Where(q => q.ExamId == examId)
-            .GroupBy(q => q.SectionId)
+        // #269: per-section figures are the roster's, like the exam total above.
+        var questionsBySection = await db.ExamItems.AsNoTracking()
+            .Where(i => i.ExamId == examId)
+            .GroupBy(i => i.SectionId)
             .Select(g => new { SectionId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.SectionId, x => x.Count, cancellationToken);
 

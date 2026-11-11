@@ -21,12 +21,6 @@ public sealed partial class PracticeService
     /// the pool is "the items its paper binds into it", which <c>ExamItems</c> already records - so the
     /// section's cell is read from the bindings, and a section with no binding has no stock.
     /// </para>
-    /// <para>
-    /// shortcut: a section with NO pool bindings falls back to the legacy question count, because a
-    /// certificate authored before the pool still has to drill. #269 drops that table and this branch with
-    /// it; a section that HAS pool stock never consults the legacy count, so the two can never disagree
-    /// about the same section.
-    /// </para>
     /// </summary>
     private async Task<Dictionary<int, int>> CountDrillableBySectionAsync(
         int certId, CancellationToken cancellationToken)
@@ -39,35 +33,10 @@ public sealed partial class PracticeService
             .Select(x => x.SectionId)
             .ToListAsync(cancellationToken);
 
-        var counts = rows
+        return rows
             .GroupBy(sectionId => sectionId)
             .ToDictionary(g => g.Key, g => g.Count());
-
-        // shortcut: the legacy branch #269 deletes.
-        var legacy = await DrillableLegacyQuestions(certId)
-            .GroupBy(q => q.SectionId)
-            .Select(g => new { SectionId = g.Key, Count = g.Count() })
-            .ToListAsync(cancellationToken);
-
-        foreach (var row in legacy)
-        {
-            counts.TryAdd(row.SectionId, row.Count);
-        }
-
-        return counts;
     }
-
-    /// <summary>
-    /// shortcut: the legacy drillability rule, kept only for a section the pool has not stocked. The
-    /// speaking exclusion and the "answerable without a grader" rule are the same two facts the pool
-    /// branch expresses; #269 deletes this method with the tables it reads.
-    /// </summary>
-    private IQueryable<Question> DrillableLegacyQuestions(int certId) =>
-        db.Questions.AsNoTracking().Where(q => q.Section.CertId == certId
-            && q.Section.Modality != SpeakingCode
-            && (q.QuestionType == FreeResponseCode
-                || (q.QuestionType != FreeResponseCode
-                    && (q.AcceptedAnswersJson != null || db.QuestionOptions.Any(o => o.QuestionId == q.QuestionId)))));
 
     /// <summary>
     /// #263: the pool items a section drills, in the order the planner expects.
@@ -137,40 +106,7 @@ public sealed partial class PracticeService
         }).ToList();
     }
 
-    /// <summary>
-    /// shortcut: the legacy half of <see cref="LoadSectionCandidatesAsync"/>, for a section the pool has
-    /// not stocked. It reads the per-question history table this ticket stops WRITING but does not yet
-    /// delete; #269 removes both branches together. The planner is given the legacy question id in the
-    /// item slot, which is what the session builder then writes back as a legacy answer.
-    /// </summary>
-    private async Task<List<PracticeCandidate>> LoadLegacySectionCandidatesAsync(
-        int userId, int certId, int sectionId, CancellationToken cancellationToken)
-    {
-        var candidates = await DrillableLegacyQuestions(certId)
-            .Where(q => q.SectionId == sectionId)
-            .Select(q => new
-            {
-                q.QuestionId,
-                q.CategoryId,
-                History = db.UserQuestionHistories
-                    .Where(h => h.UserId == userId && h.QuestionId == q.QuestionId)
-                    .Select(h => new { h.LastAnsweredAt, h.CooldownUntil })
-                    .FirstOrDefault(),
-            })
-            .ToListAsync(cancellationToken);
-
-        return candidates
-            .Select(c => new PracticeCandidate(
-                c.QuestionId,
-                c.CategoryId,
-                c.History?.LastAnsweredAt,
-                c.History?.CooldownUntil))
-            .ToList();
-    }
-
     private static readonly string SpeakingCode = Modality.Speaking.ToCode();
-
-    private static readonly string FreeResponseCode = QuestionType.FreeResponse.ToCode();
 
     public async Task<PracticeSectionsView> GetPracticeSectionsAsync(int userId, CancellationToken cancellationToken = default)
     {
@@ -224,31 +160,6 @@ public sealed partial class PracticeService
                         .ToList();
                     return (Total: g.Count(), Resting: due.Count, Next: due.Count > 0 ? (DateTimeOffset?)due.Min() : null);
                 });
-
-        // shortcut: a section the pool has not stocked reports its rest from the legacy category axis,
-        // which is what the drill itself still draws for such a section. #269 deletes both this branch
-        // and the legacy loader behind it. A stocked section never reaches it.
-        var legacySectionCategories = await db.Questions
-            .AsNoTracking()
-            .Where(q => q.Section.CertId == activeCertId && q.CategoryId != null)
-            .Select(q => new { q.SectionId, CategoryId = q.CategoryId!.Value })
-            .Distinct()
-            .ToListAsync(cancellationToken);
-
-        foreach (var group in legacySectionCategories.GroupBy(c => c.SectionId))
-        {
-            if (rests.ContainsKey(group.Key))
-            {
-                continue;
-            }
-
-            var due = group
-                .Select(c => mastery.TryGetValue(c.CategoryId, out var m) ? m.NextReviewDueAt : null)
-                .OfType<DateTimeOffset>()
-                .Where(d => d > now)
-                .ToList();
-            rests[group.Key] = (group.Count(), due.Count, due.Count > 0 ? due.Min() : (DateTimeOffset?)null);
-        }
 
         var items = sections.Select(s =>
         {

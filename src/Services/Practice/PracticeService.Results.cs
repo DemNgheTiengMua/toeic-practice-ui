@@ -36,21 +36,9 @@ public sealed partial class PracticeService
 
         var answers = await db.PracticeAnswers
             .AsNoTracking()
-            .Include(pa => pa.Question)
-                .ThenInclude(q => q!.Category)
-            .Include(pa => pa.Question)
-                .ThenInclude(q => q!.Group)
             .Where(pa => pa.SessionId == sessionId)
             .OrderBy(pa => pa.DisplayOrder)
             .ToListAsync(cancellationToken);
-
-        var questionIds = answers.Where(a => a.QuestionId.HasValue).Select(a => a.QuestionId!.Value).ToList();
-        var allOptions = questionIds.Count == 0
-            ? []
-            : await db.QuestionOptions
-                .AsNoTracking()
-                .Where(o => questionIds.Contains(o.QuestionId))
-                .ToListAsync(cancellationToken);
 
         // #187: this is the criterion that has to be observed. Each answer renders the version it
         // pinned — not the item's current version, and not whatever the item says today. A correction
@@ -60,7 +48,6 @@ public sealed partial class PracticeService
 
         var outcomes = answers.Select(a =>
         {
-            var q = a.Question;
             var version = pinned.GetValueOrDefault(a.AnswerId);
 
             if (version is not null)
@@ -95,34 +82,27 @@ public sealed partial class PracticeService
                     version.ItemVersionId);
             }
 
-            var qOptions = allOptions.Where(o => o.QuestionId == q!.QuestionId).ToList();
-            var selectedOpt = a.SelectedOptionId.HasValue
-                ? qOptions.FirstOrDefault(o => o.OptionId == a.SelectedOptionId.Value)
-                : null;
-            var correctOpt = qOptions.FirstOrDefault(o => o.IsCorrect);
-
+            // Every answer pins a version, so a row whose version is gone has nothing to render.
             return new QuestionOutcome(
                 a.DisplayOrder,
-                q!.QuestionId,
-                q.Category?.Name,
-                q.Stem,
-                selectedOpt?.Label,
-                selectedOpt?.Text,
-                correctOpt?.Label,
-                correctOpt?.Text,
+                null,
+                null,
+                string.Empty,
+                null,
+                null,
+                null,
+                null,
                 a.IsCorrect,
                 a.HintUsed,
-                q.QuestionType == QuestionType.FreeResponse.ToCode()
-                    ? FreeResponseExplanation(q, a.ResponseText)
-                    : q.Explanation,
-                q.Group.AudioPath,
-                q.Group.AudioStartMs,
-                q.Group.AudioEndMs,
-                q.Group.Transcript,
-                q.QuestionType ?? "mcq",
+                null,
+                null,
+                null,
+                null,
+                null,
+                QuestionType.Mcq.ToCode(),
                 a.ResponseText,
                 a.SelectedOptionIdsJson,
-                q.AcceptedAnswersJson,
+                AcceptedAnswersJson: null,
                 null);
         }).ToList();
 

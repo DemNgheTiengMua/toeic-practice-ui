@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -88,23 +88,15 @@ public sealed partial class AttemptEngine
             .AsNoTracking()
             .Where(a => a.AttemptId == attempt.AttemptId)
             .ToListAsync(cancellationToken);
-        var answerByQuestionId = attemptAnswers
-            .Where(a => a.QuestionId.HasValue)
-            .ToDictionary(a => a.QuestionId!.Value);
         var answerByExamItemId = attemptAnswers
-            .Where(a => a.ExamItemId.HasValue)
-            .ToDictionary(a => a.ExamItemId!.Value);
+            .ToDictionary(a => a.ExamItemId);
 
         var responses = await db.FreeResponses
             .AsNoTracking()
             .Where(r => r.AttemptId == attempt.AttemptId)
             .ToListAsync(cancellationToken);
-        var responseByQuestionId = responses
-            .Where(r => r.QuestionId.HasValue)
-            .ToDictionary(r => r.QuestionId!.Value);
         var responseByExamItemId = responses
-            .Where(r => r.ExamItemId.HasValue)
-            .ToDictionary(r => r.ExamItemId!.Value);
+            .ToDictionary(r => r.ExamItemId);
 
         // Synced answers are SERVER rows that carry a choice, never the browser's queued payloads:
         // the server cannot see the client's queue, so a number counted from it would be a number the
@@ -115,13 +107,9 @@ public sealed partial class AttemptEngine
                   && (!string.IsNullOrWhiteSpace(response.ResponseText) || !string.IsNullOrWhiteSpace(response.AudioPath))
                 : AnswerFor(q) is { } answer && IsAnswered(answer);
 
-        AttemptAnswer? AnswerFor(SittingQuestion q) => q.ExamItemId is int examItemId
-            ? answerByExamItemId.GetValueOrDefault(examItemId)
-            : answerByQuestionId.GetValueOrDefault(q.Id);
+        AttemptAnswer? AnswerFor(SittingQuestion q) => answerByExamItemId.GetValueOrDefault(q.ExamItemId);
 
-        FreeResponse? ResponseFor(SittingQuestion q) => q.ExamItemId is int examItemId
-            ? responseByExamItemId.GetValueOrDefault(examItemId)
-            : responseByQuestionId.GetValueOrDefault(q.Id);
+        FreeResponse? ResponseFor(SittingQuestion q) => responseByExamItemId.GetValueOrDefault(q.ExamItemId);
 
         var phaseSkills = questions
             .GroupBy(q => q.Section.Skill)
@@ -202,7 +190,7 @@ public sealed partial class AttemptEngine
         // placement recording, so an interrupted recording could not be resumed at all.
         var response = await db.FreeResponses
             .SingleOrDefaultAsync(r => r.AttemptId == attemptId
-                && (r.QuestionId == questionId || r.ExamItemId == questionId), cancellationToken)
+                && r.ExamItemId == questionId, cancellationToken)
             ?? throw new AttemptEngineException(
                 AttemptEngineException.QuestionNotFound,
                 $"Free-response question {questionId} not found in attempt.");
@@ -219,8 +207,10 @@ public sealed partial class AttemptEngine
                 null);
         }
 
-        var siblingId = await FindUnseenSiblingQuestionAsync(attempt, questionId, cancellationToken);
-        var decision = PlacementRecordingRule.Decide(response.RecordingInterruptions, capturedMs, siblingId);
+        // #269: a paper has one roster, and no roster position declares a CEFR level to match a sibling
+        // on. So the rule is given no sibling and finalises rather than inventing a replacement task -
+        // which is the correct answer, not a failure: PLC-15's contract is "no sibling means finalise".
+        var decision = PlacementRecordingRule.Decide(response.RecordingInterruptions, capturedMs, siblingQuestionId: null);
 
         response.RecordingInterruptions = decision.Interruptions;
         response.RecordingSessionToken = sessionToken;
@@ -236,64 +226,5 @@ public sealed partial class AttemptEngine
         await db.SaveChangesAsync(cancellationToken);
 
         return decision;
-    }
-
-    /// <summary>
-    /// PLC-15's "unseen sibling from the same cell". The id of a same-skill, same-level sibling task
-    /// with no answer yet.
-    /// <para>
-    /// <b>This is a legacy-paper rule, by design.</b> It matches on <c>Questions.CefrLevel</c>, so a
-    /// pool-authored paper has no row here and the method returns null - which is the correct answer,
-    /// not a failure: the caller's contract is "null means the paper carries no such sibling, so
-    /// finalise rather than inventing a task". Adding a level lookup for the pool would mean a second
-    /// way to pick a sibling, and #250's whole point is that a paper has one roster.
-    /// </para>
-    /// </summary>
-    private async Task<int?> FindUnseenSiblingQuestionAsync(
-        ExamAttempt attempt,
-        int questionId,
-        CancellationToken cancellationToken)
-    {
-        var current = await db.Questions
-            .AsNoTracking()
-            .Where(q => q.QuestionId == questionId && q.ExamId == attempt.ExamId)
-            .Select(q => new { q.SkillId, q.CefrLevel })
-            .SingleOrDefaultAsync(cancellationToken);
-
-        if (current is null)
-        {
-            return null;
-        }
-
-        var drafted = await db.FreeResponses
-            .Where(r => r.AttemptId == attempt.AttemptId
-                && r.QuestionId != null
-                && (!string.IsNullOrEmpty(r.ResponseText) || r.AudioPath != null))
-            // #250: QuestionId is nullable now. This branch is about LEGACY questions - the fallback it
-            // feeds is a query over Questions - so a pool response contributes nothing here.
-            .Select(r => r.QuestionId!.Value)
-            .ToListAsync(cancellationToken);
-        var answered = await db.AttemptAnswers
-            .Where(a => a.AttemptId == attempt.AttemptId
-                && a.SelectedOptionId != null
-                && a.QuestionId != null)
-            // #250: QuestionId is nullable now, so the projection yields int? and a pool answer would
-            // contribute a NULL here. This branch is about LEGACY questions, so the nulls are dropped
-            // rather than carried into a set of question ids.
-            .Select(a => a.QuestionId!.Value)
-            .ToListAsync(cancellationToken);
-
-        var seen = drafted.Union(answered).ToHashSet();
-
-        return await db.Questions
-            .AsNoTracking()
-            .Where(q => q.ExamId == attempt.ExamId
-                && q.QuestionId != questionId
-                && q.SkillId == current.SkillId
-                && q.CefrLevel == current.CefrLevel
-                && !seen.Contains(q.QuestionId))
-            .OrderBy(q => q.DisplayOrder)
-            .Select(q => (int?)q.QuestionId)
-            .FirstOrDefaultAsync(cancellationToken);
     }
 }

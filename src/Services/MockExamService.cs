@@ -102,21 +102,14 @@ public sealed class MockExamService(
             activeAttempt = null;
         }
 
-        // Only the sections this exam has questions in, counted from the exam itself - the
-        // certificate may define sections (e.g. Speaking on TOEIC L&R) this exam never uses.
+        // Only the sections this exam has positions in, counted from the exam itself - the certificate
+        // may define sections (e.g. Speaking on TOEIC L&R) this exam never uses.
         //
-        // #269: "questions in" is the roster once a paper is authored there, and the legacy question
-        // rows otherwise. Reading Questions alone made a pool-authored paper report zero sections and
-        // so offer nothing to sit; reading the roster alone loses every paper not yet migrated.
+        // #269: "positions in" is the roster. It is the only place a paper's sections are recorded.
         var examSectionCounts = (await db.ExamItems
                 .AsNoTracking()
                 .Where(i => i.ExamId == examId)
                 .Select(i => i.SectionId)
-                .ToListAsync(cancellationToken))
-            .Concat(await db.Questions
-                .AsNoTracking()
-                .Where(q => q.ExamId == examId)
-                .Select(q => q.SectionId)
                 .ToListAsync(cancellationToken))
             .GroupBy(sectionId => sectionId)
             .ToDictionary(g => g.Key, g => g.Count());

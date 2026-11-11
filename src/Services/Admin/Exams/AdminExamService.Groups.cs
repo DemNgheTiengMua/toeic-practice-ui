@@ -169,25 +169,13 @@ public sealed partial class AdminExamService
         // scored over. The per-question answer check below only sees the questions that have answers.
         await RequireStructureEditableAsync(examId, cancellationToken);
 
-        var qIds = await db.Questions.Where(q => q.GroupId == groupId).Select(q => q.QuestionId).ToListAsync(cancellationToken);
-        // #250: QuestionId is nullable, so the predicate is stated on a nullable column. A pool answer
-        // carries NULL here and can never match a real question id, which is the correct answer.
-        var hasAnswers = await db.AttemptAnswers.AnyAsync(
-                a => a.QuestionId != null && qIds.Contains(a.QuestionId.Value), cancellationToken)
-            || await db.FreeResponses.AnyAsync(r => r.QuestionId != null && qIds.Contains(r.QuestionId.Value), cancellationToken);
-
-        if (hasAnswers)
-        {
-            throw new AdminExamException(ApiError.Codes.QuestionHasAttemptAnswers, "Cannot delete a question group containing questions answered in attempts.", 400);
-        }
+        // #269: no attempt answer or free response can cite a legacy question id - the column is gone with
+        // the table - so no question in this group has a recorded answer, and the refusal that guarded
+        // against deleting an answered one has nothing left to test.
 
         foreach (var q in group.QuestionGroups)
         {
-            var saved = await db.SavedQuestions.Where(s => s.QuestionId == q.QuestionId).ToListAsync(cancellationToken);
-            if (saved.Count > 0) db.SavedQuestions.RemoveRange(saved);
-
-            var pa = await db.PracticeAnswers.Where(p => p.QuestionId == q.QuestionId).ToListAsync(cancellationToken);
-            if (pa.Count > 0) db.PracticeAnswers.RemoveRange(pa);
+            // #269: practice answers name an item, not a question, so there is no per-question row to cascade.
 
             db.QuestionOptions.RemoveRange(q.QuestionOptionQuestionNavigations);
             db.Questions.Remove(q);
@@ -422,9 +410,9 @@ public sealed partial class AdminExamService
         var positionIds = positions.Select(p => p.ExamItemId).ToList();
 
         var answered = await db.AttemptAnswers.AnyAsync(
-                a => a.ExamItemId != null && positionIds.Contains(a.ExamItemId.Value), cancellationToken)
+                a => positionIds.Contains(a.ExamItemId), cancellationToken)
             || await db.FreeResponses.AnyAsync(
-                r => r.ExamItemId != null && positionIds.Contains(r.ExamItemId.Value), cancellationToken);
+                r => positionIds.Contains(r.ExamItemId), cancellationToken);
 
         if (answered)
         {

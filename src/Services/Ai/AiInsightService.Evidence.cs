@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,7 +34,6 @@ public sealed partial class AiInsightService
     /// </summary>
     public List<ErrorFingerprint> ExtractErrorFingerprints(
         IReadOnlyList<AttemptAnswer> answers,
-        IReadOnlyList<QuestionOption> allOptions,
         IReadOnlyList<InsightTopicAccuracy> topicAccuracies)
     {
         var incorrectAnswers = answers.Where(a => a.IsCorrect == false).ToList();
@@ -76,24 +75,10 @@ public sealed partial class AiInsightService
         var result = new List<ErrorFingerprint>();
         foreach (var ans in selected)
         {
-            // #269 / #271: a pool answer has no Question row, so `q` may be null. This loop already
-            // read `q.QuestionId` unconditionally, which threw for every pool answer - the exam insight
-            // could not be generated for a paper assembled from the pool.
-            var q = ans.Question;
-            var qOpts = q is null
-                ? []
-                : allOptions.Where(o => o.QuestionId == q.QuestionId).ToList();
-            // #186: a pinned answer names a label on its version; the legacy row has no option to look
-            // up. The fingerprint describes what the learner saw, so the version supplies it.
+            // #269: an answer reads its pinned version, which is what the learner saw.
             var pinned = ans.ItemVersion;
-            var chosen = pinned is not null
-                ? PinnedOptionText(pinned, ans.SelectedLabel)
-                : ans.SelectedOptionId.HasValue
-                    ? qOpts.FirstOrDefault(o => o.OptionId == ans.SelectedOptionId.Value)?.Text
-                    : null;
-            var correct = pinned is not null
-                ? PinnedOptionText(pinned, pinned.KeyLabel)
-                : qOpts.FirstOrDefault(o => o.IsCorrect)?.Text;
+            var chosen = pinned is null ? null : PinnedOptionText(pinned, ans.SelectedLabel);
+            var correct = pinned is null ? null : PinnedOptionText(pinned, pinned.KeyLabel);
 
             // The cell's NAME comes from the payload's own row, not from a second lookup: the row the
             // answer was ranked against is the one it is described by. A cell absent from the payload
@@ -108,10 +93,10 @@ public sealed partial class AiInsightService
                         : null;
 
             result.Add(new ErrorFingerprint(
-                pinned?.Stem ?? q?.Stem ?? string.Empty,
+                pinned?.Stem ?? string.Empty,
                 chosen,
                 correct,
-                pinned?.Explanation ?? q?.Explanation,
+                pinned?.Explanation,
                 ans.IsFlagged,
                 cellName));
         }
@@ -142,12 +127,24 @@ public sealed partial class AiInsightService
     {
         var freeResponses = await db.FreeResponses
             .AsNoTracking()
-            .Include(fr => fr.Question)
             .Include(fr => fr.AiGradingFreeResponse)
                 .ThenInclude(g => g!.AiGradingScores)
                     .ThenInclude(s => s.GradingCriterion)
             .Where(fr => fr.AttemptId == attemptId)
             .ToListAsync(cancellationToken);
+
+        // #269: a free response names a roster position and no question, so the task's stem comes from
+        // the version that position pinned - the same content the sitting rendered.
+        var positionIds = freeResponses.Select(fr => fr.ExamItemId).Distinct().ToList();
+        var stemByPosition = positionIds.Count == 0
+            ? new Dictionary<int, string>()
+            : await db.ExamItems
+                .AsNoTracking()
+                .Where(i => positionIds.Contains(i.ExamItemId))
+                .Join(db.ItemVersions.AsNoTracking(),
+                    i => i.ItemVersionId, v => v.ItemVersionId,
+                    (i, v) => new { i.ExamItemId, v.Stem })
+                .ToDictionaryAsync(x => x.ExamItemId, x => x.Stem, cancellationToken);
 
         var result = new List<WritingEvidence>();
         foreach (var fr in freeResponses)
@@ -173,8 +170,8 @@ public sealed partial class AiInsightService
             int words = string.IsNullOrWhiteSpace(text) ? 0 : text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
 
             result.Add(new WritingEvidence(
-                fr.QuestionId!.Value,
-                fr.Question?.Stem ?? "Writing Prompt",
+                fr.ExamItemId,
+                stemByPosition.GetValueOrDefault(fr.ExamItemId, "Writing Prompt"),
                 text,
                 words,
                 scores,

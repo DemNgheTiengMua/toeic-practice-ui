@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
 using Contracts;
 using DataAccess;
@@ -23,37 +23,21 @@ public sealed partial class PracticeService
 
         var answers = await db.PracticeAnswers
             .AsNoTracking()
-            .Include(pa => pa.Question)
-                .ThenInclude(q => q!.Group)
-            .Include(pa => pa.Question)
-                .ThenInclude(q => q!.Category)
-            .Include(pa => pa.Question)
-                .ThenInclude(q => q!.QuestionOptionQuestionNavigations)
             .Where(pa => pa.SessionId == sessionId)
             .OrderBy(pa => pa.DisplayOrder)
             .ToListAsync(cancellationToken);
 
         var isFinished = session.Status == PracticeStatus.Finished.ToCode();
-        var questionIds = answers.Where(a => a.QuestionId.HasValue).Select(a => a.QuestionId!.Value).ToList();
-        var itemIds = answers.Where(a => a.ItemId.HasValue).Select(a => a.ItemId!.Value).ToList();
+        var itemIds = answers.Select(a => a.ItemId).ToList();
 
-        // #224: the bank holds both shapes now, so the saved state is asked of whichever identity each
-        // answer has. The row id comes along, because unsaving addresses the bookmark itself - the
-        // practice page has no other way to name the right row. One query per shape, each skipped when
-        // its id list is empty.
-        var savedByQuestionId = questionIds.Count == 0
-            ? []
-            : await db.SavedQuestions
-                .AsNoTracking()
-                .Where(sq => sq.UserId == userId && sq.QuestionId.HasValue && questionIds.Contains(sq.QuestionId.Value))
-                .ToDictionaryAsync(sq => sq.QuestionId!.Value, sq => sq.SavedQuestionId, cancellationToken);
-
+        // #224 / #269: a bookmark names the item. The row id comes along, because unsaving addresses the
+        // bookmark itself - the practice page has no other way to name the right row.
         var savedByItemId = itemIds.Count == 0
             ? []
             : await db.SavedQuestions
                 .AsNoTracking()
-                .Where(sq => sq.UserId == userId && sq.ItemId.HasValue && itemIds.Contains(sq.ItemId.Value))
-                .ToDictionaryAsync(sq => sq.ItemId!.Value, sq => sq.SavedQuestionId, cancellationToken);
+                .Where(sq => sq.UserId == userId && itemIds.Contains(sq.ItemId))
+                .ToDictionaryAsync(sq => sq.ItemId, sq => sq.SavedQuestionId, cancellationToken);
 
         // #187: a pool answer renders the version it pinned, and nothing else decides. The pinned rows
         // are loaded in one query, so a session with no pool answers costs no second round trip.
@@ -62,7 +46,7 @@ public sealed partial class PracticeService
 
         return answers.Select(answer =>
             ProjectAnswer(session, answer, isFinished, pinned.GetValueOrDefault(answer.AnswerId),
-                stimuli, savedByQuestionId, savedByItemId)).ToList();
+                stimuli, savedByItemId)).ToList();
     }
 
     public async Task<PracticeQuestionView> GetQuestionAsync(int userId, int sessionId, int displayOrder, CancellationToken cancellationToken = default)
@@ -73,12 +57,6 @@ public sealed partial class PracticeService
                 .ThenInclude(s => s.Section)
             .Include(pa => pa.Session)
                 .ThenInclude(s => s.Topic)
-            .Include(pa => pa.Question)
-                .ThenInclude(q => q!.Group)
-            .Include(pa => pa.Question)
-                .ThenInclude(q => q!.Category)
-            .Include(pa => pa.Question)
-                .ThenInclude(q => q!.QuestionOptionQuestionNavigations)
             .Where(pa => pa.SessionId == sessionId && pa.Session.UserId == userId);
 
         PracticeAnswer? answer;
@@ -111,21 +89,20 @@ public sealed partial class PracticeService
         var stimulus = await LoadStimuliAsync(pinned.Values, cancellationToken);
 
         var savedQuestionId = await db.SavedQuestions
-            .Where(sq => sq.UserId == userId
-                && (answer.QuestionId != null ? sq.QuestionId == answer.QuestionId : sq.ItemId == answer.ItemId))
+            .Where(sq => sq.UserId == userId && sq.ItemId == answer.ItemId)
             .Select(sq => (int?)sq.SavedQuestionId)
             .FirstOrDefaultAsync(cancellationToken);
 
         return ProjectAnswer(
             answer.Session, answer, isFinished, pinned.GetValueOrDefault(answer.AnswerId), stimulus,
-            savedQuestionId is { } id && answer.QuestionId is { } qid ? new Dictionary<int, int> { [qid] = id } : [],
             savedQuestionId is { } iid && answer.ItemId is { } itemId2 ? new Dictionary<int, int> { [itemId2] = iid } : []);
     }
 
     /// <summary>
-    /// #186/#187: one projection for both shapes. A pinned answer renders its version's stem, options,
-    /// key and explanation; an unpinned one renders the question row it was answered from. Every field
-    /// that is not scored content — word limits, type, audio slice — stays where it already lives.
+    /// #186/#187 / #269: one projection, and it renders the version the answer pinned. There is no
+    /// second shape to fall back to: a practice answer names an item and version, and the legacy
+    /// question row it could have rendered is gone. A row with no pin (a lesson micro-check answer,
+    /// which names only its card) renders an empty stem, which is what it rendered before.
     /// </summary>
     private static PracticeQuestionView ProjectAnswer(
         PracticeSession session,
@@ -133,33 +110,31 @@ public sealed partial class PracticeService
         bool isFinished,
         ItemVersion? pinned,
         IReadOnlyDictionary<int, Stimulus> stimuli,
-        IReadOnlyDictionary<int, int> savedByQuestionId,
         IReadOnlyDictionary<int, int> savedByItemId)
     {
-        var q = answer.Question;
         var (_, sectionName) = ScopeLabels(session);
         // #253: one definition, so the pool's ungraded productive answer reads as answered here too.
         var isAnswered = AnswerContent.IsAnswered(
             answer.SelectedOptionId, answer.SelectedLabel, answer.ResponseText, answer.SelectedOptionIdsJson);
 
-        IReadOnlyList<PracticeQuestionOption> options;
-        int? selectedOptionId;
+        IReadOnlyList<PracticeQuestionOption> options = [];
+        int? selectedOptionId = null;
         int? correctOptionId = null;
         string? explanation = null;
-        string? transcript;
-        string? passage;
-        string? audioPath;
-        string? imagePath;
-        string? imageAlt;
+        string? transcript = null;
+        string? passage = null;
+        string? audioPath = null;
+        string? imagePath = null;
+        string? imageAlt = null;
         int? audioStartMs = null;
         int? audioEndMs = null;
-        var questionType = q?.QuestionType ?? "mcq";
-        int? maxSelections = q?.MaxSelections;
-        var allowNumber = q?.AllowNumber ?? true;
-        string? acceptedAnswersJson = q?.AcceptedAnswersJson;
-        string? requiredKeywords = q?.RequiredKeywords;
-        int? minWords = q?.MinWords;
-        int? maxWords = q?.MaxWords;
+        var questionType = QuestionType.Mcq.ToCode();
+        int? maxSelections = null;
+        var allowNumber = true;
+        string? acceptedAnswersJson = null;
+        string? requiredKeywords = null;
+        int? minWords = null;
+        int? maxWords = null;
 
         if (pinned is not null)
         {
@@ -189,50 +164,24 @@ public sealed partial class PracticeService
             imagePath = stimulus?.ImagePath;
             imageAlt = stimulus?.ImageAlt;
         }
-        else
-        {
-            options = (q?.QuestionOptionQuestionNavigations ?? [])
-                .OrderBy(o => o.Label)
-                .Select(o => new PracticeQuestionOption(o.OptionId, o.Label, o.Text))
-                .ToList();
-
-            selectedOptionId = answer.SelectedOptionId;
-            if (isAnswered || isFinished)
-            {
-                correctOptionId = q?.QuestionOptionQuestionNavigations.FirstOrDefault(o => o.IsCorrect)?.OptionId;
-                explanation = q?.QuestionType == QuestionType.FreeResponse.ToCode()
-                    ? FreeResponseExplanation(q!, answer.ResponseText)
-                    : q?.Explanation;
-            }
-
-            transcript = q?.Group?.Transcript;
-            passage = q?.Group?.Passage;
-            audioPath = q?.Group?.AudioPath;
-            imagePath = q?.Group?.ImagePath;
-            imageAlt = q?.Group?.ImageAlt;
-            audioStartMs = q?.Group?.AudioStartMs;
-            audioEndMs = q?.Group?.AudioEndMs;
-        }
 
         // #269: a pool answer records HintUsed from the pinned version's hint, so the reload must read
         // the hint from that same version. Consulting only the legacy row left the flag true beside a
         // null hint - the learner was told they had used a hint they could not see.
-        var hintText = answer.HintUsed
-            ? (pinned?.Hint ?? q?.Hint)
+        var hintText = answer.HintUsed ? pinned?.Hint : null;
+        int? savedQuestionId = answer.ItemId is { } iid && savedByItemId.TryGetValue(iid, out var idForItem)
+            ? idForItem
             : null;
-        int? savedQuestionId = answer.QuestionId is { } qid
-            ? savedByQuestionId.TryGetValue(qid, out var idForQuestion) ? idForQuestion : null
-            : answer.ItemId is { } iid && savedByItemId.TryGetValue(iid, out var idForItem) ? idForItem : null;
         var isSaved = savedQuestionId.HasValue;
 
         return new PracticeQuestionView(
             session.SessionId,
             sectionName,
-            answer.QuestionId,
+            null,
             answer.DisplayOrder,
             session.QuestionCount,
-            pinned?.Stem ?? q?.Stem ?? string.Empty,
-            q?.Category?.Name,
+            pinned?.Stem ?? string.Empty,
+            null,
             hintText,
             answer.HintUsed,
             options,
@@ -258,11 +207,7 @@ public sealed partial class PracticeService
             answer.ResponseText,
             AttemptEngine.ParseOptionIds(answer.SelectedOptionIdsJson, answer.SelectedOptionId).ToList(),
             answer.SelectedOptionIdsJson,
-            (isAnswered || isFinished)
-                ? pinned is not null
-                    ? correctOptionId is { } key ? [key] : []
-                    : q?.QuestionOptionQuestionNavigations.Where(o => o.IsCorrect).Select(o => o.OptionId).ToList() ?? []
-                : [],
+            (isAnswered || isFinished) && correctOptionId is { } key ? [key] : [],
             answer.ItemVersionId,
             savedQuestionId);
     }

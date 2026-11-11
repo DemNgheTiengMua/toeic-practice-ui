@@ -82,9 +82,8 @@ public sealed partial class AttemptEngine
                 : [];
             if (finalDrafts is { Count: > 0 })
             {
-                // #269: a draft's `QuestionId` is the POSITION the client was handed - a question id on a
-                // legacy paper, an ExamItemId on a pool one. The wire field keeps its name (the client did
-                // not change); `Address` says what the value actually means.
+                // #269: a draft's `QuestionId` is the POSITION the client was handed, an ExamItemId. The
+                // wire field keeps its name because the client did not change.
                 int Address(AttemptFinalDraft draft) => draft.QuestionId;
 
                 if (finalDrafts.Select(Address).Distinct().Count() != finalDrafts.Count)
@@ -96,17 +95,14 @@ public sealed partial class AttemptEngine
 
                 foreach (var finalDraft in finalDrafts)
                 {
-                    // #269: the draft names a POSITION, which is a QuestionId on a legacy paper and an
-                    // ExamItemId on a pool one. Matching on QuestionId alone missed every pool draft, so
-                    // the create branch below inserted a second row for a position CreateAttemptAsync had
-                    // already seeded - and UX_FreeResponses_ExamItem refused it with a duplicate key.
-                    var response = freeResponses.SingleOrDefault(item => item.QuestionId == Address(finalDraft)
-                        || item.ExamItemId == Address(finalDraft));
+                    // #269: the draft names a roster position. Matching on the legacy column alone missed
+                    // every pool draft, so the create branch below inserted a second row for a position
+                    // CreateAttemptAsync had already seeded - and UX_FreeResponses_ExamItem refused it
+                    // with a duplicate key.
+                    var response = freeResponses.SingleOrDefault(item => item.ExamItemId == Address(finalDraft));
                     if (response is null)
                     {
-                        // #250: the position comes from the paper, so a pool-only productive task
-                        // resolves too. A response row names whichever identity its paper uses, and
-                        // CK_FreeResp_HasShape guarantees at least one is set.
+                        // #250: the position comes from the paper, so a productive task resolves too.
                         var question = await FindSittingQuestionAsync(attempt, Address(finalDraft), cancellationToken);
 
                         if (question.RenderFormat != QuestionType.FreeResponse.ToCode())
@@ -119,7 +115,6 @@ public sealed partial class AttemptEngine
                         response = new FreeResponse
                         {
                             AttemptId = attemptId,
-                            QuestionId = question.LegacyQuestion is null ? null : question.Id,
                             ExamItemId = question.ExamItemId,
                             ExamId = attempt.ExamId,
                             SkillId = question.Section.SkillId,
@@ -181,34 +176,19 @@ public sealed partial class AttemptEngine
 
             var answers = await db.AttemptAnswers
                 .Where(a => a.AttemptId == attemptId)
-                .Include(a => a.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
                 .ToListAsync(cancellationToken);
             var isPlacement = attempt.Exam.Purpose == ExamPurpose.Placement.ToCode();
-            var questionIds = answers.Select(answer => answer.QuestionId).Distinct().ToList();
-            var optionsByQuestion = (await db.QuestionOptions
-                .Where(option => questionIds.Contains(option.QuestionId))
-                .ToListAsync(cancellationToken))
-                .ToLookup(option => option.QuestionId);
 
-            // #186: a pinned answer is scored against the version it pinned, not the question row.
+            // #186: a pinned answer is scored against the version it pinned.
             var pinnedVersions = await LoadPinnedVersionsAsync(answers, cancellationToken);
 
-            // #250: an answer on a pool-authored paper has no `Question` navigation - it names a roster
-            // position instead. Scoring therefore cannot read `a.Question.QuestionType`; it asks the
-            // paper, which is the one place that knows the render format and the section of a position.
-            //
-            // Measured before this: submitting a pool paper threw NullReferenceException at
-            // `a.Question.QuestionType`, because the navigation is legitimately null when
-            // CK_AttemptAnswers_HasShape chose the ExamItemId branch.
+            // #250: a position's render format and section come from the paper, which is the one place
+            // that knows them.
             var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
-            var positionById = paperQuestions.ToDictionary(q => q.Id);
             var positionByExamItemId = paperQuestions
-                .Where(q => q.ExamItemId.HasValue)
-                .ToDictionary(q => q.ExamItemId!.Value);
+                .ToDictionary(q => q.ExamItemId);
 
-            SittingQuestion? PositionOf(AttemptAnswer a) => a.ExamItemId is int examItemId
-                ? positionByExamItemId.GetValueOrDefault(examItemId)
-                : a.QuestionId is int questionId ? positionById.GetValueOrDefault(questionId) : null;
+            SittingQuestion? PositionOf(AttemptAnswer a) => positionByExamItemId.GetValueOrDefault(a.ExamItemId);
 
             bool IsProductiveAnswer(AttemptAnswer a) =>
                 PositionOf(a)?.RenderFormat == QuestionType.FreeResponse.ToCode();
@@ -223,7 +203,7 @@ public sealed partial class AttemptEngine
             // grade"; leaving the blank unjudged is what makes the two agree.
             foreach (var ans in answers.Where(a => !IsProductiveAnswer(a)))
             {
-                ans.IsCorrect = IsAnswered(ans) ? EvaluateAnswer(ans, pinnedVersions, optionsByQuestion) : null;
+                ans.IsCorrect = IsAnswered(ans) ? EvaluateAnswer(ans, pinnedVersions) : null;
             }
 
             // Clean any existing skill scores for idempotent resubmits
@@ -458,32 +438,23 @@ public sealed partial class AttemptEngine
 
             var answers = await db.AttemptAnswers
                 .Where(a => a.AttemptId == attemptId)
-                .Include(a => a.Question).ThenInclude(q => q.QuestionOptionQuestionNavigations)
                 .ToListAsync(cancellationToken);
 
-            // #269: a pool position has no question row, so the section, the skill and the length rule
-            // come from the roster. The legacy branch keeps its question rows for one more release;
-            // the readers below ask the paper, which knows both shapes.
+            // #269: the section, the skill and the length rule come from the roster position a row names.
             var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
-            var positionByQuestionId = paperQuestions
-                .Where(q => !q.ExamItemId.HasValue)
-                .ToDictionary(q => q.Id);
             var positionByExamItemId = paperQuestions
-                .Where(q => q.ExamItemId.HasValue)
-                .ToDictionary(q => q.ExamItemId!.Value);
+                .ToDictionary(q => q.ExamItemId);
 
-            SittingQuestion? PositionOfQuestion(int? examItemId, int? questionId) =>
-                examItemId is int itemKey
-                    ? positionByExamItemId.GetValueOrDefault(itemKey)
-                    : questionId is int questionKey ? positionByQuestionId.GetValueOrDefault(questionKey) : null;
+            SittingQuestion? PositionOfQuestion(int examItemId) =>
+                positionByExamItemId.GetValueOrDefault(examItemId);
 
             SittingQuestion PositionOfResponse(FreeResponse fr) =>
-                PositionOfQuestion(fr.ExamItemId, fr.QuestionId)
+                PositionOfQuestion(fr.ExamItemId)
                 ?? throw new AttemptEngineException(
                     AttemptEngineException.QuestionNotFound,
                     $"Free response {fr.FreeResponseId} names no position on attempt {attemptId}'s paper.");
 
-            SittingQuestion? PositionOfAnswer(AttemptAnswer a) => PositionOfQuestion(a.ExamItemId, a.QuestionId);
+            SittingQuestion? PositionOfAnswer(AttemptAnswer a) => PositionOfQuestion(a.ExamItemId);
 
             // #191: clearing the score is a write of the same derived fact, so it declares the same
             // writer. This runs before the rescore below and is what makes a resubmit start from a
@@ -572,16 +543,8 @@ public sealed partial class AttemptEngine
                 // #217 / PLC-18: a blank stays unjudged, exactly as in the objective pass above. It is
                 // still incorrect for the skill's raw score (only `IsCorrect == true` counts, over every
                 // delivered item) but it does not read as an ANSWERED row to the accuracy views.
-                // #269: a pool answer has no Question row, so the legacy options lookup is empty for it.
-                // EvaluateAnswer reads the pinned version for such an answer and never touches this
-                // lookup, but building it dereferenced the null navigation and threw
-                // NullReferenceException - so finalising ANY attempt containing a pool answer failed.
-                var legacyOptions = answer.Question is { } question
-                    ? question.QuestionOptionQuestionNavigations.ToLookup(o => o.QuestionId)
-                    : ((IEnumerable<BusinessObjects.Entities.QuestionOption>)[]).ToLookup(o => o.QuestionId);
-
                 answer.IsCorrect = IsAnswered(answer)
-                    ? EvaluateAnswer(answer, pinnedVersions, legacyOptions)
+                    ? EvaluateAnswer(answer, pinnedVersions)
                     : null;
             }
 

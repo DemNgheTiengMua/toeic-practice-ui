@@ -1429,7 +1429,13 @@ CREATE TABLE ExamItems (
   CONSTRAINT FK_ExamItems_VersionItem  FOREIGN KEY (ItemVersionId, ItemId)
     REFERENCES ItemVersions(ItemVersionId, ItemId),
   -- one position per paper per section: two items cannot both be "question 7" of one section
-  CONSTRAINT UQ_ExamItems_Exam_Section_Order UNIQUE (ExamId, SectionId, DisplayOrder)
+  CONSTRAINT UQ_ExamItems_Exam_Section_Order UNIQUE (ExamId, SectionId, DisplayOrder),
+  -- #269: composite target so a free response can require its position to belong to its own exam.
+  CONSTRAINT UQ_ExamItems_Id_Exam UNIQUE (ExamItemId, ExamId),
+  -- #269: composite target so a free response's SkillId must be its position's own skill. Without this
+  -- a response on a READING position could claim the SPEAKING skill and AiGradings accepted it, so the
+  -- rubric the answer was graded against belonged to a different skill.
+  CONSTRAINT UQ_ExamItems_Id_Section UNIQUE (ExamItemId, SectionId)
 );
 GO
 -- INV-6 is the one rule no foreign key can express: "this paper may draw this tier of stock" relates
@@ -1643,13 +1649,11 @@ GO
 CREATE TABLE PracticeAnswers (
   AnswerId         INT IDENTITY(1,1) PRIMARY KEY,
   SessionId        INT NOT NULL REFERENCES PracticeSessions(SessionId),
-  -- #269: the legacy `QuestionId`/`SectionId` shape is GONE with the Questions table. A drill answer
-  -- names the item and the exact version it was written against; containment comes from the session's
-  -- own cell (TopicId + CefrLevel), which is what a pool drill has instead of a section.
-  -- #187: the pool item and the exact version answered, so a re-versioned or retired item cannot
-  -- change what a finished session's summary shows.
-  ItemId           INT NOT NULL,
-  ItemVersionId    INT NOT NULL,
+  -- #269: a practice answer names its item and version, OR its lesson micro-check card. Both are
+  -- nullable because CK_PracticeAnswers_Shape below refuses a row that names neither or both - the
+  -- micro-check arm requires both item columns NULL, so they cannot be NOT NULL.
+  ItemId           INT NULL,
+  ItemVersionId    INT NULL,
   -- #186's idiom at practice: an ItemVersion stores labels A-D rather than option rows, so a pool
   -- answer records the label it chose and leaves SelectedOptionId NULL.
   SelectedLabel    VARCHAR(1) NULL
@@ -1670,9 +1674,11 @@ CREATE TABLE PracticeAnswers (
   CONSTRAINT FK_PracticeAnswers_VersionItem FOREIGN KEY (ItemVersionId, ItemId) REFERENCES ItemVersions(ItemVersionId, ItemId)
 );
 GO
--- #187: one answer per item version per session - "one question, one grade". #269: this is now the
--- only shape, so it is the only index; the filtered legacy one went with the column.
-CREATE UNIQUE INDEX UQ_PracticeAnswers_Version ON PracticeAnswers(SessionId, ItemVersionId);
+-- #187: one answer per item version per session - "one question, one grade". #269: filtered, because a
+-- lesson micro-check answer names a card and has no version; without the filter SQL Server treats every
+-- NULL as equal and a session could hold exactly one micro-check answer.
+CREATE UNIQUE INDEX UQ_PracticeAnswers_Version ON PracticeAnswers(SessionId, ItemVersionId)
+  WHERE ItemVersionId IS NOT NULL;
 GO
 -- UI-13: "Save this question for review" / "saved to your incorrect-answer bank"
 --
@@ -1886,7 +1892,11 @@ CREATE TABLE AttemptAnswers (
   CONSTRAINT FK_AttemptAnswers_AttemptExam FOREIGN KEY (AttemptId, ExamId) REFERENCES ExamAttempts(AttemptId, ExamId),
   -- #186: the answered version must be a version of the answered item - the same composite idiom
   -- ExamItems uses, so one row cannot name one item and another item's version.
-  CONSTRAINT FK_AttemptAnswers_VersionItem FOREIGN KEY (ItemVersionId, ItemId) REFERENCES ItemVersions(ItemVersionId, ItemId)
+  CONSTRAINT FK_AttemptAnswers_VersionItem FOREIGN KEY (ItemVersionId, ItemId) REFERENCES ItemVersions(ItemVersionId, ItemId),
+  -- #269: the position must belong to the attempt's OWN paper. This replaced
+  -- FK_AttemptAnswers_QuestionExam, which did the same job through Questions(QuestionId, ExamId).
+  -- Measured without it: an attempt on a TOEIC paper accepted an IELTS position.
+  CONSTRAINT FK_AttemptAnswers_ExamItemExam FOREIGN KEY (ExamItemId, ExamId) REFERENCES ExamItems(ExamItemId, ExamId)
 );
 GO
 -- CNT-43: no hard delete. An item that has left draft, or that any learner has answered, is retired
@@ -1950,6 +1960,9 @@ CREATE TABLE FreeResponses (
   ExamItemId     INT NOT NULL REFERENCES ExamItems(ExamItemId),
   -- H-5: carried down from the attempt so the position must belong to the attempt's own exam
   ExamId         INT NOT NULL,
+  -- M-3: carried down from the position's section so the response's skill can be pinned to that
+  -- section's own. This replaced the chain through Questions(QuestionId, SkillId).
+  SectionId      INT NOT NULL,
   -- M-3: carried down from the position's skill so AiGradings must name that skill
   SkillId        INT NOT NULL,
   -- M-7: pins the shape (a CHECK cannot reach the item's render format, and a productive task is the
@@ -1987,6 +2000,12 @@ CREATE TABLE FreeResponses (
   CONSTRAINT CK_FreeResp_HasContent CHECK (ResponseText IS NOT NULL OR AudioPath IS NOT NULL),
   -- H-5: ExamId must be the attempt's own
   CONSTRAINT FK_FreeResp_AttemptExam FOREIGN KEY (AttemptId, ExamId) REFERENCES ExamAttempts(AttemptId, ExamId),
+  -- #269: the position must belong to the attempt's own paper, and the response's skill must be the
+  -- position's own. These replaced FK_FreeResp_QuestionExam / _QuestionSkill, which did both through
+  -- Questions. Measured without them: a reading position accepted a response claiming the speaking skill.
+  CONSTRAINT FK_FreeResp_ExamItemExam FOREIGN KEY (ExamItemId, ExamId) REFERENCES ExamItems(ExamItemId, ExamId),
+  CONSTRAINT FK_FreeResp_ExamItemSection FOREIGN KEY (ExamItemId, SectionId) REFERENCES ExamItems(ExamItemId, SectionId),
+  CONSTRAINT FK_FreeResp_SectionSkill FOREIGN KEY (SectionId, SkillId) REFERENCES Sections(SectionId, SkillId),
   -- M-3: composite target so AiGradings can require its SkillId to be this response's own
   CONSTRAINT UQ_FreeResp_Id_Skill UNIQUE (FreeResponseId, SkillId)
 );

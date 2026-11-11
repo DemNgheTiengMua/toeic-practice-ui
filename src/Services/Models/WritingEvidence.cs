@@ -8,7 +8,7 @@ using BusinessObjects;
 namespace Services;
 
 public record WritingEvidence(
-    int QuestionId,
+    int? QuestionId,
     string Stem,
     string? ResponseText,
     int WordCount,

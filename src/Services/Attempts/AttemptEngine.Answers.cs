@@ -43,27 +43,21 @@ public sealed partial class AttemptEngine
 
         await ValidateQuestionSittingStateAsync(attempt, questionId, cancellationToken);
 
-        // #250: an answer is keyed by whatever identity its question carries. A legacy position names
-        // QuestionId; a pool position names ExamItemId, which is the id the projection handed the
-        // client. Looking up only the first makes a pool paper look unanswered - measured: saving failed
-        // with "Free-response questions do not accept multiple-choice options", because a missing answer
-        // fell through to the free-response branch.
+        // #250 / #269: an answer is keyed by its roster position - the ExamItemId the projection handed
+        // the client. That is the only position identity a paper has.
         var sittingQuestion = await FindSittingQuestionAsync(attempt, questionId, cancellationToken);
 
-        var answer = sittingQuestion.ExamItemId is int examItemId
-            ? await db.AttemptAnswers
-                .Include(a => a.Question)
-                .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.ExamItemId == examItemId, cancellationToken)
-            : await db.AttemptAnswers
-                .Include(a => a.Question)
-                .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.QuestionId == questionId, cancellationToken);
+        var answer = await db.AttemptAnswers
+            .SingleOrDefaultAsync(
+                a => a.AttemptId == attemptId && a.ExamItemId == sittingQuestion.ExamItemId,
+                cancellationToken);
 
         if (answer is null)
-        {            return await SaveFreeResponseInternalAsync(
+        {
+            return await SaveFreeResponseInternalAsync(
                 attempt, attemptId, questionId, selectedOptionId, responseText, isFlagged, null, cancellationToken);
         }
-        // #250: the question's type comes from the paper, not from a joined Questions row - a pool
-        // answer has no such row.
+        // #250: the question's type comes from the paper, not from a joined question row.
         if (sittingQuestion.RenderFormat == QuestionType.FreeResponse.ToCode())
         {
             return await SaveFreeResponseInternalAsync(
@@ -76,70 +70,37 @@ public sealed partial class AttemptEngine
                 throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Multiple-choice questions do not accept free-response text.");
             }
 
-            // #186: an answer that pinned a version chooses among that version's four options, not
-            // among legacy QuestionOptions rows. The option id the projection rendered is decoded
-            // back to its label and stored, so the key it is judged against is the pinned version's.
-            if (answer.ItemVersionId is int pinnedVersionId)
+            // #186: an answer that pinned a version chooses among that version's four options. The option
+            // id the projection rendered is decoded back to its label and stored, so the key it is judged
+            // against is the pinned version's.
+            // #186 / #269: every answer pins a version, so the pin is not something this path has to
+            // discover; the read below is the only thing that can still say the version is gone.
+            var pinnedVersionId = answer.ItemVersionId;
+
+            var pinnedVersion = await db.ItemVersions
+                .AsNoTracking()
+                .SingleOrDefaultAsync(v => v.ItemVersionId == pinnedVersionId, cancellationToken)
+                ?? throw new AttemptEngineException(
+                    AttemptEngineException.PaperNotAssembled,
+                    $"Item version {pinnedVersionId} pinned by this answer no longer exists.");
+
+            var label = selectedOptionId.HasValue ? OptionLabelOrNull(selectedOptionId.Value, pinnedVersionId) : null;
+            if (selectedOptionId.HasValue && label is null)
             {
-                var pinnedVersion = await db.ItemVersions
-                    .AsNoTracking()
-                    .SingleOrDefaultAsync(v => v.ItemVersionId == pinnedVersionId, cancellationToken)
-                    ?? throw new AttemptEngineException(
-                        AttemptEngineException.PaperNotAssembled,
-                        $"Item version {pinnedVersionId} pinned by this answer no longer exists.");
-
-                var label = selectedOptionId.HasValue ? OptionLabelOrNull(selectedOptionId.Value, pinnedVersionId) : null;
-                if (selectedOptionId.HasValue && label is null)
-                {
-                    throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Invalid option for this question.");
-                }
-
-                answer.SelectedLabel = label;
-                answer.SelectedOptionId = null;
-                answer.SelectedOptionIdsJson = selectedOptionIdsJson;
-                answer.ResponseText = responseText;
-                // #269: a pinned version is graded by its key AND its accepted answers. `IsKeyLabel` alone
-                // judges only a lettered choice, so an inline_completion (or any text answer) on the pool
-                // could never be correct - the version carries AcceptedAnswersJson and the sitting projects
-                // it, but nothing read it back.
-                answer.IsCorrect = string.IsNullOrWhiteSpace(responseText)
-                    ? IsKeyLabel(pinnedVersion, label)
-                    : EvaluatePinnedText(pinnedVersion, responseText);
+                throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Invalid option for this question.");
             }
-            else
-            {
-                if (selectedOptionId.HasValue)
-                {
-                    var valid = await db.QuestionOptions
-                        .AnyAsync(o => o.OptionId == selectedOptionId.Value && o.QuestionId == questionId, cancellationToken);
-                    if (!valid)
-                    {
-                        throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Invalid option for this question.");
-                    }
-                }
 
-                answer.SelectedOptionId = selectedOptionId;
-                answer.SelectedOptionIdsJson = selectedOptionIdsJson;
-                answer.ResponseText = responseText;
-
-                // #250: a legacy answer still scores against its QuestionOptions rows, so that branch
-                // needs the question row itself. The loader carries it for exactly this.
-                var legacyQuestion = sittingQuestion.LegacyQuestion
-                    ?? answer.Question
-                    ?? throw new AttemptEngineException(
-                        AttemptEngineException.PaperNotAssembled,
-                        "This answer names neither a pinned item version nor a legacy question, so it cannot be scored.");
-
-                var options = await db.QuestionOptions
-                    .Where(o => o.QuestionId == (answer.QuestionId ?? questionId))
-                    .ToListAsync(cancellationToken);
-                answer.IsCorrect = EvaluateObjectiveAnswer(
-                    legacyQuestion,
-                    options,
-                    selectedOptionId,
-                    selectedOptionIdsJson,
-                    responseText);
-            }
+            answer.SelectedLabel = label;
+            answer.SelectedOptionId = null;
+            answer.SelectedOptionIdsJson = selectedOptionIdsJson;
+            answer.ResponseText = responseText;
+            // #269: a pinned version is graded by its key AND its accepted answers. `IsKeyLabel` alone
+            // judges only a lettered choice, so an inline_completion (or any text answer) on the pool
+            // could never be correct - the version carries AcceptedAnswersJson and the sitting projects
+            // it, but nothing read it back.
+            answer.IsCorrect = string.IsNullOrWhiteSpace(responseText)
+                ? IsKeyLabel(pinnedVersion, label)
+                : EvaluatePinnedText(pinnedVersion, responseText);
         }
 
         answer.IsFlagged = isFlagged;
@@ -180,16 +141,12 @@ public sealed partial class AttemptEngine
 
         await ValidateQuestionSittingStateAsync(attempt, questionId, cancellationToken);
 
-        // #261: the row is addressed by the position the request names, which is a question id on a
-        // legacy paper and a roster id on a pool paper.
+        // #261 / #269: the row is addressed by the roster position the request names.
         var position = await FindSittingQuestionAsync(attempt, questionId, cancellationToken);
-        var examItemId = position.ExamItemId;
         var freeResponse = await db.FreeResponses
             .SingleOrDefaultAsync(response =>
                 response.AttemptId == attemptId &&
-                (examItemId.HasValue
-                    ? response.ExamItemId == examItemId
-                    : response.QuestionId == questionId) &&
+                response.ExamItemId == position.ExamItemId &&
                 response.Status == FreeResponseStatus.Draft.ToCode(),
                 cancellationToken)
             ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Free-response question {questionId} not found in attempt.");
@@ -197,7 +154,6 @@ public sealed partial class AttemptEngine
         var savedAt = DateTimeOffset.UtcNow;
         freeResponse.ResponseText = responseText ?? string.Empty;
         freeResponse.DraftSavedAt = savedAt;
-        // #250: see SaveAnswerAsync - the column is an FK to Questions and only a legacy position fits.
         RecordLastPosition(attempt, position);
         // #216 / PLC-13: a draft is activity too; otherwise a learner who writes for an hour without
         // submitting loses the sitting at the 48-hour mark measured from their last click.
@@ -229,17 +185,15 @@ public sealed partial class AttemptEngine
 
         var positionExamItemId = position.ExamItemId;
         var response = await db.FreeResponses
-            .SingleOrDefaultAsync(fr => fr.AttemptId == attemptId
-                && (positionExamItemId.HasValue
-                    ? fr.ExamItemId == positionExamItemId
-                    : fr.QuestionId == questionId), cancellationToken);
+            .SingleOrDefaultAsync(
+                fr => fr.AttemptId == attemptId && fr.ExamItemId == positionExamItemId,
+                cancellationToken);
 
         if (response is null)
         {
             response = new FreeResponse
             {
                 AttemptId = attemptId,
-                QuestionId = position.ExamItemId is null ? questionId : null,
                 ExamItemId = position.ExamItemId,
                 ExamId = attempt.ExamId,
                 SkillId = position.Section.SkillId,
@@ -252,15 +206,13 @@ public sealed partial class AttemptEngine
 
         if (answer is null)
         {
-            // #186 / #261: a lazily created answer names the same position attempt creation would
-            // have, so a pool paper records its roster row and a legacy paper its question.
+            // #186 / #261: a lazily created answer names the same position attempt creation would have.
             answer = new AttemptAnswer
             {
                 AttemptId = attemptId,
-                QuestionId = position.ExamItemId is null ? questionId : null,
                 ExamItemId = position.ExamItemId,
                 ExamId = attempt.ExamId,
-                ItemId = position.ItemId == 0 ? null : position.ItemId,
+                ItemId = position.ItemId,
                 ItemVersionId = position.ItemVersionId,
                 IsFlagged = isFlagged
             };
@@ -272,14 +224,12 @@ public sealed partial class AttemptEngine
         response.DraftSavedAt = DateTimeOffset.UtcNow;
         if (answer is not null)
         {
-            // a productive version has no options at all, so neither the legacy option id nor the
-            // pinned label can hold a choice for a free response
+            // a productive version has no options at all, so no choice can be recorded for it
             answer.SelectedOptionId = null;
             answer.SelectedLabel = null;
             answer.IsFlagged = isFlagged;
         }
 
-        // #250: same rule as the other two writes - only a legacy position fits LastQuestionId's FK.
         RecordLastPosition(attempt, await FindSittingQuestionAsync(attempt, questionId, cancellationToken));
         // #216 / PLC-13: the free-response save path is the third write that counts as activity.
         await MarkPlacementActivityAsync(attempt, cancellationToken);

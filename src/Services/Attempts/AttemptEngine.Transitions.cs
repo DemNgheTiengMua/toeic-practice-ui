@@ -23,11 +23,8 @@ public sealed partial class AttemptEngine
                 "Exam phase time has expired.");
         }
 
-        // #250: the sitting state of a position is a property of the PAPER, not of a question row. A
-        // pool answer names an ExamItemId, which has no Questions row to look up - so this resolves
-        // through the same seam the projection uses. Measured: before this, saving an answer on a
-        // pool-only paper failed with "Question 1 not found in attempt" even though the paper had three
-        // positions, because the lookup was a query on db.Questions.
+        // #250 / #269: the sitting state of a position is a property of the PAPER - a roster row on
+        // ExamItems - so this resolves through the same seam the projection uses.
         var questions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
         var question = questions.FirstOrDefault(q => q.Id == questionId)
             ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found in attempt.");
@@ -174,9 +171,9 @@ public sealed partial class AttemptEngine
 
         attempt.ActiveUnitNumber = targetUnitNumber;
 
-        // #250: the paper's positions come from the seam, not from a Questions query. A pool-only
-        // paper had no row here, so the unit transition silently left LastQuestionId pointing at the
-        // previous unit's question.
+        // #250 / #269: the paper's positions come from the seam, not from a content query. A pool-only
+        // paper had no content row here, so the unit transition silently left the position pointing at
+        // the previous unit's question.
         //
         // No re-sort: LoadSittingQuestionsAsync already returns sitting order (skill, section, then the
         // binding's own position), so the first match is the unit's first question.

@@ -19,6 +19,42 @@ public sealed partial class AdminExamService
 {
 
     /// <summary>
+    /// #269: a section the paper has not assembled anything into, shaped as the Studio's empty rail -
+    /// the blueprint, and no groups. The blueprint fields are the section's own, so the editor can still
+    /// show what the section asks for before its first item arrives.
+    /// </summary>
+    private static ExamStudioSectionDto EmptyPoolSectionDto(Section sec, ExamSectionAudio? secAudio) =>
+        new(
+            SectionId: sec.SectionId,
+            CertId: sec.CertId,
+            Code: sec.Code,
+            Name: sec.Name,
+            Modality: EnumCodes.Parse<Modality>(sec.Modality).MapTo<ModalityDto>(),
+            ExpectedQuestionCount: sec.ExpectedQuestionCount,
+            DisplayOrder: sec.DisplayOrder,
+            CurrentQuestionCount: 0,
+            HasAudio: secAudio != null,
+            MasterAudioPath: MediaUrlHelper.NormalizeMediaUrl(secAudio?.AudioPath),
+            MasterAudioDurationSec: secAudio?.DurationSec,
+            Groups: [],
+            OptionCount: sec.OptionCount,
+            ClusterSize: sec.ClusterSize,
+            UnitCount: sec.UnitCount,
+            HideOptionText: sec.HideOptionText,
+            RequirePassage: sec.RequirePassage,
+            RequireAudio: sec.RequireAudio,
+            RequireImage: sec.RequireImage,
+            RequiredKeywordCount: sec.RequiredKeywordCount,
+            AllowedComponentTypesJson: sec.AllowedComponentTypesJson,
+            LayoutType: sec.LayoutType ?? "STANDARD_VERTICAL",
+            NavigationMode: sec.NavigationMode ?? "FULL_SANDBOX",
+            TimerPolicyJson: sec.TimerPolicyJson,
+            ToolsConfigJson: sec.ToolsConfigJson,
+            SkillId: sec.SkillId,
+            SkillCode: sec.Skill?.Code ?? sec.Code,
+            SkillName: sec.Skill?.Name ?? sec.Name);
+
+    /// <summary>
     /// #265: one section of a pool-authored paper, shaped as the editor's group tree.
     /// <para>
     /// <b>Why grouping is derived, not stored.</b> The editor's rail groups positions under a block that
@@ -47,17 +83,17 @@ public sealed partial class AdminExamService
         var displayOrder = 0;
 
         foreach (var group in positions
-            .GroupBy(p => p.GroupId ?? -(p.ExamItemId ?? p.Id))
+            .GroupBy(p => p.GroupId ?? -p.ExamItemId)
             .OrderBy(g => g.Min(p => p.Id)))
         {
             var first = group.OrderBy(p => p.Id).First();
-            var groupId = first.GroupId ?? -(first.ExamItemId ?? first.Id);
+            var groupId = first.GroupId ?? -first.ExamItemId;
 
             var qDtos = new List<ExamStudioQuestionDto>();
             foreach (var position in group.OrderBy(p => p.Id))
             {
                 displayOrder++;
-                var examItemId = position.ExamItemId ?? position.Id;
+                var examItemId = position.ExamItemId;
 
                 qDtos.Add(new ExamStudioQuestionDto(
                     QuestionId: examItemId,
@@ -176,57 +212,30 @@ public sealed partial class AdminExamService
             .Where(a => a.ExamId == examId)
             .ToListAsync(cancellationToken);
 
-        var groups = await db.QuestionGroups.AsNoTracking()
-            .Include(g => g.Section)
-            .Include(g => g.QuestionGroups)
-                .ThenInclude(q => q.QuestionOptionQuestionNavigations)
-            .Include(g => g.QuestionGroups)
-                .ThenInclude(q => q.Category)
-            .Where(g => g.ExamId == examId)
-            .OrderBy(g => g.DisplayOrder)
-            // Two collection levels (questions, then options): split, or EF warns 20504 and the
-            // rows multiply (see the readiness audit). Children are re-ordered in memory below.
-            .AsSplitQuery()
-            .ToListAsync(cancellationToken);
-
-        // #265: the Studio shows the paper, and the paper is whatever the SITTING reads. That loader
-        // already resolves both shapes - the roster for a content-model paper, the legacy rows for a
-        // paper authored before it - so the editor cannot disagree with the exam a learner sits.
-        //
-        // Only a ROSTER position is edited through the pool path: a legacy paper's positions carry a
-        // QuestionId and the group tree below is their editor. Filtering here is what keeps the two
-        // edit surfaces from both claiming the same section.
+        // #265 / #269: the Studio shows the paper, and the paper is whatever the SITTING reads. That
+        // loader resolves the roster, which is now the paper's only shape - so the editor cannot
+        // disagree with the exam a learner sits.
         var paper = await new AttemptEngine(db).LoadSittingQuestionsAsync(examId, cancellationToken);
         var rosterBySection = paper
-            .Where(p => p.ExamItemId.HasValue)
             .GroupBy(p => p.SectionId)
             .ToDictionary(g => g.Key, g => g.OrderBy(p => p.ExamItemId).ToList());
 
-        var isPoolPaper = rosterBySection.Count > 0;
-
         // A position's authored level lives on the item, not on the sitting projection: the projection
         // exists to render, and a level is authoring metadata. Read once for the whole paper.
-        var levelsByPosition = isPoolPaper
-            ? await db.ExamItems.AsNoTracking()
-                .Where(i => i.ExamId == examId)
-                .Join(db.Items.AsNoTracking(), i => i.ItemId, item => item.ItemId, (i, item) => new { i.ExamItemId, item.CefrLevel })
-                .ToDictionaryAsync(x => x.ExamItemId, x => x.CefrLevel.Code, cancellationToken)
-            : new Dictionary<int, string>();
+        var levelsByPosition = await db.ExamItems.AsNoTracking()
+            .Where(i => i.ExamId == examId)
+            .Join(db.Items.AsNoTracking(), i => i.ItemId, item => item.ItemId, (i, item) => new { i.ExamItemId, item.CefrLevel })
+            .ToDictionaryAsync(x => x.ExamItemId, x => x.CefrLevel.Code, cancellationToken);
 
-        var allQuestionIds = groups.SelectMany(g => g.QuestionGroups.Select(q => q.QuestionId)).ToList();
         var paperPositionIds = paper
-            .Where(p => p.ExamItemId.HasValue)
-            .Select(p => p.ExamItemId!.Value)
+            .Select(p => p.ExamItemId)
             .ToList();
 
-        // #250: a pool answer names its roster position and has a NULL QuestionId, so the badge must
-        // consult both shapes or a pool paper's cards all read "unanswered".
+        // #250: the badge reads the roster position an answer names - the only identity a paper has.
         var answeredQuestionIds = new HashSet<int>(await db.AttemptAnswers.AsNoTracking()
-            .Where(a => a.QuestionId != null && allQuestionIds.Contains(a.QuestionId.Value))
-            .Select(a => a.QuestionId!.Value)
-            .Concat(db.FreeResponses.AsNoTracking().Where(r => r.QuestionId != null && allQuestionIds.Contains(r.QuestionId.Value)).Select(r => r.QuestionId!.Value))
-            .Concat(db.AttemptAnswers.AsNoTracking().Where(a => a.ExamItemId != null && paperPositionIds.Contains(a.ExamItemId.Value)).Select(a => a.ExamItemId!.Value))
-            .Concat(db.FreeResponses.AsNoTracking().Where(r => r.ExamItemId != null && paperPositionIds.Contains(r.ExamItemId.Value)).Select(r => r.ExamItemId!.Value))
+            .Where(a => paperPositionIds.Contains(a.ExamItemId))
+            .Select(a => a.ExamItemId)
+            .Concat(db.FreeResponses.AsNoTracking().Where(r => paperPositionIds.Contains(r.ExamItemId)).Select(r => r.ExamItemId))
             .ToListAsync(cancellationToken));
 
         var availableCategories = await db.QuestionCategories.AsNoTracking()
@@ -245,130 +254,25 @@ public sealed partial class AdminExamService
             .Where(sc => sections.Select(s => s.SectionId).Contains(sc.SectionId))
             .ToListAsync(cancellationToken);
 
-        var audit = await AuditExamPublishReadinessInternal(exam, sections, sectionAudios, groups, sectionCriteria, cancellationToken);
+        var audit = await AuditExamPublishReadinessInternal(exam, sections, sectionAudios, sectionCriteria, cancellationToken);
 
         var sectionDtos = new List<ExamStudioSectionDto>();
         foreach (var sec in sections)
         {
             var secAudio = sectionAudios.FirstOrDefault(a => a.SectionId == sec.SectionId);
 
-            // #265: a section whose positions are on the roster is shown from the pool; every other
-            // section keeps the group tree. Per section rather than per paper, because a transition
-            // paper can hold both and a screen that showed nothing for one of them would be a
-            // regression an admin cannot work around.
+            // #265 / #269: every section is shown from the pool. A section with no positions is shown
+            // with no groups, which is what an unassembled section of the paper is.
             if (rosterBySection.TryGetValue(sec.SectionId, out var secPositions) && secPositions.Count > 0)
             {
                 sectionDtos.Add(BuildPoolSectionDto(
                     sec, secAudio, secPositions, availableCriteria, sectionCriteria, answeredQuestionIds,
                     levelsByPosition));
-                continue;
             }
-
-            var secGroups = groups.Where(g => g.SectionId == sec.SectionId).OrderBy(g => g.DisplayOrder).ToList();
-            var secQuestions = secGroups.SelectMany(g => g.QuestionGroups).ToList();
-
-            var groupDtos = new List<ExamStudioGroupDto>();
-            foreach (var g in secGroups)
+            else
             {
-                var qDtos = new List<ExamStudioQuestionDto>();
-                foreach (var q in g.QuestionGroups.OrderBy(x => x.DisplayOrder))
-                {
-                    var opts = q.QuestionOptionQuestionNavigations
-                        .OrderBy(o => o.Label)
-                        .Select(o => new ExamStudioQuestionOptionDto(o.OptionId, o.QuestionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
-                        .ToList();
-
-                    qDtos.Add(new ExamStudioQuestionDto(
-                        QuestionId: q.QuestionId,
-                        GroupId: q.GroupId,
-                        ExamId: q.ExamId,
-                        SectionId: q.SectionId,
-                        SectionCode: sec.Code,
-                        SectionName: sec.Name,
-                        SkillId: q.SkillId,
-                        SkillCode: sec.Skill?.Code ?? sec.Code,
-                        Stem: q.Stem,
-                        QuestionType: EnumCodes.Parse<QuestionType>(q.QuestionType).MapTo<QuestionTypeDto>(),
-                        Explanation: q.Explanation,
-                        CategoryId: q.CategoryId,
-                        CategoryCode: q.Category?.Code,
-                        CategoryName: q.Category?.Name,
-                        PrepSeconds: q.PrepSeconds,
-                        ResponseSeconds: q.ResponseSeconds,
-                        MinWords: q.MinWords,
-                        MaxWords: q.MaxWords,
-                        Hint: q.Hint,
-                        DisplayOrder: q.DisplayOrder,
-                        UpdatedAt: q.UpdatedAt,
-                        Options: opts,
-                        Criteria: availableCriteria
-                            .Where(c => c.SkillId == q.SkillId
-                                && sectionCriteria.Any(sc => sc.SectionId == q.SectionId && sc.CriterionId == c.CriterionId))
-                            .ToList(),
-                        HasAnswers: answeredQuestionIds.Contains(q.QuestionId),
-                        MaxSelections: q.MaxSelections,
-                        AllowNumber: q.AllowNumber,
-                        AcceptedAnswersJson: q.AcceptedAnswersJson,
-                        RequiredKeywords: q.RequiredKeywords,
-                        SampleAnswerOrImageDesc: q.SampleAnswerOrImageDesc,
-                        ReferenceKind: q.ReferenceKind is null
-                            ? null
-                            : EnumCodes.Parse<ReferenceKindDto>(q.ReferenceKind),
-                        CefrLevelCode: q.CefrLevel?.Code));
-                }
-
-                groupDtos.Add(new ExamStudioGroupDto(
-                    GroupId: g.GroupId,
-                    ExamId: g.ExamId,
-                    CertId: g.CertId,
-                    SectionId: g.SectionId,
-                    SectionCode: sec.Code,
-                    SectionName: sec.Name,
-                    Modality: EnumCodes.Parse<Modality>(sec.Modality).MapTo<ModalityDto>(),
-                    Passage: g.Passage,
-                    AudioPath: MediaUrlHelper.NormalizeMediaUrl(g.AudioPath),
-                    AudioStartMs: g.AudioStartMs,
-                    AudioEndMs: g.AudioEndMs,
-                    ImagePath: MediaUrlHelper.NormalizeMediaUrl(g.ImagePath),
-                    ImageAlt: g.ImageAlt,
-                    Transcript: g.Transcript,
-                    PrepSeconds: g.PrepSeconds,
-                    ResponseSeconds: g.ResponseSeconds,
-                    DisplayOrder: g.DisplayOrder,
-                    Questions: qDtos,
-                    UnitNumber: g.UnitNumber));
+                sectionDtos.Add(EmptyPoolSectionDto(sec, secAudio));
             }
-
-            var hasAudio = secAudio != null || secGroups.Any(g => !string.IsNullOrWhiteSpace(g.AudioPath));
-            sectionDtos.Add(new ExamStudioSectionDto(
-                SectionId: sec.SectionId,
-                CertId: sec.CertId,
-                Code: sec.Code,
-                Name: sec.Name,
-                Modality: EnumCodes.Parse<Modality>(sec.Modality).MapTo<ModalityDto>(),
-                ExpectedQuestionCount: sec.ExpectedQuestionCount,
-                DisplayOrder: sec.DisplayOrder,
-                CurrentQuestionCount: secQuestions.Count,
-                HasAudio: hasAudio,
-                MasterAudioPath: MediaUrlHelper.NormalizeMediaUrl(secAudio?.AudioPath),
-                MasterAudioDurationSec: secAudio?.DurationSec,
-                Groups: groupDtos,
-                OptionCount: sec.OptionCount,
-                ClusterSize: sec.ClusterSize,
-                UnitCount: sec.UnitCount,
-                HideOptionText: sec.HideOptionText,
-                RequirePassage: sec.RequirePassage,
-                RequireAudio: sec.RequireAudio,
-                RequireImage: sec.RequireImage,
-                RequiredKeywordCount: sec.RequiredKeywordCount,
-                AllowedComponentTypesJson: sec.AllowedComponentTypesJson,
-                LayoutType: sec.LayoutType,
-                NavigationMode: sec.NavigationMode,
-                TimerPolicyJson: sec.TimerPolicyJson,
-                ToolsConfigJson: sec.ToolsConfigJson,
-                SkillId: sec.SkillId,
-                SkillCode: sec.Skill?.Code ?? sec.Code,
-                SkillName: sec.Skill?.Name ?? sec.Name));
         }
 
         var finishedAttemptCount = await db.ExamAttempts.CountAsync(
@@ -387,7 +291,7 @@ public sealed partial class AdminExamService
             SourceName: exam.SourceName,
             InternalNote: exam.InternalNote,
             QuestionCount: exam.QuestionCount,
-            ActualQuestionCount: isPoolPaper ? paper.Count(p => p.ExamItemId.HasValue) : allQuestionIds.Count,
+            ActualQuestionCount: paper.Count,
             FinishedAttemptCount: finishedAttemptCount,
             CreatedAt: exam.CreatedAt,
             UpdatedAt: exam.UpdatedAt,

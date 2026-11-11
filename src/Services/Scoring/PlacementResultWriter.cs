@@ -475,7 +475,7 @@ public sealed class PlacementResultWriter(
     {
         var answers = await db.AttemptAnswers
             .AsNoTracking()
-            .Where(a => a.AttemptId == attemptId && a.ItemId != null)
+            .Where(a => a.AttemptId == attemptId)
             .Select(a => new
             {
                 a.AnswerId,
@@ -493,7 +493,8 @@ public sealed class PlacementResultWriter(
             return [];
         }
 
-        var itemIds = answers.Select(a => a.ItemId!.Value).Distinct().ToList();
+        // #269: ItemId is required on AttemptAnswer, so every answer names the item it was asked from.
+        var itemIds = answers.Select(a => a.ItemId).Distinct().ToList();
         var items = await db.Items
             .AsNoTracking()
             .Where(i => itemIds.Contains(i.ItemId))
@@ -510,13 +511,13 @@ public sealed class PlacementResultWriter(
             // would report a writing topic as weak because nothing marked it right - the rubric profile
             // is the productive half's evidence, not this tally.
             .Where(a => a.IsCorrect.HasValue)
-            .Where(a => items.ContainsKey(a.ItemId!.Value))
+            .Where(a => items.ContainsKey(a.ItemId))
             .Where(a => skillByAnswer.ContainsKey(a.AnswerId))
             .GroupBy(a => skillByAnswer[a.AnswerId])
             .ToDictionary(
                 g => g.Key,
                 g => (IReadOnlyList<PlacementTopicPrior>)g
-                    .GroupBy(a => (items[a.ItemId!.Value].TopicId, items[a.ItemId!.Value].Band))
+                    .GroupBy(a => (items[a.ItemId].TopicId, items[a.ItemId].Band))
                     .OrderBy(t => t.Key.TopicId)
                     .Select(t =>
                     {

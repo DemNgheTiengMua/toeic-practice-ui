@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -12,99 +12,6 @@ namespace Services;
 
 public sealed partial class AttemptEngine
 {
-    /// <summary>
-    /// #186: a paper position resolved through the pool — the item, the version the binding pins, and
-    /// the version row itself. This is the whole of "reads through item versions": the binding is
-    /// placed on the paper by (section, 1-based position within that section), because that pair is
-    /// what <c>UQ_ExamItems_Exam_Section_Order</c> makes unique and what the sitting projection
-    /// already orders by. A binding names no <c>QuestionId</c>, so position is the only join there is.
-    /// </summary>
-    private sealed record BoundPaperPosition(int ItemId, int ItemVersionId, ItemVersion Version);
-
-    /// <summary>
-    /// The exam's bindings, keyed by paper position. Empty for a paper the pool has not assembled —
-    /// the cheap empty result is what keeps the legacy path untouched and unevaluated for those.
-    /// </summary>
-    private Task<Dictionary<(int SectionId, int DisplayOrder), BoundPaperPosition>> LoadPaperBindingsAsync(
-        int examId,
-        CancellationToken cancellationToken) =>
-        db.ExamItems
-            .AsNoTracking()
-            .Where(b => b.ExamId == examId)
-            .Join(
-                db.ItemVersions.AsNoTracking(),
-                b => b.ItemVersionId,
-                v => v.ItemVersionId,
-                (b, v) => new { b.SectionId, b.DisplayOrder, b.ItemId, b.ItemVersionId, Version = v })
-            .ToDictionaryAsync(
-                b => (b.SectionId, b.DisplayOrder),
-                b => new BoundPaperPosition(b.ItemId, b.ItemVersionId, b.Version),
-                cancellationToken);
-
-    /// <summary>
-    /// Places the bindings on the ordered paper. <paramref name="questions"/> must be in sitting
-    /// order (the order <see cref="LoadExamQuestionsAsync"/> returns), because a position is a rank
-    /// within its section, not a column.
-    /// </summary>
-    private static Dictionary<int, BoundPaperPosition> PlaceBindings(
-        IReadOnlyList<Question> questions,
-        IReadOnlyDictionary<(int SectionId, int DisplayOrder), BoundPaperPosition> bindings)
-    {
-        var placed = new Dictionary<int, BoundPaperPosition>();
-        if (bindings.Count == 0)
-        {
-            return placed;
-        }
-
-        var positionInSection = new Dictionary<int, int>();
-        foreach (var question in questions)
-        {
-            var position = positionInSection[question.SectionId] = positionInSection.GetValueOrDefault(question.SectionId) + 1;
-            if (bindings.TryGetValue((question.SectionId, position), out var bound))
-            {
-                placed[question.QuestionId] = bound;
-            }
-        }
-
-        return placed;
-    }
-
-    /// <summary>
-    /// #186: a bound position must render something. The schema already forbids a binding without a
-    /// version (<c>ExamItems.ItemVersionId</c> is NOT NULL and FK-enforced), so the reachable form of
-    /// "this paper's binding points at nothing" is a position with no question behind it — a paper
-    /// half-assembled by an edit that removed a question from a bound section. An attempt is refused
-    /// before the first write rather than created as a paper with a hole in it.
-    /// </summary>
-    private static void EnsureBindingsRender(
-        IReadOnlyList<Question> questions,
-        IReadOnlyDictionary<(int SectionId, int DisplayOrder), BoundPaperPosition> bindings)
-    {
-        if (bindings.Count == 0)
-        {
-            return;
-        }
-
-        var positions = new HashSet<(int SectionId, int DisplayOrder)>();
-        var positionInSection = new Dictionary<int, int>();
-        foreach (var question in questions)
-        {
-            var position = positionInSection[question.SectionId] = positionInSection.GetValueOrDefault(question.SectionId) + 1;
-            positions.Add((question.SectionId, position));
-        }
-
-        foreach (var (key, bound) in bindings)
-        {
-            if (positions.Contains(key))
-            {
-                continue;
-            }
-
-            throw new AttemptEngineException(
-                AttemptEngineException.PaperNotAssembled,
-                $"This paper binds item version {bound.ItemVersionId} at section {key.SectionId} position {key.DisplayOrder}, but that position holds no question. The attempt was not created.");
-        }
-    }
 
     /// <summary>
     /// #186: a pinned version's four options have no OptionId column — CNT-06 stores labels A–D and
@@ -310,8 +217,7 @@ public sealed partial class AttemptEngine
         CancellationToken cancellationToken)
     {
         var versionIds = answers
-            .Where(a => a.ItemVersionId.HasValue)
-            .Select(a => a.ItemVersionId!.Value)
+            .Select(a => a.ItemVersionId)
             .Distinct()
             .ToList();
 
@@ -324,61 +230,27 @@ public sealed partial class AttemptEngine
     }
 
     /// <summary>
-    /// #186: a pinned answer is right when the label it recorded is the pinned version's key. The legacy
-    /// question's options are not consulted at all — they may disagree with the version the learner sat,
-    /// and the version is the one that scores. An answer with no pin scores against the question row,
-    /// which is exactly what the engine did before this ticket.
+    /// #186 / #269: a pinned answer is right when the label it recorded is the pinned version's key, or
+    /// when its text matches the version's accepted answers.
     /// </summary>
     private static bool EvaluateAnswer(
         AttemptAnswer answer,
-        IReadOnlyDictionary<int, ItemVersion> pinnedVersions,
-        ILookup<int, QuestionOption> optionsByQuestion)
+        IReadOnlyDictionary<int, ItemVersion> pinnedVersions)
     {
-        if (answer.ItemVersionId is int versionId && pinnedVersions.TryGetValue(versionId, out var version))
-        {
-            // #269: a pinned answer is graded by its KEYED LABEL or by its TEXT. Reading only the label
-            // meant an inline_completion (a text answer with no label) was re-graded to false on submit,
-            // overwriting the correct grade the save had written - so the sitting said right and the
-            // review said wrong. The two now agree because both ask this one method.
-            return string.IsNullOrWhiteSpace(answer.SelectedLabel) && !string.IsNullOrWhiteSpace(answer.ResponseText)
-                ? EvaluatePinnedText(version, answer.ResponseText)
-                : IsKeyLabel(version, answer.SelectedLabel);
-        }
-
-        // #250: a legacy answer is identified by its question and a pool answer by its pinned version;
-        // CK_AttemptAnswers_OneShape guarantees exactly one. This branch is the legacy one, so the
-        // question is present - the `is not int` guard states that rather than silencing the compiler.
-        if (answer.QuestionId is not int questionId || answer.Question is null)
+        // #269: every answer pins a version, so the only way this fails is a version that is gone;
+        // such an answer cannot make a correct claim.
+        if (!pinnedVersions.TryGetValue(answer.ItemVersionId, out var version))
         {
             return false;
         }
 
-        return EvaluateObjectiveAnswer(
-            answer.Question,
-            optionsByQuestion[questionId],
-            answer.SelectedOptionId,
-            answer.SelectedOptionIdsJson,
-            answer.ResponseText);
-    }
-
-    /// <summary>
-    /// #186: the binding covering one question of a paper, resolved the same way
-    /// <see cref="PlaceBindings"/> does — by (section, 1-based position within that section). Used on
-    /// the path that creates an answer row lazily for a question attempt creation did not seed one for.
-    /// </summary>
-    private async Task<BoundPaperPosition?> FindBoundPositionAsync(
-        int examId,
-        int questionId,
-        CancellationToken cancellationToken)
-    {
-        var bindings = await LoadPaperBindingsAsync(examId, cancellationToken);
-        if (bindings.Count == 0)
-        {
-            return null;
-        }
-
-        var questions = await LoadExamQuestionsAsync(examId, cancellationToken);
-        return PlaceBindings(questions, bindings).GetValueOrDefault(questionId);
+        // #269: a pinned answer is graded by its KEYED LABEL or by its TEXT. Reading only the label
+        // meant an inline_completion (a text answer with no label) was re-graded to false on submit,
+        // overwriting the correct grade the save had written - so the sitting said right and the
+        // review said wrong. The two now agree because both ask this one method.
+        return string.IsNullOrWhiteSpace(answer.SelectedLabel) && !string.IsNullOrWhiteSpace(answer.ResponseText)
+            ? EvaluatePinnedText(version, answer.ResponseText)
+            : IsKeyLabel(version, answer.SelectedLabel);
     }
 
     /// <summary>

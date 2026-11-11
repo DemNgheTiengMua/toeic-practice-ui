@@ -270,8 +270,7 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
 
         var answers = await db.AttemptAnswers
             .AsNoTracking()
-            .Where(a => a.ItemVersionId != null
-                && ids.Contains(a.ItemVersionId.Value)
+            .Where(a => ids.Contains(a.ItemVersionId)
                 && a.Attempt.Status == "graded"
                 && a.SelectedLabel != null)
             .Select(a => new
@@ -293,7 +292,7 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
         var byItem = new Dictionary<int, List<ItemObservation>>();
         foreach (var answer in answers)
         {
-            var itemId = versionToItem[answer.ItemVersionId!.Value];
+            var itemId = versionToItem[answer.ItemVersionId];
             if (!byItem.TryGetValue(itemId, out var list))
             {
                 list = [];
@@ -316,11 +315,9 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
     /// unweighted mean of the four criterion integers 0-6, and <c>AiGradingScores.Score</c> holds exactly
     /// those integers.
     /// <para>
-    /// The join runs through the paper binding, because a <c>FreeResponse</c> names a legacy
-    /// <c>Question</c> and never an item version — <c>ExamItems</c> is the only stored link between a
-    /// paper position and a pool version. The position is the 1-based rank of the question within
-    /// (exam, section), which is the same resolution <c>AttemptEngine.PlaceBindings</c> uses; there is
-    /// no other stored ordering to join on.
+    /// A response names its roster position (<c>FreeResponses.ExamItemId</c>), and the roster row names
+    /// the version. That is the whole join: <c>ExamItems</c> is the paper, so a position needs no rank
+    /// computed from a second table.
     /// </para>
     /// <para>
     /// A productive task practised outside a paper therefore has no bindable position and contributes no
@@ -337,109 +334,36 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
             return [];
         }
 
-        var bindings = await db.ExamItems
+        var positionToVersion = await db.ExamItems
             .AsNoTracking()
             .Where(b => ids.Contains(b.ItemVersionId))
-            .Select(b => new { b.ExamId, b.SectionId, b.DisplayOrder, b.ItemVersionId })
-            .ToListAsync(cancellationToken);
+            .Select(b => new { b.ExamItemId, b.ItemVersionId })
+            .ToDictionaryAsync(b => b.ExamItemId, b => b.ItemVersionId, cancellationToken);
 
-        if (bindings.Count == 0)
+        if (positionToVersion.Count == 0)
         {
             return [];
         }
 
-        var examIds = bindings.Select(b => b.ExamId).Distinct().ToList();
-
-        // The papers' questions in sitting order, so a position is the rank AttemptEngine assigns.
-        var questions = await db.Questions
-            .AsNoTracking()
-            .Where(q => examIds.Contains(q.ExamId))
-            .OrderBy(q => q.Section.Skill.DisplayOrder)
-            .ThenBy(q => q.Section.DisplayOrder)
-            .ThenBy(q => q.Group.DisplayOrder)
-            .ThenBy(q => q.DisplayOrder)
-            .Select(q => new { q.QuestionId, q.ExamId, q.SectionId })
-            .ToListAsync(cancellationToken);
-
-        var positionOf = new Dictionary<(int ExamId, int SectionId, int QuestionId), int>();
-        var nextRank = new Dictionary<(int, int), int>();
-        foreach (var question in questions)
-        {
-            var section = (question.ExamId, question.SectionId);
-            var rank = nextRank.GetValueOrDefault(section) + 1;
-            nextRank[section] = rank;
-            positionOf[(question.ExamId, question.SectionId, question.QuestionId)] = rank;
-        }
-
-        var versionAtPosition = bindings
-            .GroupBy(b => (b.ExamId, b.SectionId, b.DisplayOrder))
-            .ToDictionary(g => g.Key, g => g.First().ItemVersionId);
-
-        // One grouped read of every finished grading whose question sits on a bound position.
+        // One grouped read of every finished grading whose position sits on a bound position.
         var graded = await db.AiGradings
             .AsNoTracking()
             .Where(g => g.Status == AiGradingStatus.Done.ToCode())
             .Select(g => new
             {
-                g.FreeResponse.QuestionId,
                 g.FreeResponse.ExamItemId,
-                ExamId = g.FreeResponse.ExamId,
-                // #269: a pool grading names an ExamItemId, not a question; its section comes from the
-                // roster. The projection used `QuestionId!.Value` and `Question!.ExamId`, which throw
-                // while reading the RESULT SET - so the whole telemetry pass died before the "skip
-                // below" this comment used to promise could ever run.
-                SectionId = g.FreeResponse.Question != null
-                    ? g.FreeResponse.Question.SectionId
-                    : (int?)null,
                 SittingTotal = (double)(g.FreeResponse.Attempt.TotalScore ?? 0),
                 MeanBand = g.AiGradingScores.Average(s => (double?)s.Score),
             })
             .Where(g => g.MeanBand != null)
             .ToListAsync(cancellationToken);
 
-        // A pool grading's section, resolved from the position it names.
-        var poolPositionIds = graded
-            .Where(g => g.QuestionId is null && g.ExamItemId.HasValue)
-            .Select(g => g.ExamItemId!.Value)
-            .Distinct()
-            .ToList();
-        var poolSectionByPosition = poolPositionIds.Count == 0
-            ? []
-            : await db.ExamItems.AsNoTracking()
-                .Where(i => poolPositionIds.Contains(i.ExamItemId))
-                .Select(i => new { i.ExamItemId, i.SectionId })
-                .ToDictionaryAsync(x => x.ExamItemId, x => x.SectionId, cancellationToken);
-
         var byItem = new Dictionary<int, List<ItemObservation>>();
         foreach (var grading in graded)
         {
-            // The position map is keyed by (exam, section, question). A pool row has no question id, so
-            // it resolves through its position instead - and only then is it skippable.
-            int sectionId = grading.SectionId
-                ?? (grading.ExamItemId is int poolItemId
-                    ? poolSectionByPosition.GetValueOrDefault(poolItemId)
-                    : 0);
-
-            if (sectionId <= 0)
-            {
-                continue;
-            }
-
-            var position = grading.QuestionId is int questionId
-                ? positionOf.GetValueOrDefault((grading.ExamId, sectionId, questionId))
-                : 0;
-
-            if (position <= 0)
-            {
-                continue;
-            }
-
-            if (!versionAtPosition.TryGetValue((grading.ExamId, sectionId, position), out var versionId))
-            {
-                continue;
-            }
-
-            if (!versionToItem.TryGetValue(versionId, out var itemId))
+            // #269: ExamItemId is required on FreeResponse, so a grading always names its position.
+            if (!positionToVersion.TryGetValue(grading.ExamItemId, out var versionId)
+                || !versionToItem.TryGetValue(versionId, out var itemId))
             {
                 continue;
             }
@@ -491,8 +415,7 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
 
         var attemptIds = await db.AttemptAnswers
             .AsNoTracking()
-            .Where(a => a.ItemVersionId != null
-                && versionIds.Contains(a.ItemVersionId.Value)
+            .Where(a => versionIds.Contains(a.ItemVersionId)
                 && a.Attempt.Status == "graded")
             .Select(a => a.AttemptId)
             .Distinct()
@@ -526,7 +449,6 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
 
         var answers = await db.AttemptAnswers
             .Where(a => a.AttemptId == attemptId)
-            .Include(a => a.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
             .ToListAsync(cancellationToken);
 
         var affected = answers.Where(a => a.ItemVersionId is int v && defectiveVersionIds.Contains(v)).ToList();
@@ -536,10 +458,8 @@ public sealed class ItemTelemetryService(CompanionDbContext db, TimeProvider? cl
             return null;
         }
 
-        // #269: the skill of an answer comes from its own row - the roster position on a pool paper, the
-        // legacy question otherwise - never from a navigation that is null on half the rows. Reading
-        // `a.Question.Section.SkillId` threw NullReferenceException for every pool answer, so a defective
-        // item's recomputation could not run at all.
+        // #269: the skill of an answer comes from its roster position, never from a navigation - so a
+        // defective item's recomputation runs over every answer shape without dereferencing a null.
         var skillByAnswer = await RosterSkills.ByAnswerAsync(db, attempt.AttemptId, cancellationToken);
         var skillIds = answers
             .Where(a => skillByAnswer.ContainsKey(a.AnswerId))

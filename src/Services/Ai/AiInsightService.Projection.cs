@@ -69,8 +69,9 @@ public sealed partial class AiInsightService
         // #187: a pool answer records a version and a label rather than a question and an option id,
         // so both join the hash. Without them two different answers to one pool item hash identically
         // and a cached insight is served for a session whose answers have changed.
+        // #269: the answer's position is the item it answered - a practice answer has no question id.
         var answerPart = string.Join(";", answers.Select(a =>
-            $"{a.QuestionId}:{a.ItemVersionId}:{a.SelectedOptionId}:{a.SelectedLabel}:{a.IsCorrect}:{a.HintUsed}"));
+            $"{a.ItemId}:{a.ItemVersionId}:{a.SelectedOptionId}:{a.SelectedLabel}:{a.IsCorrect}:{a.HintUsed}"));
         var raw = $"practice_session:{userId}:{sessionId}:{certId}:{sectionId}:{answerPart}";
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();
     }
@@ -80,7 +81,8 @@ public sealed partial class AiInsightService
         // #186: a pinned answer records a version and a label rather than an option id, so the label
         // joins the hash. Without it two different answers to one item hash identically and a cached
         // insight is served for an attempt whose answer has changed.
-        var answerPart = string.Join(";", answers.Select(a => $"{a.QuestionId}:{a.SelectedOptionId}:{a.SelectedLabel}:{a.IsCorrect}"));
+        // #269: the roster position is the answer's identity now that QuestionId is gone.
+        var answerPart = string.Join(";", answers.Select(a => $"{a.ExamItemId}:{a.SelectedOptionId}:{a.SelectedLabel}:{a.IsCorrect}"));
         var raw = $"attempt:{userId}:{attemptId}:{certId}:{examId}:{totalScore}:{answerPart}";
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();
     }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,7 +39,7 @@ public sealed partial class AiInsightService
         var answers = await db.AttemptAnswers
             .AsNoTracking()
             .Where(a => a.AttemptId == attemptId)
-            .OrderBy(a => a.QuestionId)
+            .OrderBy(a => a.ExamItemId)
             .ToListAsync(cancellationToken);
 
         var fingerprint = ComputeExamFingerprint(userId, attemptId, attempt.CertId, attempt.ExamId, attempt.TotalScore, answers);
@@ -130,54 +130,47 @@ public sealed partial class AiInsightService
             .Include(a => a.ItemVersion)
                 .ThenInclude(v => v!.Item)
                     .ThenInclude(i => i.Topic)
-            .Include(a => a.Question)
-                .ThenInclude(q => q.Category)
-            .Include(a => a.Question)
-                .ThenInclude(q => q.Section)
             .Where(a => a.AttemptId == attempt.AttemptId)
-            .OrderBy(a => a.QuestionId)
+            .OrderBy(a => a.ExamItemId)
             .ToListAsync(cancellationToken);
 
-        var questionIds = answers.Select(a => a.QuestionId).Distinct().ToList();
-        var allOptions = await db.QuestionOptions
+        // #269: the section an answer belongs to is its roster position's section.
+        var sectionIdByAnswer = await RosterSkills.ByAnswerAsync(db, attempt.AttemptId, cancellationToken);
+        var sectionIds = answers
+            .Where(a => sectionIdByAnswer.ContainsKey(a.AnswerId))
+            .Select(a => sectionIdByAnswer[a.AnswerId])
+            .Distinct()
+            .ToList();
+
+        var sections = await db.Sections
             .AsNoTracking()
-            .Where(o => questionIds.Contains(o.QuestionId))
+            .Where(s => sectionIds.Contains(s.SectionId))
             .ToListAsync(cancellationToken);
+        var sectionById = sections.ToDictionary(s => s.SectionId);
 
         var questionDetails = answers.Select(a =>
         {
-            // #269: a pool answer has no Question row. The payload describes what the LEARNER SAW, so a
-            // pinned answer reads its version - the practice insight already does this. Reading
-            // `a.Question` unconditionally threw NRE for every pool attempt, so the exam insight could
-            // never be generated for a paper built on the pool.
-            var q = a.Question;
+            // #269: the payload describes what the LEARNER SAW, so an answer reads its pinned version.
             var pinned = a.ItemVersion;
-            var qOptions = q is null
-                ? []
-                : allOptions.Where(o => o.QuestionId == q.QuestionId).ToList();
-            var selectedText = pinned is not null
-                ? PinnedOptionText(pinned, a.SelectedLabel)
-                : qOptions.FirstOrDefault(o => o.OptionId == a.SelectedOptionId)?.Text;
-            var selectedLabel = pinned is not null
-                ? a.SelectedLabel
-                : qOptions.FirstOrDefault(o => o.OptionId == a.SelectedOptionId)?.Label;
-            var correctLabel = pinned is not null
-                ? pinned.KeyLabel
-                : qOptions.FirstOrDefault(o => o.IsCorrect)?.Label;
+            var sectionId = sectionIdByAnswer.TryGetValue(a.AnswerId, out var resolved)
+                ? (int?)resolved
+                : null;
+            var section = sectionId is int id ? sectionById.GetValueOrDefault(id) : null;
+            var selectedText = pinned is not null ? PinnedOptionText(pinned, a.SelectedLabel) : null;
+            var selectedLabel = pinned is not null ? a.SelectedLabel : null;
+            var correctLabel = pinned?.KeyLabel;
 
             // #271: the cell is the item the version pins - the same join vw_UserTopicAccuracy makes.
-            // A legacy answer has no topic at all (the retired CategoryId is not one), so it carries a
-            // level but no topic and is never matched to an accuracy row.
             var item = pinned?.Item;
             var topicId = item?.TopicId;
             var topicName = item?.Topic?.Name;
-            var level = item?.CefrLevel ?? q?.CefrLevel;
+            var level = item?.CefrLevel;
 
             return new InsightQuestionDetail(
-                q?.QuestionId,
-                pinned?.Stem ?? q?.Stem ?? string.Empty,
-                q?.SectionId,
-                q?.Section?.Name ?? string.Empty,
+                null,
+                pinned?.Stem ?? string.Empty,
+                sectionId,
+                section?.Name ?? string.Empty,
                 topicId,
                 topicName,
                 level,
@@ -186,25 +179,12 @@ public sealed partial class AiInsightService
                 correctLabel,
                 a.IsCorrect,
                 false,
-                pinned?.Explanation ?? q?.Explanation);
+                pinned?.Explanation);
         }).ToList();
 
-        // #269: the section an answer belongs to is the roster position's section on a pool paper and
-        // the question row's otherwise - the same rule RosterSkills encodes, resolved to section ids.
-        var sectionIdByAnswer = await LoadSectionByAnswerAsync(attempt.AttemptId, cancellationToken);
-        var sectionIds = answers
-            .Where(a => sectionIdByAnswer.ContainsKey(a.AnswerId))
-            .Select(a => sectionIdByAnswer[a.AnswerId])
-            .Distinct()
-            .ToList();
         var sectionAccuracyRows = await db.vw_UserSectionAccuracyAlls
             .AsNoTracking()
             .Where(v => v.UserId == insight.UserId && sectionIds.Contains(v.SectionId))
-            .ToListAsync(cancellationToken);
-
-        var sections = await db.Sections
-            .AsNoTracking()
-            .Where(s => sectionIds.Contains(s.SectionId))
             .ToListAsync(cancellationToken);
 
         var sectionAccuracies = sections.Select(s =>
@@ -234,7 +214,7 @@ public sealed partial class AiInsightService
         var answeredCount = answers.Count(a =>
             AnswerContent.IsAnswered(a.SelectedOptionId, a.SelectedLabel, a.ResponseText, a.SelectedOptionIdsJson));
         var correctCount = answers.Count(a => a.IsCorrect == true);
-        var errorFingerprints = ExtractErrorFingerprints(answers, allOptions, topicAccuracies);
+        var errorFingerprints = ExtractErrorFingerprints(answers, topicAccuracies);
         var writingEvidences = await ExtractWritingEvidenceAsync(attempt.AttemptId, cancellationToken);
 
         var facts = await BuildFactsAsync(insight.UserId, insight.CertId, targetBand, cancellationToken);
@@ -263,55 +243,5 @@ public sealed partial class AiInsightService
             ErrorFingerprints: errorFingerprints,
             WritingEvidences: writingEvidences,
             Facts: facts);
-    }
-
-    /// <summary>
-    /// #269: answer id → section id, resolved from the roster position on a pool paper and the legacy
-    /// question row otherwise. The insight payload needs a section per answer and must not branch on
-    /// which store the answer came from.
-    /// </summary>
-    private async Task<Dictionary<int, int>> LoadSectionByAnswerAsync(
-        int attemptId, CancellationToken cancellationToken)
-    {
-        var answers = await db.AttemptAnswers
-            .AsNoTracking()
-            .Where(a => a.AttemptId == attemptId)
-            .Select(a => new { a.AnswerId, a.ExamItemId, a.QuestionId })
-            .ToListAsync(cancellationToken);
-
-        var positionIds = answers.Where(a => a.ExamItemId.HasValue).Select(a => a.ExamItemId!.Value).Distinct().ToList();
-        var questionIds = answers.Where(a => !a.ExamItemId.HasValue && a.QuestionId.HasValue)
-            .Select(a => a.QuestionId!.Value).Distinct().ToList();
-
-        var sectionByPosition = positionIds.Count == 0
-            ? []
-            : await db.ExamItems.AsNoTracking()
-                .Where(i => positionIds.Contains(i.ExamItemId))
-                .Select(i => new { i.ExamItemId, i.SectionId })
-                .ToDictionaryAsync(x => x.ExamItemId, x => x.SectionId, cancellationToken);
-
-        var sectionByQuestion = questionIds.Count == 0
-            ? []
-            : await db.Questions.AsNoTracking()
-                .Where(q => questionIds.Contains(q.QuestionId))
-                .Select(q => new { q.QuestionId, q.SectionId })
-                .ToDictionaryAsync(x => x.QuestionId, x => x.SectionId, cancellationToken);
-
-        var map = new Dictionary<int, int>(answers.Count);
-        foreach (var answer in answers)
-        {
-            var sectionId = answer.ExamItemId is int positionId
-                ? sectionByPosition.GetValueOrDefault(positionId)
-                : answer.QuestionId is int questionId
-                    ? sectionByQuestion.GetValueOrDefault(questionId)
-                    : 0;
-
-            if (sectionId != 0)
-            {
-                map[answer.AnswerId] = sectionId;
-            }
-        }
-
-        return map;
     }
 }

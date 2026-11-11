@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
@@ -126,16 +126,12 @@ public sealed partial class AttemptEngine
                         db.AttemptAnswers.Add(new AttemptAnswer
                         {
                             AttemptId = attempt.AttemptId,
-                            // #250: a legacy position names its question; a pool position names the
-                            // roster row it sits at. CK_AttemptAnswers_HasShape requires at least one,
-                            // and only one of the two is ever set for a given paper.
-                            QuestionId = q.LegacyQuestion is null ? null : q.Id,
-                            ExamId = examId,
-                            // #186: the row records the version, so a re-versioned or retired item
-                            // cannot change what this attempt renders later.
-                            ItemId = q.ItemId == 0 ? null : q.ItemId,
-                            ItemVersionId = q.ItemVersionId,
+                            // #250 / #269: an answer names the roster position it was recorded at, and
+                            // the versions pinned so a re-versioned item cannot change what it renders.
                             ExamItemId = q.ExamItemId,
+                            ExamId = examId,
+                            ItemId = q.ItemId,
+                            ItemVersionId = q.ItemVersionId,
                             SelectedOptionId = null,
                             SelectedLabel = null,
                             IsCorrect = null,
@@ -144,15 +140,12 @@ public sealed partial class AttemptEngine
                     }
                     else
                     {
-                        // #250 / #261: a productive task on a pool paper names its roster position, so
-                        // the row is written with ExamItemId and no QuestionId. CK_FreeResp_HasShape
-                        // requires at least one identity and the two filtered unique indexes keep one
-                        // response per position, so this is the same shape the legacy write produced -
-                        // addressed by the paper's own position instead of a question row.
+                        // #250 / #261: a productive task names its roster position, with no question id.
+                        // CK_FreeResp_HasShape requires at least one identity and the filtered unique
+                        // indexes keep one response per position.
                         db.FreeResponses.Add(new FreeResponse
                         {
                             AttemptId = attempt.AttemptId,
-                            QuestionId = q.LegacyQuestion is null ? null : q.Id,
                             ExamItemId = q.ExamItemId,
                             ExamId = examId,
                             SkillId = q.Section.SkillId,
@@ -364,43 +357,27 @@ public sealed partial class AttemptEngine
             throw new AttemptEngineException(AttemptEngineException.AttemptExpired, "Exam time has expired and your exam was auto-submitted.");
         }
 
-        // #250: answers and free responses are keyed by whichever identity their paper uses - a legacy
-        // position names QuestionId, a pool position names ExamItemId - so the sheet must look up both
-        // rather than assume one.
+        // #269: answers and free responses name the roster position they were recorded against.
         var answers = await db.AttemptAnswers
             .Where(a => a.AttemptId == attempt.AttemptId)
             .ToListAsync(cancellationToken);
-        var answerByQuestionId = answers
-            .Where(a => a.QuestionId.HasValue)
-            .ToDictionary(a => a.QuestionId!.Value);
         var answerByExamItemId = answers
-            .Where(a => a.ExamItemId.HasValue)
-            .ToDictionary(a => a.ExamItemId!.Value);
+            .ToDictionary(a => a.ExamItemId);
 
         var freeResponses = await db.FreeResponses
             .Where(fr => fr.AttemptId == attempt.AttemptId)
             .ToListAsync(cancellationToken);
-        // #261: keyed twice, because a response names its position by whichever identity its paper
-        // uses - keying by the nullable legacy column throws on the second pool row.
-        var freeResponseByQuestionId = freeResponses
-            .Where(fr => fr.QuestionId.HasValue)
-            .ToDictionary(fr => fr.QuestionId!.Value);
+        // #261: a response names its position, so the map is keyed by that one identity.
         var freeResponseByExamItemId = freeResponses
-            .Where(fr => fr.ExamItemId.HasValue)
-            .ToDictionary(fr => fr.ExamItemId!.Value);
+            .ToDictionary(fr => fr.ExamItemId);
 
-        // The paper's positions in order, from the seam - a pool-only paper has no Questions rows to
-        // enumerate, and the old query returned an empty sheet for it.
+        // The paper's positions in order, from the seam.
         var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
 
         var answerSheet = paperQuestions.Select(q =>
         {
-            var ans = q.ExamItemId is int examItemId
-                ? answerByExamItemId.GetValueOrDefault(examItemId)
-                : answerByQuestionId.GetValueOrDefault(q.Id);
-            var fr = q.ExamItemId is int itemId
-                ? freeResponseByExamItemId.GetValueOrDefault(itemId)
-                : freeResponseByQuestionId.GetValueOrDefault(q.Id);
+            var ans = answerByExamItemId.GetValueOrDefault(q.ExamItemId);
+            var fr = freeResponseByExamItemId.GetValueOrDefault(q.ExamItemId);
             return new AttemptAnswerSheetItem(
                 q.Id,
                 ProjectedOptionId(ans),

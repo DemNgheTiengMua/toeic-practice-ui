@@ -127,79 +127,35 @@ public sealed partial class AiInsightService
             .Include(pa => pa.ItemVersion)
                 .ThenInclude(v => v!.Item)
                     .ThenInclude(i => i.Topic)
-            .Include(pa => pa.Question)
-                .ThenInclude(q => q!.Category)
             .Where(pa => pa.SessionId == session.SessionId)
             .OrderBy(pa => pa.DisplayOrder)
             .ToListAsync(cancellationToken);
 
-        var questionIds = answers.Where(a => a.QuestionId.HasValue).Select(a => a.QuestionId!.Value).Distinct().ToList();
-        var allOptions = questionIds.Count == 0
-            ? []
-            : await db.QuestionOptions
-                .AsNoTracking()
-                .Where(o => questionIds.Contains(o.QuestionId))
-                .ToListAsync(cancellationToken);
-
-        // #187: the payload describes what the learner actually saw, so a pinned answer reads its
-        // version. An unpinned answer is a legacy one and reads the question row it was answered from.
+        // #187: the payload describes what the learner actually saw, so an answer reads its version.
         var scopeName = session.Section?.Name ?? session.Topic?.Name ?? string.Empty;
 
         var questionDetails = answers.Select(a =>
         {
-            var q = a.Question;
+            // #271: the cell comes off the item the version pins, which is the join the accuracy view
+            // makes - so the detail and the cell the narrative ranks are one attribution.
             var pinned = a.ItemVersion;
+            var item = pinned?.Item;
 
-            if (pinned is not null)
-            {
-                // #271: the cell comes off the item the version pins, which is the join the accuracy
-                // view makes - so the detail and the cell the narrative ranks are one attribution.
-                var item = pinned.Item;
-                return new InsightQuestionDetail(
-                    null,
-                    pinned.Stem,
-                    null,
-                    scopeName,
-                    item?.TopicId,
-                    item?.Topic?.Name,
-                    item?.CefrLevel,
-                    null,
-                    a.SelectedLabel,
-                    pinned.KeyLabel,
-                    a.IsCorrect,
-                    a.HintUsed,
-                    pinned.Explanation,
-                    pinned.ItemVersionId);
-            }
-
-            var qOptions = allOptions.Where(o => o.QuestionId == q!.QuestionId).ToList();
-            var selectedOpt = a.SelectedOptionId.HasValue
-                ? qOptions.FirstOrDefault(o => o.OptionId == a.SelectedOptionId.Value)
-                : null;
-            var correctOpt = qOptions.FirstOrDefault(o => o.IsCorrect);
-
-            // #187: the session's own section is the question's section - FK_PracticeAnswers_QuestionSection
-            // makes that true - so the label is read from the session that was already loaded rather
-            // than from a navigation this query does not include.
-            //
-            // #271: a legacy answer carries no cell. Its level is the question's authored one, but its
-            // topic does not exist - the retired CategoryId is not a topic - so the topic is null and
-            // this answer is never matched to an accuracy row. That is honest: the view has no row for
-            // it either.
             return new InsightQuestionDetail(
-                q!.QuestionId,
-                q.Stem,
-                q.SectionId,
+                null,
+                pinned?.Stem ?? string.Empty,
+                null,
                 scopeName,
+                item?.TopicId,
+                item?.Topic?.Name,
+                item?.CefrLevel,
                 null,
-                null,
-                q.CefrLevel,
-                a.SelectedOptionId,
-                selectedOpt?.Label,
-                correctOpt?.Label,
+                a.SelectedLabel,
+                pinned?.KeyLabel,
                 a.IsCorrect,
                 a.HintUsed,
-                q.Explanation);
+                pinned?.Explanation,
+                pinned?.ItemVersionId);
         }).ToList();
 
         // Query historical accuracy from deterministic SQL views. A pool drill has no section, so it

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -169,7 +169,6 @@ public sealed class SpeakingPracticeService(
             var fr = new FreeResponse
             {
                 AttemptId = attempt.AttemptId,
-                QuestionId = q.ExamItemId is null ? q.Id : null,
                 ExamItemId = q.ExamItemId,
                 ExamId = examId,
                 SkillId = q.Section.SkillId,
@@ -235,10 +234,9 @@ public sealed class SpeakingPracticeService(
             .Where(fr => fr.AttemptId == attemptId)
             .ToListAsync(cancellationToken);
 
-        // #262: a response names its position by whichever identity its paper uses.
-        FreeResponse? ResponseFor(SittingQuestion q) => q.ExamItemId is int examItemId
-            ? freeResponses.FirstOrDefault(fr => fr.ExamItemId == examItemId)
-            : freeResponses.FirstOrDefault(fr => fr.QuestionId == q.Id);
+        // #262 / #269: a response names its roster position.
+        FreeResponse? ResponseFor(SittingQuestion q) =>
+            freeResponses.FirstOrDefault(fr => fr.ExamItemId == q.ExamItemId);
 
         var targetQuestion = questionId.HasValue
             ? questions.FirstOrDefault(q => q.Id == questionId.Value) ?? questions[0]
@@ -353,7 +351,6 @@ public sealed class SpeakingPracticeService(
                 && string.Equals(p.Section.Modality, Modality.Speaking.ToCode(), StringComparison.OrdinalIgnoreCase))
             ?? throw new SpeakingPracticeException(SpeakingPracticeException.QuestionNotFound, $"Speaking question {questionId} not found in this exam.");
 
-        var question = position.LegacyQuestion;
         var responseSeconds = position.ResponseSeconds;
 
         // #239: the recording window is the TASK'S OWN declaration, and the server enforces it. The
@@ -382,10 +379,7 @@ public sealed class SpeakingPracticeService(
         var relativePath = await fileStore.SaveAudioAsync(attemptId, questionId, stream, contentType, ext, cancellationToken);
 
         var fr = await db.FreeResponses
-            .Where(r => r.AttemptId == attemptId
-                && (position.ExamItemId.HasValue
-                    ? r.ExamItemId == position.ExamItemId
-                    : r.QuestionId == questionId))
+            .Where(r => r.AttemptId == attemptId && r.ExamItemId == position.ExamItemId)
             .SingleOrDefaultAsync(cancellationToken);
 
         if (fr is null)
@@ -393,8 +387,7 @@ public sealed class SpeakingPracticeService(
             fr = new FreeResponse
             {
                 AttemptId = attemptId,
-                // A pool response names the roster position and carries no QuestionId at all.
-                QuestionId = position.ExamItemId.HasValue ? null : questionId,
+                // #269: a response names the roster position; there is no question id to carry.
                 ExamItemId = position.ExamItemId,
                 ExamId = attempt.ExamId,
                 SkillId = position.Section.SkillId,
@@ -426,7 +419,7 @@ public sealed class SpeakingPracticeService(
 
         return new SaveSpeakingAudioResult(
             fr.FreeResponseId,
-            fr.QuestionId ?? fr.ExamItemId ?? 0,
+            fr.ExamItemId,
             relativePath,
             durationMs,
             now);
@@ -544,23 +537,19 @@ public sealed class SpeakingPracticeService(
         var gradings = await db.AiGradings
             .AsNoTracking()
             .Include(g => g.FreeResponse)
-                .ThenInclude(fr => fr.Question)
             .Where(g => g.FreeResponse.AttemptId == attemptId)
             .ToListAsync(cancellationToken);
 
-        // #269: the same reader as writing's - a pool response has no QuestionId, so `QuestionId!.Value`
-        // threw and the grading-status page could not load after a successful grading.
+        // #269: a response names its roster position, so the paper is the only source of order.
         var positions = await LoadPaperPositionsAsync(attempt.ExamId, cancellationToken);
         var positionByExamItemId = positions
-            .Where(p => p.ExamItemId.HasValue)
-            .ToDictionary(p => p.ExamItemId!.Value);
+            .ToDictionary(p => p.ExamItemId);
 
-        int AddressOf(FreeResponse fr) => fr.QuestionId ?? fr.ExamItemId ?? 0;
+        int AddressOf(FreeResponse fr) => fr.ExamItemId;
 
-        int OrderOf(FreeResponse fr) => fr.ExamItemId is int examItemId
-            && positionByExamItemId.TryGetValue(examItemId, out var position)
-                ? positions.IndexOf(position)
-                : fr.Question?.DisplayOrder ?? 0;
+        int OrderOf(FreeResponse fr) => positionByExamItemId.TryGetValue(fr.ExamItemId, out var position)
+            ? positions.IndexOf(position)
+            : 0;
 
         gradings = gradings.OrderBy(g => OrderOf(g.FreeResponse)).ToList();
 
@@ -644,34 +633,29 @@ public sealed class SpeakingPracticeService(
         var freeResponses = await db.FreeResponses
             .AsNoTracking()
             .Where(fr => fr.AttemptId == attemptId)
-            .Include(fr => fr.Question)
-                .ThenInclude(q => q.Section)
             .Include(fr => fr.AiGradingFreeResponse)
                 .ThenInclude(g => g!.AiGradingScores)
                     .ThenInclude(s => s.GradingCriterion)
             .ToListAsync(cancellationToken);
 
-        // #269: the review page reads the same address, order, section and stem for a pool task as for a
-        // legacy one. Reading fr.Question for a pool response threw on QuestionId!.Value.
+        // #269: the review page reads the same address, order, section and stem for every response,
+        // because the paper position is the only place they live now.
         var reviewPositions = await LoadPaperPositionsAsync(attempt.ExamId, cancellationToken);
         var reviewPositionByExamItemId = reviewPositions
-            .Where(p => p.ExamItemId.HasValue)
-            .ToDictionary(p => p.ExamItemId!.Value);
+            .ToDictionary(p => p.ExamItemId);
 
-        int ReviewAddressOf(FreeResponse fr) => fr.QuestionId ?? fr.ExamItemId ?? 0;
+        int ReviewAddressOf(FreeResponse fr) => fr.ExamItemId;
 
         // A sitting order is 1-based, the way the navigator and every other screen numbers it. Using
         // IndexOf here reported the first task as displayOrder 0, which the review page rendered as
         // "task 0 of 3".
-        int ReviewOrderOf(FreeResponse fr) => fr.ExamItemId is int examItemId
-            && reviewPositionByExamItemId.TryGetValue(examItemId, out var pos)
-                ? reviewPositions.IndexOf(pos) + 1
-                : fr.Question?.DisplayOrder ?? 0;
+        int ReviewOrderOf(FreeResponse fr) => reviewPositionByExamItemId.TryGetValue(fr.ExamItemId, out var pos)
+            ? reviewPositions.IndexOf(pos) + 1
+            : 0;
 
-        int ReviewSectionOf(FreeResponse fr) => fr.ExamItemId is int examItemId
-            && reviewPositionByExamItemId.TryGetValue(examItemId, out var pos)
-                ? pos.SectionId
-                : fr.Question?.SectionId ?? 0;
+        int ReviewSectionOf(FreeResponse fr) => reviewPositionByExamItemId.TryGetValue(fr.ExamItemId, out var pos)
+            ? pos.SectionId
+            : 0;
 
         freeResponses = freeResponses.OrderBy(ReviewOrderOf).ToList();
 
@@ -724,12 +708,12 @@ public sealed class SpeakingPracticeService(
             questionItems.Add(new SpeakingQuestionReviewItem(
                 ReviewAddressOf(fr),
                 ReviewOrderOf(fr),
-                fr.ExamItemId is int reviewItemId && reviewPositionByExamItemId.TryGetValue(reviewItemId, out var reviewPos)
+                reviewPositionByExamItemId.TryGetValue(fr.ExamItemId, out var reviewPos)
                     ? reviewPos.Section.Name
-                    : fr.Question?.Section?.Name ?? string.Empty,
-                fr.ExamItemId is int reviewStemId && reviewPositionByExamItemId.TryGetValue(reviewStemId, out var stemPos)
+                    : string.Empty,
+                reviewPositionByExamItemId.TryGetValue(fr.ExamItemId, out var stemPos)
                     ? stemPos.Stem
-                    : fr.Question?.Stem ?? string.Empty,
+                    : string.Empty,
                 fr.AudioPath,
                 fr.DurationMs,
                 fr.ResponseText,
@@ -846,7 +830,7 @@ public sealed class SpeakingPracticeService(
         var fr = await db.FreeResponses
             .AsNoTracking()
             .Where(r => r.AttemptId == attemptId
-                && (r.QuestionId == questionId || r.ExamItemId == questionId))
+                && r.ExamItemId == questionId)
             .SingleOrDefaultAsync(cancellationToken);
 
         if (fr is null || string.IsNullOrWhiteSpace(fr.AudioPath))

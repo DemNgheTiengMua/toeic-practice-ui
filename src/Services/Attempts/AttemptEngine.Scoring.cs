@@ -412,7 +412,7 @@ public sealed partial class AttemptEngine
             .Where(s => s.AiGrading.FreeResponse.AttemptId == attemptId
                 && s.AiGrading.Status == AiGradingStatus.Done.ToCode())
             .Include(s => s.GradingCriterion)
-            .Include(s => s.AiGrading).ThenInclude(g => g.FreeResponse).ThenInclude(fr => fr.Question)
+            .Include(s => s.AiGrading).ThenInclude(g => g.FreeResponse)
             .ToListAsync(cancellationToken);
 
         if (scores.Count == 0) return (0m, 0m);
@@ -420,7 +420,7 @@ public sealed partial class AttemptEngine
         // #269: a pool free response has no Question row, so `fr.Question.SectionId` threw here and the
         // whole band estimate died with it - the grading itself had succeeded, so the learner was charged
         // for a result the app could not show. The section comes from the position the response names.
-        var sectionByResponse = await LoadSectionByResponseAsync(db, attemptId, cancellationToken);
+        var sectionByResponse = await RosterSkills.ByResponseSectionAsync(db, attemptId, cancellationToken);
 
         int? SectionOf(BusinessObjects.Entities.AiGradingScore score) =>
             sectionByResponse.GetValueOrDefault(score.AiGrading.FreeResponseId);
@@ -489,55 +489,5 @@ public sealed partial class AttemptEngine
         // places before it is scaled would throw away the difference the weights just made.
         var fraction = Math.Clamp(weightedFraction / weight, 0m, 1m);
         return (Math.Round(fraction * max, 2, MidpointRounding.AwayFromZero), max);
-    }
-
-    /// <summary>
-    /// #269: response id → section id, from the roster position a pool response names or the legacy
-    /// question row otherwise. One lookup so the band estimate and the rubric totals cannot decide a
-    /// section differently - the previous code read `FreeResponse.Question.SectionId` in both, which is
-    /// null on every pool response.
-    /// </summary>
-    private static async Task<Dictionary<int, int>> LoadSectionByResponseAsync(
-        CompanionDbContext db, int attemptId, CancellationToken cancellationToken)
-    {
-        var responses = await db.FreeResponses
-            .AsNoTracking()
-            .Where(fr => fr.AttemptId == attemptId)
-            .Select(fr => new { fr.FreeResponseId, fr.ExamItemId, fr.QuestionId })
-            .ToListAsync(cancellationToken);
-
-        var positionIds = responses.Where(r => r.ExamItemId.HasValue).Select(r => r.ExamItemId!.Value).Distinct().ToList();
-        var questionIds = responses.Where(r => r.QuestionId.HasValue).Select(r => r.QuestionId!.Value).Distinct().ToList();
-
-        var sectionByPosition = positionIds.Count == 0
-            ? []
-            : await db.ExamItems.AsNoTracking()
-                .Where(i => positionIds.Contains(i.ExamItemId))
-                .Select(i => new { i.ExamItemId, i.SectionId })
-                .ToDictionaryAsync(x => x.ExamItemId, x => x.SectionId, cancellationToken);
-
-        var sectionByQuestion = questionIds.Count == 0
-            ? []
-            : await db.Questions.AsNoTracking()
-                .Where(q => questionIds.Contains(q.QuestionId))
-                .Select(q => new { q.QuestionId, q.SectionId })
-                .ToDictionaryAsync(x => x.QuestionId, x => x.SectionId, cancellationToken);
-
-        var map = new Dictionary<int, int>(responses.Count);
-        foreach (var response in responses)
-        {
-            var sectionId = response.ExamItemId is int positionId
-                ? sectionByPosition.GetValueOrDefault(positionId)
-                : response.QuestionId is int questionId
-                    ? sectionByQuestion.GetValueOrDefault(questionId)
-                    : 0;
-
-            if (sectionId != 0)
-            {
-                map[response.FreeResponseId] = sectionId;
-            }
-        }
-
-        return map;
     }
 }
