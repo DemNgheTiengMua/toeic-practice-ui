@@ -38,6 +38,14 @@ public sealed class SittingPersistenceAndCrashRecoveryTests(DatabaseFixture data
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
 
+    /// <summary>
+    /// One paper with a Listening and a Reading position, authored on the pool.
+    /// <para>
+    /// <b>#272: migrated.</b> The ids this file's tests address are <c>ExamItemId</c>s - a position is an
+    /// <c>ExamItems</c> row - so the option ids are the projection's (a pinned version stores labels
+    /// A-D, not option rows) and an answer stores <c>SelectedLabel</c>.
+    /// </para>
+    /// </summary>
     private async Task<(int certId, int examId, int skill1Id, int skill2Id, int q1Id, int q2Id, int opt1Id, int opt2Id)> SeedExamAsync(string certCode)
     {
         await database.SqlAsync($"""
@@ -53,41 +61,30 @@ public sealed class SittingPersistenceAndCrashRecoveryTests(DatabaseFixture data
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, NavigationMode) VALUES
               (@sL, @cert, 'listening', 'P1', N'Photos', 1, 1, 'FULL_SANDBOX'),
               (@sR, @cert, 'reading', 'P5', N'Sentences', 2, 1, 'FULL_SANDBOX');
-            DECLARE @secL INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P1');
-            DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES
               (@cert, N'Exam {certCode}', 'published', 75, 'mock');
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, UnitNumber) VALUES
-              (@exam, @cert, @secL, 1, 1),
-              (@exam, @cert, @secR, 2, 1);
-            DECLARE @gL INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND SectionId = @secL);
-            DECLARE @gR INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND SectionId = @secR);
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder) VALUES
-              (@gL, @exam, @secL, @sL, N'Listening Q1', 'A2', 'mcq', 1),
-              (@gR, @exam, @secR, @sR, N'Reading Q2', 'A2', 'mcq', 2);
-            DECLARE @q1 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND SectionId = @secL);
-            DECLARE @q2 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND SectionId = @secR);
-
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q1, 'mcq', 'A', N'Opt A', 1),
-              (@q1, 'mcq', 'B', N'Opt B', 0),
-              (@q2, 'mcq', 'A', N'Opt A', 1),
-              (@q2, 'mcq', 'B', N'Opt B', 0);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
         var skills = await db.Skills.Where(s => s.CertId == cert.CertId).OrderBy(s => s.DisplayOrder).ToListAsync();
-        var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).ToListAsync();
-        var opt1 = await db.QuestionOptions.Where(o => o.QuestionId == questions[0].QuestionId && o.Label == "A").SingleAsync();
-        var opt2 = await db.QuestionOptions.Where(o => o.QuestionId == questions[1].QuestionId && o.Label == "A").SingleAsync();
+        var secL = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "P1");
+        var secR = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "P5");
 
-        return (cert.CertId, exam.ExamId, skills[0].SkillId, skills[1].SkillId, questions[0].QuestionId, questions[1].QuestionId, opt1.OptionId, opt2.OptionId);
+        var q1 = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, secL.SectionId, "listening", "Listening Q1",
+            displayOrder: 1, keyLabel: "A", level: "A2");
+        var q2 = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, secR.SectionId, "reading", "Reading Q2",
+            displayOrder: 2, keyLabel: "A", level: "A2");
+
+        var opt1 = await PoolFixture.OptionIdAsync(db, exam.ExamId, q1.ExamItemId, "A");
+        var opt2 = await PoolFixture.OptionIdAsync(db, exam.ExamId, q2.ExamItemId, "A");
+
+        return (cert.CertId, exam.ExamId, skills[0].SkillId, skills[1].SkillId,
+            q1.ExamItemId, q2.ExamItemId, opt1, opt2);
     }
 
     [Fact]
@@ -144,8 +141,10 @@ public sealed class SittingPersistenceAndCrashRecoveryTests(DatabaseFixture data
         Assert.Equal("{\"notes\":[{\"q\":1,\"text\":\"flagged question\"}]}", reloadedAttempt.CandidateNotesJson);
         Assert.Equal(q1Id, reloadedAttempt.CurrentExamItemId);
 
-        var answer = await db.AttemptAnswers.SingleAsync(a => a.AttemptId == attempt.AttemptId && a.QuestionId == q1Id);
-        Assert.Equal(opt1Id, answer.SelectedOptionId);
+        // #272: a pool answer is addressed by its roster position and records the LABEL it picked -
+        // a pinned version stores A-D, not option rows, so there is no option id to store here.
+        var answer = await db.AttemptAnswers.SingleAsync(a => a.AttemptId == attempt.AttemptId && a.ExamItemId == q1Id);
+        Assert.Equal("A", answer.SelectedLabel);
         Assert.True(answer.IsFlagged);
     }
 
@@ -228,9 +227,11 @@ public sealed class SittingPersistenceAndCrashRecoveryTests(DatabaseFixture data
         Assert.Equal("{\"highlights\":[{\"q\":1,\"tokens\":[2,3]}]}", resumeView.CandidateNotesJson);
         Assert.True(resumeView.RemainingSeconds > 0);
 
-        // Verify AnswerSheet contains both questions and restored answers
+        // Verify AnswerSheet contains both positions and restored answers
         Assert.Equal(2, resumeView.AnswerSheet.Count);
         var q1Answer = resumeView.AnswerSheet.Single(a => a.QuestionId == q1Id);
+        // #272: the sheet still hands back the PROJECTED option id (a pool answer decodes its stored
+        // label back to the id the sitting rendered), so the wire value is unchanged.
         Assert.Equal(opt1Id, q1Answer.SelectedOptionId);
         Assert.True(q1Answer.IsFlagged);
 

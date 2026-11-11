@@ -252,6 +252,13 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
     [Fact]
     public async Task MultiSelect_Allows_Multiple_Correct_Options_While_MCQ_Enforces_OneCorrect()
     {
+        // #272: NOT migrated, and deliberately. The subject of this test IS the legacy index
+        // `UX_Options_OneCorrect` on QuestionOptions (a filtered unique index where IsCorrect = 1 and the
+        // type is not multi_select). The pool expresses the same authored shape differently - one key is
+        // MaxSelections NULL, a multi-answer key is 'A,C' in ItemVersions.KeyLabel - and it carries no
+        // constraint that refuses an mcq-rendered version with a two-label key. So migrating this would
+        // delete the "one correct" half of the assertion rather than translate it. It stays here, and it
+        // goes when #269 drops the table and the index with it.
         var databaseName = $"MultiSelect_{Guid.NewGuid():N}";
         var connectionString = await database.CreateFreshDatabaseAsync(databaseName);
         try
@@ -332,50 +339,55 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
     [Fact]
     public async Task InlineCompletion_Supports_MaxWords_And_AcceptedAnswersJson()
     {
+        // #272: migrated. The blank's answer shape is the pool's: MaxWords, AllowNumber and
+        // AcceptedAnswersJson all live on ItemVersions, which is where a blank's key belongs (its answer
+        // is a set of strings, not a label). The assertions are unchanged; only the store they read is.
         var databaseName = $"InlineComp_{Guid.NewGuid():N}";
         var connectionString = await database.CreateFreshDatabaseAsync(databaseName);
         try
         {
             await using var db = DbContextFactory.Create(connectionString);
-            var cert = new Certificate { Code = "IC_CERT", Name = "Cert" };
-            db.Certificates.Add(cert);
+
+            // A fresh test database is empty and Items needs a topic, so the vocabulary row is authored
+            // here rather than assumed: 'L-DET' is one of the closed twenty.
+            var topic = new Topic { Modality = "listening", Code = "L-DET", Name = "Listening for detail" };
+            db.Topics.Add(topic);
             await db.SaveChangesAsync();
 
-            var skill = new Skill { CertId = cert.CertId, Code = "LIST", Name = "Listening", Modality = "listening" };
-            db.Skills.Add(skill);
-            await db.SaveChangesAsync();
-
-            var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "listening", Code = "P1", Name = "Part 1", ExpectedQuestionCount = 1 };
-            db.Sections.Add(section);
-            await db.SaveChangesAsync();
-
-            var exam = new Exam { CertId = cert.CertId, Name = "Exam", DurationMinutes = 30, Purpose = "mock" };
-            db.Exams.Add(exam);
-            await db.SaveChangesAsync();
-
-            var group = new QuestionGroup { CertId = cert.CertId, ExamId = exam.ExamId, SectionId = section.SectionId, UnitNumber = 1 };
-            db.QuestionGroups.Add(group);
-            await db.SaveChangesAsync();
-
-            // inline_completion specifies MaxWords, AllowNumber, AcceptedAnswersJson
-            var q = new Question
+            // A blank renders as inline_completion and carries no options at all - the "no options"
+            // branch of CK_ItemVersions_OptionsComplete, whose key is AcceptedAnswersJson rather than a
+            // label.
+            var item = new Item
             {
-                GroupId = group.GroupId,
-                ExamId = exam.ExamId,
-                SectionId = section.SectionId,
-                SkillId = skill.SkillId,
-                Stem = "The library is closed on [blank] afternoons.",
+                Modality = "listening",
+                TopicId = topic.TopicId,
                 CefrLevel = CefrLevel.B1,
-                QuestionType = "inline_completion",
+                ItemType = "short_exchange",
+                RenderFormat = "inline_completion",
+                ContentTier = "demo",
+                LifecycleStatus = "active"
+            };
+            db.Items.Add(item);
+            await db.SaveChangesAsync();
+
+            var version = new ItemVersion
+            {
+                ItemId = item.ItemId,
+                VersionNumber = 1,
+                Stem = "The library is closed on [blank] afternoons.",
+                // #272: the pool refuses a ceiling with no floor (CK_ItemVersions_WordRange), where the
+                // legacy Questions table allowed MaxWords alone. The subject of this test - a two-word
+                // ceiling and an accepted-answer set - is unchanged; the floor it now needs is 1.
+                MinWords = 1,
                 MaxWords = 2,
                 AllowNumber = true,
                 AcceptedAnswersJson = "[\"wednesday\",\"wed\"]"
             };
-            db.Questions.Add(q);
+            db.ItemVersions.Add(version);
             await db.SaveChangesAsync();
 
-            var loaded = await db.Questions.SingleAsync(x => x.QuestionId == q.QuestionId);
-            Assert.Equal("inline_completion", loaded.QuestionType);
+            var loaded = await db.ItemVersions.SingleAsync(x => x.ItemVersionId == version.ItemVersionId);
+            Assert.Equal("inline_completion", (await db.Items.SingleAsync(i => i.ItemId == loaded.ItemId)).RenderFormat);
             Assert.Equal(2, loaded.MaxWords);
             Assert.True(loaded.AllowNumber);
             Assert.Equal("[\"wednesday\",\"wed\"]", loaded.AcceptedAnswersJson);
@@ -424,22 +436,13 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
             db.Exams.Add(exam);
             await db.SaveChangesAsync();
 
-            var group = new QuestionGroup { CertId = cert.CertId, ExamId = exam.ExamId, SectionId = section.SectionId, UnitNumber = 1 };
-            db.QuestionGroups.Add(group);
-            await db.SaveChangesAsync();
-
-            var q = new Question
-            {
-                GroupId = group.GroupId,
-                ExamId = exam.ExamId,
-                SectionId = section.SectionId,
-                SkillId = skill.SkillId,
-                Stem = "Fill in the blank",
-                CefrLevel = CefrLevel.A2,
-                QuestionType = "inline_completion"
-            };
-            db.Questions.Add(q);
-            await db.SaveChangesAsync();
+            // #272: migrated to the pool. The position is an ExamItems binding and the block address it
+            // implies is the solo-position convention - the negated ExamItemId - which is what a
+            // HYBRID_GROUP_LOCKED sitting stores when its unit shares no stimulus.
+            var position = await PoolFixture.AddMcqAsync(
+                db, exam.ExamId, cert.CertId, section.SectionId, "reading", "Fill in the blank",
+                displayOrder: 1, keyLabel: "A", level: "A2");
+            var blockAddress = -position.ExamItemId;
 
             var deadline = DateTime.UtcNow.AddMinutes(45);
             var attempt = new ExamAttempt
@@ -449,7 +452,7 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
                 CertId = cert.CertId,
                 ActiveSkillId = skill.SkillId,
                 ActiveUnitNumber = 2,
-                ActiveGroupId = group.GroupId,
+                ActiveGroupId = blockAddress,
                 AuthorizationCode = "AUTH-9876543210-CRASH-REC",
                 PhaseDeadlineAt = deadline,
                 LastAudioOffsetMs = 15400,
@@ -469,17 +472,20 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
             Assert.Equal(2, loadedAttempt.ActiveUnitNumber);
             // #269: the block address round-trips as a value. It is no longer a navigation, because a
             // solo position's address is its own negated ExamItemId and names no row.
-            Assert.Equal(group.GroupId, loadedAttempt.ActiveGroupId);
+            Assert.Equal(blockAddress, loadedAttempt.ActiveGroupId);
             Assert.Equal("AUTH-9876543210-CRASH-REC", loadedAttempt.AuthorizationCode);
             Assert.Equal(15400, loadedAttempt.LastAudioOffsetMs);
             Assert.NotNull(loadedAttempt.CandidateNotesJson);
 
-            // AttemptAnswers multi-component responses
+            // AttemptAnswers multi-component responses. #272: the row names its roster position, and
+            // pins the version so re-versioning the item cannot change what this answer means.
             var answer = new AttemptAnswer
             {
                 AttemptId = attempt.AttemptId,
-                QuestionId = q.QuestionId,
+                ExamItemId = position.ExamItemId,
                 ExamId = exam.ExamId,
+                ItemId = position.ItemId,
+                ItemVersionId = position.ItemVersionId,
                 ResponseText = "railway station",
                 SelectedOptionIdsJson = "[101, 102]",
                 IsCorrect = true
@@ -491,6 +497,7 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
             Assert.Equal("railway station", loadedAnswer.ResponseText);
             Assert.Equal("[101, 102]", loadedAnswer.SelectedOptionIdsJson);
             Assert.True(loadedAnswer.IsCorrect);
+            Assert.Equal(position.ExamItemId, loadedAnswer.ExamItemId);
         }
         finally
         {
