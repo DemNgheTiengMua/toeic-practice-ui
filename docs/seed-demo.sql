@@ -3475,13 +3475,13 @@ END CATCH
 -- ---- SavedQuestions (2 rows)
 SET IDENTITY_INSERT [SavedQuestions] ON;
 BEGIN TRY
-  INSERT INTO [SavedQuestions] ([SavedQuestionId], [UserId], [CertId], [QuestionId], [ItemId], [ItemVersionId], [Source], [SavedAt]) VALUES (1, 2, 1, NULL, 2, 2, N'manual', '2026-11-08T01:44:02.8616810+07:00');
+  INSERT INTO [SavedQuestions] ([SavedQuestionId], [UserId], [CertId], [ItemId], [ItemVersionId], [Source], [SavedAt]) VALUES (1, 2, 1, 2, 2, N'manual', '2026-11-08T01:44:02.8616810+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [SavedQuestions] ([SavedQuestionId], [UserId], [CertId], [QuestionId], [ItemId], [ItemVersionId], [Source], [SavedAt]) VALUES (2, 2, 1, NULL, 1, 1, N'incorrect', '2026-11-07T01:44:02.8671889+07:00');
+  INSERT INTO [SavedQuestions] ([SavedQuestionId], [UserId], [CertId], [ItemId], [ItemVersionId], [Source], [SavedAt]) VALUES (2, 2, 1, 1, 1, N'incorrect', '2026-11-07T01:44:02.8671889+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -6040,9 +6040,8 @@ BEGIN CATCH
 END CATCH
 SET IDENTITY_INSERT [Complaints] OFF;
 
--- D23 / #224: a legacy saved link is dropped rather than re-pointed. This is a rule about a
--- database that predates the pool, so it is not a row the dump could carry.
-DELETE FROM [SavedQuestions] WHERE [QuestionId] IS NOT NULL;
+-- D23 / #224: a legacy saved link was dropped rather than re-pointed. #269 removed the QuestionId
+-- column that rule was about, so there is no legacy shape left to delete.
 GO
 
 IF OBJECT_ID('CatalogMode', 'U') IS NOT NULL AND OBJECT_ID('tempdb..#ee_seed_prior_fixture') IS NOT NULL

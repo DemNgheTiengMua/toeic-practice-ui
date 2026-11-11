@@ -1,4 +1,4 @@
--- docs/database-schema.sql
+﻿-- docs/database-schema.sql
 -- Multi-certificate mock-exam companion schema.
 -- Spec: docs/superpowers/specs/2026-09-24-multi-cert-companion-design.md
 SET QUOTED_IDENTIFIER ON;
@@ -627,14 +627,10 @@ BEGIN
              s.LockNavigationOneWay
       FROM Skills s
       WHERE s.CertId = i.CertId
-        AND (EXISTS (SELECT 1
+        AND EXISTS (SELECT 1
                      FROM ExamItems ei
                      JOIN Sections esec ON esec.SectionId = ei.SectionId
                      WHERE ei.ExamId = i.ExamId AND esec.SkillId = s.SkillId)
-          OR EXISTS (SELECT 1
-                     FROM Questions q
-                     JOIN Sections sec ON sec.SectionId = q.SectionId
-                     WHERE q.ExamId = i.ExamId AND sec.SkillId = s.SkillId))
       ORDER BY s.DisplayOrder
       FOR JSON PATH), '[]'),
     c.ScoreAggregationRule,
@@ -1490,136 +1486,22 @@ CREATE TABLE QuestionCategories (
   CONSTRAINT UQ_QuestionCategories_Id_Cert UNIQUE (CategoryId, CertId)
 );
 GO
-CREATE TABLE QuestionGroups (
-  GroupId      INT IDENTITY(1,1) PRIMARY KEY,
-  ExamId       INT NOT NULL,
-  CertId       INT NOT NULL,
-  SectionId    INT NOT NULL,
-  UnitNumber   INT NOT NULL CONSTRAINT DF_QGroups_UnitNumber DEFAULT 1,
-  Passage      NVARCHAR(MAX) NULL,
-  AudioPath    NVARCHAR(400) NULL,
-  -- UI-6: a Part's audio is one uploaded file (ExamSectionAudio); the group's slice of it lets
-  -- exam-review "Replay this question" play just this item. Both NULL when AudioPath is used instead.
-  AudioStartMs INT NULL,
-  AudioEndMs   INT NULL,
-  -- UI-5: Part 1 photos and speaking "Describe a picture"; alt text is required by the question editor
-  ImagePath    NVARCHAR(400) NULL,
-  ImageAlt     NVARCHAR(400) NULL,
-  Transcript   NVARCHAR(MAX) NULL,        -- UI-7: Part 3/4 conversation or talk script, shown after the exam
-  PrepSeconds  INT NULL CONSTRAINT CK_QGroups_Prep CHECK (PrepSeconds IS NULL OR PrepSeconds >= 0), -- UI-9: shared read time
-  -- UI-41: one time block shared by the group's questions (TOEIC Writing Q1-5: 8 minutes for five sentences)
-  ResponseSeconds INT NULL CONSTRAINT CK_QGroups_Response CHECK (ResponseSeconds IS NULL OR ResponseSeconds > 0),
-  DisplayOrder INT NOT NULL DEFAULT 0,
-  CONSTRAINT CK_QGroups_ImageAlt CHECK (ImagePath IS NULL OR ImageAlt IS NOT NULL),
-  CONSTRAINT CK_QGroups_AudioSlice CHECK (
-       (AudioStartMs IS NULL AND AudioEndMs IS NULL)
-    OR (AudioStartMs >= 0 AND AudioEndMs > AudioStartMs)
-  ),
-  -- both composite FKs share CertId, so exam-cert and section-cert must agree:
-  CONSTRAINT FK_QGroups_ExamCert    FOREIGN KEY (ExamId, CertId)    REFERENCES Exams(ExamId, CertId),
-  CONSTRAINT FK_QGroups_SectionCert FOREIGN KEY (SectionId, CertId) REFERENCES Sections(SectionId, CertId),
-  -- composite targets so Questions can carry ExamId/SectionId down from its group (H-5 / Low):
-  CONSTRAINT UQ_QGroups_Id_Exam    UNIQUE (GroupId, ExamId),
-  CONSTRAINT UQ_QGroups_Id_Section UNIQUE (GroupId, SectionId),
-  CONSTRAINT UQ_QGroups_Id_Cert    UNIQUE (GroupId, CertId)
-);
-GO
-CREATE TABLE Questions (
-  QuestionId      INT IDENTITY(1,1) PRIMARY KEY,
-  GroupId         INT NOT NULL REFERENCES QuestionGroups(GroupId),
-  -- H-5 / Low: carried down from the owning QuestionGroups row so attempts/answers can pin isolation
-  ExamId          INT NOT NULL,
-  SectionId       INT NOT NULL,
-  -- M-3: carried down from the section so AI grading can be pinned to the question's own skill
-  SkillId         INT NOT NULL,
-  Stem            NVARCHAR(MAX) NOT NULL,
-  -- #229 (D1): the level the item is authored at. This is the fact every authoring and import path
-  -- now writes; it is NULL only for a row written before the column existed. Authored, so the
-  -- reportable floor 'pre_a1' is refused here as well as in CefrLevel.TryParseAuthored.
-  CefrLevel       VARCHAR(10) NULL
-    CONSTRAINT CK_Questions_Level CHECK (CefrLevel IS NULL OR CefrLevel IN ('A1','A2','B1','B2','C1','C2')),
-  -- #231: DifficultyLevel and CK_Questions_Difficulty are gone. The 1-5 scale was the second level
-  -- model D1 forbids, and nothing had written it since #229 moved every authoring path to CefrLevel.
-  QuestionType    VARCHAR(30) NOT NULL
-    CONSTRAINT CK_Questions_Type CHECK (QuestionType IN ('mcq', 'mcq_3', 'multi_select', 'inline_completion', 'dropdown', 'drag_drop', 'free_response')),
-  Explanation     NVARCHAR(MAX) NULL,
-  -- UI-8: "Grammar type" (practice summary), "inference questions" (weakness analysis)
-  CategoryId      INT NULL CONSTRAINT FK_Questions_Category REFERENCES QuestionCategories(CategoryId),
-  -- UI-9 (speaking gap 1): per-question prepare/speak windows; MCQ never carries them
-  PrepSeconds     INT NULL,
-  ResponseSeconds INT NULL,
-  -- UI-39: exam-writing word counter "142 / 150-300 words"; free response only
-  MinWords        INT NULL,
-  MaxWords        INT NULL,
-  MaxSelections   INT NULL,
-  AllowNumber     BIT NOT NULL CONSTRAINT DF_Questions_AllowNumber DEFAULT 1,
-  AcceptedAnswersJson NVARCHAR(MAX) NULL,
-  RequiredKeywords    NVARCHAR(MAX) NULL,
-  -- UI-42: practice-take "Show hint" (a nudge, not the answer; Explanation stays the after-answer why)
-  Hint            NVARCHAR(1000) NULL,
-  -- #152: the reference a spoken answer is judged against - the words to read for a Read Aloud
-  -- question, the description of the picture for a Describe a Picture one. NULL is "no reference
-  -- exists" (nothing is invented): the question is graded as unscripted and carries no relevance.
-  SampleAnswerOrImageDesc NVARCHAR(1000) NULL,
-  -- #152: WHAT that text is - 'script' (read aloud) or 'image_desc' (describes the picture). A
-  -- question-level fact, so a scripted question keeps its script even when its group shows a chart.
-  -- The text and the kind are declared together: text with no kind is not a reference this system
-  -- knows how to use, and both NULL is free speech.
-  ReferenceKind   VARCHAR(12) NULL
-    CONSTRAINT CK_Questions_ReferenceKind CHECK (ReferenceKind IN ('script', 'image_desc')),
-  CONSTRAINT CK_Questions_ReferencePair CHECK (
-       (SampleAnswerOrImageDesc IS NULL AND ReferenceKind IS NULL)
-    OR (SampleAnswerOrImageDesc IS NOT NULL AND ReferenceKind IS NOT NULL)
-  ),
-  DisplayOrder    INT NOT NULL DEFAULT 0,
-  UpdatedAt       DATETIMEOFFSET NULL,    -- UI-4: question editor "Last saved: 19:42"
-  CONSTRAINT CK_Questions_Words CHECK (
-       (MinWords IS NULL AND MaxWords IS NULL)
-    OR (QuestionType IN ('free_response', 'inline_completion')
-        AND (MinWords IS NULL OR MinWords > 0)
-        AND (MaxWords IS NULL OR MaxWords >= ISNULL(MinWords, 1)))
-  ),
-  CONSTRAINT CK_Questions_Timing CHECK (
-       (QuestionType <> 'free_response' AND PrepSeconds IS NULL AND ResponseSeconds IS NULL)
-    OR (QuestionType = 'free_response'
-        AND (PrepSeconds IS NULL OR PrepSeconds >= 0)
-        AND (ResponseSeconds IS NULL OR ResponseSeconds > 0))
-  ),
-  -- ExamId/SectionId must be the group's own (composite FK pins them, not free-standing values)
-  CONSTRAINT FK_Questions_GroupExam    FOREIGN KEY (GroupId, ExamId)    REFERENCES QuestionGroups(GroupId, ExamId),
-  CONSTRAINT FK_Questions_GroupSection FOREIGN KEY (GroupId, SectionId) REFERENCES QuestionGroups(GroupId, SectionId),
-  -- M-3: SkillId must be the section's own
-  CONSTRAINT FK_Questions_SectionSkill FOREIGN KEY (SectionId, SkillId) REFERENCES Sections(SectionId, SkillId),
-  -- composite targets for H-5 (attempt containment) and M-7 (MCQ/free-response branch)
-  CONSTRAINT UQ_Questions_Id_Exam    UNIQUE (QuestionId, ExamId),
-  CONSTRAINT UQ_Questions_Id_Section UNIQUE (QuestionId, SectionId),
-  CONSTRAINT UQ_Questions_Id_Type    UNIQUE (QuestionId, QuestionType),
-  -- M-3: composite target so FreeResponses can carry SkillId down
-  CONSTRAINT UQ_Questions_Id_Skill   UNIQUE (QuestionId, SkillId)
-);
-GO
-CREATE TABLE QuestionOptions (
-  OptionId     INT IDENTITY(1,1) PRIMARY KEY,
-  QuestionId   INT NOT NULL REFERENCES Questions(QuestionId),
-  -- M-7: options only belong to objective / choice questions
-  QuestionType VARCHAR(30) NOT NULL
-    CONSTRAINT CK_Options_QuestionType CHECK (QuestionType IN ('mcq', 'mcq_3', 'multi_select', 'inline_completion', 'dropdown', 'drag_drop')),
-  Label        VARCHAR(4) NOT NULL,
-  Text         NVARCHAR(MAX) NOT NULL,
-  IsCorrect    BIT NOT NULL DEFAULT 0,
-  -- UI-10: "why this option is wrong" feedback for the option the learner actually picked
-  -- (exam-review / practice-take revealed-wrong). Questions.Explanation stays the general why-correct text.
-  Rationale    NVARCHAR(MAX) NULL,
-  CONSTRAINT UQ_Options_Question_Label UNIQUE (QuestionId, Label),
-  -- H-6: composite target so answer tables can pin the selected option to its own question
-  CONSTRAINT UQ_Options_Id_Question UNIQUE (OptionId, QuestionId),
-  -- M-7: QuestionType must match the question's own (pins the literal via the FK)
-  CONSTRAINT FK_Options_QuestionType FOREIGN KEY (QuestionId, QuestionType) REFERENCES Questions(QuestionId, QuestionType)
-  -- M-8: at most one correct option per question enforced below via UX_Options_OneCorrect
-);
-GO
-CREATE UNIQUE INDEX UX_Options_OneCorrect ON QuestionOptions(QuestionId) WHERE IsCorrect = 1 AND QuestionType <> 'multi_select';
-GO
+-- #269: the legacy paper content model is GONE - QuestionGroups, Questions and
+-- QuestionOptions. A paper is now a roster of positions (`ExamItems`) over pool items, and a
+-- position's shared content (passage, audio slice, image, transcript) lives on `Stimuli`.
+--
+-- Removed with them: the three tables' composite targets that let an answer carry ExamId,
+-- SectionId, SkillId and QuestionType down from its question, the `Questions.SectionId` that
+-- attributed an answer to a section, and the three per-table indexes. Nothing in this script
+-- references a removed object; `LegacyContentModelIsGoneTests` asserts the absence, and
+-- `NoLegacyTableReferencesTests` asserts no source file names one.
+--
+-- What replaced each thing they held:
+--   Stem, CefrLevel, type, word limits   -> ItemVersions (per version, never re-read from an item)
+--   the four options with rationale      -> ItemVersions.OptionA..D / RationaleA..D
+--   AcceptedAnswersJson, RequiredKeywords-> ItemVersions (the graded content)
+--   Passage, Transcript, Image/Audio     -> Stimuli, reached through Items.StimulusId
+--   the group's unit and time budget     -> ExamItems + ItemVersions.PrepSeconds/ResponseSeconds
 CREATE TABLE ImportBatches (
   BatchId     INT IDENTITY(1,1) PRIMARY KEY,
   CertId      INT NOT NULL REFERENCES Certificates(CertId),
@@ -1642,9 +1524,12 @@ CREATE TABLE ImportLog (
 GO
 
 -- UI-36 / UI-38: a speaking_practice exam holds speaking sections only, a writing_practice exam
--- writing sections only (a one-skill result never mixes skills)
-CREATE TRIGGER trg_QGroups_SkillPracticeOneModality
-ON QuestionGroups AFTER INSERT, UPDATE AS
+-- writing sections only (a one-skill result never mixes skills).
+--
+-- #269: this was a trigger on QuestionGroups, which is gone. The rule is about the paper's POSITIONS,
+-- so it moves to the roster - the same table the sitting actually renders.
+CREATE TRIGGER trg_ExamItems_SkillPracticeOneModality
+ON ExamItems AFTER INSERT, UPDATE AS
 BEGIN
   SET NOCOUNT ON;
   IF EXISTS (
@@ -1663,8 +1548,8 @@ BEGIN
   SET NOCOUNT ON;
   IF EXISTS (
     SELECT 1 FROM inserted i
-    JOIN QuestionGroups g ON g.ExamId = i.ExamId
-    JOIN Sections s ON s.SectionId = g.SectionId
+    JOIN ExamItems ei ON ei.ExamId = i.ExamId
+    JOIN Sections s ON s.SectionId = ei.SectionId
     WHERE (i.Purpose = 'speaking_practice' AND s.Modality <> 'speaking')
        OR (i.Purpose = 'writing_practice'  AND s.Modality <> 'writing')
   )
@@ -1758,19 +1643,13 @@ GO
 CREATE TABLE PracticeAnswers (
   AnswerId         INT IDENTITY(1,1) PRIMARY KEY,
   SessionId        INT NOT NULL REFERENCES PracticeSessions(SessionId),
-  -- #187: NULL for a pool answer. A pool item has no Questions row, so the legacy containment key
-  -- is absent rather than invented; the pool shape names the item and version instead, exactly as
-  -- AttemptAnswers does. The legacy half stays: #231 could not drop it, because a paper position is
-  -- still resolved against Questions and 4 NOT NULL foreign keys still point at that table.
-  QuestionId       INT NULL REFERENCES Questions(QuestionId),
-  -- Low: carried down so a question must belong to the session's own section. NULL for a pool
-  -- answer, which has no section: MATCH SIMPLE then skips both containing foreign keys below,
-  -- which is the point - a pool answer is contained by its cell, not by a section.
-  SectionId        INT NULL,
+  -- #269: the legacy `QuestionId`/`SectionId` shape is GONE with the Questions table. A drill answer
+  -- names the item and the exact version it was written against; containment comes from the session's
+  -- own cell (TopicId + CefrLevel), which is what a pool drill has instead of a section.
   -- #187: the pool item and the exact version answered, so a re-versioned or retired item cannot
-  -- change what a finished session's summary shows. Both NULL for a legacy answer.
-  ItemId           INT NULL,
-  ItemVersionId    INT NULL,
+  -- change what a finished session's summary shows.
+  ItemId           INT NOT NULL,
+  ItemVersionId    INT NOT NULL,
   -- #186's idiom at practice: an ItemVersion stores labels A-D rather than option rows, so a pool
   -- answer records the label it chose and leaves SelectedOptionId NULL.
   SelectedLabel    VARCHAR(1) NULL
@@ -1786,32 +1665,14 @@ CREATE TABLE PracticeAnswers (
   -- a row from before this column has no response time, and inventing one would make the filter
   -- meaningless.
   AnsweredAt       DATETIME2(3) NULL,
-  -- #187: filtered, because a pool answer has no QuestionId and a plain UNIQUE would let a session
-  -- hold at most one of them. The legacy rule (one answer per question per session) is unchanged
-  -- where QuestionId is present, and a version may likewise be answered once per session.
-  CONSTRAINT FK_PracticeAnswers_SessionSection FOREIGN KEY (SessionId, SectionId) REFERENCES PracticeSessions(SessionId, SectionId),
-  -- Low: QuestionId must belong to the same section (containment)
-  CONSTRAINT FK_PracticeAnswers_QuestionSection FOREIGN KEY (QuestionId, SectionId) REFERENCES Questions(QuestionId, SectionId),
-  -- H-6: SelectedOptionId must belong to this same question (NULL stays legal, MATCH SIMPLE)
-  CONSTRAINT FK_PracticeAnswers_OptionQuestion FOREIGN KEY (SelectedOptionId, QuestionId) REFERENCES QuestionOptions(OptionId, QuestionId),
   -- #187: the answered version must be a version of the answered item - the same composite idiom
   -- ExamItems and AttemptAnswers use.
-  CONSTRAINT FK_PracticeAnswers_VersionItem FOREIGN KEY (ItemVersionId, ItemId) REFERENCES ItemVersions(ItemVersionId, ItemId),
-  -- #187: an answer is one shape or the other, never half of each. A pool answer names item and
-  -- version and no question/section; a legacy answer names question and section and neither pool
-  -- column.
-  CONSTRAINT CK_PracticeAnswers_Shape CHECK (
-       (QuestionId IS NOT NULL AND SectionId IS NOT NULL AND ItemId IS NULL AND ItemVersionId IS NULL)
-    OR (QuestionId IS NULL AND SectionId IS NULL AND ItemId IS NOT NULL AND ItemVersionId IS NOT NULL)
-  )
+  CONSTRAINT FK_PracticeAnswers_VersionItem FOREIGN KEY (ItemVersionId, ItemId) REFERENCES ItemVersions(ItemVersionId, ItemId)
 );
 GO
-CREATE UNIQUE INDEX UQ_PracticeAnswers_Question ON PracticeAnswers(SessionId, QuestionId)
-  WHERE QuestionId IS NOT NULL;
-GO
--- #187: one answer per item version per session, the pool half of "one question, one grade".
-CREATE UNIQUE INDEX UQ_PracticeAnswers_Version ON PracticeAnswers(SessionId, ItemVersionId)
-  WHERE ItemVersionId IS NOT NULL;
+-- #187: one answer per item version per session - "one question, one grade". #269: this is now the
+-- only shape, so it is the only index; the filtered legacy one went with the column.
+CREATE UNIQUE INDEX UQ_PracticeAnswers_Version ON PracticeAnswers(SessionId, ItemVersionId);
 GO
 -- UI-13: "Save this question for review" / "saved to your incorrect-answer bank"
 --
@@ -1829,28 +1690,15 @@ CREATE TABLE SavedQuestions (
   -- a question id are two counters that can collide, so neither can address a row on its own.
   SavedQuestionId INT IDENTITY(1,1) PRIMARY KEY,
   UserId     INT NOT NULL REFERENCES Users(UserId),
-  -- #224: which certificate's bank this link lives in. A pool link must carry it: an item is
-  -- certificate-agnostic (D2) and has no section to climb to one, so a demo VSTEP item would otherwise
-  -- appear in every certificate's bank. A legacy link leaves it NULL and is scoped through its
-  -- question's section, exactly as before - the same choice PracticeSession makes between its two
-  -- shapes.
-  CertId     INT NULL REFERENCES Certificates(CertId),
-  -- #224: NULL for a pool link. #231 did not retire the legacy half; it retires when the papers behind
-  -- it are re-assembled from bound versions.
-  QuestionId INT NULL REFERENCES Questions(QuestionId),
-  -- #224: the pool item saved, and the version that was rendered when it was saved. Both NULL for a
-  -- legacy link. D23 drops legacy links rather than re-pointing them - the rows they referenced are
-  -- the ones this rebuild deletes - so the two shapes are never manufactured from one another.
-  ItemId        INT NULL,
-  ItemVersionId INT NULL,
+  -- #224: which certificate's bank this link lives in. An item is certificate-agnostic (D2) and has
+  -- no section to climb to one, so a demo VSTEP item would otherwise appear in every certificate's
+  -- bank. #269: this is now always required, because the legacy link that could omit it is gone.
+  CertId     INT NOT NULL REFERENCES Certificates(CertId),
+  -- #224: the pool item saved, and the version that was rendered when it was saved.
+  ItemId        INT NOT NULL,
+  ItemVersionId INT NOT NULL,
   Source     VARCHAR(10) NOT NULL CONSTRAINT CK_SavedQ_Source CHECK (Source IN ('manual','incorrect')),
   SavedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-  -- #224: one shape or the other, never half of each. A pool link names its certificate because an
-  -- item has none of its own; a legacy link does not, because its question already carries one.
-  CONSTRAINT CK_SavedQuestions_Shape CHECK (
-       (QuestionId IS NOT NULL AND ItemId IS NULL AND ItemVersionId IS NULL AND CertId IS NULL)
-    OR (QuestionId IS NULL AND ItemId IS NOT NULL AND ItemVersionId IS NOT NULL AND CertId IS NOT NULL)
-  ),
   -- #224: the saved version must be a version of the saved item - the same composite idiom
   -- ExamItems, AttemptAnswers and PracticeAnswers use, so a link can never name one item and another
   -- item's version.
@@ -1858,20 +1706,13 @@ CREATE TABLE SavedQuestions (
     REFERENCES ItemVersions(ItemVersionId, ItemId)
 );
 GO
--- #224: filtered, because a pool link has no QuestionId and a plain PRIMARY KEY/UNIQUE would let a
--- learner hold at most one of them. Each shape keeps "one bookmark per thing".
-CREATE UNIQUE INDEX UQ_SavedQuestions_Question ON SavedQuestions(UserId, QuestionId)
-  WHERE QuestionId IS NOT NULL;
-GO
 -- One bookmark per item, not per version: re-saving an item at a newer version is the same bookmark,
--- and the row keeps the version it already pinned.
-CREATE UNIQUE INDEX UQ_SavedQuestions_Item ON SavedQuestions(UserId, ItemId)
-  WHERE ItemId IS NOT NULL;
+-- and the row keeps the version it already pinned. #269: the filtered legacy index and the now-always-
+-- present CertId make this the only uniqueness the bank needs.
+CREATE UNIQUE INDEX UQ_SavedQuestions_Item ON SavedQuestions(UserId, ItemId);
 GO
--- The bank lists and counts a learner's pool links per certificate, as it already does for legacy
--- links through the question's section.
-CREATE INDEX IX_SavedQuestions_User_Cert ON SavedQuestions(UserId, CertId)
-  WHERE CertId IS NOT NULL;
+-- The bank lists and counts a learner's links per certificate.
+CREATE INDEX IX_SavedQuestions_User_Cert ON SavedQuestions(UserId, CertId);
 GO
 
 -- #155: mastery is a fact about a Category, never about a single Question. Spaced repetition over
@@ -1913,24 +1754,6 @@ CREATE TABLE UserCategoryMasteries (
 GO
 -- The scheduler asks "which due-or-unseen categories belong to this certificate" on every start.
 CREATE INDEX IX_UCM_User_Due ON UserCategoryMasteries(UserId, CertId, NextReviewDueAt);
-GO
-
--- #155: one row per (learner, question) so a question just answered wrongly does not reappear in the
--- next session, and so "unseen" is a cheap lookup rather than a UNION over two answer tables.
-CREATE TABLE UserQuestionHistories (
-  UserId       INT NOT NULL REFERENCES Users(UserId),
-  QuestionId   INT NOT NULL REFERENCES Questions(QuestionId),
-  LastAnsweredAt DATETIMEOFFSET NOT NULL CONSTRAINT DF_UQH_Last DEFAULT SYSDATETIMEOFFSET(),
-  LastIsCorrect  BIT NULL,       -- NULL for a skipped question: neither right nor wrong
-  -- set to now + 24h on a wrong answer and cleared on a right one; the selection filter is
-  -- `CooldownUntil IS NULL OR CooldownUntil <= now`, so an expired cooldown needs no write to expire
-  CooldownUntil  DATETIMEOFFSET NULL,
-  CONSTRAINT PK_UserQuestionHistories PRIMARY KEY (UserId, QuestionId)
-);
-GO
--- "the questions this learner may be served now, oldest first" - the hot path of Smart Practice.
--- Certificate scoping comes from the join to Questions/Sections, so it stays out of this index.
-CREATE INDEX IX_UQH_User_Cooldown ON UserQuestionHistories(UserId, CooldownUntil);
 GO
 
 -- ============ Domain 7: MockExam ============
@@ -2024,34 +1847,28 @@ GO
 CREATE TABLE AttemptAnswers (
   AnswerId         INT IDENTITY(1,1) PRIMARY KEY,
   AttemptId        INT NOT NULL REFERENCES ExamAttempts(AttemptId),
-  -- #250: NULLABLE, because a pool answer names no legacy question. Before this the column was NOT
-  -- NULL, so a pool answer had to invent one - which is why ExamAnswers could never reach zero reads of
-  -- db.Questions, and why #250 could not delete that table. A pool answer is identified by
-  -- (ItemId, ItemVersionId) below; a legacy answer by QuestionId here; and CK_AttemptAnswers_OneShape
-  -- at the bottom refuses a row that names neither or both.
-  QuestionId       INT NULL REFERENCES Questions(QuestionId),
-  -- H-5: carried down from the attempt so the question must belong to the attempt's own exam
+  -- H-5: carried down from the attempt so the position must belong to the attempt's own exam
   ExamId           INT NOT NULL,
+  -- #269: the legacy QuestionId is GONE with the Questions table. An answer is now exactly one thing -
+  -- the roster position it was written against - and the version it pinned for copy-on-write reading.
+  --
   -- #186: which version of which item the learner answered. Copy-on-write (CNT-43) means this pair,
   -- not the item row, is what the review renders: re-versioning or retiring the item afterwards
-  -- cannot change what the attempt shows. Both columns are NULL for an answer recorded before the
-  -- pool existed (a legacy reader #231 could not remove), and the CHECK below refuses half a pair,
-  -- so an answer can never name an item without naming its version or the reverse.
-  ItemId           INT NULL,
-  ItemVersionId    INT NULL,
-  -- #250: the ROSTER POSITION this answer was recorded against, for a paper the pool assembled.
-  -- NULL for a legacy answer.
+  -- cannot change what the attempt shows.
+  ItemId           INT NOT NULL,
+  ItemVersionId    INT NOT NULL,
+  -- #250: the ROSTER POSITION this answer was recorded against.
   --
   -- Why a position column is needed on top of (ItemId, ItemVersionId): a paper may bind the same item
   -- version at two positions ("the same item on two papers, or twice on one paper, gets two positions"),
   -- so the version pair does not identify WHICH question of the paper was answered. Without this column
   -- two answers to one repeated item are indistinguishable, and the navigator cannot mark the right cell
-  -- as answered. The position is the answer's identity, exactly as QuestionId is on a legacy paper.
-  ExamItemId       INT NULL REFERENCES ExamItems(ExamItemId),
+  -- as answered. The position is the answer's identity.
+  ExamItemId       INT NOT NULL REFERENCES ExamItems(ExamItemId),
   -- #186: which of the pinned version's four options was picked. An ItemVersion stores labels A-D,
-  -- not option rows, so there is no OptionId to point at; SelectedOptionId keeps its meaning (and its
-  -- FK) for a legacy answer and stays NULL whenever this is set. The pair is the answer's whole
-  -- record of what was chosen, which is what makes a re-versioned item unable to change it.
+  -- not option rows, so there is no OptionId to point at; SelectedOptionId is kept nullable for the
+  -- text and multi-select shapes and stays NULL whenever a label is set. The pair is the answer's
+  -- whole record of what was chosen, which is what makes a re-versioned item unable to change it.
   SelectedLabel    VARCHAR(1) NULL
     CONSTRAINT CK_AttemptAnswers_SelectedLabel CHECK (SelectedLabel IN ('A','B','C','D')),
   SelectedOptionId      INT NULL,
@@ -2062,52 +1879,14 @@ CREATE TABLE AttemptAnswers (
   IsFlagged        BIT NOT NULL CONSTRAINT DF_AttemptAnswers_IsFlagged DEFAULT 0,
   -- #167: no AnsweredAt here. Sitting timing is not measured for regular attempts and nothing
   -- reads it; only PracticeAnswers.AnsweredAt feeds the calibration rushed-answer filter.
-  -- #250: uniqueness moved from one constraint to a FILTERED index.
-  --
-  -- `UNIQUE (AttemptId, QuestionId)` was correct while QuestionId was NOT NULL. With it nullable, SQL
-  -- Server treats every NULL as equal for uniqueness - so an attempt could hold exactly ONE pool answer
-  -- and every later one would be refused, collapsing a whole paper onto one row. The filter states the
-  -- rule only for the rows it applies to: one answer per legacy question.
-  --
-  -- There is deliberately NO sibling index on ItemVersionId. A paper may bind the same version at two
-  -- positions ("the same item on two papers, or twice on one paper, gets two positions" - ExamItems),
-  -- so (AttemptId, ItemVersionId) is legitimately non-unique. What makes a pool answer unique is the
-  -- roster position it is recorded against, not the version it pins.
-  INDEX UX_AttemptAnswers_Question UNIQUE (AttemptId, QuestionId) WHERE QuestionId IS NOT NULL,
-  -- #250: the same rule for the pool shape, on the ROSTER POSITION rather than the item version. One
-  -- answer per position is what the navigator counts, and it is the only statement that stays true when
-  -- a paper binds one version twice.
-  INDEX UX_AttemptAnswers_ExamItem UNIQUE (AttemptId, ExamItemId) WHERE ExamItemId IS NOT NULL,
+  -- #250: one answer per roster position is what the navigator counts, and it is the only statement
+  -- that stays true when a paper binds one version twice.
+  INDEX UX_AttemptAnswers_ExamItem UNIQUE (AttemptId, ExamItemId),
   -- H-5: ExamId must be the attempt's own
   CONSTRAINT FK_AttemptAnswers_AttemptExam FOREIGN KEY (AttemptId, ExamId) REFERENCES ExamAttempts(AttemptId, ExamId),
-  -- H-5: the question must belong to that same exam
-  CONSTRAINT FK_AttemptAnswers_QuestionExam FOREIGN KEY (QuestionId, ExamId) REFERENCES Questions(QuestionId, ExamId),
-  -- H-6: SelectedOptionId must belong to this same question (NULL stays legal, MATCH SIMPLE)
-  CONSTRAINT FK_AttemptAnswers_OptionQuestion FOREIGN KEY (SelectedOptionId, QuestionId) REFERENCES QuestionOptions(OptionId, QuestionId),
   -- #186: the answered version must be a version of the answered item - the same composite idiom
   -- ExamItems uses, so one row cannot name one item and another item's version.
-  CONSTRAINT FK_AttemptAnswers_VersionItem FOREIGN KEY (ItemVersionId, ItemId) REFERENCES ItemVersions(ItemVersionId, ItemId),
-  -- #186: the pool pin is optional (an answer recorded before #184 has no item to name), but an
-  -- answer that names a version must name its item too. A CHECK, because MATCH SIMPLE would let a
-  -- half-filled row through the composite foreign key above.
-  CONSTRAINT CK_AttemptAnswers_ItemPair CHECK (
-       (ItemId IS NULL AND ItemVersionId IS NULL)
-    OR (ItemId IS NOT NULL AND ItemVersionId IS NOT NULL)
-  ),
-  -- #250: AT LEAST ONE identity. A row names a legacy question, or pins a pool item version (with the
-  -- roster position it sat at), or - during the transition - both, because every pool answer written
-  -- before this ticket kept a QuestionId (the column was NOT NULL, so it had to). Forbidding "both"
-  -- would refuse rows that already exist and every fixture that models the pool arriving beside the
-  -- paper.
-  --
-  -- A row that names NEITHER is refused: nothing identifies what was asked, so it cannot be rendered,
-  -- scored or reviewed. That is the only state this check exists to exclude, and it is the one the two
-  -- accuracy views could not have been trusted to assume.
-  CONSTRAINT CK_AttemptAnswers_HasShape CHECK (
-       QuestionId IS NOT NULL
-    OR ItemVersionId IS NOT NULL
-    OR ExamItemId IS NOT NULL
-  )
+  CONSTRAINT FK_AttemptAnswers_VersionItem FOREIGN KEY (ItemVersionId, ItemId) REFERENCES ItemVersions(ItemVersionId, ItemId)
 );
 GO
 -- CNT-43: no hard delete. An item that has left draft, or that any learner has answered, is retired
@@ -2166,18 +1945,15 @@ GO
 CREATE TABLE FreeResponses (
   FreeResponseId INT IDENTITY(1,1) PRIMARY KEY,
   AttemptId      INT NOT NULL REFERENCES ExamAttempts(AttemptId),
-  -- #250: NULLABLE. A productive task on a pool-authored paper names no legacy question, and while this
-  -- was NOT NULL such a paper could not be sat at all - AttemptEngine refused it explicitly rather than
-  -- write a fake id. A pool response names ExamItemId below instead; CK_FreeResp_HasShape refuses a row
-  -- that names neither.
-  QuestionId     INT NULL REFERENCES Questions(QuestionId),
-  -- #250: the roster position this response was recorded against, for a pool-authored paper.
-  ExamItemId     INT NULL REFERENCES ExamItems(ExamItemId),
-  -- H-5: carried down from the attempt so the question must belong to the attempt's own exam
+  -- #269: the legacy QuestionId shape is GONE with the Questions table. A response names the roster
+  -- position it was recorded against.
+  ExamItemId     INT NOT NULL REFERENCES ExamItems(ExamItemId),
+  -- H-5: carried down from the attempt so the position must belong to the attempt's own exam
   ExamId         INT NOT NULL,
-  -- M-3: carried down from the question so AiGradings must name that question's own skill
+  -- M-3: carried down from the position's skill so AiGradings must name that skill
   SkillId        INT NOT NULL,
-  -- M-7: pins the question to be a free_response question (a CHECK can't reach Questions)
+  -- M-7: pins the shape (a CHECK cannot reach the item's render format, and a productive task is the
+  -- only thing that produces a free response)
   QuestionType   VARCHAR(30) NOT NULL
     CONSTRAINT CK_FreeResp_QuestionType CHECK (QuestionType = 'free_response'),
   ResponseText   NVARCHAR(MAX) NULL,
@@ -2206,21 +1982,11 @@ CREATE TABLE FreeResponses (
        (Status = 'draft'  AND SubmittedAt IS NULL)
     OR (Status <> 'draft' AND SubmittedAt IS NOT NULL)
   ),
-  -- #250: uniqueness per shape. `UNIQUE (AttemptId, QuestionId)` over a nullable column admits exactly
-  -- ONE pool response, because SQL Server treats every NULL as equal.
-  INDEX UX_FreeResponses_Question UNIQUE (AttemptId, QuestionId) WHERE QuestionId IS NOT NULL,
-  INDEX UX_FreeResponses_ExamItem UNIQUE (AttemptId, ExamItemId) WHERE ExamItemId IS NOT NULL,
+  -- #250: one response per roster position.
+  INDEX UX_FreeResponses_ExamItem UNIQUE (AttemptId, ExamItemId),
   CONSTRAINT CK_FreeResp_HasContent CHECK (ResponseText IS NOT NULL OR AudioPath IS NOT NULL),
-  -- #250: at least one identity. A row naming neither cannot be rendered, graded or reviewed.
-  CONSTRAINT CK_FreeResp_HasShape CHECK (QuestionId IS NOT NULL OR ExamItemId IS NOT NULL),
   -- H-5: ExamId must be the attempt's own
   CONSTRAINT FK_FreeResp_AttemptExam FOREIGN KEY (AttemptId, ExamId) REFERENCES ExamAttempts(AttemptId, ExamId),
-  -- H-5: the question must belong to that same exam
-  CONSTRAINT FK_FreeResp_QuestionExam FOREIGN KEY (QuestionId, ExamId) REFERENCES Questions(QuestionId, ExamId),
-  -- M-7: QuestionType must be the question's own (pins the literal via the FK)
-  CONSTRAINT FK_FreeResp_QuestionType FOREIGN KEY (QuestionId, QuestionType) REFERENCES Questions(QuestionId, QuestionType),
-  -- M-3: SkillId must be the question's own
-  CONSTRAINT FK_FreeResp_QuestionSkill FOREIGN KEY (QuestionId, SkillId) REFERENCES Questions(QuestionId, SkillId),
   -- M-3: composite target so AiGradings can require its SkillId to be this response's own
   CONSTRAINT UQ_FreeResp_Id_Skill UNIQUE (FreeResponseId, SkillId)
 );
@@ -2868,14 +2634,12 @@ BEGIN
     JOIN GradingCriteria c ON c.CriterionId = i.CriterionId
     JOIN AiGradings g      ON g.GradingId = i.GradingId
     JOIN FreeResponses fr  ON fr.FreeResponseId = g.FreeResponseId
-    -- #269: a pool free response has no QuestionId; its section comes from the roster position it
-    -- names. Joining Questions on that nullable column made this ceiling unreachable for every pool
-    -- response - measured: a score of 99 was accepted against a MaxScore of 5.
-    LEFT JOIN Questions q  ON q.QuestionId = fr.QuestionId
+    -- #269: a free response names the roster position it was recorded against, and the position names
+    -- the section. The legacy Questions arm went with that table.
     LEFT JOIN ExamItems ei ON ei.ExamItemId = fr.ExamItemId
     LEFT JOIN SectionCriteria sc
            ON sc.CriterionId = i.CriterionId
-          AND sc.SectionId = ISNULL(q.SectionId, ei.SectionId)
+          AND sc.SectionId = ei.SectionId
     WHERE i.Score > COALESCE(sc.MaxScore, c.MaxScore)
   )
     THROW 50026, 'AiGradingScores.Score cannot exceed the criterion MaxScore.', 1;
@@ -2885,9 +2649,8 @@ BEGIN
     FROM inserted i
     JOIN AiGradings g     ON g.GradingId = i.GradingId
     JOIN FreeResponses fr ON fr.FreeResponseId = g.FreeResponseId
-    LEFT JOIN Questions q  ON q.QuestionId = fr.QuestionId
-    LEFT JOIN ExamItems ei ON ei.ExamItemId = fr.ExamItemId
-    CROSS APPLY (SELECT ISNULL(q.SectionId, ei.SectionId) AS SectionId) sec
+    JOIN ExamItems ei     ON ei.ExamItemId = fr.ExamItemId
+    CROSS APPLY (SELECT ei.SectionId AS SectionId) sec
     WHERE sec.SectionId IS NOT NULL
       AND EXISTS (SELECT 1 FROM SectionCriteria x WHERE x.SectionId = sec.SectionId)
       AND NOT EXISTS (SELECT 1 FROM SectionCriteria x WHERE x.SectionId = sec.SectionId AND x.CriterionId = i.CriterionId)
@@ -2903,8 +2666,8 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM inserted sc
-    JOIN Questions q      ON q.SectionId = sc.SectionId
-    JOIN FreeResponses fr ON fr.QuestionId = q.QuestionId
+    JOIN ExamItems ei ON ei.SectionId = sc.SectionId
+    JOIN FreeResponses fr ON fr.ExamItemId = ei.ExamItemId
     JOIN AiGradings g     ON g.FreeResponseId = fr.FreeResponseId
     JOIN AiGradingScores s ON s.GradingId = g.GradingId AND s.CriterionId = sc.CriterionId
     JOIN GradingCriteria c ON c.CriterionId = sc.CriterionId
@@ -4357,43 +4120,21 @@ CREATE VIEW vw_UserPurchaseTotals AS
 GO
 -- UI-34: weakness analysis combines exams AND practice ("45/78 questions" across both)
 --
--- #250: both answer shapes now contribute, and that is the whole change. The legacy branch joins
--- Questions for its SectionId; the pool branch reaches a section through the paper binding, because
--- ExamItems is the only place that says which section an item sat in. Before this, a pool answer was
--- dropped by the INNER JOIN on Questions (its QuestionId is NULL), so a learner drilling the pool had
--- every such answer silently missing from their weakness analysis.
---
--- A pool PRACTICE answer still contributes no row: an item is certificate-agnostic and section-free,
--- and a free drill has no paper to read a section from. That is #187's stated boundary, not an
--- oversight - the topic axis (vw_UserTopicAccuracy, D3) is where drill accuracy belongs.
+-- #269: only ATTEMPT answers contribute now. A pool PRACTICE answer has neither a section nor a paper to
+-- read one from - a free drill is scoped by its cell (TopicId + CefrLevel), which is where
+-- vw_UserTopicAccuracy reports it. That was already #187's stated boundary; the legacy practice-answer
+-- arm that read PracticeAnswers.SectionId went with that column, and the attempt arm is the sole branch.
 --
 -- Column names are unchanged on purpose: WeaknessAnalysisService, AiInsightService.Dashboard (L75,
 -- L198) and AiInsightService.Paths/Exams read UserId, SectionId, Answered and Correct by name.
 CREATE VIEW vw_UserSectionAccuracyAll AS
-  SELECT x.UserId, x.SectionId, COUNT(x.IsCorrect) AS Answered,
-         SUM(CASE WHEN x.IsCorrect = 1 THEN 1 ELSE 0 END) AS Correct
-  FROM (
-    SELECT ps.UserId, pa.SectionId, pa.IsCorrect
-    FROM PracticeAnswers pa JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
-    WHERE pa.SectionId IS NOT NULL
-    UNION ALL
-    -- #264: the legacy attempt-answer branch is gone. A section's accuracy is a fact about the POOL: an
-    -- answer names the binding it was written against, and the binding names the section. The old branch
-    -- read QuestionId -> Questions.SectionId, which only a paper authored before the pool migration
-    -- carried, so keeping it would have counted two shapes for one product and kept Questions alive in
-    -- the schema for a paper no sitting can produce.
-    --
-    -- PoolAndLegacyAccuracyAgreeTests used to prove the two branches agreed; it now proves the pool view
-    -- against a directly computed figure, which is the stronger check (a view that silently returns
-    -- nothing fails it, where two views agreeing on zero would not).
-    -- #250: pool attempt answer - the binding names the section the item sat in
-    SELECT a.UserId, ei.SectionId, aa.IsCorrect
-    FROM AttemptAnswers aa
-    JOIN ExamAttempts a ON a.AttemptId = aa.AttemptId
-    JOIN ExamItems   ei ON ei.ExamId = aa.ExamId AND ei.ItemVersionId = aa.ItemVersionId
-    WHERE a.Status = 'graded'
-  ) x
-  GROUP BY x.UserId, x.SectionId;
+  SELECT a.UserId, ei.SectionId, COUNT(aa.IsCorrect) AS Answered,
+         SUM(CASE WHEN aa.IsCorrect = 1 THEN 1 ELSE 0 END) AS Correct
+  FROM AttemptAnswers aa
+  JOIN ExamAttempts a ON a.AttemptId = aa.AttemptId
+  JOIN ExamItems   ei ON ei.ExamItemId = aa.ExamItemId
+  WHERE a.Status = 'graded'
+  GROUP BY a.UserId, ei.SectionId;
 GO
 -- #243 / D3: accuracy on the two axes the rest of the product uses, (TopicId, CefrLevel).
 --
@@ -4575,7 +4316,9 @@ CREATE VIEW vw_DailyPracticeVolume AS
                         END) AS DistinctCells
   FROM PracticeAnswers pa
   JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
-  LEFT JOIN Sections s     ON s.SectionId = COALESCE(pa.SectionId, ps.SectionId)
+  -- #269: a practice answer has no SectionId of its own any more; the session names the section it
+  -- drills (NULL for a pool drill, which is the LEFT JOIN's job).
+  LEFT JOIN Sections s     ON s.SectionId = ps.SectionId
   LEFT JOIN Items i        ON i.ItemId = pa.ItemId
   WHERE pa.AnsweredAt IS NOT NULL
     AND (pa.SelectedOptionId IS NOT NULL
@@ -4650,13 +4393,9 @@ GO
 -- Identity
 CREATE INDEX IX_EmailVerificationTokens_User ON EmailVerificationTokens(UserId);
 CREATE INDEX IX_PasswordResetTokens_User     ON PasswordResetTokens(UserId);
--- Content (exam list, exam editor, question bank)
+-- Content (exam list, exam editor, question bank). #269: the three indexes into the legacy
+-- QuestionGroups/Questions tables went with them; a paper's positions are indexed by their own keys.
 CREATE INDEX IX_Exams_Cert_Status        ON Exams(CertId, Purpose, Status) WHERE IsDeleted = 0;
-CREATE INDEX IX_QGroups_Exam             ON QuestionGroups(ExamId, DisplayOrder);
-CREATE INDEX IX_QGroups_Section          ON QuestionGroups(SectionId);
-CREATE INDEX IX_Questions_Group          ON Questions(GroupId, DisplayOrder);
-CREATE INDEX IX_Questions_Section        ON Questions(SectionId);
-CREATE INDEX IX_Questions_Category       ON Questions(CategoryId) WHERE CategoryId IS NOT NULL;
 -- #184: the pool. Cell lookup is (topic, level) - the coordinate a practice drill and a path step
 -- both ask for; the selection index is the two columns every item-selection query filters on.
 CREATE INDEX IX_Items_Cell               ON Items(TopicId, CefrLevel) INCLUDE (Modality, ItemType);
@@ -4667,14 +4406,15 @@ CREATE INDEX IX_ImportLog_Batch          ON ImportLog(BatchId);
 -- Practice (history, weakness views, path module progress)
 CREATE INDEX IX_Practice_User            ON PracticeSessions(UserId, StartedAt);
 CREATE INDEX IX_Practice_PathStep        ON PracticeSessions(LearnerPathStepId) WHERE LearnerPathStepId IS NOT NULL;
-CREATE INDEX IX_PracticeAnswers_Question ON PracticeAnswers(QuestionId) WHERE QuestionId IS NOT NULL;
+CREATE INDEX IX_PracticeAnswers_Version  ON PracticeAnswers(ItemVersionId);
 -- #187: a pool session is resumed and ceiling-checked by its cell, not by a section.
 CREATE INDEX IX_Practice_Cell           ON PracticeSessions(UserId, TopicId, CefrLevel, StartedAt) WHERE TopicId IS NOT NULL;
 -- Mock exam (exam history, review, grading triggers)
 CREATE INDEX IX_Attempts_User            ON ExamAttempts(UserId, StartedAt) INCLUDE (ExamId, Status, TotalScore);
 CREATE INDEX IX_Attempts_Exam            ON ExamAttempts(ExamId);
-CREATE INDEX IX_AttemptAnswers_Question  ON AttemptAnswers(QuestionId);
-CREATE INDEX IX_FreeResponses_Question   ON FreeResponses(QuestionId);
+-- #269: answers and responses are found by their roster position and pinned version.
+CREATE INDEX IX_AttemptAnswers_ExamItem  ON AttemptAnswers(ExamItemId);
+CREATE INDEX IX_FreeResponses_ExamItem   ON FreeResponses(ExamItemId);
 -- AI grading worker queue: pending first, failed for retry
 CREATE INDEX IX_FreeResponses_Pending    ON FreeResponses(SubmittedAt) WHERE Status = 'pending_ai';
 CREATE INDEX IX_AiGradings_Queue         ON AiGradings(Status, RequestedAt) WHERE Status IN ('pending','failed');
@@ -5360,17 +5100,12 @@ CREATE UNIQUE INDEX UX_Practice_OneLessonSitting ON PracticeSessions(UserId, Les
 GO
 ALTER TABLE PracticeAnswers ADD CardId INT NULL REFERENCES LessonCards(CardId);
 GO
--- A third shape, beside the legacy question shape and the pool item shape: a lesson micro-check names
--- its card and nothing else. Written as a drop-and-re-add so the three arms are read in one place.
-ALTER TABLE PracticeAnswers DROP CONSTRAINT CK_PracticeAnswers_Shape;
-GO
+-- A second shape beside the pool item shape: a lesson micro-check names its card and nothing else.
+-- #269: the legacy question arm is gone with the Questions table, so the shape is now two arms, and it
+-- is declared here (after CardId exists) rather than re-declaring a constraint that no longer has three.
 ALTER TABLE PracticeAnswers ADD CONSTRAINT CK_PracticeAnswers_Shape CHECK (
-     (QuestionId IS NOT NULL AND SectionId IS NOT NULL
-        AND ItemId IS NULL AND ItemVersionId IS NULL AND CardId IS NULL)
-  OR (QuestionId IS NULL AND SectionId IS NULL
-        AND ItemId IS NOT NULL AND ItemVersionId IS NOT NULL AND CardId IS NULL)
-  OR (QuestionId IS NULL AND SectionId IS NULL
-        AND ItemId IS NULL AND ItemVersionId IS NULL AND CardId IS NOT NULL)
+     (ItemId IS NOT NULL AND ItemVersionId IS NOT NULL AND CardId IS NULL)
+  OR (ItemId IS NULL AND ItemVersionId IS NULL AND CardId IS NOT NULL)
 );
 GO
 CREATE UNIQUE INDEX UQ_PracticeAnswers_Card ON PracticeAnswers(SessionId, CardId)
