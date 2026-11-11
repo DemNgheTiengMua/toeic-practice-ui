@@ -88,7 +88,7 @@ public sealed partial class PracticeService
                     stimulus?.AudioStartMs,
                     stimulus?.AudioEndMs,
                     stimulus?.Transcript,
-                    AttemptEngine.IsProductive(version) ? QuestionType.FreeResponse.ToCode() : QuestionType.Mcq.ToCode(),
+                    AttemptEngine.IsProductive(version) ? QuestionType.FreeResponse.ToCode() : RenderTypeOf(version),
                     a.ResponseText,
                     a.SelectedOptionIdsJson,
                     AcceptedAnswersJson: null,

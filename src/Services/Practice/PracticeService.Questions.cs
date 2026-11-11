@@ -163,16 +163,16 @@ public sealed partial class PracticeService
 
         if (pinned is not null)
         {
-            // #187: a version is either four options with a key, or a productive task with none.
-            // That is the whole of what a pool item offers a drill, so the type is read from the
-            // shape rather than pretended from the legacy vocabulary.
-            questionType = AttemptEngine.IsProductive(pinned) ? QuestionType.FreeResponse.ToCode() : QuestionType.Mcq.ToCode();
-            maxSelections = null;
-            allowNumber = true;
-            acceptedAnswersJson = null;
-            requiredKeywords = null;
-            minWords = null;
-            maxWords = null;
+            // #272: the render shape (and the fields it needs) come from the version's own declaration,
+            // so a multi_select keeps its label set, a blank keeps its accepted answers, and a
+            // productive task keeps them all null. One rule, shared with the grader.
+            questionType = RenderTypeOf(pinned);
+            maxSelections = pinned.MaxSelections;
+            allowNumber = pinned.AllowNumber;
+            acceptedAnswersJson = pinned.AcceptedAnswersJson;
+            requiredKeywords = pinned.RequiredKeywords;
+            minWords = pinned.MinWords;
+            maxWords = pinned.MaxWords;
 
             options = PinnedOptions(pinned.ItemVersionId, pinned);
             selectedOptionId = PinnedSelectedOptionId(pinned.ItemVersionId, answer.SelectedLabel);

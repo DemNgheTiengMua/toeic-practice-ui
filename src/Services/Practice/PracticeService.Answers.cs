@@ -131,24 +131,50 @@ public sealed partial class PracticeService
                 }
 
                 answer.SelectedLabel = AttemptEngine.OptionLabel(index);
-                answer.IsCorrect = EvaluatePinnedAnswer(pinned, answer.SelectedLabel);
+                // #272: a multi_select declares its key as a label SET ('A,B'), so one label cannot be
+                // the whole answer. Both the chosen set and the key set are compared.
+                answer.IsCorrect = EvaluatePinnedResponse(
+                    pinned, answer.SelectedLabel, answer.SelectedOptionIdsJson, responseText: null);
+            }
+            else if (!string.IsNullOrWhiteSpace(answer.SelectedOptionIdsJson))
+            {
+                // #272: a multi_select submission may name ONLY a set of ids, with no single choice.
+                // This branch used to record no verdict at all, so the drill counted the question as
+                // answered and never judged it.
+                answer.IsCorrect = EvaluatePinnedResponse(
+                    pinned, null, answer.SelectedOptionIdsJson, responseText: null);
             }
             else
             {
                 answer.IsCorrect = null;
             }
         }
-        else if (pinned is not null)
+        else if (pinned is not null && !IsObjectivelyGradable(pinned))
         {
             // A productive task has no key. A response is recorded and left UNGRADED (IsCorrect null),
             // never true: a version cannot evaluate word count or required keywords without the AI
             // queue, and marking any non-blank text correct made a writing drill report 100% accuracy
             // in the session summary. null means "not judged", which is what this is.
+            //
+            // #272: the test is "carries no key and no accepted answers", NOT "has no options". An
+            // inline_completion is blank-shaped too, and leaving it here recorded no verdict for a
+            // question the version could judge.
             answer.SelectedOptionId = null;
             answer.SelectedLabel = null;
             answer.SelectedOptionIdsJson = null;
             answer.ResponseText = string.IsNullOrWhiteSpace(input.ResponseText) ? null : input.ResponseText;
             answer.IsCorrect = null;
+        }
+        else if (pinned is not null)
+        {
+            // A blank-shaped version that DOES carry accepted answers: a typed completion is judged by
+            // them, exactly as the exam engine judges the same version, so a drill and a sitting cannot
+            // disagree about one item.
+            answer.SelectedOptionId = null;
+            answer.SelectedLabel = null;
+            answer.SelectedOptionIdsJson = null;
+            answer.ResponseText = string.IsNullOrWhiteSpace(input.ResponseText) ? null : input.ResponseText;
+            answer.IsCorrect = answer.ResponseText is null ? null : EvaluatePinnedResponse(pinned, null, null, answer.ResponseText);
         }
         else if (isFreeResponse)
         {

@@ -959,13 +959,13 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Equal(PracticeStatus.Finished, finalSessionInfo.Status);
     }
 
-    // #269: NOT migrated - a production gap, re-measured against HEAD in #272 and still present.
+    // #269: NOT migrated - a production gap, re-measured against HEAD 37e0d48 in #272 and still present.
     // SubmitAnswerAsync's pinned branch (PracticeService.Answers.cs:125-139) reads only
     // `input.SelectedOptionId`: a SelectedOptionIds LIST is written to Json but leaves IsCorrect null,
-    // and GradedPracticeAnswerResult.CorrectOptionIds (PracticeService.Answers.cs:350) emits the single
-    // first key label rather than the set. Measured on a pool multi_select position (key 'A,B'):
-    // IsCorrect=null, CorrectOptionIds=[11] - one id where the legacy path returns both. A pool
-    // multi_select therefore records no verdict at all, which is the defect, not a test limitation.
+    // and GradedPracticeAnswerResult.CorrectOptionIds (PracticeService.Answers.cs:349-351) emits the
+    // single first key label rather than the set. Measured on a pool multi_select position keyed 'A,B':
+    // IsCorrect=null, CorrectOptionIds=[31] where the two answered ids were [31,32]. A pool multi_select
+    // therefore records no verdict at all, which is the defect, not a test limitation.
     [Fact]
     public async Task SubmitAnswer_evaluates_multi_select_accurately()
     {
@@ -1072,15 +1072,15 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.True(correctResult.IsSessionFinished);
     }
 
-    // #269: NOT migrated - a production gap, re-measured against HEAD in #272 and still present.
+    // #269: NOT migrated - a production gap, re-measured against HEAD 37e0d48 in #272 and still present.
     // SubmitAnswerAsync's pinned branch (PracticeService.Answers.cs:125-139) grades only from
     // `input.SelectedOptionId`, so a text answer stores IsCorrect = null even though the version carries
-    // AcceptedAnswersJson - the engine's own pinned path DOES grade it (AttemptEngine.Answers.cs:107-109
-    // calls EvaluatePinnedText), so the two stores disagree. The reply's AcceptedAnswersJson comes from
-    // `q?.AcceptedAnswersJson` (PracticeService.Answers.cs:348) and the projection nulls it
-    // (PracticeService.Questions.cs:172). Measured on a pool inline_completion version whose
-    // AcceptedAnswersJson is ["development","software development"], answered "  DEVELOPMENT  ":
-    // IsCorrect=null, AcceptedAnswersJson=null. Recording a right answer as ungraded is the defect.
+    // AcceptedAnswersJson. The two stores now disagree in a way they did not before 9097ba7: the ENGINE
+    // grades it (AttemptEngine.Answers.cs:105-107 -> EvaluatePinnedText) and PracticeService does not.
+    // The reply's AcceptedAnswersJson comes from `q?.AcceptedAnswersJson` (PracticeService.Answers.cs:348)
+    // and the projection nulls it (PracticeService.Questions.cs:172). Measured on a pool inline_completion
+    // version whose AcceptedAnswersJson is ["development","software development"], answered
+    // "  DEVELOPMENT  ": IsCorrect=null, AcceptedAnswersJson=null.
     [Fact]
     public async Task SubmitAnswer_evaluates_inline_completion_accurately()
     {
@@ -1169,13 +1169,13 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.True(res2.IsSessionFinished);
     }
 
-    // #269: NOT migrated - a production gap, re-measured against HEAD in #272 and still present. The
-    // pinned branch nulls the answer-shape fields deliberately: maxSelections, acceptedAnswersJson,
+    // #269: NOT migrated - a production gap, re-measured against HEAD 37e0d48 in #272 and still present.
+    // The pinned branch nulls the answer-shape fields deliberately: maxSelections, acceptedAnswersJson,
     // requiredKeywords, minWords and maxWords at PracticeService.Questions.cs:170-175, and the type is
     // read from the item's shape at :169. Measured on a pool inline_completion position:
-    // QuestionType=free_response (the version has no options, so it renders as a productive task),
-    // AcceptedAnswersJson=null, MaxWords=null, AllowNumber=True. Three of the five assertions below
-    // therefore have no pool answer, and the rendered type is not even the authored one.
+    // QuestionType=free_response (the version has no options, so an authored blank renders as a
+    // productive task), AcceptedAnswersJson=null, MaxWords=null, AllowNumber=True. Three of the five
+    // assertions below therefore have no pool answer, and the rendered type is not the authored one.
     [Fact]
     public async Task GetSessionTakeAsync_returns_component_metadata()
     {
