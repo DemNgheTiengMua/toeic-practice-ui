@@ -16,6 +16,13 @@ using Xunit;
 
 namespace Services.Tests;
 
+/// <summary>
+/// The legacy authoring service's rules: option sets, word bounds, timers, cluster sizes, delete guards
+/// and quick ingest. #272: this file stays on the legacy tables because its SUBJECT is that service -
+/// <c>CreateQuestionGroupAsync</c>/<c>CreateQuestionAsync</c> and the quick-ingest commit still write
+/// <c>QuestionGroups</c>/<c>Questions</c>, and asserting their validation against a pool fixture would
+/// test a writer those methods do not call.
+/// </summary>
 [Collection(DatabaseCollection.Name)]
 public sealed class AdminExamServiceTests(DatabaseFixture database)
 {

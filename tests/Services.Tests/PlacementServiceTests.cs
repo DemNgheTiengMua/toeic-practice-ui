@@ -79,11 +79,13 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
             SET a.StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
                 a.ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET()),
                 a.ActiveSkillId = (
+                    -- #272: the paper's positions are ExamItems bindings now, so the next skill is
+                    -- the skill of a bound position, not of a Questions row.
                     SELECT TOP 1 s.SkillId
                     FROM Skills s
                     JOIN Sections sec ON sec.SkillId = s.SkillId
-                    JOIN Questions q ON q.SectionId = sec.SectionId
-                    WHERE q.ExamId = a.ExamId AND s.SkillId <> a.ActiveSkillId
+                    JOIN ExamItems ei ON ei.SectionId = sec.SectionId
+                    WHERE ei.ExamId = a.ExamId AND s.SkillId <> a.ActiveSkillId
                     ORDER BY s.DisplayOrder
                 ),
                 a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
@@ -712,7 +714,14 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
         Assert.True(reading.Navigator.Single(n => n.QuestionId == w2Id).IsLocked);
     }
 
-    /// <summary>A Writing skill made of two locked question groups (W1, W2), then a Reading skill.</summary>
+    /// <summary>
+    /// A Writing skill made of two locked units (W1, W2), then a Reading skill.
+    /// <para>
+    /// #272: on the pool a locked "group" is the block its positions share - here each writing task gets
+    /// its own stimulus, so it is its own unit with its own 600/1200-second window. The ids the tests
+    /// address are <c>ExamItemId</c>s, which is what the sitting projection hands back.
+    /// </para>
+    /// </summary>
     private async Task<(int examId, int w1Id, int w2Id, int r1Id)> SeedLockedGroupPlacementFixtureAsync(string certCode)
     {
         await database.SqlAsync($"""
@@ -727,10 +736,8 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, NavigationMode) VALUES
               (@sW, @cert, 'writing', 'W1', N'Writing tasks', 1, 1, 'HYBRID_GROUP_LOCKED');
-            DECLARE @secW INT = SCOPE_IDENTITY();
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
               (@sR, @cert, 'reading', 'R1', N'Reading', 1, 2);
-            DECLARE @secR INT = SCOPE_IDENTITY();
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cert, 'A1', N'Beginner', 0, 200, 1),
@@ -738,34 +745,31 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, QuestionCount) VALUES
               (@cert, N'Locked Group Placement', 'published', 60, 'placement', N'Two locked writing tasks, then reading.', 3);
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ResponseSeconds) VALUES (@exam, @cert, @secW, 1, 600);
-            DECLARE @gW1 INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ResponseSeconds) VALUES (@exam, @cert, @secW, 2, 1200);
-            DECLARE @gW2 INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 3);
-            DECLARE @gR INT = SCOPE_IDENTITY();
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@gW1, @exam, @secW, @sW, N'Writing task 1', 'A2', 'free_response', 1);
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@gW2, @exam, @secW, @sW, N'Writing task 2', 'A2', 'free_response', 2);
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@gR, @exam, @secR, @sR, N'Reading question', 'A2', 'mcq', 3);
-            DECLARE @r1 INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@r1, 'mcq', 'A', N'Opt A', 1),
-              (@r1, 'mcq', 'B', N'Opt B', 0);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var ids = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).Select(q => q.QuestionId).ToListAsync();
-        return (exam.ExamId, ids[0], ids[1], ids[2]);
+        var writing = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "W1");
+        var reading = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "R1");
+
+        var w1 = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, writing.SectionId, "writing", "Writing task 1",
+            displayOrder: 1, stimulusResponseSeconds: 600, unitNumber: 1, level: "A2");
+        var w2 = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, writing.SectionId, "writing", "Writing task 2",
+            displayOrder: 2, stimulusResponseSeconds: 1200, unitNumber: 2, level: "A2");
+        var r1 = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, reading.SectionId, "reading", "Reading question",
+            displayOrder: 1, level: "A2");
+
+        return (exam.ExamId, w1.ExamItemId, w2.ExamItemId, r1.ExamItemId);
     }
 
+    /// <summary>
+    /// One free-response writing task on its own placement paper. #272: the task is a pool item whose
+    /// version carries the word window, and the id the test addresses is its <c>ExamItemId</c>.
+    /// </summary>
     private async Task<(int certId, int examId, int writingQId)> SeedHybridPlacementFixtureAsync(string certCode)
     {
         await database.SqlAsync($"""
@@ -778,7 +782,6 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
               (@sW, @cert, 'writing', 'W1', N'Writing Section', 1, 1);
-            DECLARE @secW INT = SCOPE_IDENTITY();
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cert, 'A1', N'Beginner', 0, 200, 1),
@@ -791,19 +794,18 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
             INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
               (@cert, @sW, @exam, 0, 100),
               (@cert, @sW, @exam, 1, 200);
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secW, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, @secW, @sW, N'Diagnostic writing prompt', 'A2', 'free_response', 1);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId && e.Name == "Hybrid Placement Test");
-        var q = await db.Questions.SingleAsync(q => q.ExamId == exam.ExamId);
-        return (cert.CertId, exam.ExamId, q.QuestionId);
+        var section = await db.Sections.SingleAsync(s => s.CertId == cert.CertId);
+
+        var task = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, section.SectionId, "writing", "Diagnostic writing prompt",
+            displayOrder: 1, level: "A2");
+
+        return (cert.CertId, exam.ExamId, task.ExamItemId);
     }
 
     [Fact]

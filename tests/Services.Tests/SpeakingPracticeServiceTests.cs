@@ -60,6 +60,14 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         return userId;
     }
 
+    /// <summary>
+    /// Two speaking tasks on one practice paper: a read-aloud and a describe-the-picture.
+    /// <para>
+    /// #272: both are pool items with a productive version. The picture belongs to the STIMULUS the second
+    /// position shares, because on the pool an image is a property of the passage/context block rather than
+    /// of a question-group row. The ids the tests address are <c>ExamItemId</c>s.
+    /// </para>
+    /// </summary>
     private async Task<(int certId, int examId, int q1Id, int q2Id)> SeedSpeakingExamFixtureAsync(string certCode)
     {
         await database.SqlAsync($"""
@@ -73,49 +81,37 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
               (@sS, @cert, 'speaking', 'S1', N'Read aloud', 1, 1),
               (@sS, @cert, 'speaking', 'S2', N'Describe picture', 1, 2);
-            DECLARE @sec1 INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'S1');
-            DECLARE @sec2 INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'S2');
 
             -- Criteria
             INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
               (@cert, @sS, 'PRON', N'Pronunciation', 3.0, 1.0, 1),
               (@cert, @sS, 'INT', N'Intonation & Stress', 3.0, 1.0, 2);
-            DECLARE @crit1 INT = (SELECT CriterionId FROM GradingCriteria WHERE CertId = @cert AND Code = 'PRON');
-            DECLARE @crit2 INT = (SELECT CriterionId FROM GradingCriteria WHERE CertId = @cert AND Code = 'INT');
 
             -- Exam
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount) VALUES
               (@cert, N'Speaking Practice {certCode}', 'published', 20, 'speaking_practice', 2);
-            DECLARE @exam INT = SCOPE_IDENTITY();
 
             -- #152: a speaking rubric is reported on this certificate's own axis, so the fixture
             -- declares one - the same way #147 makes every seeded certificate declare its bands.
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cert, 'B1', N'Intermediate', 0, 30, 1),
               (@cert, 'B2', N'Upper intermediate', 31, 50, 2);
-
-            -- Question 1: Read aloud
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec1, 1);
-            DECLARE @grp1 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp1, @exam, @sec1, @sS, N'Read the following announcement out loud.', 'A2', 'free_response', 1);
-            DECLARE @q1 INT = SCOPE_IDENTITY();
-
-            -- Question 2: Describe picture
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ImagePath, ImageAlt)
-            VALUES (@exam, @cert, @sec2, 2, '/img/sample-picture.jpg', N'Office setting');
-            DECLARE @grp2 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp2, @exam, @sec2, @sS, N'Describe what you see in the picture.', 'B1', 'free_response', 2);
-            DECLARE @q2 INT = SCOPE_IDENTITY();
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).ToListAsync();
+        var section1 = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "S1");
+        var section2 = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "S2");
 
-        return (cert.CertId, exam.ExamId, questions[0].QuestionId, questions[1].QuestionId);
+        var q1 = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, section1.SectionId, "speaking",
+            "Read the following announcement out loud.", displayOrder: 1, level: "A2");
+        var q2 = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, section2.SectionId, "speaking",
+            "Describe what you see in the picture.", displayOrder: 1, level: "B1");
+
+        return (cert.CertId, exam.ExamId, q1.ExamItemId, q2.ExamItemId);
     }
 
     [Fact]
@@ -237,7 +233,7 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         Assert.Null(oldAudioDeleted);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var draft = await db.FreeResponses.SingleAsync(fr => fr.AttemptId == info.AttemptId && fr.QuestionId == q1Id);
+        var draft = await db.FreeResponses.SingleAsync(fr => fr.AttemptId == info.AttemptId && fr.ExamItemId == q1Id);
         Assert.Equal(saveResult2.AudioPath, draft.AudioPath);
         Assert.Equal(29000, draft.DurationMs);
         Assert.Equal("draft", draft.Status);
@@ -245,6 +241,16 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         Assert.NotNull(draft.DraftSavedAt);
     }
 
+    /// <summary>
+    /// BLOCKER (#272, not owned by this ticket): <c>SpeakingPracticeService.GetAudioFileAsync</c>
+    /// (<c>src/Services/SpeakingPracticeService.cs:845</c>) still resolves a response with
+    /// <c>r.QuestionId == questionId</c>. On a pool paper <c>questionId</c> is an <c>ExamItemId</c> and a
+    /// pool response leaves <c>QuestionId</c> NULL, so the lookup finds nothing and the call throws
+    /// <see cref="SpeakingPracticeException.AudioNotFound"/> instead of serving the recording. The fixture
+    /// is migrated (the task is a pool item, so this is the shape production produces); the assertion is
+    /// kept unchanged and this test is expected to fail until the reader is repointed to
+    /// <c>ExamItemId</c>, exactly as <c>SaveAudioAsync</c> already is.
+    /// </summary>
     [Fact]
     public async Task Audio_is_served_only_through_ownership_checked_endpoint()
     {
@@ -381,7 +387,7 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         await gradingProcessor.ProcessPendingGradingsAsync();
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var failedGrading = await db.AiGradings.Include(g => g.FreeResponse).SingleAsync(g => g.FreeResponse.AttemptId == info.AttemptId && g.FreeResponse.QuestionId == q1Id);
+        var failedGrading = await db.AiGradings.Include(g => g.FreeResponse).SingleAsync(g => g.FreeResponse.AttemptId == info.AttemptId && g.FreeResponse.ExamItemId == q1Id);
         Assert.Equal("failed", failedGrading.Status);
         var initialGradingId = failedGrading.GradingId;
         var initialCount = failedGrading.AttemptCount;

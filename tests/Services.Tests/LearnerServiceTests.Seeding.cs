@@ -164,33 +164,45 @@ public sealed partial class LearnerServiceTests
 
     /// <summary>A finished practice session with answers, which is what the daily-ceiling view counts.
     /// The cascade reads it, so a test that needs "the day is full" seeds it rather than a stored
-    /// counter - there is none (D12).</summary>
+    /// counter - there is none (D12).
+    /// <para>
+    /// #272: the answers are pool-shaped. <c>vw_DailyPracticeVolume</c> counts an answer by its own
+    /// <c>SelectedLabel</c>/<c>ResponseText</c> and reads the modality through <c>Items</c>, so no
+    /// <c>Questions</c> row is needed - which is what lets this fixture stop authoring one.
+    /// </para>
+    /// </summary>
     private Task SeedAnsweredTodayAsync(int userId, string certCode, int sectionId, int count) =>
         database.SqlAsync($"""
             DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
-            DECLARE @skill INT = (SELECT SkillId FROM Sections WHERE SectionId = {sectionId});
             DECLARE @mod VARCHAR(10) = (SELECT Modality FROM Sections WHERE SectionId = {sectionId});
-            DECLARE @exam INT = (SELECT TOP 1 ExamId FROM Exams WHERE CertId = @cert AND Purpose = 'mock');
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, {sectionId}, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
             INSERT INTO PracticeSessions (UserId, CertId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
             VALUES ({userId}, @cert, {sectionId}, @mod, {count}, 'finished', 0, SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET());
             DECLARE @sess INT = SCOPE_IDENTITY();
+
+            DECLARE @topic INT = (SELECT TOP 1 TopicId FROM Topics WHERE Modality = @mod ORDER BY TopicId);
+            IF @topic IS NULL
+            BEGIN
+              INSERT INTO Topics (Modality, Code, Name) VALUES (@mod, 'R-DET', N'Local factual retrieval and paraphrase matching');
+              SET @topic = SCOPE_IDENTITY();
+            END;
+
             DECLARE @i INT = 1;
             WHILE @i <= {count}
             BEGIN
-              INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-              VALUES (@grp, @exam, {sectionId}, @skill, CONCAT(N'Stem ', @i), 'B1', 'mcq', @i);
-              DECLARE @q INT = SCOPE_IDENTITY();
-              INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-                (@q, 'mcq', 'A', N'Right', 1), (@q, 'mcq', 'B', N'Wrong', 0);
+              INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, RenderFormat, ContentTier, LifecycleStatus)
+              VALUES (@mod, @topic, 'B1',
+                      CASE WHEN @mod IN ('speaking','writing') THEN 'descriptive_monologue' ELSE 'sentence_cloze' END,
+                      CASE WHEN @mod IN ('speaking','writing') THEN 'free_response' ELSE 'mcq' END,
+                      'demo', 'active');
+              DECLARE @item INT = SCOPE_IDENTITY();
+              INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
+              VALUES (@item, 1, CONCAT(N'Stem ', @i), N'Right', N'Wrong', N'Wrong', N'Wrong', 'A');
+              DECLARE @ver INT = SCOPE_IDENTITY();
               -- #241: UTC, not local. vw_DailyPracticeVolume groups on CAST(AnsweredAt AS DATE) and the
               -- service compares that against the UTC day, so a local-offset timestamp would land on
               -- tomorrow for a learner east of Greenwich and the ceiling would read as not reached.
-              INSERT INTO PracticeAnswers (SessionId, QuestionId, SectionId, SelectedOptionId, IsCorrect, DisplayOrder, AnsweredAt)
-              VALUES (@sess, @q, {sectionId},
-                      (SELECT OptionId FROM QuestionOptions WHERE QuestionId = @q AND IsCorrect = 0),
-                      0, @i, SYSUTCDATETIME());
+              INSERT INTO PracticeAnswers (SessionId, ItemId, ItemVersionId, SelectedLabel, IsCorrect, DisplayOrder, AnsweredAt)
+              VALUES (@sess, @item, @ver, 'B', 0, @i, SYSUTCDATETIME());
               SET @i = @i + 1;
             END
             """);

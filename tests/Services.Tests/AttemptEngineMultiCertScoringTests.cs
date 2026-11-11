@@ -35,11 +35,12 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
             SET a.StartedAt = DATEADD(second, -1801, SYSDATETIMEOFFSET()),
                 a.ExpiresAt = DATEADD(second, 1799, SYSDATETIMEOFFSET()),
                 a.ActiveSkillId = (
+                    -- #269: the skills this paper uses come from its roster, not from Questions.
                     SELECT TOP 1 s.SkillId
                     FROM Skills s
                     JOIN Sections sec ON sec.SkillId = s.SkillId
-                    JOIN Questions q ON q.SectionId = sec.SectionId
-                    WHERE q.ExamId = a.ExamId AND s.SkillId <> a.ActiveSkillId
+                    JOIN ExamItems i ON i.SectionId = sec.SectionId
+                    WHERE i.ExamId = a.ExamId AND s.SkillId <> a.ActiveSkillId
                     ORDER BY s.DisplayOrder
                 ),
                 a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
@@ -90,43 +91,33 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
             VALUES (@cert, N'{certCode} scoring exam', 'published', 60, 'mock');
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES
-              (@exam, @cert, @listeningSection, 1),
-              (@exam, @cert, @readingSection, 2);
-            DECLARE @listeningGroup INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND SectionId = @listeningSection);
-            DECLARE @readingGroup INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND SectionId = @readingSection);
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder) VALUES
-              (@listeningGroup, @exam, @listeningSection, @listening, N'Listening question', 'A2', 'mcq', 1),
-              (@readingGroup, @exam, @readingSection, @reading, N'Reading question', 'A2', 'mcq', 2);
-
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
-            SELECT QuestionId, 'mcq', 'A', N'Correct', 1 FROM Questions WHERE ExamId = @exam;
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
-            SELECT QuestionId, 'mcq', 'B', N'Incorrect', 0 FROM Questions WHERE ExamId = @exam;
-
             """);
 
         await using var db = DbContextFactory.Create(connectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
         var skills = await db.Skills.Where(s => s.CertId == cert.CertId).ToDictionaryAsync(s => s.Code);
-        var questions = await db.Questions
-            .Where(q => q.ExamId == exam.ExamId)
-            .Include(q => q.QuestionOptionQuestionNavigations)
-            .ToDictionaryAsync(q => q.SkillId);
+        var listeningSection = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "L1");
+        var readingSection = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "R1");
+
+        // #269: the paper is authored on the pool, so the id a test addresses is the POSITION's ExamItemId
+        // and the option id is the one the sitting projection renders.
+        var listening = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, listeningSection.SectionId, "listening", "Listening question",
+            displayOrder: 1, keyLabel: "A", level: "A2");
+        var reading = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, readingSection.SectionId, "reading", "Reading question",
+            displayOrder: 2, keyLabel: "A", level: "A2");
 
         return new ScoringFixture(
             cert.CertId,
             exam.ExamId,
             skills["LIST"].SkillId,
             skills["READ"].SkillId,
-            questions[skills["LIST"].SkillId].QuestionId,
-            questions[skills["READ"].SkillId].QuestionId,
-            questions[skills["LIST"].SkillId].QuestionOptionQuestionNavigations.Single(o => o.IsCorrect).OptionId,
-            questions[skills["READ"].SkillId].QuestionOptionQuestionNavigations.Single(o => o.IsCorrect).OptionId);
+            listening.ExamItemId,
+            reading.ExamItemId,
+            await PoolFixture.OptionIdAsync(db, exam.ExamId, listening.ExamItemId, "A"),
+            await PoolFixture.OptionIdAsync(db, exam.ExamId, reading.ExamItemId, "A"));
     }
 
     [Fact]

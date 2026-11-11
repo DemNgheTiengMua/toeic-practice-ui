@@ -29,7 +29,13 @@ public sealed class RubricAnchorGateTests(DatabaseFixture database)
 
     private static string AnchorText(int band) => $"Anchor response written at band {band}: a whole answer, not a note.";
 
-    /// <summary>A writing-practice exam for one skill, with the given canonical criteria and a grid each.</summary>
+    /// <summary>
+    /// A writing-practice exam for one skill, with the given canonical criteria and a grid each.
+    /// <para>
+    /// #272: the task is a pool item with a productive version, and <c>QuestionId</c> in the returned
+    /// tuple is its <c>ExamItemId</c> - the id the writing service addresses a position by.
+    /// </para>
+    /// </summary>
     private async Task<(int CertId, int SkillId, int ExamId, int QuestionId, IReadOnlyList<int> CriterionIds)>
         SeedAsync(string certCode, params string[] codes)
     {
@@ -41,15 +47,8 @@ public sealed class RubricAnchorGateTests(DatabaseFixture database)
             DECLARE @sW INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'WRIT');
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder)
             VALUES (@sW, @cert, 'writing', 'W1', N'Essay', 1, 1);
-            DECLARE @sec INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'W1');
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount)
             VALUES (@cert, N'Writing Practice {certCode}', 'published', 60, 'writing_practice', 1);
-            DECLARE @exam INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @sW, N'Write about your week.', 'A2', 'free_response', 5, 200, 1);
-            DECLARE @q INT = SCOPE_IDENTITY();
 
             {(string.Join("\n", codes.Select((code, i) => $"""
                 INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder)
@@ -67,21 +66,24 @@ public sealed class RubricAnchorGateTests(DatabaseFixture database)
                 INSERT INTO GradingCriterionAnchors (CriterionId, Band, ResponseText)
                 VALUES (@crit{i}, 2, N'{AnchorText(2)}'), (@crit{i}, 3, N'{AnchorText(3)}'), (@crit{i}, 4, N'{AnchorText(4)}');
                 """)))}
-
-            SELECT @cert AS CertId, @sW AS SkillId, @exam AS ExamId, @q AS QuestionId;
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var question = await db.Questions.SingleAsync(q => q.ExamId == exam.ExamId);
+        var section = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "W1");
+
+        var task = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, section.SectionId, "writing", "Write about your week.",
+            displayOrder: 1, minWords: 5, maxWords: 200, level: "A2");
+
         var skillId = await db.Skills.Where(s => s.CertId == cert.CertId).Select(s => s.SkillId).SingleAsync();
         var criterionIds = await db.GradingCriteria
             .Where(c => c.CertId == cert.CertId)
             .OrderBy(c => c.DisplayOrder)
             .Select(c => c.CriterionId)
             .ToListAsync();
-        return (cert.CertId, skillId, exam.ExamId, question.QuestionId, criterionIds);
+        return (cert.CertId, skillId, exam.ExamId, task.ExamItemId, criterionIds);
     }
 
     private async Task<int> SeedLearnerAsync(string certCode)

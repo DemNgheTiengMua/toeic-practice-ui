@@ -84,122 +84,109 @@ public sealed class ExamPublishInvariantTests(DatabaseFixture database)
 
     /// <summary>
     /// The baseline every test edits one thing from. A certificate with one reading skill at 60 minutes,
-    /// one section declaring one question, a draft exam declaring 60 minutes, one rendered question, and
-    /// one cleared pool item bound at that position.
+    /// one section declaring one question, a draft exam declaring 60 minutes, and one cleared pool item
+    /// bound at that position.
     /// <para>
-    /// The pool item is bound at position 1 because that is where the sitting renders it, so the
-    /// baseline is a paper the learner would actually sit - not one with a binding in thin air.
+    /// <b>#272: the paper is authored on the pool only.</b> This fixture used to keep a legacy
+    /// <c>Questions</c> row beside the binding, because INV-1 counted a section's rendered positions
+    /// from <c>Questions</c> alone and a pool-only paper reported "declares 1 item(s) but holds 0" -
+    /// measured, CanPublish=false on a complete roster. #522315f fixed the three counts to read the
+    /// roster as well; <c>PoolPaperPublishTests</c> pins that a pool-only paper passes the whole audit.
+    /// So this fixture now holds no <c>QuestionGroups</c>/<c>Questions</c>/<c>QuestionOptions</c> row at
+    /// all, and every test below proves the invariants against a paper the sitting can actually serve.
     /// </para>
     /// <para>
-    /// <b>#269: the rendered position stays a legacy <c>Questions</c> row, and the reason is production
-    /// code rather than this fixture.</b> INV-1's "every section holds exactly what it declares" is
-    /// checked against the legacy count, because that is what the sitting rendered at the time the check
-    /// was written (<c>AdminExamService.Invariants.cs</c>: "What a section HOLDS is the number of
-    /// positions the sitting renders, and that is the legacy <c>Questions</c> count - not the union with
-    /// <c>ExamItems</c>"). The ~26 authoring checks above the six read the same group tree. So a paper
-    /// whose positions live only on the pool currently fails INV-1 with "declares 1 item(s) but holds 0"
-    /// (measured), and every test in this file needs a paper that clears the other five invariants.
-    /// </para>
-    /// <para>
-    /// Migrating the rendered position before INV-1 reads the roster would make all fifteen tests red for
-    /// a reason this ticket does not own. The pool half - the bound item, its version, its clearance - is
-    /// already authored here, because that is what the invariants under test inspect. The fixture stays
-    /// half-legacy until INV-1 moves; #269 deletes that half with the tables.
+    /// The clearance is the real one: a decision naming the item, made by a SECOND account, because
+    /// ADM-02's trigger refuses self-approval (<c>trg_ReviewSampleDecisions_NoSelfApproval</c>).
     /// </para>
     /// </summary>
     private async Task<(int CertId, int SkillId, int SectionId, int ExamId, int ItemId)> SeedBaselineAsync(
         string certCode)
     {
-        var tag = Unique("B");
-
-        await database.SqlAsync($"""
-            INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
-            DECLARE @cert INT = SCOPE_IDENTITY();
-
-            -- The canonical topics, guarded row by row. The schema declares the closed set but does not
-            -- seed it; seed-demo.sql does. A test that inserted an invented code would be refused by
-            -- trg_Topics_ClosedVocabulary, which is the trigger working.
-            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading' AND Code = 'R-GRAM')
-              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-GRAM', N'Morphosyntactic structure and lexical precision');
-            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading' AND Code = 'R-DET')
-              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Explicit factual detail and extraction');
-            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'writing' AND Code = 'W-ARG')
-              INSERT INTO Topics (Modality, Code, Name) VALUES ('writing', 'W-ARG', N'Argumentation and position defence');
-
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes,
-                                MinScaledScore, MaxScaledScore, ScoreStep)
-            VALUES (@cert, 'READ', N'Reading', 'reading', 1, 60, 5, 495, 5);
-            DECLARE @skill INT = SCOPE_IDENTITY();
-
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-            VALUES (@skill, @cert, 'reading', 'P5', N'Incomplete Sentences', 4, 1, 1);
-            DECLARE @sec INT = SCOPE_IDENTITY();
-
-            INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount)
-            VALUES (@cert, N'Paper {certCode}', 'draft', 60, 'mock', 1);
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            -- The rendered position the sitting will serve. A binding supplies this position's CONTENT.
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @skill, N'Choose the word.', 'B1', 'mcq', 1);
-            DECLARE @q INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q, 'mcq', 'A', N'correct', 1),
-              (@q, 'mcq', 'B', N'wrong', 0);
-
-            -- The uploader who sent the batch, and the DIFFERENT reviewer who clears it. ADM-02's trigger
-            -- refuses a decision whose actor uploaded or last modified the batch, so one account cannot
-            -- do both - which is the invariant, not a fixture inconvenience.
-            IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'reviewer')
-              INSERT INTO Roles (Code, Name) VALUES ('reviewer', N'Reviewer');
-            INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
-            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'reviewer'), '{tag}@test.local', 0x01, N'Uploader');
-            DECLARE @u INT = SCOPE_IDENTITY();
-            INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
-            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'reviewer'), '{tag}-rev@test.local', 0x01, N'Reviewer');
-            DECLARE @rev INT = SCOPE_IDENTITY();
-
-            -- The batch the item arrived in, the stratum that audited its cell, and the clearance.
-            INSERT INTO ImportBatches (CertId, SourceName, Status, UploadedBy)
-            VALUES (@cert, N'{tag}.json', 'done', @u);
-            DECLARE @b INT = SCOPE_IDENTITY();
-
-            DECLARE @topic INT = (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'reading' ORDER BY TopicId);
-
-            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, BatchTag)
-            VALUES ('reading', @topic, 'B1', 'sentence_cloze', 'demo', 'active', N'{tag}');
-            DECLARE @item INT = SCOPE_IDENTITY();
-
-            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel, Explanation)
-            VALUES (@item, 1, N'Choose the word.', N'correct', N'wrong', N'other', N'another', 'A', N'Because it is.');
-
-            -- ImportLog is the only record of which item a record became.
-            INSERT INTO ImportLog (BatchId, RowNo, Level, Message, ItemId, Attempt)
-            VALUES (@b, 1, 'info', N'Accepted.', @item, 1);
-
-            -- A decided stratum needs a stamp (CK_ReviewStrata_DecisionIsStamped), and only
-            -- StratifiedAuditService may write one (trg_ReviewStrata_SingleWriter).
-            INSERT INTO ReviewStrata (BatchId, TopicId, CefrLevel, ItemCount, SampleSize, Status,
-                                      DecidedAt, WrittenByService, ProjectionVersion)
-            VALUES (@b, @topic, 'B1', 1, 1, 'approved', SYSDATETIMEOFFSET(), 'StratifiedAuditService', 1);
-
-            INSERT INTO ReviewSampleDecisions (BatchId, ItemId, ActorUserId, Decision)
-            VALUES (@b, @item, @rev, 'clear');
-
-            INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder, UnitNumber)
-            SELECT @exam, @sec, @cert, v.ItemVersionId, @item, 'reading', 1, 1
-            FROM ItemVersions v WHERE v.ItemId = @item;
-            """);
-
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
-        var skill = await db.Skills.SingleAsync(s => s.CertId == cert.CertId);
-        var section = await db.Sections.SingleAsync(s => s.CertId == cert.CertId);
-        var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var item = await db.Items.SingleAsync(i => i.BatchTag == tag);
-        return (cert.CertId, skill.SkillId, section.SectionId, exam.ExamId, item.ItemId);
+
+        var cert = new BusinessObjects.Entities.Certificate
+        {
+            Code = certCode, Name = $"Cert {certCode}", IsActive = true,
+        };
+        db.Certificates.Add(cert);
+        await db.SaveChangesAsync();
+
+        var skill = new BusinessObjects.Entities.Skill
+        {
+            CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading",
+            DisplayOrder = 1, DurationMinutes = 60, MinScaledScore = 5, MaxScaledScore = 495, ScoreStep = 5,
+        };
+        db.Skills.Add(skill);
+        await db.SaveChangesAsync();
+
+        var section = new BusinessObjects.Entities.Section
+        {
+            CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading",
+            Code = "P5", Name = "Incomplete Sentences", OptionCount = 4,
+            ExpectedQuestionCount = 1, DisplayOrder = 1,
+        };
+        db.Sections.Add(section);
+        await db.SaveChangesAsync();
+
+        var exam = new BusinessObjects.Entities.Exam
+        {
+            CertId = cert.CertId, Name = $"Paper {certCode}", Status = "draft",
+            DurationMinutes = 60, Purpose = "mock", QuestionCount = 1,
+        };
+        db.Exams.Add(exam);
+        await db.SaveChangesAsync();
+
+        // The position the sitting serves, authored exactly as the pool editor writes it.
+        var position = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, section.SectionId, "reading", "Choose the word.",
+            displayOrder: 1, keyLabel: "A", level: "B1");
+
+        // The uploader who sent the batch, and the DIFFERENT reviewer who clears it. ADM-02's trigger
+        // refuses a decision whose actor uploaded or last modified the batch, so one account cannot
+        // do both - which is the invariant, not a fixture inconvenience.
+        var reviewerRole = new BusinessObjects.Entities.Role { Code = "reviewer", Name = "Reviewer" };
+        if (!await db.Roles.AnyAsync(r => r.Code == "reviewer"))
+        {
+            db.Roles.Add(reviewerRole);
+            await db.SaveChangesAsync();
+        }
+        var roleId = (await db.Roles.SingleAsync(r => r.Code == "reviewer")).RoleId;
+
+        var tag = Unique("B");
+        var uploader = new BusinessObjects.Entities.User
+        {
+            RoleId = roleId, Email = $"{tag}@test.local", PasswordHash = [0x01], FullName = "Uploader",
+        };
+        var reviewer = new BusinessObjects.Entities.User
+        {
+            RoleId = roleId, Email = $"{tag}-rev@test.local", PasswordHash = [0x01], FullName = "Reviewer",
+        };
+        db.Users.AddRange(uploader, reviewer);
+        await db.SaveChangesAsync();
+
+        // The batch the item arrived in, and the clearance that puts it on the paper.
+        var batch = new BusinessObjects.Entities.ImportBatch
+        {
+            CertId = cert.CertId, SourceName = $"{tag}.json",
+            Status = BusinessObjects.ImportBatchStatus.Done.ToCode(), UploadedBy = uploader.UserId,
+        };
+        db.ImportBatches.Add(batch);
+        await db.SaveChangesAsync();
+
+        db.ImportLogs.Add(new BusinessObjects.Entities.ImportLog
+        {
+            BatchId = batch.BatchId, RowNo = 1, Level = "info", Message = "Accepted.",
+            ItemId = position.ItemId, Attempt = 1,
+        });
+        db.ReviewSampleDecisions.Add(new BusinessObjects.Entities.ReviewSampleDecision
+        {
+            BatchId = batch.BatchId, ItemId = position.ItemId, ActorUserId = reviewer.UserId,
+            Decision = "clear", DecidedAt = DateTimeOffset.UtcNow,
+        });
+        await db.SaveChangesAsync();
+
+        return (cert.CertId, skill.SkillId, section.SectionId, exam.ExamId, position.ItemId);
     }
 
     private static ExamInvariantDto Invariant(ExamAuditResultDto audit, string code) =>
@@ -300,11 +287,6 @@ public sealed class ExamPublishInvariantTests(DatabaseFixture database)
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
             VALUES ({skillId}, {certId}, 'reading', 'P6', N'Text completion', 4, 2, 2);
             DECLARE @sec2 INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES ({examId}, {certId}, @sec2, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder) VALUES
-              (@grp, {examId}, @sec2, {skillId}, N'First rendered.', 'B1', 'mcq', 1),
-              (@grp, {examId}, @sec2, {skillId}, N'Second rendered.', 'B1', 'mcq', 2);
 
             INSERT INTO Stimuli (CefrLevel, Passage, DisplayOrder)
             VALUES ('B1', REPLICATE(CAST(N'word ' AS NVARCHAR(MAX)), 100), 1);
@@ -312,15 +294,15 @@ public sealed class ExamPublishInvariantTests(DatabaseFixture database)
 
             DECLARE @topic INT = (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'reading' ORDER BY TopicId);
 
-            INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus)
-            VALUES (@stim, 'reading', @topic, 'B1', 'passage_comprehension', 'demo', 'active');
+            INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, RenderFormat, ContentTier, LifecycleStatus)
+            VALUES (@stim, 'reading', @topic, 'B1', 'passage_comprehension', 'mcq', 'demo', 'active');
             DECLARE @i1 INT = SCOPE_IDENTITY();
             INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel,
                                       EvidenceStart, EvidenceEnd, EvidenceUnit)
             VALUES (@i1, 1, N'First.', N'a', N'b', N'c', N'd', 'A', 10, 60, 'char');
 
-            INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus)
-            VALUES (@stim, 'reading', @topic, 'B1', 'passage_comprehension', 'demo', 'active');
+            INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, RenderFormat, ContentTier, LifecycleStatus)
+            VALUES (@stim, 'reading', @topic, 'B1', 'passage_comprehension', 'mcq', 'demo', 'active');
             DECLARE @i2 INT = SCOPE_IDENTITY();
             -- The identical span: two items measuring one sentence twice.
             INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel,
@@ -426,9 +408,9 @@ public sealed class ExamPublishInvariantTests(DatabaseFixture database)
     /// A stratum that was drawn and never decided. The item is active and arrived in a batch, so the
     /// only thing wrong is that the audit is still `pending` - which must not read as cleared.
     /// <para>
-    /// Its own fixture rather than the baseline plus an edit: the baseline's strata are approved and it
-    /// carries a `clear` decision, and a decision is append-only (`trg_ReviewSampleDecisions_NoSelfApproval`
-    /// refuses DELETE outright), so the baseline cannot be walked back to "undecided".
+    /// Its own fixture rather than the baseline plus an edit: the baseline's item carries a `clear`
+    /// decision, and a decision is append-only (<c>trg_ReviewSampleDecisions_NoSelfApproval</c> refuses
+    /// DELETE outright), so the baseline cannot be walked back to "undecided".
     /// </para>
     /// </summary>
     [Fact]
@@ -436,60 +418,88 @@ public sealed class ExamPublishInvariantTests(DatabaseFixture database)
     {
         var certCode = Unique("INV3C");
         var tag = Unique("P");
+        int examId;
 
-        await database.SqlAsync($"""
-            INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
-            DECLARE @cert INT = SCOPE_IDENTITY();
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var cert = new BusinessObjects.Entities.Certificate
+            {
+                Code = certCode, Name = $"Cert {certCode}", IsActive = true,
+            };
+            db.Certificates.Add(cert);
+            await db.SaveChangesAsync();
 
-            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading' AND Code = 'R-GRAM')
-              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-GRAM', N'Morphosyntactic structure and lexical precision');
+            var skill = new BusinessObjects.Entities.Skill
+            {
+                CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading",
+                DisplayOrder = 1, DurationMinutes = 60,
+            };
+            db.Skills.Add(skill);
+            await db.SaveChangesAsync();
 
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
-            VALUES (@cert, 'READ', N'Reading', 'reading', 1, 60);
-            DECLARE @skill INT = SCOPE_IDENTITY();
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-            VALUES (@skill, @cert, 'reading', 'P5', N'Incomplete Sentences', 4, 1, 1);
-            DECLARE @sec INT = SCOPE_IDENTITY();
+            var section = new BusinessObjects.Entities.Section
+            {
+                CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading",
+                Code = "P5", Name = "Incomplete Sentences", OptionCount = 4,
+                ExpectedQuestionCount = 1, DisplayOrder = 1,
+            };
+            db.Sections.Add(section);
+            await db.SaveChangesAsync();
 
-            INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount)
-            VALUES (@cert, N'Pending {certCode}', 'draft', 60, 'mock', 1);
-            DECLARE @exam INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @skill, N'Choose the word.', 'B1', 'mcq', 1);
+            var exam = new BusinessObjects.Entities.Exam
+            {
+                CertId = cert.CertId, Name = $"Pending {certCode}", Status = "draft",
+                DurationMinutes = 60, Purpose = "mock", QuestionCount = 1,
+            };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+            examId = exam.ExamId;
 
-            IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'reviewer')
-              INSERT INTO Roles (Code, Name) VALUES ('reviewer', N'Reviewer');
-            INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
-            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'reviewer'), '{tag}@test.local', 0x01, N'Uploader');
-            DECLARE @u INT = SCOPE_IDENTITY();
+            // #272: the paper is authored on the pool - one cleared position would come from the
+            // authoring flow, but this fixture deliberately leaves it undecided below.
+            var position = await PoolFixture.AddMcqAsync(
+                db, examId, cert.CertId, section.SectionId, "reading", "Choose the word.",
+                displayOrder: 1, keyLabel: "A", level: "B1");
 
-            INSERT INTO ImportBatches (CertId, SourceName, Status, UploadedBy)
-            VALUES (@cert, N'{tag}.json', 'done', @u);
-            DECLARE @b INT = SCOPE_IDENTITY();
+            var reviewerRole = new BusinessObjects.Entities.Role { Code = "reviewer", Name = "Reviewer" };
+            if (!await db.Roles.AnyAsync(r => r.Code == "reviewer"))
+            {
+                db.Roles.Add(reviewerRole);
+                await db.SaveChangesAsync();
+            }
+            var roleId = (await db.Roles.SingleAsync(r => r.Code == "reviewer")).RoleId;
 
-            DECLARE @topic INT = (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'reading' ORDER BY TopicId);
-            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, BatchTag)
-            VALUES ('reading', @topic, 'B1', 'sentence_cloze', 'demo', 'active', N'{tag}');
-            DECLARE @item INT = SCOPE_IDENTITY();
-            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
-            VALUES (@item, 1, N'Choose the word.', N'a', N'b', N'c', N'd', 'A');
-            INSERT INTO ImportLog (BatchId, RowNo, Level, Message, ItemId, Attempt)
-            VALUES (@b, 1, 'info', N'Accepted.', @item, 1);
+            var uploader = new BusinessObjects.Entities.User
+            {
+                RoleId = roleId, Email = $"{tag}@test.local", PasswordHash = [0x01], FullName = "Uploader",
+            };
+            db.Users.Add(uploader);
+            await db.SaveChangesAsync();
 
-            -- Drawn and never decided. No clear decision exists, so nothing says a human cleared it.
-            INSERT INTO ReviewStrata (BatchId, TopicId, CefrLevel, ItemCount, SampleSize, Status)
-            VALUES (@b, @topic, 'B1', 1, 1, 'pending');
+            var batch = new BusinessObjects.Entities.ImportBatch
+            {
+                CertId = cert.CertId, SourceName = $"{tag}.json",
+                Status = BusinessObjects.ImportBatchStatus.Done.ToCode(), UploadedBy = uploader.UserId,
+            };
+            db.ImportBatches.Add(batch);
+            await db.SaveChangesAsync();
 
-            INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder, UnitNumber)
-            SELECT @exam, @sec, @cert, v.ItemVersionId, @item, 'reading', 1, 1
-            FROM ItemVersions v WHERE v.ItemId = @item;
-            """);
+            db.ImportLogs.Add(new BusinessObjects.Entities.ImportLog
+            {
+                BatchId = batch.BatchId, RowNo = 1, Level = "info", Message = "Accepted.",
+                ItemId = position.ItemId, Attempt = 1,
+            });
+            await db.SaveChangesAsync();
 
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-        var examId = await db.Exams.Where(e => e.CertId == db.Certificates.Where(c => c.Code == certCode).Select(c => c.CertId).Single())
-            .Select(e => e.ExamId).SingleAsync();
+            // Drawn and never decided. No clear decision exists, so nothing says a human cleared it.
+            var item = await db.Items.SingleAsync(i => i.ItemId == position.ItemId);
+            db.ReviewStrata.Add(new BusinessObjects.Entities.ReviewStratum
+            {
+                BatchId = batch.BatchId, TopicId = item.TopicId, CefrLevel = item.CefrLevel,
+                ItemCount = 1, SampleSize = 1, Status = "pending",
+            });
+            await db.SaveChangesAsync();
+        }
 
         var audit = await CreateService().AuditExamPublishReadinessAsync(examId);
         var inv3 = Invariant(audit, ExamInvariants.ItemClearance);
@@ -571,18 +581,18 @@ public sealed class ExamPublishInvariantTests(DatabaseFixture database)
             INSERT INTO GradingRubricLocks (SkillId, CertId, LadderOutcome, LadderReason, LadderRunAt)
             VALUES (@w, {certId}, 'accepted', N'Separated.', SYSDATETIMEOFFSET());
 
-            -- One bound essay on that skill, so INV-4's anchor half has a task to judge.
-            DECLARE @topic INT = (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'writing' ORDER BY TopicId);
+            -- One bound essay on that skill, so INV-4's anchor half has a task to judge. It is a pool
+            -- item: a writing stimulus is not the paper's chrome, so the item stands alone and the
+            -- binding is the only row that puts it on the paper.
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'writing' AND Code = 'W-CORR')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('writing', 'W-CORR', N'Transactional correspondence');
+            DECLARE @topic INT = (SELECT TopicId FROM Topics WHERE Modality = 'writing' AND Code = 'W-CORR');
             INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, RenderFormat)
             VALUES ('writing', @topic, 'B1', 'persuasive_essay', 'demo', 'active', 'free_response');
             DECLARE @item INT = SCOPE_IDENTITY();
             INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, MinWords, MaxWords, ResponseSeconds)
             VALUES (@item, 1, N'Write an essay.', 100, 200, 1800);
             DECLARE @sec INT = (SELECT SectionId FROM Sections WHERE SkillId = @w);
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES ({examId}, {certId}, @sec, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
-            VALUES (@grp, {examId}, @sec, @w, N'Write an essay.', 'B1', 'free_response', 100, 200, 1);
             INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder, UnitNumber)
             SELECT {examId}, @sec, {certId}, v.ItemVersionId, @item, 'writing', 1, 1
             FROM ItemVersions v WHERE v.ItemId = @item;

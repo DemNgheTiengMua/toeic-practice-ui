@@ -15,6 +15,14 @@ namespace Services.Tests;
 /// dropping .AsSplitQuery() breaks a test instead of quietly reintroducing the latency.
 /// The studio, question list and both exports load the same groups → questions → options graph
 /// (plus categories) and are guarded the same way.
+/// <para>
+/// #272: stays on the legacy tables, and the subject is why. Every test here seeds through
+/// <c>CreateQuestionGroupAsync</c>/<c>CreateQuestionAsync</c> and reads the group tree back, because the
+/// split-query guard only means something over a query that loads TWO collection navigations - which is
+/// the legacy <c>QuestionGroups → Questions → QuestionOptions</c> graph. A pool paper's roster is a flat
+/// <c>ExamItems → ItemVersions</c> projection with no second collection level, so it cannot express the
+/// Cartesian product this file exists to refuse.
+/// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
 public sealed class AdminExamServiceSplitQueryTests(DatabaseFixture database)

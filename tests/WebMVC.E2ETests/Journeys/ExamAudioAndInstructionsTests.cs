@@ -10,20 +10,23 @@ namespace WebMVC.E2ETests.Journeys;
 [TestFixture]
 public class ExamAudioAndInstructionsTests : PlaywrightTestBase
 {
-    // #269: this journey file was NOT migrated onto the pool, and the reason is that these tests
-    // exercise the legacy audio-slice EDITOR, not the legacy authoring service. Group 1 is addressed
-    // directly (`UPDATE QuestionGroups SET AudioStartMs = ... WHERE GroupId = 1`), `ResetAttemptForListening-`
-    // style setup reads `Questions`, and `ReadGroupSliceAsync` reads `QuestionGroups.AudioStartMs`.
-    // Three of those are gone or unreachable for a pool paper:
-    //   * the demo seed writes no QuestionGroups/Questions rows at all (docs/seed-demo.sql:6), so
-    //     `WHERE GroupId = 1` matches nothing and the slicer has no group to mark;
-    //   * `AdminExamService.UpdateQuestionGroupAsync` still writes QuestionGroups, so it cannot edit a
-    //     pool paper's stimulus — the editor's pool path is the Studio's `BuildPoolSectionDto` read,
-    //     whose group ids are stimulus ids (or a negated ExamItemId), and no save path exists yet;
-    //   * `LastQuestionId` is gone from ExamAttempts (it is `CurrentExamItemId` now).
-    // Migrating the fixture would not help: the subject is the slice editor's round trip, and that round
-    // trip has no pool writer to test. #269 deletes this file with the tables, or a ticket that gives the
-    // Studio a pool group-save path rewrites it against stimuli.
+    // #272: the fixtures author the pool. A pool group's address is the stimulus its positions share
+    // (#273), so the slice these tests mark lives on `Stimuli`, reached through `Items` and `ExamItems`;
+    // a solo position negates its ExamItemId instead (`AdminExamService.BuildPoolSectionDto`). The
+    // Studio's save path is `PUT /admin/exams/{id}/studio/group/{groupId}` ->
+    // `UpdateExamStudioGroupAsync`, which writes stimulus.AudioStartMs/AudioEndMs
+    // (src/Services/Admin/Exams/AdminExamService.Groups.cs:377), and
+    // tests/Services.Tests/StudioGroupWriterTests.cs pins that round trip.
+    //
+    // Exam 1's first position shares stimulus 3 (test1-p1.mp3) and no passage, which is the card the
+    // slicer draws and the slice these tests set. Writes that only need a starting state
+    // (`SetFirstSliceAsync`) go through SQL to the same row, because the point of the test is the
+    // editor's own save, not the fixture's.
+    //
+    // What is still read/written as SQL, and why: `SetFirstSliceAsync`/`ReadGroupSliceAsync` arrange and
+    // check the row the browser just wrote, and `ResetAttemptForListeningAsync` rewinds a seeded attempt
+    // to its first position. All three address the pool; none names `Questions`, `QuestionGroups` or
+    // `QuestionOptions`.
 
     private LoginPage _loginPage = null!;
 
@@ -235,11 +238,56 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
             .ToContainTextAsync("Microphone access is off");
     }
 
-    private static async Task ExecuteSqlAsync(string sql)
+    private static async Task ExecuteSqlAsync(string sql, params (string Name, object Value)[] parameters)
     {
         await using var conn = await OpenAppDatabaseAsync();
         await using var cmd = new Microsoft.Data.SqlClient.SqlCommand(sql, conn);
+        foreach (var (name, value) in parameters)
+        {
+            cmd.Parameters.AddWithValue(name, value);
+        }
+
         await cmd.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Exam 1's first pool group: the position the slicer draws first, and the stimulus it shares. Read
+    /// rather than hard-coded so a reseed that moves the ids cannot point the slicer at another card.
+    /// A group's address IS its stimulus id (#273).
+    /// </summary>
+    private static async Task<(int SectionId, int GroupId)> FirstPoolGroupAsync()
+    {
+        await using var conn = await OpenAppDatabaseAsync();
+        await using var cmd = new Microsoft.Data.SqlClient.SqlCommand("""
+            SELECT TOP (1) i.SectionId, item.StimulusId
+            FROM ExamItems AS i
+            INNER JOIN Items AS item ON item.ItemId = i.ItemId
+            INNER JOIN Sections AS section ON section.SectionId = i.SectionId
+            INNER JOIN Skills AS skill ON skill.SkillId = section.SkillId
+            WHERE i.ExamId = 1 AND item.StimulusId IS NOT NULL
+            ORDER BY skill.DisplayOrder, section.DisplayOrder, i.DisplayOrder;
+            """, conn);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        if (!await reader.ReadAsync())
+        {
+            throw new InvalidOperationException("Exam 1 must bind a pool group the audio slicer can mark.");
+        }
+
+        return (reader.GetInt32(0), reader.GetInt32(1));
+    }
+
+    /// <summary>
+    /// Writes the group's slice on its stimulus, which is what the slicer's own save path writes. Nulls
+    /// both halves together because the check constraint refuses one without the other.
+    /// </summary>
+    private static async Task SetFirstSliceAsync(int? startMs, int? endMs)
+    {
+        var (_, groupId) = await FirstPoolGroupAsync();
+        await ExecuteSqlAsync(
+            "UPDATE Stimuli SET AudioStartMs = @startMs, AudioEndMs = @endMs WHERE StimulusId = @stimulusId;",
+            ("@startMs", (object?)startMs ?? DBNull.Value),
+            ("@endMs", (object?)endMs ?? DBNull.Value),
+            ("@stimulusId", groupId));
     }
 
     [Test]
@@ -247,7 +295,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
     {
         // Issue #75: Audio slicing. The attempt question player carries slice offsets,
         // plays only the designated slice of the section's master track, and stops on time.
-        await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = 200, AudioEndMs = 800 WHERE GroupId = 1;");
+        await SetFirstSliceAsync(200, 800);
 
         try
         {
@@ -310,7 +358,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         finally
         {
             // Reset DB state
-            await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;");
+            await SetFirstSliceAsync(null, null);
         }
     }
 
@@ -544,6 +592,11 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 1");
     }
 
+    /// <summary>
+    /// Rewinds a seeded attempt to the start of its paper. The position an attempt resumes at is
+    /// <c>CurrentExamItemId</c> (#272: the column was <c>LastQuestionId</c>), and the paper's first
+    /// position is read from the pool roster in sitting order rather than from <c>Questions</c>.
+    /// </summary>
     private static async Task ResetAttemptForListeningAsync(int attemptId)
     {
         await using var connection = await OpenAppDatabaseAsync();
@@ -554,24 +607,22 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
                 PreflightVerifiedAt = SYSDATETIMEOFFSET(),
                 ExpiresAt = DATEADD(minute, exam.DurationMinutes, SYSDATETIMEOFFSET()),
                 ActiveSkillId = (
-                    SELECT TOP (1) question.SkillId
-                    FROM Questions AS question
-                    INNER JOIN Sections AS section ON section.SectionId = question.SectionId
+                    SELECT TOP (1) section.SkillId
+                    FROM ExamItems AS position
+                    INNER JOIN Sections AS section ON section.SectionId = position.SectionId
                     INNER JOIN Skills AS skill ON skill.SkillId = section.SkillId
-                    INNER JOIN QuestionGroups AS questionGroup ON questionGroup.GroupId = question.GroupId
-                    WHERE question.ExamId = attempt.ExamId
-                    ORDER BY skill.DisplayOrder, section.DisplayOrder, questionGroup.DisplayOrder, question.DisplayOrder
+                    WHERE position.ExamId = attempt.ExamId
+                    ORDER BY skill.DisplayOrder, section.DisplayOrder, position.DisplayOrder
                 ),
                 ActiveUnitNumber = 1,
                 ActiveGroupId = NULL,
-                LastQuestionId = (
-                    SELECT TOP (1) question.QuestionId
-                    FROM Questions AS question
-                    INNER JOIN Sections AS section ON section.SectionId = question.SectionId
+                CurrentExamItemId = (
+                    SELECT TOP (1) position.ExamItemId
+                    FROM ExamItems AS position
+                    INNER JOIN Sections AS section ON section.SectionId = position.SectionId
                     INNER JOIN Skills AS skill ON skill.SkillId = section.SkillId
-                    INNER JOIN QuestionGroups AS questionGroup ON questionGroup.GroupId = question.GroupId
-                    WHERE question.ExamId = attempt.ExamId
-                    ORDER BY skill.DisplayOrder, section.DisplayOrder, questionGroup.DisplayOrder, question.DisplayOrder
+                    WHERE position.ExamId = attempt.ExamId
+                    ORDER BY skill.DisplayOrder, section.DisplayOrder, position.DisplayOrder
                 )
             FROM ExamAttempts AS attempt
             INNER JOIN Exams AS exam ON exam.ExamId = attempt.ExamId
@@ -708,7 +759,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         }
         finally
         {
-            await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;");
+            await SetFirstSliceAsync(null, null);
         }
     }
 
@@ -744,7 +795,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         }
         finally
         {
-            await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;");
+            await SetFirstSliceAsync(null, null);
         }
     }
 
@@ -781,7 +832,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         }
         finally
         {
-            await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;");
+            await SetFirstSliceAsync(null, null);
         }
     }
 
@@ -805,13 +856,13 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         }
         finally
         {
-            await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;");
+            await SetFirstSliceAsync(null, null);
         }
     }
 
     private async Task<(int SectionId, int GroupId)> OpenExamStudioWithAudioAsync()
     {
-        await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;");
+        await SetFirstSliceAsync(null, null);
         await _loginPage.GotoAsync();
         await _loginPage.LoginAsync("admin@demo.local", "Demo1234!");
         await Expect(Page).ToHaveURLAsync(new Regex(@"(Dashboard|admin|certificates)", RegexOptions.IgnoreCase));
@@ -832,12 +883,12 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
     }
 
     /// <summary>The slice as stored, so a test can compare the milliseconds the author saw with the
-    /// milliseconds the database holds (#159).</summary>
+    /// milliseconds the database holds (#159). A pool group's slice is its stimulus's (#273).</summary>
     private async Task<(int? Start, int? End)> ReadGroupSliceAsync(int groupId)
     {
         await using var db = await OpenAppDatabaseAsync();
         await using var cmd = new Microsoft.Data.SqlClient.SqlCommand(
-            "SELECT AudioStartMs, AudioEndMs FROM QuestionGroups WHERE GroupId = @id", db);
+            "SELECT AudioStartMs, AudioEndMs FROM Stimuli WHERE StimulusId = @id", db);
         cmd.Parameters.AddWithValue("@id", groupId);
         await using var reader = await cmd.ExecuteReaderAsync();
         return await reader.ReadAsync()

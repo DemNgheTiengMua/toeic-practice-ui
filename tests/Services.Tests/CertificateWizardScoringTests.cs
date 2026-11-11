@@ -80,7 +80,7 @@ public sealed class CertificateWizardScoringTests(DatabaseFixture database)
         {
             await using var db = DbContextFactory.Create(connectionString);
             var certService = new CertificateService(db);
-            var saved = await certService.SaveCertificateWizardAsync(ResearchWritingCertificate());
+            var saved = await certService.SaveCertificateWizardAsync(ReadingCertificateForPlacement());
 
             var skill = await db.Skills.SingleAsync(s => s.CertId == saved.CertId);
             var examId = await SeedPlacementExamAsync(db, saved.CertId, skill.SkillId);            var userId = await SeedLearnerAsync(db);
@@ -111,6 +111,15 @@ public sealed class CertificateWizardScoringTests(DatabaseFixture database)
 
     /// <summary>A one-question placement exam for the certificate the wizard just created, reusing
     /// the section the wizard already wrote so the composite unique key is not violated.</summary>
+    /// <summary>
+    /// A one-question placement exam for the certificate the wizard just created, reusing the section the
+    /// wizard already wrote so the composite unique key is not violated.
+    /// <para>
+    /// #272: the position is authored on the pool - an item, its version and a binding, because that is
+    /// the only content model left. The section must be objective: <c>CK_Items_Modality_RenderFormat</c>
+    /// refuses an mcq in a writing section, and the legacy rows this fixture used to write put one there.
+    /// </para>
+    /// </summary>
     private static async Task<int> SeedPlacementExamAsync(DataAccess.CompanionDbContext db, int certId, int skillId)
     {
         var section = await db.Sections.SingleAsync(s => s.SkillId == skillId);
@@ -129,42 +138,8 @@ public sealed class CertificateWizardScoringTests(DatabaseFixture database)
         db.Exams.Add(exam);
         await db.SaveChangesAsync();
 
-        // A question belongs to a group; the group carries its passage and audio.
-        var group = new BusinessObjects.Entities.QuestionGroup
-        {
-            ExamId = exam.ExamId,
-            SectionId = section.SectionId,
-            CertId = certId,
-            DisplayOrder = 1,
-            UnitNumber = 1,
-        };
-        db.QuestionGroups.Add(group);
-        await db.SaveChangesAsync();
-
-        var question = new BusinessObjects.Entities.Question
-        {
-            ExamId = exam.ExamId,
-            SectionId = section.SectionId,
-            SkillId = skillId,
-            GroupId = group.GroupId,
-            QuestionType = "mcq",
-            CefrLevel = CefrLevel.A2,
-            Stem = "Pick one.",
-            DisplayOrder = 1,
-        };
-        db.Questions.Add(question);
-        await db.SaveChangesAsync();
-
-        var option = new BusinessObjects.Entities.QuestionOption
-        {
-            QuestionId = question.QuestionId,
-            QuestionType = "mcq",
-            Label = "A",
-            Text = "Correct",
-            IsCorrect = true,
-        };
-        db.QuestionOptions.Add(option);
-        await db.SaveChangesAsync();
+        await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, certId, section.SectionId, "reading", "Pick one.", displayOrder: 1);
 
         // #259 / PRN-03: the wizard writes Certificate/Skill/Section/ScoreScale/ScoreBand, and a
         // placement is placed by a CUT-SCORE table. Before #259 this test passed only because the
@@ -211,6 +186,78 @@ public sealed class CertificateWizardScoringTests(DatabaseFixture database)
         await db.SaveChangesAsync();
         return user.UserId;
     }
+
+    /// <summary>
+    /// The same certificate, with a READING skill instead of a writing one.
+    /// <para>
+    /// #272: a placement must measure something synchronously to produce a band, and the pool refuses an
+    /// <c>mcq</c> in a writing section (<c>CK_Items_Modality_RenderFormat</c>). So the placement test needs
+    /// a certificate whose section can host an objective position. Everything the wizard writes -
+    /// scales, bands, a rubric criterion - is identical; only the modality differs.
+    /// </para>
+    /// </summary>
+    private static Contracts.SaveCertificateWizardRequest ReadingCertificateForPlacement() =>
+        new(
+            CertId: null,
+            Code: "DEMO_WIZ_R",
+            Name: "Demo Wizard Reading Certificate",
+            Description: null,
+            ScoreAggregationRule: "sum",
+            PresetCode: "custom",
+            IsActive: true,
+            Skills:
+            [
+                new Contracts.SaveSkillWizardDto(
+                    SkillId: null,
+                    Code: "COMP",
+                    Name: "Comprehension",
+                    Modality: Contracts.ModalityDto.Reading,
+                    DisplayOrder: 1,
+                    DurationMinutes: 60,
+                    Sections:
+                    [
+                        new Contracts.SaveSectionWizardDto(
+                            SectionId: null,
+                            Code: "COMP1",
+                            Name: "Comprehension 1",
+                            DisplayOrder: 1,
+                            ScoreWeight: 1.0m,
+                            NavigationMode: Contracts.NavigationModeDto.FullSandbox,
+                            TimerPolicyJson: null,
+                            LayoutType: Contracts.LayoutTypeDto.StandardVertical,
+                            OptionCount: 4,
+                            ClusterSize: 1,
+                            UnitCount: 1,
+                            HideOptionText: false,
+                            RequirePassage: false,
+                            RequireAudio: false,
+                            RequireImage: false,
+                            RequiredKeywordCount: 0,
+                            ExpectedQuestionCount: 10,
+                            AllowedComponentTypesJson: "[\"mcq\"]",
+                            ToolsConfigJson: null)
+                    ])
+            ],
+            MinScaledScore: 0,
+            MaxScaledScore: 50,
+            ScoreStep: 1,
+            Bands:
+            [
+                new Contracts.SaveScoreBandWizardDto(null, "FAIL", "Below passing", 0, 24, 1),
+                new Contracts.SaveScoreBandWizardDto(null, "PASS", "Passing", 25, 50, 2)
+            ],
+            Criteria:
+            [
+                new Contracts.SaveGradingCriterionWizardDto(
+                    null,
+                    "COMP",
+                    "TASK",
+                    "Task achievement",
+                    MaxScore: 5m,
+                    Weight: 1m,
+                    DisplayOrder: 1,
+                    RubricDescription: "5 = fully addresses the task; 1 = does not address it.")
+            ]);
 
     /// <summary>A certificate authored the way the ticket describes: two skills, a 0-50 step-1
     /// scale, continuous bands and a rubric criterion.</summary>

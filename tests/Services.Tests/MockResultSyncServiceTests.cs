@@ -77,22 +77,6 @@ public sealed class MockResultSyncServiceTests(DatabaseFixture database)
               (@cert, @list, @exam, 0, 5), (@cert, @list, @exam, 1, 400),
               (@cert, @read, @exam, 0, 5), (@cert, @read, @exam, 1, 350);
 
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secL, 1);
-            DECLARE @grpL INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-              VALUES (@grpL, @exam, @secL, @list, N'Listening Q1', 'A2', 'mcq', 1);
-            DECLARE @qL INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@qL, 'mcq', 'A', N'Right', 1), (@qL, 'mcq', 'B', N'Wrong', 0);
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 2);
-            DECLARE @grpR INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-              VALUES (@grpR, @exam, @secR, @read, N'Reading Q1', 'A2', 'mcq', 2);
-            DECLARE @qR INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@qR, 'mcq', 'A', N'Right', 1), (@qR, 'mcq', 'B', N'Wrong', 0);
-
             INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
               VALUES (@cert, 1, 0, N'test standard-setting study', '{cutTablePublishedAt:yyyy-MM-dd}');
 
@@ -130,8 +114,17 @@ public sealed class MockResultSyncServiceTests(DatabaseFixture database)
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var skills = await db.Skills.Where(s => s.CertId == cert.CertId).OrderBy(s => s.DisplayOrder).ToListAsync();
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).ToListAsync();
-        var options = await db.QuestionOptions.Where(o => o.IsCorrect).ToListAsync();
+        var sections = await db.Sections.Where(s => s.CertId == cert.CertId).OrderBy(s => s.DisplayOrder).ToListAsync();
+
+        // #269: the paper is authored on the pool, so the id a test addresses is the POSITION's ExamItemId
+        // and the option id is the one the sitting projection renders.
+        var listeningPosition = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, sections[0].SectionId, "listening", "Listening Q1",
+            displayOrder: 1, keyLabel: "A", level: "A2");
+        var readingPosition = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, sections[1].SectionId, "reading", "Reading Q1",
+            displayOrder: 2, keyLabel: "A", level: "A2");
+
         var userId = await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
 
         return (
@@ -139,10 +132,10 @@ public sealed class MockResultSyncServiceTests(DatabaseFixture database)
             skills[0].SkillId,
             skills[1].SkillId,
             exam.ExamId,
-            questions[0].QuestionId,
-            questions[1].QuestionId,
-            options.Single(o => o.QuestionId == questions[0].QuestionId).OptionId,
-            options.Single(o => o.QuestionId == questions[1].QuestionId).OptionId,
+            listeningPosition.ExamItemId,
+            readingPosition.ExamItemId,
+            await PoolFixture.OptionIdAsync(db, exam.ExamId, listeningPosition.ExamItemId, "A"),
+            await PoolFixture.OptionIdAsync(db, exam.ExamId, readingPosition.ExamItemId, "A"),
             userId);
     }
 

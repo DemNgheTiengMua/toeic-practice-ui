@@ -697,11 +697,20 @@ public sealed class MentorServiceTests(DatabaseFixture database)
               (@cert, N'AI Speaking Practice {certCode}', 'published', 20, 'speaking_practice', 1);
             DECLARE @exam INT = SCOPE_IDENTITY();
 
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec1, 1);
-            DECLARE @grp1 INT = SCOPE_IDENTITY();
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp1, @exam, @sec1, @sS, N'Read aloud text.', 'A2', 'free_response', 1);
+            -- #272: the position is a pool item with a productive version. Only its existence matters
+            -- here - the booking flow starts an attempt, which is what the test asserts.
+            INSERT INTO Topics (Modality, Code, Name)
+            SELECT 'speaking', 'S-DESC', N'Describing'
+            WHERE NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'speaking' AND Code = 'S-DESC');
+            INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, RenderFormat, ContentTier, LifecycleStatus)
+            VALUES ('speaking', (SELECT TopicId FROM Topics WHERE Modality = 'speaking' AND Code = 'S-DESC'),
+                    'A2', 'descriptive_monologue', 'free_response', 'demo', 'active');
+            DECLARE @item INT = SCOPE_IDENTITY();
+            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem)
+            VALUES (@item, 1, N'Read aloud text.');
+            DECLARE @ver INT = SCOPE_IDENTITY();
+            INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder, UnitNumber)
+            VALUES (@exam, @sec1, @cert, @ver, @item, 'speaking', 1, 1);
             """);
 
         await using var dbSetup = DbContextFactory.Create(database.ConnectionString);

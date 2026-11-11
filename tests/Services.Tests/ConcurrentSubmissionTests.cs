@@ -204,49 +204,12 @@ public sealed class ConcurrentSubmissionTests(DatabaseFixture database)
         db.Exams.Add(exam);
         await db.SaveChangesAsync();
 
-        var group = new BusinessObjects.Entities.QuestionGroup
-        {
-            ExamId = exam.ExamId,
-            SectionId = section.SectionId,
-            CertId = cert.CertId,
-            DisplayOrder = 1,
-            UnitNumber = 1,
-        };
-        db.QuestionGroups.Add(group);
-        await db.SaveChangesAsync();
-
-        var question = new BusinessObjects.Entities.Question
-        {
-            ExamId = exam.ExamId,
-            SectionId = section.SectionId,
-            SkillId = skill.SkillId,
-            GroupId = group.GroupId,
-            QuestionType = "mcq",
-            CefrLevel = CefrLevel.B1,
-            Stem = "What time does the depot open?",
-            DisplayOrder = 1,
-        };
-        db.Questions.Add(question);
-        await db.SaveChangesAsync();
-
-        var option = new BusinessObjects.Entities.QuestionOption
-        {
-            QuestionId = question.QuestionId,
-            QuestionType = "mcq",
-            Label = "A",
-            Text = "Six",
-            IsCorrect = true,
-        };
-        var wrong = new BusinessObjects.Entities.QuestionOption
-        {
-            QuestionId = question.QuestionId,
-            QuestionType = "mcq",
-            Label = "B",
-            Text = "Seven",
-            IsCorrect = false,
-        };
-        db.QuestionOptions.AddRange(option, wrong);
-        await db.SaveChangesAsync();
+        // #272: the paper's one position is a pool MCQ. The attempt and its answer are written by hand
+        // because submitting is the only thing left to race, so the answer records the position's
+        // ExamItemId and the label the sitting would have stored.
+        var position = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, section.SectionId, "reading",
+            "What time does the depot open?", displayOrder: 1);
 
         var role = new BusinessObjects.Entities.Role { Code = Unique("lrn"), Name = "Learner" };
         db.Roles.Add(role);

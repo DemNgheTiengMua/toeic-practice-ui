@@ -48,6 +48,13 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         return userId;
     }
 
+    /// <summary>
+    /// Two productive tasks on one writing-practice paper.
+    /// <para>
+    /// #272: the tasks are pool items whose versions carry the word window, and the ids the tests address
+    /// are their <c>ExamItemId</c>s. The W1 section override on the rubric criteria is unchanged.
+    /// </para>
+    /// </summary>
     private async Task<(int certId, int examId, int q1Id, int q2Id)> SeedWritingExamFixtureAsync(string certCode)
     {
         await database.SqlAsync($"""
@@ -79,29 +86,24 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
             -- Exam
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount) VALUES
               (@cert, N'Writing Practice {certCode}', 'published', 60, 'writing_practice', 2);
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            -- Question 1: Sentence from picture
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec1, 1);
-            DECLARE @grp1 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
-            VALUES (@grp1, @exam, @sec1, @sW, N'Write a sentence describing the picture.', 'A2', 'free_response', 5, 25, 1);
-            DECLARE @q1 INT = SCOPE_IDENTITY();
-
-            -- Question 2: Essay
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec2, 2);
-            DECLARE @grp2 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
-            VALUES (@grp2, @exam, @sec2, @sW, N'Write an essay giving your opinion on remote work.', 'B2', 'free_response', 30, 300, 2);
-            DECLARE @q2 INT = SCOPE_IDENTITY();
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).ToListAsync();
+        var section1 = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "W1");
+        var section2 = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "W2");
 
-        return (cert.CertId, exam.ExamId, questions[0].QuestionId, questions[1].QuestionId);
+        var q1 = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, section1.SectionId, "writing",
+            "Write a sentence describing the picture.", displayOrder: 1,
+            minWords: 5, maxWords: 25, level: "A2");
+        var q2 = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, section2.SectionId, "writing",
+            "Write an essay giving your opinion on remote work.", displayOrder: 1,
+            minWords: 30, maxWords: 300, level: "B2");
+
+        return (cert.CertId, exam.ExamId, q1.ExamItemId, q2.ExamItemId);
     }
 
     [Fact]
@@ -130,7 +132,7 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         await using var dbCheck = DbContextFactory.Create(database.ConnectionString);
         var scoresQ1 = await dbCheck.AiGradingScores
             .Include(s => s.AiGrading)
-            .Where(s => s.AiGrading.FreeResponse.AttemptId == info.AttemptId && s.AiGrading.FreeResponse.QuestionId == q1Id)
+            .Where(s => s.AiGrading.FreeResponse.AttemptId == info.AttemptId && s.AiGrading.FreeResponse.ExamItemId == q1Id)
             .ToListAsync();
 
         // Q1 section override MaxScore is 3.0, so 10.0 must be clamped to 3.0
@@ -161,8 +163,8 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         await writingService.SubmitAttemptAsync(userId, info.AttemptId);
 
         var freeResponses = await db.FreeResponses.Where(fr => fr.AttemptId == info.AttemptId).ToListAsync();
-        var fr1 = freeResponses.Single(r => r.QuestionId == q1Id);
-        var fr2 = freeResponses.Single(r => r.QuestionId == q2Id);
+        var fr1 = freeResponses.Single(r => r.ExamItemId == q1Id);
+        var fr2 = freeResponses.Single(r => r.ExamItemId == q2Id);
 
         var fakeGrader = new FakeAiGrader();
         var processor = new AiGradingProcessor(db, fakeGrader);
@@ -213,8 +215,8 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         Assert.True(processed >= 2);
 
         await using var dbCheck = DbContextFactory.Create(database.ConnectionString);
-        var g1 = await dbCheck.AiGradings.Include(g => g.FreeResponse).SingleAsync(g => g.FreeResponse.AttemptId == info.AttemptId && g.FreeResponse.QuestionId == q1Id);
-        var g2 = await dbCheck.AiGradings.Include(g => g.FreeResponse).SingleAsync(g => g.FreeResponse.AttemptId == info.AttemptId && g.FreeResponse.QuestionId == q2Id);
+        var g1 = await dbCheck.AiGradings.Include(g => g.FreeResponse).SingleAsync(g => g.FreeResponse.AttemptId == info.AttemptId && g.FreeResponse.ExamItemId == q1Id);
+        var g2 = await dbCheck.AiGradings.Include(g => g.FreeResponse).SingleAsync(g => g.FreeResponse.AttemptId == info.AttemptId && g.FreeResponse.ExamItemId == q2Id);
 
         Assert.Equal("failed", g1.Status);
         Assert.NotNull(g1.FailureReason);
@@ -247,7 +249,7 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
 
         var graded = await db.AiGradings
             .Include(g => g.FreeResponse)
-            .Where(g => g.FreeResponse.AttemptId == info.AttemptId && g.FreeResponse.QuestionId == q2Id)
+            .Where(g => g.FreeResponse.AttemptId == info.AttemptId && g.FreeResponse.ExamItemId == q2Id)
             .SingleAsync();
         Assert.Equal(2.5m, graded.OverallScaled);
 

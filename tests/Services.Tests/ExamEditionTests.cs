@@ -46,22 +46,10 @@ public sealed class ExamEditionTests(DatabaseFixture database)
     // ------------------------------------------------------------------ fixtures
 
     /// <summary>
-    /// <b>#269: this file's fixture stays on the legacy authoring service, and the reason is
-    /// production code rather than this fixture.</b> Every test here publishes the paper through
-    /// <see cref="AdminExamService.PublishExamAsync"/>, because that is the only door that freezes an
-    /// edition (<c>trg_Exams_PublishFreezesEdition</c>), and the edition is the whole subject of the
-    /// file. The readiness audit that gate runs counts a section's rendered positions from
-    /// <c>Questions</c> (<c>AdminExamService.Invariants.cs</c>: "What a section HOLDS is the number of
-    /// positions the sitting renders, and that is the legacy <c>Questions</c> count") and the ~26
-    /// authoring checks read <c>QuestionGroups → Questions → QuestionOptions</c>. So a paper authored
-    /// only on the pool currently reports zero positions, fails INV-1, and cannot be published through
-    /// the door this file exists to test. Measured: a pool-only paper audits
-    /// <c>CanPublish=false</c> with "section declares 1 item(s) but holds 0".
+    /// A two-skill certificate with two sections, each declaring two positions.
     /// <para>
-    /// Migrating this fixture before those readers move onto the roster would turn twelve green tests
-    /// red for a reason this ticket does not own, and would prove nothing about editions because no
-    /// edition could be frozen. The fixture stays legacy until the readiness audit reads the roster;
-    /// #269 deletes it with the three tables.
+    /// Both skills declare a duration because INV-5 sums the <em>served</em> skills' durations against the
+    /// paper's — 20 + 40 = the 60 minutes every paper here declares.
     /// </para>
     /// </summary>
     private async Task<(int CertId, int FirstSkillId, int SecondSkillId, int FirstSectionId, int SecondSectionId)>
@@ -95,47 +83,78 @@ public sealed class ExamEditionTests(DatabaseFixture database)
         return (cert.CertId, skills[0].SkillId, skills[1].SkillId, sections[0].SectionId, sections[1].SectionId);
     }
 
-    private static CreateQuestionRequest Question(int groupId, string stem) => new(
-        groupId,
-        stem,
-        QuestionTypeDto.Mcq,
-        Options:
-        [
-            new AdminQuestionOptionInput(null, "A", "Correct", true, null),
-            new AdminQuestionOptionInput(null, "B", "Wrong", false, null),
-        ],
-        CefrLevelCode: "B1");
-
     /// <summary>
-    /// A two-skill paper with two questions in each section, published through the real publish door
-    /// so the edition freeze runs. Returns the exam and the questions in sitting order.
+    /// A two-skill paper with two positions in each section, published through the real publish door so
+    /// the edition freeze runs. Returns the exam and its roster positions in sitting order.
     /// <para>
-    /// #269: authored through <c>CreateQuestionGroupAsync</c> / <c>CreateQuestionAsync</c>, which are
-    /// the legacy authoring methods. Those methods still exist and are the admin editor's authoring
-    /// API, and the publish gate this fixture must clear reads the rows they write. See
-    /// <see cref="SeedCertificateAsync"/> for why migrating it is blocked on production code.
+    /// <b>#272: authored on the pool, and that is now possible.</b> This fixture used to call
+    /// <c>CreateQuestionGroupAsync</c>/<c>CreateQuestionAsync</c> because the readiness audit counted a
+    /// section's positions from <c>Questions</c> alone: a pool-only paper reported "declares 1 item(s)
+    /// but holds 0" and could not be published, so no edition could be frozen for these tests to
+    /// inspect. #522315f made the audit and INV-1 read the roster, and the paper below clears all six
+    /// invariants on the pool alone.
+    /// </para>
+    /// <para>
+    /// INV-3 needs a human clearance naming each item, and ADM-02's trigger refuses one made by the
+    /// batch's own uploader or by the item's last writer — so the fixture needs a second, independent
+    /// reviewer. That is the rule working, not a setup inconvenience.
     /// </para>
     /// </summary>
-    private async Task<(int ExamId, List<int> QuestionIds)> SeedPublishedExamAsync(
+    private async Task<(int ExamId, List<int> PositionIds)> SeedPublishedExamAsync(
         AdminExamService service, int certId, int firstSectionId, int secondSectionId, string name)
     {
         var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
             certId, name, 60, ExamPurposeDto.Mock, QuestionCount: 4));
 
-        var first = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(firstSectionId));
-        var second = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secondSectionId));
-        var questions = new List<int>
+        await using var db = Db();
+
+        // A second account, because the first one uploads the batch the clearance is about.
+        await database.SqlAsync($"""
+            IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'reviewer')
+              INSERT INTO Roles (Code, Name) VALUES ('reviewer', N'Reviewer');
+            INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'reviewer'), 'uploader-{Guid.NewGuid():N}@edition.local', 0x01, N'Uploader');
+            DECLARE @u INT = SCOPE_IDENTITY();
+            INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'reviewer'), 'reviewer-{Guid.NewGuid():N}@edition.local', 0x01, N'Reviewer');
+            DECLARE @rev INT = SCOPE_IDENTITY();
+            INSERT INTO ImportBatches (CertId, SourceName, Status, UploadedBy)
+            VALUES ({certId}, N'edition-{Guid.NewGuid():N}.json', 'done', @u);
+            """);
+
+        var positions = new List<PoolFixture.Position>
         {
-            (await service.CreateQuestionAsync(exam.ExamId, Question(first.GroupId, "First skill one"))).QuestionId,
-            (await service.CreateQuestionAsync(exam.ExamId, Question(first.GroupId, "First skill two"))).QuestionId,
-            (await service.CreateQuestionAsync(exam.ExamId, Question(second.GroupId, "Second skill one"))).QuestionId,
-            (await service.CreateQuestionAsync(exam.ExamId, Question(second.GroupId, "Second skill two"))).QuestionId,
+            await PoolFixture.AddMcqAsync(db, exam.ExamId, certId, firstSectionId, "reading", "First skill one", displayOrder: 1),
+            await PoolFixture.AddMcqAsync(db, exam.ExamId, certId, firstSectionId, "reading", "First skill two", displayOrder: 2),
+            await PoolFixture.AddMcqAsync(db, exam.ExamId, certId, secondSectionId, "reading", "Second skill one", displayOrder: 1),
+            await PoolFixture.AddMcqAsync(db, exam.ExamId, certId, secondSectionId, "reading", "Second skill two", displayOrder: 2),
         };
+
+        var batch = await db.ImportBatches.AsNoTracking()
+            .Where(b => b.CertId == certId).OrderByDescending(b => b.BatchId).FirstAsync();
+        var reviewerId = await db.Users.Where(u => u.Email.StartsWith("reviewer-")).OrderByDescending(u => u.UserId)
+            .Select(u => u.UserId).FirstAsync();
+
+        foreach (var position in positions)
+        {
+            db.ImportLogs.Add(new BusinessObjects.Entities.ImportLog
+            {
+                BatchId = batch.BatchId, Level = "info", Message = "accepted by the edition fixture",
+                ItemId = position.ItemId, Attempt = 1,
+            });
+            db.ReviewSampleDecisions.Add(new BusinessObjects.Entities.ReviewSampleDecision
+            {
+                BatchId = batch.BatchId, ItemId = position.ItemId, ActorUserId = reviewerId,
+                Decision = "clear", DecidedAt = DateTimeOffset.UtcNow,
+            });
+        }
+
+        await db.SaveChangesAsync();
 
         // Published through the service, so trg_Exams_PublishFreezesEdition writes the edition. The
         // six invariants are checked by the gate; this paper is an ordinary one and clears them.
         await service.PublishExamAsync(exam.ExamId);
-        return (exam.ExamId, questions);
+        return (exam.ExamId, positions.Select(p => p.ExamItemId).ToList());
     }
 
     /// <summary>A learner id, created or reused, for an attempt.</summary>
@@ -274,46 +293,41 @@ public sealed class ExamEditionTests(DatabaseFixture database)
     [Fact]
     public async Task A_fork_copies_the_paper_and_leaves_the_original_locked()
     {
-        var (certId, _, _, firstSectionId, secondSectionId) = await SeedCertificateAsync(CertCode("EDFORK_"));
+        var (certId, firstSkillId, _, firstSectionId, secondSectionId) = await SeedCertificateAsync(CertCode("EDFORK_"));
         await using var db = Db();
         var service = CreateService(db);
 
-        var (examId, sourceQuestions) = await SeedPublishedExamAsync(
+        var (examId, sourcePositions) = await SeedPublishedExamAsync(
             service, certId, firstSectionId, secondSectionId, Unique("Forked "));
         var userId = await LearnerAsync();
         await FinishedAttemptAsync(userId, examId, certId, 60, "B1");
 
         var fork = await service.ForkEditionAsync(examId, new ForkExamEditionRequest(Unique("Edition 2 ")));
 
-        // The fork is a complete paper: a paper row with no questions would satisfy "a new edition
-        // exists" and be unsittable.
+        // The fork is a complete paper: a paper row with no positions would satisfy "a new edition
+        // exists" and be unsittable. A position is a roster row, so the roster is where completeness is
+        // read - the three legacy tables hold nothing for either paper.
         Assert.NotEqual(examId, fork.ExamId);
         Assert.Equal(2, fork.EditionNumber);
-        Assert.Equal(4, fork.QuestionCount);
-        Assert.Equal(4, await db.Questions.CountAsync(q => q.ExamId == fork.ExamId));
+        Assert.Equal(4, fork.BindingCount);
+        Assert.Equal(4, await db.ExamItems.CountAsync(b => b.ExamId == fork.ExamId));
         Assert.Equal(
-            await db.QuestionGroups.CountAsync(g => g.ExamId == examId),
-            await db.QuestionGroups.CountAsync(g => g.ExamId == fork.ExamId));
+            await db.ExamItems.CountAsync(b => b.ExamId == examId),
+            await db.ExamItems.CountAsync(b => b.ExamId == fork.ExamId));
 
-        // The fork accepts the repair...
-        var forkGroup = await db.QuestionGroups.AsNoTracking()
-            .Where(g => g.ExamId == fork.ExamId && g.SectionId == firstSectionId)
-            .FirstAsync();
-        var added = await service.CreateQuestionAsync(fork.ExamId, Question(forkGroup.GroupId, "Repaired question"));
-        Assert.Equal("Repaired question", added.Stem);
+        // The fork accepts the repair - a new position bound onto the same paper...
+        var versionId = await SeedActiveVersionAsync(db, firstSkillId);
+        var added = await service.BindItemAsync(fork.ExamId, new BindPoolItemRequest(firstSectionId, versionId, 3));
+        Assert.Equal(3, added.DisplayOrder);
 
         // ...and the live edition still refuses it. Both directions matter: a fork that copied rows
         // but left the original editable would pass "the fork accepts the repair" alone.
-        var liveGroup = await db.QuestionGroups.AsNoTracking()
-            .Where(g => g.ExamId == examId && g.SectionId == firstSectionId)
-            .FirstAsync();
         var refused = await Assert.ThrowsAsync<AdminExamException>(() =>
-            service.CreateQuestionAsync(examId, Question(liveGroup.GroupId, "Should never land")));
+            service.BindItemAsync(examId, new BindPoolItemRequest(firstSectionId, versionId, 3)));
         Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, refused.Code);
 
-        // And the source paper's own questions are untouched by the fork's edit.
-        Assert.Equal(4, await db.Questions.CountAsync(q => q.ExamId == examId));
-        Assert.Equal(sourceQuestions.Count, await db.Questions.CountAsync(q => q.ExamId == examId));
+        // And the source paper's own roster is untouched by the fork's edit.
+        Assert.Equal(sourcePositions.Count, await db.ExamItems.CountAsync(b => b.ExamId == examId));
     }
 
     [Fact]
@@ -480,9 +494,11 @@ public sealed class ExamEditionTests(DatabaseFixture database)
 
         // A fork happens while the sitting is in progress. Nothing about the sitting may move.
         var fork = await service.ForkEditionAsync(examId, new ForkExamEditionRequest(Unique("Mid 2 ")));
-        var forkQuestionIds = await db.Questions.AsNoTracking()
-            .Where(q => q.ExamId == fork.ExamId)
-            .Select(q => q.QuestionId)
+        // A pool paper's positions ARE roster rows, and the id a sitting addresses is the position's id
+        // (#250) - so the fork's own ExamItemIds are what must not have leaked in.
+        var forkPositionIds = await db.ExamItems.AsNoTracking()
+            .Where(b => b.ExamId == fork.ExamId)
+            .Select(b => b.ExamItemId)
             .ToListAsync();
 
         var after = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, null);
@@ -492,8 +508,8 @@ public sealed class ExamEditionTests(DatabaseFixture database)
         Assert.Equal(
             before.Questions!.Select(q => q.QuestionId).ToList(),
             after.Questions!.Select(q => q.QuestionId).ToList());
-        // The fork's questions are new rows, so their ids cannot have leaked into the sitting.
-        Assert.Empty(after.Questions.Select(q => q.QuestionId).Intersect(forkQuestionIds));
+        // The fork's positions are new rows, so their ids cannot have leaked into the sitting.
+        Assert.Empty(after.Questions.Select(q => q.QuestionId).Intersect(forkPositionIds));
     }
 
     [Fact]

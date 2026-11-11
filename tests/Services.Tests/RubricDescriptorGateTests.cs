@@ -45,8 +45,12 @@ public sealed class RubricDescriptorGateTests(DatabaseFixture database)
 
     /// <summary>
     /// A writing-practice exam whose one criterion is <paramref name="code"/> with
-    /// <paramref name="descriptorSqlGrid"/> rows of grid. An empty grid means "none authored", which is
-    /// the legacy shape.
+    /// <paramref name="gridRows"/> rows of grid. An empty grid means "none authored", which is the legacy
+    /// shape.
+    /// <para>
+    /// #272: the task is a pool item with a productive version; <c>QuestionId</c> in the tuple is its
+    /// <c>ExamItemId</c>, which is the id the writing service addresses a position by.
+    /// </para>
     /// </summary>
     private async Task<(int CertId, int ExamId, int QuestionId, int CriterionId)> SeedAsync(
         string certCode, string code, string? rubricDescription, int gridRows, bool completeText = true,
@@ -60,7 +64,6 @@ public sealed class RubricDescriptorGateTests(DatabaseFixture database)
             DECLARE @sW INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'WRIT');
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder)
             VALUES (@sW, @cert, 'writing', 'W1', N'Essay', 1, 1);
-            DECLARE @sec INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'W1');
 
             INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder)
             VALUES (@cert, @sW, '{code}', N'{code} criterion',
@@ -72,11 +75,6 @@ public sealed class RubricDescriptorGateTests(DatabaseFixture database)
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount)
             VALUES (@cert, N'Writing Practice {certCode}', 'published', 60, 'writing_practice', 1);
-            DECLARE @exam INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @sW, N'Write about your week.', 'A2', 'free_response', 5, 200, 1);
             """);
 
         if (gridRows > 0)
@@ -128,19 +126,30 @@ public sealed class RubricDescriptorGateTests(DatabaseFixture database)
             await using var check = DbContextFactory.Create(database.ConnectionString);
             var cert = await check.Certificates.SingleAsync(c => c.Code == certCode);
             var exam = await check.Exams.SingleAsync(e => e.CertId == cert.CertId);
-            var question = await check.Questions.SingleAsync(q => q.ExamId == exam.ExamId);
-            return (cert.CertId, exam.ExamId, question.QuestionId, criterionId);
+            var questionId = await AddTaskAsync(check, cert.CertId, exam.ExamId);
+            return (cert.CertId, exam.ExamId, questionId, criterionId);
         }
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var c2 = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var e2 = await db.Exams.SingleAsync(e => e.CertId == c2.CertId);
-        var q2 = await db.Questions.SingleAsync(q => q.ExamId == e2.ExamId);
+        var q2Id = await AddTaskAsync(db, c2.CertId, e2.ExamId);
         var crit2 = await db.GradingCriteria
             .Where(c => c.Cert.Code == certCode)
             .OrderBy(c => c.DisplayOrder)
             .FirstAsync();
-        return (c2.CertId, e2.ExamId, q2.QuestionId, crit2.CriterionId);
+        return (c2.CertId, e2.ExamId, q2Id, crit2.CriterionId);
+    }
+
+    /// <summary>The paper's one productive writing position, authored on the pool (#272).</summary>
+    private static async Task<int> AddTaskAsync(
+        DataAccess.CompanionDbContext db, int certId, int examId)
+    {
+        var section = await db.Sections.SingleAsync(s => s.CertId == certId && s.Code == "W1");
+        var task = await PoolFixture.AddProductiveAsync(
+            db, examId, certId, section.SectionId, "writing", "Write about your week.",
+            displayOrder: 1, minWords: 5, maxWords: 200, level: "A2");
+        return task.ExamItemId;
     }
 
     private async Task<int> SeedLearnerAsync(string certCode)

@@ -121,6 +121,19 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
 
         // Write the first task and move on: the sitting confirms leaving the question group, saves
         // the essay, then opens the second task without a reload.
+        //
+        // KNOWN BLOCKER (#272, not test debt): the group-loss dialog never fires on a pool paper, so the
+        // two assertions below fail. `PlacementTakeViewModel.LeavingLockedPartConfirmation`
+        // (src/WebMVC/ViewModels/Placement/PlacementTakeViewModel.cs:105) only confirms when
+        // `next.GroupId != current.GroupId`, and a pool position's GroupId is its item's stimulus id
+        // (`AttemptEngine.Sitting.Roster.cs:166`). docs/seed-pool-native.sql gives ALL 32 pooling items
+        // stimulus 20 (one shared placeholder image), so exam 13's W2 and W3 positions - ExamItemId 85
+        // and 86, one group per writing section in the legacy seed - both report GroupId 20 and read as
+        // the SAME group. The pool has no per-writing-task stimulus to separate them. The legacy
+        // benchmark seed gave each task its own QuestionGroup
+        // (docs/seed-diagnostic-benchmark.sql:1105 and :1148), which is the shape a pool seed has to
+        // reproduce before this boundary can exist again. The assertions are left intact: the group
+        // lock is the subject of the test, and removing them would hide the defect.
         var dialogs = new List<string>();
         Page.Dialog += (_, dialog) => dialogs.Add(dialog.Message);
         await sitting.Locator("#writing-editor").FillAsync("An essay for the first writing task.");
@@ -141,8 +154,8 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
         essay.CommandText = """
             SELECT f.ResponseText FROM FreeResponses f
             JOIN PlacementTests p ON p.AttemptId = f.AttemptId
-            JOIN Questions q ON q.QuestionId = f.QuestionId
-            JOIN Sections s ON s.SectionId = q.SectionId
+            JOIN ExamItems i ON i.ExamItemId = f.ExamItemId
+            JOIN Sections s ON s.SectionId = i.SectionId
             WHERE p.PlacementId = @placementId AND s.Code = 'W2';
             """;
         essay.Parameters.AddWithValue("@placementId", int.Parse(placementId));
@@ -154,6 +167,14 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
     /// and its first Reading one. Looked up rather than hard-coded: #156 replaced the arrangement and a
     /// reseed may move the ids. Skills are read from the section's skill, not from a section code, so
     /// P1–P4 are Listening and P5–P7 are Reading by the seed's own definition.
+    /// <para>
+    /// #272: the paper is the pool roster (<c>ExamItems</c>), and the number these turn into is the
+    /// sitting's own - <c>AttemptEngine.Sitting.cs:352</c> reads <c>?q=N</c> as index <c>N-1</c> of the
+    /// list ordered by skill, section, then position <c>DisplayOrder</c>
+    /// (<c>AttemptEngine.Sitting.Roster.cs:86</c>). <c>Questions.DisplayOrder</c> happened to be a global
+    /// number; <c>ExamItems.DisplayOrder</c> restarts inside each section, so the ordering is turned into
+    /// a <c>ROW_NUMBER</c> rather than read off the column.
+    /// </para>
     /// </summary>
     private static async Task<(int ExamId, int ListeningLast, int ReadingFirst)> DiagnosticPlacementExamAsync()
     {
@@ -172,13 +193,19 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
 
         await using var bounds = connection.CreateCommand();
         bounds.CommandText = """
+            WITH sitting AS (
+                SELECT
+                    sk.Code AS SkillCode,
+                    CAST(ROW_NUMBER() OVER (ORDER BY sk.DisplayOrder, s.DisplayOrder, p.DisplayOrder) AS INT) AS QuestionNumber
+                FROM ExamItems p
+                JOIN Sections s ON s.SectionId = p.SectionId
+                JOIN Skills sk ON sk.SkillId = s.SkillId
+                WHERE p.ExamId = @examId
+            )
             SELECT
-                MAX(CASE WHEN sk.Code = 'LIST' THEN q.DisplayOrder END),
-                MIN(CASE WHEN sk.Code = 'READ' THEN q.DisplayOrder END)
-            FROM Questions q
-            JOIN Sections s ON s.SectionId = q.SectionId
-            JOIN Skills sk ON sk.SkillId = s.SkillId
-            WHERE q.ExamId = @examId;
+                MAX(CASE WHEN SkillCode = 'LIST' THEN QuestionNumber END),
+                MIN(CASE WHEN SkillCode = 'READ' THEN QuestionNumber END)
+            FROM sitting;
             """;
         bounds.Parameters.AddWithValue("@examId", examId);
         await using var reader = await bounds.ExecuteReaderAsync();
@@ -191,32 +218,39 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
     /// <summary>
     /// The seeded placement exam that carries two writing tasks, with their display orders. The
     /// recommended diagnostic above is Listening+Reading only; the group-lock boundary lives on the
-    /// larger benchmark.
+    /// larger benchmark. Same sitting numbering as above (#272).
     /// </summary>
     private static async Task<(int ExamId, int W2, int W3, int ReadingFirst)> WritingBenchmarkAsync()
     {
         await using var connection = await OpenAppDatabaseAsync();
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT TOP (1) q.ExamId
-            FROM Questions q
-            JOIN Sections s ON s.SectionId = q.SectionId
+            SELECT TOP (1) p.ExamId
+            FROM ExamItems p
+            JOIN Sections s ON s.SectionId = p.SectionId
             JOIN Certificates c ON c.CertId = s.CertId
             WHERE c.Code = 'TOEIC' AND s.Code = 'W3'
-            GROUP BY q.ExamId
-            ORDER BY q.ExamId;
+            GROUP BY p.ExamId
+            ORDER BY p.ExamId;
             """;
         var examId = Convert.ToInt32(await command.ExecuteScalarAsync());
         Assert.That(examId, Is.GreaterThan(0), "The demo seed must contain a TOEIC placement exam with writing tasks.");
 
         await using var orders = connection.CreateCommand();
         orders.CommandText = """
-            SELECT s.Code, MIN(q.DisplayOrder)
-            FROM Questions q
-            JOIN Sections s ON s.SectionId = q.SectionId
-            JOIN Skills sk ON sk.SkillId = s.SkillId
-            WHERE q.ExamId = @examId AND s.Code IN ('W2', 'W3')
-            GROUP BY s.Code;
+            WITH sitting AS (
+                SELECT
+                    s.Code AS SectionCode,
+                    CAST(ROW_NUMBER() OVER (ORDER BY sk.DisplayOrder, s.DisplayOrder, p.DisplayOrder) AS INT) AS QuestionNumber
+                FROM ExamItems p
+                JOIN Sections s ON s.SectionId = p.SectionId
+                JOIN Skills sk ON sk.SkillId = s.SkillId
+                WHERE p.ExamId = @examId
+            )
+            SELECT SectionCode, MIN(QuestionNumber)
+            FROM sitting
+            WHERE SectionCode IN ('W2', 'W3')
+            GROUP BY SectionCode;
             """;
         orders.Parameters.AddWithValue("@examId", examId);
         var byCode = new Dictionary<string, int>();
@@ -230,11 +264,16 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
 
         await using var reading = connection.CreateCommand();
         reading.CommandText = """
-            SELECT MIN(q.DisplayOrder)
-            FROM Questions q
-            JOIN Sections s ON s.SectionId = q.SectionId
-            JOIN Skills sk ON sk.SkillId = s.SkillId
-            WHERE q.ExamId = @examId AND sk.Code = 'READ';
+            WITH sitting AS (
+                SELECT
+                    sk.Code AS SkillCode,
+                    CAST(ROW_NUMBER() OVER (ORDER BY sk.DisplayOrder, s.DisplayOrder, p.DisplayOrder) AS INT) AS QuestionNumber
+                FROM ExamItems p
+                JOIN Sections s ON s.SectionId = p.SectionId
+                JOIN Skills sk ON sk.SkillId = s.SkillId
+                WHERE p.ExamId = @examId
+            )
+            SELECT MIN(QuestionNumber) FROM sitting WHERE SkillCode = 'READ';
             """;
         reading.Parameters.AddWithValue("@examId", examId);
         var readingFirst = Convert.ToInt32(await reading.ExecuteScalarAsync());

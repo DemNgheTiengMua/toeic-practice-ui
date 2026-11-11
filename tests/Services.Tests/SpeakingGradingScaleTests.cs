@@ -74,10 +74,24 @@ public sealed class SpeakingGradingScaleTests(DatabaseFixture database)
     /// </summary>
     private async Task<(int CertId, int ExamId, int ScriptQuestionId, int PictureQuestionId)> SeedAsync(
         string certCode, (int Min, int Max, int Step)? skillScale, params (string Code, int Min, int Max)[] bands) =>
-        await SeedAsync(certCode, "sum", skillScale, bands);
+        await SeedPaperAsync(certCode, "sum", skillScale, bands);
 
     private async Task<(int CertId, int ExamId, int ScriptQuestionId, int PictureQuestionId)> SeedAsync(
-        string certCode, string scoreAggregationRule, (int Min, int Max, int Step)? skillScale, params (string Code, int Min, int Max)[] bands)
+        string certCode, string scoreAggregationRule, (int Min, int Max, int Step)? skillScale, params (string Code, int Min, int Max)[] bands) =>
+        await SeedPaperAsync(certCode, scoreAggregationRule, skillScale, bands);
+
+    /// <summary>
+    /// Two speaking tasks on one practice paper: a scripted read-aloud and a picture description.
+    /// <para>
+    /// #272: both are pool items. The script is a <c>ItemVersion</c> fact (ReferenceText/ReferenceKind);
+    /// the picture is a <c>Stimulus</c> fact, because on the pool an image belongs to the passage/context
+    /// block its positions share rather than to a question-group row.
+    /// </para>
+    /// </summary>
+    private async Task<(int CertId, int ExamId, int ScriptQuestionId, int PictureQuestionId)> SeedPaperAsync(
+        string certCode, string scoreAggregationRule, (int Min, int Max, int Step)? skillScale,
+        (string Code, int Min, int Max)[] bands,
+        string? pictureReferenceText = null, string? pictureReferenceKind = null)
     {
         var scale = skillScale is (int smin, int smax, int sstep) ? $"{smin}, {smax}, {sstep}" : "NULL, NULL, NULL";
         var bandSql = bands.Length == 0
@@ -96,8 +110,6 @@ public sealed class SpeakingGradingScaleTests(DatabaseFixture database)
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
               (@sS, @cert, 'speaking', 'S1', N'Read aloud', 1, 1),
               (@sS, @cert, 'speaking', 'S2', N'Describe picture', 1, 2);
-            DECLARE @sec1 INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'S1');
-            DECLARE @sec2 INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'S2');
 
             INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
               (@cert, @sS, 'PRON', N'Pronunciation', 3.0, 1.0, 1),
@@ -107,26 +119,34 @@ public sealed class SpeakingGradingScaleTests(DatabaseFixture database)
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount) VALUES
               (@cert, N'Speaking Practice {certCode}', 'published', 20, 'speaking_practice', 2);
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec1, 1);
-            DECLARE @grp1 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder, SampleAnswerOrImageDesc, ReferenceKind)
-            VALUES (@grp1, @exam, @sec1, @sS, N'Read the announcement aloud.', 'A2', 'free_response', 1,
-                    N'Attention all shoppers. The sale ends today at 9:00 PM.', 'script');
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ImagePath, ImageAlt)
-            VALUES (@exam, @cert, @sec2, 2, '/img/sample.jpg', N'Office setting');
-            DECLARE @grp2 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp2, @exam, @sec2, @sS, N'Describe what you see in the picture.', 'B1', 'free_response', 2);
             """);
 
+        // #272: the two tasks are pool items. A task's reference is a fact about its VERSION
+        // (ReferenceText/ReferenceKind), and the picture belongs to the STIMULUS the second position
+        // shares - which is the same split the group/question columns used to carry.
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).ToListAsync();
-        return (cert.CertId, exam.ExamId, questions[0].QuestionId, questions[1].QuestionId);
+        var section1 = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "S1");
+        var section2 = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "S2");
+
+        var scripted = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, section1.SectionId, "speaking", "Read the announcement aloud.",
+            displayOrder: 1, level: "A2",
+            referenceText: "Attention all shoppers. The sale ends today at 9:00 PM.",
+            referenceKind: "script");
+        var picture = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, section2.SectionId, "speaking", "Describe what you see in the picture.",
+            displayOrder: 1, level: "B1",
+            referenceText: pictureReferenceText, referenceKind: pictureReferenceKind);
+
+        await database.SqlAsync($"""
+            INSERT INTO Stimuli (CefrLevel, DomainContext, ImagePath, ImageAlt, DisplayOrder)
+            VALUES ('B1', 'general', '/img/sample.jpg', N'Office setting', 1);
+            UPDATE Items SET StimulusId = SCOPE_IDENTITY() WHERE ItemId = {picture.ItemId};
+            """);
+
+        return (cert.CertId, exam.ExamId, scripted.ExamItemId, picture.ExamItemId);
     }
 
     private async Task<int> SeedLearnerAsync(string certCode, int credits = 3)
@@ -391,11 +411,14 @@ public sealed class SpeakingGradingScaleTests(DatabaseFixture database)
         var (_, examId, scriptQuestionId, _) = await SeedAsync(certCode, null, ("B1", 0, 50));
         var userId = await SeedLearnerAsync(certCode);
 
-        // Give the Read Aloud question's group a picture — a logo, a chart, a photo. Nothing about the
-        // question's own text changes: it is still the words to read.
+        // Give the Read Aloud task's stimulus a picture — a logo, a chart, a photo. Nothing about the
+        // task's own text changes: it is still the words to read. #272: a pool task shares its stimulus
+        // with the other positions in its block, so this is the equivalent of the old group image.
         await database.SqlAsync($"""
-            UPDATE QuestionGroups SET ImagePath = '/img/logo.svg', ImageAlt = N'Company logo'
-            WHERE GroupId = (SELECT GroupId FROM Questions WHERE QuestionId = {scriptQuestionId});
+            INSERT INTO Stimuli (CefrLevel, DomainContext, ImagePath, ImageAlt, DisplayOrder)
+            VALUES ('A2', 'general', '/img/logo.svg', N'Company logo', 1);
+            UPDATE Items SET StimulusId = SCOPE_IDENTITY()
+            WHERE ItemId = (SELECT ItemId FROM ExamItems WHERE ExamItemId = {scriptQuestionId});
             """);
 
         var store = TempStore();
@@ -421,21 +444,21 @@ public sealed class SpeakingGradingScaleTests(DatabaseFixture database)
 
     /// <summary>
     /// #152 finding 4, the other direction: a description of the picture is context for relevance,
-    /// not something to read. Its group's picture is what makes it a description — but the *kind*
-    /// still comes from the question, because a group image cannot describe itself.
+    /// not something to read. Its stimulus's picture is what makes it a description — but the *kind*
+    /// still comes from the task's own version, because an image cannot describe itself.
+    /// <para>
+    /// #272: the reference is authored with the version, because <c>trg_ItemVersions_ScoredFieldsImmutable</c>
+    /// refuses an in-place move of it - the copy-on-write rule (CNT-43).
+    /// </para>
     /// </summary>
     [Fact]
     public async Task A_picture_description_is_prompt_context_and_never_a_pronunciation_reference()
     {
         var certCode = Unique("DESC");
-        var (_, examId, _, pictureQuestionId) = await SeedAsync(certCode, null, ("B1", 0, 50));
+        var (_, examId, _, pictureQuestionId) = await SeedPaperAsync(
+            certCode, "sum", null, [("B1", 0, 50)],
+            pictureReferenceText: "Two colleagues are talking across a desk.", pictureReferenceKind: "image_desc");
         var userId = await SeedLearnerAsync(certCode);
-
-        await database.SqlAsync($"""
-            UPDATE Questions
-            SET SampleAnswerOrImageDesc = N'Two colleagues are talking across a desk.', ReferenceKind = 'image_desc'
-            WHERE QuestionId = {pictureQuestionId};
-            """);
 
         var store = TempStore();
         var provider = new StubProvider(HeardFine);

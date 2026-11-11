@@ -651,7 +651,9 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
 
         // =========================================================================
         // SEAM 5: Practice Drilling & Weakness Analysis Alignment (#119)
-        // Drilling non-MCQ items, verifying vw_UserCategoryAccuracy & vw_UserSectionAccuracyAll
+        // Drilling non-MCQ items, verifying vw_UserTopicAccuracy & vw_UserSectionAccuracyAll
+        // (#271: the category view this seam used to check is retired; these answers are legacy, so
+        // the topic view correctly reports no cell for them - see the assertion below.)
         // =========================================================================
         await using (var dbPractice = DbContextFactory.Create(database.ConnectionString))
         {
