@@ -1,110 +1,118 @@
-﻿{
-  "version": "1.0",
-  "exam": {
-    "title": "TOEIC Listening Sample (Part 1 Photograph & Part 2 Question-Response)",
-    "purpose": "mock",
-    "durationMinutes": 30,
-    "sourceName": "Sample pack â€” listening",
-    "description": null
-  },
-  "sections": [
-    {
-      "sectionCode": "P1",
-      "groups": [
-        {
-          "passage": null,
-          "audioFile": "media/part1-photo-01.wav",
-          "audioStartMs": null,
-          "audioEndMs": null,
-          "imageFile": "media/part1-photo-01.jpg",
-          "imageAlt": "A person writing notes in a notebook at an office desk.",
-          "transcript": "(A) He is walking down the hallway. (B) He is writing in a notebook. (C) He is driving a vehicle. (D) He is closing a window.",
-          "displayOrder": 1,
-          "questions": [
-            {
-              "stem": "Look at the photograph and choose the statement that best describes what you see.",
-              "cefrLevel": "A2",
-              "questionType": "mcq",
-              "categoryCode": "listening_photo",
-              "explanation": "Statement (B) accurately describes the action shown in the photo.",
-              "hint": "Focus on the main subject's hands and activity.",
-              "displayOrder": 1,
-              "options": [
-                {
-                  "label": "A",
-                  "text": "(A) He is walking down the hallway.",
-                  "isCorrect": false,
-                  "rationale": "Incorrect action; the person is seated at a desk."
-                },
-                {
-                  "label": "B",
-                  "text": "(B) He is writing in a notebook.",
-                  "isCorrect": true,
-                  "rationale": "Directly corresponds to the action depicted in the photograph."
-                },
-                {
-                  "label": "C",
-                  "text": "(C) He is driving a vehicle.",
-                  "isCorrect": false,
-                  "rationale": "Incorrect setting and action."
-                },
-                {
-                  "label": "D",
-                  "text": "(D) He is closing a window.",
-                  "isCorrect": false,
-                  "rationale": "No window interaction is taking place."
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "sectionCode": "P2",
-      "groups": [
-        {
-          "passage": null,
-          "audioFile": "media/part2-question-01.wav",
-          "audioStartMs": null,
-          "audioEndMs": null,
-          "imageFile": null,
-          "imageAlt": null,
-          "transcript": "Where did you leave the contract files? (A) On Mr. Davis's desk. (B) Yes, yesterday morning. (C) It was signed by both parties.",
-          "displayOrder": 2,
-          "questions": [
-            {
-              "stem": "Where did you leave the contract files?",
-              "cefrLevel": "A2",
-              "questionType": "mcq",
-              "categoryCode": "listening_detail",
-              "explanation": "Question starts with 'Where', requiring a location response.",
-              "hint": "Identify the question word (Where) which asks for a place.",
-              "displayOrder": 1,
-              "options": [
-                {
-                  "label": "A",
-                  "text": "On Mr. Davis's desk.",
-                  "isCorrect": true,
-                  "rationale": "Directly answers 'Where' with a specific location."
-                },
-                {
-                  "label": "B",
-                  "text": "Yes, yesterday morning.",
-                  "isCorrect": false,
-                  "rationale": "'Yes' is inappropriate for a WH-question; also answers 'When', not 'Where'."
-                },
-                {
-                  "label": "C",
-                  "text": "It was signed by both parties.",
-                  "isCorrect": false,
-                  "rationale": "Answers a question about status, not location."
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  ]
+{
+    "version":  "1.0",
+    "exam":  {
+                 "title":  "TOEIC Listening Sample (Part 1 Photograph \u0026 Part 2 Question-Response)",
+                 "purpose":  "mock",
+                 "durationMinutes":  30,
+                 "sourceName":  "Sample pack Ã¢â‚¬â€ listening",
+                 "description":  null
+             },
+    "sections":  [
+                     {
+                         "sectionCode":  "P1",
+                         "groups":  [
+                                        {
+                                            "passage":  null,
+                                            "audioFile":  "media/part1-photo-01.wav",
+                                            "audioStartMs":  null,
+                                            "audioEndMs":  null,
+                                            "imageFile":  "media/part1-photo-01.jpg",
+                                            "imageAlt":  "A person writing notes in a notebook at an office desk.",
+                                            "transcript":  "(A) He is walking down the hallway. (B) He is writing in a notebook. (C) He is driving a vehicle. (D) He is closing a window.",
+                                            "displayOrder":  1,
+                                            "questions":  [
+                                                              {
+                                                                  "stem":  "Look at the photograph and choose the statement that best describes what you see.",
+                                                                  "cefrLevel":  "A2",
+                                                                  "questionType":  "mcq",
+                                                                  "categoryCode":  "listening_photo",
+                                                                  "explanation":  "Statement (B) accurately describes the action shown in the photo.",
+                                                                  "hint":  "Focus on the main subject\u0027s hands and activity.",
+                                                                  "displayOrder":  1,
+                                                                  "options":  [
+                                                                                  {
+                                                                                      "label":  "A",
+                                                                                      "text":  "(A) He is walking down the hallway.",
+                                                                                      "isCorrect":  false,
+                                                                                      "rationale":  "Incorrect action; the person is seated at a desk."
+                                                                                  },
+                                                                                  {
+                                                                                      "label":  "B",
+                                                                                      "text":  "(B) He is writing in a notebook.",
+                                                                                      "isCorrect":  true,
+                                                                                      "rationale":  "Directly corresponds to the action depicted in the photograph."
+                                                                                  },
+                                                                                  {
+                                                                                      "label":  "C",
+                                                                                      "text":  "(C) He is driving a vehicle.",
+                                                                                      "isCorrect":  false,
+                                                                                      "rationale":  "Incorrect setting and action."
+                                                                                  },
+                                                                                  {
+                                                                                      "label":  "D",
+                                                                                      "text":  "(D) He is closing a window.",
+                                                                                      "isCorrect":  false,
+                                                                                      "rationale":  "No window interaction is taking place."
+                                                                                  }
+                                                                              ],
+                                                                  "itemType":  "short_exchange"
+                                                              }
+                                                          ]
+                                        }
+                                    ]
+                     },
+                     {
+                         "sectionCode":  "P2",
+                         "groups":  [
+                                        {
+                                            "passage":  null,
+                                            "audioFile":  "media/part2-question-01.wav",
+                                            "audioStartMs":  null,
+                                            "audioEndMs":  null,
+                                            "imageFile":  null,
+                                            "imageAlt":  null,
+                                            "transcript":  "Where did you leave the contract files? (A) On Mr. Davis\u0027s desk. (B) Yes, yesterday morning. (C) It was signed by both parties.",
+                                            "displayOrder":  2,
+                                            "questions":  [
+                                                              {
+                                                                  "stem":  "Where did you leave the contract files?",
+                                                                  "cefrLevel":  "A2",
+                                                                  "questionType":  "mcq",
+                                                                  "categoryCode":  "listening_detail",
+                                                                  "explanation":  "Question starts with \u0027Where\u0027, requiring a location response.",
+                                                                  "hint":  "Identify the question word (Where) which asks for a place.",
+                                                                  "displayOrder":  1,
+                                                                  "options":  [
+                                                                                  {
+                                                                                      "label":  "A",
+                                                                                      "text":  "On Mr. Davis\u0027s desk.",
+                                                                                      "isCorrect":  true,
+                                                                                      "rationale":  "Directly answers \u0027Where\u0027 with a specific location."
+                                                                                  },
+                                                                                  {
+                                                                                      "label":  "B",
+                                                                                      "text":  "Yes, yesterday morning.",
+                                                                                      "isCorrect":  false,
+                                                                                      "rationale":  "\u0027Yes\u0027 is inappropriate for a WH-question; also answers \u0027When\u0027, not \u0027Where\u0027."
+                                                                                  },
+                                                                                  {
+                                                                                      "label":  "C",
+                                                                                      "text":  "It was signed by both parties.",
+                                                                                      "isCorrect":  false,
+                                                                                      "rationale":  "Answers a question about status, not location."
+                                                                                  },
+                                                                                  {
+                                                                                      "label":  "D",
+                                                                                      "text":  "No, the manager has it.",
+                                                                                      "isCorrect":  false,
+                                                                                      "rationale":  "A \u0027No\u0027 answer contradicts the question\u0027s presupposition and names a different holder."
+                                                                                  }
+                                                                              ],
+                                                                  "itemType":  "short_exchange"
+                                                              }
+                                                          ]
+                                        }
+                                    ]
+                     }
+                 ]
 }

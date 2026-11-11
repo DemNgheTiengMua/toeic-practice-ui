@@ -111,8 +111,9 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     private async Task<List<string>> StoredLevelsAsync(int examId)
     {
         await using var db = Db();
+        // #266: the level a learner's paper carries is the ITEM's, and the item is what the roster binds.
         return await db.Database.SqlQuery<string>(
-                $"SELECT ISNULL(CefrLevel, '(null)') AS [Value] FROM Questions WHERE ExamId = {examId} ORDER BY SectionId, DisplayOrder, QuestionId")
+                $"SELECT ISNULL(i.CefrLevel, '(null)') AS [Value] FROM ExamItems b JOIN Items i ON i.ItemId = b.ItemId WHERE b.ExamId = {examId} ORDER BY b.SectionId, b.DisplayOrder, b.ExamItemId")
             .ToListAsync();
     }
 

@@ -1,100 +1,102 @@
-﻿{
-  "version": "1.0",
-  "exam": {
-    "title": "Speaking and Writing Free Response Sample",
-    "purpose": "mock",
-    "durationMinutes": 60,
-    "sourceName": "Sample pack â€” speaking and writing",
-    "description": null
-  },
-  "sections": [
-    {
-      "sectionCode": "S3",
-      "groups": [
-        {
-          "passage": null,
-          "audioFile": null,
-          "audioStartMs": null,
-          "audioEndMs": null,
-          "imageFile": null,
-          "imageAlt": null,
-          "transcript": null,
-          "displayOrder": 1,
-          "questions": [
-            {
-              "stem": "Describe a memorable celebration or holiday you attended. Explain why it was important to you.",
-              "cefrLevel": "B1",
-              "questionType": "free_response",
-              "categoryCode": null,
-              "prepSeconds": 45,
-              "responseSeconds": 60,
-              "minWords": null,
-              "maxWords": null,
-              "explanation": "Speak fluently, describe the event vividly, and explain personal significance clearly.",
-              "hint": "Mention the occasion, who was there, what happened, and why you remember it fondly.",
-              "displayOrder": 1,
-              "criteria": [
-                {
-                  "code": "PRON"
-                },
-                {
-                  "code": "INT"
-                },
-                {
-                  "code": "GRAM"
-                },
-                {
-                  "code": "REL"
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "sectionCode": "W2",
-      "groups": [
-        {
-          "passage": "You received an email from your client requesting an update on project milestones.",
-          "audioFile": null,
-          "audioStartMs": null,
-          "audioEndMs": null,
-          "imageFile": null,
-          "imageAlt": null,
-          "transcript": null,
-          "displayOrder": 2,
-          "questions": [
-            {
-              "stem": "Write an email responding to the client. In your email, summarize current progress, explain any pending items, and propose a date for the next status meeting.",
-              "cefrLevel": "B2",
-              "questionType": "free_response",
-              "categoryCode": null,
-              "prepSeconds": null,
-              "responseSeconds": 900,
-              "minWords": 100,
-              "maxWords": 200,
-              "explanation": "Use standard business email formatting, clear paragraphs, polite tone, and address all three required points.",
-              "hint": "Include greeting, update, pending tasks, proposed meeting date, and professional sign-off.",
-              "displayOrder": 1,
-              "criteria": [
-                {
-                  "code": "GRAM"
-                },
-                {
-                  "code": "VOCAB"
-                },
-                {
-                  "code": "ORG"
-                },
-                {
-                  "code": "REL"
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  ]
+{
+    "version":  "1.0",
+    "exam":  {
+                 "title":  "Speaking and Writing Free Response Sample",
+                 "purpose":  "mock",
+                 "durationMinutes":  60,
+                 "sourceName":  "Sample pack â€” speaking and writing",
+                 "description":  null
+             },
+    "sections":  [
+                     {
+                         "sectionCode":  "S3",
+                         "groups":  [
+                                        {
+                                            "passage":  null,
+                                            "audioFile":  null,
+                                            "audioStartMs":  null,
+                                            "audioEndMs":  null,
+                                            "imageFile":  null,
+                                            "imageAlt":  null,
+                                            "transcript":  null,
+                                            "displayOrder":  1,
+                                            "questions":  [
+                                                              {
+                                                                  "stem":  "Describe a memorable celebration or holiday you attended. Explain why it was important to you.",
+                                                                  "cefrLevel":  "B1",
+                                                                  "questionType":  "free_response",
+                                                                  "categoryCode":  null,
+                                                                  "prepSeconds":  45,
+                                                                  "responseSeconds":  60,
+                                                                  "minWords":  null,
+                                                                  "maxWords":  null,
+                                                                  "explanation":  "Speak fluently, describe the event vividly, and explain personal significance clearly.",
+                                                                  "hint":  "Mention the occasion, who was there, what happened, and why you remember it fondly.",
+                                                                  "displayOrder":  1,
+                                                                  "criteria":  [
+                                                                                   {
+                                                                                       "code":  "PRON"
+                                                                                   },
+                                                                                   {
+                                                                                       "code":  "INT"
+                                                                                   },
+                                                                                   {
+                                                                                       "code":  "GRAM"
+                                                                                   },
+                                                                                   {
+                                                                                       "code":  "REL"
+                                                                                   }
+                                                                               ],
+                                                                  "itemType":  "descriptive_monologue"
+                                                              }
+                                                          ]
+                                        }
+                                    ]
+                     },
+                     {
+                         "sectionCode":  "W2",
+                         "groups":  [
+                                        {
+                                            "passage":  "You received an email from your client requesting an update on project milestones.",
+                                            "audioFile":  null,
+                                            "audioStartMs":  null,
+                                            "audioEndMs":  null,
+                                            "imageFile":  null,
+                                            "imageAlt":  null,
+                                            "transcript":  null,
+                                            "displayOrder":  2,
+                                            "questions":  [
+                                                              {
+                                                                  "stem":  "Write an email responding to the client. In your email, summarize current progress, explain any pending items, and propose a date for the next status meeting.",
+                                                                  "cefrLevel":  "B2",
+                                                                  "questionType":  "free_response",
+                                                                  "categoryCode":  null,
+                                                                  "prepSeconds":  null,
+                                                                  "responseSeconds":  900,
+                                                                  "minWords":  100,
+                                                                  "maxWords":  200,
+                                                                  "explanation":  "Use standard business email formatting, clear paragraphs, polite tone, and address all three required points.",
+                                                                  "hint":  "Include greeting, update, pending tasks, proposed meeting date, and professional sign-off.",
+                                                                  "displayOrder":  1,
+                                                                  "criteria":  [
+                                                                                   {
+                                                                                       "code":  "GRAM"
+                                                                                   },
+                                                                                   {
+                                                                                       "code":  "VOCAB"
+                                                                                   },
+                                                                                   {
+                                                                                       "code":  "ORG"
+                                                                                   },
+                                                                                   {
+                                                                                       "code":  "REL"
+                                                                                   }
+                                                                               ],
+                                                                  "itemType":  "transactional_correspondence"
+                                                              }
+                                                          ]
+                                        }
+                                    ]
+                     }
+                 ]
 }

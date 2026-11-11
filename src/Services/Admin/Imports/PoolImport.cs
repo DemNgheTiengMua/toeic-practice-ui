@@ -307,7 +307,15 @@ internal static class PoolImport
         out PoolContent? content,
         out string reason,
         ProductiveOutput? subTask = null,
-        string? renderFormat = null)
+        string? renderFormat = null,
+        // #266: a hint is readable content and the other two are how a blank is judged. They were
+        // carried only by the legacy question row, so an import that stopped writing that row lost
+        // them silently.
+        string? hint = null,
+        string? acceptedAnswersJson = null,
+        string? requiredKeywords = null,
+        int? maxSelections = null,
+        bool allowNumber = true)
     {
         content = null;
 
@@ -411,7 +419,12 @@ internal static class PoolImport
             subTask?.MinWords,
             subTask?.MaxWords,
             subTask?.PrepSeconds,
-            subTask?.ResponseSeconds);
+            subTask?.ResponseSeconds,
+            Normalise(hint),
+            Normalise(acceptedAnswersJson),
+            Normalise(requiredKeywords),
+            maxSelections,
+            allowNumber);
         return true;
     }
 
@@ -425,6 +438,13 @@ internal static class PoolImport
         int? MaxWords = null,
         int? PrepSeconds = null,
         int? ResponseSeconds = null);
+
+    /// <summary>
+    /// #266: a question the pool cannot express. Thrown rather than returned as a note, because a pack
+    /// that imported "most of" its questions would look successful and leave a paper short by an amount
+    /// only a log knows. The message names the question and the reason, so the author fixes the pack.
+    /// </summary>
+    internal sealed class RefusedException(string message) : Exception(message);
 
     /// <summary>
     /// The stimulus a group's children share: one row per group, never one per child. A passage
@@ -536,6 +556,11 @@ internal static class PoolImport
             MaxWords = content.MaxWords,
             PrepSeconds = content.PrepSeconds,
             ResponseSeconds = content.ResponseSeconds,
+            Hint = content.Hint,
+            AcceptedAnswersJson = content.AcceptedAnswersJson,
+            RequiredKeywords = content.RequiredKeywords,
+            MaxSelections = content.MaxSelections,
+            AllowNumber = content.AllowNumber,
         };
 
         return (item, version);
@@ -752,7 +777,15 @@ internal sealed record PoolContent(
     int? MinWords = null,
     int? MaxWords = null,
     int? PrepSeconds = null,
-    int? ResponseSeconds = null)
+    int? ResponseSeconds = null,
+    // #266: a hint is content the learner can reveal, and the other two are how a blank is judged.
+    // They lived only on the legacy question row, so an imported pack lost them the moment the importer
+    // stopped writing that row.
+    string? Hint = null,
+    string? AcceptedAnswersJson = null,
+    string? RequiredKeywords = null,
+    int? MaxSelections = null,
+    bool AllowNumber = true)
 {
     /// <summary>#204: the productive shape - no key, no options.</summary>
     public bool IsProductiveTask => KeyLabel is null && OptionA is null;

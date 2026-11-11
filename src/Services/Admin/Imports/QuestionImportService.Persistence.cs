@@ -46,7 +46,7 @@ public sealed partial class QuestionImportService
                 // #189: the legacy shape first. Its rows are what a paper renders, and the
                 // pool write below needs their ids to bind the pool's versions back onto the paper.
                 (exam, var writtenQuestions) = await WriteExamAsync(batch.CertId!.Value, plan, stored, cancellationToken);
-                var pool = await WritePoolAsync(batch, writtenQuestions, exam, cancellationToken);
+                var pool = await WritePoolAsync(batch, writtenQuestions, exam, stored, cancellationToken);
 
                 db.ImportLogs.Add(NewLog(batch.BatchId, null, ImportLogLevel.Info,
                     $"Created draft exam '{exam.Name}' with {plan.QuestionCount} questions in {plan.Groups.Count} groups."));
@@ -76,6 +76,16 @@ public sealed partial class QuestionImportService
                 report.Error(null, "The database refused the import. Nothing was imported; the error has been logged.");
                 return await FailAsync(batch, report, cancellationToken, resetTracker: true);
             }
+            catch (PoolImport.RefusedException ex)
+            {
+                // #266: a question the pool cannot express. Nothing is half-written: the transaction is
+                // rolled back, the stored media is removed, and the author reads the sentence naming the
+                // question and the reason.
+                await transaction.RollbackAsync(cancellationToken);
+                await DeleteStoredAsync(stored.Values);
+                report.Error(null, ex.Message);
+                return await FailAsync(batch, report, cancellationToken, resetTracker: true);
+            }
         }
 
         return new AdminImportResultDto(batch.BatchId, ImportBatchStatusDto.Done, exam.ExamId, exam.Name, plan.QuestionCount, 0, report.WarningCount);
@@ -96,8 +106,14 @@ public sealed partial class QuestionImportService
         ImportBatch batch,
         IReadOnlyList<WrittenQuestion> questions,
         Exam exam,
+        IReadOnlyDictionary<string, string> stored,
         CancellationToken cancellationToken)
     {
+        // A stored file resolves to the URL the site serves it at; the store keeps it under imports/.
+        // Without this the stimulus named the raw entry path and the file existed but was unreachable.
+        string? Url(string? file) => file is null
+            ? null
+            : MediaUrlPrefix + stored.GetValueOrDefault(NormaliseEntryPath(file) ?? file);
         var topics = await TopicCatalog.LoadAsync(db, cancellationToken);
         if (topics.Canonical("reading").Length == 0)
         {
@@ -119,15 +135,15 @@ public sealed partial class QuestionImportService
             var first = group.First();
             var stimulusInput = new PoolImport.StimulusInput(
                 PoolImport.Normalise(first.GroupSource.CefrLevel),
-                Passage: first.GroupRow.Passage,
-                AudioPath: first.GroupRow.AudioPath,
-                Transcript: first.GroupRow.Transcript,
-                ImagePath: first.GroupRow.ImagePath,
-                ImageAlt: first.GroupRow.ImageAlt,
+                Passage: first.GroupSource.Passage,
+                AudioPath: Url(first.GroupSource.AudioFile),
+                Transcript: first.GroupSource.Transcript,
+                ImagePath: Url(first.GroupSource.ImageFile),
+                ImageAlt: first.GroupSource.ImageAlt,
                 DomainContext: first.GroupSource.DomainContext,
                 PromptCopy: first.GroupSource.PromptCopy,
-                PrepSeconds: first.GroupRow.PrepSeconds,
-                ResponseSeconds: first.GroupRow.ResponseSeconds);
+                PrepSeconds: first.GroupSource.PrepSeconds,
+                ResponseSeconds: first.GroupSource.ResponseSeconds);
 
             var requests = new List<PoolImportWriter.Request>();
             foreach (var question in group)
@@ -157,16 +173,34 @@ public sealed partial class QuestionImportService
                         // #250: the legacy QuestionType IS the render format. Passing it keeps a
                         // multi_select a multi_select; without it the item falls back to the modality's
                         // default and every round-trip silently turns checkboxes into radios.
-                        renderFormat: source.QuestionType))
+                        renderFormat: source.QuestionType,
+                        hint: source.Hint,
+                        acceptedAnswersJson: source.AcceptedAnswersJson,
+                        requiredKeywords: source.RequiredKeywords is { Count: > 0 } kw
+                            ? string.Join(", ", kw)
+                            : null,
+                        maxSelections: source.MaxSelections,
+                        allowNumber: source.AllowNumber ?? true,
+                        // #266: a productive task's timers and word window were only ever written to the
+                        // legacy row. They travel through ProductiveOutput, which the importer must
+                        // supply or a writing task arrives with no floor and no clock.
+                        subTask: new PoolImport.ProductiveOutput(
+                            source.MinWords,
+                            source.MaxWords,
+                            source.PrepSeconds,
+                            source.ResponseSeconds)))
                 {
-                    notes.Add(
-                        $"Section {question.Section.Code}, group {question.GroupSource.DisplayOrder}, question \"{Truncate(source.Stem)}\": " +
-                        $"not written to the pool - {reason}");
-                    continue;
+                    // #266: a question the pool cannot express is a REFUSAL the author must read, never a
+                    // row in a second model. The whole batch fails rather than importing "most of" its
+                    // questions, because a pack that looks successful and arrives short by an amount only
+                    // a log knows is the failure mode this rule exists to prevent.
+                    throw new PoolImport.RefusedException(
+                        $"Section {question.Section.Code}, question \"{Truncate(source.Stem)}\" cannot be written "
+                        + $"to the pool - {reason}. Nothing was imported; fix the pack and re-run it.");
                 }
 
                 requests.Add(new PoolImportWriter.Request(
-                    question.QuestionId,
+                    QuestionId: requests.Count,
                     question.StimulusKey,
                     content!,
                     source.Stem!,
@@ -188,29 +222,35 @@ public sealed partial class QuestionImportService
         return new PoolImportWriter.Outcome(written, stimuli, bound, notes);
     }
 
-    /// <summary>#189: one written legacy question, tied back to the group and planned question it came
+    /// <summary>#189 / #266: one written question, tied back to the section and planned question it came
     /// from. A plan is immutable and carries no ids; this is what the pool write needs to bind.</summary>
     private sealed record WrittenQuestion(
-        int QuestionId,
         string StimulusKey,
         Section Section,
         ImportManifestGroup GroupSource,
-        QuestionGroup GroupRow,
         ImportManifestQuestion Source,
-        Question Row);
+        int GroupKey);
 
     private static string Truncate(string? stem) =>
         stem is null ? "(no stem)" : stem.Length > 60 ? stem[..57] + "..." : stem;
 
-    /// <summary>Saves in stages (exam, groups, questions, options) with explicit keys: the composite
-    /// foreign keys that pin a question to its group's exam and section need the generated ids.
-    /// Returns each question's row and the group it came from, because the pool write binds by
-    /// position and a position is only meaningful against rows that now exist.</summary>
+    /// <summary>
+    /// #266: writes the exam and one entry per question, and NOTHING else.
+    /// <para>
+    /// The previously staged writes - a <c>QuestionGroup</c>, then a <c>Question</c> per item, then its
+    /// <c>QuestionOption</c> rows - are gone. The pool write that used to run afterwards is now the only
+    /// write, which is why this method returns a plan rather than rows: the pool writer creates the
+    /// stimuli, items and versions, and binds them.
+    /// </para>
+    /// <para>
+    /// <b>What still has to be staged.</b> The exam row itself, because the bindings name it and the
+    /// batch's result reports its id. Everything else is derived from the plan.
+    /// </para>
+    /// </summary>
     private async Task<(Exam Exam, IReadOnlyList<WrittenQuestion> Questions)> WriteExamAsync(
         int certId, ImportPlan plan, IReadOnlyDictionary<string, string> stored, CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow();
-        string? Url(string? file) => file is null ? null : MediaUrlPrefix + stored[NormaliseEntryPath(file)!];
 
         var exam = new Exam
         {
@@ -219,6 +259,10 @@ public sealed partial class QuestionImportService
             Status = ExamStatus.Draft.ToCode(),
             Purpose = plan.Exam.Purpose.ToCode(),
             DeliveryMode = plan.Exam.DeliveryMode,
+            // #266: an imported paper draws the tier the importer writes. Without this the paper
+            // defaulted to production while every imported item is demo, so INV-6 correctly refused
+            // every binding and the pack arrived as items on no paper at all.
+            ContentTier = ContentTiers.Demo,
             DurationMinutes = plan.Exam.DurationMinutes,
             SourceName = plan.Exam.SourceName,
             Description = plan.Exam.Description,
@@ -228,82 +272,23 @@ public sealed partial class QuestionImportService
         db.Exams.Add(exam);
         await db.SaveChangesAsync(cancellationToken);
 
-        var groups = plan.Groups.Select(planned => (planned, row: new QuestionGroup
+        // A group is the unit that shares a stimulus: children of one group share a key, and two groups
+        // in one section are two passages even when their text is identical. The key is the group's
+        // ordinal in the plan, which is stable and unique within the paper.
+        var written = new List<WrittenQuestion>();
+        for (var g = 0; g < plan.Groups.Count; g++)
         {
-            ExamId = exam.ExamId,
-            CertId = certId,
-            SectionId = planned.Section.SectionId,
-            UnitNumber = planned.Source.UnitNumber ?? 1,
-            Passage = Normalise(planned.Source.Passage),
-            AudioPath = Url(planned.Source.AudioFile),
-            AudioStartMs = planned.Source.AudioStartMs,
-            AudioEndMs = planned.Source.AudioEndMs,
-            ImagePath = Url(planned.Source.ImageFile),
-            ImageAlt = planned.Source.ImageFile is null ? null : Normalise(planned.Source.ImageAlt),
-            Transcript = Normalise(planned.Source.Transcript),
-            PrepSeconds = planned.Source.PrepSeconds,
-            ResponseSeconds = planned.Source.ResponseSeconds,
-            DisplayOrder = planned.DisplayOrder,
-        })).ToList();
-        db.QuestionGroups.AddRange(groups.Select(g => g.row));
-        await db.SaveChangesAsync(cancellationToken);
-
-        var questions = groups.SelectMany(g => g.planned.Questions.Select(question => (question, planned: g.planned, row: new Question
-        {
-            GroupId = g.row.GroupId,
-            ExamId = exam.ExamId,
-            SectionId = g.planned.Section.SectionId,
-            SkillId = g.planned.Section.SkillId,
-            Stem = question.Source.Stem!.Trim(),
-            // #229 / D1: the level the file was validated on, not a second parse of the same string.
-            // #231 deleted the difficulty column entirely, so there is no field here to leave null.
-            CefrLevel = question.Level,
-            QuestionType = question.Type.ToCode(),
-            Explanation = Normalise(question.Source.Explanation),
-            CategoryId = question.CategoryId,
-            PrepSeconds = question.Source.PrepSeconds,
-            ResponseSeconds = question.Source.ResponseSeconds,
-            MinWords = question.Source.MinWords,
-            MaxWords = question.Source.MaxWords,
-            MaxSelections = question.Source.MaxSelections,
-            AllowNumber = question.Source.AllowNumber ?? true,
-            AcceptedAnswersJson = question.AcceptedAnswersJson,
-            RequiredKeywords = question.RequiredKeywords,
-            Hint = Normalise(question.Source.Hint),
-            SampleAnswerOrImageDesc = Normalise(question.Source.SampleAnswerOrImageDesc),
-            ReferenceKind = Normalise(question.Source.ReferenceKind),
-            DisplayOrder = question.DisplayOrder,
-            UpdatedAt = now,
-        }))).ToList();
-        db.Questions.AddRange(questions.Select(q => q.row));
-        await db.SaveChangesAsync(cancellationToken);
-
-        // Options for all non-free-response questions
-        db.QuestionOptions.AddRange(questions
-            .Where(q => q.question.Type != QuestionType.FreeResponse && q.question.Source.Options != null)
-            .SelectMany(q => q.question.Source.Options!.Select(o => new QuestionOption
+            var group = plan.Groups[g];
+            foreach (var question in group.Questions)
             {
-                QuestionId = q.row.QuestionId,
-                QuestionType = q.row.QuestionType,
-                Label = o.Label!.Trim().ToUpperInvariant(),
-                Text = o.Text!.Trim(),
-                IsCorrect = o.IsCorrect,
-                Rationale = Normalise(o.Rationale),
-            })));
-        await db.SaveChangesAsync(cancellationToken);
-
-        var written = questions
-            .Select(q => new WrittenQuestion(
-                q.row.QuestionId,
-                // A group is the unit that shares a stimulus: children of one group share a key, and
-                // two groups in one section are two passages even when their text is identical.
-                StimulusKey: $"{q.row.SectionId}:{q.row.GroupId}",
-                q.planned.Section,
-                q.planned.Source,
-                groups.First(g => g.planned == q.planned).row,
-                q.question.Source,
-                q.row))
-            .ToList();
+                written.Add(new WrittenQuestion(
+                    StimulusKey: $"{group.Section.SectionId}:{g}",
+                    group.Section,
+                    group.Source,
+                    question.Source,
+                    GroupKey: g));
+            }
+        }
 
         return (exam, written);
     }

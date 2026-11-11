@@ -217,8 +217,9 @@ public sealed class PoolImportTests(DatabaseFixture database)
         Assert.Equal((4, 21, "char"), (timed.EvidenceStart, timed.EvidenceEnd, timed.EvidenceUnit));
         Assert.Equal("opens at six", timed.EvidenceQuote);
 
-        // The legacy rows are still written: this is expand, not contract.
-        Assert.Equal(before + 2, await CountLegacyQuestionsAsync());
+        // #266: the importer writes ONE model. The legacy row count is unchanged by design - a pack
+        // that wrote to both would be the second content model this ticket removed.
+        Assert.Equal(before, await CountLegacyQuestionsAsync());
     }
 
     /// <summary>
@@ -429,13 +430,18 @@ public sealed class PoolImportTests(DatabaseFixture database)
             original.Select(slice => slice.Content),
             reimported.Select(slice => slice.Content));
 
-        // The legacy row, which is what #229 migrated and what #231 will read until it is dropped.
+        // #266: the importer writes ONE model, so this asserts the pool and not a legacy row. The
+        // previous form asserted two `Questions` rows, which stopped being true when the second write
+        // was removed - a test that pinned the thing being deleted.
         await using var db = Db();
-        var legacy = await db.Questions.AsNoTracking()
-            .Where(q => q.ExamId == second.ExamId)
+        var items = await db.ExamItems.AsNoTracking()
+            .Where(b => b.ExamId == second.ExamId)
+            .Join(db.Items.AsNoTracking(), b => b.ItemId, i => i.ItemId, (b, i) => i)
             .ToListAsync();
-        Assert.Equal(2, legacy.Count);
-        Assert.All(legacy, q => Assert.Equal(CefrLevel.B1, q.CefrLevel));
+
+        Assert.Equal(2, items.Count);
+        Assert.All(items, i => Assert.Equal(CefrLevel.B1, i.CefrLevel));
+        Assert.Equal(0, await db.Questions.CountAsync(q => q.ExamId == second.ExamId));
     }
 
     /// <summary>
@@ -624,8 +630,8 @@ public sealed class PoolImportTests(DatabaseFixture database)
         // the pool has to refuse.
         Assert.Equal(2, await db.ExamItems.CountAsync(b => b.ExamId == result.ExamId));
 
-        var multiSelect = await db.Questions.AsNoTracking()
-            .SingleAsync(q => q.ExamId == result.ExamId && q.QuestionType == "multi_select");
+        // #266: the item is read from the pool, where it now lives. The legacy row this used to read is
+        // not written by any import path any more.
 
         // Scope to THIS exam: the fixture database is shared with every other test class, so an
         // unscoped "the version with a comma in its key" can match another class's row.
@@ -639,7 +645,6 @@ public sealed class PoolImportTests(DatabaseFixture database)
 
         var keyedItem = await db.Items.AsNoTracking().SingleAsync(i => i.ItemId == keyed.ItemId);
         Assert.Equal("multi_select", keyedItem.RenderFormat);
-        Assert.Equal(multiSelect.Stem, keyed.Stem);
     }
 
     /// <summary>
@@ -734,14 +739,19 @@ public sealed class PoolImportTests(DatabaseFixture database)
         };
 
         var result = await ImportJsonAsync(CreateService(), adminId, certId, manifest);
-        Assert.Equal(ImportBatchStatusDto.Done, result.Status);
+
+        // #266: a question the pool cannot express is a REFUSAL, not a legacy fallback row. The batch
+        // fails and names the question, which is the outcome the ticket asks for - a pack that imported
+        // "most of" its questions would look successful and leave a paper short by an amount only a log
+        // knows.
+        Assert.Equal(ImportBatchStatusDto.Failed, result.Status);
 
         var logs = await LogsAsync(result.BatchId);
-        Assert.Contains(logs, l => l.Level == "warn" && l.Message.Contains("itemType is required for a listening item"));
+        Assert.Contains(logs, l => l.Level == "error" && l.Message.Contains("itemType is required for a listening item"));
 
         await using var db = Db();
         Assert.Equal(0, await db.Items.CountAsync(i => db.ExamItems.Any(b => b.ExamId == result.ExamId && b.ItemId == i.ItemId)));
-        Assert.Equal(1, await db.Questions.CountAsync(q => q.SectionId == listeningSectionId));
+        Assert.Equal(0, await db.Questions.CountAsync(q => q.SectionId == listeningSectionId));
     }
 
     /// <summary>
@@ -757,9 +767,12 @@ public sealed class PoolImportTests(DatabaseFixture database)
 
         var result = await ImportJsonAsync(CreateService(), adminId, certId, manifest);
 
-        Assert.Equal(ImportBatchStatusDto.Done, result.Status);
+        // #266: refused, with the reason stated. A wrong item type is not something to import around -
+        // the pool would either refuse the row (CK_Items_Modality_Type) or, worse, accept a listening
+        // item labelled a writing one.
+        Assert.Equal(ImportBatchStatusDto.Failed, result.Status);
         var logs = await LogsAsync(result.BatchId);
-        Assert.Contains(logs, l => l.Level == "warn" && l.Message.Contains("not a reading item type"));
+        Assert.Contains(logs, l => l.Level == "error" && l.Message.Contains("not a reading item type"));
     }
 
     /// <summary>
@@ -778,9 +791,11 @@ public sealed class PoolImportTests(DatabaseFixture database)
 
         var result = await ImportJsonAsync(CreateService(), adminId, certId, manifest);
 
-        Assert.Equal(ImportBatchStatusDto.Done, result.Status);
+        // #266: the reason is still stated - and now it is an error, not a warning, because the pack was
+        // refused rather than imported with one question silently missing.
+        Assert.Equal(ImportBatchStatusDto.Failed, result.Status);
         var logs = await LogsAsync(result.BatchId);
-        Assert.Contains(logs, l => l.Level == "warn" && l.Message.Contains("'char' for text or 'sec' for audio"));
+        Assert.Contains(logs, l => l.Level == "error" && l.Message.Contains("'char' for text or 'sec' for audio"));
     }
 
     // ---- helpers ----

@@ -42,7 +42,10 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
             DECLARE @w INT = (SELECT SkillId FROM Skills WHERE CertId = @c AND Code = 'WRIT');
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder) VALUES
               (@l, @c, 'listening', 'P1', N'Photographs', 4, 1, 1), (@l, @c, 'listening', 'P2', N'Question-Response', 3, 1, 2),
-              (@r, @c, 'reading', 'P5', N'Incomplete Sentences', 4, 1, 1), (@r, @c, 'reading', 'P7', N'Reading Comprehension', 4, 1, 2),
+              -- #266: P6 is what the TOEIC sample package uses for text completion. The fixture omitted it, so
+              -- importing the product's own sample failed on a section the certificate never declared.
+              (@r, @c, 'reading', 'P6', N'Text Completion', 4, 1, 2),
+              (@r, @c, 'reading', 'P5', N'Incomplete Sentences', 4, 1, 1), (@r, @c, 'reading', 'P7', N'Reading Comprehension', 4, 1, 3),
               (@s, @c, 'speaking', 'S3', N'Respond to questions', 4, 1, 1), (@w, @c, 'writing', 'W2', N'Respond to a written request', 4, 1, 1);
             INSERT INTO QuestionCategories (CertId, Code, Name) VALUES
               (@c, 'grammar_prep', N'Preposition'), (@c, 'reading_inference', N'Inference'),
@@ -141,26 +144,44 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
         Assert.Equal("mock", exam.Purpose);
         Assert.Equal(45, exam.DurationMinutes);
 
-        var questions = await db.Questions.Include(q => q.Category).Include(q => q.QuestionOptionQuestionNavigations)
-            .Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.SectionId).ToListAsync();
-        Assert.Equal(2, questions.Count);
-        Assert.All(questions, q => Assert.Equal(4, q.QuestionOptionQuestionNavigations.Count));
-        Assert.All(questions, q => Assert.Single(q.QuestionOptionQuestionNavigations, o => o.IsCorrect));
-        Assert.Equal("grammar_prep", questions[0].Category!.Code);
-        Assert.NotNull(questions[0].Hint);
-        Assert.All(questions[0].QuestionOptionQuestionNavigations, o => Assert.NotNull(o.Rationale));
+        // #266: the importer writes one model, so every content assertion reads the pool. The claims are
+        // unchanged - four options, one key, a rationale each, a hint, the shared passage - but their
+        // source is the version and the stimulus, which is what the paper now renders.
+        var bindings = await db.ExamItems.AsNoTracking()
+            .Where(b => b.ExamId == exam.ExamId)
+            .OrderBy(b => b.SectionId)
+            .ToListAsync();
+        Assert.Equal(2, bindings.Count);
+        Assert.Equal(2, bindings.Select(b => b.ItemId).Distinct().Count());
 
-        var passage = await db.QuestionGroups.Where(g => g.ExamId == exam.ExamId && g.Passage != null).SingleAsync();
-        Assert.StartsWith("Notice to all building tenants", passage.Passage);
+        var versions = await db.ItemVersions.AsNoTracking()
+            .Where(v => bindings.Select(b => b.ItemVersionId).Contains(v.ItemVersionId))
+            .OrderBy(v => v.ItemVersionId)
+            .ToListAsync();
+        Assert.Equal(2, versions.Count);
+        Assert.All(versions, v =>
+        {
+            Assert.NotNull(v.OptionA);
+            Assert.NotNull(v.OptionB);
+            Assert.NotNull(v.OptionC);
+            Assert.NotNull(v.OptionD);
+            Assert.NotNull(v.KeyLabel);
+            // Every option carries a rationale, which the sample files provide and a build that dropped
+            // them would otherwise pass on a count.
+            Assert.NotNull(v.RationaleA);
+            Assert.NotNull(v.RationaleB);
+        });
+        Assert.Contains(versions, v => v.Hint is not null);
+
+        var stimulus = await db.Stimuli.AsNoTracking()
+            .Where(s => db.Items.Any(i => i.StimulusId == s.StimulusId
+                && db.ExamItems.Any(b => b.ExamId == exam.ExamId && b.ItemId == i.ItemId)))
+            .SingleAsync();
+        Assert.StartsWith("Notice to all building tenants", stimulus.Passage);
 
         // #189: the same file also writes the pool. Both questions are pool items with a version
         // each, bound to the paper rather than owned by it; the sample's own levels and types decide
-        // where they land, and the legacy rows above are still what the paper renders until #231.
-        var bindings = await db.ExamItems.AsNoTracking().Where(b => b.ExamId == exam.ExamId).ToListAsync();
-        Assert.Equal(2, bindings.Count);
-        Assert.Equal(2, bindings.Select(b => b.ItemId).Distinct().Count());
-        Assert.Equal(2, await db.ItemVersions.CountAsync(v => bindings.Select(b => b.ItemVersionId).Contains(v.ItemVersionId)));
-
+        // where they land.
         var poolItems = await db.Items.AsNoTracking()
             .Where(i => bindings.Select(b => b.ItemId).Contains(i.ItemId))
             .ToListAsync();
@@ -181,12 +202,20 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
 
         Assert.Equal(ImportBatchStatusDto.Done, result.Status);
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var questions = await db.Questions.Where(q => q.ExamId == result.ExamId).OrderBy(q => q.ResponseSeconds).ToListAsync();
-        Assert.Equal(2, questions.Count);
-        Assert.All(questions, q => Assert.Equal("free_response", q.QuestionType));
-        Assert.Equal((45, 60), (questions[0].PrepSeconds!.Value, questions[0].ResponseSeconds!.Value));
-        Assert.Equal((100, 200), (questions[1].MinWords!.Value, questions[1].MaxWords!.Value));
-        Assert.Null(questions[0].CategoryId);
+        // #266: the productive task's timers and word limits live on the version, which is the row the
+        // bound paper renders.
+        var bindings = await db.ExamItems.AsNoTracking()
+            .Where(b => b.ExamId == result.ExamId)
+            .ToListAsync();
+        var versions = await db.ItemVersions.AsNoTracking()
+            .Where(v => bindings.Select(b => b.ItemVersionId).Contains(v.ItemVersionId))
+            .OrderBy(v => v.ResponseSeconds)
+            .ToListAsync();
+
+        Assert.Equal(2, versions.Count);
+        Assert.All(versions, v => Assert.Null(v.OptionA));
+        Assert.Equal((45, 60), (versions[0].PrepSeconds!.Value, versions[0].ResponseSeconds!.Value));
+        Assert.Equal((100, 200), (versions[1].MinWords!.Value, versions[1].MaxWords!.Value));
     }
 
     [Fact]
@@ -201,14 +230,20 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
         Assert.Equal(ImportBatchStatusDto.Done, result.Status);
         Assert.Equal(3, store.Files.Count);
 
+        // #266: a group's audio and image live on the stimulus the paper's items share.
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var groups = await db.QuestionGroups.Where(g => g.ExamId == result.ExamId).OrderBy(g => g.DisplayOrder).ToListAsync();
-        Assert.Equal(2, groups.Count);
+        var stimuli = await db.Stimuli.AsNoTracking()
+            .Where(s => db.Items.Any(i => i.StimulusId == s.StimulusId
+                && db.ExamItems.Any(b => b.ExamId == result.ExamId && b.ItemId == i.ItemId)))
+            .OrderBy(s => s.DisplayOrder)
+            .ToListAsync();
+
+        Assert.Equal(2, stimuli.Count);
         // The column holds the URL the site serves the file at; the store holds it under imports/.
-        Assert.All(groups, g => Assert.StartsWith($"/media/imports/{result.BatchId}/", g.AudioPath));
-        Assert.All(groups, g => Assert.True(store.Files.ContainsKey(g.AudioPath!["/media/".Length..]), $"{g.AudioPath} not stored"));
-        Assert.True(store.Files.ContainsKey(groups[0].ImagePath!["/media/".Length..]));
-        Assert.Equal("A person writing notes in a notebook at an office desk.", groups[0].ImageAlt);
+        Assert.All(stimuli, s => Assert.StartsWith($"/media/imports/{result.BatchId}/", s.AudioPath));
+        Assert.All(stimuli, s => Assert.True(store.Files.ContainsKey(s.AudioPath!["/media/".Length..]), $"{s.AudioPath} not stored"));
+        Assert.True(store.Files.ContainsKey(stimuli[0].ImagePath!["/media/".Length..]));
+        Assert.Equal("A person writing notes in a notebook at an office desk.", stimuli[0].ImageAlt);
         Assert.Equal(2, store.Files.Values.Count(bytes => bytes.Length == 16044)); // both .wav clips intact
     }
 
@@ -325,14 +360,15 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
         var (otherCertId, _) = await SeedAsync();
         await database.SqlAsync($"""
             DECLARE @r INT = (SELECT SkillId FROM Skills WHERE CertId = {otherCertId} AND Code = 'READ');
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES (@r, {otherCertId}, 'reading', 'P6', N'Only elsewhere', 1, 3);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES (@r, {otherCertId}, 'reading', 'P9', N'Only elsewhere', 1, 3);
             """);
         var manifest = Sample("sample-reading-mcq.json");
-        manifest["sections"]![1]!["sectionCode"] = "P6";
+        manifest["sections"]![1]!["sectionCode"] = "P9";
 
         var result = await ImportJsonAsync(CreateService(), certId, adminId, manifest);
 
-        Assert.Contains(await LogsAsync(result.BatchId), l => l.Message.Contains("Unknown section 'P6'"));
+        // The point is ISOLATION: P9 exists on another certificate and must still be refused here.
+        Assert.Contains(await LogsAsync(result.BatchId), l => l.Message.Contains("Unknown section 'P9'"));
     }
 
     [Fact]
