@@ -26,6 +26,11 @@ public sealed class AdminExamPreviewTests(DatabaseFixture database)
     /// <summary>
     /// A certificate with two skills and a <b>draft</b> exam of <paramref name="questionCount"/>
     /// questions spread across them — the primary case, an exam nobody has published.
+    /// <para>
+    /// #269: the paper is authored on the pool. Each position is an item, a version carrying the
+    /// scored content, and a binding, which is the shape every production reader now resolves.
+    /// The four options come from CNT-06's canonical MCQ shape rather than a fixture choice.
+    /// </para>
     /// </summary>
     private async Task<(int CertId, int ExamId)> SeedDraftExamAsync(string certCode, int questionCount = 20)
     {
@@ -44,8 +49,6 @@ public sealed class AdminExamPreviewTests(DatabaseFixture database)
             VALUES
               (@sL, @cert, 'listening', 'P1', N'Photographs', 4, 10, 1, 'FULL_SANDBOX'),
               (@sR, @cert, 'reading', 'P5', N'Incomplete Sentences', 4, 10, 2, 'FULL_SANDBOX');
-            DECLARE @secL INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P1');
-            DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cert, 'LOW', N'Low', 0, 499, 1),
@@ -53,36 +56,28 @@ public sealed class AdminExamPreviewTests(DatabaseFixture database)
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount)
             VALUES (@cert, N'Preview ' + '{certCode}', 'draft', 120, 'mock', {questionCount});
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            DECLARE @i INT = 1;
-            WHILE @i <= {questionCount}
-            BEGIN
-              DECLARE @section INT = CASE WHEN @i <= {questionCount / 2} THEN @secL ELSE @secR END;
-              DECLARE @skill INT = CASE WHEN @i <= {questionCount / 2} THEN @sL ELSE @sR END;
-
-              INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
-              VALUES (@exam, @cert, @section, @i);
-              DECLARE @grp INT = SCOPE_IDENTITY();
-
-              INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
-              VALUES (@grp, @exam, @section, @skill, N'Preview stem ' + CAST(@i AS NVARCHAR(10)), 'A2', 'mcq',
-                      N'Because option A is the only grammatical fit.', @i);
-              DECLARE @q INT = SCOPE_IDENTITY();
-
-              INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-                (@q, 'mcq', 'A', N'Correct ' + CAST(@i AS NVARCHAR(10)), 1),
-                (@q, 'mcq', 'B', N'Wrong ' + CAST(@i AS NVARCHAR(10)), 0),
-                (@q, 'mcq', 'C', N'Also wrong', 0),
-                (@q, 'mcq', 'D', N'Still wrong', 0);
-
-              SET @i = @i + 1;
-            END
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
+        var sections = await db.Sections.Where(s => s.CertId == cert.CertId)
+            .OrderBy(s => s.DisplayOrder).ToListAsync();
+
+        // A binding's DisplayOrder is 1-based WITHIN its section, so the two halves number from 1 and
+        // the sitting still numbers them 1..20 across the paper.
+        for (var i = 1; i <= questionCount; i++)
+        {
+            var listening = i <= questionCount / 2;
+            var section = listening ? sections[0] : sections[1];
+
+            await PoolFixture.AddMcqAsync(
+                db, exam.ExamId, cert.CertId, section.SectionId, section.Modality,
+                $"Preview stem {i}", displayOrder: listening ? i : i - questionCount / 2,
+                level: "A2",
+                explanation: "Because option A is the only grammatical fit.");
+        }
+
         return (cert.CertId, exam.ExamId);
     }
 

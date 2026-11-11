@@ -77,14 +77,31 @@ public sealed partial class AdminExamService
 
         var relevantSectionIds = relevantSections.Select(s => s.SectionId).ToHashSet();
         var relevantGroups = groups.Where(g => relevantSectionIds.Contains(g.SectionId)).ToList();
-        var totalQuestions = relevantGroups.Sum(g => g.QuestionGroups.Count);
+
+        // #269: a position is a ROSTER row. Every count below used only `Questions`, so a
+        // pool-authored paper reported zero everywhere and could never pass the publish door -
+        // measured: "Exam must have at least one question group and question", "requires at least 2
+        // questions, but only has 0", on a paper whose roster was complete.
+        var rosterBySection = await db.ExamItems.AsNoTracking()
+            .Where(i => i.ExamId == exam.ExamId && relevantSectionIds.Contains(i.SectionId))
+            .GroupBy(i => i.SectionId)
+            .Select(g => new { SectionId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.SectionId, x => x.Count, cancellationToken);
+
+        int RenderedIn(int sectionId) => Math.Max(
+            relevantGroups.Where(g => g.SectionId == sectionId).Sum(g => g.QuestionGroups.Count),
+            rosterBySection.GetValueOrDefault(sectionId));
+
+        var totalQuestions = relevantSections
+            .Where(s => relevantSectionIds.Contains(s.SectionId))
+            .Sum(s => RenderedIn(s.SectionId));
 
         // #157: ExpectedQuestionCount is NOT NULL, so every section now contributes. A section whose
         // count is missing can no longer make this sum silently low.
         var sectionExpectedSum = relevantSections.Sum(s => s.ExpectedQuestionCount);
         var expectedTotal = sectionExpectedSum > 0 ? sectionExpectedSum : (exam.QuestionCount ?? 0);
 
-        if (groups.Count == 0 || totalQuestions == 0)
+        if (groups.Count == 0 && totalQuestions == 0)
         {
             var msg = "Exam must have at least one question group and question.";
             issues.Add(new ExamAuditIssueDto(
@@ -109,13 +126,14 @@ public sealed partial class AdminExamService
         {
             var secGroups = groups.Where(g => g.SectionId == sec.SectionId).ToList();
             var secQuestions = secGroups.SelectMany(g => g.QuestionGroups).ToList();
+            var secRendered = RenderedIn(sec.SectionId);
 
             // #157: ExpectedQuestionCount is NOT NULL, so this check can no longer be skipped by
             // leaving the count blank. It is the check that stopped an empty part from publishing.
-            if (secQuestions.Count < sec.ExpectedQuestionCount)
+            if (secRendered < sec.ExpectedQuestionCount)
             {
-                var diff = sec.ExpectedQuestionCount - secQuestions.Count;
-                var msg = $"Section [{sec.Code}] '{sec.Name}' requires {sec.ExpectedQuestionCount} questions, but only has {secQuestions.Count} ({diff} missing).";
+                var diff = sec.ExpectedQuestionCount - secRendered;
+                var msg = $"Section [{sec.Code}] '{sec.Name}' requires {sec.ExpectedQuestionCount} questions, but only has {secRendered} ({diff} missing).";
                 issues.Add(new ExamAuditIssueDto(
                     Code: "SEC_QUESTION_COUNT_LOW",
                     Severity: "error",

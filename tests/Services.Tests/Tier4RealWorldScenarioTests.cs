@@ -92,26 +92,6 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
             INSERT INTO Exams (CertId, Purpose, Name, DurationMinutes, Status, IsDeleted)
             VALUES (@cert, 'mock', N'Mock Sitting Exam', 120, 'published', 0);
             DECLARE @exam INT = SCOPE_IDENTITY();
-
-            -- Group & Question for Listening
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secL, 1);
-            DECLARE @grpL INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grpL, @exam, @secL, @sL, N'Listening Question 1', 'A2', 'mcq', 1);
-            DECLARE @qL INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@qL, 'mcq', 'A', N'Listening Option A (Correct)', 1),
-              (@qL, 'mcq', 'B', N'Listening Option B (Wrong)', 0);
-
-            -- Group & Question for Reading
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 2);
-            DECLARE @grpR INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grpR, @exam, @secR, @sR, N'Reading Question 1', 'A2', 'mcq', 1);
-            DECLARE @qR INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@qR, 'mcq', 'A', N'Reading Option A (Wrong)', 0),
-              (@qR, 'mcq', 'B', N'Reading Option B (Correct)', 1);
             """);
 
         var learnerId = await SeedLearnerWithCreditsAsync(10, certCode);
@@ -119,12 +99,23 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId).ToListAsync();
-        var qListening = questions.Single(q => q.Stem.Contains("Listening"));
-        var qReading = questions.Single(q => q.Stem.Contains("Reading"));
+        var secL = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Modality == "listening");
+        var secR = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Modality == "reading");
 
-        var optLCorrect = await db.QuestionOptions.Where(o => o.QuestionId == qListening.QuestionId && o.IsCorrect).Select(o => o.OptionId).SingleAsync();
-        var optRCorrect = await db.QuestionOptions.Where(o => o.QuestionId == qReading.QuestionId && o.IsCorrect).Select(o => o.OptionId).SingleAsync();
+        // #269: the paper is the roster. A listening position must carry a stimulus - that is where a
+        // pool paper keeps its audio - and the preflight gate is driven by audio existing. The reading
+        // position is B2 rather than A2 so it stocks no cell another test counts exactly.
+        var qListening = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, secL.SectionId, "listening", "Listening Question 1",
+            displayOrder: 1, keyLabel: "A", level: "A2", passage: "Listen to the announcement.");
+        var qReading = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, secR.SectionId, "reading", "Reading Question 1",
+            displayOrder: 1, keyLabel: "B", level: "B2");
+
+        // A pool MCQ is four options by construction (CNT-06), and the option ids are the sitting
+        // projection's own - never recomputed here.
+        var optLCorrect = await PoolFixture.OptionIdAsync(db, exam.ExamId, qListening.ExamItemId, "A");
+        var optRCorrect = await PoolFixture.OptionIdAsync(db, exam.ExamId, qReading.ExamItemId, "B");
 
         var engine = new AttemptEngine(db);
 
@@ -142,7 +133,7 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
         // 3. Phase 1: Answer Listening question in active skill
         var batchListening = new List<BatchAnswerItem>
         {
-            new(qListening.QuestionId, optLCorrect, false)
+            new(qListening.ExamItemId, optLCorrect, false)
         };
         var batchResultL = await engine.SaveBatchAnswersAsync(attempt.AttemptId, learnerId, batchListening);
         Assert.Single(batchResultL);
@@ -155,7 +146,7 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
         // 4. Phase 2: Answer Reading question in active skill
         var batchReading = new List<BatchAnswerItem>
         {
-            new(qReading.QuestionId, optRCorrect, false)
+            new(qReading.ExamItemId, optRCorrect, false)
         };
         var batchResultR = await engine.SaveBatchAnswersAsync(attempt.AttemptId, learnerId, batchReading);
         Assert.Single(batchResultR);
@@ -291,17 +282,6 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
             VALUES (@cert, 'placement', N'Placement Test 1', 30, 'published', 0);
             DECLARE @exam INT = SCOPE_IDENTITY();
 
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, @secR, @sR, N'Placement Diagnostic Question 1', 'B1', 'mcq', 1);
-            DECLARE @q INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q, 'mcq', 'A', N'Placement Answer A', 1),
-              (@q, 'mcq', 'B', N'Placement Answer B', 0);
-
             -- #232: the plan is synthesised from the skill's own level, so the fixture supplies the
             -- coordinate's inputs - a cut-score row and drillable stock - rather than a template.
             INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
@@ -332,8 +312,14 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId && e.Purpose == "placement");
-        var question = await db.Questions.SingleAsync(q => q.ExamId == exam.ExamId);
-        var correctOption = await db.QuestionOptions.Where(o => o.QuestionId == question.QuestionId && o.IsCorrect).Select(o => o.OptionId).SingleAsync();
+        var section = await db.Sections.SingleAsync(s => s.CertId == cert.CertId);
+
+        // #269: the diagnostic paper is a roster too. Its position's level is B1, which is what the
+        // placement below must report.
+        var position = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, section.SectionId, "reading", "Placement Diagnostic Question 1",
+            displayOrder: 1, keyLabel: "A", level: "B1");
+        var correctOption = await PoolFixture.OptionIdAsync(db, exam.ExamId, position.ExamItemId, "A");
 
         var learners = new LearnerService(db);
         var placementService = new PlacementService(db, learners);
@@ -347,7 +333,7 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
         var saveResult = await placementService.SaveAnswerAsync(
             learnerId,
             placementInfo.PlacementId,
-            question.QuestionId,
+            position.ExamItemId,
             correctOption,
             isFlagged: false);
         Assert.NotNull(saveResult);

@@ -133,8 +133,8 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
     public async Task PracticeDrilling_Answers_Feed_Deterministic_Sql_View_Accuracy()
     {
         var certCode = Unique("PRAC");
-        var learnerId = await SeedLearnerWithCreditsAsync(0, certCode);
 
+        // #269: the certificate is seeded BEFORE the learner, so ActiveCertId points at it.
         await database.SqlAsync($"""
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
@@ -145,19 +145,25 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
 
             INSERT INTO Exams (CertId, Purpose, Name, DurationMinutes, Status, IsDeleted)
             VALUES (@cert, 'mock', N'Practice Bank', 60, 'published', 0);
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @skill, N'Question 1', 'A2', 'mcq', 1),
-                   (@grp, @exam, @sec, @skill, N'Question 2', 'A2', 'mcq', 2);
             """);
+
+        var learnerId = await SeedLearnerWithCreditsAsync(0, certCode);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var section = await db.Sections.SingleAsync(s => s.CertId == cert.CertId);
-        var questions = await db.Questions.Where(q => q.SectionId == section.SectionId).ToListAsync();
+        var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
+
+        // #269: the drill's stock is pool stock. Two positions on the bank paper, so the answers below
+        // name an (ItemId, ItemVersionId) pair rather than a Questions row. The level is B2, not B1:
+        // `PoolIngestionTests` counts the (R-DET, B1) cell exactly and the pool is shared by the whole
+        // assembly, so stocking there would shift a number another test asserts.
+        var first = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, section.SectionId, "reading", "Question 1",
+            displayOrder: 1, level: "B2");
+        var second = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, section.SectionId, "reading", "Question 2",
+            displayOrder: 2, level: "B2");
 
         // Create practice session
         var session = new PracticeSession
@@ -179,30 +185,30 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
         db.PracticeAnswers.Add(new PracticeAnswer
         {
             SessionId = session.SessionId,
-            QuestionId = questions[0].QuestionId,
-            SectionId = section.SectionId,
+            ItemId = first.ItemId,
+            ItemVersionId = first.ItemVersionId,
             IsCorrect = true,
             DisplayOrder = 1
         });
         db.PracticeAnswers.Add(new PracticeAnswer
         {
             SessionId = session.SessionId,
-            QuestionId = questions[1].QuestionId,
-            SectionId = section.SectionId,
+            ItemId = second.ItemId,
+            ItemVersionId = second.ItemVersionId,
             IsCorrect = false,
             DisplayOrder = 2
         });
         await db.SaveChangesAsync();
 
-        // Query deterministic SQL view
-        var accuracy = await db.vw_UserSectionAccuracyAlls
-            .FirstOrDefaultAsync(v => v.UserId == learnerId && v.SectionId == section.SectionId);
+        // Query deterministic SQL view. A pool practice answer carries no section (#187: an item is
+        // section-free), so the section axis has no row to report it under - the cell axis is where a
+        // drill's accuracy lives, and it is the same deterministic SQL (D3).
+        var accuracy = await db.vw_UserTopicAccuracies
+            .SingleAsync(v => v.UserId == learnerId);
 
-        if (accuracy != null)
-        {
-            Assert.Equal(2, accuracy.Answered);
-            Assert.Equal(1, accuracy.Correct);
-        }
+        Assert.Equal(2, accuracy.Answered);
+        Assert.Equal(1, accuracy.Correct);
+        Assert.Equal(50, accuracy.AccuracyPercent);
     }
 
     [Fact]
@@ -219,11 +225,6 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
             DECLARE @sec INT = SCOPE_IDENTITY();
             INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES (@cert, @skill, 'TASK', N'Task Response', 9.0, 1.0, 1);
             INSERT INTO Exams (CertId, Purpose, Name, DurationMinutes, Status, IsDeleted) VALUES (@cert, 'writing_practice', N'Writing Practice', 30, 'published', 0);
-            DECLARE @exam INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @skill, N'Write an essay.', 'A2', 'free_response', 50, 300, 1);
             """);
 
         var learnerId = await SeedLearnerWithCreditsAsync(3, certCode);
@@ -231,13 +232,19 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var question = await db.Questions.SingleAsync(q => q.ExamId == exam.ExamId);
+        var section = await db.Sections.SingleAsync(s => s.CertId == cert.CertId);
+
+        // #269: a writing task is a productive pool position - no options, no key, and the word window
+        // the task declares. Its address is the ExamItemId, which is what the sitting renders.
+        var question = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, section.SectionId, "writing", "Write an essay.",
+            displayOrder: 1, minWords: 50, maxWords: 300, level: "A2");
 
         var learnerService = new LearnerService(db);
         var writingService = new WritingPracticeService(db, learnerService);
 
         var attempt = await writingService.StartAttemptAsync(learnerId, exam.ExamId);
-        await writingService.SaveDraftAsync(learnerId, attempt.AttemptId, question.QuestionId, "This is a completed essay submission for AI grading.");
+        await writingService.SaveDraftAsync(learnerId, attempt.AttemptId, question.ExamItemId, "This is a completed essay submission for AI grading.");
         await writingService.SubmitAttemptAsync(learnerId, attempt.AttemptId);
 
         // Verify task was enqueued into AiGradings with status 'pending'

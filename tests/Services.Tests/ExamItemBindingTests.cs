@@ -24,11 +24,55 @@ public sealed class ExamItemBindingTests(DatabaseFixture database)
         new(DbContextFactory.Create(database.ConnectionString), TimeProvider.System);
 
     /// <summary>
-    /// A certificate with one reading section, one exam, and one pool item with a version the paper
-    /// binds. The legacy <c>Questions</c> row is deliberately given a *different* key and explanation,
-    /// so the two read paths cannot both produce the assertion below.
+    /// A certificate with one reading section, one exam, and one pool item whose pinned version the
+    /// paper binds. The item is authored on the pool, which is the only content model #269 leaves.
     /// </summary>
     private async Task<(int CertId, int ExamId, int ItemVersionId)> SeedBoundPaperAsync(
+        string certCode, string keyLabel)
+    {
+        await database.SqlAsync($"""
+            INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Bound Cert', 1);
+            DECLARE @cert INT = SCOPE_IDENTITY();
+
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
+            VALUES (@cert, 'RDT', N'Reading', 'reading', 1, 60);
+            DECLARE @skill INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'RDT');
+
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode)
+            VALUES (@skill, @cert, 'reading', 'P5', N'Incomplete Sentences', 4, 1, 1, 'FULL_SANDBOX');
+
+            INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
+              (@cert, 'LOW', N'Low', 0, 499, 1), (@cert, 'HIGH', N'High', 500, 990, 2);
+
+            INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount)
+            VALUES (@cert, N'Bound paper', 'draft', 120, 'mock', 1);
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
+        var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
+        var section = await db.Sections.SingleAsync(s => s.CertId == cert.CertId);
+
+        var position = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, section.SectionId, "reading",
+            "The regional manager ------- the figures.", displayOrder: 1,
+            keyLabel: keyLabel, explanation: "The pinned version says so.");
+
+        return (cert.CertId, exam.ExamId, position.ItemVersionId);
+    }
+
+    /// <summary>
+    /// The same paper authored on BOTH models, with different keys.
+    /// <para>
+    /// <b>#269: this fixture stays on legacy rows on purpose, and it is the paper's own test that needs
+    /// them.</b> <c>The_preview_answer_key_is_the_pinned_version_not_the_legacy_question_row</c> asserts
+    /// that the pool path WINS over the legacy one, which is a statement about two sources - authoring
+    /// only the pool would leave one source and the assertion could no longer fail. The legacy reads it
+    /// contrasts against still exist until the three tables are dropped, so this is the only proof they
+    /// do not take precedence. It is deleted with them, not migrated before them.
+    /// </para>
+    /// </summary>
+    private async Task<(int ExamId, string PinnedExplanation)> SeedPaperOnBothModelsAsync(
         string certCode, string keyLabel, string legacyKeyLabel)
     {
         await database.SqlAsync($"""
@@ -62,8 +106,8 @@ public sealed class ExamItemBindingTests(DatabaseFixture database)
 
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
               (@q, 'mcq', 'A', N'review', 0),
-              (@q, 'mcq', 'B', N'will review', {Bool(legacyKeyLabel == "B")}),
-              (@q, 'mcq', 'C', N'reviewing', {Bool(legacyKeyLabel == "C")}),
+              (@q, 'mcq', 'B', N'will review', {(legacyKeyLabel == "B" ? 1 : 0)}),
+              (@q, 'mcq', 'C', N'reviewing', {(legacyKeyLabel == "C" ? 1 : 0)}),
               (@q, 'mcq', 'D', N'to review', 0);
 
             -- the pool item and the pinned version, with its own key. The topic is shared across the
@@ -87,16 +131,9 @@ public sealed class ExamItemBindingTests(DatabaseFixture database)
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
-        var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var version = await db.ExamItems
-            .Where(b => b.ExamId == exam.ExamId)
-            .Select(b => b.ItemVersionId)
-            .SingleAsync();
-        return (cert.CertId, exam.ExamId, version);
+        var exam = await db.Exams.SingleAsync(e => e.Cert.Code == certCode);
+        return (exam.ExamId, "The pinned version says so.");
     }
-
-    private static string Bool(bool value) => value ? "1" : "0";
 
     /// <summary>
     /// AC1: a binding row exists per assembled item, carrying exam, section, certificate, the pinned
@@ -106,7 +143,7 @@ public sealed class ExamItemBindingTests(DatabaseFixture database)
     [Fact]
     public async Task A_binding_saves_through_ef_and_carries_its_paper_position_and_unit()
     {
-        var (certId, examId, _) = await SeedBoundPaperAsync(Unique("BND"), "B", "B");
+        var (certId, examId, _) = await SeedBoundPaperAsync(Unique("BND"), "B");
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var binding = await db.ExamItems.AsNoTracking().SingleAsync(b => b.ExamId == examId);
@@ -127,11 +164,15 @@ public sealed class ExamItemBindingTests(DatabaseFixture database)
     /// AC4, the one that has to be observed rather than asserted: the preview's answer key comes from
     /// the version the paper pinned, not from the legacy question row. The fixture gives the two
     /// different keys and different explanations, so only one path can produce the expected answer.
+    /// <para>
+    /// #269: this is the test that keeps its legacy rows - it is a claim about precedence between two
+    /// sources, so it needs both. See <see cref="SeedPaperOnBothModelsAsync"/>.
+    /// </para>
     /// </summary>
     [Fact]
     public async Task The_preview_answer_key_is_the_pinned_version_not_the_legacy_question_row()
     {
-        var (_, examId, _) = await SeedBoundPaperAsync(Unique("PVW"), keyLabel: "C", legacyKeyLabel: "B");
+        var (examId, pinnedExplanation) = await SeedPaperOnBothModelsAsync(Unique("PVW"), keyLabel: "C", legacyKeyLabel: "B");
 
         var preview = await CreateService().GetExamPreviewTakeAsync(examId, questionDisplayOrder: null);
 
@@ -141,7 +182,7 @@ public sealed class ExamItemBindingTests(DatabaseFixture database)
         var correct = Assert.Single(answer.CorrectOptionIds);
         var option = preview.Take.CurrentQuestion.Options.Single(o => o.OptionId == correct);
         Assert.Equal("C", option.Label);
-        Assert.Equal("The pinned version says so.", answer.Explanation);
+        Assert.Equal(pinnedExplanation, answer.Explanation);
     }
 
     /// <summary>
@@ -152,7 +193,7 @@ public sealed class ExamItemBindingTests(DatabaseFixture database)
     [Fact]
     public async Task Re_versioning_the_item_leaves_the_paper_on_the_version_it_pinned()
     {
-        var (_, examId, versionId) = await SeedBoundPaperAsync(Unique("RVR"), "B", "B");
+        var (_, examId, versionId) = await SeedBoundPaperAsync(Unique("RVR"), "B");
 
         await database.SqlAsync($"""
             UPDATE Items SET ContentTier = 'demo' WHERE ItemId = (SELECT ItemId FROM ExamItems WHERE ExamId = {examId});
@@ -183,7 +224,7 @@ public sealed class ExamItemBindingTests(DatabaseFixture database)
     [Fact]
     public async Task The_database_refuses_a_cross_certificate_binding_and_ef_surfaces_it()
     {
-        var (_, examId, versionId) = await SeedBoundPaperAsync(Unique("XCR"), "B", "B");
+        var (_, examId, versionId) = await SeedBoundPaperAsync(Unique("XCR"), "B");
         var other = Unique("OTH");
 
         await database.SqlAsync($"""

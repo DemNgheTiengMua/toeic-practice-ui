@@ -46,8 +46,23 @@ public sealed class ExamEditionTests(DatabaseFixture database)
     // ------------------------------------------------------------------ fixtures
 
     /// <summary>
-    /// A certificate with two reading skills whose durations differ, so a fork's frozen phase
-    /// weights are distinguishable from a later edit of the same rows. Two sections, one per skill.
+    /// <b>#269: this file's fixture stays on the legacy authoring service, and the reason is
+    /// production code rather than this fixture.</b> Every test here publishes the paper through
+    /// <see cref="AdminExamService.PublishExamAsync"/>, because that is the only door that freezes an
+    /// edition (<c>trg_Exams_PublishFreezesEdition</c>), and the edition is the whole subject of the
+    /// file. The readiness audit that gate runs counts a section's rendered positions from
+    /// <c>Questions</c> (<c>AdminExamService.Invariants.cs</c>: "What a section HOLDS is the number of
+    /// positions the sitting renders, and that is the legacy <c>Questions</c> count") and the ~26
+    /// authoring checks read <c>QuestionGroups → Questions → QuestionOptions</c>. So a paper authored
+    /// only on the pool currently reports zero positions, fails INV-1, and cannot be published through
+    /// the door this file exists to test. Measured: a pool-only paper audits
+    /// <c>CanPublish=false</c> with "section declares 1 item(s) but holds 0".
+    /// <para>
+    /// Migrating this fixture before those readers move onto the roster would turn twelve green tests
+    /// red for a reason this ticket does not own, and would prove nothing about editions because no
+    /// edition could be frozen. The fixture stays legacy until the readiness audit reads the roster;
+    /// #269 deletes it with the three tables.
+    /// </para>
     /// </summary>
     private async Task<(int CertId, int FirstSkillId, int SecondSkillId, int FirstSectionId, int SecondSectionId)>
         SeedCertificateAsync(string code)
@@ -94,6 +109,12 @@ public sealed class ExamEditionTests(DatabaseFixture database)
     /// <summary>
     /// A two-skill paper with two questions in each section, published through the real publish door
     /// so the edition freeze runs. Returns the exam and the questions in sitting order.
+    /// <para>
+    /// #269: authored through <c>CreateQuestionGroupAsync</c> / <c>CreateQuestionAsync</c>, which are
+    /// the legacy authoring methods. Those methods still exist and are the admin editor's authoring
+    /// API, and the publish gate this fixture must clear reads the rows they write. See
+    /// <see cref="SeedCertificateAsync"/> for why migrating it is blocked on production code.
+    /// </para>
     /// </summary>
     private async Task<(int ExamId, List<int> QuestionIds)> SeedPublishedExamAsync(
         AdminExamService service, int certId, int firstSectionId, int secondSectionId, string name)

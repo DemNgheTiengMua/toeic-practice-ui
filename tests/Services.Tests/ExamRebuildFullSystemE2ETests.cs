@@ -819,28 +819,23 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
             VALUES (@cert, N'CAT Sitting Exam', 'published', 60, 'mock');
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, UnitNumber)
-            VALUES (@exam, @cert, @sec, 1, 1), (@exam, @cert, @sec, 2, 2);
-            DECLARE @g1 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND UnitNumber = 1);
-            DECLARE @g2 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND UnitNumber = 2);
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@g1, @exam, @sec, @skill, N'Stage 1 Q', 'A2', 'mcq', 1),
-                   (@g2, @exam, @sec, @skill, N'Stage 2 Adaptive Q', 'B1', 'mcq', 2);
-
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
-            SELECT QuestionId, 'mcq', 'A', 'Correct', 1 FROM Questions WHERE ExamId = @exam;
             """);
 
         await using var dbCat = DbContextFactory.Create(database.ConnectionString);
         var cert = await dbCat.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await dbCat.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var qStage1 = await dbCat.Questions.SingleAsync(q => q.ExamId == exam.ExamId && q.DisplayOrder == 1);
-        var qStage2 = await dbCat.Questions.SingleAsync(q => q.ExamId == exam.ExamId && q.DisplayOrder == 2);
-        var optStage1 = await dbCat.QuestionOptions.FirstAsync(o => o.QuestionId == qStage1.QuestionId);
-        var optStage2 = await dbCat.QuestionOptions.FirstAsync(o => o.QuestionId == qStage2.QuestionId);
+        var section = await dbCat.Sections.SingleAsync(s => s.CertId == cert.CertId);
+
+        // #269: a stage is a position's UnitNumber on the roster, not a group row.
+        var stage1 = await PoolFixture.AddMcqAsync(
+            dbCat, exam.ExamId, cert.CertId, section.SectionId, "reading", "Stage 1 Q",
+            displayOrder: 1, keyLabel: "A", level: "A2", unitNumber: 1);
+        var stage2 = await PoolFixture.AddMcqAsync(
+            dbCat, exam.ExamId, cert.CertId, section.SectionId, "reading", "Stage 2 Adaptive Q",
+            displayOrder: 2, keyLabel: "A", level: "B1", unitNumber: 2);
+
+        var optStage1 = await PoolFixture.OptionIdAsync(dbCat, exam.ExamId, stage1.ExamItemId, "A");
+        var optStage2 = await PoolFixture.OptionIdAsync(dbCat, exam.ExamId, stage2.ExamItemId, "A");
 
         var userId = await SeedLearnerAsync(certCode);
         var engine = new AttemptEngine(dbCat);
@@ -849,9 +844,9 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
         Assert.Equal(1, attempt.ActiveUnitNumber);
 
         // Stage 1 is active, Stage 2 locked
-        await engine.SaveAnswerAsync(attempt.AttemptId, userId, qStage1.QuestionId, optStage1.OptionId, false);
+        await engine.SaveAnswerAsync(attempt.AttemptId, userId, stage1.ExamItemId, optStage1, false);
         await Assert.ThrowsAsync<AttemptEngineException>(() =>
-            engine.SaveAnswerAsync(attempt.AttemptId, userId, qStage2.QuestionId, optStage2.OptionId, false));
+            engine.SaveAnswerAsync(attempt.AttemptId, userId, stage2.ExamItemId, optStage2, false));
 
         // Transition to Stage 2 (Unit 2)
         var trans = await engine.TransitionUnitAsync(attempt.AttemptId, 2);
@@ -859,11 +854,11 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
 
         // Stage 1 is permanently locked
         await Assert.ThrowsAsync<AttemptEngineException>(() =>
-            engine.SaveAnswerAsync(attempt.AttemptId, userId, qStage1.QuestionId, optStage1.OptionId, false));
+            engine.SaveAnswerAsync(attempt.AttemptId, userId, stage1.ExamItemId, optStage1, false));
 
         // Stage 2 is now open
-        var res2 = await engine.SaveAnswerAsync(attempt.AttemptId, userId, qStage2.QuestionId, optStage2.OptionId, false);
-        Assert.Equal(qStage2.QuestionId, res2.QuestionId);
+        var res2 = await engine.SaveAnswerAsync(attempt.AttemptId, userId, stage2.ExamItemId, optStage2, false);
+        Assert.Equal(stage2.ExamItemId, res2.QuestionId);
     }
 
     [Fact]

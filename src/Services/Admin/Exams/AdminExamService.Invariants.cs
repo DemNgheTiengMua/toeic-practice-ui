@@ -82,6 +82,20 @@ public sealed partial class AdminExamService
             .ToListAsync(cancellationToken);
         var legacyBySection = legacyCounts.ToDictionary(x => x.SectionId, x => x.Count);
 
+        // #269: a position is a ROSTER row. Counting only `Questions` made a pool-authored paper report
+        // "holds 0" for every section and therefore unpublishable - measured: the audit answered
+        // CanPublish=false for a paper whose roster was complete. The roster is what the sitting
+        // renders, so it is what a section holds.
+        var rosterBySection = await db.ExamItems.AsNoTracking()
+            .Where(i => i.ExamId == exam.ExamId)
+            .GroupBy(i => i.SectionId)
+            .Select(g => new { SectionId = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        int RenderedIn(int sectionId) => Math.Max(
+            legacyBySection.GetValueOrDefault(sectionId),
+            rosterBySection.FirstOrDefault(r => r.SectionId == sectionId)?.Count ?? 0);
+
         var sectionsBySkill = sections.GroupBy(s => s.SkillId).ToDictionary(g => g.Key, g => g.ToList());
 
         // ---- INV-1: every enabled skill has a section, every section holds what it declares ----------
@@ -110,7 +124,7 @@ public sealed partial class AdminExamService
             foreach (var sec in skillSections)
             {
                 var declared = sec.ExpectedQuestionCount;
-                var rendered = legacyBySection.GetValueOrDefault(sec.SectionId);
+                var rendered = RenderedIn(sec.SectionId);
 
                 if (rendered != declared)
                 {

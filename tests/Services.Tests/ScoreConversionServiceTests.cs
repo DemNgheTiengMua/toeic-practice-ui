@@ -218,35 +218,28 @@ public sealed class ScoreConversionServiceTests(DatabaseFixture database)
               (@cert, @sL, @exam, 1, 400),
               (@cert, @sR, @exam, 0, 100),
               (@cert, @sR, @exam, 1, 400);
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secL, 1);
-            DECLARE @grp1 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp1, @exam, @secL, @sL, N'Listening Q1', 'A2', 'mcq', 1);
-            DECLARE @q1 INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q1, 'mcq', 'A', N'Opt A', 1),
-              (@q1, 'mcq', 'B', N'Opt B', 0);
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 2);
-            DECLARE @grp2 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp2, @exam, @secR, @sR, N'Reading Q2', 'A2', 'mcq', 2);
-            DECLARE @q2 INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q2, 'mcq', 'A', N'Opt A', 0),
-              (@q2, 'mcq', 'B', N'Opt B', 1);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
-        var q1 = await db.Questions.FirstAsync(q => q.ExamId == exam.ExamId && q.DisplayOrder == 1);
-        var q2 = await db.Questions.FirstAsync(q => q.ExamId == exam.ExamId && q.DisplayOrder == 2);
-        var opt1 = await db.QuestionOptions.FirstAsync(o => o.QuestionId == q1.QuestionId && o.IsCorrect);
-        var opt2 = await db.QuestionOptions.FirstAsync(o => o.QuestionId == q2.QuestionId && o.IsCorrect);
         var listSkill = await db.Skills.FirstAsync(s => s.CertId == cert.CertId && s.Code == "LIST");
         var readSkill = await db.Skills.FirstAsync(s => s.CertId == cert.CertId && s.Code == "READ");
+        var secL = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "P1");
+        var secR = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "P5");
+
+        // #269: the paper is authored on the pool. The keys are the legacy fixture's own: the
+        // listening task's answer is A and the reading task's is B, which is what the answers below
+        // echo - so each skill still sits a raw score of 1. The reading item is B2 rather than A2 so it
+        // does not stock a cell another test counts exactly.
+        var q1 = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, secL.SectionId, "listening", "Listening Q1",
+            displayOrder: 1, keyLabel: "A", level: "A2");
+        var q2 = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, secR.SectionId, "reading", "Reading Q2",
+            displayOrder: 1, keyLabel: "B", level: "B2");
+        var opt1 = await PoolFixture.OptionIdAsync(db, exam.ExamId, q1.ExamItemId, "A");
+        var opt2 = await PoolFixture.OptionIdAsync(db, exam.ExamId, q2.ExamItemId, "B");
 
         // Seed learner and take exam
         var email = $"{Guid.NewGuid():N}@test.local";
@@ -270,7 +263,8 @@ public sealed class ScoreConversionServiceTests(DatabaseFixture database)
         var mockService = new MockExamService(db, learners);
 
         var attempt = await mockService.StartAttemptAsync(userId, exam.ExamId);
-        await mockService.SaveAnswerAsync(userId, attempt.AttemptId, q1.QuestionId, opt1.OptionId, false);
+        // #269: the position, not a question row, is what the sitting addresses.
+        await mockService.SaveAnswerAsync(userId, attempt.AttemptId, q1.ExamItemId, opt1, false);
         await database.SqlAsync($"""
             UPDATE ExamAttempts
             SET StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
@@ -281,7 +275,7 @@ public sealed class ScoreConversionServiceTests(DatabaseFixture database)
             """);
         var secondPhaseDb = DbContextFactory.Create(database.ConnectionString);
         mockService = new MockExamService(secondPhaseDb, new LearnerService(secondPhaseDb));
-        await mockService.SaveAnswerAsync(userId, attempt.AttemptId, q2.QuestionId, opt2.OptionId, false);
+        await mockService.SaveAnswerAsync(userId, attempt.AttemptId, q2.ExamItemId, opt2, false);
         var resultBeforeEdit = await mockService.SubmitAttemptAsync(userId, attempt.AttemptId, false);
 
         // Before edit: TotalScore is 800 (400 + 400), which falls in "HIGH" (500-990)

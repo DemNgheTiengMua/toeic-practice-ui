@@ -10,6 +10,21 @@ namespace WebMVC.E2ETests.Journeys;
 [TestFixture]
 public class ExamAudioAndInstructionsTests : PlaywrightTestBase
 {
+    // #269: this journey file was NOT migrated onto the pool, and the reason is that these tests
+    // exercise the legacy audio-slice EDITOR, not the legacy authoring service. Group 1 is addressed
+    // directly (`UPDATE QuestionGroups SET AudioStartMs = ... WHERE GroupId = 1`), `ResetAttemptForListening-`
+    // style setup reads `Questions`, and `ReadGroupSliceAsync` reads `QuestionGroups.AudioStartMs`.
+    // Three of those are gone or unreachable for a pool paper:
+    //   * the demo seed writes no QuestionGroups/Questions rows at all (docs/seed-demo.sql:6), so
+    //     `WHERE GroupId = 1` matches nothing and the slicer has no group to mark;
+    //   * `AdminExamService.UpdateQuestionGroupAsync` still writes QuestionGroups, so it cannot edit a
+    //     pool paper's stimulus — the editor's pool path is the Studio's `BuildPoolSectionDto` read,
+    //     whose group ids are stimulus ids (or a negated ExamItemId), and no save path exists yet;
+    //   * `LastQuestionId` is gone from ExamAttempts (it is `CurrentExamItemId` now).
+    // Migrating the fixture would not help: the subject is the slice editor's round trip, and that round
+    // trip has no pool writer to test. #269 deletes this file with the tables, or a ticket that gives the
+    // Studio a pool group-save path rewrites it against stimuli.
+
     private LoginPage _loginPage = null!;
 
     [SetUp]

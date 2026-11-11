@@ -87,9 +87,24 @@ public sealed class ExamPublishInvariantTests(DatabaseFixture database)
     /// one section declaring one question, a draft exam declaring 60 minutes, one rendered question, and
     /// one cleared pool item bound at that position.
     /// <para>
-    /// The pool item is bound at position 1 because that is where the sitting renders it
-    /// (<c>AttemptEngine.PlaceBindings</c> maps a binding onto the legacy question at its position), so
-    /// the baseline is a paper the learner would actually sit - not one with a binding in thin air.
+    /// The pool item is bound at position 1 because that is where the sitting renders it, so the
+    /// baseline is a paper the learner would actually sit - not one with a binding in thin air.
+    /// </para>
+    /// <para>
+    /// <b>#269: the rendered position stays a legacy <c>Questions</c> row, and the reason is production
+    /// code rather than this fixture.</b> INV-1's "every section holds exactly what it declares" is
+    /// checked against the legacy count, because that is what the sitting rendered at the time the check
+    /// was written (<c>AdminExamService.Invariants.cs</c>: "What a section HOLDS is the number of
+    /// positions the sitting renders, and that is the legacy <c>Questions</c> count - not the union with
+    /// <c>ExamItems</c>"). The ~26 authoring checks above the six read the same group tree. So a paper
+    /// whose positions live only on the pool currently fails INV-1 with "declares 1 item(s) but holds 0"
+    /// (measured), and every test in this file needs a paper that clears the other five invariants.
+    /// </para>
+    /// <para>
+    /// Migrating the rendered position before INV-1 reads the roster would make all fifteen tests red for
+    /// a reason this ticket does not own. The pool half - the bound item, its version, its clearance - is
+    /// already authored here, because that is what the invariants under test inspect. The fixture stays
+    /// half-legacy until INV-1 moves; #269 deletes that half with the tables.
     /// </para>
     /// </summary>
     private async Task<(int CertId, int SkillId, int SectionId, int ExamId, int ItemId)> SeedBaselineAsync(

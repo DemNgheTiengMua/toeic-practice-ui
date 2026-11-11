@@ -39,6 +39,16 @@ public sealed class PreflightGateTests(DatabaseFixture database)
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
 
+    /// <summary>
+    /// A two-section paper (listening + reading), each holding one position, with audio on the
+    /// listening section.
+    /// <para>
+    /// #269: the positions are authored on the pool, which is what every reader behind this fixture
+    /// now resolves - the preflight requirements, the audio URL list and attempt creation all read the
+    /// roster. Audio is still an <c>ExamSectionAudio</c> upload here, because a section's master track
+    /// is a property of the paper rather than of a stimulus.
+    /// </para>
+    /// </summary>
     private async Task<(int certId, int examId, int q1Id, int q2Id)> SeedExamWithRequireAudioAsync(string certCode)
     {
         await database.SqlAsync($"""
@@ -48,14 +58,11 @@ public sealed class PreflightGateTests(DatabaseFixture database)
             INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
               (@cert, 'LIST', N'Listening', 'listening', 1),
               (@cert, 'READ', N'Reading', 'reading', 2);
-            DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
-            DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, RequireAudio) VALUES
-              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 1, 1),
-              (@sR, @cert, 'reading', 'P5', N'Sentences', 2, 1, 0);
-            DECLARE @secL INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P1');
-            DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, RequireAudio)
+            SELECT s.SkillId, @cert, 'listening', 'P1', N'Photos', 1, 1, 1 FROM Skills s WHERE s.CertId = @cert AND s.Code = 'LIST';
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, RequireAudio)
+            SELECT s.SkillId, @cert, 'reading', 'P5', N'Sentences', 2, 1, 0 FROM Skills s WHERE s.CertId = @cert AND s.Code = 'READ';
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cert, 'LOW', N'Low', 0, 499, 1),
@@ -63,33 +70,26 @@ public sealed class PreflightGateTests(DatabaseFixture database)
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES
               (@cert, N'Exam {certCode}', 'published', 120, 'mock');
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secL, 1);
-            DECLARE @gL INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 2);
-            DECLARE @gR INT = SCOPE_IDENTITY();
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@gL, @exam, @secL, @sL, N'Listening question', 'A2', 'mcq', 1);
-            DECLARE @q1 INT = SCOPE_IDENTITY();
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@gR, @exam, @secR, @sR, N'Reading question', 'A2', 'mcq', 2);
-            DECLARE @q2 INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q1, 'mcq', 'A', 'Opt 1A', 1), (@q1, 'mcq', 'B', 'Opt 1B', 0),
-              (@q2, 'mcq', 'A', 'Opt 2A', 1), (@q2, 'mcq', 'B', 'Opt 2B', 0);
-
-            INSERT INTO ExamSectionAudio (ExamId, SectionId, CertId, AudioPath, DurationSec, SizeBytes, UploadedAt)
-            VALUES (@exam, @secL, @cert, '/media/audio/track1.mp3', 120, 1024000, SYSDATETIMEOFFSET());
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var exam = await db.Exams.SingleAsync(e => e.Cert.Code == certCode);
-        var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).ToListAsync();
-        return (exam.CertId, exam.ExamId, questions[0].QuestionId, questions[1].QuestionId);
+        var sections = await db.Sections.Where(s => s.CertId == exam.CertId)
+            .OrderBy(s => s.DisplayOrder).ToListAsync();
+
+        var q1 = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, exam.CertId, sections[0].SectionId, "listening", "Listening question",
+            displayOrder: 1, level: "A2");
+        var q2 = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, exam.CertId, sections[1].SectionId, "reading", "Reading question",
+            displayOrder: 1, level: "A2");
+
+        await database.SqlAsync($"""
+            INSERT INTO ExamSectionAudio (ExamId, SectionId, CertId, AudioPath, DurationSec, SizeBytes, UploadedAt)
+            VALUES ({exam.ExamId}, {sections[0].SectionId}, {exam.CertId}, '/media/audio/track1.mp3', 120, 1024000, SYSDATETIMEOFFSET());
+            """);
+
+        return (exam.CertId, exam.ExamId, q1.ExamItemId, q2.ExamItemId);
     }
 
     private async Task<(int certId, int examId, int qSpeakingId)> SeedExamWithSpeakingSkillAsync(string certCode)
@@ -100,11 +100,9 @@ public sealed class PreflightGateTests(DatabaseFixture database)
 
             INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
               (@cert, 'speaking', N'Speaking', 'speaking', 1);
-            DECLARE @sS INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'speaking');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, RequireAudio) VALUES
-              (@sS, @cert, 'speaking', 'S1', N'Speaking Part 1', 1, 1, 0);
-            DECLARE @secS INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'S1');
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, RequireAudio)
+            SELECT s.SkillId, @cert, 'speaking', 'S1', N'Speaking Part 1', 1, 1, 0 FROM Skills s WHERE s.CertId = @cert AND s.Code = 'speaking';
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cert, 'LOW', N'Low', 0, 499, 1),
@@ -112,20 +110,17 @@ public sealed class PreflightGateTests(DatabaseFixture database)
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES
               (@cert, N'Speaking Exam {certCode}', 'published', 45, 'mock');
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secS, 1);
-            DECLARE @gS INT = SCOPE_IDENTITY();
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@gS, @exam, @secS, @sS, N'Describe your hometown.', 'A2', 'free_response', 1);
-            DECLARE @q1 INT = SCOPE_IDENTITY();
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var exam = await db.Exams.SingleAsync(e => e.Cert.Code == certCode);
-        var q = await db.Questions.SingleAsync(q => q.ExamId == exam.ExamId);
-        return (exam.CertId, exam.ExamId, q.QuestionId);
+        var section = await db.Sections.SingleAsync(s => s.CertId == exam.CertId);
+
+        var q = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, exam.CertId, section.SectionId, "speaking",
+            "Describe your hometown.", displayOrder: 1, level: "A2");
+
+        return (exam.CertId, exam.ExamId, q.ExamItemId);
     }
 
     private async Task<(int certId, int examId, int qReadingId)> SeedPureReadingExamAsync(string certCode)
@@ -136,11 +131,9 @@ public sealed class PreflightGateTests(DatabaseFixture database)
 
             INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
               (@cert, 'READ', N'Reading', 'reading', 1);
-            DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, RequireAudio) VALUES
-              (@sR, @cert, 'reading', 'P5', N'Sentences', 1, 1, 0);
-            DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, RequireAudio)
+            SELECT s.SkillId, @cert, 'reading', 'P5', N'Sentences', 1, 1, 0 FROM Skills s WHERE s.CertId = @cert AND s.Code = 'READ';
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cert, 'LOW', N'Low', 0, 499, 1),
@@ -148,23 +141,19 @@ public sealed class PreflightGateTests(DatabaseFixture database)
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES
               (@cert, N'Reading Exam {certCode}', 'published', 60, 'mock');
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 1);
-            DECLARE @gR INT = SCOPE_IDENTITY();
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@gR, @exam, @secR, @sR, N'Reading sentence', 'A2', 'mcq', 1);
-            DECLARE @q1 INT = SCOPE_IDENTITY();
-
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q1, 'mcq', 'A', 'Opt A', 1), (@q1, 'mcq', 'B', 'Opt B', 0);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var exam = await db.Exams.SingleAsync(e => e.Cert.Code == certCode);
-        var q = await db.Questions.SingleAsync(q => q.ExamId == exam.ExamId);
-        return (exam.CertId, exam.ExamId, q.QuestionId);
+        var section = await db.Sections.SingleAsync(s => s.CertId == exam.CertId);
+
+        // A pool MCQ carries four options by construction (CNT-06), so this position offers four where
+        // the legacy fixture wrote two. Nothing here counts them.
+        var q = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, exam.CertId, section.SectionId, "reading", "Reading sentence",
+            displayOrder: 1, level: "A2");
+
+        return (exam.CertId, exam.ExamId, q.ExamItemId);
     }
 
     [Fact]
@@ -291,10 +280,10 @@ public sealed class PreflightGateTests(DatabaseFixture database)
 
         // SaveAnswerAsync succeeds
         await using var optDb = DbContextFactory.Create(database.ConnectionString);
-        var opt = await optDb.QuestionOptions.FirstAsync(o => o.QuestionId == q1Id);
-        var answerResult = await engine.SaveAnswerAsync(attempt.AttemptId, userId, q1Id, selectedOptionId: opt.OptionId, isFlagged: false);
+        var opt = await PoolFixture.OptionIdAsync(optDb, examId, q1Id, "A");
+        var answerResult = await engine.SaveAnswerAsync(attempt.AttemptId, userId, q1Id, selectedOptionId: opt, isFlagged: false);
         Assert.NotNull(answerResult);
-        Assert.Equal(opt.OptionId, answerResult.SelectedOptionId);
+        Assert.Equal(opt, answerResult.SelectedOptionId);
     }
 
     [Fact]
