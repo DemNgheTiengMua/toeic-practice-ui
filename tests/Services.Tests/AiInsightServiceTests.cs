@@ -237,6 +237,109 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         Assert.Equal(initial.SourceFingerprint, reloaded.SourceFingerprint);
     }
 
+    /// <summary>
+    /// #269: the exam insight for a paper authored on the pool.
+    /// <para>
+    /// A pool answer has no <c>Question</c> row, and the payload builder read
+    /// <c>a.Question.QuestionId</c>, <c>a.Question.SectionId</c> and <c>a.Question.Section.Name</c>
+    /// unconditionally - so generating an insight for ANY pool attempt threw NullReferenceException.
+    /// The fixture below writes only pool rows, which is what makes a green assertion mean the roster
+    /// answered rather than the legacy branch.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task GetOrCreateExamInsightAsync_builds_a_payload_for_a_pool_attempt_with_no_question_rows()
+    {
+        var certCode = Unique("EXP");
+        var userId = await SeedLearnerAsync();
+
+        int attemptId;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+            db.Certificates.Add(cert);
+            await db.SaveChangesAsync();
+
+            var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
+            db.Skills.Add(skill);
+            await db.SaveChangesAsync();
+
+            var section = new Section
+            {
+                CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading",
+                Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1,
+                OptionCount = 4, ExpectedQuestionCount = 1,
+            };
+            db.Sections.Add(section);
+            await db.SaveChangesAsync();
+
+            db.ScoreBands.Add(new ScoreBand
+            {
+                CertId = cert.CertId, Code = "B2", Name = "Vantage", MinTotal = 500, MaxTotal = 990, DisplayOrder = 1,
+            });
+            await db.SaveChangesAsync();
+
+            var exam = new Exam
+            {
+                CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published",
+                DurationMinutes = 60, Purpose = "mock",
+            };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+
+            var position = await PoolFixture.AddMcqAsync(
+                db, exam.ExamId, cert.CertId, section.SectionId, "reading", "Pool stem", displayOrder: 1);
+            var key = await PoolFixture.OptionIdAsync(db, exam.ExamId, position.ExamItemId, "A");
+
+            var attempt = new ExamAttempt
+            {
+                UserId = userId,
+                ExamId = exam.ExamId,
+                CertId = cert.CertId,
+                Status = AttemptStatus.Graded.ToCode(),
+                StartedAt = DateTimeOffset.UtcNow.AddMinutes(-30),
+                SubmittedAt = DateTimeOffset.UtcNow,
+                TotalScore = 750,
+                BandCode = "B2",
+                WrittenByService = DerivedFactWriters.AttemptScoreAndBand,
+                ProjectionVersion = 1,
+            };
+            db.ExamAttempts.Add(attempt);
+            await db.SaveChangesAsync();
+            attemptId = attempt.AttemptId;
+
+            // The pool shape: no QuestionId at all, the position and its version instead.
+            db.AttemptAnswers.Add(new AttemptAnswer
+            {
+                AttemptId = attempt.AttemptId,
+                ExamId = exam.ExamId,
+                ExamItemId = position.ExamItemId,
+                ItemId = position.ItemId,
+                ItemVersionId = position.ItemVersionId,
+                SelectedLabel = "A",
+                SelectedOptionId = key,
+                IsCorrect = true,
+            });
+            await db.SaveChangesAsync();
+
+            Assert.Empty(await db.Questions.Where(q => q.ExamId == exam.ExamId).ToListAsync());
+        }
+
+        var (service, _) = CreateService();
+        // Creation only records the request. The PAYLOAD is built by the processor, which is where the
+        // payload builder reads each answer - so the test has to drive that, or it asserts nothing.
+        await service.GetOrCreateExamInsightAsync(userId, attemptId);
+        await service.ProcessPendingInsightsAsync();
+
+        await using var read = DbContextFactory.Create(database.ConnectionString);
+        var stored = await read.AiInsights
+            .SingleAsync(i => i.AttemptId == attemptId && i.Scope == AiInsightScope.Attempt.ToCode());
+
+        Assert.Equal(AiInsightStatus.Done.ToCode(), stored.Status);
+        Assert.NotNull(stored.Narrative);
+        Assert.Equal(64, stored.SourceFingerprint!.Length);
+    }
+
     [Fact]
     public async Task ProcessPendingInsightsAsync_generates_insight_and_links_recommendations()
     {

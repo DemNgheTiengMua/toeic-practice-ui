@@ -13,10 +13,14 @@ public sealed partial class PracticeService
 
     public async Task<string?> RevealHintAsync(int userId, int sessionId, int questionId, CancellationToken cancellationToken = default)
     {
+        // #269: the address is the answer, not the question. A pool position has no QuestionId, so the
+        // row is resolved by whichever identity exists - the same rule SubmitAnswerAsync already uses.
         var answer = await db.PracticeAnswers
             .Include(pa => pa.Session)
             .Include(pa => pa.Question)
-            .Where(pa => pa.SessionId == sessionId && pa.Session.UserId == userId && pa.QuestionId == questionId)
+            .Where(pa => pa.SessionId == sessionId && pa.Session.UserId == userId
+                && (pa.QuestionId == questionId
+                    || (pa.QuestionId == null && pa.ItemVersionId == questionId)))
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PracticeException(PracticeException.QuestionNotFound, $"Question {questionId} was not found in session {sessionId}.");
 
@@ -31,8 +35,13 @@ public sealed partial class PracticeService
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        // A pool item has no hint: it is authored on the legacy question row, which #231 did not drop.
-        return answer.Question?.Hint;
+        // A pool item's hint is authored on its pinned version; a legacy one's is on the question row.
+        return answer.ItemVersionId is int versionId
+            ? await db.ItemVersions.AsNoTracking()
+                .Where(v => v.ItemVersionId == versionId)
+                .Select(v => v.Hint)
+                .SingleAsync(cancellationToken)
+            : answer.Question?.Hint;
     }
 
     public async Task<GradedPracticeAnswerResult> SubmitAnswerAsync(int userId, int sessionId, int questionId, SubmitPracticeAnswerInput input, CancellationToken cancellationToken = default)

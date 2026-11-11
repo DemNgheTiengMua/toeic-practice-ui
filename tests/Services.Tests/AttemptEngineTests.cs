@@ -79,8 +79,114 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
               (@cert, @sL, @exam, 1, 450),
               (@cert, @sR, @exam, 0, 100),
               (@cert, @sR, @exam, 1, 450);
+            """);
 
-            -- Question 1: Listening
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
+        var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
+        var secL = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "P1");
+        var secR = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "P5");
+
+        // #269: the paper is authored on the pool. A position is addressed by its ExamItemId, and the
+        // listening one carries a stimulus because that is where a pool paper keeps its audio.
+        var q1 = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, secL.SectionId, "listening", "Listening Q1",
+            displayOrder: 1, keyLabel: "A", level: "A2", passage: "Listen to the exchange.");
+        var q2 = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, secR.SectionId, "reading", "Reading Q2",
+            displayOrder: 2, keyLabel: "B", level: "A2");
+
+        var opt1 = await PoolFixture.OptionIdAsync(db, exam.ExamId, q1.ExamItemId, "A");
+        var opt2 = await PoolFixture.OptionIdAsync(db, exam.ExamId, q2.ExamItemId, "B");
+
+        return (cert.CertId, exam.ExamId, q1.ExamItemId, q2.ExamItemId, opt1, opt2);
+    }
+
+    private async Task<int> AddWritingQuestionAsync(int certId, int examId)
+    {
+        await database.SqlAsync($"""
+            DECLARE @cert INT = {certId};
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep)
+            VALUES (@cert, 'WRIT', N'Writing', 'writing', 3, 0, 10, 1);
+            DECLARE @skill INT = SCOPE_IDENTITY();
+
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder)
+            VALUES (@skill, @cert, 'writing', 'WR', N'Writing', 1, 1);
+
+            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder)
+            VALUES (@cert, @skill, 'TASK', N'Task Achievement', N'Band 6: fully addresses the task. Band 3: only partly addresses it. Band 0: no response.', 9.0, 1.0, 1);
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var section = await db.Sections.SingleAsync(s => s.CertId == certId && s.Code == "WR");
+
+        // #269: word limits and the stem live on the pinned version, and the position is the ExamItemId.
+        var position = await PoolFixture.AddProductiveAsync(
+            db, examId, certId, section.SectionId, "writing", "Describe the image.",
+            displayOrder: 3, minWords: 10, maxWords: 100, level: "A2");
+        return position.ExamItemId;
+    }
+
+    /// <summary>
+    /// The same two-skill paper as two legacy <c>Questions</c> rows.
+    /// <para>
+    /// <b>#269: NOT migrated, and the reason is production code rather than this fixture.</b> Four tests
+    /// below need a WHOLE legacy paper, not just a legacy task, because three readers they drive still
+    /// resolve a free response through <c>fr.Question</c>:
+    /// <list type="bullet">
+    /// <item><c>AttemptEngine.Submission</c> matches a final draft by
+    /// <c>item.QuestionId == finalDraft.QuestionId</c>, so a pool response is never found and the insert
+    /// hits <c>UX_FreeResponses_ExamItem</c> as a duplicate.</item>
+    /// <item><c>AiGradingProcessor</c> reads <c>grading.FreeResponse.Question.SectionId</c>, so a pool
+    /// grading fails and the attempt stays <c>submitted</c> instead of <c>graded</c>.</item>
+    /// <item><c>AttemptEngine.Speaking</c> keys its response by <c>QuestionId</c> and returns
+    /// <c>fr.QuestionId!.Value</c>.</item>
+    /// </list>
+    /// A paper carrying BOTH shapes is not an option either: <c>LoadSittingQuestionsAsync</c> picks the
+    /// legacy branch the moment one question row exists, and <c>EnsureBindingsRender</c> then refuses the
+    /// pool binding ("this position holds no question"). So the paper is wholly legacy, as it was, and
+    /// #269 deletes it with the tables.
+    /// </para>
+    /// </summary>
+    private async Task<(int certId, int examId, int q1Id, int q2Id, int opt1CorrectId, int opt2CorrectId)> SeedLegacyExamFixtureAsync(string certCode)
+    {
+        await database.SqlAsync($"""
+            INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
+            DECLARE @cert INT = SCOPE_IDENTITY();
+
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cert, 'LIST', N'Listening', 'listening', 1, 100, 450, 50),
+              (@cert, 'READ', N'Reading', 'reading', 2, 100, 450, 50);
+            DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
+            DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
+
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 1),
+              (@sR, @cert, 'reading', 'P5', N'Sentences', 1, 2);
+            DECLARE @secL INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P1');
+            DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
+
+            INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
+              (@cert, 'LOW', N'Low', 0, 499, 1),
+              (@cert, 'HIGH', N'High', 500, 990, 2);
+            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
+              VALUES (@cert, 1, 0, N'fixture', '2026-01-01');
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
+              SELECT @cert, 1, SkillId, 'A2', 'cut', 0, 499 FROM Skills WHERE CertId = @cert;
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
+              SELECT @cert, 1, SkillId, 'B1', 'cut', 500, 990 FROM Skills WHERE CertId = @cert;
+
+            INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES
+              (@cert, N'Exam {certCode}', 'published', 120, 'mock');
+            DECLARE @exam INT = SCOPE_IDENTITY();
+
+            INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+              (@cert, @sL, @exam, 0, 100),
+              (@cert, @sL, @exam, 1, 450),
+              (@cert, @sR, @exam, 0, 100),
+              (@cert, @sR, @exam, 1, 450);
+
+            -- Two options each, because that is what these readers' assertions were written against.
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secL, 1);
             DECLARE @grp1 INT = SCOPE_IDENTITY();
             INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
@@ -90,7 +196,6 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
               (@q1, 'mcq', 'A', N'Opt A', 1),
               (@q1, 'mcq', 'B', N'Opt B', 0);
 
-            -- Question 2: Reading
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 2);
             DECLARE @grp2 INT = SCOPE_IDENTITY();
             INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
@@ -105,47 +210,32 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
         var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).ToListAsync();
-        var q1 = questions[0];
-        var q2 = questions[1];
 
-        var opt1 = await db.QuestionOptions.SingleAsync(o => o.QuestionId == q1.QuestionId && o.IsCorrect);
-        var opt2 = await db.QuestionOptions.SingleAsync(o => o.QuestionId == q2.QuestionId && o.IsCorrect);
+        var opt1 = await db.QuestionOptions.SingleAsync(o => o.QuestionId == questions[0].QuestionId && o.IsCorrect);
+        var opt2 = await db.QuestionOptions.SingleAsync(o => o.QuestionId == questions[1].QuestionId && o.IsCorrect);
 
-        return (cert.CertId, exam.ExamId, q1.QuestionId, q2.QuestionId, opt1.OptionId, opt2.OptionId);
+        return (cert.CertId, exam.ExamId, questions[0].QuestionId, questions[1].QuestionId, opt1.OptionId, opt2.OptionId);
     }
 
-    private async Task<int> AddSpeakingQuestionAsync(int certId, int examId)
-    {
-        await database.SqlAsync($"""
-            DECLARE @cert INT = {certId};
-            DECLARE @exam INT = {examId};
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep)
-            VALUES (@cert, 'SPEA', N'Speaking', 'speaking', 4, 0, 10, 1);
-            DECLARE @skill INT = SCOPE_IDENTITY();
-
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, NavigationMode)
-            VALUES (@skill, @cert, 'speaking', 'SPK', N'Speaking Pacer Section', 1, 1, 'SYSTEM_PACED_AUTO');
-            DECLARE @section INT = SCOPE_IDENTITY();
-
-            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder)
-            VALUES (@cert, @skill, 'PRON', N'Pronunciation', 5.0, 1.0, 1);
-
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
-            VALUES (@exam, @cert, @section, 4);
-            DECLARE @group INT = SCOPE_IDENTITY();
-
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
-            VALUES (@group, @exam, @section, @skill, N'Read the text aloud.', 'A2', 'free_response', 45, 45, 4);
-            """);
-
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-        return await db.Questions
-            .Where(q => q.ExamId == examId && q.Section.Modality == "speaking")
-            .Select(q => q.QuestionId)
-            .SingleAsync();
-    }
-
-    private async Task<int> AddWritingQuestionAsync(int certId, int examId)
+    /// <summary>
+    /// The same writing task as a legacy <c>Questions</c> row.
+    /// <para>
+    /// <b>#269: NOT migrated, and the reason is production code rather than this fixture.</b> Three
+    /// tests below hand a free response to <c>WritingPracticeService</c>, to a final-draft submit, and
+    /// to <c>AiGradingProcessor</c>; each dereferences <c>fr.Question</c>, which a pool answer leaves
+    /// null:
+    /// <list type="bullet">
+    /// <item><c>AttemptEngine.Submission</c> matches a final draft by
+    /// <c>item.QuestionId == finalDraft.QuestionId</c>, so a pool response is never found and the
+    /// insert hits <c>UX_FreeResponses_ExamItem</c> as a duplicate.</item>
+    /// <item><c>AiGradingProcessor</c> reads <c>grading.FreeResponse.Question.SectionId</c>, so every
+    /// pool grading fails and the attempt stays <c>submitted</c> instead of <c>graded</c>.</item>
+    /// </list>
+    /// Migrating before those readers move would turn green tests red for a reason this ticket does
+    /// not own. The helper stays legacy until they do; #269 deletes it with the tables.
+    /// </para>
+    /// </summary>
+    private async Task<int> AddLegacyWritingQuestionAsync(int certId, int examId)
     {
         await database.SqlAsync($"""
             DECLARE @cert INT = {certId};
@@ -176,17 +266,58 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             .SingleAsync();
     }
 
+    /// <summary>
+    /// The same speaking task as a legacy <c>Questions</c> row.
+    /// <para>
+    /// <b>#269: NOT migrated.</b> <c>AttemptEngine.Speaking</c> keys its response lookup by
+    /// <c>QuestionId</c> and returns <c>fr.QuestionId!.Value</c>, so a pool position's take is written
+    /// against the wrong identity and then read back through a null. The helper stays legacy until
+    /// that reader moves; #269 deletes it with the tables.
+    /// </para>
+    /// </summary>
+    private async Task<int> AddLegacySpeakingQuestionAsync(int certId, int examId)
+    {
+        await database.SqlAsync($"""
+            DECLARE @cert INT = {certId};
+            DECLARE @exam INT = {examId};
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep)
+            VALUES (@cert, 'SPEA', N'Speaking', 'speaking', 4, 0, 10, 1);
+            DECLARE @skill INT = SCOPE_IDENTITY();
+
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, NavigationMode)
+            VALUES (@skill, @cert, 'speaking', 'SPK', N'Speaking Pacer Section', 1, 1, 'SYSTEM_PACED_AUTO');
+            DECLARE @section INT = SCOPE_IDENTITY();
+
+            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder)
+            VALUES (@cert, @skill, 'PRON', N'Pronunciation', 5.0, 1.0, 1);
+
+            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+            VALUES (@exam, @cert, @section, 4);
+            DECLARE @group INT = SCOPE_IDENTITY();
+
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+            VALUES (@group, @exam, @section, @skill, N'Read the text aloud.', 'A2', 'free_response', 45, 45, 4);
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        return await db.Questions
+            .Where(q => q.ExamId == examId && q.Section.Modality == "speaking")
+            .Select(q => q.QuestionId)
+            .SingleAsync();
+    }
+
     private Task AdvanceAttemptToSecondPhaseAsync(int attemptId) =>
         database.SqlAsync($"""
             UPDATE a
             SET a.StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
                 a.ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET()),
                 a.ActiveSkillId = (
+                    -- #269: the skills this paper uses come from its roster, not from Questions.
                     SELECT TOP 1 s.SkillId
                     FROM Skills s
                     JOIN Sections sec ON sec.SkillId = s.SkillId
-                    JOIN Questions q ON q.SectionId = sec.SectionId
-                    WHERE q.ExamId = a.ExamId AND s.SkillId <> a.ActiveSkillId
+                    JOIN ExamItems i ON i.SectionId = sec.SectionId
+                    WHERE i.ExamId = a.ExamId AND s.SkillId <> a.ActiveSkillId
                     ORDER BY s.DisplayOrder
                 ),
                 a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
@@ -235,13 +366,14 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var answers = await db.AttemptAnswers.Where(a => a.AttemptId == attempt.AttemptId).ToListAsync();
         var drafts = await db.FreeResponses.Where(r => r.AttemptId == attempt.AttemptId).ToListAsync();
 
-        // #250: QuestionId is nullable now, so the projection is int?. This fixture's answers are all
-        // legacy rows, so the value is present - `!.Value` states that rather than hiding a null.
+        // #269: on a pool paper an answer is addressed by its roster position, so the identity to
+        // compare is ExamItemId. QuestionId is NULL by construction (CK_AttemptAnswers_HasShape lets a
+        // row name one identity or the other), which is why this asserts the position instead.
         Assert.Equal(
             new[] { q1Id, q2Id }.OrderBy(id => id),
-            answers.Select(a => a.QuestionId!.Value).OrderBy(id => id));
+            answers.Select(a => a.ExamItemId!.Value).OrderBy(id => id));
         var draft = Assert.Single(drafts);
-        Assert.Equal(freeResponseQuestionId, draft.QuestionId);
+        Assert.Equal(freeResponseQuestionId, draft.ExamItemId);
         Assert.Equal(FreeResponseStatus.Draft.ToCode(), draft.Status);
         Assert.Equal(string.Empty, draft.ResponseText);
         Assert.Null(draft.SubmittedAt);
@@ -295,9 +427,11 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             var activeAttempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
             activeAttempt.StartedAt = startedAt;
             activeAttempt.ExpiresAt = startedAt.AddMinutes(120);
-            var writingQ = await db.Questions.SingleAsync(q => q.QuestionId == freeResponseQuestionId);
-            activeAttempt.ActiveSkillId = writingQ.SkillId;
-            activeAttempt.PhaseDeadlineAt = DateTimeOffset.UtcNow.UtcDateTime.AddMinutes(30);
+            // #269: a position's skill comes from its roster row - the only place a pool paper records it.
+            activeAttempt.ActiveSkillId = await db.ExamItems
+                .Where(i => i.ExamItemId == freeResponseQuestionId)
+                .Select(i => i.Section.SkillId)
+                .SingleAsync();            activeAttempt.PhaseDeadlineAt = DateTimeOffset.UtcNow.UtcDateTime.AddMinutes(30);
             await db.SaveChangesAsync();
         }
 
@@ -311,7 +445,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         Assert.Equal(7, result.WordCount);
         await using var resultDb = DbContextFactory.Create(database.ConnectionString);
         var response = await resultDb.FreeResponses.SingleAsync(r =>
-            r.AttemptId == attempt.AttemptId && r.QuestionId == freeResponseQuestionId);
+            r.AttemptId == attempt.AttemptId && r.ExamItemId == freeResponseQuestionId);
         Assert.Equal("A saved exam response with several words.", response.ResponseText);
         Assert.Equal(result.SavedAt, response.DraftSavedAt);
         Assert.Equal(freeResponseQuestionId,
@@ -322,8 +456,9 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     public async Task SubmitAttempt_Flushes_Final_Drafts_And_Queues_Ai_Gradings()
     {
         var certCode = Unique("ATTE");
-        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
-        var freeResponseQuestionId = await AddWritingQuestionAsync(certId, examId);
+        var (certId, examId, _, _, _, _) = await SeedLegacyExamFixtureAsync(certCode);
+        // #269: legacy paper - see SeedLegacyExamFixtureAsync. A final draft is matched by QuestionId.
+        var freeResponseQuestionId = await AddLegacyWritingQuestionAsync(certId, examId);
         var userId = await SeedLearnerAsync(certCode);
         var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, 120);
 
@@ -361,8 +496,9 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     public async Task AiGradingCompletion_Preserves_Hybrid_Exam_Objective_Score()
     {
         var certCode = Unique("ATTE");
-        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
-        var freeResponseQuestionId = await AddWritingQuestionAsync(certId, examId);
+        var (certId, examId, _, _, _, _) = await SeedLegacyExamFixtureAsync(certCode);
+        // #269: legacy paper - see SeedLegacyExamFixtureAsync. AiGradingProcessor reads fr.Question.
+        var freeResponseQuestionId = await AddLegacyWritingQuestionAsync(certId, examId);
         var userId = await SeedLearnerAsync(certCode);
         var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, 120);
         var engine = CreateEngine();
@@ -414,8 +550,9 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     public async Task FinalizeAiGradedAttempt_UnderLength_Writing_Records_Penalty_Flag_And_Weighted_Score()
     {
         var certCode = Unique("ATTE");
-        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
-        var freeResponseQuestionId = await AddWritingQuestionAsync(certId, examId);
+        var (certId, examId, _, _, _, _) = await SeedLegacyExamFixtureAsync(certCode);
+        // #269: legacy paper - see SeedLegacyExamFixtureAsync. AiGradingProcessor reads fr.Question.
+        var freeResponseQuestionId = await AddLegacyWritingQuestionAsync(certId, examId);
         var userId = await SeedLearnerAsync(certCode);
         var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, 120);
         var engine = CreateEngine();
@@ -536,8 +673,11 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         Assert.True(saveResult.RemainingSeconds > 0);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var savedAnswer = await db.AttemptAnswers.SingleAsync(a => a.AttemptId == attempt.AttemptId && a.QuestionId == q1Id);
-        Assert.Equal(opt1CorrectId, savedAnswer.SelectedOptionId);
+        var savedAnswer = await db.AttemptAnswers.SingleAsync(a => a.AttemptId == attempt.AttemptId && a.ExamItemId == q1Id);
+        // #269: a pool version stores four labels and no option rows, so the answer records the LABEL it
+        // was given. That is the same fact the old SelectedOptionId check made - the choice the learner
+        // was shown is the choice that was stored - and 'A' is the label opt1CorrectId named.
+        Assert.Equal("A", savedAnswer.SelectedLabel);
         Assert.True(savedAnswer.IsFlagged);
 
         var savedAttempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
@@ -633,8 +773,10 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         await using (var answerDb = DbContextFactory.Create(database.ConnectionString))
         {
             var savedAnswer = await answerDb.AttemptAnswers.SingleAsync(a =>
-                a.AttemptId == attempt.AttemptId && a.QuestionId == q2Id);
-            Assert.Equal(opt2CorrectId, savedAnswer.SelectedOptionId);
+                a.AttemptId == attempt.AttemptId && a.ExamItemId == q2Id);
+            // #269: see SaveAnswer_Updates_Answer_And_LastQuestionId - the stored fact is the label, and
+            // feeding it back through the projection names the same option id the learner chose.
+            Assert.Equal(opt2CorrectId, await PoolFixture.OptionIdAsync(answerDb, examId, q2Id, savedAnswer.SelectedLabel!));
         }
 
         var result = await secondPhaseEngine.SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: false);
@@ -818,22 +960,27 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         Assert.Equal(AttemptStatus.Abandoned.ToCode(), reloaded.Status);
     }
 
-    /// <summary>Gives the listening question's group the given audio and, optionally, its section a
+    /// <summary>Gives the listening position's stimulus the given audio and, optionally, its section a
     /// studio-uploaded master track.</summary>
     private async Task SetListeningAudioAsync(int examId, int q1Id, string? groupAudioPath, int? startMs, int? endMs, string? masterPath)
     {
         string Sql(string? s) => s is null ? "NULL" : $"N'{s}'";
         string Num(int? n) => n?.ToString() ?? "NULL";
+        // #269: a pool paper keeps a position's audio on the STIMULUS its item points at, reached
+        // through the roster binding. The legacy QuestionGroups row is being dropped.
         await database.SqlAsync($"""
-            UPDATE QuestionGroups SET AudioPath = {Sql(groupAudioPath)}, AudioStartMs = {Num(startMs)}, AudioEndMs = {Num(endMs)}
-            WHERE GroupId = (SELECT GroupId FROM Questions WHERE QuestionId = {q1Id});
+            UPDATE Stimuli SET AudioPath = {Sql(groupAudioPath)}, AudioStartMs = {Num(startMs)}, AudioEndMs = {Num(endMs)}
+            WHERE StimulusId = (
+                SELECT i.StimulusId FROM ExamItems ei
+                JOIN Items i ON i.ItemId = ei.ItemId
+                WHERE ei.ExamItemId = {q1Id});
             """);
         if (masterPath is not null)
         {
             await database.SqlAsync($"""
                 INSERT INTO ExamSectionAudio (ExamId, SectionId, CertId, AudioPath, DurationSec, SizeBytes)
-                SELECT {examId}, q.SectionId, e.CertId, N'{masterPath}', 600, 1000
-                FROM Questions q JOIN Exams e ON e.ExamId = q.ExamId WHERE q.QuestionId = {q1Id};
+                SELECT {examId}, SectionId, CertId, N'{masterPath}', 600, 1000
+                FROM ExamItems WHERE ExamItemId = {q1Id};
                 """);
         }
     }
@@ -935,8 +1082,9 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     public async Task SaveSpeakingAudio_and_submit_queues_ai_grading_cleanly()
     {
         var certCode = Unique("ATSP");
-        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
-        var speakingQuestionId = await AddSpeakingQuestionAsync(certId, examId);
+        // #269: legacy paper - see AddLegacySpeakingQuestionAsync. SaveSpeakingAudio keys by QuestionId.
+        var (certId, examId, _, _, _, _) = await SeedLegacyExamFixtureAsync(certCode);
+        var speakingQuestionId = await AddLegacySpeakingQuestionAsync(certId, examId);
         var userId = await SeedLearnerAsync(certCode);
         var engine = CreateEngine();
         var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 120);
@@ -958,6 +1106,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
 
         await using (var checkDb = DbContextFactory.Create(database.ConnectionString))
         {
+            // Legacy row: the response is found by the question id it was written against.
             var frDraft = await checkDb.FreeResponses.SingleAsync(r => r.AttemptId == attempt.AttemptId && r.QuestionId == speakingQuestionId);
             Assert.Equal("draft", frDraft.Status);
             Assert.Equal(audioResult.AudioPath, frDraft.AudioPath);

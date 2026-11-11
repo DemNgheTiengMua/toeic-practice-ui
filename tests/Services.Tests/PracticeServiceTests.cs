@@ -382,6 +382,42 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Contains("Missing required keywords", outcome.Explanation);
     }
 
+    /// <summary>
+    /// D3: a session is finished by the SITTING, not by reading it.
+    /// <para>
+    /// Both the summary page and the AI-insight panel read an in-progress session and used to helpfully
+    /// "finish it or ensure answers are final" on the way out. That is a state-machine transition taken
+    /// by a GET, so a learner who opened the summary mid-drill - or whose summary page was prefetched -
+    /// had the session closed underneath them, and the next submission was refused with
+    /// <c>AlreadyAnswered</c> because the session was no longer in progress. Only a learner who
+    /// genuinely answered the last question may finish a session; a read reports the state it found.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task Reading_a_summary_or_an_insight_does_not_finish_an_in_progress_session()
+    {
+        var certCode = Unique("RD");
+        var pooled = await SeedPoolCertificateAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
+        Assert.Equal(PracticeStatus.InProgress, session.Status);
+
+        // A read. It must not move the session, and it must still answer something useful.
+        var summary = await practice.GetSummaryAsync(userId, session.SessionId);
+        Assert.Null(summary.FinishedAt);
+
+        // The session is still sittable: the first question can be answered after the read. A pool
+        // question is addressed by its version, a legacy one by its question id - the same rule
+        // SubmitAnswerAsync already uses.
+        var question = await practice.GetQuestionAsync(userId, session.SessionId, 1);
+        var graded = await practice.SubmitAnswerAsync(
+            userId, session.SessionId, (question.QuestionId ?? question.ItemVersionId)!.Value,
+            new SubmitPracticeAnswerInput(SelectedOptionId: pooled.CorrectOptionIds[0]));
+        Assert.True(graded.IsCorrect);
+    }
+
     // #150 round 2: a free-response answer has no options, so an "incorrect" row for it renders in
     // the saved bank as a question with no choices. Only objective answers feed that bank.
     [Theory]

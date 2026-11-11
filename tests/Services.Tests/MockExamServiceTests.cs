@@ -30,11 +30,12 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
             SET a.StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
                 a.ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET()),
                 a.ActiveSkillId = (
+                    -- #269: the skills this paper uses come from its roster, not from Questions.
                     SELECT TOP 1 s.SkillId
                     FROM Skills s
                     JOIN Sections sec ON sec.SkillId = s.SkillId
-                    JOIN Questions q ON q.SectionId = sec.SectionId
-                    WHERE q.ExamId = a.ExamId AND s.SkillId <> a.ActiveSkillId
+                    JOIN ExamItems i ON i.SectionId = sec.SectionId
+                    WHERE i.ExamId = a.ExamId AND s.SkillId <> a.ActiveSkillId
                     ORDER BY s.DisplayOrder
                 ),
                 a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
@@ -106,8 +107,77 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
               (@cert, @sL, @exam, 1, 400),
               (@cert, @sR, @exam, 0, 100),
               (@cert, @sR, @exam, 1, 400);
+            """);
 
-            -- Question 1: Listening
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
+        var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
+        var secL = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "P1");
+        var secR = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "P5");
+
+        // #269: the paper is authored on the pool, so the id a test addresses is the POSITION's ExamItemId.
+        var q1 = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, secL.SectionId, "listening", "Listening Q1",
+            displayOrder: 1, keyLabel: "A", level: "A2", passage: "Listen to the exchange.");
+        var q2 = await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, secR.SectionId, "reading", "Reading Q2",
+            displayOrder: 2, keyLabel: "B", level: "A2");
+
+        var opt1 = await PoolFixture.OptionIdAsync(db, exam.ExamId, q1.ExamItemId, "A");
+        var opt2 = await PoolFixture.OptionIdAsync(db, exam.ExamId, q2.ExamItemId, "B");
+
+        return (cert.CertId, exam.ExamId, q1.ExamItemId, q2.ExamItemId, opt1, opt2);
+    }
+
+    /// <summary>
+    /// The same two-skill mock paper as two legacy <c>Questions</c> rows.
+    /// <para>
+    /// <b>#269: NOT migrated, and the reason is production code rather than this fixture.</b> Two tests
+    /// below read a service that still requires a question row:
+    /// <list type="bullet">
+    /// <item><c>MockExamService.GetExamInstructionsAsync</c> counts sections with
+    /// <c>db.Questions.GroupBy(q =&gt; q.SectionId)</c>, so a pool paper reports zero sections and the
+    /// test's "only P1 and P5, one question each" assertion has nothing to read.</item>
+    /// <item><c>MockExamService.GetExamHistoryAsync</c> groups answers by
+    /// <c>a.Question.Section.SkillId</c>; a pool answer's <c>Question</c> navigation is null, so the
+    /// query throws "Nullable object must have a value".</item>
+    /// </list>
+    /// Migrating these two before those readers move would turn green tests red for a reason this
+    /// ticket does not own. The fixture stays legacy until they do; #269 deletes it with the tables.
+    /// </para>
+    /// </summary>
+    private async Task<(int certId, int examId, int q1Id, int q2Id, int opt1CorrectId, int opt2CorrectId)> SeedLegacyMockExamFixtureAsync(string certCode)
+    {
+        await database.SqlAsync($"""
+            INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
+            DECLARE @cert INT = SCOPE_IDENTITY();
+
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cert, 'LIST', N'Listening', 'listening', 1, 100, 400, 50),
+              (@cert, 'READ', N'Reading', 'reading', 2, 100, 400, 50);
+            DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
+            DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
+
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 1),
+              (@sR, @cert, 'reading', 'P5', N'Sentences', 1, 2);
+            DECLARE @secL INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P1');
+            DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
+
+            INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
+              (@cert, 'LOW', N'Low', 0, 499, 1),
+              (@cert, 'HIGH', N'High', 500, 990, 2);
+
+            INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES
+              (@cert, N'Mock {certCode}', 'published', 120, 'mock');
+            DECLARE @exam INT = SCOPE_IDENTITY();
+
+            INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+              (@cert, @sL, @exam, 0, 100),
+              (@cert, @sL, @exam, 1, 400),
+              (@cert, @sR, @exam, 0, 100),
+              (@cert, @sR, @exam, 1, 400);
+
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secL, 1);
             DECLARE @grp1 INT = SCOPE_IDENTITY();
             INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
@@ -117,7 +187,6 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
               (@q1, 'mcq', 'A', N'Opt A', 1),
               (@q1, 'mcq', 'B', N'Opt B', 0);
 
-            -- Question 2: Reading
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 2);
             DECLARE @grp2 INT = SCOPE_IDENTITY();
             INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
@@ -132,15 +201,26 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
         var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).ToListAsync();
-        var q1 = questions[0];
-        var q2 = questions[1];
 
-        var opt1 = await db.QuestionOptions.SingleAsync(o => o.QuestionId == q1.QuestionId && o.IsCorrect);
-        var opt2 = await db.QuestionOptions.SingleAsync(o => o.QuestionId == q2.QuestionId && o.IsCorrect);
+        var opt1 = await db.QuestionOptions.SingleAsync(o => o.QuestionId == questions[0].QuestionId && o.IsCorrect);
+        var opt2 = await db.QuestionOptions.SingleAsync(o => o.QuestionId == questions[1].QuestionId && o.IsCorrect);
 
-        return (cert.CertId, exam.ExamId, q1.QuestionId, q2.QuestionId, opt1.OptionId, opt2.OptionId);
+        return (cert.CertId, exam.ExamId, questions[0].QuestionId, questions[1].QuestionId, opt1.OptionId, opt2.OptionId);
     }
 
+    /// <summary>
+    /// The hybrid paper as two legacy rows.
+    /// <para>
+    /// <b>#269: NOT migrated, and the reason is production code rather than this fixture.</b> The test
+    /// below grades a free response through <c>AiGradingProcessor</c>, which dereferences
+    /// <c>grading.FreeResponse.Question.SectionId</c>; a pool answer leaves <c>Question</c> null, so
+    /// every grading fails and the attempt stays <c>submitted</c> instead of <c>graded</c>. It also
+    /// submits a final draft, and <c>AttemptEngine.Submission</c> matches those by
+    /// <c>item.QuestionId == finalDraft.QuestionId</c>, which a pool row never matches. Moving this
+    /// fixture before those two readers move would turn a green test red for a reason this ticket does
+    /// not own. The fixture stays legacy until they do; #269 deletes it with the tables.
+    /// </para>
+    /// </summary>
     private async Task<(int examId, int listeningQuestionId, int writingQuestionId, int listeningOptionId)> SeedHybridMockExamFixtureAsync(string certCode)
     {
         await database.SqlAsync($"""
@@ -498,8 +578,8 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
     {
         var certCode1 = Unique("C1");
         var certCode2 = Unique("C2");
-        var (cert1Id, exam1Id, q1A, q1B, o1A, o1B) = await SeedMockExamFixtureAsync(certCode1);
-        var (cert2Id, exam2Id, q2A, q2B, o2A, o2B) = await SeedMockExamFixtureAsync(certCode2);
+        var (cert1Id, exam1Id, q1A, q1B, o1A, o1B) = await SeedLegacyMockExamFixtureAsync(certCode1);
+        var (cert2Id, exam2Id, q2A, q2B, o2A, o2B) = await SeedLegacyMockExamFixtureAsync(certCode2);
 
         var userId = await SeedLearnerAsync(certCode1, startingCredits: 5);
         var (service, learners) = CreateServices();
@@ -608,7 +688,7 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
     public async Task GetExamInstructions_lists_only_sections_with_questions_in_this_exam_and_their_actual_counts()
     {
         var certCode = Unique("MC76");
-        var (certId, examId, _, _, _, _) = await SeedMockExamFixtureAsync(certCode);
+        var (certId, examId, _, _, _, _) = await SeedLegacyMockExamFixtureAsync(certCode);
         // The certificate also has a Speaking section this exam has no questions in, and P1's
         // certificate-wide expected count differs from the exam's real count.
         await database.SqlAsync($"""
@@ -625,5 +705,49 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
 
         Assert.Equal(["P1", "P5"], instructions.Sections.Select(s => s.SectionCode));
         Assert.All(instructions.Sections, s => Assert.Equal(1, s.QuestionCount));
+    }
+
+    /// <summary>
+    /// #269: the two reads that used to reach through <c>AttemptAnswer.Question</c>.
+    /// <para>
+    /// A pool-authored paper has no question rows at all, so both of them broke on it:
+    /// <c>GetExamInstructionsAsync</c> counted sections from <c>Questions</c> and reported NOTHING to
+    /// sit, and <c>GetExamHistoryAsync</c> grouped on <c>a.Question.Section.SkillId</c> and threw
+    /// "Nullable object must have a value" - a finished attempt whose history could not be opened.
+    /// Both now read the roster, and this asserts the pool answer, not the legacy one.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task A_pool_paper_lists_its_sections_and_its_history_without_question_rows()
+    {
+        var certCode = Unique("MP");
+        var (_, examId, q1Id, _, _, _) = await SeedMockExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 5);
+        var (service, _) = CreateServices();
+
+        // The fixture authors the paper on the pool; this proves it holds no legacy rows, so a green
+        // assertion cannot be the legacy branch answering.
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            Assert.Empty(await db.Questions.Where(q => q.ExamId == examId).ToListAsync());
+            Assert.NotEmpty(await db.ExamItems.Where(i => i.ExamId == examId).ToListAsync());
+        }
+
+        var instructions = await service.GetExamInstructionsAsync(userId, examId);
+        Assert.Equal(["P1", "P5"], instructions.Sections.Select(s => s.SectionCode));
+        Assert.All(instructions.Sections, s => Assert.Equal(1, s.QuestionCount));
+
+        // And the history read: one answered position, then a finished attempt.
+        var attempt = await service.StartAttemptAsync(userId, examId);
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var key = await PoolFixture.OptionIdAsync(db, examId, q1Id, "A");
+            await service.SaveAnswerAsync(userId, attempt.AttemptId, q1Id, key, false);
+        }
+        await service.SubmitAttemptAsync(userId, attempt.AttemptId, false);
+
+        var history = await service.GetExamHistoryAsync(userId);
+        Assert.Single(history.Attempts);
+        Assert.Equal(attempt.AttemptId, history.Attempts[0].AttemptId);
     }
 }

@@ -144,12 +144,15 @@ public sealed partial class AiInsightService
 
         var questionDetails = answers.Select(a =>
         {
+            // #269: a pool answer has no Question row. The payload describes what the LEARNER SAW, so a
+            // pinned answer reads its version - the practice insight already does this. Reading
+            // `a.Question` unconditionally threw NRE for every pool attempt, so the exam insight could
+            // never be generated for a paper built on the pool.
             var q = a.Question;
-            var qOptions = allOptions.Where(o => o.QuestionId == q.QuestionId).ToList();
-            // #186: a pinned answer names a label on its version, not a legacy option row. The AI
-            // payload is built from what the learner actually saw, so the pinned stem, chosen text and
-            // key text are read from the version; only an unpinned answer falls back to the question.
             var pinned = a.ItemVersion;
+            var qOptions = q is null
+                ? []
+                : allOptions.Where(o => o.QuestionId == q.QuestionId).ToList();
             var selectedText = pinned is not null
                 ? PinnedOptionText(pinned, a.SelectedLabel)
                 : qOptions.FirstOrDefault(o => o.OptionId == a.SelectedOptionId)?.Text;
@@ -161,21 +164,28 @@ public sealed partial class AiInsightService
                 : qOptions.FirstOrDefault(o => o.IsCorrect)?.Label;
 
             return new InsightQuestionDetail(
-                q.QuestionId,
-                pinned?.Stem ?? q.Stem,
-                q.SectionId,
-                q.Section.Name,
-                q.CategoryId,
-                q.Category?.Name,
+                q?.QuestionId,
+                pinned?.Stem ?? q?.Stem ?? string.Empty,
+                q?.SectionId,
+                q?.Section?.Name ?? string.Empty,
+                q?.CategoryId,
+                q?.Category?.Name,
                 a.SelectedOptionId,
                 selectedLabel,
                 correctLabel,
                 a.IsCorrect,
                 false,
-                pinned?.Explanation ?? q.Explanation);
+                pinned?.Explanation ?? q?.Explanation);
         }).ToList();
 
-        var sectionIds = answers.Select(a => a.Question.SectionId).Distinct().ToList();
+        // #269: the section an answer belongs to is the roster position's section on a pool paper and
+        // the question row's otherwise - the same rule RosterSkills encodes, resolved to section ids.
+        var sectionIdByAnswer = await LoadSectionByAnswerAsync(attempt.AttemptId, cancellationToken);
+        var sectionIds = answers
+            .Where(a => sectionIdByAnswer.ContainsKey(a.AnswerId))
+            .Select(a => sectionIdByAnswer[a.AnswerId])
+            .Distinct()
+            .ToList();
         var sectionAccuracyRows = await db.vw_UserSectionAccuracyAlls
             .AsNoTracking()
             .Where(v => v.UserId == insight.UserId && sectionIds.Contains(v.SectionId))
@@ -195,7 +205,11 @@ public sealed partial class AiInsightService
             return new InsightSectionAccuracy(s.SectionId, s.Code, s.Name, ans, cor, pct);
         }).ToList();
 
-        var categoryIds = answers.Where(a => a.Question.CategoryId.HasValue).Select(a => a.Question.CategoryId!.Value).Distinct().ToList();
+        var categoryIds = answers
+            .Where(a => a.Question?.CategoryId is not null)
+            .Select(a => a.Question!.CategoryId!.Value)
+            .Distinct()
+            .ToList();
         var catAccuracyRows = await db.vw_UserCategoryAccuracies
             .AsNoTracking()
             .Where(v => v.UserId == insight.UserId && v.CategoryId != null && categoryIds.Contains(v.CategoryId.Value))
@@ -254,5 +268,55 @@ public sealed partial class AiInsightService
             ErrorFingerprints: errorFingerprints,
             WritingEvidences: writingEvidences,
             Facts: facts);
+    }
+
+    /// <summary>
+    /// #269: answer id → section id, resolved from the roster position on a pool paper and the legacy
+    /// question row otherwise. The insight payload needs a section per answer and must not branch on
+    /// which store the answer came from.
+    /// </summary>
+    private async Task<Dictionary<int, int>> LoadSectionByAnswerAsync(
+        int attemptId, CancellationToken cancellationToken)
+    {
+        var answers = await db.AttemptAnswers
+            .AsNoTracking()
+            .Where(a => a.AttemptId == attemptId)
+            .Select(a => new { a.AnswerId, a.ExamItemId, a.QuestionId })
+            .ToListAsync(cancellationToken);
+
+        var positionIds = answers.Where(a => a.ExamItemId.HasValue).Select(a => a.ExamItemId!.Value).Distinct().ToList();
+        var questionIds = answers.Where(a => !a.ExamItemId.HasValue && a.QuestionId.HasValue)
+            .Select(a => a.QuestionId!.Value).Distinct().ToList();
+
+        var sectionByPosition = positionIds.Count == 0
+            ? []
+            : await db.ExamItems.AsNoTracking()
+                .Where(i => positionIds.Contains(i.ExamItemId))
+                .Select(i => new { i.ExamItemId, i.SectionId })
+                .ToDictionaryAsync(x => x.ExamItemId, x => x.SectionId, cancellationToken);
+
+        var sectionByQuestion = questionIds.Count == 0
+            ? []
+            : await db.Questions.AsNoTracking()
+                .Where(q => questionIds.Contains(q.QuestionId))
+                .Select(q => new { q.QuestionId, q.SectionId })
+                .ToDictionaryAsync(x => x.QuestionId, x => x.SectionId, cancellationToken);
+
+        var map = new Dictionary<int, int>(answers.Count);
+        foreach (var answer in answers)
+        {
+            var sectionId = answer.ExamItemId is int positionId
+                ? sectionByPosition.GetValueOrDefault(positionId)
+                : answer.QuestionId is int questionId
+                    ? sectionByQuestion.GetValueOrDefault(questionId)
+                    : 0;
+
+            if (sectionId != 0)
+            {
+                map[answer.AnswerId] = sectionId;
+            }
+        }
+
+        return map;
     }
 }

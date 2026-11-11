@@ -20,13 +20,19 @@ public sealed partial class PracticeService
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PracticeException(PracticeException.SessionNotFound, $"Practice session {sessionId} was not found.");
 
-        if (session.Status == PracticeStatus.InProgress.ToCode())
-        {
-            session.Status = PracticeStatus.Finished.ToCode();
-            session.FinishedAt = DateTimeOffset.UtcNow;
-            await db.SaveChangesAsync(cancellationToken);
-            await PruneOldSessionsAsync(userId, session.CertId, cancellationToken);
-        }
+        // D3: reading a session does not finish it. This was a write on a GET - "finish it or ensure
+        // answers are final" - so opening the summary mid-drill (or prefetching it) closed the session
+        // underneath the learner, and their next submission was refused because the session was no
+        // longer in progress. The transition belongs to the sitting: a learner who answers the last
+        // question finishes there, and only there. A read reports what it found.
+        // D3: reading a session does not finish it.
+        //
+        // This used to be "if the session is in progress, finish it and stamp FinishedAt". Both the
+        // summary page and the AI-insight panel read an unfinished session on the way in, so opening
+        // the summary mid-drill (or prefetching it) closed the session underneath the learner: their
+        // next submission was then refused because the session was no longer in progress. The
+        // transition belongs to the sitting - a learner who answers the last question finishes there,
+        // and only there. A read reports the state it found.
 
         var answers = await db.PracticeAnswers
             .AsNoTracking()

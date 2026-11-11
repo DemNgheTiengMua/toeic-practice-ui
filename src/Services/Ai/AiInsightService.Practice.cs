@@ -32,12 +32,9 @@ public sealed partial class AiInsightService
         }
 
         // If session is still in progress, finish it or ensure answers are final
-        if (session.Status == PracticeStatus.InProgress.ToCode())
-        {
-            session.Status = PracticeStatus.Finished.ToCode();
-            session.FinishedAt = DateTimeOffset.UtcNow;
-            await db.SaveChangesAsync(cancellationToken);
-        }
+        // D3: a read does not move the state machine. This block finished the session on a GET, so
+        // opening the insight panel mid-drill closed it and the learner's next answer was refused.
+        // The sitting finishes a session; an insight about it reports what it found.
 
         // Query answers to compute source fingerprint
         var answers = await db.PracticeAnswers

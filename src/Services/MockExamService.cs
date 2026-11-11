@@ -102,15 +102,25 @@ public sealed class MockExamService(
             activeAttempt = null;
         }
 
-        // Only the sections this exam has questions in, counted from the exam itself — the
+        // Only the sections this exam has questions in, counted from the exam itself - the
         // certificate may define sections (e.g. Speaking on TOEIC L&R) this exam never uses.
-        var questionCounts = await db.Questions
-            .AsNoTracking()
-            .Where(q => q.ExamId == examId)
-            .GroupBy(q => q.SectionId)
-            .Select(g => new { SectionId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.SectionId, x => x.Count, cancellationToken);
-        var examSectionIds = questionCounts.Keys.ToList();
+        //
+        // #269: "questions in" is the roster once a paper is authored there, and the legacy question
+        // rows otherwise. Reading Questions alone made a pool-authored paper report zero sections and
+        // so offer nothing to sit; reading the roster alone loses every paper not yet migrated.
+        var examSectionCounts = (await db.ExamItems
+                .AsNoTracking()
+                .Where(i => i.ExamId == examId)
+                .Select(i => i.SectionId)
+                .ToListAsync(cancellationToken))
+            .Concat(await db.Questions
+                .AsNoTracking()
+                .Where(q => q.ExamId == examId)
+                .Select(q => q.SectionId)
+                .ToListAsync(cancellationToken))
+            .GroupBy(sectionId => sectionId)
+            .ToDictionary(g => g.Key, g => g.Count());
+        var examSectionIds = examSectionCounts.Keys.ToList();
 
         var sections = (await db.Sections
                 .AsNoTracking()
@@ -127,7 +137,7 @@ public sealed class MockExamService(
                 s.Code,
                 s.Name,
                 s.ExpectedQuestionCount,
-                questionCounts[s.SectionId],
+                examSectionCounts[s.SectionId],
                 s.Skill.DurationMinutes,
                 s.DisplayOrder))
             .ToList();
@@ -347,12 +357,27 @@ public sealed class MockExamService(
             .Include(s => s.Skill)
             .ToListAsync(cancellationToken);
 
-        var questionCounts = await db.AttemptAnswers
-            .AsNoTracking()
-            .Where(a => attemptIds.Contains(a.AttemptId))
-            .GroupBy(a => new { a.AttemptId, a.Question.Section.SkillId })
+        // #269: a pool answer has no Question row, so grouping by `a.Question.Section.SkillId` threw
+        // "Nullable object must have a value" for every pool attempt in the history list. The skill
+        // comes from the answer's own row, through the same map the results and placement pages use.
+        var historySkillByAnswer = new Dictionary<int, int>();
+        foreach (var attemptId in attemptIds)
+        {
+            foreach (var (answerId, skillId) in await RosterSkills.ByAnswerAsync(db, attemptId, cancellationToken))
+            {
+                historySkillByAnswer[answerId] = skillId;
+            }
+        }
+
+        var questionCounts = (await db.AttemptAnswers
+                .AsNoTracking()
+                .Where(a => attemptIds.Contains(a.AttemptId))
+                .Select(a => new { a.AttemptId, a.AnswerId })
+                .ToListAsync(cancellationToken))
+            .Where(a => historySkillByAnswer.ContainsKey(a.AnswerId))
+            .GroupBy(a => new { a.AttemptId, SkillId = historySkillByAnswer[a.AnswerId] })
             .Select(g => new { g.Key.AttemptId, g.Key.SkillId, Count = g.Count() })
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         var bandDict = bands.ToDictionary(b => b.Code, b => b.Name);
 

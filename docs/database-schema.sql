@@ -619,14 +619,22 @@ BEGIN
     i.EditionNumber,
     i.DurationMinutes * 60,
     ISNULL((
+      -- #269: a paper's phases are the skills it actually EXAMINES, and after the pool migration that
+      -- is a fact about the roster. This read Questions only, so a pool-authored paper froze '[]' -
+      -- and ParseFrozenPhases treats an empty plan as "no edition", which silently fell back to today's
+      -- Skill rows: the pin #227 exists to hold, defeated for every paper built on the pool.
       SELECT s.SkillId, s.Code, s.Name, s.DisplayOrder, s.DurationMinutes,
              s.LockNavigationOneWay
       FROM Skills s
       WHERE s.CertId = i.CertId
-        AND EXISTS (SELECT 1
-                    FROM Questions q
-                    JOIN Sections sec ON sec.SectionId = q.SectionId
-                    WHERE q.ExamId = i.ExamId AND sec.SkillId = s.SkillId)
+        AND (EXISTS (SELECT 1
+                     FROM ExamItems ei
+                     JOIN Sections esec ON esec.SectionId = ei.SectionId
+                     WHERE ei.ExamId = i.ExamId AND esec.SkillId = s.SkillId)
+          OR EXISTS (SELECT 1
+                     FROM Questions q
+                     JOIN Sections sec ON sec.SectionId = q.SectionId
+                     WHERE q.ExamId = i.ExamId AND sec.SkillId = s.SkillId))
       ORDER BY s.DisplayOrder
       FOR JSON PATH), '[]'),
     c.ScoreAggregationRule,
@@ -1725,6 +1733,27 @@ CREATE TABLE PracticeSessions (
   -- UI-43: composite target so a recommendation can name the learner's own session
   CONSTRAINT UQ_PracticeSessions_Id_User UNIQUE (SessionId, UserId)
 );
+GO
+-- #269 audit: a practice session's state machine was unguarded on the server side. Nothing stopped
+-- 'finished' from becoming 'in_progress' again, so a finished drill became sittable and its already
+-- counted answers could be answered a second time (SubmitAnswerAsync refuses a re-answer by asking
+-- whether the row already holds content, and that guard only reads the ANSWER - it trusted the
+-- session to still be open). The legal moves are the sitting's:
+--   in_progress -> finished   (the last question was answered, or the lesson micro-check closed)
+--   in_progress -> abandoned  (a later session superseded it, or the path moved on)
+-- and both are terminal. There is no writer that reopens one, so this refuses none of them.
+CREATE TRIGGER trg_PracticeSessions_StatusTransitions
+ON PracticeSessions AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN deleted d ON d.SessionId = i.SessionId
+    WHERE d.Status IN ('finished','abandoned') AND i.Status <> d.Status
+  )
+    THROW 50090, 'PracticeSessions.Status is terminal: a finished or abandoned session cannot change state.', 1;
+END;
 GO
 CREATE TABLE PracticeAnswers (
   AnswerId         INT IDENTITY(1,1) PRIMARY KEY,
@@ -2839,8 +2868,14 @@ BEGIN
     JOIN GradingCriteria c ON c.CriterionId = i.CriterionId
     JOIN AiGradings g      ON g.GradingId = i.GradingId
     JOIN FreeResponses fr  ON fr.FreeResponseId = g.FreeResponseId
-    JOIN Questions q       ON q.QuestionId = fr.QuestionId
-    LEFT JOIN SectionCriteria sc ON sc.SectionId = q.SectionId AND sc.CriterionId = i.CriterionId
+    -- #269: a pool free response has no QuestionId; its section comes from the roster position it
+    -- names. Joining Questions on that nullable column made this ceiling unreachable for every pool
+    -- response - measured: a score of 99 was accepted against a MaxScore of 5.
+    LEFT JOIN Questions q  ON q.QuestionId = fr.QuestionId
+    LEFT JOIN ExamItems ei ON ei.ExamItemId = fr.ExamItemId
+    LEFT JOIN SectionCriteria sc
+           ON sc.CriterionId = i.CriterionId
+          AND sc.SectionId = ISNULL(q.SectionId, ei.SectionId)
     WHERE i.Score > COALESCE(sc.MaxScore, c.MaxScore)
   )
     THROW 50026, 'AiGradingScores.Score cannot exceed the criterion MaxScore.', 1;
@@ -2850,9 +2885,12 @@ BEGIN
     FROM inserted i
     JOIN AiGradings g     ON g.GradingId = i.GradingId
     JOIN FreeResponses fr ON fr.FreeResponseId = g.FreeResponseId
-    JOIN Questions q      ON q.QuestionId = fr.QuestionId
-    WHERE EXISTS (SELECT 1 FROM SectionCriteria x WHERE x.SectionId = q.SectionId)
-      AND NOT EXISTS (SELECT 1 FROM SectionCriteria x WHERE x.SectionId = q.SectionId AND x.CriterionId = i.CriterionId)
+    LEFT JOIN Questions q  ON q.QuestionId = fr.QuestionId
+    LEFT JOIN ExamItems ei ON ei.ExamItemId = fr.ExamItemId
+    CROSS APPLY (SELECT ISNULL(q.SectionId, ei.SectionId) AS SectionId) sec
+    WHERE sec.SectionId IS NOT NULL
+      AND EXISTS (SELECT 1 FROM SectionCriteria x WHERE x.SectionId = sec.SectionId)
+      AND NOT EXISTS (SELECT 1 FROM SectionCriteria x WHERE x.SectionId = sec.SectionId AND x.CriterionId = i.CriterionId)
   )
     THROW 50033, 'This criterion does not apply to the question''s section.', 1;
 END;
