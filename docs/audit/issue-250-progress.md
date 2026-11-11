@@ -46,3 +46,56 @@ Plus two more found by making the legacy write disappear in #266: `PaperPosition
 ## A demo-owner note
 
 The seed's demo learner has **no learning path and no placement**. Deliberate: a path is derived from a measurement, and the generated seed does not ship a measurement nobody took. Sitting a placement now generates one — which #268's stock makes possible for the first time.
+
+---
+
+# Session: the state-machine audit (#269 side quest)
+
+The #269 sub-agent migration stalled on production readers, so the six placement sites were fixed
+directly (`a8f37b9`), then the suite stopped being blocked. Placement is 144/144.
+
+Then the audit the user asked for: **every state-bearing column**, probed against a real schema with
+real triggers, plus the flows driven in a browser with real files.
+
+## Fixed
+
+| # | Defect | Evidence |
+|---|---|---|
+| 1 | A GET finished a practice session | red test: `FinishedAt` stamped by `GetSummaryAsync` |
+| 2 | Practice session status unguarded | probe: `finished -> in_progress` accepted; trigger + `domain43b` |
+| 3 | Cancel abandoned a graded attempt | red test: score/band/stamp erased |
+| 4 | Published pool paper froze `phasePlan=[]` | probe on real schema, before/after |
+| 5 | Pool response scored 99 against max 5 | probe: ceiling accepted 99 |
+| 6 | AI grading NRE on every pool response | browser: charged, never graded |
+| 7 | Four readers threw after a successful grading | browser: "Nullable object must have a value" |
+| 8 | Audio upload rejected every pool recording | real mp3: 500 -> 200, file on disk |
+| 9 | Writing route served a speaking paper | API: 200 with the speaking exam -> 404 |
+
+Full detail and the ten recorded-but-unreachable transitions: `docs/audit/state-machines.md`.
+
+## Evidence
+
+- Full suite twice, identical: Services 1933, WebMVC 1021, WebAPI 109, E2E 4 - all passing.
+- Schema harness `ALL CHECKS PASSED` including the new `domain43b`, which is verified to fail with
+  its trigger dropped.
+- Browser on a fresh crawl env, `fail:` count 0: writing scored 17.2/40 band A2; speaking scored
+  10/12 band B2 from a real 20,900-byte mp3; placement resumed at question 2 with 1/24 saved; practice
+  resumed at question 2 with 1/5 answered. Screenshots in `docs/audit/screenshots/`.
+
+## What is left
+
+**#272** - 426 legacy refs across 73 test files, now unblocked because the production readers resolve
+both stores. `PoolFixture` self-provisions its topic, so a migration is mechanical.
+
+**Then #269's drops** - `Questions`, `QuestionGroups`, `QuestionOptions`,
+`UserQuestionHistories`, `vw_UserCategoryAccuracy`; rewrite `vw_UserSectionAccuracyAll` pool-only;
+the self-proved absence test; `DataDisposition` entries; the grep. 65 source refs remain, mostly the
+legacy authoring methods in `AdminExamService` that their tests still exercise.
+
+**Then #270** and **#271**.
+
+## Honest note on the audit
+
+Three of the nine defects - 6, 7, 8 - were invisible to 1933 green tests and only appeared when a real
+browser uploaded a real file. That is the strongest argument for the user's instruction to upload real
+images and audio: a green code path is not a working feature.

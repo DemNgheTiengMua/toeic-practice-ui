@@ -8,6 +8,9 @@ The distinction that decides "fix" from "record" is **reachability**, not the ab
 unguarded transition no writer can produce is a latent hole; one a live route can produce is a defect.
 Both are written down here so the next reader does not have to re-derive the difference.
 
+Status: audit complete. Five defects fixed, three found later by driving the real browser flow (in
+"Found in the browser" below), ten unguarded transitions recorded with the reason each is left alone.
+
 ---
 
 ## Defects found and fixed
@@ -71,9 +74,8 @@ Fix: refuse unless the attempt is `in_progress`.
 
 Test: `MockExamServiceTests.CancelAttempt_refuses_to_abandon_a_graded_attempt_and_keeps_its_result`.
 
-### 4. `PracticeSessions`/`Exams` — a published pool-only paper froze an empty phase plan
+### 4. A published pool-only paper froze an empty phase plan
 
-Not a status column but the same class: a derived fact computed from the legacy tables.
 `trg_Exams_PublishFreezesEdition` built `PhasePlanJson` from a `Questions`-only subquery, so a
 pool-authored paper froze `[]`, and `ParseFrozenPhases` treats an empty plan as "no edition" and falls
 back to today's `Skill` rows — defeating the pin #227 exists to hold.
@@ -88,6 +90,44 @@ for a pool response the join produced no row and the guard never fired. Measured
 accepted against a `MaxScore` of 5, and the section-membership arm was equally blind.
 
 Fix: both arms resolve the section from the class row through the roster position.
+
+---
+
+## Found in the browser, not by a test
+
+These three were invisible to the suite and only appeared when the real flows ran with real files. Each
+now has a test that writes only pool rows and asserts the paper holds zero `Questions` before asserting
+the result, so a green assertion cannot be the legacy branch answering.
+
+### 6. The AI grading processor could not grade a pool response
+
+`fr.Question.SectionId` threw `NullReferenceException` inside EF's parameter evaluation. The learner was
+charged the grading credit at submit and the result never arrived. The section, stem, word window,
+required keywords, reference text and modality now come from the pinned version. The position lookup also
+moved inside the per-item `try`: it was outside, so its failure escaped the catch and left every grading
+in the batch `pending`.
+
+### 7. Three readers took the page down after a successful grading
+
+`AttemptEngine.RubricTotalsAsync` (band estimate), `WritingPracticeService.GetGradingPendingAsync`,
+`SpeakingPracticeService.GetGradingPendingAsync` and both review pages all dereferenced
+`FreeResponse.Question`. Measured: "Nullable object must have a value" on the page that reports grading
+progress, after the grading had already succeeded and the credit was taken.
+
+### 8. Audio upload rejected every pool recording, and the routes crossed modalities
+
+`SpeakingPracticeService.SaveAudioAsync` resolved the task with a `db.Questions` query, so every upload
+answered "Speaking question 36 not found in this exam" — the recording window, the response shape and the
+skill all came from a row that does not exist. Measured with a real 20,900-byte mp3: 500 before, 200
+after, file at `App_Data/audio/attempts/4/q_36_….mp3`, row stored as `QuestionId=NULL, ExamItemId=36`.
+
+Separately, writing and speaking both render as `free_response`, and every filter asked only for that
+format — so `GET /api/learner/writing/attempts/{speakingAttemptId}` answered 200 with the speaking exam
+and its three speaking tasks. Both services now filter on their own modality, and a mismatched route
+answers 404.
+
+`ItemTelemetryService` had the same projection defect and aborted the whole telemetry pass; its "a pool
+grading is skipped below" comment was unreachable because the query died before the skip.
 
 ---
 
