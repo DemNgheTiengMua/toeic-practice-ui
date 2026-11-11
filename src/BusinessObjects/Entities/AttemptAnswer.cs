@@ -6,7 +6,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusinessObjects.Entities;
 
-[Index("QuestionId", Name = "IX_AttemptAnswers_Question")]
+/// <summary>
+/// #269: one answer is one roster position. The legacy <c>QuestionId</c> and its three navigations are
+/// gone with the <c>Questions</c> table; <see cref="ExamItemId"/>, <see cref="ItemId"/> and
+/// <see cref="ItemVersionId"/> are now all required, because a position and the version it pinned are
+/// the only things that identify what was asked.
+/// </summary>
 public partial class AttemptAnswer
 {
     [Key]
@@ -14,43 +19,30 @@ public partial class AttemptAnswer
 
     public int AttemptId { get; set; }
 
-    /// <summary>
-    /// #250: the legacy question this answer was given against, or NULL for a pool answer.
-    ///
-    /// It was <c>int</c> (NOT NULL) until #250, which forced every pool answer to invent a question id -
-    /// and that is why the sitting path could never reach zero reads of <c>Questions</c>. The database's
-    /// <c>CK_AttemptAnswers_HasShape</c> requires at least one of this and <see cref="ItemVersionId"/>:
-    /// a row naming neither cannot be rendered, scored or reviewed.
-    /// </summary>
-    public int? QuestionId { get; set; }
-
     public int ExamId { get; set; }
 
     /// <summary>
     /// #186: the pool item and the exact version the learner answered, so a re-versioned or retired
-    /// item cannot change what this attempt renders. Both are NULL for an answer recorded against a
-    /// paper that the pool has not assembled; the database refuses a half-filled pair.
+    /// item cannot change what this attempt renders.
     /// </summary>
-    public int? ItemId { get; set; }
+    public int ItemId { get; set; }
 
-    public int? ItemVersionId { get; set; }
+    public int ItemVersionId { get; set; }
 
     /// <summary>
-    /// #250: the roster position this answer was recorded against, for a paper the pool assembled.
-    /// NULL for a legacy answer.
+    /// #250: the roster position this answer was recorded against.
     ///
     /// Needed on top of <see cref="ItemId"/> and <see cref="ItemVersionId"/> because a paper may bind
     /// one item version at two positions, so the version pair does not say which question of the paper
-    /// was answered. The position is the answer's identity, exactly as <see cref="QuestionId"/> is on a
-    /// legacy paper, and it is what the navigator counts.
+    /// was answered. The position is the answer's identity, and it is what the navigator counts.
     /// </summary>
-    public int? ExamItemId { get; set; }
+    public int ExamItemId { get; set; }
 
     /// <summary>
     /// #186: which of the pinned version's four options was picked. An <see cref="ItemVersion"/>
-    /// stores labels A–D rather than option rows, so there is no id to point at;
-    /// <see cref="SelectedOptionId"/> keeps its meaning (and its foreign key) for a legacy answer and
-    /// is NULL whenever this is set.
+    /// stores labels A-D rather than option rows, so there is no id to point at;
+    /// <see cref="SelectedOptionId"/> is kept nullable for the text and multi-select shapes and is NULL
+    /// whenever a label is set.
     /// </summary>
     public string? SelectedLabel { get; set; }
 
@@ -72,20 +64,8 @@ public partial class AttemptAnswer
     [InverseProperty("AttemptAnswerExamAttempts")]
     public virtual ExamAttempt ExamAttempt { get; set; } = null!;
 
-    [ForeignKey("QuestionId")]
-    [InverseProperty("AttemptAnswerQuestions")]
-    public virtual Question Question { get; set; } = null!;
-
-    [ForeignKey("QuestionId, ExamId")]
-    [InverseProperty("AttemptAnswerQuestionNavigations")]
-    public virtual Question QuestionNavigation { get; set; } = null!;
-
-    [ForeignKey("SelectedOptionId, QuestionId")]
-    [InverseProperty("AttemptAnswers")]
-    public virtual QuestionOption? QuestionOption { get; set; }
-
-    /// <summary>#186: the version this answer pinned (NULL for an answer with no pool pin).</summary>
+    /// <summary>#186: the version this answer pinned.</summary>
     [ForeignKey("ItemVersionId, ItemId")]
     [InverseProperty("AttemptAnswers")]
-    public virtual ItemVersion? ItemVersion { get; set; }
+    public virtual ItemVersion ItemVersion { get; set; } = null!;
 }

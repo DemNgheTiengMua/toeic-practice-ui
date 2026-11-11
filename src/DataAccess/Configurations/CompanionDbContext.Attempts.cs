@@ -100,26 +100,11 @@ public partial class CompanionDbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__AttemptAn__Attem__0F2D40CE");
 
-            entity.HasOne(d => d.Question).WithMany(p => p.AttemptAnswerQuestions)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__AttemptAn__Quest__10216507");
-
             entity.HasOne(d => d.ExamAttempt).WithMany(p => p.AttemptAnswerExamAttempts)
                 .HasPrincipalKey(p => new { p.AttemptId, p.ExamId })
                 .HasForeignKey(d => new { d.AttemptId, d.ExamId })
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_AttemptAnswers_AttemptExam");
-
-            entity.HasOne(d => d.QuestionNavigation).WithMany(p => p.AttemptAnswerQuestionNavigations)
-                .HasPrincipalKey(p => new { p.QuestionId, p.ExamId })
-                .HasForeignKey(d => new { d.QuestionId, d.ExamId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_AttemptAnswers_QuestionExam");
-
-            entity.HasOne(d => d.QuestionOption).WithMany(p => p.AttemptAnswers)
-                .HasPrincipalKey(p => new { p.OptionId, p.QuestionId })
-                .HasForeignKey(d => new { d.SelectedOptionId, d.QuestionId })
-                .HasConstraintName("FK_AttemptAnswers_OptionQuestion");
 
             // #186: the answered version is pinned by (version, item), the same composite pair
             // ExamItems uses, so one row cannot name one item and another item's version.
@@ -128,6 +113,10 @@ public partial class CompanionDbContext
                 .HasForeignKey(d => new { d.ItemVersionId, d.ItemId })
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_AttemptAnswers_VersionItem");
+
+            // #269: the three navigations into Questions/QuestionOptions are gone with those tables.
+            // The database still enforces (ExamItemId -> ExamItems) and (SelectedOptionId) via its own
+            // foreign keys; nothing read either through an answer.
         });
 
 

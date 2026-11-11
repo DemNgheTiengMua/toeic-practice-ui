@@ -1,4 +1,4 @@
-using BusinessObjects.Entities;
+﻿using BusinessObjects.Entities;
 using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
 
@@ -70,10 +70,9 @@ public partial class CompanionDbContext
         {
             entity.HasKey(e => e.AnswerId).HasName("PK__Practice__D48250043F262F2D");
 
-            // #187: the unique keys are filtered indexes, because a pool answer has no QuestionId and
-            // a legacy answer has no ItemVersionId. EF cannot express a filtered unique index from
-            // conventions, so the names are declared here and dropped from the model as keys.
-            entity.HasIndex(e => e.QuestionId, "IX_PracticeAnswers_Question").HasFilter("([QuestionId] IS NOT NULL)");
+            // #269: one answer per version per sitting. The filtered legacy index is gone with
+            // PracticeAnswers.QuestionId; the unique key below is now unfiltered in the schema, but EF
+            // still declares the filter so the model matches what the database holds.
             // #240: one micro-check graded once per sitting.
             entity.HasIndex(e => new { e.SessionId, e.CardId }, "UQ_PracticeAnswers_Card")
                 .IsUnique()
@@ -84,20 +83,13 @@ public partial class CompanionDbContext
             // #156: response time per practice answer, same measurement as the exam sitting.
             entity.Property(e => e.AnsweredAt).HasPrecision(3);
 
-            entity.HasOne(d => d.Question).WithMany(p => p.PracticeAnswerQuestions)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__PracticeA__Quest__6CD828CA");
-
             entity.HasOne(d => d.Session).WithMany(p => p.PracticeAnswerSessions)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__PracticeA__Sessi__6BE40491");
 
-            // #187: FK_PracticeAnswers_QuestionSection (the question must be the session's section)
-            // and FK_PracticeAnswers_SessionSection (the answer's section must be the session's) are
-            // database guards, not EF navigations: SectionId and QuestionId are now nullable, and EF
-            // reads a partly-nullable composite key as required, refusing a pool answer's save with
-            // "the value of QuestionId is unknown". MATCH SIMPLE skips each exactly when its nullable
-            // column is null, which is the pool shape.
+            // #269: FK_PracticeAnswers_QuestionSection and the Question navigation went with the
+            // Questions table. A drill is contained by its cell (the session's topic and level), which
+            // is a property of the session, not of an answer.
 
             // #187: the answered version must be a version of the answered item - the same composite
             // idiom ExamItems and AttemptAnswers use.
@@ -149,9 +141,8 @@ public partial class CompanionDbContext
 
 
 
-        // #224: a saved link pins the item version it rendered, so it has two shapes and one address.
-        // The two unique indexes are filtered (one per shape), which EF cannot infer, so they are
-        // declared by name here and excluded from the key. The composite version FK is written by hand
+        // #224: a saved link pins the item version it rendered, and it is pool-native.
+        // The composite version FK is written by hand
         // for the same reason PracticeAnswers' is: EF cannot infer (version, item) as one relation.
         modelBuilder.Entity<SavedQuestion>(entity =>
         {
@@ -159,18 +150,8 @@ public partial class CompanionDbContext
 
             entity.Property(e => e.SavedAt).HasDefaultValueSql("(sysdatetimeoffset())");
 
-            entity.HasIndex(e => new { e.UserId, e.QuestionId }, "UQ_SavedQuestions_Question")
-                .IsUnique()
-                .HasFilter("([QuestionId] IS NOT NULL)");
-            entity.HasIndex(e => new { e.UserId, e.ItemId }, "UQ_SavedQuestions_Item")
-                .IsUnique()
-                .HasFilter("([ItemId] IS NOT NULL)");
-            entity.HasIndex(e => new { e.UserId, e.CertId }, "IX_SavedQuestions_User_Cert")
-                .HasFilter("([CertId] IS NOT NULL)");
-
-            entity.HasOne(d => d.Question).WithMany(p => p.SavedQuestions)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__SavedQues__Quest__756D6ECB");
+            entity.HasIndex(e => new { e.UserId, e.ItemId }, "UQ_SavedQuestions_Item").IsUnique();
+            entity.HasIndex(e => new { e.UserId, e.CertId }, "IX_SavedQuestions_User_Cert");
 
             // The pinned version must be a version of the item the link names.
             entity.HasOne(d => d.ItemVersion).WithMany(p => p.SavedQuestions)
@@ -180,7 +161,6 @@ public partial class CompanionDbContext
                 .HasConstraintName("FK_SavedQuestions_VersionItem");
 
             entity.HasOne(d => d.Cert).WithMany(p => p.SavedQuestions)
-                .IsRequired(false)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_SavedQuestions_Cert");
 

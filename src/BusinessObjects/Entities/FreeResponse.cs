@@ -6,7 +6,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusinessObjects.Entities;
 
-[Index("QuestionId", Name = "IX_FreeResponses_Question")]
+/// <summary>
+/// #269: a free response belongs to one roster position on a pool paper. The legacy <c>QuestionId</c>
+/// and its four composite keyed navigations are gone with the <c>Questions</c> table, which is what
+/// unblocked a pool-only productive paper from being sat at all.
+/// </summary>
+[Index("ExamItemId", Name = "IX_FreeResponses_ExamItem")]
 [Index("FreeResponseId", "SkillId", Name = "UQ_FreeResp_Id_Skill", IsUnique = true)]
 public partial class FreeResponse
 {
@@ -15,17 +20,8 @@ public partial class FreeResponse
 
     public int AttemptId { get; set; }
 
-    /// <summary>
-    /// #250: the legacy question this response was given against, or NULL for a pool-authored paper.
-    ///
-    /// It was <c>int</c> (NOT NULL) with three composite foreign keys into <c>Questions</c>, which is why
-    /// a pool-only productive paper could not be sat at all: the engine refused it explicitly rather
-    /// than invent a question id. <c>CK_FreeResp_HasShape</c> now requires at least one identity.
-    /// </summary>
-    public int? QuestionId { get; set; }
-
-    /// <summary>#250: the roster position this response was recorded against, for a pool paper.</summary>
-    public int? ExamItemId { get; set; }
+    /// <summary>#250: the roster position this response was recorded against.</summary>
+    public int ExamItemId { get; set; }
 
     public int ExamId { get; set; }
 
@@ -71,20 +67,4 @@ public partial class FreeResponse
     [ForeignKey("AttemptId, ExamId")]
     [InverseProperty("FreeResponseExamAttempts")]
     public virtual ExamAttempt ExamAttempt { get; set; } = null!;
-
-    [ForeignKey("QuestionId")]
-    [InverseProperty("FreeResponseQuestions")]
-    public virtual Question Question { get; set; } = null!;
-
-    [ForeignKey("QuestionId, QuestionType")]
-    [InverseProperty("FreeResponseQuestion1s")]
-    public virtual Question Question1 { get; set; } = null!;
-
-    [ForeignKey("QuestionId, SkillId")]
-    [InverseProperty("FreeResponseQuestion2s")]
-    public virtual Question Question2 { get; set; } = null!;
-
-    [ForeignKey("QuestionId, ExamId")]
-    [InverseProperty("FreeResponseQuestionNavigations")]
-    public virtual Question QuestionNavigation { get; set; } = null!;
 }
