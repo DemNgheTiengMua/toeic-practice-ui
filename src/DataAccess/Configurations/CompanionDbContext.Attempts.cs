@@ -52,10 +52,11 @@ public partial class CompanionDbContext
                 .HasForeignKey(d => new { d.ActiveSkillId, d.CertId })
                 .HasConstraintName("FK_Attempts_ActiveSkill");
 
-            entity.HasOne(d => d.ActiveGroup).WithMany()
-                .HasPrincipalKey(p => new { p.GroupId, p.CertId })
-                .HasForeignKey(d => new { d.ActiveGroupId, d.CertId })
-                .HasConstraintName("FK_Attempts_ActiveGroup");
+            // #269: ActiveGroupId is a block ADDRESS - a stimulus id, or the negated position id for a
+            // solo block - so it is not a reference and has no navigation. Keeping the FK here made a
+            // solo block's address unsatisfiable: InsertPlacementTest threw
+            // "FK_Attempts_ActiveGroup conflicted in table Stimuli".
+            entity.Ignore(d => d.ActiveGroup);
 
             entity.HasOne(d => d.Cert).WithMany(p => p.ExamAttempts)
                 .OnDelete(DeleteBehavior.ClientSetNull)

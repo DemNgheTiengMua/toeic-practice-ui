@@ -41,11 +41,19 @@ public sealed partial class AttemptEngine
             .Include(s => s.Skill)
             .ToListAsync(cancellationToken);
 
-        var questionCounts = await db.AttemptAnswers
-            .Where(a => a.AttemptId == attempt.AttemptId)
-            .GroupBy(a => a.Question.Section.SkillId)
-            .Select(g => new { SkillId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(g => g.SkillId, g => g.Count, cancellationToken);
+        // #269: the per-skill question count comes from each answer's own row - the roster position on a
+        // pool paper, the legacy question otherwise. RosterSkills answers this for the placement writer
+        // too, so the results screen and the placement snapshot cannot disagree.
+        var skillByAnswer = await RosterSkills.ByAnswerAsync(db, attempt.AttemptId, cancellationToken);
+
+        var questionCounts = (await db.AttemptAnswers
+                .AsNoTracking()
+                .Where(a => a.AttemptId == attempt.AttemptId)
+                .Select(a => a.AnswerId)
+                .ToListAsync(cancellationToken))
+            .Where(id => skillByAnswer.ContainsKey(id))
+            .GroupBy(id => skillByAnswer[id])
+            .ToDictionary(g => g.Key, g => g.Count());
 
         var scoreItems = skillScores
             .OrderBy(s => s.Skill.DisplayOrder)

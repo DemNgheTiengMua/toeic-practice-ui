@@ -30,7 +30,14 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
         var certCode = Unique("PF");
         var (_, examId, _, _, _, _, _) = await SeedPlacementFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
-        await database.SqlAsync($"UPDATE QuestionGroups SET AudioPath = '/audio/placement-preflight.mp3' WHERE ExamId = {examId};");
+        // #269: audio belongs to the stimulus a pool position shares, so that is what a fixture sets.
+        await database.SqlAsync($"""
+            UPDATE Stimuli SET AudioPath = '/audio/placement-preflight.mp3'
+            WHERE StimulusId IN (
+                SELECT i.StimulusId FROM ExamItems ei
+                JOIN Items i ON i.ItemId = ei.ItemId
+                WHERE ei.ExamId = {examId} AND i.StimulusId IS NOT NULL);
+            """);
         var (service, _) = CreateServices();
         var info = await service.StartPlacementTestAsync(userId, examId);
 
@@ -175,40 +182,29 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
               (@cert, @sL, @standard, 1, 250),
               (@cert, @sR, @standard, 0, 100),
               (@cert, @sR, @standard, 1, 200);
-
-            -- Q1 for Standard (Listening)
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@standard, @cert, @secL, 1);
-            DECLARE @grp1 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp1, @standard, @secL, @sL, N'Standard Q1', 'A2', 'mcq', 1);
-            DECLARE @q1 INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q1, 'mcq', 'A', N'Opt A', 1),
-              (@q1, 'mcq', 'B', N'Opt B', 0);
-
-            -- Q2 for Standard (Reading)
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@standard, @cert, @secR, 2);
-            DECLARE @grp2 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp2, @standard, @secR, @sR, N'Standard Q2', 'A2', 'mcq', 2);
-            DECLARE @q2 INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q2, 'mcq', 'A', N'Opt A', 0),
-              (@q2, 'mcq', 'B', N'Opt B', 1);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var standardExam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId && e.Name == "Standard Placement Test");
         var quickExam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId && e.Name == "Quick Placement Test");
-        var questions = await db.Questions.Where(q => q.ExamId == standardExam.ExamId).OrderBy(q => q.DisplayOrder).ToListAsync();
-        var q1 = questions[0];
-        var q2 = questions[1];
 
-        var opt1 = await db.QuestionOptions.SingleAsync(o => o.QuestionId == q1.QuestionId && o.IsCorrect);
-        var opt2 = await db.QuestionOptions.SingleAsync(o => o.QuestionId == q2.QuestionId && o.IsCorrect);
+        // #269: the paper is authored on the pool. The legacy rows this fixture used to insert put the
+        // answers on QuestionId and are being dropped with the tables.
+        var secL = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "P1");
+        var secR = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "P5");
+        // #269: the listening position carries a stimulus, because that is where a pool paper keeps its
+        // audio - and the preflight gate is driven by audio existing.
+        var q1 = await PoolFixture.AddMcqAsync(
+            db, standardExam.ExamId, cert.CertId, secL.SectionId, "listening", "Standard Q1",
+            displayOrder: 1, keyLabel: "A", passage: "Listen to the exchange.");
+        var q2 = await PoolFixture.AddMcqAsync(
+            db, standardExam.ExamId, cert.CertId, secR.SectionId, "reading", "Standard Q2", displayOrder: 1, keyLabel: "B");
 
-        return (cert.CertId, standardExam.ExamId, quickExam.ExamId, q1.QuestionId, q2.QuestionId, opt1.OptionId, opt2.OptionId);
+        var opt1 = await PoolFixture.OptionIdAsync(db, standardExam.ExamId, q1.ExamItemId, "A");
+        var opt2 = await PoolFixture.OptionIdAsync(db, standardExam.ExamId, q2.ExamItemId, "B");
+
+        return (cert.CertId, standardExam.ExamId, quickExam.ExamId, q1.ExamItemId, q2.ExamItemId, opt1, opt2);
     }
 
     [Fact]
@@ -308,7 +304,10 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
         Assert.Equal(2, take.TotalQuestions);
         Assert.Equal(0, take.AnsweredCount);
         Assert.Equal(q1Id, take.CurrentQuestion.QuestionId);
-        Assert.Equal(2, take.CurrentQuestion.Options.Count);
+        // #269: a pool MCQ is four options by construction (CNT-06 pins the shape), so the count is the
+        // pool's, not the two the legacy fixture happened to author. The intent - "the options the
+        // learner was shown come back with the position" - is unchanged.
+        Assert.Equal(4, take.CurrentQuestion.Options.Count);
         Assert.Equal(2, take.Navigator.Count);
         Assert.True(take.Navigator[0].IsCurrent);
         Assert.False(take.Navigator[1].IsCurrent);
@@ -644,18 +643,17 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
         // skill; a hand-edited jump deeper into it is refused like any other locked question.
         var certCode = Unique("SJ");
         var (_, examId, _, q1Id, _, _, _) = await SeedPlacementFixtureAsync(certCode);
-        await database.SqlAsync($"""
-            DECLARE @grp INT = (SELECT TOP 1 g.GroupId FROM QuestionGroups g JOIN Sections s ON s.SectionId = g.SectionId
-                                WHERE g.ExamId = {examId} AND s.Code = 'P5');
-            DECLARE @sec INT = (SELECT SectionId FROM QuestionGroups WHERE GroupId = @grp);
-            DECLARE @skill INT = (SELECT SkillId FROM Sections WHERE SectionId = @sec);
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, {examId}, @sec, @skill, N'Standard Q3', 'A2', 'mcq', 3);
-            DECLARE @q3 INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q3, 'mcq', 'A', N'Opt A', 1),
-              (@q3, 'mcq', 'B', N'Opt B', 0);
-            """);
+
+        // #269: the third position is another pool binding in the reading section - a hand-edited jump
+        // to it must still be refused.
+        await using (var seedDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            var cert = await seedDb.Certificates.SingleAsync(c => c.Code == certCode);
+            var reading = await seedDb.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Code == "P5");
+            await PoolFixture.AddMcqAsync(
+                seedDb, examId, cert.CertId, reading.SectionId, "reading", "Standard Q3", displayOrder: 2);
+        }
+
         var userId = await SeedLearnerAsync(certCode);
         var (service, _) = CreateServices();
         var info = await service.StartPlacementTestAsync(userId, examId);

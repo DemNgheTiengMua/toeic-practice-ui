@@ -471,14 +471,20 @@ public sealed partial class PlacementService(
             .OrderBy(s => s.Skill.DisplayOrder)
             .ToListAsync(cancellationToken);
 
-        var answers = await db.AttemptAnswers
+        // #269: a pool paper's answers have no question row, so the per-skill total is counted from each
+        // answer's own row. It used to read `a.Question.Section.SkillId` and threw
+        // NullReferenceException on the first pool answer.
+        var skillByAnswer = await RosterSkills.ByAnswerAsync(db, attempt.AttemptId, cancellationToken);
+        var answerIds = await db.AttemptAnswers
+            .AsNoTracking()
             .Where(a => a.AttemptId == attempt.AttemptId)
-            .Include(a => a.Question).ThenInclude(q => q.Section)
+            .Select(a => a.AnswerId)
             .ToListAsync(cancellationToken);
 
         var skillInfos = skillScores.Select(sc =>
         {
-            int totalInSkill = answers.Count(a => a.Question.Section.SkillId == sc.SkillId);
+            int totalInSkill = answerIds.Count(
+                id => skillByAnswer.GetValueOrDefault(id) == sc.SkillId);
             return new PlacementSkillScoreInfo(
                 sc.SkillId,
                 sc.Skill.Code,
@@ -1066,9 +1072,13 @@ public sealed partial class PlacementService(
             .OrderBy(s => s.Skill.DisplayOrder)
             .ToListAsync(cancellationToken);
 
-        var answers = await db.AttemptAnswers
+        // #269: same rule as the grading-status page - the per-skill total comes from each answer's own
+        // row, because a pool answer has no question row to read a section from.
+        var skillByAnswer = await RosterSkills.ByAnswerAsync(db, attempt.AttemptId, cancellationToken);
+        var answerIds = await db.AttemptAnswers
+            .AsNoTracking()
             .Where(a => a.AttemptId == attempt.AttemptId)
-            .Include(a => a.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
+            .Select(a => a.AnswerId)
             .ToListAsync(cancellationToken);
 
         var bands = await db.ScoreBands
@@ -1092,7 +1102,8 @@ public sealed partial class PlacementService(
         var skillInfos = new List<PlacementSkillScoreInfo>();
         foreach (var sc in skillScores)
         {
-            int totalInSkill = answers.Count(a => a.Question.Section.SkillId == sc.SkillId);
+            int totalInSkill = answerIds.Count(
+                id => skillByAnswer.GetValueOrDefault(id) == sc.SkillId);
             skillInfos.Add(new PlacementSkillScoreInfo(
                 sc.SkillId,
                 sc.Skill.Code,
@@ -1181,7 +1192,7 @@ public sealed partial class PlacementService(
             attempt.Exam?.Name ?? "Placement Test",
             placement.TakenAt,
             duration,
-            answers.Count,
+            answerIds.Count,
             totalScore,
             resultBandCode,
             resultBandName,

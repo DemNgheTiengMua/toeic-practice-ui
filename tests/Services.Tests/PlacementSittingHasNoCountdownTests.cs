@@ -74,30 +74,23 @@ public sealed class PlacementSittingHasNoCountdownTests : IAsyncLifetime
         await db.SaveChangesAsync();
         var examId = await db.Exams.Where(e => e.CertId == certId).Select(e => e.ExamId).SingleAsync();
 
+        // #269: the fixture hands back the paper's positions, so a test answers the ids the sitting
+        // renders rather than looking them up in the legacy tables.
+        var positions = new List<PoolFixture.Position>();
+
         foreach (var (sectionCode, order) in new[] { ("L1", 1), ("R1", 2) })
         {
             var section = await db.Sections.Where(s => s.Code == sectionCode && s.CertId == certId).SingleAsync();
-            var group = new QuestionGroup { ExamId = examId, CertId = certId, SectionId = section.SectionId, DisplayOrder = order };
-            db.QuestionGroups.Add(group);
-            await db.SaveChangesAsync();
+            // #269: the pool authors the paper. The listening position carries a stimulus, because a
+            // pool paper keeps its audio there and the preflight gate is driven by audio existing.
+            var position = section.Modality == "listening"
+                ? await PoolFixture.AddMcqAsync(
+                    db, examId, certId, section.SectionId, "listening", $"Q{order}",
+                    displayOrder: order, passage: "Listen to the exchange.")
+                : await PoolFixture.AddMcqAsync(
+                    db, examId, certId, section.SectionId, "reading", $"Q{order}", displayOrder: order);
 
-            var question = new Question
-            {
-                GroupId = group.GroupId,
-                ExamId = examId,
-                SectionId = section.SectionId,
-                SkillId = section.SkillId,
-                Stem = $"Q{order}",
-                CefrLevel = CefrLevel.A2,
-                QuestionType = "mcq",
-                DisplayOrder = order,
-            };
-            db.Questions.Add(question);
-            await db.SaveChangesAsync();
-
-            db.QuestionOptions.AddRange(
-                new QuestionOption { QuestionId = question.QuestionId, QuestionType = "mcq", Label = "A", Text = "Right", IsCorrect = true },
-                new QuestionOption { QuestionId = question.QuestionId, QuestionType = "mcq", Label = "B", Text = "Wrong", IsCorrect = false });
+            positions.Add(position);
         }
 
         db.ScoreBands.Add(new ScoreBand { CertId = certId, Code = "A2", Name = "Elementary", MinTotal = 0, MaxTotal = 200, DisplayOrder = 1 });
@@ -124,10 +117,8 @@ public sealed class PlacementSittingHasNoCountdownTests : IAsyncLifetime
 
         await db.SaveChangesAsync();
 
-        var questionId = await db.Questions.Where(q => q.ExamId == examId).OrderBy(q => q.DisplayOrder)
-            .Select(q => q.QuestionId).FirstAsync();
-        var correctOption = await db.QuestionOptions.Where(o => o.QuestionId == questionId && o.IsCorrect)
-            .Select(o => o.OptionId).SingleAsync();
+        var questionId = positions[0].ExamItemId;
+        var correctOption = await PoolFixture.OptionIdAsync(db, examId, questionId, "A");
 
         return new Fixture(certId, examId, questionId, correctOption);
     }
@@ -193,10 +184,13 @@ public sealed class PlacementSittingHasNoCountdownTests : IAsyncLifetime
         await using (var db = Db())
         {
             // Audio is what puts the preflight gate in front of the sitting, and the gate is the second
-            // place a deadline is stamped.
+            // place a deadline is stamped. #269: a pool paper's audio lives on its stimuli.
             await db.Database.ExecuteSqlAsync($"""
-                UPDATE QuestionGroups SET AudioPath = '/audio/214-preflight.mp3'
-                WHERE ExamId = {fixture.ExamId}
+                UPDATE Stimuli SET AudioPath = '/audio/214-preflight.mp3'
+                WHERE StimulusId IN (
+                    SELECT i.StimulusId FROM ExamItems ei
+                    JOIN Items i ON i.ItemId = ei.ItemId
+                    WHERE ei.ExamId = {fixture.ExamId} AND i.StimulusId IS NOT NULL)
                 """);
         }
 
@@ -316,8 +310,12 @@ public sealed class PlacementSittingHasNoCountdownTests : IAsyncLifetime
         Assert.NotNull(attempt.TotalScore);
         var scores = await read.AttemptSkillScores.Where(s => s.AttemptId == attempt.AttemptId).ToListAsync();
         Assert.Single(scores);
-        Assert.Equal(fixture.QuestionId, await read.Questions
-            .Where(q => q.SkillId == scores[0].SkillId).Select(q => q.QuestionId).FirstAsync());
+        // #269: the position that scored is a roster row, and its skill is the section's - the same fact
+        // the legacy question row used to carry.
+        Assert.Equal(fixture.QuestionId, await read.ExamItems
+            .Where(i => i.ExamId == fixture.ExamId
+                && read.Sections.Any(s => s.SectionId == i.SectionId && s.SkillId == scores[0].SkillId))
+            .Select(i => i.ExamItemId).FirstAsync());
 
         var untouched = await read.PlacementSkillResults
             .SingleAsync(r => r.PlacementId == placementId && r.SkillId != scores[0].SkillId);

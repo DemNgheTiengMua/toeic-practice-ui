@@ -33,6 +33,141 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
 
+    /// <summary>
+    /// #269: the pool's topic vocabulary is a closed set of twenty that no certificate owns, so a
+    /// fixture authors the four it needs. Guarded, because every test in this class shares one catalog.
+    /// </summary>
+    private Task EnsureTopicsAsync() => database.SqlAsync("""
+        INSERT INTO Topics (Modality, Code, Name)
+        SELECT v.Modality, v.Code, v.Name
+        FROM (VALUES
+          ('listening','L-DET',N'Detail'),
+          ('reading','R-DET',N'Local detail'),
+          ('speaking','S-DESC',N'Description'),
+          ('writing','W-CORR',N'Correspondence')
+        ) v(Modality, Code, Name)
+        WHERE NOT EXISTS (SELECT 1 FROM Topics t WHERE t.Modality = v.Modality AND t.Code = v.Code);
+        """);
+
+    /// <summary>
+    /// The pool shape of the old <c>SeedCertificateWithQuestionsAsync</c>: a reading section holding
+    /// three keyed positions (keys A, B, B) and a speaking section holding one productive task.
+    /// <para>
+    /// The id a drill answer names is the <b>pinned version</b>, and the option ids come from the
+    /// projection (<see cref="PoolFixture.OptionIdAsync"/>), never from a second formula.
+    /// </para>
+    /// </summary>
+    private sealed record PooledCertificate(
+        int CertId,
+        int SectionId,
+        int SpeakingSectionId,
+        int ExamId,
+        List<int> ItemIds,
+        List<int> VersionIds,
+        List<int> CorrectOptionIds,
+        List<int> WrongOptionIds);
+
+    private async Task<PooledCertificate> SeedPoolCertificateAsync(string certCode)
+    {
+        await EnsureTopicsAsync();
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+        db.Certificates.Add(cert);
+        await db.SaveChangesAsync();
+
+        var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
+        var spkSkill = new Skill { CertId = cert.CertId, Code = "SPEA", Name = "Speaking", Modality = "speaking", DisplayOrder = 2 };
+        db.Skills.AddRange(skill, spkSkill);
+        await db.SaveChangesAsync();
+
+        var readSec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
+        var spkSec = new Section { CertId = cert.CertId, SkillId = spkSkill.SkillId, Modality = "speaking", Code = "S1", Name = "Speaking Part 1", DisplayOrder = 1, ExpectedQuestionCount = 1 };
+        db.Sections.AddRange(readSec, spkSec);
+        await db.SaveChangesAsync();
+
+        var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 120, Purpose = "mock" };
+        db.Exams.Add(exam);
+        await db.SaveChangesAsync();
+
+        string[] keys = ["A", "B", "B"];
+        var itemIds = new List<int>();
+        var versionIds = new List<int>();
+        var examItemIds = new List<int>();
+
+        for (var i = 0; i < keys.Length; i++)
+        {
+            var position = await PoolFixture.AddMcqAsync(
+                db, exam.ExamId, cert.CertId, readSec.SectionId, "reading", $"Stem {i + 1}",
+                displayOrder: i + 1, keyLabel: keys[i], level: "B2", explanation: $"Explanation {i + 1}");
+            examItemIds.Add(position.ExamItemId);
+            itemIds.Add(position.ItemId);
+            versionIds.Add(position.ItemVersionId);
+        }
+
+        await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, spkSec.SectionId, "speaking", "Speaking task", displayOrder: 1);
+
+        var correctOpts = new List<int>();
+        var wrongOpts = new List<int>();
+        for (var i = 0; i < keys.Length; i++)
+        {
+            correctOpts.Add(await PoolFixture.OptionIdAsync(db, exam.ExamId, examItemIds[i], keys[i]));
+            wrongOpts.Add(await PoolFixture.OptionIdAsync(db, exam.ExamId, examItemIds[i], keys[i] == "A" ? "B" : "A"));
+        }
+
+        return new PooledCertificate(
+            cert.CertId, readSec.SectionId, spkSec.SectionId, exam.ExamId, itemIds, versionIds, correctOpts, wrongOpts);
+    }
+
+    private sealed record PooledFreeResponse(int CertId, int SectionId, int ExamId, int ItemId, int VersionId);
+
+    /// <summary>
+    /// The pool shape of <c>SeedFreeResponseCertificateAsync</c>: one section holding one productive
+    /// task with a five-word floor and a word ceiling.
+    /// </summary>
+    private async Task<PooledFreeResponse> SeedPoolFreeResponseCertificateAsync(string certCode, string modality)
+    {
+        await EnsureTopicsAsync();
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+        db.Certificates.Add(cert);
+        await db.SaveChangesAsync();
+
+        var code = modality == "writing" ? "WRIT" : "SPEA";
+        var skill = new Skill { CertId = cert.CertId, Code = code, Name = modality, Modality = modality, DisplayOrder = 1 };
+        db.Skills.Add(skill);
+        await db.SaveChangesAsync();
+
+        var section = new Section
+        {
+            CertId = cert.CertId, SkillId = skill.SkillId, Modality = modality, Code = "T1",
+            Name = "Free response task", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1,
+        };
+        db.Sections.Add(section);
+        await db.SaveChangesAsync();
+
+        var exam = new Exam
+        {
+            CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 30,
+            Purpose = modality == "writing" ? "writing_practice" : "speaking_practice",
+        };
+        db.Exams.Add(exam);
+        await db.SaveChangesAsync();
+
+        var position = await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, section.SectionId, modality, "Write about the meeting.",
+            displayOrder: 1, minWords: 5, maxWords: 40, hint: "Noun form");
+
+        return new PooledFreeResponse(cert.CertId, section.SectionId, exam.ExamId, position.ItemId, position.ItemVersionId);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Legacy fixtures. Kept only for the tests below that address a behaviour the pool path does not
+    // yet produce; each such test names the gap in its own comment. #269 deletes these with the tables.
+    // ---------------------------------------------------------------------------------------------
+
     private async Task<(int CertId, int SectionId, int SpeakingSecId, List<int> QuestionIds, List<int> CorrectOptionIds, List<int> WrongOptionIds)> SeedCertificateWithQuestionsAsync(string certCode)
     {
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -84,11 +219,57 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         return (cert.CertId, readSec.SectionId, spkSec.SectionId, qIds, correctOpts, wrongOpts);
     }
 
+    private async Task<(int SectionId, int QuestionId)> SeedFreeResponseCertificateAsync(string certCode, string modality)
+    {
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+        db.Certificates.Add(cert);
+        await db.SaveChangesAsync();
+
+        var code = modality == "writing" ? "WRIT" : "SPEA";
+        var skill = new Skill { CertId = cert.CertId, Code = code, Name = modality, Modality = modality, DisplayOrder = 1 };
+        db.Skills.Add(skill);
+        await db.SaveChangesAsync();
+
+        var section = new Section
+        {
+            CertId = cert.CertId, SkillId = skill.SkillId, Modality = modality, Code = "T1",
+            Name = "Free response task", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1,
+        };
+        db.Sections.Add(section);
+        await db.SaveChangesAsync();
+
+        var exam = new Exam
+        {
+            CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 30,
+            Purpose = modality == "writing" ? "writing_practice" : "speaking_practice",
+        };
+        db.Exams.Add(exam);
+        await db.SaveChangesAsync();
+
+        var group = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = section.SectionId, DisplayOrder = 1 };
+        db.QuestionGroups.Add(group);
+        await db.SaveChangesAsync();
+
+        var question = new Question
+        {
+            GroupId = group.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId,
+            Stem = "Write about the meeting.", CefrLevel = CefrLevel.B1, QuestionType = "free_response",
+            MinWords = 5, MaxWords = 40, RequiredKeywords = "proposal", Explanation = "Use the past simple.",
+            DisplayOrder = 1,
+        };
+        db.Questions.Add(question);
+        await db.SaveChangesAsync();
+
+        return (section.SectionId, question.QuestionId);
+    }
+
     [Fact]
     public async Task GetPracticeSections_returns_sections_with_available_question_counts()
     {
         var certCode = Unique("PR");
-        var (certId, readSecId, _, _, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var pooled = await SeedPoolCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
@@ -107,6 +288,11 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     // #150: a certificate whose only skill is Writing had no route to a practice session at all -
     // CK_Practice_Modality allowed listening/reading only and PracticeService refused the rest.
     // Speaking is deliberately excluded (round 2): a spoken answer cannot be typed.
+    //
+    // #269: NOT migrated. The pool grades a productive answer by recording it UNGRADED
+    // (SubmitAnswerAsync's pinned branch sets IsCorrect = null and returns version.Explanation
+    // verbatim), so neither the "at least 5 words" / "Missing required keywords" feedback this test
+    // asserts nor a true/false verdict exists on the pool path.
     [Theory]
     [InlineData("writing")]
     public async Task StartSession_drills_a_free_response_section_and_grades_the_answer(string modality)
@@ -132,6 +318,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.True(tooShort.IsSessionFinished);
     }
 
+    // #269: NOT migrated, same reason as above - a pool productive answer is never graded true.
     [Theory]
     [InlineData("writing")]
     public async Task StartSession_grades_a_free_response_answer_that_meets_the_question_requirements(string modality)
@@ -156,12 +343,12 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     public async Task StartSession_refuses_a_speaking_section_and_names_the_recorded_practice()
     {
         var certCode = Unique("SPK");
-        var (sectionId, _) = await SeedFreeResponseCertificateAsync(certCode, "speaking");
+        var pooled = await SeedPoolFreeResponseCertificateAsync(certCode, "speaking");
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
         var ex = await Assert.ThrowsAsync<PracticeException>(() =>
-            practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId)));
+            practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId)));
 
         Assert.Equal(PracticeException.ModalityNotAllowed, ex.Code);
         Assert.Contains("record", ex.Message, StringComparison.OrdinalIgnoreCase);
@@ -169,6 +356,9 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
 
     // #150 round 2: the evaluated feedback is the whole point of a drill. It has to survive a
     // refresh, not only the one AJAX reply that first produced it.
+    //
+    // #269: NOT migrated - the pool path stores no evaluated feedback for a productive answer; it
+    // returns the version's authored explanation unchanged.
     [Theory]
     [InlineData("writing")]
     public async Task Free_response_feedback_survives_a_reload_of_the_question_and_the_summary(string modality)
@@ -199,21 +389,25 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     public async Task A_wrong_free_response_answer_is_not_filed_in_the_incorrect_answer_bank(string modality)
     {
         var certCode = Unique("SQ");
-        var (sectionId, questionId) = await SeedFreeResponseCertificateAsync(certCode, modality);
+        var pooled = await SeedPoolFreeResponseCertificateAsync(certCode, modality);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
         await practice.SubmitAnswerAsync(
-            userId, session.SessionId, questionId, new SubmitPracticeAnswerInput(ResponseText: "Too short."));
+            userId, session.SessionId, pooled.VersionId, new SubmitPracticeAnswerInput(ResponseText: "Too short."));
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        Assert.False(await db.SavedQuestions.AnyAsync(sq => sq.UserId == userId && sq.QuestionId == questionId));
+        Assert.False(await db.SavedQuestions.AnyAsync(sq => sq.UserId == userId && sq.ItemId == pooled.ItemId));
     }
 
     // Finding 4, the divergence itself: a writing section holding only keyed questions was counted by
     // the catalog (it has options) and then refused by the session builder (it serves free responses
     // only). One predicate now answers both questions, so the count is never a broken promise.
+    //
+    // #269: NOT migrated - the pool makes the shape this test exists for unrepresentable. An
+    // ExamItem's modality is pinned to its section's, and CK_Items_Modality_RenderFormat admits only
+    // 'free_response' for a writing item, so a writing section can never hold a keyed position.
     [Fact]
     public async Task A_section_the_catalog_counts_can_always_be_started()
     {
@@ -266,7 +460,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     public async Task Catalog_and_session_builder_agree_on_what_a_section_can_drill()
     {
         var certCode = Unique("AG");
-        await SeedMixedModalityCertificateAsync(certCode);
+        await SeedPoolMixedModalityCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
@@ -299,11 +493,18 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         }
     }
 
-    // A certificate with one section of each shape, including the two the old split filters disagreed
-    // on: a writing section holding only keyed questions (counted by the catalog, served by nothing)
-    // and a section with no questions at all.
-    private async Task SeedMixedModalityCertificateAsync(string certCode)
+    /// <summary>
+    /// A certificate with one section of each shape the builder has to tell apart: a reading section
+    /// with stock, a reading section with none, and a writing section holding one productive task.
+    /// <para>
+    /// The old fixture's "writing section holding only keyed questions" is gone: the pool cannot
+    /// express it (<c>CK_Items_Modality_RenderFormat</c> admits only <c>free_response</c> for a writing
+    /// item), which is why the two-filter divergence it existed to catch is unreachable.
+    /// </para>
+    /// </summary>
+    private async Task SeedPoolMixedModalityCertificateAsync(string certCode)
     {
+        await EnsureTopicsAsync();
         await using var db = DbContextFactory.Create(database.ConnectionString);
 
         var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
@@ -325,39 +526,11 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         db.Exams.Add(exam);
         await db.SaveChangesAsync();
 
-        await AddQuestionAsync(db, exam, keyedReading, reading, "mcq", hasAnswerKey: true);
-        await AddQuestionAsync(db, exam, writingSection, writing, "free_response", hasAnswerKey: false);
-    }
-
-    private static async Task AddQuestionAsync(
-        DataAccess.CompanionDbContext db, Exam exam, Section section, Skill skill, string type, bool hasAnswerKey)
-    {
-        var group = new QuestionGroup
-        {
-            ExamId = exam.ExamId, CertId = exam.CertId, SectionId = section.SectionId,
-            DisplayOrder = section.DisplayOrder,
-        };
-        db.QuestionGroups.Add(group);
-        await db.SaveChangesAsync();
-
-        var question = new Question
-        {
-            GroupId = group.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId,
-            Stem = $"{section.Code} question", CefrLevel = CefrLevel.B1, QuestionType = type,
-            MinWords = type == "free_response" ? 5 : null, RequiredKeywords = type == "free_response" ? "proposal" : null,
-            DisplayOrder = 1,
-        };
-        db.Questions.Add(question);
-        await db.SaveChangesAsync();
-
-        if (hasAnswerKey)
-        {
-            db.QuestionOptions.Add(new QuestionOption
-            {
-                QuestionId = question.QuestionId, QuestionType = type, Label = "A", Text = "Only option", IsCorrect = true,
-            });
-            await db.SaveChangesAsync();
-        }
+        await PoolFixture.AddMcqAsync(
+            db, exam.ExamId, cert.CertId, keyedReading.SectionId, "reading", "P5 question", displayOrder: 1);
+        await PoolFixture.AddProductiveAsync(
+            db, exam.ExamId, cert.CertId, writingSection.SectionId, "writing", "W1 question", displayOrder: 1,
+            minWords: 5);
     }
 
     // The composite FK still owns the pin: a session's modality is its section's, and no widening of
@@ -366,7 +539,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     public async Task A_practice_session_cannot_carry_a_modality_other_than_its_sections()
     {
         var certCode = Unique("PIN");
-        var (sectionId, _) = await SeedFreeResponseCertificateAsync(certCode, "writing");
+        var pooled = await SeedPoolFreeResponseCertificateAsync(certCode, "writing");
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var user = new User
@@ -381,57 +554,11 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
 
         db.PracticeSessions.Add(new PracticeSession
         {
-            UserId = user.UserId, CertId = (await db.Certificates.SingleAsync(c => c.Code == certCode)).CertId, SectionId = sectionId, Modality = "listening",
+            UserId = user.UserId, CertId = pooled.CertId, SectionId = pooled.SectionId, Modality = "listening",
             QuestionCount = 1, Status = "in_progress", CorrectCount = 0,
         });
 
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
-    }
-
-    private async Task<(int SectionId, int QuestionId)> SeedFreeResponseCertificateAsync(string certCode, string modality)
-    {
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-
-        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
-        db.Certificates.Add(cert);
-        await db.SaveChangesAsync();
-
-        var code = modality == "writing" ? "WRIT" : "SPEA";
-        var skill = new Skill { CertId = cert.CertId, Code = code, Name = modality, Modality = modality, DisplayOrder = 1 };
-        db.Skills.Add(skill);
-        await db.SaveChangesAsync();
-
-        var section = new Section
-        {
-            CertId = cert.CertId, SkillId = skill.SkillId, Modality = modality, Code = "T1",
-            Name = "Free response task", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1,
-        };
-        db.Sections.Add(section);
-        await db.SaveChangesAsync();
-
-        var exam = new Exam
-        {
-            CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 30,
-            Purpose = modality == "writing" ? "writing_practice" : "speaking_practice",
-        };
-        db.Exams.Add(exam);
-        await db.SaveChangesAsync();
-
-        var group = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = section.SectionId, DisplayOrder = 1 };
-        db.QuestionGroups.Add(group);
-        await db.SaveChangesAsync();
-
-        var question = new Question
-        {
-            GroupId = group.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId,
-            Stem = "Write about the meeting.", CefrLevel = CefrLevel.B1, QuestionType = "free_response",
-            MinWords = 5, MaxWords = 40, RequiredKeywords = "proposal", Explanation = "Use the past simple.",
-            DisplayOrder = 1,
-        };
-        db.Questions.Add(question);
-        await db.SaveChangesAsync();
-
-        return (section.SectionId, question.QuestionId);
     }
 
     [Fact]
@@ -439,13 +566,13 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     {
         var certCode1 = Unique("C1");
         var certCode2 = Unique("C2");
-        var (_, sec1Id, _, _, _, _) = await SeedCertificateWithQuestionsAsync(certCode1);
-        await SeedCertificateWithQuestionsAsync(certCode2);
+        var pooled1 = await SeedPoolCertificateAsync(certCode1);
+        await SeedPoolCertificateAsync(certCode2);
         var userId = await SeedLearnerAsync(certCode2); // User is active in cert 2
         var (practice, _) = CreateServices();
 
         var ex = await Assert.ThrowsAsync<PracticeException>(() =>
-            practice.StartSessionAsync(userId, new StartPracticeSessionInput(sec1Id)));
+            practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled1.SectionId)));
 
         Assert.Equal(PracticeException.SectionUnavailable, ex.Code);
     }
@@ -454,11 +581,11 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     public async Task StartSession_creates_session_and_answers_for_mcq_questions_only()
     {
         var certCode = Unique("MC");
-        var (_, secId, _, qIds, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var pooled = await SeedPoolCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
 
         // #155: the session is the whole bank when the bank is smaller than ten - three here - rather
         // than the learner's chosen two.
@@ -467,7 +594,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Equal(0, session.CorrectCount);
 
         var q1 = await practice.GetQuestionAsync(userId, session.SessionId, 1);
-        Assert.Equal(qIds[0], q1.QuestionId);
+        Assert.Equal(pooled.VersionIds[0], q1.ItemVersionId);
         Assert.Equal(1, q1.DisplayOrder);
         Assert.Equal(3, q1.TotalQuestions);
         Assert.False(q1.HintUsed);
@@ -476,6 +603,9 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Null(q1.CorrectOptionId); // Cannot leak answer
     }
 
+    // #269: NOT migrated. RevealHintAsync resolves the answer by `PracticeAnswer.QuestionId`, which is
+    // NULL on every pool answer, and the projection reads the hint off the legacy question row - so a
+    // pool drill can neither record a hint nor render one.
     [Fact]
     public async Task RevealHint_records_hint_used_on_practice_answer()
     {
@@ -498,18 +628,18 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     public async Task SubmitAnswer_grades_answer_immediately_and_shows_explanation()
     {
         var certCode = Unique("GR");
-        var (_, secId, _, qIds, correctOpts, wrongOpts) = await SeedCertificateWithQuestionsAsync(certCode);
+        var pooled = await SeedPoolCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
 
-        // Submit correct answer to Q1
+        // Submit correct answer to the first position.
         var result1 = await practice.SubmitAnswerAsync(
-            userId, session.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
+            userId, session.SessionId, pooled.VersionIds[0], new SubmitPracticeAnswerInput(pooled.CorrectOptionIds[0]));
 
         Assert.True(result1.IsCorrect);
-        Assert.Equal(correctOpts[0], result1.SelectedOptionId);
+        Assert.Equal(pooled.CorrectOptionIds[0], result1.SelectedOptionId);
         Assert.Equal("Explanation 1", result1.Explanation);
         Assert.False(result1.IsSessionFinished);
         Assert.Equal(2, result1.NextQuestionDisplayOrder);
@@ -517,18 +647,18 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         // Submit wrong answer to Q2. The session is three questions (the whole bank), so answering two
         // of them does not finish it - #155 made the count the planner's, not the learner's.
         var result2 = await practice.SubmitAnswerAsync(
-            userId, session.SessionId, qIds[1], new SubmitPracticeAnswerInput(wrongOpts[1]));
+            userId, session.SessionId, pooled.VersionIds[1], new SubmitPracticeAnswerInput(pooled.WrongOptionIds[1]));
 
         Assert.False(result2.IsCorrect);
-        Assert.Equal(wrongOpts[1], result2.SelectedOptionId);
-        Assert.Equal(correctOpts[1], result2.CorrectOptionId);
+        Assert.Equal(pooled.WrongOptionIds[1], result2.SelectedOptionId);
+        Assert.Equal(pooled.CorrectOptionIds[1], result2.CorrectOptionId);
         Assert.Equal("Explanation 2", result2.Explanation);
         Assert.False(result2.IsSessionFinished);
         Assert.Equal(3, result2.NextQuestionDisplayOrder);
 
         // Q3 finishes it.
         var result3 = await practice.SubmitAnswerAsync(
-            userId, session.SessionId, qIds[2], new SubmitPracticeAnswerInput(correctOpts[2]));
+            userId, session.SessionId, pooled.VersionIds[2], new SubmitPracticeAnswerInput(pooled.CorrectOptionIds[2]));
         Assert.True(result3.IsSessionFinished);
 
         var info = await practice.GetSessionInfoAsync(userId, session.SessionId);
@@ -540,19 +670,23 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     public async Task SubmitAnswer_rejects_option_from_different_question()
     {
         var certCode = Unique("OP");
-        var (_, secId, _, qIds, correctOpts, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var pooled = await SeedPoolCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
 
-        // Try submitting Q2's option for Q1
+        // Try submitting the second position's option for the first
         var ex = await Assert.ThrowsAsync<PracticeException>(() =>
-            practice.SubmitAnswerAsync(userId, session.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[1])));
+            practice.SubmitAnswerAsync(userId, session.SessionId, pooled.VersionIds[0], new SubmitPracticeAnswerInput(pooled.CorrectOptionIds[1])));
 
         Assert.Equal(PracticeException.InvalidOption, ex.Code);
     }
 
+    // #269: NOT migrated. GetSummaryAsync's pinned branch hard-codes AudioStartMs/AudioEndMs to null
+    // even though the stimulus carries the slice, so the four audio assertions below have no pool
+    // answer today. The accuracy arithmetic below it is pool-reachable; this is one production
+    // omission, not two tests.
     [Fact]
     public async Task GetSummary_computes_per_question_outcome_and_skip_accuracy_math()
     {
@@ -618,20 +752,21 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     public async Task A_session_is_drawn_from_what_is_due_not_from_a_learner_picked_source()
     {
         var certCode = Unique("QS");
-        var (_, secId, _, qIds, _, wrongOpts) = await SeedCertificateWithQuestionsAsync(certCode);
+        var pooled = await SeedPoolCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var session1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
         Assert.Equal(3, session1.QuestionCount); // the whole bank: one short session, honestly short
-        await practice.SubmitAnswerAsync(userId, session1.SessionId, qIds[0], new SubmitPracticeAnswerInput(wrongOpts[0]));
+        await practice.SubmitAnswerAsync(
+            userId, session1.SessionId, pooled.VersionIds[0], new SubmitPracticeAnswerInput(pooled.WrongOptionIds[0]));
 
         // The next session is not "wrong_before" - it is everything still due, which excludes exactly
         // the question just missed and its whole category.
-        var session2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var session2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
         var session2Questions = await practice.GetSessionQuestionsAsync(userId, session2.SessionId);
 
-        Assert.DoesNotContain(qIds[0], session2Questions.Select(q => q.QuestionId));
+        Assert.DoesNotContain(pooled.VersionIds[0], session2Questions.Select(q => q.ItemVersionId));
         Assert.Equal(2, session2.QuestionCount);
     }
 
@@ -639,21 +774,21 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     public async Task StartSession_prunes_older_sessions_and_answer_logs_when_exceeding_limit()
     {
         var certCode = Unique("PR");
-        var (_, secId, _, qIds, correctOpts, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var pooled = await SeedPoolCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
         practice.MaxSavedSessionsPerCertificate = 2; // Test limit of 2
 
         // Session 1: complete it
-        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
-        await practice.SubmitAnswerAsync(userId, s1.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
+        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
+        await practice.SubmitAnswerAsync(userId, s1.SessionId, pooled.VersionIds[0], new SubmitPracticeAnswerInput(pooled.CorrectOptionIds[0]));
 
         // Session 2: complete it
-        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
-        await practice.SubmitAnswerAsync(userId, s2.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
+        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
+        await practice.SubmitAnswerAsync(userId, s2.SessionId, pooled.VersionIds[0], new SubmitPracticeAnswerInput(pooled.CorrectOptionIds[0]));
 
         // Session 3: start it -> exceeds limit of 2, so s1 and its answers should be pruned
-        var s3 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var s3 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var remainingSessions = await db.PracticeSessions
@@ -680,15 +815,15 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     public async Task StartSession_cleans_up_empty_unstarted_in_progress_sessions()
     {
         var certCode = Unique("AB");
-        var (_, secId, _, _, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var pooled = await SeedPoolCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
         // Start session 1 but do not answer any questions
-        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
 
         // Start session 2 -> s1 was empty, so it should be cleaned up immediately
-        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var sessions = await db.PracticeSessions.Where(s => s.UserId == userId).ToListAsync();
@@ -704,16 +839,16 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     public async Task StartSession_marks_partially_answered_in_progress_session_as_abandoned()
     {
         var certCode = Unique("PA");
-        var (_, secId, _, qIds, correctOpts, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var pooled = await SeedPoolCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
         // Start session 1 and answer question 1
-        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
-        await practice.SubmitAnswerAsync(userId, s1.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
+        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
+        await practice.SubmitAnswerAsync(userId, s1.SessionId, pooled.VersionIds[0], new SubmitPracticeAnswerInput(pooled.CorrectOptionIds[0]));
 
         // Start session 2 -> s1 had an answer, so it should be preserved as "abandoned"
-        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var session1InDb = await db.PracticeSessions.SingleOrDefaultAsync(s => s.SessionId == s1.SessionId);
@@ -727,32 +862,32 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     public async Task GetPracticeSections_returns_unfinished_session_when_in_progress()
     {
         var certCode = Unique("UP");
-        var (_, secId, _, _, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var pooled = await SeedPoolCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
 
         var catalog = await practice.GetPracticeSectionsAsync(userId);
 
         Assert.NotNull(catalog.UnfinishedSession);
         Assert.Equal(s1.SessionId, catalog.UnfinishedSession.SessionId);
         Assert.Equal(PracticeStatus.InProgress, catalog.UnfinishedSession.Status);
-        Assert.Equal(secId, catalog.UnfinishedSession.SectionId);
+        Assert.Equal(pooled.SectionId, catalog.UnfinishedSession.SectionId);
     }
 
     [Fact]
     public async Task GetSessionQuestions_returns_all_questions_with_anti_cheat_rules_and_saved_state()
     {
         var certCode = Unique("SQ");
-        var (_, secId, _, qIds, correctOpts, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var pooled = await SeedPoolCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
 
         // Answer question 1
-        await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
+        await practice.SubmitAnswerAsync(userId, session.SessionId, pooled.VersionIds[0], new SubmitPracticeAnswerInput(pooled.CorrectOptionIds[0]));
 
         // Question 2: save to bank
         await using (var db = DbContextFactory.Create(database.ConnectionString))
@@ -760,7 +895,9 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
             db.SavedQuestions.Add(new SavedQuestion
             {
                 UserId = userId,
-                QuestionId = qIds[1],
+                CertId = pooled.CertId,
+                ItemId = pooled.ItemIds[1],
+                ItemVersionId = pooled.VersionIds[1],
                 Source = "manual",
                 SavedAt = DateTimeOffset.UtcNow
             });
@@ -772,9 +909,9 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var questions = await practice.GetSessionQuestionsAsync(userId, session.SessionId);
 
         Assert.Equal(3, questions.Count);
-        Assert.Equal(qIds[0], questions[0].QuestionId);
-        Assert.Equal(qIds[1], questions[1].QuestionId);
-        Assert.Equal(qIds[2], questions[2].QuestionId);
+        Assert.Equal(pooled.VersionIds[0], questions[0].ItemVersionId);
+        Assert.Equal(pooled.VersionIds[1], questions[1].ItemVersionId);
+        Assert.Equal(pooled.VersionIds[2], questions[2].ItemVersionId);
 
         // Anti-cheat policy verification:
         // Question 1 was answered -> correctOptionId & explanation released
@@ -797,14 +934,14 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     public async Task SubmitAnswer_out_of_order_does_not_finish_session_when_questions_remain()
     {
         var certCode = Unique("NO");
-        var (_, secId, _, qIds, correctOpts, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var pooled = await SeedPoolCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
 
         // Jump directly to Question 3 (the last question) and answer it
-        var resultQ3 = await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[2], new SubmitPracticeAnswerInput(correctOpts[2]));
+        var resultQ3 = await practice.SubmitAnswerAsync(userId, session.SessionId, pooled.VersionIds[2], new SubmitPracticeAnswerInput(pooled.CorrectOptionIds[2]));
 
         // Session must NOT be finished yet because Q1 and Q2 remain unanswered
         Assert.False(resultQ3.IsSessionFinished);
@@ -813,17 +950,21 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Equal(PracticeStatus.InProgress, sessionInfo.Status);
 
         // Now answering Question 1 and Question 2 should succeed without SessionAlreadyFinished
-        var resultQ1 = await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
+        var resultQ1 = await practice.SubmitAnswerAsync(userId, session.SessionId, pooled.VersionIds[0], new SubmitPracticeAnswerInput(pooled.CorrectOptionIds[0]));
         Assert.False(resultQ1.IsSessionFinished);
 
-        var resultQ2 = await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[1], new SubmitPracticeAnswerInput(correctOpts[1]));
+        var resultQ2 = await practice.SubmitAnswerAsync(userId, session.SessionId, pooled.VersionIds[1], new SubmitPracticeAnswerInput(pooled.CorrectOptionIds[1]));
         // Now all questions are answered -> session finishes!
         Assert.True(resultQ2.IsSessionFinished);
 
         var finalSessionInfo = await practice.GetSessionInfoAsync(userId, session.SessionId);
         Assert.Equal(PracticeStatus.Finished, finalSessionInfo.Status);
     }
-[Fact]
+
+    // #269: NOT migrated. SubmitAnswerAsync grades a pinned version only from a single
+    // SelectedOptionId; an id list leaves IsCorrect null, and CorrectOptionIds carries one key label,
+    // so the incomplete-set and full-set verdicts this test asserts do not exist on the pool path.
+    [Fact]
     public async Task SubmitAnswer_evaluates_multi_select_accurately()
     {
         var certCode = Unique("MS");
@@ -929,6 +1070,8 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.True(correctResult.IsSessionFinished);
     }
 
+    // #269: NOT migrated. A pinned version is graded only from SelectedOptionId, so an inline answer's
+    // text is recorded with IsCorrect = null and the accepted-answer set is nulled in the projection.
     [Fact]
     public async Task SubmitAnswer_evaluates_inline_completion_accurately()
     {
@@ -1017,6 +1160,9 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.True(res2.IsSessionFinished);
     }
 
+    // #269: NOT migrated. A pool position's type is read from its shape, and the projection nulls the
+    // answer-shape fields (accepted answers, allow-number, max words) on the pinned branch, so the
+    // component metadata this test asserts is not what the pool drill renders.
     [Fact]
     public async Task GetSessionTakeAsync_returns_component_metadata()
     {

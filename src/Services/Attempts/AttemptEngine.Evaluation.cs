@@ -104,20 +104,28 @@ public sealed partial class AttemptEngine
         return set;
     }
 
-    public static WritingEvaluationResult EvaluateWritingResponse(Question question, string? responseText)
+    public static WritingEvaluationResult EvaluateWritingResponse(Question question, string? responseText) =>
+        EvaluateWritingResponse(question.MinWords, question.RequiredKeywords, responseText);
+
+    /// <summary>
+    /// #269: the same evaluation over the two facts it actually reads, so a pool position - which has
+    /// no <c>Question</c> row - is judged by the identical rule rather than by a second copy of it.
+    /// </summary>
+    public static WritingEvaluationResult EvaluateWritingResponse(
+        int? minWords, string? requiredKeywords, string? responseText)
     {
         var text = responseText ?? string.Empty;
         var words = text.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
         int wordCount = words.Length;
 
-        bool isUnderLength = question.MinWords.HasValue && question.MinWords.Value > 0 && wordCount < question.MinWords.Value;
+        bool isUnderLength = minWords.HasValue && minWords.Value > 0 && wordCount < minWords.Value;
 
         var missingKeywords = new List<string>();
         bool hasRequiredKeywords = true;
 
-        if (!string.IsNullOrWhiteSpace(question.RequiredKeywords))
+        if (!string.IsNullOrWhiteSpace(requiredKeywords))
         {
-            var keywords = ParseKeywords(question.RequiredKeywords);
+            var keywords = ParseKeywords(requiredKeywords);
             foreach (var kw in keywords)
             {
                 if (string.IsNullOrWhiteSpace(kw)) continue;
@@ -132,7 +140,7 @@ public sealed partial class AttemptEngine
         var feedbackParts = new List<string>();
         if (isUnderLength)
         {
-            feedbackParts.Add($"IsUnderLength=true; WordCount={wordCount}; MinWords={question.MinWords}; Length penalty applied.");
+            feedbackParts.Add($"IsUnderLength=true; WordCount={wordCount}; MinWords={minWords}; Length penalty applied.");
         }
         if (!hasRequiredKeywords)
         {
@@ -144,7 +152,7 @@ public sealed partial class AttemptEngine
         return new WritingEvaluationResult(
             wordCount,
             isUnderLength,
-            question.MinWords,
+            minWords,
             hasRequiredKeywords,
             missingKeywords,
             feedback);

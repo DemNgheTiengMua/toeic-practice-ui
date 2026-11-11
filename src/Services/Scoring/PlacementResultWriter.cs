@@ -88,14 +88,20 @@ public sealed class PlacementResultWriter(
             .Where(s => s.AttemptId == attempt.AttemptId)
             .ToDictionaryAsync(s => s.SkillId, s => s.ScaledScore, cancellationToken);
 
-        var answeredBySkill = await db.AttemptAnswers
-            .AsNoTracking()
-            .Where(a => a.AttemptId == attempt.AttemptId
-                && (a.SelectedOptionId != null || a.SelectedLabel != null
-                    || a.SelectedOptionIdsJson != null || a.ResponseText != null))
-            .GroupBy(a => a.Question.Section.SkillId)
-            .Select(g => new { SkillId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(g => g.SkillId, g => g.Count, cancellationToken);
+        // #269: a skill comes from the answer's own row - the roster position on a pool paper, the
+        // legacy question otherwise - never from a navigation that is null on half the rows.
+        var skillByAnswer = await RosterSkills.ByAnswerAsync(db, attempt.AttemptId, cancellationToken);
+
+        var answeredBySkill = (await db.AttemptAnswers
+                .AsNoTracking()
+                .Where(a => a.AttemptId == attempt.AttemptId
+                    && (a.SelectedOptionId != null || a.SelectedLabel != null
+                        || a.SelectedOptionIdsJson != null || a.ResponseText != null))
+                .Select(a => a.AnswerId)
+                .ToListAsync(cancellationToken))
+            .Where(id => skillByAnswer.ContainsKey(id))
+            .GroupBy(id => skillByAnswer[id])
+            .ToDictionary(g => g.Key, g => g.Count());
 
         var gradingsBySkill = (await db.AiGradings
                 .AsNoTracking()
@@ -438,6 +444,17 @@ public sealed class PlacementResultWriter(
     }
 
     /// <summary>
+    /// #269: which skill a roster position belongs to. The legacy path read
+    /// <c>AttemptAnswer.Question.Section.SkillId</c>; a pool answer has no question row, so the same fact
+    /// is resolved from the position it was written against (<c>ExamItemId</c>) - one query, reused by
+    /// the answered tally and the topic priors so neither can disagree about which skill an answer counts
+    /// for.
+    /// </summary>
+    private async Task<Dictionary<int, int>> LoadSkillByPositionAsync(
+        int attemptId, CancellationToken cancellationToken)
+        => await RosterSkills.ByAnswerAsync(db, attemptId, cancellationToken);
+
+    /// <summary>
     /// #219 / D5: what the sitting saw per (skill, topic, band). A topic is a property of the pool item
     /// the answer is pinned to, and an answer with no pin has no topic to name G�� it contributes
     /// nothing rather than an invented one.
@@ -461,13 +478,13 @@ public sealed class PlacementResultWriter(
             .Where(a => a.AttemptId == attemptId && a.ItemId != null)
             .Select(a => new
             {
+                a.AnswerId,
                 a.ItemId,
                 a.SelectedOptionId,
                 a.SelectedLabel,
                 a.ResponseText,
                 a.SelectedOptionIdsJson,
                 a.IsCorrect,
-                a.Question.Section.SkillId,
             })
             .ToListAsync(cancellationToken);
 
@@ -483,6 +500,8 @@ public sealed class PlacementResultWriter(
             .Select(i => new { i.ItemId, i.TopicId, Band = i.CefrLevel.Code })
             .ToDictionaryAsync(i => i.ItemId, cancellationToken);
 
+        var skillByAnswer = await LoadSkillByPositionAsync(attemptId, cancellationToken);
+
         return answers
             .Where(a => AnswerContent.IsAnswered(
                 a.SelectedOptionId, a.SelectedLabel, a.ResponseText, a.SelectedOptionIdsJson))
@@ -492,7 +511,8 @@ public sealed class PlacementResultWriter(
             // is the productive half's evidence, not this tally.
             .Where(a => a.IsCorrect.HasValue)
             .Where(a => items.ContainsKey(a.ItemId!.Value))
-            .GroupBy(a => a.SkillId)
+            .Where(a => skillByAnswer.ContainsKey(a.AnswerId))
+            .GroupBy(a => skillByAnswer[a.AnswerId])
             .ToDictionary(
                 g => g.Key,
                 g => (IReadOnlyList<PlacementTopicPrior>)g

@@ -432,7 +432,6 @@ public sealed partial class AttemptEngine
 
             var freeResponses = await db.FreeResponses
                 .Where(fr => fr.AttemptId == attemptId)
-                .Include(fr => fr.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
                 .Include(fr => fr.AiGradingFreeResponse).ThenInclude(g => g!.AiGradingScores)
                 .ToListAsync(cancellationToken);
 
@@ -449,9 +448,32 @@ public sealed partial class AttemptEngine
 
             var answers = await db.AttemptAnswers
                 .Where(a => a.AttemptId == attemptId)
-                .Include(a => a.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
                 .Include(a => a.Question).ThenInclude(q => q.QuestionOptionQuestionNavigations)
                 .ToListAsync(cancellationToken);
+
+            // #269: a pool position has no question row, so the section, the skill and the length rule
+            // come from the roster. The legacy branch keeps its question rows for one more release;
+            // the readers below ask the paper, which knows both shapes.
+            var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+            var positionByQuestionId = paperQuestions
+                .Where(q => !q.ExamItemId.HasValue)
+                .ToDictionary(q => q.Id);
+            var positionByExamItemId = paperQuestions
+                .Where(q => q.ExamItemId.HasValue)
+                .ToDictionary(q => q.ExamItemId!.Value);
+
+            SittingQuestion? PositionOfQuestion(int? examItemId, int? questionId) =>
+                examItemId is int itemKey
+                    ? positionByExamItemId.GetValueOrDefault(itemKey)
+                    : questionId is int questionKey ? positionByQuestionId.GetValueOrDefault(questionKey) : null;
+
+            SittingQuestion PositionOfResponse(FreeResponse fr) =>
+                PositionOfQuestion(fr.ExamItemId, fr.QuestionId)
+                ?? throw new AttemptEngineException(
+                    AttemptEngineException.QuestionNotFound,
+                    $"Free response {fr.FreeResponseId} names no position on attempt {attemptId}'s paper.");
+
+            SittingQuestion? PositionOfAnswer(AttemptAnswer a) => PositionOfQuestion(a.ExamItemId, a.QuestionId);
 
             // #191: clearing the score is a write of the same derived fact, so it declares the same
             // writer. This runs before the rescore below and is what makes a resubmit start from a
@@ -473,7 +495,10 @@ public sealed partial class AttemptEngine
 
             foreach (var response in freeResponses)
             {
-                var eval = EvaluateWritingResponse(response.Question, response.ResponseText);
+                var eval = EvaluateWritingResponse(
+                    PositionOfResponse(response).MinWords,
+                    PositionOfResponse(response).RequiredKeywords,
+                    response.ResponseText);
                 if (eval.IsUnderLength && response.AiGradingFreeResponse != null)
                 {
                     foreach (var s in response.AiGradingFreeResponse.AiGradingScores)
@@ -500,7 +525,7 @@ public sealed partial class AttemptEngine
                             GradingId = response.AiGradingFreeResponse.GradingId,
                             SkillId = response.SkillId,
                             Severity = "minor",
-                            Text = $"IsUnderLength=true: Bài viết có {eval.WordCount} từ, dưới mức tối thiểu {response.Question.MinWords} từ.",
+                            Text = $"IsUnderLength=true: Bài viết có {eval.WordCount} từ, dưới mức tối thiểu {eval.MinWords} từ.",
                             CreatedAt = DateTimeOffset.UtcNow
                         });
                     }
@@ -510,8 +535,9 @@ public sealed partial class AttemptEngine
             var fractionByResponse = new Dictionary<int, decimal>();
             foreach (var response in freeResponses)
             {
+                var position = PositionOfResponse(response);
                 var sectionCriteria = await db.SectionCriteria
-                    .Where(sc => sc.SectionId == response.Question.SectionId)
+                    .Where(sc => sc.SectionId == position.SectionId)
                     .Include(sc => sc.GradingCriterion)
                     .ToListAsync(cancellationToken);
 
@@ -530,7 +556,8 @@ public sealed partial class AttemptEngine
             // #186: the same pinned-version rule as the other scoring pass, so an attempt finalized
             // after AI grading cannot score against a question row the learner never saw.
             var pinnedVersions = await LoadPinnedVersionsAsync(answers, cancellationToken);
-            foreach (var answer in answers.Where(a => a.Question.QuestionType != QuestionType.FreeResponse.ToCode()))
+            foreach (var answer in answers.Where(a =>
+                PositionOfAnswer(a)?.RenderFormat != QuestionType.FreeResponse.ToCode()))
             {
                 // #217 / PLC-18: a blank stays unjudged, exactly as in the objective pass above. It is
                 // still incorrect for the skill's raw score (only `IsCorrect == true` counts, over every
@@ -543,8 +570,8 @@ public sealed partial class AttemptEngine
                     : null;
             }
 
-            var skills = answers.Select(a => a.Question.Section.Skill)
-                .Concat(freeResponses.Select(fr => fr.Question.Section.Skill))
+            var skills = answers.Select(a => PositionOfAnswer(a)!.Section.Skill)
+                .Concat(freeResponses.Select(fr => PositionOfResponse(fr).Section.Skill))
                 .DistinctBy(s => s.SkillId)
                 .ToList();
 
@@ -552,7 +579,10 @@ public sealed partial class AttemptEngine
             var newSkillScores = new List<AttemptSkillScore>();
             foreach (var skill in skills)
             {
-                var objectiveAnswers = answers.Where(a => a.Question.Section.SkillId == skill.SkillId && a.Question.QuestionType != QuestionType.FreeResponse.ToCode()).ToList();
+                var objectiveAnswers = answers
+                    .Where(a => PositionOfAnswer(a)!.Section.SkillId == skill.SkillId
+                        && PositionOfAnswer(a)!.RenderFormat != QuestionType.FreeResponse.ToCode())
+                    .ToList();
                 var freeResponsesInSkill = freeResponses.Where(fr => fr.SkillId == skill.SkillId).ToList();
                 var totalQuestionsInSkill = objectiveAnswers.Count + freeResponsesInSkill.Count;
                 if (totalQuestionsInSkill == 0) continue;
@@ -589,13 +619,17 @@ public sealed partial class AttemptEngine
                     // actually graded are averaged; a failed task is absent, not a zero (PLC-35).
                     if (gradedInSkill.Count == 0) continue;
 
-                    var gradedSections = gradedInSkill.Select(fr => fr.Question.Section).DistinctBy(s => s.SectionId).ToList();
+                    var gradedSections = gradedInSkill
+                        .Select(fr => PositionOfResponse(fr).Section)
+                        .DistinctBy(s => s.SectionId)
+                        .ToList();
                     decimal totalWeight = gradedSections.Sum(s => s.ScoreWeight > 0 ? s.ScoreWeight : 1.0m);
                     decimal weightedSectionSum = 0m;
 
                     foreach (var fr in gradedInSkill)
                     {
-                        var secWeight = fr.Question.Section.ScoreWeight > 0 ? fr.Question.Section.ScoreWeight : 1.0m;
+                        var section = PositionOfResponse(fr).Section;
+                        var secWeight = section.ScoreWeight > 0 ? section.ScoreWeight : 1.0m;
                         var frScore = fr.AiGradingFreeResponse?.OverallScaled ?? 0m;
                         weightedSectionSum += frScore * secWeight;
                     }

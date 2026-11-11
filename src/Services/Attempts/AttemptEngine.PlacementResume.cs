@@ -79,24 +79,49 @@ public sealed partial class AttemptEngine
             throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "This exam attempt is no longer in progress.");
         }
 
-        var questions = await LoadExamQuestionsAsync(attempt.ExamId, cancellationToken);
-        var answersByQuestion = await db.AttemptAnswers
+        // #269: the resume screen reads the same roster the taking screen reads. It used to load
+        // Questions rows and key its answer/response maps on the nullable legacy column, which throws
+        // on the second pool row - and on a pool paper every row is such a row.
+        var questions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+
+        var attemptAnswers = await db.AttemptAnswers
             .AsNoTracking()
             .Where(a => a.AttemptId == attempt.AttemptId)
-            .ToDictionaryAsync(a => a.QuestionId, cancellationToken);
-        var freeResponses = await db.FreeResponses
+            .ToListAsync(cancellationToken);
+        var answerByQuestionId = attemptAnswers
+            .Where(a => a.QuestionId.HasValue)
+            .ToDictionary(a => a.QuestionId!.Value);
+        var answerByExamItemId = attemptAnswers
+            .Where(a => a.ExamItemId.HasValue)
+            .ToDictionary(a => a.ExamItemId!.Value);
+
+        var responses = await db.FreeResponses
             .AsNoTracking()
             .Where(r => r.AttemptId == attempt.AttemptId)
-            .ToDictionaryAsync(r => r.QuestionId, cancellationToken);
+            .ToListAsync(cancellationToken);
+        var responseByQuestionId = responses
+            .Where(r => r.QuestionId.HasValue)
+            .ToDictionary(r => r.QuestionId!.Value);
+        var responseByExamItemId = responses
+            .Where(r => r.ExamItemId.HasValue)
+            .ToDictionary(r => r.ExamItemId!.Value);
 
         // Synced answers are SERVER rows that carry a choice, never the browser's queued payloads:
         // the server cannot see the client's queue, so a number counted from it would be a number the
         // database does not hold.
-        bool Answered(Question question) =>
-            question.QuestionType == QuestionType.FreeResponse.ToCode()
-                ? freeResponses.TryGetValue(question.QuestionId, out var response)
+        bool Answered(SittingQuestion q) =>
+            q.RenderFormat == QuestionType.FreeResponse.ToCode()
+                ? ResponseFor(q) is { } response
                   && (!string.IsNullOrWhiteSpace(response.ResponseText) || !string.IsNullOrWhiteSpace(response.AudioPath))
-                : answersByQuestion.TryGetValue(question.QuestionId, out var answer) && IsAnswered(answer);
+                : AnswerFor(q) is { } answer && IsAnswered(answer);
+
+        AttemptAnswer? AnswerFor(SittingQuestion q) => q.ExamItemId is int examItemId
+            ? answerByExamItemId.GetValueOrDefault(examItemId)
+            : answerByQuestionId.GetValueOrDefault(q.Id);
+
+        FreeResponse? ResponseFor(SittingQuestion q) => q.ExamItemId is int examItemId
+            ? responseByExamItemId.GetValueOrDefault(examItemId)
+            : responseByQuestionId.GetValueOrDefault(q.Id);
 
         var phaseSkills = questions
             .GroupBy(q => q.Section.Skill)

@@ -1964,10 +1964,10 @@ CREATE TABLE ExamAttempts (
   -- H-5: ExamId's CertId must be the attempt's own (pins the carried-down value)
   CONSTRAINT FK_Attempts_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
   CONSTRAINT FK_Attempts_ActiveSkill FOREIGN KEY (ActiveSkillId, CertId) REFERENCES Skills(SkillId, CertId),
-  -- #269: the unit a locked-phase sitting is currently inside. On the pool a "group" IS the stimulus its
-  -- positions share, so this names a Stimuli row - the FK below says so. A solo position (no stimulus)
-  -- has no group to name and leaves this NULL, which the locks already treat as "not group-scoped".
-  CONSTRAINT FK_Attempts_ActiveGroup FOREIGN KEY (ActiveGroupId) REFERENCES Stimuli(StimulusId),
+  -- #269: the unit a locked-phase sitting is currently inside, as a BLOCK ADDRESS and not a reference:
+  -- a stimulus id when the unit shares one, or the negated position id for a solo block (the same
+  -- convention the Studio rail, the exporter and the roster use). No FK - a negated id names no Stimuli
+  -- row, and a stimulus retired mid-sitting must not delete the attempt that was inside it.
   -- composite target so CreditTransactions can prove the charged user owns the attempt (H-1):
   CONSTRAINT UQ_Attempts_Id_User UNIQUE (AttemptId, UserId),
   -- H-5: composite targets so AttemptAnswers/FreeResponses/AttemptSkillScores can pin containment

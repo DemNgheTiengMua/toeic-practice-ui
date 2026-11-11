@@ -294,6 +294,31 @@ public sealed class ProductivePracticeTests(DatabaseFixture database)
         return userId;
     }
 
+    /// <summary>
+    /// A writing practice paper as two legacy tasks.
+    /// <para>
+    /// <b>#269: NOT migrated to the pool, and the reason is production code rather than this
+    /// fixture.</b> The ids this fixture returns are the addresses the tests pass to
+    /// <c>WritingPracticeService</c>, and the service reads <c>fr.Question</c> on four paths that a pool
+    /// answer leaves null:
+    /// <list type="bullet">
+    /// <item><c>SaveDraftAsync</c> resolves the position through <c>LoadPaperPositionAsync</c>, which
+    /// works, but <c>GetGradingPendingAsync</c> dereferences <c>fr.Question.DisplayOrder</c> and
+    /// <c>fr.QuestionId!.Value</c> — the probe throws "Nullable object must have a value".</item>
+    /// <item><c>GetAttemptReviewAsync</c> orders by <c>fr.Question.DisplayOrder</c> and reads
+    /// <c>fr.Question.Stem</c>/<c>.Section.Name</c>, so it throws before the review exists.</item>
+    /// <item><c>AiGradingProcessor</c> reads <c>grading.FreeResponse.Question.SectionId</c> and
+    /// <c>.Section.Modality</c>; on a pool answer both are null and every grading fails with a
+    /// NullReferenceException, which then keeps the attempt <c>submitted</c> rather than graded.</item>
+    /// <item><c>SpeakingPracticeService.SaveAudioAsync</c> looks the task up in <c>db.Questions</c>
+    /// directly, so a pool speaking take renders but cannot be saved ("Speaking question N not found
+    /// in this exam").</item>
+    /// </list>
+    /// Migrating the fixture before those four readers move would turn four green tests red for a
+    /// reason this ticket does not own. The fixture stays legacy until they do; #269 deletes it with
+    /// the tables.
+    /// </para>
+    /// </summary>
     private async Task<(int certId, int examId, int q1Id, int q2Id)> SeedWritingExamAsync(string certCode)
     {
         await database.SqlAsync($"""
@@ -339,6 +364,11 @@ public sealed class ProductivePracticeTests(DatabaseFixture database)
         return (cert.CertId, exam.ExamId, questions[0].QuestionId, questions[1].QuestionId);
     }
 
+    /// <summary>
+    /// A speaking practice paper as two legacy tasks. See <see cref="SeedWritingExamAsync"/> for why
+    /// #269 leaves this fixture legacy: <c>SpeakingPracticeService.SaveAudioAsync</c> resolves the
+    /// recording window from <c>db.Questions</c>, so a pool speaking take cannot be saved at all.
+    /// </summary>
     private async Task<(int certId, int examId, int q1Id, int q2Id)> SeedSpeakingExamAsync(
         string certCode, int prepSeconds, int responseSeconds)
     {

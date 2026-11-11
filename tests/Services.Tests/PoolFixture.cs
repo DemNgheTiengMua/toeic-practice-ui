@@ -250,7 +250,8 @@ public static class PoolFixture
 
     /// <summary>
     /// A topic of this modality. The vocabulary is a closed set of twenty that no certificate owns, so a
-    /// fixture needs one to exist; a database without it cannot hold pool stock at all.
+    /// fixture needs one to exist; a database without it cannot hold pool stock at all. A fresh test
+    /// database starts empty, so the fixture authors the row rather than making every caller remember to.
     /// </summary>
     private static async Task<int> FirstTopicIdAsync(
         CompanionDbContext db, string modality, CancellationToken cancellationToken)
@@ -261,13 +262,38 @@ public static class PoolFixture
             .Select(t => (int?)t.TopicId)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (topicId is null)
+        if (topicId is not null)
         {
-            throw new InvalidOperationException(
-                $"The topic vocabulary holds no {modality} topic, so a fixture cannot author pool stock. "
-                + "Run docs/seed-demo.sql, or insert one in the fixture.");
+            return topicId.Value;
         }
 
-        return topicId.Value;
+        var topic = new BusinessObjects.Entities.Topic
+        {
+            Modality = modality,
+            Code = CodeFor(modality),
+            Name = NameFor(modality),
+        };
+        db.Topics.Add(topic);
+        await db.SaveChangesAsync(cancellationToken);
+        return topic.TopicId;
     }
+
+    /// <summary>The closed vocabulary's code for a modality, so a fixture row is not an invented one.</summary>
+    private static string CodeFor(string modality) => modality switch
+    {
+        "listening" => "L-DET",
+        "reading" => "R-DET",
+        "speaking" => "S-DESC",
+        "writing" => "W-CORR",
+        _ => "R-DET",
+    };
+
+    private static string NameFor(string modality) => modality switch
+    {
+        "listening" => "Listening for detail",
+        "reading" => "Reading for detail",
+        "speaking" => "Describing",
+        "writing" => "Transactional correspondence",
+        _ => "Reading for detail",
+    };
 }
