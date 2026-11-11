@@ -64,6 +64,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         int ExamId,
         List<int> ItemIds,
         List<int> VersionIds,
+        List<int> ExamItemIds,
         List<int> CorrectOptionIds,
         List<int> WrongOptionIds);
 
@@ -122,7 +123,8 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         }
 
         return new PooledCertificate(
-            cert.CertId, readSec.SectionId, spkSec.SectionId, exam.ExamId, itemIds, versionIds, correctOpts, wrongOpts);
+            cert.CertId, readSec.SectionId, spkSec.SectionId, exam.ExamId, itemIds, versionIds, examItemIds,
+            correctOpts, wrongOpts);
     }
 
     private sealed record PooledFreeResponse(int CertId, int SectionId, int ExamId, int ItemId, int VersionId);
@@ -169,60 +171,10 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Legacy fixtures. Kept only for the tests below that address a behaviour the pool path does not
-    // yet produce; each such test names the gap in its own comment. #269 deletes these with the tables.
+    // Legacy fixture. Kept for the ONE test below whose subject is the legacy store itself: the
+    // evaluated word-floor/keyword feedback that only a Question row can produce. #269 deletes this
+    // with the tables.
     // ---------------------------------------------------------------------------------------------
-
-    private async Task<(int CertId, int SectionId, int SpeakingSecId, List<int> QuestionIds, List<int> CorrectOptionIds, List<int> WrongOptionIds)> SeedCertificateWithQuestionsAsync(string certCode)
-    {
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-
-        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
-        db.Certificates.Add(cert);
-        await db.SaveChangesAsync();
-
-        var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
-        var spkSkill = new Skill { CertId = cert.CertId, Code = "SPEA", Name = "Speaking", Modality = "speaking", DisplayOrder = 2 };
-        db.Skills.AddRange(skill, spkSkill);
-        await db.SaveChangesAsync();
-
-        var readSec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
-        var spkSec = new Section { CertId = cert.CertId, SkillId = spkSkill.SkillId, Modality = "speaking", Code = "S1", Name = "Speaking Part 1", DisplayOrder = 1, ExpectedQuestionCount = 1 };
-        db.Sections.AddRange(readSec, spkSec);
-        await db.SaveChangesAsync();
-
-        var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 120, Purpose = "mock" };
-        db.Exams.Add(exam);
-        await db.SaveChangesAsync();
-
-        var grp = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = readSec.SectionId, DisplayOrder = 1 };
-        db.QuestionGroups.Add(grp);
-        await db.SaveChangesAsync();
-
-        var q1 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = readSec.SectionId, SkillId = skill.SkillId, Stem = "Stem 1", CefrLevel = CefrLevel.B2, QuestionType = "mcq", Hint = "Hint 1", Explanation = "Explanation 1", DisplayOrder = 1 };
-        var q2 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = readSec.SectionId, SkillId = skill.SkillId, Stem = "Stem 2", CefrLevel = CefrLevel.B2, QuestionType = "mcq", Hint = "Hint 2", Explanation = "Explanation 2", DisplayOrder = 2 };
-        var q3 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = readSec.SectionId, SkillId = skill.SkillId, Stem = "Stem 3", CefrLevel = CefrLevel.B2, QuestionType = "mcq", Hint = "Hint 3", Explanation = "Explanation 3", DisplayOrder = 3 };
-        db.Questions.AddRange(q1, q2, q3);
-        await db.SaveChangesAsync();
-
-        var opt1A = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "mcq", Label = "A", Text = "Correct A", IsCorrect = true };
-        var opt1B = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "mcq", Label = "B", Text = "Wrong B", IsCorrect = false };
-
-        var opt2A = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "mcq", Label = "A", Text = "Wrong A", IsCorrect = false };
-        var opt2B = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "mcq", Label = "B", Text = "Correct B", IsCorrect = true };
-
-        var opt3A = new QuestionOption { QuestionId = q3.QuestionId, QuestionType = "mcq", Label = "A", Text = "Wrong A", IsCorrect = false };
-        var opt3B = new QuestionOption { QuestionId = q3.QuestionId, QuestionType = "mcq", Label = "B", Text = "Correct B", IsCorrect = true };
-        db.QuestionOptions.AddRange(opt1A, opt1B, opt2A, opt2B, opt3A, opt3B);
-        await db.SaveChangesAsync();
-
-        var qIds = new List<int> { q1.QuestionId, q2.QuestionId, q3.QuestionId };
-        var optionsInDb = await db.QuestionOptions.Where(o => qIds.Contains(o.QuestionId)).ToListAsync();
-        var correctOpts = qIds.Select(id => optionsInDb.First(o => o.QuestionId == id && o.IsCorrect).OptionId).ToList();
-        var wrongOpts = qIds.Select(id => optionsInDb.First(o => o.QuestionId == id && !o.IsCorrect).OptionId).ToList();
-
-        return (cert.CertId, readSec.SectionId, spkSec.SectionId, qIds, correctOpts, wrongOpts);
-    }
 
     private async Task<(int SectionId, int QuestionId)> SeedFreeResponseCertificateAsync(string certCode, string modality)
     {
@@ -362,15 +314,13 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Contains("record", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    // #150 round 2: the evaluated feedback is the whole point of a drill. It has to survive a
-    // refresh, not only the one AJAX reply that first produced it.
-    //
-    // #269: NOT migrated, and this one is not a production gap - the subject itself is legacy. The
-    // assertions are on #150's EVALUATED feedback (the word floor and the missing keywords computed
-    // from the response). A pool productive answer is stored ungraded, so no evaluation runs and the
-    // submit reply carries only the version's authored Explanation, which a fixture authors as null
-    // (measured: `submitted.Explanation` is null on a pool writing drill). Asserting the authored copy
-    // round-trips would be a different, weaker test of a different fact, so it is not substituted.
+    // #269: NOT migrated - the subject itself is the LEGACY store. The assertions are on #150's
+    // EVALUATED feedback (the word floor and the missing keywords computed from the response), which
+    // only PracticeService.Answers.cs:153-170's `isFreeResponse` branch produces from a Question row.
+    // #272 re-checked it against HEAD and it still blocks: a pool productive answer is stored UNGRADED
+    // (IsCorrect null) and its reply carries only the version's authored Explanation - measured on the
+    // pool: `Explanation=Explanation 0`, no word-floor sentence. Substituting the authored copy would
+    // assert a different, weaker fact, so this stays legacy with the tables.
     [Theory]
     [InlineData("writing")]
     public async Task Free_response_feedback_survives_a_reload_of_the_question_and_the_summary(string modality)
@@ -453,9 +403,11 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     // the catalog (it has options) and then refused by the session builder (it serves free responses
     // only). One predicate now answers both questions, so the count is never a broken promise.
     //
-    // #269: NOT migrated - the pool makes the shape this test exists for unrepresentable. An
-    // ExamItem's modality is pinned to its section's, and CK_Items_Modality_RenderFormat admits only
-    // 'free_response' for a writing item, so a writing section can never hold a keyed position.
+    // #269/#272: NOT migrated - not a production gap, an unrepresentable shape. The pool makes the
+    // shape this test exists for impossible: an ExamItem's modality is foreign-keyed to its section's,
+    // and CK_Items_Modality_RenderFormat (docs/database-schema.sql:1104-1108) admits only
+    // 'free_response' for a writing item, so a writing section can never hold a keyed position. The
+    // two-filter divergence it caught cannot recur, so the test dies with the tables.
     [Fact]
     public async Task A_section_the_catalog_counts_can_always_be_started()
     {
@@ -651,21 +603,20 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Null(q1.CorrectOptionId); // Cannot leak answer
     }
 
-    // #269: NOT migrated. Half of it is now pool-reachable and half is not, measured on the pool:
-    // RevealHintAsync resolves the row by ItemVersionId and returns the pinned version's hint, but
-    // PracticeService.Questions.cs:217 renders `answer.HintUsed ? q?.Hint : null` - and a pool answer
-    // has no Question row, so `q` is null and the reloaded question shows HintUsed = true beside a
-    // null Hint. The drill records the hint and cannot display it.
+    // #269: migrated. #272 re-checked it against HEAD: RevealHintAsync resolves the row by ItemVersionId
+    // and returns the pinned version's Hint, and the reload reads `pinned?.Hint ?? q?.Hint`
+    // (PracticeService.Questions.cs:220-222) - the pair db7e969 fixed. The drill records the hint AND
+    // displays it on the pool now, so the legacy fixture is no longer needed for this.
     [Fact]
     public async Task RevealHint_records_hint_used_on_practice_answer()
     {
         var certCode = Unique("HN");
-        var (_, secId, _, qIds, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var pooled = await SeedPoolCertificateAsync(certCode, firstHint: "Hint 1");
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
-        var hint = await practice.RevealHintAsync(userId, session.SessionId, qIds[0]);
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
+        var hint = await practice.RevealHintAsync(userId, session.SessionId, pooled.VersionIds[0]);
 
         Assert.Equal("Hint 1", hint);
 
@@ -733,51 +684,40 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Equal(PracticeException.InvalidOption, ex.Code);
     }
 
-    // #269: NOT migrated. GetSummaryAsync's pinned branch hard-codes AudioStartMs/AudioEndMs to null
-    // even though the stimulus carries the slice, so the four audio assertions below have no pool
-    // answer today. The accuracy arithmetic below it is pool-reachable; this is one production
-    // omission, not two tests.
-    // #269: NOT migrated. Measured on the pool, and only the AUDIO assertions block it:
-    // src/Services/Practice/PracticeService.Results.cs:86-87 hard-codes
-    // `AudioStartMs: null, AudioEndMs: null` on the pinned branch even though the stimulus carries the
-    // slice (Stimuli.AudioStartMs/AudioEndMs), so three of the four audio assertions below have no pool
-    // answer. The accuracy arithmetic, the hint counts and the per-question verdicts are all
-    // pool-reachable; the audio slice is one production omission in the summary's projection, not four
-    // tests. HintUsed/CORRECT_WITH_HINT are withheld here too because the reloaded question cannot
-    // render a pool hint (PracticeService.Questions.cs:217 reads it off `q`, null for a pool answer).
+    // #269: migrated. #272 re-checked the two blockers this comment named, and both are gone:
+    // PracticeService.Results.cs:86-89 now reads AudioStartMs/AudioEndMs off the stimulus (db7e969), and
+    // the reloaded question renders the pinned version's hint (PracticeService.Questions.cs:220-222). The
+    // audio slice moves from the legacy QuestionGroup to the position's stimulus, which is where a pool
+    // paper keeps it - the only edit to the fixture after seeding.
     [Fact]
     public async Task GetSummary_computes_per_question_outcome_and_skip_accuracy_math()
     {
         var certCode = Unique("SM");
-        var (_, secId, _, qIds, correctOpts, wrongOpts) = await SeedCertificateWithQuestionsAsync(certCode);
+        var pooled = await SeedPoolCertificateAsync(certCode, firstHint: "Hint 1", firstPassage: "A short practice transcript.");
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
 
         // Q1: reveal hint and answer correctly
-        await practice.RevealHintAsync(userId, session.SessionId, qIds[0]);
-        await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
+        await practice.RevealHintAsync(userId, session.SessionId, pooled.VersionIds[0]);
+        await practice.SubmitAnswerAsync(userId, session.SessionId, pooled.VersionIds[0], new SubmitPracticeAnswerInput(pooled.CorrectOptionIds[0]));
 
         // Q2: answer incorrectly without hint
-        await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[1], new SubmitPracticeAnswerInput(wrongOpts[1]));
+        await practice.SubmitAnswerAsync(userId, session.SessionId, pooled.VersionIds[1], new SubmitPracticeAnswerInput(pooled.WrongOptionIds[1]));
 
         // Q3: skip (SelectedOptionId = null)
-        await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[2], new SubmitPracticeAnswerInput(null));
+        await practice.SubmitAnswerAsync(userId, session.SessionId, pooled.VersionIds[2], new SubmitPracticeAnswerInput(null));
 
-        await using (var db = DbContextFactory.Create(database.ConnectionString))
-        {
-            var groupId = await db.Questions
-                .Where(q => q.QuestionId == qIds[0])
-                .Select(q => q.GroupId)
-                .SingleAsync();
-            var group = await db.QuestionGroups.SingleAsync(g => g.GroupId == groupId);
-            group.AudioPath = "/audio/practice-dialogue.mp3";
-            group.AudioStartMs = 200;
-            group.AudioEndMs = 800;
-            group.Transcript = "A short practice transcript.";
-            await db.SaveChangesAsync();
-        }
+        await database.SqlAsync($"""
+            UPDATE s
+            SET s.AudioPath = N'/audio/practice-dialogue.mp3', s.AudioStartMs = 200, s.AudioEndMs = 800,
+                s.Transcript = N'A short practice transcript.'
+            FROM Stimuli s
+            JOIN Items i ON i.StimulusId = s.StimulusId
+            JOIN ExamItems ei ON ei.ItemId = i.ItemId
+            WHERE ei.ExamItemId = {pooled.ExamItemIds[0]};
+            """);
 
         var summary = await practice.GetSummaryAsync(userId, session.SessionId);
 
@@ -1019,11 +959,13 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Equal(PracticeStatus.Finished, finalSessionInfo.Status);
     }
 
-    // #269: NOT migrated. SubmitAnswerAsync grades a pinned version only from a single
-    // SelectedOptionId (PracticeService.Answers.cs:125-139): an id LIST is stored in
-    // SelectedOptionIdsJson but leaves IsCorrect null, and GradedPracticeAnswerResult.CorrectOptionIds
-    // (PracticeService.Answers.cs:349-351) carries the one first key label rather than the set. So
-    // the partial-set and full-set verdicts this test asserts do not exist on the pool path.
+    // #269: NOT migrated - a production gap, re-measured against HEAD in #272 and still present.
+    // SubmitAnswerAsync's pinned branch (PracticeService.Answers.cs:125-139) reads only
+    // `input.SelectedOptionId`: a SelectedOptionIds LIST is written to Json but leaves IsCorrect null,
+    // and GradedPracticeAnswerResult.CorrectOptionIds (PracticeService.Answers.cs:350) emits the single
+    // first key label rather than the set. Measured on a pool multi_select position (key 'A,B'):
+    // IsCorrect=null, CorrectOptionIds=[11] - one id where the legacy path returns both. A pool
+    // multi_select therefore records no verdict at all, which is the defect, not a test limitation.
     [Fact]
     public async Task SubmitAnswer_evaluates_multi_select_accurately()
     {
@@ -1130,11 +1072,15 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.True(correctResult.IsSessionFinished);
     }
 
-    // #269: NOT migrated. A pinned version is graded only from SelectedOptionId
-    // (PracticeService.Answers.cs:125-139), so an inline answer's text is stored with
-    // IsCorrect = null; the accepted-answer set this test asserts comes from
-    // `q?.AcceptedAnswersJson` (PracticeService.Answers.cs:348), which is null on a pool answer, and
-    // the projection nulls it too (PracticeService.Questions.cs:172).
+    // #269: NOT migrated - a production gap, re-measured against HEAD in #272 and still present.
+    // SubmitAnswerAsync's pinned branch (PracticeService.Answers.cs:125-139) grades only from
+    // `input.SelectedOptionId`, so a text answer stores IsCorrect = null even though the version carries
+    // AcceptedAnswersJson - the engine's own pinned path DOES grade it (AttemptEngine.Answers.cs:107-109
+    // calls EvaluatePinnedText), so the two stores disagree. The reply's AcceptedAnswersJson comes from
+    // `q?.AcceptedAnswersJson` (PracticeService.Answers.cs:348) and the projection nulls it
+    // (PracticeService.Questions.cs:172). Measured on a pool inline_completion version whose
+    // AcceptedAnswersJson is ["development","software development"], answered "  DEVELOPMENT  ":
+    // IsCorrect=null, AcceptedAnswersJson=null. Recording a right answer as ungraded is the defect.
     [Fact]
     public async Task SubmitAnswer_evaluates_inline_completion_accurately()
     {
@@ -1223,11 +1169,13 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.True(res2.IsSessionFinished);
     }
 
-    // #269: NOT migrated. A pool position's type is read from its shape
-    // (PracticeService.Questions.cs:169), and the pinned branch nulls the answer-shape fields -
-    // acceptedAnswersJson, requiredKeywords, minWords, maxWords at PracticeService.Questions.cs:172-175,
-    // maxSelections at :170 - so the component metadata this test asserts is not what a pool drill
-    // renders. (allowNumber is passed through at :171, which is why only the other four are listed.)
+    // #269: NOT migrated - a production gap, re-measured against HEAD in #272 and still present. The
+    // pinned branch nulls the answer-shape fields deliberately: maxSelections, acceptedAnswersJson,
+    // requiredKeywords, minWords and maxWords at PracticeService.Questions.cs:170-175, and the type is
+    // read from the item's shape at :169. Measured on a pool inline_completion position:
+    // QuestionType=free_response (the version has no options, so it renders as a productive task),
+    // AcceptedAnswersJson=null, MaxWords=null, AllowNumber=True. Three of the five assertions below
+    // therefore have no pool answer, and the rendered type is not even the authored one.
     [Fact]
     public async Task GetSessionTakeAsync_returns_component_metadata()
     {

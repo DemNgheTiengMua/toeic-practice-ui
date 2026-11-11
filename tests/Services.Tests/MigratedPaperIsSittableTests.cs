@@ -25,6 +25,11 @@ namespace Services.Tests;
 /// an empty paper. The assertions are the paper's own length, the pinned content appearing in the
 /// take view, an answer being recorded against a roster position, and a score after submission.
 /// </para>
+/// <para>
+/// <b>#272: stays legacy - reason 2, the DELETION is the subject.</b> Deleting the three legacy tables'
+/// rows for one exam is what the test does, not scaffolding it needs; a fixture with no legacy rows to
+/// purge would prove nothing about a paper that has them. The rows go in #269 with the tables.
+/// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
 public sealed class MigratedPaperIsSittableTests(DatabaseFixture database)

@@ -74,17 +74,14 @@ public sealed class ItemTelemetryAggregationOwnershipTests(DatabaseFixture datab
     /// one.
     /// </para>
     /// <para>
-    /// <b>BLOCKER (#272, not owned by this ticket).</b> The recalculating tests in this file now fail on
-    /// <c>src/Services/Admin/Items/ItemTelemetryService.cs:539</c> with
-    /// <c>System.NullReferenceException</c>. That line is
-    /// <c>answers.Select(a =&gt; a.Question.Section.SkillId)</c>, which dereferences the legacy
-    /// <c>Questions</c> row - and a pool answer has none (<c>QuestionId</c>/<c>Question</c> are NULL).
-    /// Measured on <c>The_recalculated_score_is_written_by_the_registered_owner_and_the_trigger_refuses_any_other</c>
-    /// and the three <c>Telemetry_and_the_sitting_engine_report_the_same_total</c> rows. The fixture used
-    /// to mask it by ALSO authoring legacy rows, which put the sitting on the legacy branch; the paper is
-    /// now pool-only, the shape production produces. The assertions are unchanged; the reader needs
-    /// repointing at the roster (<c>ExamItems.SectionId</c>), as <c>AttemptEngine.Sitting.Roster</c> does.
-    /// Not fixed here: src/ is out of scope.
+    /// <b>#272: the blocker this note used to record is fixed.</b> The recalculating tests in this file
+    /// failed on <c>src/Services/Admin/Items/ItemTelemetryService.cs</c> with
+    /// <c>System.NullReferenceException</c>, because <c>answers.Select(a =&gt; a.Question.Section.SkillId)</c>
+    /// dereferenced the legacy <c>Questions</c> row - and a pool answer has none
+    /// (<c>QuestionId</c>/<c>Question</c> are NULL). The fixture used to mask it by ALSO authoring legacy
+    /// rows, which put the sitting on the legacy branch; the paper is now pool-only, the shape production
+    /// produces. The reader now resolves each answer's skill through <c>RosterSkills.ByAnswerAsync</c>,
+    /// the same roster read <c>AttemptEngine.Sitting.Roster</c> makes, and all five tests pass.
     /// </para>
     /// </summary>
     private static async Task<RuleFixture> SeedRuleFixtureAsync(
