@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessObjects;
@@ -45,15 +45,15 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
     /// <summary>Two objective skills and one productive skill, so "which skills are done" has three
     /// different answers to choose between and one that is a recording.
     /// <para>
-    /// <b>#269: NOT migrated to a pool-only paper, and the reason is production code.</b> The recording
-    /// retry reads its response with <c>FreeResponses.QuestionId == questionId</c>
-    /// (AttemptEngine.PlacementResume.cs:201); a pool response names <c>ExamItemId</c> instead, so the
-    /// lookup misses and throws "Free-response question N not found in attempt". The paper keeps its
-    /// legacy question rows, and its audio lives on the group, until that reader resolves the roster.
+    /// <b>#269: migrated to a pool-only paper.</b> A position is an <c>ExamItems</c> row and the ids the
+    /// tests address are <c>ExamItemId</c>s. The recording retry was the blocker: it looked its response
+    /// up by <c>FreeResponses.QuestionId</c> alone, so an interrupted pool recording could not be
+    /// resumed at all. That reader now matches <c>ExamItemId</c> too (AttemptEngine.PlacementResume.cs,
+    /// e8e8aff).
     /// </para>
     /// </summary>
     private sealed record Fixture(int CertId, int ExamId, int ListeningSkillId, int ReadingSkillId,
-        int SpeakingSkillId, int Q1, int Q2, int Q3, int CorrectOption);
+        int SpeakingSkillId, int ListeningPosition, int ReadingPosition, int SpeakingPosition);
 
     private async Task<Fixture> SeedAsync()
     {
@@ -80,6 +80,8 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
             new Section { SkillId = speakSkill, CertId = certId, Modality = "speaking", Code = "S1", Name = "Speaking", ExpectedQuestionCount = 1, DisplayOrder = 3 });
         await db.SaveChangesAsync();
 
+        var sections = await db.Sections.Where(s => s.CertId == certId).ToDictionaryAsync(s => s.Code, s => s.SectionId);
+
         db.Exams.Add(new Exam
         {
             CertId = certId,
@@ -92,47 +94,20 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
         await db.SaveChangesAsync();
         var examId = await db.Exams.Where(e => e.CertId == certId).Select(e => e.ExamId).SingleAsync();
 
-        var questionIds = new int[3];
-        for (var index = 0; index < 3; index++)
-        {
-            var sectionCode = index switch { 0 => "L1", 1 => "R1", _ => "S1" };
-            var section = await db.Sections.Where(s => s.Code == sectionCode && s.CertId == certId).SingleAsync();
-            var group = new QuestionGroup { ExamId = examId, CertId = certId, SectionId = section.SectionId, DisplayOrder = index + 1 };
-            db.QuestionGroups.Add(group);
-            await db.SaveChangesAsync();
-
-            var question = new Question
-            {
-                GroupId = group.GroupId,
-                ExamId = examId,
-                SectionId = section.SectionId,
-                SkillId = section.SkillId,
-                Stem = $"Q{index + 1}",
-                CefrLevel = CefrLevel.B1,
-                QuestionType = sectionCode == "S1" ? "free_response" : "mcq",
-                DisplayOrder = index + 1,
-                ResponseSeconds = sectionCode == "S1" ? 60 : null,
-            };
-            db.Questions.Add(question);
-            await db.SaveChangesAsync();
-            questionIds[index] = question.QuestionId;
-
-            if (sectionCode != "S1")
-            {
-                db.QuestionOptions.AddRange(
-                    new QuestionOption { QuestionId = question.QuestionId, QuestionType = "mcq", Label = "A", Text = "Right", IsCorrect = true },
-                    new QuestionOption { QuestionId = question.QuestionId, QuestionType = "mcq", Label = "B", Text = "Wrong", IsCorrect = false });
-            }
-        }
+        // CK_Items_Modality_RenderFormat pins a speaking item to free_response, so the recording task is
+        // authored as a productive one with the 60-second window the sitting's sub-timer reads.
+        var listening = await PoolFixture.AddMcqAsync(
+            db, examId, certId, sections["L1"], "listening", "Q1", displayOrder: 1);
+        var reading = await PoolFixture.AddMcqAsync(
+            db, examId, certId, sections["R1"], "reading", "Q2", displayOrder: 1);
+        var speaking = await PoolFixture.AddProductiveAsync(
+            db, examId, certId, sections["S1"], "speaking", "Q3", displayOrder: 1, responseSeconds: 60);
 
         db.ScoreBands.Add(new ScoreBand { CertId = certId, Code = "B1", Name = "Intermediate", MinTotal = 0, MaxTotal = 200, DisplayOrder = 1 });
         await db.SaveChangesAsync();
 
-        var correct = await db.QuestionOptions
-            .Where(o => o.QuestionId == questionIds[0] && o.IsCorrect)
-            .Select(o => o.OptionId).SingleAsync();
-
-        return new Fixture(certId, examId, listSkill, readSkill, speakSkill, questionIds[0], questionIds[1], questionIds[2], correct);
+        return new Fixture(certId, examId, listSkill, readSkill, speakSkill,
+            listening.ExamItemId, reading.ExamItemId, speaking.ExamItemId);
     }
 
     private async Task<int> SeedLearnerAsync(int certId)
@@ -210,7 +185,7 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
         var placementId = info.PlacementId;
         await using (var db = Db())
         {
-            await Service(db).SaveAnswerAsync(userId, placementId, fixture.Q1, fixture.CorrectOption, isFlagged: false);
+            await AnswerListeningAsync(db, userId, placementId, fixture, isFlagged: false);
         }
 
         await using (var db = Db())
@@ -380,7 +355,7 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
 
         await using (var db = Db())
         {
-            await Service(db).SaveAnswerAsync(userId, placementId, fixture.Q1, fixture.CorrectOption, isFlagged: false);
+            await AnswerListeningAsync(db, userId, placementId, fixture, isFlagged: false);
         }
 
         await using (var db = Db())
@@ -409,7 +384,7 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
 
         await using (var db = Db())
         {
-            await Service(db).SaveAnswerAsync(userId, placementId, fixture.Q1, fixture.CorrectOption, isFlagged: true);
+            await AnswerListeningAsync(db, userId, placementId, fixture, isFlagged: true);
         }
 
         await using (var db = Db())
@@ -472,7 +447,7 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
 
         await using (var db = Db())
         {
-            await new AttemptEngine(db).SaveAnswerAsync(attemptId, userId, fixture.Q1, fixture.CorrectOption, isFlagged: false);
+            await new AttemptEngine(db).SaveAnswerAsync(attemptId, userId, fixture.ListeningPosition, await PoolFixture.OptionIdAsync(db, fixture.ExamId, fixture.ListeningPosition, "A"), isFlagged: false);
         }
 
         var after = await ReadClockAsync(attemptId);
@@ -503,32 +478,34 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
         var userId = await SeedLearnerAsync(fixture.CertId);
         var placementId = (await StartAsync(userId, fixture.ExamId)).PlacementId;
 
-        // Answer Q1 and move to Q2 through the server, exactly as the sitting does.
+        // Answer the Listening position and move to the Reading one through the server, exactly as the
+        // sitting does.
         await using (var db = Db())
         {
             var service = Service(db);
-            await service.SaveAnswerAsync(userId, placementId, fixture.Q1, fixture.CorrectOption, isFlagged: false);
-            var takeToQ2 = await service.GetPlacementTakeAsync(userId, placementId, 2);
-            Assert.Equal(fixture.Q2, takeToQ2.CurrentQuestion.QuestionId);
+            await AnswerListeningAsync(db, userId, placementId, fixture, isFlagged: false);
+            var takeToReading = await service.GetPlacementTakeAsync(userId, placementId, 2);
+            Assert.Equal(fixture.ReadingPosition, takeToReading.CurrentQuestion.QuestionId);
 
-            // Land the position on Q2 the way an answer moves it.
-            await service.SaveAnswerAsync(userId, placementId, fixture.Q2, await CorrectOptionAsync(fixture.Q2), isFlagged: true);
+            // Land the position on the Reading item the way an answer moves it.
+            await service.SaveAnswerAsync(userId, placementId, fixture.ReadingPosition,
+                await CorrectOptionAsync(db, fixture.ExamId, fixture.ReadingPosition), isFlagged: true);
         }
 
         var before = await SnapshotAsync(placementId);
 
         // The reload: read the sitting with no question asked for. Twice, because a second reload is
         // the case a bug shows up in.
-        int reloadedQuestionId;
+        int reloadedPositionId;
         await using (var db = Db())
         {
             var reload = await Service(db).GetPlacementTakeAsync(userId, placementId, null);
-            reloadedQuestionId = reload.CurrentQuestion.QuestionId;
+            reloadedPositionId = reload.CurrentQuestion.QuestionId;
             await Service(db).GetPlacementTakeAsync(userId, placementId, null);
         }
 
         // 1. The item is the one the learner was on.
-        Assert.Equal(fixture.Q2, reloadedQuestionId);
+        Assert.Equal(fixture.ReadingPosition, reloadedPositionId);
 
         // 2. No answer row was written by either read.
         var after = await SnapshotAsync(placementId);
@@ -538,22 +515,34 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
 
         // 3. Nothing on the attempt moved. The position and both clocks are identical, which is the
         //    half a status-code test can never see.
-        Assert.Equal(before.LastQuestionId, after.LastQuestionId);
+        Assert.Equal(before.Position, after.Position);
         Assert.Equal(before.StartedAt, after.StartedAt);
         Assert.Equal(before.ExpiresAt, after.ExpiresAt);
         Assert.Equal(before.LastActivityAt, after.LastActivityAt);
         Assert.Equal(before.LastAudioOffsetMs, after.LastAudioOffsetMs);
     }
 
-    private async Task<int> CorrectOptionAsync(int questionId)
+    /// <summary>
+    /// Answers the Listening position with its key. #269: a pool answer is addressed by its roster
+    /// <c>ExamItemId</c> and records <c>SelectedLabel</c>; the option id it echoes is the one the
+    /// sitting renders, read from the projection.
+    /// </summary>
+    private static async Task AnswerListeningAsync(
+        CompanionDbContext db, int userId, int placementId, Fixture fixture, bool isFlagged)
     {
-        await using var db = Db();
-        return await db.QuestionOptions.Where(o => o.QuestionId == questionId && o.IsCorrect).Select(o => o.OptionId).SingleAsync();
+        var optionId = await PoolFixture.OptionIdAsync(db, fixture.ExamId, fixture.ListeningPosition, "A");
+        await new PlacementService(db, new LearnerService(db)).SaveAnswerAsync(
+            userId, placementId, fixture.ListeningPosition, optionId, isFlagged);
     }
+
+    /// <summary>The option id the sitting renders for the key label of a position, read from the
+    /// projection rather than recomputed.</summary>
+    private static Task<int> CorrectOptionAsync(CompanionDbContext db, int examId, int examItemId) =>
+        PoolFixture.OptionIdAsync(db, examId, examItemId, "A");
 
     private sealed record AttemptSnapshot(
         int AnswerCount, int TotalSelected, int DraftCount,
-        int? LastQuestionId, DateTimeOffset StartedAt, DateTimeOffset ExpiresAt,
+        int? Position, DateTimeOffset StartedAt, DateTimeOffset ExpiresAt,
         DateTimeOffset? LastActivityAt, int LastAudioOffsetMs);
 
     private async Task<AttemptSnapshot> SnapshotAsync(int placementId)
@@ -564,7 +553,9 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
         var answers = await db.AttemptAnswers.AsNoTracking().Where(a => a.AttemptId == attemptId).ToListAsync();
         return new AttemptSnapshot(
             answers.Count,
-            answers.Count(a => a.SelectedOptionId != null || a.SelectedOptionIdsJson != null),
+            // #269: a pool answer holds its choice in SelectedLabel, not a legacy option id, so a count
+            // that saw only the option columns would report zero either way and prove nothing.
+            answers.Count(a => a.SelectedOptionId != null || a.SelectedLabel != null || a.SelectedOptionIdsJson != null),
             await db.FreeResponses.CountAsync(r => r.AttemptId == attemptId && r.ResponseText != null && r.ResponseText != ""),
             attempt.CurrentExamItemId,
             attempt.StartedAt,
@@ -595,15 +586,15 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
         await using (var db = Db())
         {
             var service = Service(db);
-            first = await service.RecordRecordingInterruptionAsync(userId, placementId, fixture.Q3, "session-A", capturedMs: 4000);
+            first = await service.RecordRecordingInterruptionAsync(userId, placementId, fixture.SpeakingPosition, "session-A", capturedMs: 4000);
         }
         await using (var db = Db())
         {
-            reload = await Service(db).RecordRecordingInterruptionAsync(userId, placementId, fixture.Q3, "session-A", capturedMs: 4000);
+            reload = await Service(db).RecordRecordingInterruptionAsync(userId, placementId, fixture.SpeakingPosition, "session-A", capturedMs: 4000);
         }
         await using (var db = Db())
         {
-            reloadAgain = await Service(db).RecordRecordingInterruptionAsync(userId, placementId, fixture.Q3, "session-A", capturedMs: 4000);
+            reloadAgain = await Service(db).RecordRecordingInterruptionAsync(userId, placementId, fixture.SpeakingPosition, "session-A", capturedMs: 4000);
         }
 
         Assert.Equal(PlacementRecordingOutcome.Retry, first.Outcome);
@@ -613,7 +604,7 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
 
         await using (var db = Db())
         {
-            var row = await db.FreeResponses.SingleAsync(r => r.QuestionId == fixture.Q3);
+            var row = await db.FreeResponses.SingleAsync(r => r.ExamItemId == fixture.SpeakingPosition);
             Assert.Equal(1, row.RecordingInterruptions);
         }
     }
@@ -641,17 +632,17 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
         PlacementRecordingDecision first, second, third;
         await using (var db = Db())
         {
-            first = await Service(db).RecordRecordingInterruptionAsync(userId, placementId, fixture.Q3, "session-1", capturedMs: 3000);
+            first = await Service(db).RecordRecordingInterruptionAsync(userId, placementId, fixture.SpeakingPosition, "session-1", capturedMs: 3000);
         }
         await using (var db = Db())
         {
-            second = await Service(db).RecordRecordingInterruptionAsync(userId, placementId, fixture.Q3, "session-2", capturedMs: 3000);
+            second = await Service(db).RecordRecordingInterruptionAsync(userId, placementId, fixture.SpeakingPosition, "session-2", capturedMs: 3000);
         }
         await using (var db = Db())
         {
             // A THIRD, distinct interruption. The cap already stands at 2, so this must not become a
             // new retry - the ticket's "no further retries".
-            third = await Service(db).RecordRecordingInterruptionAsync(userId, placementId, fixture.Q3, "session-3", capturedMs: 3000);
+            third = await Service(db).RecordRecordingInterruptionAsync(userId, placementId, fixture.SpeakingPosition, "session-3", capturedMs: 3000);
         }
 
         Assert.Equal(PlacementRecordingOutcome.Retry, first.Outcome);
@@ -661,7 +652,7 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
 
         await using (var db = Db())
         {
-            var row = await db.FreeResponses.SingleAsync(r => r.QuestionId == fixture.Q3);
+            var row = await db.FreeResponses.SingleAsync(r => r.ExamItemId == fixture.SpeakingPosition);
             Assert.Equal(2, row.RecordingInterruptions);
         }
     }
@@ -721,7 +712,7 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
         await using (var db = Db())
         {
             // A draft, so submit has something to queue.
-            await new AttemptEngine(db).SaveDraftAsync(attemptId, userId, fixture.Q3, "My spoken answer, transcribed.");
+            await new AttemptEngine(db).SaveDraftAsync(attemptId, userId, fixture.SpeakingPosition, "My spoken answer, transcribed.");
         }
 
         await using (var db = Db())

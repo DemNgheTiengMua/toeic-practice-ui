@@ -94,4 +94,69 @@ internal static class RosterSkills
 
         return map;
     }
+
+    /// <summary>
+    /// #269: free-response id → section id, resolved from the roster position a pool response names or
+    /// the legacy question row otherwise. The sibling of <see cref="ByAnswerAsync"/> for the productive
+    /// half, so a rubric override is looked up against the section the task was actually sat in.
+    /// </summary>
+    public static async Task<Dictionary<int, int>> ByResponseSectionAsync(
+        CompanionDbContext db, int attemptId, CancellationToken cancellationToken = default)
+    {
+        var responses = await db.FreeResponses
+            .AsNoTracking()
+            .Where(fr => fr.AttemptId == attemptId)
+            .Select(fr => new { fr.FreeResponseId, fr.ExamItemId, fr.QuestionId })
+            .ToListAsync(cancellationToken);
+
+        if (responses.Count == 0)
+        {
+            return [];
+        }
+
+        var positionIds = responses
+            .Where(r => r.ExamItemId.HasValue)
+            .Select(r => r.ExamItemId!.Value)
+            .Distinct()
+            .ToList();
+
+        var questionIds = responses
+            .Where(r => !r.ExamItemId.HasValue && r.QuestionId.HasValue)
+            .Select(r => r.QuestionId!.Value)
+            .Distinct()
+            .ToList();
+
+        var sectionByPosition = positionIds.Count == 0
+            ? []
+            : await db.ExamItems
+                .AsNoTracking()
+                .Where(i => positionIds.Contains(i.ExamItemId))
+                .Select(i => new { i.ExamItemId, i.SectionId })
+                .ToDictionaryAsync(x => x.ExamItemId, x => x.SectionId, cancellationToken);
+
+        var sectionByQuestion = questionIds.Count == 0
+            ? []
+            : await db.Questions
+                .AsNoTracking()
+                .Where(q => questionIds.Contains(q.QuestionId))
+                .Select(q => new { q.QuestionId, q.SectionId })
+                .ToDictionaryAsync(x => x.QuestionId, x => x.SectionId, cancellationToken);
+
+        var map = new Dictionary<int, int>(responses.Count);
+        foreach (var response in responses)
+        {
+            var sectionId = response.ExamItemId is int positionId
+                ? sectionByPosition.GetValueOrDefault(positionId)
+                : response.QuestionId is int questionId
+                    ? sectionByQuestion.GetValueOrDefault(questionId)
+                    : 0;
+
+            if (sectionId != 0)
+            {
+                map[response.FreeResponseId] = sectionId;
+            }
+        }
+
+        return map;
+    }
 }

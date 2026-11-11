@@ -546,7 +546,13 @@ public sealed class PlacementResultWriter(
     private async Task<Dictionary<int, PlacementCriterionProfile>> LoadCriterionProfilesAsync(
         int attemptId, CancellationToken cancellationToken)
     {
-        var scored = await db.AiGradingScores
+        // #269: the section of a FREE RESPONSE, resolved from its own row. A pool response has no
+        // QuestionId, so `FreeResponse.Question.Section.SectionCriteria` is a navigation through null -
+        // inside an EF projection that cannot short-circuit, so the query threw and the criterion profile
+        // was written empty. The consequence was silent and wrong: a rubric override (a section marking a
+        // criterion out of 3 instead of the table's 6) was ignored, and the weakest criterion was named
+        // by the wrong ratio.
+        var scoredRaw = await db.AiGradingScores
             .AsNoTracking()
             .Where(s => s.AiGrading.FreeResponse.AttemptId == attemptId
                 && s.AiGrading.Status == AiGradingStatus.Done.ToCode())
@@ -556,14 +562,35 @@ public sealed class PlacementResultWriter(
                 s.CriterionId,
                 s.GradingCriterion.Code,
                 s.Score,
-                // UI-20: a section may override the ceiling, so the ratio is read against the score the
-                // criterion was actually marked out of rather than its table default.
-                MaxScore = s.AiGrading.FreeResponse.Question.Section.SectionCriteria
-                    .Where(sc => sc.CriterionId == s.CriterionId)
-                    .Select(sc => sc.MaxScore)
-                    .FirstOrDefault() ?? s.GradingCriterion.MaxScore,
+                s.GradingCriterion.MaxScore,
+                s.AiGrading.FreeResponseId,
             })
             .ToListAsync(cancellationToken);
+
+        var sectionByResponse = await RosterSkills.ByResponseSectionAsync(db, attemptId, cancellationToken);
+
+        var overrideBySectionAndCriterion = (await db.SectionCriteria
+                .AsNoTracking()
+                .Where(sc => sectionByResponse.Values.Contains(sc.SectionId))
+                .Select(sc => new { sc.SectionId, sc.CriterionId, sc.MaxScore })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(x => (x.SectionId, x.CriterionId), x => x.MaxScore);
+
+        // UI-20: a section may override the ceiling, so the ratio is read against the score the criterion
+        // was actually marked out of rather than its table default.
+        var scored = scoredRaw.Select(s =>
+        {
+            var sectionId = sectionByResponse.GetValueOrDefault(s.FreeResponseId);
+            return new
+            {
+                s.SkillId,
+                s.CriterionId,
+                s.Code,
+                s.Score,
+                MaxScore = overrideBySectionAndCriterion.GetValueOrDefault((sectionId, s.CriterionId))
+                    ?? s.MaxScore,
+            };
+        }).ToList();
 
         if (scored.Count == 0)
         {

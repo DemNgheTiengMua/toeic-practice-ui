@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessObjects;
@@ -57,18 +57,16 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
     /// <summary>Two objective skills (Listening, Reading) and one productive one (Writing), all on one
     /// placement paper, which is what "a partial result" needs three different answers from.
     /// <para>
-    /// <b>#269: NOT migrated to a pool-only paper, and the reason is production code.</b> The
-    /// failed-grading test settles through <c>AttemptEngine.FinalizeAiGradedAttemptAsync</c>, which still
-    /// scores objective answers with <c>answer.Question.QuestionOptionQuestionNavigations</c>
-    /// (AttemptEngine.Submission.cs:569); a pool answer has no Question row, so that line throws. The
-    /// paper keeps its legacy question rows beside its bindings until that reader resolves the roster.
+    /// <b>#269: migrated to a pool-only paper.</b> A position is an <c>ExamItems</c> row and the ids the
+    /// tests address are <c>ExamItemId</c>s, so a pool answer records <c>SelectedLabel</c> rather than a
+    /// legacy option id. This was blocked until <c>FinalizeAiGradedAttemptAsync</c> stopped dereferencing
+    /// <c>answer.Question</c> for a pool answer (AttemptEngine.Submission.cs, e8e8aff).
     /// </para>
     /// </summary>
     private sealed record Fixture(
         int CertId, int ExamId,
         int ListeningSkillId, int ReadingSkillId, int WritingSkillId,
-        int[] ListeningQuestions, int[] ReadingQuestions, int WritingQuestion,
-        int CorrectOption);
+        int[] ListeningPositions, int[] ReadingPositions, int WritingPosition);
 
     private async Task<Fixture> SeedAsync(string certCode)
     {
@@ -108,44 +106,23 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
         var listeningIds = new int[2];
         var readingIds = new int[2];
         var writingId = 0;
-        var correctOption = 0;
 
-        foreach (var (code, count, order) in new[] { ("L1", 2, 1), ("R1", 2, 2), ("W1", 1, 3) })
+        foreach (var (code, count) in new[] { ("L1", 2), ("R1", 2), ("W1", 1) })
         {
-            var group = new QuestionGroup { ExamId = examId, CertId = certId, SectionId = sections[code], DisplayOrder = order };
-            db.QuestionGroups.Add(group);
-            await db.SaveChangesAsync();
-
-            var skillId = code == "L1" ? skills["LIST"] : code == "R1" ? skills["READ"] : skills["WRIT"];
+            var modality = code == "L1" ? "listening" : code == "R1" ? "reading" : "writing";
             for (var index = 0; index < count; index++)
             {
-                var question = new Question
-                {
-                    GroupId = group.GroupId,
-                    ExamId = examId,
-                    SectionId = sections[code],
-                    SkillId = skillId,
-                    Stem = $"{code}-{index + 1}",
-                    CefrLevel = CefrLevel.B1,
-                    QuestionType = code == "W1" ? "free_response" : "mcq",
-                    DisplayOrder = order * 10 + index,
-                };
-                db.Questions.Add(question);
-                await db.SaveChangesAsync();
+                var position = code == "W1"
+                    // CK_Items_Modality_RenderFormat pins a writing item to free_response and refuses
+                    // options on it, so the productive task is authored as one.
+                    ? await PoolFixture.AddProductiveAsync(
+                        db, examId, certId, sections[code], modality, $"{code}-{index + 1}", displayOrder: index + 1)
+                    : await PoolFixture.AddMcqAsync(
+                        db, examId, certId, sections[code], modality, $"{code}-{index + 1}", displayOrder: index + 1);
 
-                if (code == "W1")
-                {
-                    writingId = question.QuestionId;
-                    continue;
-                }
-
-                db.QuestionOptions.AddRange(
-                    new QuestionOption { QuestionId = question.QuestionId, QuestionType = "mcq", Label = "A", Text = "Right", IsCorrect = true },
-                    new QuestionOption { QuestionId = question.QuestionId, QuestionType = "mcq", Label = "B", Text = "Wrong", IsCorrect = false });
-                await db.SaveChangesAsync();
-
-                if (code == "L1") listeningIds[index] = question.QuestionId;
-                else readingIds[index] = question.QuestionId;
+                if (code == "W1") writingId = position.ExamItemId;
+                else if (code == "L1") listeningIds[index] = position.ExamItemId;
+                else readingIds[index] = position.ExamItemId;
             }
         }
 
@@ -185,13 +162,10 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
 
         await db.SaveChangesAsync();
 
-        correctOption = await db.QuestionOptions
-            .Where(o => o.QuestionId == listeningIds[0] && o.IsCorrect)
-            .Select(o => o.OptionId).SingleAsync();
-
         return new Fixture(certId, examId, skills["LIST"], skills["READ"], skills["WRIT"],
-            listeningIds, readingIds, writingId, correctOption);
+            listeningIds, readingIds, writingId);
     }
+
 
     private async Task<int> SeedLearnerAsync(int certId, int startingCredits = 0)
     {
@@ -245,45 +219,45 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
         return info;
     }
 
-    /// <summary>Answers one objective question with ITS OWN correct option, crossing the one-way skill
-    /// lock first. The lock refuses an answer for a skill the attempt has not reached, which is the
-    /// engine's rule, not the thing under test; the option must belong to the question, which is what
-    /// <c>FK_AttemptAnswers_OptionQuestion</c> enforces.</summary>
-    private async Task<int> AnswerCorrectlyAsync(int attemptId, int questionId)
+    /// <summary>Answers one objective position correctly, crossing the one-way skill lock first. The
+    /// lock refuses an answer for a skill the attempt has not reached, which is the engine's rule, not
+    /// the thing under test. #269: a pool answer is addressed by its <c>ExamItemId</c> and records
+    /// <c>SelectedLabel</c>, because a pinned version stores labels rather than option rows.</summary>
+    private async Task AnswerCorrectlyAsync(int attemptId, int examItemId)
     {
         await using var db = Db();
-        var skillId = await db.Questions.Where(q => q.QuestionId == questionId).Select(q => q.SkillId).SingleAsync();
-        var attempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attemptId);
-        attempt.ActiveSkillId = skillId;
-        attempt.PhaseDeadlineAt = DateTime.UtcNow.AddMinutes(30);
-        await db.SaveChangesAsync();
-
-        var optionId = await db.QuestionOptions
-            .Where(o => o.QuestionId == questionId && o.IsCorrect == true)
-            .Select(o => o.OptionId).SingleAsync();
-
-        var answer = await db.AttemptAnswers.SingleAsync(a => a.AttemptId == attemptId && a.QuestionId == questionId);
-        answer.SelectedOptionId = optionId;
-        await db.SaveChangesAsync();
-        return optionId;
+        await AdvanceToSkillOfAsync(db, attemptId, examItemId);
+        await RecordLabelAsync(db, attemptId, examItemId, "A");
     }
 
-    /// <summary>Answers one objective question with ITS OWN wrong option, under the same lock rule.</summary>
-    private async Task AnswerIncorrectlyAsync(int attemptId, int questionId)
+    /// <summary>Answers one objective position with a wrong label, under the same lock rule.</summary>
+    private async Task AnswerIncorrectlyAsync(int attemptId, int examItemId)
     {
         await using var db = Db();
-        var skillId = await db.Questions.Where(q => q.QuestionId == questionId).Select(q => q.SkillId).SingleAsync();
+        await AdvanceToSkillOfAsync(db, attemptId, examItemId);
+        await RecordLabelAsync(db, attemptId, examItemId, "B");
+    }
+
+    /// <summary>The skill a position belongs to, from the section its binding names.</summary>
+    private static async Task AdvanceToSkillOfAsync(CompanionDbContext db, int attemptId, int examItemId)
+    {
+        var skillId = await db.ExamItems
+            .Where(i => i.ExamItemId == examItemId)
+            .Select(i => i.Section.SkillId)
+            .SingleAsync();
         var attempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attemptId);
         attempt.ActiveSkillId = skillId;
         attempt.PhaseDeadlineAt = DateTime.UtcNow.AddMinutes(30);
         await db.SaveChangesAsync();
+    }
 
-        var optionId = await db.QuestionOptions
-            .Where(o => o.QuestionId == questionId && o.IsCorrect == false)
-            .Select(o => o.OptionId).SingleAsync();
-
-        var answer = await db.AttemptAnswers.SingleAsync(a => a.AttemptId == attemptId && a.QuestionId == questionId);
-        answer.SelectedOptionId = optionId;
+    /// <summary>Writes the label a pool reading picks. The fixture's key is always 'A'.</summary>
+    private static async Task RecordLabelAsync(
+        CompanionDbContext db, int attemptId, int examItemId, string label)
+    {
+        var answer = await db.AttemptAnswers
+            .SingleAsync(a => a.AttemptId == attemptId && a.ExamItemId == examItemId);
+        answer.SelectedLabel = label;
         await db.SaveChangesAsync();
     }
 
@@ -326,7 +300,7 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
         await using (var db = Db()) placementId = (await StartAsync(userId, fixture, db)).PlacementId;
         var attemptId = await AttemptIdAsync(placementId);
 
-        await AnswerCorrectlyAsync(attemptId, fixture.ListeningQuestions[0]);
+        await AnswerCorrectlyAsync(attemptId, fixture.ListeningPositions[0]);
 
         await using (var db = Db())
         {
@@ -335,7 +309,8 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
 
         await using var verify = Db();
         var blank = await verify.AttemptAnswers.AsNoTracking()
-            .SingleAsync(a => a.AttemptId == attemptId && a.QuestionId == fixture.ListeningQuestions[1]);
+            .SingleAsync(a => a.AttemptId == attemptId && a.ExamItemId == fixture.ListeningPositions[1]);
+        Assert.Null(blank.SelectedLabel);
         Assert.Null(blank.SelectedOptionId);
         // The wrong-but-passing input: `IsCorrect = false` here passes every total on the page and
         // inflates vw_UserSectionAccuracyAll. The blank must stay unjudged.
@@ -361,7 +336,7 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
 
     /// <summary>
     /// Only Listening answered; Reading and Writing untouched. Listening is measured, the other two are
-    /// <c>not_measured · candidate_skipped</c>, and the placement is <c>done</c> with NO completion
+    /// <c>not_measured Â· candidate_skipped</c>, and the placement is <c>done</c> with NO completion
     /// failure because something WAS measured.
     /// <para>
     /// <b>The wrong-but-passing input:</b> a zero score row for each untouched skill. The placement
@@ -380,8 +355,8 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
         await using (var db = Db()) placementId = (await StartAsync(userId, fixture, db)).PlacementId;
         var attemptId = await AttemptIdAsync(placementId);
 
-        await AnswerCorrectlyAsync(attemptId, fixture.ListeningQuestions[0]);
-        await AnswerCorrectlyAsync(attemptId, fixture.ListeningQuestions[1]);
+        await AnswerCorrectlyAsync(attemptId, fixture.ListeningPositions[0]);
+        await AnswerCorrectlyAsync(attemptId, fixture.ListeningPositions[1]);
 
         await using (var db = Db())
         {
@@ -432,9 +407,9 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
         var attemptId = await AttemptIdAsync(placementId);
 
         // both Listening items answered, both wrong
-        foreach (var questionId in fixture.ListeningQuestions)
+        foreach (var examItemId in fixture.ListeningPositions)
         {
-            await AnswerIncorrectlyAsync(attemptId, questionId);
+            await AnswerIncorrectlyAsync(attemptId, examItemId);
         }
 
         await using (var db = Db())
@@ -519,7 +494,7 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>
-    /// Writing's only task failed to grade. The skill is <c>not_measured · ai_grading_failed</c>, has
+    /// Writing's only task failed to grade. The skill is <c>not_measured Â· ai_grading_failed</c>, has
     /// no level at all, and the placement still completes on the measured Listening half.
     /// <para>
     /// <b>The wrong-but-passing input:</b> a writer that falls back to <c>LevelFromBand(null)</c> stores
@@ -539,17 +514,14 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
         var attemptId = await AttemptIdAsync(placementId);
 
         // Listening answered; Writing submitted with a draft, then its grading fails.
-        await AnswerCorrectlyAsync(attemptId, fixture.ListeningQuestions[0]);
-        await AnswerCorrectlyAsync(attemptId, fixture.ListeningQuestions[1]);
+        await AnswerCorrectlyAsync(attemptId, fixture.ListeningPositions[0]);
+        await AnswerCorrectlyAsync(attemptId, fixture.ListeningPositions[1]);
 
         await using (var db = Db())
         {
-            var writing = await db.Questions.SingleAsync(q => q.QuestionId == fixture.WritingQuestion);
-            var attempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attemptId);
-            attempt.ActiveSkillId = writing.SkillId;
-            await db.SaveChangesAsync();
+            await AdvanceToSkillOfAsync(db, attemptId, fixture.WritingPosition);
 
-            await Service(db).SaveDraftAsync(userId, placementId, fixture.WritingQuestion,
+            await Service(db).SaveDraftAsync(userId, placementId, fixture.WritingPosition,
                 "A response long enough to be handed to the grader.");
         }
 
@@ -669,16 +641,13 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
         await using (var db = Db()) placementId = (await StartAsync(userId, fixture, db)).PlacementId;
         var attemptId = await AttemptIdAsync(placementId);
 
-        await AnswerCorrectlyAsync(attemptId, fixture.ListeningQuestions[0]);
-        await AnswerCorrectlyAsync(attemptId, fixture.ListeningQuestions[1]);
+        await AnswerCorrectlyAsync(attemptId, fixture.ListeningPositions[0]);
+        await AnswerCorrectlyAsync(attemptId, fixture.ListeningPositions[1]);
 
         await using (var db = Db())
         {
-            var writing = await db.Questions.SingleAsync(q => q.QuestionId == fixture.WritingQuestion);
-            var attempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attemptId);
-            attempt.ActiveSkillId = writing.SkillId;
-            await db.SaveChangesAsync();
-            await Service(db).SaveDraftAsync(userId, placementId, fixture.WritingQuestion,
+            await AdvanceToSkillOfAsync(db, attemptId, fixture.WritingPosition);
+            await Service(db).SaveDraftAsync(userId, placementId, fixture.WritingPosition,
                 "A response long enough to be handed to the grader.");
         }
 
@@ -713,14 +682,11 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
         await using (var db = Db()) placementId = (await StartAsync(userId, fixture, db)).PlacementId;
         var attemptId = await AttemptIdAsync(placementId);
 
-        await AnswerCorrectlyAsync(attemptId, fixture.ListeningQuestions[0]);
+        await AnswerCorrectlyAsync(attemptId, fixture.ListeningPositions[0]);
         await using (var db = Db())
         {
-            var writing = await db.Questions.SingleAsync(q => q.QuestionId == fixture.WritingQuestion);
-            var attempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attemptId);
-            attempt.ActiveSkillId = writing.SkillId;
-            await db.SaveChangesAsync();
-            await Service(db).SaveDraftAsync(userId, placementId, fixture.WritingQuestion,
+            await AdvanceToSkillOfAsync(db, attemptId, fixture.WritingPosition);
+            await Service(db).SaveDraftAsync(userId, placementId, fixture.WritingPosition,
                 "A response long enough to be handed to the grader.");
         }
         await using (var db = Db())

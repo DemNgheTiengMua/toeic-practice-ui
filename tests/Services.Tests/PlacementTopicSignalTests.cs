@@ -634,6 +634,16 @@ public sealed class PlacementTopicSignalTests : IAsyncLifetime
     ///
     /// <b>The input that would pass a weaker test:</b> ordering by raw <c>Score</c>. It names LEX,
     /// which this asserts against.
+    ///
+    /// <b>Blocked on a THIRD production reader, and this test is RED until it is fixed.</b>
+    /// <c>PlacementResultWriter.LoadCriterionProfilesAsync</c> (PlacementResultWriter.cs:561) reads the
+    /// section ceiling through <c>s.AiGrading.FreeResponse.Question.Section.SectionCriteria</c>. On a
+    /// pool paper <c>FreeResponse.QuestionId</c> is NULL, so the navigation is null and the whole query
+    /// throws NullReferenceException; the per-skill row is then written without a criterion profile and
+    /// LEX reports its table ceiling of 6 instead of this section's 3. <c>AttemptEngine</c> already
+    /// solved the identical lookup by resolving the section from the response's roster position
+    /// (AttemptEngine.Scoring.cs:500 <c>LoadSectionByResponseAsync</c>); the writer needs the same.
+    /// The assertion is NOT weakened to fit: 3 is the fact under test.
     /// </summary>
     [Fact]
     public async Task The_weakest_criterion_is_the_lowest_ratio_not_the_lowest_raw_score()
