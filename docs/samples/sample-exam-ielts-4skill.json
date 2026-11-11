@@ -55,7 +55,7 @@
                                                                                       "rationale":  "Not supported by text."
                                                                                   }
                                                                               ],
-                                                                  "itemType":  "short_exchange"
+                                                                  "itemType":  "passage_comprehension"
                                                               }
                                                           ]
                                         }
@@ -100,7 +100,7 @@
                                                                                        "code":  "GRA"
                                                                                    }
                                                                                ],
-                                                                  "itemType":  "sentence_cloze"
+                                                                  "itemType":  "visual_data_synthesis"
                                                               }
                                                           ]
                                         }
@@ -145,7 +145,7 @@
                                                                                        "code":  "GRA"
                                                                                    }
                                                                                ],
-                                                                  "itemType":  "sentence_cloze"
+                                                                  "itemType":  "persuasive_essay"
                                                               }
                                                           ]
                                         }
@@ -190,7 +190,7 @@
                                                                                        "code":  "PRON"
                                                                                    }
                                                                                ],
-                                                                  "itemType":  "sentence_cloze"
+                                                                  "itemType":  "descriptive_monologue"
                                                               },
                                                               {
                                                                   "displayOrder":  2,
@@ -218,7 +218,7 @@
                                                                                        "code":  "PRON"
                                                                                    }
                                                                                ],
-                                                                  "itemType":  "sentence_cloze"
+                                                                  "itemType":  "descriptive_monologue"
                                                               }
                                                           ]
                                         }

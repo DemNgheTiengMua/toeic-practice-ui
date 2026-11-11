@@ -191,6 +191,12 @@ internal static class QuestionExportManifest
                         ResponseSeconds = version.ResponseSeconds,
                         SampleAnswerOrImageDesc = version.ReferenceText,
                         ReferenceKind = version.ReferenceKind,
+                        MaxSelections = version.MaxSelections,
+                        AllowNumber = version.AllowNumber,
+                        AcceptedAnswersJson = version.AcceptedAnswersJson,
+                        RequiredKeywords = version.RequiredKeywords is { Length: > 0 } kw
+                            ? kw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+                            : null,
                         EvidenceStart = version.EvidenceStart,
                         EvidenceEnd = version.EvidenceEnd,
                         EvidenceUnit = version.EvidenceUnit,

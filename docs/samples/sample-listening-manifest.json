@@ -4,7 +4,7 @@
                  "title":  "TOEIC Listening Sample (Part 1 Photograph \u0026 Part 2 Question-Response)",
                  "purpose":  "mock",
                  "durationMinutes":  30,
-                 "sourceName":  "Sample pack Ã¢â‚¬â€ listening",
+                 "sourceName":  "Sample pack ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â listening",
                  "description":  null
              },
     "sections":  [
@@ -58,12 +58,7 @@
                                                                   "itemType":  "short_exchange"
                                                               }
                                                           ]
-                                        }
-                                    ]
-                     },
-                     {
-                         "sectionCode":  "P2",
-                         "groups":  [
+                                        },
                                         {
                                             "passage":  null,
                                             "audioFile":  "media/part2-question-01.wav",

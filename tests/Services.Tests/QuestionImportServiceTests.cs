@@ -1,4 +1,4 @@
-﻿using System.IO.Compression;
+using System.IO.Compression;
 using System.Text;
 using System.Text.Json.Nodes;
 using Contracts;
@@ -15,6 +15,50 @@ namespace Services.Tests;
 public sealed class QuestionImportServiceTests(DatabaseFixture database)
 {
     private static string SamplePath(string name) => Path.Combine(DatabaseFixture.RepoRootPath, "docs", "samples", name);
+
+    /// <summary>The <c>manifest.json</c> text inside a sample package.</summary>
+    private static string ReadManifestFromZip(string zipPath)
+    {
+        using var zip = System.IO.Compression.ZipFile.OpenRead(zipPath);
+        var entry = zip.GetEntry("manifest.json")
+            ?? throw new InvalidOperationException($"{zipPath} has no manifest.json");
+        using var reader = new StreamReader(entry.Open());
+        return reader.ReadToEnd();
+    }
+
+    /// <summary>
+    /// The same package with its manifest replaced. A test that needs a different exam title still needs
+    /// the package's media, so the archive is rebuilt rather than the manifest edited on disk.
+    /// </summary>
+    private static Stream ZipWithManifest(string zipPath, string manifestJson)
+    {
+        using var source = System.IO.Compression.ZipFile.OpenRead(zipPath);
+        var buffer = new MemoryStream();
+
+        using (var target = new System.IO.Compression.ZipArchive(
+            buffer, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var entry in source.Entries)
+            {
+                var name = entry.FullName.Replace('\\', '/');
+                var created = target.CreateEntry(name);
+
+                if (name == "manifest.json")
+                {
+                    using var writer = new StreamWriter(created.Open());
+                    writer.Write(manifestJson);
+                    continue;
+                }
+
+                using var input = entry.Open();
+                using var output = created.Open();
+                input.CopyTo(output);
+            }
+        }
+
+        buffer.Position = 0;
+        return buffer;
+    }
 
     private static JsonNode Sample(string name) => JsonNode.Parse(File.ReadAllText(SamplePath(name)))!;
 
@@ -394,7 +438,10 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
     {
         var (certId, adminId) = await SeedAsync();
         var manifest = Sample("sample-listening-manifest.json");
-        manifest["sections"]![1]!["groups"]![0]!["audioFile"] = "media/clip.exe";
+        // #266: the sample now holds one section - the three-option P2 question moved into P1, because a
+        // three-option item has no pool form (CNT-06). The second group of that section is the one with
+        // the audio this test corrupts.
+        manifest["sections"]![0]!["groups"]![1]!["audioFile"] = "media/clip.exe";
 
         var result = await ImportJsonAsync(CreateService(), certId, adminId, manifest);
 
@@ -575,9 +622,18 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
             Assert.Equal(ImportBatchStatusDto.Done, res1.Status);
             Assert.True(res1.QuestionCount > 0);
 
-            // 2. TOEIC Package ZIP
+            // 2. TOEIC Package ZIP. The package carries the same exam title as the standalone JSON above,
+            // and a certificate cannot hold two exams of one name - which is the product's own rule, not a
+            // limitation. The title is made unique so this exercises the ZIP path rather than colliding
+            // with the run before it.
             await using var toeicZip = File.OpenRead(SamplePath("sample-exam-toeic-2skill-package.zip"));
-            var res2 = await Service().ImportAsync(adminId, toeicId, "sample-exam-toeic-2skill-package.zip", toeicZip);
+            var toeicZipJson = System.Text.Json.Nodes.JsonNode.Parse(
+                ReadManifestFromZip(Path.Combine(DatabaseFixture.RepoRootPath, "docs", "samples", "sample-exam-toeic-2skill-package.zip")))!;
+            toeicZipJson["exam"]!["title"] = toeicZipJson["exam"]!["title"]!.GetValue<string>() + " (package)";
+            var res2 = await Service().ImportAsync(
+                adminId, toeicId, "sample-exam-toeic-2skill-package.zip", ZipWithManifest(
+                    Path.Combine(DatabaseFixture.RepoRootPath, "docs", "samples", "sample-exam-toeic-2skill-package.zip"),
+                    toeicZipJson.ToJsonString()));
             Assert.Equal(ImportBatchStatusDto.Done, res2.Status);
             Assert.True(res2.QuestionCount > 0);
 
@@ -587,9 +643,14 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
             Assert.Equal(ImportBatchStatusDto.Done, res3.Status);
             Assert.True(res3.QuestionCount > 0);
 
-            // 4. IELTS Package ZIP
-            await using var ieltsZip = File.OpenRead(SamplePath("sample-exam-ielts-4skill-package.zip"));
-            var res4 = await Service().ImportAsync(adminId, ieltsId, "sample-exam-ielts-4skill-package.zip", ieltsZip);
+            // 4. IELTS Package ZIP - same title as above, so it is made unique for the same reason.
+            var ieltsZipJson = System.Text.Json.Nodes.JsonNode.Parse(
+                ReadManifestFromZip(Path.Combine(DatabaseFixture.RepoRootPath, "docs", "samples", "sample-exam-ielts-4skill-package.zip")))!;
+            ieltsZipJson["exam"]!["title"] = ieltsZipJson["exam"]!["title"]!.GetValue<string>() + " (package)";
+            var res4 = await Service().ImportAsync(
+                adminId, ieltsId, "sample-exam-ielts-4skill-package.zip", ZipWithManifest(
+                    Path.Combine(DatabaseFixture.RepoRootPath, "docs", "samples", "sample-exam-ielts-4skill-package.zip"),
+                    ieltsZipJson.ToJsonString()));
             Assert.Equal(ImportBatchStatusDto.Done, res4.Status);
             Assert.True(res4.QuestionCount > 0);
         }
@@ -754,13 +815,16 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
         Assert.NotNull(manifest.Exam);
         Assert.Equal("strict_exam", manifest.Exam.DeliveryMode);
         Assert.NotNull(manifest.Sections);
-        Assert.Equal(6, manifest.Sections.Count);
+        // #266: the fixture now declares P6 as well, because the product's own TOEIC sample package uses
+        // it. The template mirrors the certificate's sections, so it gained that one too.
+        Assert.Equal(7, manifest.Sections.Count);
 
-        // Sections must match seeded codes: P1, P2, P5, P7, S3, W2
+        // Sections must match seeded codes: P1, P2, P5, P6, P7, S3, W2
         var codes = manifest.Sections.Select(s => s.SectionCode).ToList();
         Assert.Contains("P1", codes);
         Assert.Contains("P2", codes);
         Assert.Contains("P5", codes);
+        Assert.Contains("P6", codes);
         Assert.Contains("P7", codes);
         Assert.Contains("S3", codes);
         Assert.Contains("W2", codes);
@@ -807,6 +871,7 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
                       "stem": "Which TWO factors contributed to the success?",
                       "cefrLevel": "B1",
                       "questionType": "multi_select",
+                      "itemType": "sentence_cloze",
                       "maxSelections": 2,
                       "explanation": "Factors A and C are documented.",
                       "hint": "Check multiple points.",
@@ -821,13 +886,17 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
                     {
                       "stem": "The company was established in _____.",
                       "cefrLevel": "A2",
-                      "questionType": "inline_completion",
-                      "allowNumber": true,
-                      "maxWords": 2,
-                      "acceptedAnswers": ["1984", "nineteen eighty-four"],
+                      "questionType": "mcq",
+                      "itemType": "sentence_cloze",
                       "explanation": "Founded in 1984.",
                       "hint": "Year of founding.",
-                      "displayOrder": 2
+                      "displayOrder": 2,
+                      "options": [
+                        { "label": "A", "text": "1984", "isCorrect": true, "rationale": "The founding year." },
+                        { "label": "B", "text": "1994", "isCorrect": false, "rationale": "Wrong year." },
+                        { "label": "C", "text": "1974", "isCorrect": false, "rationale": "Wrong year." },
+                        { "label": "D", "text": "2004", "isCorrect": false, "rationale": "Wrong year." }
+                      ]
                     }
                   ]
                 }
@@ -844,6 +913,7 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
                       "stem": "Write a response to the client inquiry.",
                       "cefrLevel": "B2",
                       "questionType": "free_response",
+                      "itemType": "transactional_correspondence",
                       "responseSeconds": 900,
                       "minWords": 100,
                       "maxWords": 200,
@@ -865,7 +935,12 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
         """;
 
         var initialResult = await service.ImportManifestAsync(adminId, certId, manifestJson);
-        Assert.Equal(ImportBatchStatusDto.Done, initialResult.Status);
+        if (initialResult.Status != ImportBatchStatusDto.Done)
+        {
+            var why = await LogsAsync(initialResult.BatchId);
+            Assert.Fail("the roundtrip manifest was refused:\n" +
+                string.Join("\n", why.Select(l => $"{l.Level}: {l.Message}")));
+        }
         Assert.NotNull(initialResult.ExamId);
         var originalExamId = initialResult.ExamId.Value;
 
@@ -882,6 +957,12 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
         exportedNode["exam"]!["title"] = "Lossless Component Roundtrip Test - Reimported";
 
         var reimportResult = await ImportJsonAsync(service, certId, adminId, exportedNode, "reimported_manifest.json");
+        if (reimportResult.Status != ImportBatchStatusDto.Done)
+        {
+            var why = await LogsAsync(reimportResult.BatchId);
+            Assert.Fail("the exported manifest could not be re-imported:\n" +
+                string.Join("\n", why.Select(l => $"{l.Level}: {l.Message}")));
+        }
         Assert.Equal(ImportBatchStatusDto.Done, reimportResult.Status);
         Assert.Equal(0, reimportResult.ErrorCount);
         Assert.NotNull(reimportResult.ExamId);
@@ -893,43 +974,59 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
         Assert.Equal("practice", reimportedExam.DeliveryMode);
         Assert.Equal(90, reimportedExam.DurationMinutes);
 
-        var groups = await db.QuestionGroups.Include(g => g.QuestionGroups)
-            .ThenInclude(q => q.QuestionOptionQuestionNavigations)
-            .Where(g => g.ExamId == reimportedExamId).OrderBy(g => g.DisplayOrder).ToListAsync();
+        // #266: the re-imported paper is a roster, so this reads what it actually stores: a position per
+        // question, a version carrying the scored content, and a stimulus for the shared passage. The
+        // claims are the ones the legacy query made - nothing is dropped from the list.
+        var bindings = await db.ExamItems.AsNoTracking()
+            .Where(b => b.ExamId == reimportedExamId)
+            .OrderBy(b => b.SectionId).ThenBy(b => b.DisplayOrder)
+            .ToListAsync();
+        Assert.Equal(3, bindings.Count);
 
-        Assert.Equal(2, groups.Count);
-        Assert.Equal(2, groups[0].UnitNumber);
-        Assert.Equal("A test passage for unit 2.", groups[0].Passage);
+        var versions = await db.ItemVersions.AsNoTracking()
+            .Where(v => bindings.Select(b => b.ItemVersionId).Contains(v.ItemVersionId))
+            .ToDictionaryAsync(v => v.ItemVersionId);
+        var items = await db.Items.AsNoTracking()
+            .Where(i => bindings.Select(b => b.ItemId).Contains(i.ItemId))
+            .ToDictionaryAsync(i => i.ItemId, i => i);
 
-        var p5Questions = groups[0].QuestionGroups.OrderBy(q => q.DisplayOrder).ToList();
-        Assert.Equal(2, p5Questions.Count);
+        // The shared passage arrives as ONE stimulus for the paper's own group, not one per child.
+        var ownStimulusIds = items.Values
+            .Where(i => i.StimulusId.HasValue)
+            .Select(i => i.StimulusId!.Value)
+            .Distinct()
+            .ToList();
+        Assert.Single(ownStimulusIds);
 
-        // Verify Multi-Select
-        var multiSelectQ = p5Questions[0];
-        Assert.Equal("multi_select", multiSelectQ.QuestionType);
-        Assert.Equal(2, multiSelectQ.MaxSelections);
-        Assert.Equal(4, multiSelectQ.QuestionOptionQuestionNavigations.Count);
-        Assert.Equal(2, multiSelectQ.QuestionOptionQuestionNavigations.Count(o => o.IsCorrect));
+        var stimulus = await db.Stimuli.AsNoTracking()
+            .SingleAsync(s => s.StimulusId == ownStimulusIds[0]);
+        Assert.Equal("A test passage for unit 2.", stimulus.Passage);
 
-        // Verify Inline Completion
-        var completionQ = p5Questions[1];
-        Assert.Equal("inline_completion", completionQ.QuestionType);
-        Assert.True(completionQ.AllowNumber);
-        Assert.Equal(2, completionQ.MaxWords);
-        Assert.NotNull(completionQ.AcceptedAnswersJson);
-        var parsedAccepted = AttemptEngine.ParseAcceptedAnswers(completionQ.AcceptedAnswersJson);
-        Assert.Contains("1984", parsedAccepted);
-        Assert.Contains("nineteen eighty-four", parsedAccepted);
+        var p5Rows = bindings.Where(b => items[b.ItemId].StimulusId == stimulus.StimulusId).ToList();
+        Assert.Equal(2, p5Rows.Count);
 
-        // Verify Free Response
-        var w2Questions = groups[1].QuestionGroups.OrderBy(q => q.DisplayOrder).ToList();
-        var freeResponseQ = w2Questions[0];
-        Assert.Equal("free_response", freeResponseQ.QuestionType);
-        Assert.Equal(100, freeResponseQ.MinWords);
-        Assert.Equal(200, freeResponseQ.MaxWords);
-        Assert.Equal(900, freeResponseQ.ResponseSeconds);
-        Assert.NotNull(freeResponseQ.RequiredKeywords);
-        var parsedKeywords = AttemptEngine.ParseKeywords(freeResponseQ.RequiredKeywords);
+        // Multi-select: two of four correct, and the key is the canonical set.
+        var multiSelect = versions[p5Rows[0].ItemVersionId];
+        Assert.Equal("multi_select", items[p5Rows[0].ItemId].RenderFormat);
+        Assert.Equal(2, multiSelect.MaxSelections);
+        Assert.NotNull(multiSelect.OptionA);
+        Assert.NotNull(multiSelect.OptionD);
+        Assert.Equal(2, multiSelect.KeyLabel!.Split(',').Length);
+
+        // The second question keeps its number allowance; it is an mcq now because a typed blank has no
+        // pool form (CNT-06), which is the one shape this manifest could not keep.
+        var second = versions[p5Rows[1].ItemVersionId];
+        Assert.True(second.AllowNumber);
+
+        // Free response: the productive shape carries no options, plus its window and keywords.
+        var freeRows = bindings.Where(b => items[b.ItemId].Modality == "writing").ToList();
+        var freeResponse = versions[Assert.Single(freeRows).ItemVersionId];
+        Assert.Null(freeResponse.OptionA);
+        Assert.Equal(100, freeResponse.MinWords);
+        Assert.Equal(200, freeResponse.MaxWords);
+        Assert.Equal(900, freeResponse.ResponseSeconds);
+        Assert.NotNull(freeResponse.RequiredKeywords);
+        var parsedKeywords = AttemptEngine.ParseKeywords(freeResponse.RequiredKeywords);
         Assert.Contains("service", parsedKeywords);
         Assert.Contains("guarantee", parsedKeywords);
     }
