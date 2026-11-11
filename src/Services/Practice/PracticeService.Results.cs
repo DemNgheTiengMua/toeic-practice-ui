@@ -83,8 +83,10 @@ public sealed partial class PracticeService
                     a.HintUsed,
                     version.Explanation,
                     stimulus?.AudioPath,
-                    AudioStartMs: null,
-                    AudioEndMs: null,
+                    // #269: the pinned branch dropped the audio slice while the take projection read it,
+                    // so the SUMMARY of a pool drill lost the slice the learner had just listened to.
+                    stimulus?.AudioStartMs,
+                    stimulus?.AudioEndMs,
                     stimulus?.Transcript,
                     AttemptEngine.IsProductive(version) ? QuestionType.FreeResponse.ToCode() : QuestionType.Mcq.ToCode(),
                     a.ResponseText,

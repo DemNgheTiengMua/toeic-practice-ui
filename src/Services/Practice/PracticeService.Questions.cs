@@ -214,7 +214,12 @@ public sealed partial class PracticeService
             audioEndMs = q?.Group?.AudioEndMs;
         }
 
-        var hintText = answer.HintUsed ? q?.Hint : null;
+        // #269: a pool answer records HintUsed from the pinned version's hint, so the reload must read
+        // the hint from that same version. Consulting only the legacy row left the flag true beside a
+        // null hint - the learner was told they had used a hint they could not see.
+        var hintText = answer.HintUsed
+            ? (pinned?.Hint ?? q?.Hint)
+            : null;
         int? savedQuestionId = answer.QuestionId is { } qid
             ? savedByQuestionId.TryGetValue(qid, out var idForQuestion) ? idForQuestion : null
             : answer.ItemId is { } iid && savedByItemId.TryGetValue(iid, out var idForItem) ? idForItem : null;

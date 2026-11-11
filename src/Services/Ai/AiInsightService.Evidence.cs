@@ -80,7 +80,9 @@ public sealed partial class AiInsightService
             // read `q.QuestionId` unconditionally, which threw for every pool answer - the exam insight
             // could not be generated for a paper assembled from the pool.
             var q = ans.Question;
-            var qOpts = allOptions.Where(o => o.QuestionId == q.QuestionId).ToList();
+            var qOpts = q is null
+                ? []
+                : allOptions.Where(o => o.QuestionId == q.QuestionId).ToList();
             // #186: a pinned answer names a label on its version; the legacy row has no option to look
             // up. The fingerprint describes what the learner saw, so the version supplies it.
             var pinned = ans.ItemVersion;
