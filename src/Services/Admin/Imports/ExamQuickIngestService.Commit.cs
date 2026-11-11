@@ -219,113 +219,50 @@ public sealed partial class ExamQuickIngestService
 
         var poolNotes = new List<string>();
         var groupStimuli = new Dictionary<int, PoolImport.StimulusInput>();
-        var writtenQuestions = new List<(int QuestionId, int GroupId, PoolContent Content, string Stem, QuickIngestParsedQuestionDto Source)>();
+        // The pool is the only model this importer writes (#266). A position is still a rank within its
+        // section, and the pool writer needs the stimulus a group shares, so the grouping is kept - it is
+        // just no longer materialised as a QuestionGroup row.
+        var writtenQuestions = new List<(int Ordinal, int GroupKey, PoolContent Content, string Stem, QuickIngestParsedQuestionDto Source)>();
 
-        QuestionGroup? activeGroup = null;
         string? activePassage = null;
         int? activeGroupNum = null;
+        var activeGroupKey = 0;
+        var groupOrder = 0;
 
         foreach (var q in request.Questions)
         {
-            var needsNewGroup = activeGroup == null ||
+            var needsNewGroup = activeGroupKey == 0 ||
                 (!string.IsNullOrWhiteSpace(q.Passage) && !string.Equals(activePassage, q.Passage, StringComparison.Ordinal)) ||
                 (q.GroupNumber.HasValue && q.GroupNumber != activeGroupNum);
 
             if (needsNewGroup)
             {
-                activeGroup = new QuestionGroup
-                {
-                    ExamId = examId,
-                    CertId = exam.CertId,
-                    SectionId = request.SectionId,
-                    DisplayOrder = currentDisplayOrder,
-                    Passage = q.Passage,
-                    Transcript = q.Transcript,
-                    UnitNumber = 1
-                };
-                db.QuestionGroups.Add(activeGroup);
-                await db.SaveChangesAsync(cancellationToken);
-                groupsCreated++;
-
+                groupOrder++;
+                activeGroupKey = groupOrder;
                 activePassage = q.Passage;
                 activeGroupNum = q.GroupNumber;
 
                 // One stimulus per paste group, not one per child: that is what a shared passage is.
-                groupStimuli[activeGroup.GroupId] = new PoolImport.StimulusInput(
+                groupStimuli[activeGroupKey] = new PoolImport.StimulusInput(
                     PoolImport.Normalise(q.CefrLevel),
                     Passage: q.Passage,
                     Transcript: q.Transcript);
+                groupsCreated++;
             }
 
-            int? categoryId = null;
-            if (!string.IsNullOrWhiteSpace(q.CategoryCode) && categories.TryGetValue(q.CategoryCode, out var cid))
+            if (!TryBuildPoolContent(topics, section.Modality, q, request, out var content, out var reason))
             {
-                categoryId = cid;
+                // #266: a question the pool cannot express is a REFUSAL the author must read, not a row
+                // in a second model. The whole upload is refused rather than half-written: a pack that
+                // imported "most of" its questions would look successful and leave a paper short by an
+                // amount only the log knows.
+                throw new AdminExamException(
+                    ApiError.Codes.Validation,
+                    $"Question {q.Index} (\"{Truncate(q.Stem)}\") cannot be written to the pool - {reason}. "
+                    + "Nothing was imported; fix the pack and re-run it.");
             }
 
-            var qType = q.QuestionType?.ToLowerInvariant() ?? "mcq";
-
-            var question = new Question
-            {
-                ExamId = examId,
-                SectionId = request.SectionId,
-                SkillId = section.SkillId,
-                GroupId = activeGroup!.GroupId,
-                Stem = q.Stem.Trim(),
-                // #229 / D1: the level is the commit's own unless the paste states one per question,
-                // and no difficulty is written beside it. Which of the two applies was decided and
-                // validated before the transaction opened, so this cannot fall back on a typo.
-                CefrLevel = string.IsNullOrWhiteSpace(q.CefrLevel) ? commitLevel : AuthoredLevelOrThrow(q.CefrLevel, q.Index),
-                QuestionType = qType,
-                Explanation = q.Explanation?.Trim(),
-                CategoryId = categoryId,
-                PrepSeconds = q.PrepSeconds,
-                ResponseSeconds = q.ResponseSeconds,
-                MinWords = q.MinWords,
-                MaxWords = q.MaxWords,
-                MaxSelections = q.MaxSelections,
-                AllowNumber = q.AllowNumber,
-                AcceptedAnswersJson = q.AcceptedAnswersJson,
-                RequiredKeywords = q.RequiredKeywords?.Trim(),
-                Hint = q.Hint?.Trim(),
-                SampleAnswerOrImageDesc = q.SampleAnswerOrImageDesc?.Trim(),
-                ReferenceKind = q.ReferenceKind?.ToCode(),
-                DisplayOrder = currentDisplayOrder
-            };
-
-            db.Questions.Add(question);
-            await db.SaveChangesAsync(cancellationToken);
-            questionsCreated++;
-
-            if (q.Options != null && q.Options.Count > 0)
-            {
-                foreach (var opt in q.Options)
-                {
-                    var option = new QuestionOption
-                    {
-                        QuestionId = question.QuestionId,
-                        QuestionType = question.QuestionType,
-                        Label = opt.Label.Trim().ToUpperInvariant(),
-                        Text = opt.Text.Trim(),
-                        IsCorrect = opt.IsCorrect,
-                        Rationale = opt.Rationale?.Trim()
-                    };
-                    db.QuestionOptions.Add(option);
-                }
-            }
-
-            // Resolved after the legacy row exists: the pool write binds by the position the paper
-            // renders, and a position is a rank among rows, so it cannot be known before them.
-            if (TryBuildPoolContent(topics, section.Modality, q, request, out var content, out var reason))
-            {
-                writtenQuestions.Add((question.QuestionId, activeGroup.GroupId, content!, q.Stem.Trim(), q));
-            }
-            else
-            {
-                poolNotes.Add($"Question {q.Index} (\"{Truncate(q.Stem)}\") not written to the pool - {reason}");
-            }
-
-            currentDisplayOrder++;
+            writtenQuestions.Add((q.Index, activeGroupKey, content!, q.Stem.Trim(), q));
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -333,12 +270,14 @@ public sealed partial class ExamQuickIngestService
         var poolWritten = 0;
         var poolStimuli = 0;
         var poolBound = 0;
-        foreach (var groupId in writtenQuestions.Select(w => w.GroupId).Distinct())
+        foreach (var groupId in writtenQuestions.Select(w => w.GroupKey).Distinct())
         {
             var requests = writtenQuestions
-                .Where(w => w.GroupId == groupId)
-                .Select(w => new PoolImportWriter.Request(
-                    w.QuestionId,
+                .Where(w => w.GroupKey == groupId)
+                .Select((w, index) => new PoolImportWriter.Request(
+                    // #266: there is no legacy row to name. The key only has to be unique within the
+                    // batch, because it is the lookup key the writer uses to place this item's position.
+                    QuestionId: index,
                     $"{request.SectionId}:{groupId}",
                     w.Content,
                     w.Stem,
@@ -357,6 +296,9 @@ public sealed partial class ExamQuickIngestService
             poolBound += outcome.Bound;
             poolNotes.AddRange(outcome.Notes);
         }
+
+        // Every question that was accepted is now a bound position, so the counts describe one model.
+        questionsCreated = poolBound;
 
         exam.UpdatedAt = clock?.GetUtcNow() ?? DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);

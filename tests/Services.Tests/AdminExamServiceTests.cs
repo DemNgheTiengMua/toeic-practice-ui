@@ -59,6 +59,17 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
               (@sR, @cert, 'reading', 'SR_' + @certStr, N'Reading Part 5', 1, 2),
               (@sS, @cert, 'speaking', 'SS_' + @certStr, N'Speaking Part 1', 1, 3),
               (@sW, @cert, 'writing', 'SW_' + @certStr, N'Writing Part 1', 1, 4);
+
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading' AND Code = 'R-GRAM')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-GRAM', N'Grammatical accuracy in context');
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading' AND Code = 'R-DET')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Local factual retrieval');
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'listening' AND Code = 'L-DET')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('listening', 'L-DET', N'Listening for detail');
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'writing' AND Code = 'W-ARG')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('writing', 'W-ARG', N'Persuasive argumentation');
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'speaking' AND Code = 'S-DESC')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('speaking', 'S-DESC', N'Descriptive monologue');
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -736,6 +747,12 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             60,
             ExamPurposeDto.Mock));
 
+        // #266: the importer writes only the pool, and an imported item is demo stock (INV-6). A
+        // production paper therefore receives the items but not the bindings - correct, and not what
+        // this test is about. The paper is demo so the batch can bind, which is the case the append and
+        // replace behaviour is defined for.
+        await database.SqlAsync($"UPDATE Exams SET ContentTier = 'demo' WHERE ExamId = {exam.ExamId}");
+
         var q1 = new QuickIngestParsedQuestionDto(
             Index: 1,
             StartLineNumber: 1,
@@ -746,7 +763,9 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             Options:
             [
                 new QuickIngestParsedOptionDto("A", "Option A", true),
-                new QuickIngestParsedOptionDto("B", "Option B", false)
+                new QuickIngestParsedOptionDto("B", "Option B", false),
+                new QuickIngestParsedOptionDto("C", "Option C", false),
+                new QuickIngestParsedOptionDto("D", "Option D", false)
             ],
             Issues: [],
             IsValid: true);
@@ -770,7 +789,9 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             Options:
             [
                 new QuickIngestParsedOptionDto("A", "Option 2A", false),
-                new QuickIngestParsedOptionDto("B", "Option 2B", true)
+                new QuickIngestParsedOptionDto("B", "Option 2B", true),
+                new QuickIngestParsedOptionDto("C", "Option 2C", false),
+                new QuickIngestParsedOptionDto("D", "Option 2D", false)
             ],
             Issues: [],
             IsValid: true);
@@ -804,6 +825,9 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             60,
             ExamPurposeDto.Mock));
 
+        // #266 / INV-6: an imported item is demo stock, so only a demo paper binds it.
+        await database.SqlAsync($"UPDATE Exams SET ContentTier = 'demo' WHERE ExamId = {exam.ExamId}");
+
         var qOld = new QuickIngestParsedQuestionDto(
             Index: 1,
             StartLineNumber: 1,
@@ -814,7 +838,9 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             Options:
             [
                 new QuickIngestParsedOptionDto("A", "Old A", true),
-                new QuickIngestParsedOptionDto("B", "Old B", false)
+                new QuickIngestParsedOptionDto("B", "Old B", false),
+                new QuickIngestParsedOptionDto("C", "Old C", false),
+                new QuickIngestParsedOptionDto("D", "Old D", false)
             ],
             Issues: [],
             IsValid: true);
@@ -835,7 +861,9 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             Options:
             [
                 new QuickIngestParsedOptionDto("A", "New A", false),
-                new QuickIngestParsedOptionDto("B", "New B", true)
+                new QuickIngestParsedOptionDto("B", "New B", true),
+                new QuickIngestParsedOptionDto("C", "New C", false),
+                new QuickIngestParsedOptionDto("D", "New D", false)
             ],
             Issues: [],
             IsValid: true);

@@ -122,7 +122,8 @@ internal static class PoolImportWriter
                 [$"This paper draws {exam.ContentTier} stock and an imported item is demo (INV-6): {written.Count} items were written to the pool but not bound to this paper."]);
         }
 
-        var positions = await PaperPositionsAsync(db, exam.ExamId, sectionId, cancellationToken);
+        var positions = await PaperPositionsAsync(
+            db, exam.ExamId, sectionId, written.Select(w => w.Request.QuestionId).ToList(), cancellationToken);
 
         var bindings = written
             .Where(entry => positions.ContainsKey(entry.Request.QuestionId))
@@ -152,26 +153,31 @@ internal static class PoolImportWriter
     }
 
     /// <summary>
-    /// Each question's 1-based rank within its section, in the order the paper renders them. That
-    /// order is (group display order, question display order) - the same ordering
-    /// <c>AttemptEngine</c> places bindings by, and the reason an unbound paper still renders.
+    /// Each incoming question's 1-based rank within its section.
+    /// <para>
+    /// <b>#266: the positions come from the BATCH, not from the legacy table.</b> This used to read
+    /// <c>Questions</c> and order by (group display order, question display order) - which stopped
+    /// working the moment the importer stopped writing that table, and failed as a silent zero rather
+    /// than an error: every item was written and none bound. The rank is simply the request's own
+    /// order within its group, placed after whatever the section already holds.
+    /// </para>
     /// </summary>
     private static async Task<Dictionary<int, int>> PaperPositionsAsync(
         CompanionDbContext db,
         int examId,
         int sectionId,
+        IReadOnlyList<int> requestKeys,
         CancellationToken cancellationToken)
     {
-        var ordered = await db.Questions.AsNoTracking()
-            .Where(q => q.ExamId == examId && q.SectionId == sectionId)
-            .OrderBy(q => q.Group.DisplayOrder)
-            .ThenBy(q => q.DisplayOrder)
-            .ThenBy(q => q.QuestionId)
-            .Select(q => q.QuestionId)
-            .ToListAsync(cancellationToken);
+        // A pool paper's existing depth, and one past it is where this batch starts.
+        var existing = await db.ExamItems
+            .AsNoTracking()
+            .Where(i => i.ExamId == examId && i.SectionId == sectionId)
+            .Select(i => (int?)i.DisplayOrder)
+            .MaxAsync(cancellationToken) ?? 0;
 
-        return ordered
-            .Select((questionId, index) => (questionId, position: index + 1))
-            .ToDictionary(row => row.questionId, row => row.position);
+        return requestKeys
+            .Select((key, index) => (key, position: existing + index + 1))
+            .ToDictionary(row => row.key, row => row.position);
     }
 }

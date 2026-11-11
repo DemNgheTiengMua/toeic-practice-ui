@@ -293,6 +293,20 @@ public sealed partial class AdminExamService
             throw new ExamNotFoundException(examId);
         }
 
+        // #266: a paper's questions are read from the model that HOLDS them. The importer writes the pool
+        // and nothing else now, so a legacy-only read returns nothing for a freshly imported pack - which
+        // is what the replace-mode test caught. Deciding by the roster's presence is the same rule the
+        // sitting and the Studio use, so all three agree about what a paper contains.
+        var roster = await db.ExamItems.AsNoTracking()
+            .Where(i => i.ExamId == examId)
+            .OrderBy(i => i.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        if (roster.Count > 0)
+        {
+            return await GetPoolExamQuestionsAsync(exam, roster, cancellationToken);
+        }
+
         var groups = await db.QuestionGroups.AsNoTracking()
             .Include(g => g.Section)
             .Include(g => g.QuestionGroups)
@@ -371,6 +385,164 @@ public sealed partial class AdminExamService
                 CefrLevelCode: q.CefrLevel?.Code)).ToList(),
             UnitNumber: g.UnitNumber
         )).ToList();
+
+        var availableSections = await db.Sections.AsNoTracking()
+            .Where(s => s.CertId == exam.CertId)
+            .OrderBy(s => s.DisplayOrder)
+            .Select(s => new AdminSectionOptionDto(
+                s.SectionId,
+                s.Code,
+                s.Name,
+                EnumCodes.Parse<ModalityDto>(s.Modality),
+                s.ExpectedQuestionCount,
+                s.DisplayOrder))
+            .ToListAsync(cancellationToken);
+
+        var availableCategories = await db.QuestionCategories.AsNoTracking()
+            .Where(c => c.CertId == exam.CertId)
+            .OrderBy(c => c.Code)
+            .Select(c => new AdminQuestionCategoryOptionDto(c.CategoryId, c.Code, c.Name))
+            .ToListAsync(cancellationToken);
+
+        return new AdminExamQuestionsDto(
+            exam.ExamId,
+            exam.Name,
+            exam.CertId,
+            exam.Cert.Code,
+            groupDtos,
+            availableSections,
+            availableCategories);
+    }
+
+    /// <summary>
+    /// #266: a paper's questions read from the roster, in the shape the admin reader returns.
+    /// <para>
+    /// One group per stimulus, because that is the bundle the editor draws - and a binding's position is
+    /// the paper's own, so the order is ascending by it rather than by any display-order copy.
+    /// </para>
+    /// </summary>
+    private async Task<AdminExamQuestionsDto> GetPoolExamQuestionsAsync(
+        Exam exam, List<ExamItem> roster, CancellationToken cancellationToken)
+    {
+        var positionIds = roster.Select(i => i.ExamItemId).ToList();
+
+        var answeredIds = new HashSet<int>(await db.AttemptAnswers.AsNoTracking()
+            .Where(a => a.ExamItemId != null && positionIds.Contains(a.ExamItemId.Value))
+            .Select(a => a.ExamItemId!.Value)
+            .Concat(db.FreeResponses.AsNoTracking()
+                .Where(r => r.ExamItemId != null && positionIds.Contains(r.ExamItemId.Value))
+                .Select(r => r.ExamItemId!.Value))
+            .ToListAsync(cancellationToken));
+
+        var sitting = await new AttemptEngine(db).LoadSittingQuestionsAsync(exam.ExamId, cancellationToken);
+        var byPosition = sitting
+            .Where(p => p.ExamItemId.HasValue)
+            .ToDictionary(p => p.ExamItemId!.Value);
+
+        var versions = await db.ItemVersions.AsNoTracking()
+            .Where(v => roster.Select(i => i.ItemVersionId).Contains(v.ItemVersionId))
+            .ToDictionaryAsync(v => v.ItemVersionId, cancellationToken);
+
+        var items = await db.Items.AsNoTracking()
+            .Where(i => roster.Select(r => r.ItemId).Contains(i.ItemId))
+            .Include(i => i.Topic)
+            .ToDictionaryAsync(i => i.ItemId, cancellationToken);
+
+        var sections = await db.Sections.AsNoTracking()
+            .Where(s => roster.Select(r => r.SectionId).Contains(s.SectionId))
+            .Include(s => s.Skill)
+            .ToDictionaryAsync(s => s.SectionId, cancellationToken);
+
+        var groupDtos = roster
+            .GroupBy(i => i.ItemId)
+            .Select(g => g.OrderBy(i => i.DisplayOrder).First())
+            .OrderBy(i => i.DisplayOrder)
+            .Select(head =>
+            {
+                var section = sections[head.SectionId];
+                var item = items[head.ItemId];
+                var stimulus = head.ItemId != 0 && item.StimulusId is int sid
+                    ? db.Stimuli.AsNoTracking().FirstOrDefault(s => s.StimulusId == sid)
+                    : null;
+
+                var members = roster
+                    .Where(i => i.ItemId == head.ItemId)
+                    .OrderBy(i => i.DisplayOrder)
+                    .Select(i =>
+                    {
+                        var version = versions[i.ItemVersionId];
+                        var position = byPosition.GetValueOrDefault(i.ExamItemId);
+                        return new AdminQuestionDto(
+                            i.ExamItemId,
+                            i.ItemId,
+                            i.ExamId,
+                            i.SectionId,
+                            section.Code,
+                            section.Name,
+                            section.SkillId,
+                            section.Skill?.Code ?? section.Code,
+                            version.Stem,
+                            EnumCodes.Parse<QuestionTypeDto>(item.RenderFormat),
+                            version.Explanation,
+                            CategoryId: null,
+                            CategoryName: item.Topic?.Name,
+                            PrepSeconds: version.PrepSeconds,
+                            ResponseSeconds: version.ResponseSeconds,
+                            MinWords: version.MinWords,
+                            MaxWords: version.MaxWords,
+                            Hint: version.Hint,
+                            DisplayOrder: i.DisplayOrder,
+                            UpdatedAt: null,
+                            Options: AttemptEngine.IsProductive(version)
+                                ? []
+                                : AttemptEngine.OptionTexts(version)
+                                    .Select((text, index) =>
+                                    {
+                                        var label = AttemptEngine.OptionLabel(index);
+                                        return new AdminQuestionOptionDto(
+                                            AttemptEngine.PoolOptionId(version.ItemVersionId, index),
+                                            i.ExamItemId,
+                                            label,
+                                            text ?? string.Empty,
+                                            AttemptEngine.IsKeyLabel(version, label),
+                                            RationaleFor(version, label));
+                                    })
+                                    .ToList(),
+                            HasAnswers: answeredIds.Contains(i.ExamItemId),
+                            MaxSelections: version.MaxSelections,
+                            AllowNumber: version.AllowNumber,
+                            AcceptedAnswersJson: version.AcceptedAnswersJson,
+                            RequiredKeywords: version.RequiredKeywords,
+                            SampleAnswerOrImageDesc: version.ReferenceText,
+                            ReferenceKind: version.ReferenceKind is null
+                                ? null
+                                : EnumCodes.Parse<ReferenceKindDto>(version.ReferenceKind),
+                            CefrLevelCode: item.CefrLevel.Code);
+                    })
+                    .ToList();
+
+                return new AdminQuestionGroupDto(
+                    head.ItemId,
+                    head.ExamId,
+                    head.CertId,
+                    head.SectionId,
+                    section.Code,
+                    section.Name,
+                    EnumCodes.Parse<ModalityDto>(section.Modality),
+                    stimulus?.Passage,
+                    MediaUrlHelper.NormalizeMediaUrl(stimulus?.AudioPath),
+                    stimulus?.AudioStartMs,
+                    stimulus?.AudioEndMs,
+                    MediaUrlHelper.NormalizeMediaUrl(stimulus?.ImagePath),
+                    stimulus?.ImageAlt,
+                    stimulus?.Transcript,
+                    stimulus?.PrepSeconds,
+                    stimulus?.ResponseSeconds,
+                    head.DisplayOrder,
+                    members,
+                    UnitNumber: head.UnitNumber);
+            })
+            .ToList();
 
         var availableSections = await db.Sections.AsNoTracking()
             .Where(s => s.CertId == exam.CertId)
