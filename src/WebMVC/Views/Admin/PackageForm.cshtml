@@ -39,7 +39,7 @@
         </div>
         <div class="field">
           <label class="field__label" for="pkg-price">Price (₫)</label>
-          <input class="field__input" id="pkg-price" name="Price" type="number" min="0" step="1000" value="@((long)Model.Price)" required>
+          <input class="field__input" id="pkg-price" name="Price" type="number" min="0" step="0.01" value="@Model.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" required>
           <span class="field__hint" id="pkg-unit-hint">Unit price: @Model.UnitPrice ₫/credit</span>
           <span asp-validation-for="Price" class="text-xs text-danger"></span>
         </div>
