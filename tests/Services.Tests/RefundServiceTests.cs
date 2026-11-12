@@ -49,8 +49,10 @@ public sealed class RefundServiceTests(DatabaseFixture database)
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
 
-    /// <summary>A paid order whose package granted <paramref name="credits"/> credits.</summary>
-    private async Task<int> SeedPaidOrderAsync(int userId, int credits)
+    /// <summary>A paid order whose package granted <paramref name="credits"/> credits, for
+    /// <paramref name="amount"/> dong. The two ceilings read different columns: a credit refund is
+    /// capped by what the order granted, a money refund by what it was paid.</summary>
+    private async Task<int> SeedPaidOrderAsync(int userId, int credits, decimal amount = 199000m)
     {
         var orderCode = $"DH-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
         var packageName = $"refund-pkg-{Guid.NewGuid():N}"[..20];
@@ -61,7 +63,7 @@ public sealed class RefundServiceTests(DatabaseFixture database)
             DECLARE @pkgId INT = (SELECT TOP 1 PackageId FROM Packages WHERE Name = N'{packageName}');
 
             INSERT INTO Orders (OrderCode, PaymentNo, UserId, PackageId, Amount, Status, Gateway, CreatedAt, PaidAt)
-            VALUES ('{orderCode}', {paymentNo}, {userId}, @pkgId, 199000, 'paid', 'mock',
+            VALUES ('{orderCode}', {paymentNo}, {userId}, @pkgId, {amount}, 'paid', 'mock',
                     DATEADD(day, -1, SYSDATETIMEOFFSET()), DATEADD(day, -1, SYSDATETIMEOFFSET()));
             """);
 
@@ -279,22 +281,314 @@ public sealed class RefundServiceTests(DatabaseFixture database)
         Assert.Equal(4, await BalanceAsync(learner));
     }
 
+    // ---- #282: the money half -------------------------------------------------------------
+
     [Fact]
-    public async Task A_money_refund_cannot_be_created_through_this_screen()
+    public async Task A_staff_member_can_request_a_money_refund_against_an_order()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync();
+        var orderId = await SeedPaidOrderAsync(learner, credits: 5, amount: 199000m);
+        var service = CreateService();
+
+        var requested = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "Duplicate bank transfer", OrderId: orderId, Amount: 100000m));
+
+        Assert.Equal(RefundStatusDto.Requested, requested.Status);
+        Assert.Equal(RefundMethodDto.Money, requested.Method);
+        Assert.Equal(100000m, requested.Amount);
+
+        // The method owns the value column: a money refund carries no credit count at all.
+        Assert.Equal(0, requested.CreditCount);
+        Assert.Null(requested.CreditTxnId);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var stored = await db.Refunds.SingleAsync(r => r.RefundId == requested.RefundId);
+        Assert.Null(stored.CreditCount);
+        Assert.Equal(100000m, stored.Amount);
+    }
+
+    [Fact]
+    public async Task A_staff_member_can_request_a_money_refund_with_no_order_behind_it()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync();
+        var service = CreateService(new RefundOptions { OrderlessCeiling = 200 });
+
+        var requested = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "Mentor no-show, paid outside the product", Amount: 200m));
+
+        Assert.Equal(RefundMethodDto.Money, requested.Method);
+        Assert.Null(requested.OrderId);
+        Assert.Null(requested.OrderCode);
+        Assert.Equal(200m, requested.Amount);
+    }
+
+    /// <summary>
+    /// The ceiling counts what the order was <b>paid</b>, not what it granted: a money refund returns
+    /// money, so 199,000 dong is the whole ceiling however many credits the package carried.
+    /// </summary>
+    [Fact]
+    public async Task The_order_ceiling_refuses_more_money_than_the_order_was_paid()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync();
+        var orderId = await SeedPaidOrderAsync(learner, credits: 50, amount: 199000m);
+        var service = CreateService();
+
+        await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "First partial", OrderId: orderId, Amount: 150000m));
+
+        // 150,000 + 60,000 is over the 199,000 the order was paid.
+        var over = await Assert.ThrowsAsync<RefundException>(() =>
+            service.RequestRefundAsync(
+                staff,
+                new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                    Reason: "Second partial", OrderId: orderId, Amount: 60000m)));
+
+        Assert.Equal(ApiError.Codes.RefundExceedsOrderCeiling, over.Code);
+
+        // The remaining 49,000 is still payable.
+        var fits = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "Remaining", OrderId: orderId, Amount: 49000m));
+        Assert.Equal(RefundStatusDto.Requested, fits.Status);
+    }
+
+    /// <summary>
+    /// The two methods count against their own order ceiling and never against each other's: a credit
+    /// refund of 5 against a 199,000-dong order does not spend a dong of the money ceiling, and the
+    /// reverse is equally true. That is why the counting shape is shared but the column is the
+    /// method's own - one definition of "how much of this order is already refunded" per unit.
+    /// </summary>
+    [Fact]
+    public async Task The_credit_ceiling_and_the_money_ceiling_do_not_consume_each_other()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync();
+        var orderId = await SeedPaidOrderAsync(learner, credits: 5, amount: 199000m);
+        var service = CreateService();
+
+        await service.RequestCreditRefundAsync(staff, learner, creditCount: 5, reason: "Credits back", orderId: orderId);
+
+        // The credits are all spoken for, but not one dong of the paid amount is.
+        var money = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "And the money", OrderId: orderId, Amount: 199000m));
+
+        Assert.Equal(RefundStatusDto.Requested, money.Status);
+    }
+
+    [Fact]
+    public async Task The_orderless_ceiling_refuses_a_money_refund_above_the_configured_limit()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync();
+        var service = CreateService(new RefundOptions { OrderlessCeiling = 200 });
+
+        var over = await Assert.ThrowsAsync<RefundException>(() =>
+            service.RequestRefundAsync(
+                staff,
+                new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                    Reason: "No order, too much", Amount: 201m)));
+
+        Assert.Equal(ApiError.Codes.RefundExceedsCeiling, over.Code);
+        Assert.NotEqual(ApiError.Codes.RefundExceedsOrderCeiling, over.Code);
+    }
+
+    [Fact]
+    public async Task Approving_a_money_refund_changes_no_credit_balance()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync();
+        var orderId = await SeedPaidOrderAsync(learner, credits: 5, amount: 199000m);
+        var service = CreateService();
+
+        var requested = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "Paid by bank transfer", OrderId: orderId, Amount: 50000m));
+
+        Assert.Equal(0, await BalanceAsync(learner));
+
+        var approved = await service.ApproveRefundAsync(staff, requested.RefundId);
+
+        Assert.Equal(RefundStatusDto.Approved, approved.Status);
+        Assert.Equal(staff, approved.DecidedByUserId);
+        Assert.NotNull(approved.DecidedAt);
+
+        // Money is paid outside the product, so approval moves nothing: no ledger row, no balance.
+        Assert.Null(approved.CreditTxnId);
+        Assert.Equal(0, await BalanceAsync(learner));
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        Assert.False(await db.CreditTransactions.AnyAsync(t => t.UserId == learner));
+    }
+
+    [Fact]
+    public async Task Settling_an_approved_money_refund_records_the_accountant_and_the_time()
+    {
+        var staff = await SeedStaffAsync();
+        var accountant = await SeedStaffAsync("admin");
+        var learner = await SeedLearnerAsync();
+        var service = CreateService();
+
+        var requested = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "Refund promised in the complaint reply", Amount: 100m));
+        await service.ApproveRefundAsync(staff, requested.RefundId);
+
+        var settledAt = _clock.GetUtcNow();
+        var settled = await service.SettleRefundAsync(accountant, requested.RefundId);
+
+        Assert.Equal(RefundStatusDto.Settled, settled.Status);
+        Assert.Equal(accountant, settled.SettledByUserId);
+        Assert.Equal("Staff Member", settled.SettledByUserName);
+        Assert.Equal(settledAt, settled.SettledAt);
+
+        // Settlement is a stamp, not a movement: the balance is still untouched.
+        Assert.Equal(0, await BalanceAsync(learner));
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var stored = await db.Refunds.SingleAsync(r => r.RefundId == requested.RefundId);
+        Assert.Equal("settled", stored.Status);
+        Assert.Equal(accountant, stored.SettledByUserId);
+        Assert.NotNull(stored.SettledAt);
+    }
+
+    [Fact]
+    public async Task A_credit_refund_cannot_be_settled()
     {
         var staff = await SeedStaffAsync();
         var learner = await SeedLearnerAsync();
         var service = CreateService();
 
-        var refusal = await Assert.ThrowsAsync<RefundException>(() =>
-            service.RequestRefundAsync(
-                staff,
-                new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 5, Reason: "Bank transfer")));
+        var requested = await service.RequestCreditRefundAsync(
+            staff, learner, creditCount: 4, reason: "Credits, not money");
+        await service.ApproveRefundAsync(staff, requested.RefundId);
 
-        Assert.Equal(ApiError.Codes.RefundMoneyNotSupported, refusal.Code);
+        var refusal = await Assert.ThrowsAsync<RefundException>(() =>
+            service.SettleRefundAsync(staff, requested.RefundId));
+
+        // A readable code, not the CHECK constraint's 500.
+        Assert.Equal(ApiError.Codes.RefundCreditCannotSettle, refusal.Code);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        Assert.False(await db.Refunds.AnyAsync(r => r.UserId == learner));
+        var stored = await db.Refunds.SingleAsync(r => r.RefundId == requested.RefundId);
+        Assert.Equal("approved", stored.Status);
+        Assert.Null(stored.SettledAt);
+    }
+
+    [Fact]
+    public async Task A_money_refund_cannot_be_settled_before_it_is_approved()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync();
+        var service = CreateService();
+
+        var requested = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "Not decided yet", Amount: 50m));
+
+        var refusal = await Assert.ThrowsAsync<RefundException>(() =>
+            service.SettleRefundAsync(staff, requested.RefundId));
+
+        Assert.Equal(ApiError.Codes.RefundNotApproved, refusal.Code);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var stored = await db.Refunds.SingleAsync(r => r.RefundId == requested.RefundId);
+        Assert.Equal("requested", stored.Status);
+        Assert.Null(stored.SettledAt);
+    }
+
+    [Fact]
+    public async Task A_money_refund_must_carry_a_positive_amount()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync();
+        var service = CreateService();
+
+        var noAmount = await Assert.ThrowsAsync<RefundException>(() =>
+            service.RequestRefundAsync(
+                staff,
+                new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                    Reason: "Nothing at all", Amount: null)));
+        Assert.Equal(ApiError.Codes.RefundAmountInvalid, noAmount.Code);
+
+        var zero = await Assert.ThrowsAsync<RefundException>(() =>
+            service.RequestRefundAsync(
+                staff,
+                new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                    Reason: "Zero dong", Amount: 0m)));
+        Assert.Equal(ApiError.Codes.RefundAmountInvalid, zero.Code);
+
+        // A third decimal place is refused, not silently rounded: the stored amount must be the amount
+        // the requester stated.
+        var tooPrecise = await Assert.ThrowsAsync<RefundException>(() =>
+            service.RequestRefundAsync(
+                staff,
+                new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                    Reason: "Sub-dong amount", Amount: 1234.567m)));
+        Assert.Equal(ApiError.Codes.RefundAmountInvalid, tooPrecise.Code);
+    }
+
+    [Fact]
+    public async Task The_list_carries_the_money_row_a_screen_needs()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync();
+        var orderId = await SeedPaidOrderAsync(learner, credits: 5, amount: 199000m);
+        var service = CreateService();
+
+        var requested = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "Accounting queue", OrderId: orderId, Amount: 75000m));
+
+        var list = await service.GetAdminRefundsAsync(q: "refund learner");
+        var row = Assert.Single(list.Refunds, r => r.RefundId == requested.RefundId);
+
+        Assert.Equal(RefundMethodDto.Money, row.Method);
+        Assert.Equal(75000m, row.Amount);
+        Assert.Equal("Refund Learner", row.LearnerName);
+        Assert.StartsWith("learner-", row.LearnerEmail);
+        Assert.NotNull(row.OrderCode);
+        Assert.Null(row.SettledAt);
+    }
+
+    /// <summary>
+    /// The list filters by status, and <c>settled</c> is a status a user now reaches (#282). Scoped to
+    /// this test's own learner so the shared database's other rows can neither satisfy nor spoil it.
+    /// </summary>
+    [Fact]
+    public async Task The_list_filters_by_status_including_settled()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Settled Filter Learner");
+        var service = CreateService();
+
+        var requested = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "To be settled", Amount: 100m));
+        await service.ApproveRefundAsync(staff, requested.RefundId);
+        await service.SettleRefundAsync(staff, requested.RefundId);
+
+        var settled = await service.GetAdminRefundsAsync(q: "settled filter learner", status: "settled");
+        Assert.Single(settled.Refunds, r => r.RefundId == requested.RefundId);
+
+        var approved = await service.GetAdminRefundsAsync(q: "settled filter learner", status: "approved");
+        Assert.DoesNotContain(approved.Refunds, r => r.RefundId == requested.RefundId);
     }
 
     [Fact]

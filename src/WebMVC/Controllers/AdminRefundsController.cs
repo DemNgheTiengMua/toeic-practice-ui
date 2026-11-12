@@ -6,8 +6,8 @@ using WebMVC.Models;
 namespace WebMVC.Controllers;
 
 /// <summary>
-/// #281: the refund screens. <see cref="Permissions.SupportTriage"/> is the gate because a refund is
-/// support work; the admin-only namespace governs the system, not a learner's money.
+/// #281/#282: the refund screens. <see cref="Permissions.SupportTriage"/> is the gate because a refund
+/// is support work; the admin-only namespace governs the system, not a learner's money.
 /// </summary>
 [Authorize(Policy = Permissions.SupportTriage)]
 [Route("admin/refunds")]
@@ -67,7 +67,9 @@ public sealed class AdminRefundsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
         [FromForm] int userId,
+        [FromForm] string? method,
         [FromForm] int creditCount,
+        [FromForm] decimal? amount,
         [FromForm] string? reason,
         [FromForm] int? orderId,
         CancellationToken cancellationToken = default)
@@ -84,7 +86,19 @@ public sealed class AdminRefundsController(
             return RedirectToAction(nameof(Index));
         }
 
-        if (creditCount <= 0)
+        // The form's select carries a wire code; anything unreadable is refused rather than guessed,
+        // because guessing "credit" for a money refund would post a value nobody asked for.
+        var isMoney = string.Equals(method, "money", StringComparison.OrdinalIgnoreCase);
+
+        if (isMoney)
+        {
+            if (amount is not > 0m)
+            {
+                TempData["Error"] = "A money refund must return more than zero dong.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+        else if (creditCount <= 0)
         {
             TempData["Error"] = "A credit refund must return at least one credit.";
             return RedirectToAction(nameof(Index));
@@ -92,9 +106,13 @@ public sealed class AdminRefundsController(
 
         try
         {
-            // The method is always Credit here: a money refund is #282, and the API refuses it.
-            var request = new RequestRefundRequest(userId, RefundMethodDto.Credit, creditCount, reason.Trim(),
-                orderId is > 0 ? orderId : null);
+            var request = new RequestRefundRequest(
+                userId,
+                isMoney ? RefundMethodDto.Money : RefundMethodDto.Credit,
+                isMoney ? 0 : creditCount,
+                reason.Trim(),
+                orderId is > 0 ? orderId : null,
+                Amount: isMoney ? amount : null);
             var created = await api.RequestAdminRefundAsync(request, cancellationToken);
             TempData["Success"] = $"Refund #R-{created.RefundId} recorded and waiting for a decision.";
             return RedirectToAction(nameof(Detail), new { id = created.RefundId });
@@ -119,8 +137,10 @@ public sealed class AdminRefundsController(
     {
         try
         {
-            await api.ApproveAdminRefundAsync(id, cancellationToken);
-            TempData["Success"] = $"Refund #R-{id} approved and the credits are in the learner's balance.";
+            var approved = await api.ApproveAdminRefundAsync(id, cancellationToken);
+            TempData["Success"] = approved.Method == RefundMethodDto.Money
+                ? $"Refund #R-{id} approved. Nothing is paid yet: an accountant settles it when the transfer is made."
+                : $"Refund #R-{id} approved and the credits are in the learner's balance.";
         }
         catch (ApiException ex)
         {
@@ -163,6 +183,35 @@ public sealed class AdminRefundsController(
         {
             logger.LogError(ex, "Failed to reject refund {RefundId}", id);
             TempData["Error"] = "Could not reject the refund. Please try again.";
+        }
+
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    /// <summary>
+    /// #282: the accountant's act. It records that the transfer happened - the actor and the moment -
+    /// and moves nothing. This is the step the dashboard's net revenue waits for (ADR-0014).
+    /// </summary>
+    [HttpPost("{id:int}/settle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Settle(int id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var settled = await api.SettleAdminRefundAsync(id, cancellationToken);
+            TempData["Success"] = settled.Method == RefundMethodDto.Money
+                ? $"Refund #R-{id} settled. {CurrencyFormatter.FormatVnd(settled.Amount)} now counts against revenue."
+                : $"Refund #R-{id} settled.";
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to settle refund: {Code}", ex.Code);
+            TempData["Error"] = ex.Detail ?? ex.Title ?? ex.Message;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to settle refund {RefundId}", id);
+            TempData["Error"] = "Could not settle the refund. Please try again.";
         }
 
         return RedirectToAction(nameof(Detail), new { id });

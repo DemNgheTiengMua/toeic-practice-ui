@@ -1,9 +1,11 @@
-
 namespace Contracts;
 
 /// <summary>
 /// The detail screen's payload. <paramref name="GrantedCredits"/> and <paramref name="CreditTxnId"/>
-/// are null until approval, which is the difference the detail page renders.
+/// are null until a credit refund is approved, which is the difference the detail page renders.
+/// <paramref name="Amount"/> is the money a money refund returns, and
+/// <paramref name="SettledByUserId"/>/<paramref name="SettledAt"/> stay null until an accountant
+/// records that the transfer happened (#282).
 /// </summary>
 public sealed record AdminRefundDetailDto(
     int RefundId,
@@ -24,4 +26,9 @@ public sealed record AdminRefundDetailDto(
     string? DecidedByUserName,
     DateTimeOffset? DecidedAt,
     int? CreditTxnId,
-    int? GrantedCredits);
+    int? GrantedCredits,
+    decimal Amount = 0m,
+    decimal? OrderPaidAmount = null,
+    int? SettledByUserId = null,
+    string? SettledByUserName = null,
+    DateTimeOffset? SettledAt = null);

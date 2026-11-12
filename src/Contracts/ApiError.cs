@@ -146,9 +146,17 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         /// <summary>#281: requested, approved or rejected already - a decided refund is final.</summary>
         public const string RefundAlreadyDecided = "REFUND_ALREADY_DECIDED";
 
-        /// <summary>#281: a money refund is refused until #282 adds it. Credits are the only method
-        /// this screen can create.</summary>
-        public const string RefundMoneyNotSupported = "REFUND_MONEY_NOT_SUPPORTED";
+        /// <summary>#282: a money refund of zero, or one that names an amount in the wrong column.
+        /// <c>CK_Refunds_MethodOwnsAmount</c> would refuse the row; this refusal is readable.</summary>
+        public const string RefundAmountInvalid = "REFUND_AMOUNT_INVALID";
+
+        /// <summary>#282: a credit refund cannot be settled. The ledger is where its value landed, so
+        /// there is no transfer for an accountant to confirm.</summary>
+        public const string RefundCreditCannotSettle = "REFUND_CREDIT_CANNOT_SETTLE";
+
+        /// <summary>#282: only an approved refund can be settled. Approval is the decision; settlement
+        /// is the accountant saying the transfer happened.</summary>
+        public const string RefundNotApproved = "REFUND_NOT_APPROVED";
 
         /// <summary>#281: the order or complaint a refund names is not the learner's.</summary>
         public const string RefundInvalidSubject = "REFUND_INVALID_SUBJECT";

@@ -3,12 +3,13 @@ using Contracts;
 namespace Services;
 
 /// <summary>
-/// #281: the credit half of refunds. A request is a record; approval is the moment value moves.
+/// #281/#282: both halves of refunds. A request is a record; approval is the moment a credit refund
+/// moves value, and settlement is the moment a money refund's transfer has happened.
 /// <para>
 /// There is no delete and no reversal: the ledger is append-only, so a mistake is corrected by an
-/// opposing entry rather than by removing the refund that made it. A money refund is not accepted
-/// here yet (#282), and refusing it in the service - rather than hiding it in the screen - is what
-/// makes the refusal testable.
+/// opposing entry rather than by removing the refund that made it. A credit refund terminates at
+/// <c>approved</c>; only a money refund can reach <c>settled</c>, because only money leaves the
+/// building by a transfer someone outside the product performs.
 /// </para>
 /// </summary>
 public interface IRefundService
@@ -24,14 +25,14 @@ public interface IRefundService
         int refundId,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Records a refund request. Posts nothing: credits move on approval.</summary>
+    /// <summary>Records a refund request of either method. Posts nothing: a credit refund's credits
+    /// move on approval, and a money refund moves nothing here at all.</summary>
     Task<AdminRefundDetailDto> RequestRefundAsync(
         int staffUserId,
         RequestRefundRequest request,
         CancellationToken cancellationToken = default);
 
-    /// <summary>The credit-only shorthand the admin screen uses. A money refund must go through
-    /// <see cref="RequestRefundAsync"/> so it meets the refusal rather than a missing method.</summary>
+    /// <summary>The credit-only shorthand the admin screen uses.</summary>
     Task<AdminRefundDetailDto> RequestCreditRefundAsync(
         int staffUserId,
         int learnerUserId,
@@ -41,7 +42,8 @@ public interface IRefundService
         int? complaintId = null,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Approves and, for a credit refund, posts the credits in the same transaction.</summary>
+    /// <summary>Approves and, for a credit refund only, posts the credits in the same transaction.
+    /// A money refund's approval moves nothing.</summary>
     Task<AdminRefundDetailDto> ApproveRefundAsync(
         int staffUserId,
         int refundId,
@@ -52,5 +54,15 @@ public interface IRefundService
         int staffUserId,
         int refundId,
         string reason,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #282: the accountant records that a money refund was actually paid, stamping who and when. This
+    /// is the moment money counts against revenue (ADR-0014). Refuses a credit refund, and refuses a
+    /// money refund that has not been approved.
+    /// </summary>
+    Task<AdminRefundDetailDto> SettleRefundAsync(
+        int staffUserId,
+        int refundId,
         CancellationToken cancellationToken = default);
 }
