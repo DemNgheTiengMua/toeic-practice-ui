@@ -1,0 +1,148 @@
+# #287: bring the whole product up on a machine that has never had SQL Server.
+#
+#   cp .env.docker.example .env.docker     # then fill in Jwt__SigningKey (see the file)
+#   docker compose up -d --build
+#   open http://localhost:5000             # the web app
+#   open http://localhost:5001/scalar      # the API documentation
+#
+# Full operator instructions — URLs, switching the payment gateway to the real one, applying a
+# schema change, switching the OpenAPI surface off — are in docs/DOCKER.md.
+#
+# Every service reads one gitignored file, .env.docker, through `env_file`. There is no second place
+# for a knob, so a value cannot be set in two files that disagree, and no command needs a flag:
+# `docker compose up` works as written. Variables are deliberately not interpolated with ${...} here,
+# because compose would then read a different file (.env) at parse time than the containers read.
+
+name: extra-efficiency
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      ACCEPT_EULA: "Y"
+      # SQL Server refuses to start without MSSQL_SA_PASSWORD meeting its password policy; it comes
+      # from .env.docker with the rest of the credentials.
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      # $$ defers to the container's shell: compose must not interpolate a secret at parse time.
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' -b"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  # One-shot loader: create the database, load the schema, load the demo data, exit 0. Both apps
+  # wait for that exit, so they never boot against a database with no tables.
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    environment:
+      DB_NAME: ExtraEfficiency
+    volumes:
+      # Read-only, and from the host rather than baked into an image, so a schema edit is picked up
+      # by the next fresh load without rebuilding anything.
+      - ./docs:/sql:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -euo pipefail
+        sql() { /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P "$$MSSQL_SA_PASSWORD" -C -I -b -f 65001 "$$@"; }
+        count() { sql -h -1 -W "$$@" | tr -d '[:space:]'; }
+
+        # The database is loaded when the schema's first table is there. Testing for the table rather
+        # than for the database is deliberate: a run that died between CREATE DATABASE and the schema
+        # leaves an empty catalog behind, and treating that as "loaded" would serve an app with no
+        # tables until someone ran `down -v` and could not explain why.
+        if [ "$$(count -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name = N'$$DB_NAME'")" != "0" ] \
+           && [ "$$(count -d "$$DB_NAME" -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.tables WHERE name = N'DerivedFactOwners'")" = "1" ]; then
+          echo "db-init: $$DB_NAME is already loaded - not touching it."
+          echo "db-init: to apply a schema change, discard the volume: docker compose down -v"
+          exit 0
+        fi
+
+        if [ "$$(count -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name = N'$$DB_NAME'")" != "0" ]; then
+          echo "db-init: $$DB_NAME exists but has no schema - recreating it."
+          # Two calls, both against master: after SET SINGLE_USER the batch's own context becomes the
+          # single connection, and a DROP on the next statement then fails with "not in a state that
+          # allows access checks".
+          sql -d master -Q "ALTER DATABASE [$$DB_NAME] SET SINGLE_USER WITH ROLLBACK IMMEDIATE"
+          sql -d master -Q "DROP DATABASE [$$DB_NAME]"
+        fi
+
+        echo "db-init: creating $$DB_NAME"
+        if ! sql -Q "CREATE DATABASE [$$DB_NAME]"; then
+          # The only way to land here with a clean database volume is a drop that was interrupted
+          # (Ctrl-C, or `docker compose down` mid-load): SQL Server keeps the .mdf but forgets the
+          # catalog entry, so CREATE finds the files and refuses. Say the way out rather than
+          # leaving Msg 1802 to be decoded.
+          echo "db-init: could not create $$DB_NAME. If a previous load was interrupted, discard the"
+          echo "db-init: database volume and start again:  docker compose down -v && docker compose up -d"
+          exit 1
+        fi
+        echo "db-init: loading schema"
+        sql -d "$$DB_NAME" -i /sql/database-schema.sql
+        echo "db-init: loading demo seed"
+        sql -d "$$DB_NAME" -i /sql/seed-demo.sql
+        echo "db-init: done"
+
+  api:
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    env_file:
+      - .env.docker
+    environment:
+      ASPNETCORE_URLS: http://+:5001
+    ports:
+      - "5001:5001"
+    volumes:
+      # The only writable media path in the product. Named, so `docker compose down` keeps it and a
+      # redeploy does not lose a learner's recording. `down -v` discards it with the database.
+      - api-audio:/app/App_Data/audio
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5001/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  mvc:
+    build:
+      context: .
+      target: mvc
+    restart: unless-stopped
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      # Not required to boot, but the site calls the API on the first page load and on every cookie
+      # re-validation, so starting it before the API is up only produces a red error page.
+      api:
+        condition: service_healthy
+    # No env_file: this app has no connection string, no DbContext and no gateway. It needs one
+    # setting, and it gets it below. Nothing else from .env.docker belongs in this container.
+    environment:
+      ASPNETCORE_URLS: http://+:5000
+      # The API is reached on the compose network, never from the browser (ADR-0002).
+      ApiBaseUrl: http://api:5001
+      Https__RedirectHttps: "false"
+    ports:
+      - "5000:5000"
+
+volumes:
+  # SQL Server's data directory. Discarding this is how a schema change is applied.
+  mssql-data:
+  # Uploaded audio and recordings. Survives a restart and a redeploy.
+  api-audio:

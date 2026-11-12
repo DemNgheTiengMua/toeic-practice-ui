@@ -52,6 +52,8 @@ graphify-out/
 .env
 .env.*
 !.env.example
+# #287: compose reads .env.docker; the committed template is .env.docker.example only.
+!.env.docker.example
 # Some tooling writes the key file as `env` (no dot); it holds the same live keys
 # as .env and must never be committed. Tracked template: .env.example only.
 /env

@@ -232,6 +232,7 @@ dotnet run --project src/WebAPI                # http://localhost:5001
 dotnet run --project src/WebMVC                # http://localhost:5000/certificates
 scripts/seed-manual-test.sh fresh              # reset + seed + start, payment=mock, ai=fake
 scripts/crawl-env.sh fresh                     # disposable crawl env: own DB, mock payment, fake AI
+docker compose up -d --build                   # whole stack in containers, no SQL Server install
 ```
 
 Demo accounts (all `Demo1234!`): `admin@demo.local`, `learner@demo.local`, `learner.fresh@demo.local`.
@@ -239,6 +240,10 @@ Full manual-test reference — accounts, seeded exams, credit packages, mock-gat
 lives in `docs/MANUAL-TEST-CREDENTIALS.md`. Use `scripts/seed-manual-test.sh` rather than bare
 `dotnet run`: `appsettings.json` selects the **real** payOS gateway with placeholder credentials,
 so an unparameterised run returns 500 on checkout.
+
+**No SQL Server on the machine?** `docs/DOCKER.md` has the container route: what comes up, the two
+URLs, how to switch the gateway to the real one, how to apply a schema change, and how to switch the
+OpenAPI surface (and its credential-free demo sign-in) off.
 
 ### Test run discipline — filtered during work, full suite twice at the end
 

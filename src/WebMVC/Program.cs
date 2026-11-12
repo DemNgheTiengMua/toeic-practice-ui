@@ -175,7 +175,13 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// #287: the container publishes plain HTTP (no certificate is baked into an image), where a 307 to
+// HTTPS is an unreachable port. Default stays true, so a non-container run redirects exactly as
+// before; docker-compose.yml sets Https:RedirectHttps=false.
+if (builder.Configuration.GetValue("Https:RedirectHttps", true))
+{
+    app.UseHttpsRedirection();
+}
 
 // When the API answers a forwarded call with AUTH_LOCKED / AUTH_REQUIRED the cookie's JWT is
 // dead even though the cookie itself still looks valid: drop the cookie and send the browser
