@@ -451,6 +451,9 @@ public partial class CompanionDbContext
                 tb.HasTrigger("trg_ExamItems_ProductionBindsProduction");
                 // #201 / ADM-03: exam assembly is structure, so triage cannot write it.
                 tb.HasTrigger("trg_ExamItems_TriageCannotWrite");
+                // #269: the speaking/writing-practice one-modality rule moved off QuestionGroups and now
+                // fires on the roster, so this table carries one more trigger than it used to.
+                tb.HasTrigger("trg_ExamItems_SkillPracticeOneModality");
             });
 
             entity.Property(e => e.Modality).HasMaxLength(10).IsUnicode(false);
