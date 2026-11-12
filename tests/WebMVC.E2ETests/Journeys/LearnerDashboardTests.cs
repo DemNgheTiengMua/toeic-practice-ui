@@ -17,6 +17,7 @@ public class LearnerDashboardTests : PlaywrightTestBase
     [Test]
     public async Task Should_Render_The_Three_Dashboard_Blocks_The_Dashboard_Has_Now()
     {
+        await ArrangeSkillMeasurementAsync();
         await SignInAsync("learner@demo.local", "Demo1234!");
 
         await Page.GotoAsync($"{BaseUrl}/Dashboard");
@@ -107,5 +108,46 @@ public class LearnerDashboardTests : PlaywrightTestBase
             """;
         command.Parameters.AddWithValue("@email", email);
         return Convert.ToInt32(await command.ExecuteScalarAsync());
+    }
+    /// <summary>
+    /// #278: writes the per-skill vector a placement measurement consists of, for the demo learner, when
+    /// the seed ships none.
+    /// <para>
+    /// scripts/dump-seed.ps1 excludes LearnerSkillStates and AttemptSkillScores with the stated reason that
+    /// "shipping a placement would assert a measurement nobody took", and DemoSeedTests asserts that
+    /// omission. A fresh seed therefore has a graded attempt claiming band B1 with no skill rows behind it,
+    /// and the dashboard correctly renders its ONE-block unplaced branch - the page is right about what it
+    /// was told, and the fixture had nothing to show it.
+    /// </para>
+    /// <para>
+    /// Idempotent, so a re-run does not pile up duplicates. The values are what LearnerSkillStates
+    /// requires: CefrLevel on the authored scale, ContinuousCoordinate inside 1.00-6.99 (CK_LSS_Coordinate),
+    /// and a Source from the closed vocabulary (CK_LSS_Source) - at the same B1 the seeded attempt claims,
+    /// so the goal row and the skill vector finally agree.
+    /// </para>
+    /// </summary>
+    private static async Task ArrangeSkillMeasurementAsync()
+    {
+        await using var connection = new Microsoft.Data.SqlClient.SqlConnection(AppDatabaseConnectionString());
+        await connection.OpenAsync();
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = @"
+            DECLARE @learner INT = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local');
+            DECLARE @cert INT = (SELECT ActiveCertId FROM Users WHERE UserId = @learner);
+            DECLARE @m DATETIMEOFFSET = SYSDATETIMEOFFSET();
+
+            INSERT INTO LearnerSkillStates (UserId, CertId, SkillId, CefrLevel, PositionInBand,
+                                            ContinuousCoordinate, Source, MeasuredAt, ExpiresAt,
+                                            WrittenByService, ProjectionVersion)
+            SELECT @learner, k.CertId, k.SkillId, 'B1', 55, CONVERT(DECIMAL(3,2), 3.55),
+                   'placement', @m, DATEADD(DAY, 90, @m),
+                   'SkillStateWriter', 1
+            FROM Skills k
+            WHERE k.CertId = @cert
+              AND NOT EXISTS (SELECT 1 FROM LearnerSkillStates s
+                               WHERE s.UserId = @learner AND s.SkillId = k.SkillId);";
+
+        await command.ExecuteNonQueryAsync();
     }
 }
