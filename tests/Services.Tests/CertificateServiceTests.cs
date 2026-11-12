@@ -135,7 +135,10 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // stamp cleared and its already-counted answers still in place.
         // #274: one more, 67 -> 68 - trg_AttemptStageBundles_SingleWriter, the tenth covered derived
         // fact: the paper a sitting was served has exactly one writer.
-        Assert.Equal(68, triggerCount);
+        // #280: two more, 68 -> 70 - trg_Refunds_AppendOnly (a refund is a record, never edited away) and
+        // trg_Refunds_CreditTxnIsRefundCredit (a refund may only point at a refund_credit row of its own
+        // size, so a credit refund cannot quietly cite an unrelated ledger entry).
+        Assert.Equal(70, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]

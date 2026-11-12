@@ -11,8 +11,14 @@ public sealed class PackageServiceTests(DatabaseFixture database)
         await database.SqlAsync("""
             ALTER TABLE CreditTransactions DISABLE TRIGGER ALL;
             ALTER TABLE Orders DISABLE TRIGGER ALL;
+            -- #280: a refund is append-only and refuses a delete, which is the invariant, not an obstacle.
+            -- The fixture resets the catalog between tests, so the guard is switched off for the reset only
+            -- and restored in the same statement batch.
+            ALTER TABLE Refunds DISABLE TRIGGER ALL;
             ALTER TABLE CreditTransactions NOCHECK CONSTRAINT ALL;
             DELETE FROM PaymentEvents;
+            -- Refunds references both Orders and Complaints, so it is emptied before either.
+            DELETE FROM Refunds;
             DELETE FROM Complaints;
             DELETE FROM CreditTransactions;
             DELETE FROM Orders;
@@ -20,6 +26,7 @@ public sealed class PackageServiceTests(DatabaseFixture database)
             ALTER TABLE CreditTransactions CHECK CONSTRAINT ALL;
             ALTER TABLE CreditTransactions ENABLE TRIGGER ALL;
             ALTER TABLE Orders ENABLE TRIGGER ALL;
+            ALTER TABLE Refunds ENABLE TRIGGER ALL;
             """);
     }
 
