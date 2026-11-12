@@ -3,6 +3,11 @@
     ViewData["Description"] = "This page needs a different role.";
 }
 
+@* The sentence here used to read "requires administrator privileges" for every refusal, so an admin
+   who opened a learner page was told to sign in as an administrator while already signed in as one.
+   The page cannot tell which policy refused it: ASP.NET redirects here from any failed authorization
+   and passes no reason. So it says what is true in both directions - the page is not yours on this
+   account - rather than guessing a direction and being wrong half the time. *@
 <div class="container" style="padding-top: var(--space-6); padding-bottom: var(--space-8); max-width: 560px">
   <div class="card">
     <div class="card__body">
@@ -10,7 +15,9 @@
         <div class="state-block__icon state-block__icon--danger" aria-hidden="true">!</div>
         <div class="state-block__title">Access restricted</div>
         <p class="state-block__desc">
-          This area requires administrator privileges. If you believe this is an error, try signing out and signing in with an administrative account.
+          This page is not available to your account. It may belong to a different kind of user, or to a
+          part of the product your role does not cover. If you believe this is an error, sign out and
+          sign in with the account that owns this area.
         </p>
         <a class="btn btn--primary" href="/">Return to home</a>
       </div>
