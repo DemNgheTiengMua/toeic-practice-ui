@@ -627,4 +627,107 @@ public sealed class RefundServiceTests(DatabaseFixture database)
         Assert.NotNull(detail.DecidedAt);
         Assert.Equal(2, detail.GrantedCredits);
     }
+
+    /// <summary>
+    /// #283: <b>the export selects on settlement date and changes nothing.</b> The refund is requested
+    /// well before the range and settled inside it, so a range that selected on the request date would
+    /// find nothing and this test would fail on an empty result rather than on a wrong column.
+    /// </summary>
+    [Fact]
+    public async Task The_export_selects_money_refunds_settled_inside_the_range_and_leaves_them_alone()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Export Learner");
+        var orderId = await SeedPaidOrderAsync(learner, credits: 5, amount: 199000m);
+        var service = CreateService();
+
+        var requested = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "Chuyển khoản trùng", OrderId: orderId, Amount: 75000m));
+
+        // Requested a month before the window it is paid in: the two dates must disagree for this test
+        // to say anything about which one the filter reads.
+        _clock.Advance(TimeSpan.FromDays(30));
+        await service.ApproveRefundAsync(staff, requested.RefundId);
+
+        var settledAt = _clock.GetUtcNow();
+        await service.SettleRefundAsync(staff, requested.RefundId);
+
+        // The reporting day is read on the accountant's calendar (UTC+7), not the server's UTC date: near
+        // midnight those two disagree, and the range must be built the way the service cuts it.
+        var local = settledAt.ToOffset(ReportingPeriod.UtcOffset);
+        var day = DateOnly.FromDateTime(local.DateTime);
+        var rows = await service.GetRefundExportRowsAsync(day, day);
+
+        var row = Assert.Single(rows, r => r.RefundId == requested.RefundId);
+        Assert.Equal(RefundMethodDto.Money, row.Method);
+        Assert.Equal(75000m, row.Amount);
+        Assert.Null(row.CreditCount);
+        Assert.Equal("Export Learner", row.LearnerName);
+        Assert.Equal("Chuyển khoản trùng", row.Reason);
+        Assert.Equal("Staff Member", row.DecidingAdmin);
+        Assert.NotNull(row.OrderCode);
+        Assert.Equal(day, row.SettledOn);
+
+        // The request date is the earlier one, on the same calendar as the settlement.
+        Assert.Equal(DateOnly.FromDateTime(local.AddDays(-30).DateTime), row.RequestedOn);
+
+        // Exporting again returns the same rows, and the first export did not settle, approve or
+        // otherwise touch the refund: an export is a read.
+        var again = await service.GetRefundExportRowsAsync(day, day);
+        Assert.Equal(rows.Count, again.Count);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var stored = await db.Refunds.SingleAsync(r => r.RefundId == requested.RefundId);
+        Assert.Equal("settled", stored.Status);
+        Assert.Equal(settledAt, stored.SettledAt);
+    }
+
+    /// <summary>
+    /// #283: a row is only exported once the money has moved, and a credit refund never is. Both are
+    /// money facts, so neither can be relaxed to "approved" without the batch paying twice.
+    /// </summary>
+    [Fact]
+    public async Task The_export_carries_only_settled_money_refunds()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Not Settled Learner");
+        var service = CreateService();
+
+        var approvedOnly = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "Chưa chuyển khoản", Amount: 100m));
+        await service.ApproveRefundAsync(staff, approvedOnly.RefundId);
+
+        var credit = await service.RequestCreditRefundAsync(
+            staff, learner, creditCount: 3, reason: "Bù credit");
+        await service.ApproveRefundAsync(staff, credit.RefundId);
+
+        var settledMoney = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "Đã chuyển khoản", Amount: 200m));
+        await service.ApproveRefundAsync(staff, settledMoney.RefundId);
+        await service.SettleRefundAsync(staff, settledMoney.RefundId);
+
+        var today = DateOnly.FromDateTime(_clock.GetUtcNow().UtcDateTime);
+        var rows = await service.GetRefundExportRowsAsync(today.AddDays(-1), today.AddDays(1));
+
+        Assert.Contains(rows, r => r.RefundId == settledMoney.RefundId);
+        Assert.DoesNotContain(rows, r => r.RefundId == approvedOnly.RefundId);
+        Assert.DoesNotContain(rows, r => r.RefundId == credit.RefundId);
+    }
+
+    [Fact]
+    public async Task An_empty_export_range_is_an_empty_list_not_a_refusal()
+    {
+        var service = CreateService();
+
+        var rows = await service.GetRefundExportRowsAsync(
+            new DateOnly(2001, 1, 1), new DateOnly(2001, 1, 2));
+
+        Assert.Empty(rows);
+    }
 }

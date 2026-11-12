@@ -1,3 +1,4 @@
+using System.Globalization;
 using Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -215,5 +216,77 @@ public sealed class AdminRefundsController(
         }
 
         return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    /// <summary>
+    /// #283: the accountant's batch file, reachable from the list screen. Follows the exam export: the MVC
+    /// site relays the API's stream, so the browser never calls the API and the JWT stays in its cookie
+    /// (ADR-0002).
+    /// <para>
+    /// <b>A POST, against the API's GET.</b> The action is anti-forgery protected, and a GET cannot be: a
+    /// token is validated from a form field or a header, and a plain link carries neither. Nothing changes
+    /// in the database either way, but the download is a form so that the range arrives with a token the
+    /// same way every other staff action's input does.
+    /// </para>
+    /// <para>
+    /// The range is required rather than defaulted. A convenience default would have to decide which day
+    /// "today" is, and a second copy of the UTC+7 rule here could disagree with the API's own definition of
+    /// a reporting day - the one thing ADR-0014 exists to prevent.
+    /// </para>
+    /// <para>
+    /// The two dates are bound as text and parsed with the invariant culture, not bound as
+    /// <see cref="DateOnly"/>. MVC's binder parses a date with the request's culture, so on a Vietnamese
+    /// host <c>2026-11-01</c> - the only shape a <c>type="date"</c> input ever sends - would be refused or,
+    /// worse, read as 1 November under one culture and 11 January under another.
+    /// </para>
+    /// </summary>
+    [HttpPost("export")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Export(
+        [FromForm] string? from,
+        [FromForm] string? to,
+        CancellationToken cancellationToken = default)
+    {
+        if (!TryReadRange(from, to, out var fromDay, out var toDay))
+        {
+            TempData["Error"] = "Choose both dates as they appear in the form: the export covers a settlement-date range.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (toDay < fromDay)
+        {
+            TempData["Error"] = "The export range ends before it starts. Check the two dates.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        try
+        {
+            var (stream, contentType, fileName) = await api.ExportAdminRefundsAsync(
+                fromDay, toDay, await BearerAsync(), cancellationToken);
+
+            return File(stream, contentType, fileName);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to export refunds: {Code}", ex.Code);
+            TempData["Error"] = ex.Detail ?? ex.Title ?? ex.Message;
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to export refunds for {From} to {To}", from, to);
+            TempData["Error"] = "Could not export the refunds. Please try again.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    /// <summary>The ISO date a date input sends, read without consulting the host's culture.</summary>
+    private static bool TryReadRange(string? from, string? to, out DateOnly fromDay, out DateOnly toDay)
+    {
+        fromDay = default;
+        toDay = default;
+
+        return DateOnly.TryParseExact(from, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out fromDay)
+            && DateOnly.TryParseExact(to, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out toDay);
     }
 }

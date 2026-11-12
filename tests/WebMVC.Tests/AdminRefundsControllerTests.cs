@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Reflection;
 using Contracts;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
@@ -431,6 +432,95 @@ public sealed class AdminRefundsControllerTests
         Assert.Equal("Credits", model.MethodLabel);
     }
 
+    /// <summary>
+    /// #283: the download the accountant uses. It relays the API's stream, so the browser never calls the
+    /// API directly (ADR-0002), and the range it sends is the one it was given - a range that drifted by a
+    /// day would pay a batch out of the wrong period.
+    /// </summary>
+    [Fact]
+    public async Task Export_relays_the_csv_for_the_range_it_was_given()
+    {
+        var api = new TestAdminRefundsApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Export("2026-10-01", "2026-10-31");
+
+        var file = Assert.IsType<FileStreamResult>(result);
+        Assert.Equal("text/csv", file.ContentType);
+        Assert.Equal("refunds-2026-10-01-to-2026-10-31.csv", file.FileDownloadName);
+
+        Assert.Equal(new DateOnly(2026, 10, 1), api.LastExportFrom);
+        Assert.Equal(new DateOnly(2026, 10, 31), api.LastExportTo);
+    }
+
+    /// <summary>#283: the form demands both dates, so a half-filled range never reaches the API.</summary>
+    [Fact]
+    public async Task Export_refuses_a_missing_or_reversed_range_without_calling_the_api()
+    {
+        var api = new TestAdminRefundsApiClient();
+        var controller = CreateController(api);
+
+        var missing = await controller.Export("2026-10-01", null);
+        Assert.Equal(nameof(AdminRefundsController.Index),
+            Assert.IsType<RedirectToActionResult>(missing).ActionName);
+        Assert.Null(api.LastExportFrom);
+        Assert.Contains("Choose both dates", (string)controller.TempData["Error"]!);
+
+        // A date the invariant parser refuses: a half-typed or locale-shaped value must be refused rather
+        // than read under whichever culture the host happens to have.
+        var unreadable = await controller.Export("01/10/2026", "2026-10-31");
+        Assert.Equal(nameof(AdminRefundsController.Index),
+            Assert.IsType<RedirectToActionResult>(unreadable).ActionName);
+        Assert.Null(api.LastExportFrom);
+
+        var reversed = await controller.Export("2026-10-31", "2026-10-01");
+        Assert.Equal(nameof(AdminRefundsController.Index),
+            Assert.IsType<RedirectToActionResult>(reversed).ActionName);
+        Assert.Null(api.LastExportFrom);
+        Assert.Contains("ends before it starts", (string)controller.TempData["Error"]!);
+    }
+
+    /// <summary>
+    /// #283: the download is reachable from the refunds screen and, being a form post, carries the token.
+    /// Asserted here because losing either half is invisible in the other tests: the action would still
+    /// relay a file, and the page would still render a button that the anti-forgery filter refuses.
+    /// </summary>
+    [Fact]
+    public void Export_is_anti_forgery_protected_and_the_screen_posts_the_token()
+    {
+        var method = typeof(AdminRefundsController).GetMethod(
+            nameof(AdminRefundsController.Export),
+            [typeof(string), typeof(string), typeof(CancellationToken)]);
+        Assert.NotNull(method);
+        Assert.NotNull(method!.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());
+
+        var view = File.ReadAllText(Path.Combine(
+            TestPathHelper.FindRepoRoot(), "src", "WebMVC", "Views", "Admin", "Refunds.cshtml"));
+
+        Assert.Contains("action=\"/admin/refunds/export\"", view, StringComparison.Ordinal);
+        Assert.Contains("@Html.AntiForgeryToken()", view, StringComparison.Ordinal);
+        // The two dates are the range the API filters on; a form missing one is a range the API refuses.
+        Assert.Contains("name=\"from\"", view, StringComparison.Ordinal);
+        Assert.Contains("name=\"to\"", view, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Export_shows_the_api_refusal_verbatim_and_returns_to_the_list()
+    {
+        var api = new TestAdminRefundsApiClient
+        {
+            ExportException = new ApiException(ApiError.Codes.Validation, "Bad range", 400,
+                "The export range ends (2026-10-01) before it starts (2026-10-31)."),
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.Export("2026-10-01", "2026-10-31");
+
+        Assert.Equal(nameof(AdminRefundsController.Index),
+            Assert.IsType<RedirectToActionResult>(result).ActionName);
+        Assert.Contains("before it starts", (string)controller.TempData["Error"]!);
+    }
+
     private sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
@@ -488,6 +578,19 @@ public sealed class AdminRefundsControllerTests
             if (SettleException is not null) throw SettleException;
             SettledId = refundId;
             return Task.FromResult(DetailToReturn ?? SampleDetail(refundId, RefundStatusDto.Settled, RefundMethodDto.Money));
+        }
+
+        public DateOnly? LastExportFrom { get; set; }
+        public DateOnly? LastExportTo { get; set; }
+        public ApiException? ExportException { get; set; }
+
+        public Task<(Stream Stream, string ContentType, string FileName)> ExportAdminRefundsAsync(
+            DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
+        {
+            if (ExportException is not null) throw ExportException;
+            LastExportFrom = from;
+            LastExportTo = to;
+            return Task.FromResult(((Stream)new MemoryStream([1, 2, 3]), "text/csv", $"refunds-{from:yyyy-MM-dd}-to-{to:yyyy-MM-dd}.csv"));
         }
     }
 }

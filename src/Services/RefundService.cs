@@ -564,6 +564,79 @@ public sealed class RefundService : IRefundService
         return amount.Value;
     }
 
+    /// <summary>
+    /// #283: <b>the export reads and nothing else.</b> It selects money refunds settled inside the range
+    /// and shapes them for accounting; it writes no status and no timestamp onto a refund, so exporting
+    /// twice yields the same rows and a settlement once recorded stays recorded.
+    /// <para>
+    /// <b>Settlement date, not request date (ADR-0014).</b> Settlement is the only moment money is treated
+    /// as having left, so a refund requested in September and paid in October is October's payment. A
+    /// range that selected on <c>CreatedAt</c> would put money in a month it never moved in, and the same
+    /// refund could be paid twice by two periods that both claimed it.
+    /// </para>
+    /// <para>
+    /// The window is cut at UTC+7 by <see cref="ReportingPeriod"/>, the one place a reporting period is
+    /// cut, so a transfer stamped 23:30 Hanoi time on the 31st belongs to that day and not the next.
+    /// </para>
+    /// </summary>
+    public async Task<IReadOnlyList<RefundExportRow>> GetRefundExportRowsAsync(
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken = default)
+    {
+        // A reversed range is the caller's mistake, not an empty month: swapping it would export a period
+        // nobody asked for, so it is refused with the one code the screen already knows.
+        if (to < from)
+        {
+            throw new RefundException(
+                ApiError.Codes.Validation,
+                $"The export range ends ({to:yyyy-MM-dd}) before it starts ({from:yyyy-MM-dd}).",
+                400);
+        }
+
+        var start = StartOfDay(from);
+        var end = StartOfDay(to.AddDays(1));
+
+        var rows = await _db.Refunds
+            .AsNoTracking()
+            .Include(r => r.User)
+            .Include(r => r.Order)
+            .Include(r => r.DecidedByUser)
+            .Where(r => r.Method == RefundMethod.Money.ToCode()
+                && r.Status == RefundStatus.Settled.ToCode()
+                && r.SettledAt != null
+                && r.SettledAt >= start
+                && r.SettledAt < end)
+            // A batch is paid in the order it happened, so the file reads chronologically instead of in
+            // whatever order the identity column produced.
+            .OrderBy(r => r.SettledAt)
+            .ThenBy(r => r.RefundId)
+            .ToListAsync(cancellationToken);
+
+        return rows.Select(ToExportRow).ToList();
+    }
+
+    /// <summary>Midnight on <paramref name="day"/> on the accountant's calendar, as an instant.</summary>
+    private static DateTimeOffset StartOfDay(DateOnly day) =>
+        new(day.ToDateTime(TimeOnly.MinValue), ReportingPeriod.UtcOffset);
+
+    private static RefundExportRow ToExportRow(Refund refund) => new(
+        refund.RefundId,
+        // The request date is read on the same calendar the settlement is, or one row would state two
+        // different day boundaries.
+        DateOnly.FromDateTime(ReportingPeriod.LocalInstant(refund.CreatedAt).DateTime),
+        refund.SettledAt is { } settled
+            ? DateOnly.FromDateTime(ReportingPeriod.LocalInstant(settled).DateTime)
+            : null,
+        refund.User.Email,
+        refund.User.FullName ?? refund.User.Email,
+        refund.Order?.OrderCode,
+        ParseWireCode<RefundMethodDto>(refund.Method),
+        refund.Amount,
+        refund.CreditCount,
+        refund.Reason,
+        refund.DecidedByUser?.FullName ?? refund.DecidedByUser?.Email);
+
     private static AdminRefundListItemDto ToListItem(Refund refund) => new(
         refund.RefundId,
         refund.UserId,
