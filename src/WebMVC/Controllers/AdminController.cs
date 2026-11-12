@@ -59,9 +59,11 @@ public sealed class AdminController(
     public async Task Stream(CancellationToken cancellationToken)
     {
         var source = HttpContext.RequestServices.GetRequiredService<IDashboardRevisionSource>();
+        var options = HttpContext.RequestServices.GetService<DashboardLiveOptions>() ?? DashboardLiveOptions.Default;
+
         await DashboardStream.WriteAsync(
             Response,
-            DashboardStream.ReadingsAsync(source, DashboardStream.TickInterval, cancellationToken),
+            DashboardStream.ReadingsAsync(source, options.TickInterval, cancellationToken),
             cancellationToken);
     }
 
