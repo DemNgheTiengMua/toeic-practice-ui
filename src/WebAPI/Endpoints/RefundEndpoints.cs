@@ -104,5 +104,28 @@ public static partial class RefundEndpoints
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
         });
+
+        // #282: the accountant's step. A separate route because it is a separate decision point: an
+        // approval says "pay this", a settlement says "it was paid", and the second is what counts.
+        admin.MapPost("/{refundId:int}/settle", async (
+            int refundId,
+            HttpContext http,
+            IRefundService refunds,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var settled = await refunds.SettleRefundAsync(CurrentUserId(http), refundId, cancellationToken);
+                return Results.Ok(settled);
+            }
+            catch (RefundNotFoundException)
+            {
+                return Results.NotFound();
+            }
+            catch (RefundException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
     }
 }

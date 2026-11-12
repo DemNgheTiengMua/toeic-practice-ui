@@ -13,4 +13,6 @@ public interface IAdminRefundsClient
     Task<AdminRefundDetailDto> ApproveAdminRefundAsync(int refundId, string bearerToken, CancellationToken cancellationToken = default) => ApproveAdminRefundAsync(refundId, cancellationToken);
     Task<AdminRefundDetailDto> RejectAdminRefundAsync(int refundId, RejectRefundRequest request, CancellationToken cancellationToken = default);
     Task<AdminRefundDetailDto> RejectAdminRefundAsync(int refundId, RejectRefundRequest request, string bearerToken, CancellationToken cancellationToken = default) => RejectAdminRefundAsync(refundId, request, cancellationToken);
+    Task<AdminRefundDetailDto> SettleAdminRefundAsync(int refundId, CancellationToken cancellationToken = default);
+    Task<AdminRefundDetailDto> SettleAdminRefundAsync(int refundId, string bearerToken, CancellationToken cancellationToken = default) => SettleAdminRefundAsync(refundId, cancellationToken);
 }

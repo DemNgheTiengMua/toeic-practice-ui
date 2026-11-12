@@ -10,7 +10,14 @@ using Services.Credits;
 namespace Services;
 
 /// <summary>
-/// #281: the credit half of refunds, end to end.
+/// #281/#282: both halves of refunds, end to end.
+/// <para>
+/// <b>The method decides what moves.</b> A credit refund posts to the ledger at approval, so the
+/// learner spends the compensation without waiting for anyone. A money refund moves nothing here: the
+/// accountant pays by bank transfer, and <see cref="SettleRefundAsync"/> records that the transfer
+/// happened. That is why settlement, not approval, is when money counts against revenue (ADR-0014):
+/// approval is a decision to pay, and a decision is not a payment.
+/// </para>
 /// <para>
 /// <b>Approval posts the credits, not the request.</b> A request is a promise; approval is the
 /// decision to keep it. If the request posted, the requester would be spending the company's credits
@@ -22,17 +29,19 @@ namespace Services;
 /// <para>
 /// <b>The ceiling lives here and the method/amount split lives in the schema.</b> A CHECK cannot read
 /// another table, so the schema can prove that a credit refund carries a credit count and no money
-/// (<c>CK_Refunds_MethodOwnsAmount</c>) but cannot know how many credits the linked order granted. That
-/// is a query, so it is the service's fact. It is enforced on the request, which is the only moment a
-/// refund can be created; <c>requested</c> rows count against the ceiling, so two requests that would
-/// together exceed it cannot both exist. <c>Refunds</c> carries no UPDATE guard, so approval must not
-/// re-check: it would re-count the row it is approving and refuse itself.
+/// (<c>CK_Refunds_MethodOwnsAmount</c>) but cannot know how much of the linked order was granted or
+/// paid. That is a query, so it is the service's fact. It is enforced on the request, which is the only
+/// moment a refund can be created; <c>requested</c> rows count against the ceiling, so two requests
+/// that would together exceed it cannot both exist - a promise already spends the order, and counting
+/// only approved rows would let a queue of requests each fit on its own and overshoot in total.
+/// <c>Refunds</c> carries no UPDATE guard, so approval must not re-check: it would re-count the row it
+/// is approving and refuse itself.
 /// </para>
 /// </summary>
 public sealed class RefundService : IRefundService
 {
     /// <summary>Statuses that count against a ceiling. A rejected refund returned nothing, so it
-    /// holds no credits back.</summary>
+    /// holds nothing back.</summary>
     private static readonly string[] LiveStatuses =
     [
         RefundStatus.Requested.ToCode(),
@@ -84,7 +93,7 @@ public sealed class RefundService : IRefundService
             .Where(r => r.Status == RefundStatus.Approved.ToCode() && r.Method == RefundMethod.Credit.ToCode())
             .SumAsync(r => r.CreditCount ?? 0, cancellationToken);
 
-        IQueryable<Refund> query = _db.Refunds.AsNoTracking().Include(r => r.User);
+        IQueryable<Refund> query = _db.Refunds.AsNoTracking().Include(r => r.User).Include(r => r.Order);
 
         if (!string.IsNullOrWhiteSpace(q))
         {
@@ -135,6 +144,7 @@ public sealed class RefundService : IRefundService
             .Include(r => r.Order)
             .Include(r => r.RequestedByUser)
             .Include(r => r.DecidedByUser)
+            .Include(r => r.SettledByUser)
             .Include(r => r.CreditTransaction)
             .SingleOrDefaultAsync(r => r.RefundId == refundId, cancellationToken);
 
@@ -164,17 +174,34 @@ public sealed class RefundService : IRefundService
             throw new RefundException(ApiError.Codes.Validation, "Invalid staff user ID.", 400);
         }
 
-        // #282 owns money refunds. Refused here, not hidden in the screen, so the refusal has a test.
-        if (request.Method != RefundMethodDto.Credit)
-        {
-            throw new RefundException(
-                ApiError.Codes.RefundMoneyNotSupported,
-                "A money refund cannot be created yet. Record a credit refund instead.",
-                400);
-        }
-
         var reason = ValidateReason(request.Reason);
-        var creditCount = ValidateCreditCount(request.CreditCount);
+
+        // The method owns the value column (CK_Refunds_MethodOwnsAmount). Validate the half the method
+        // names, and refuse a figure in the other column rather than dropping it on insert.
+        decimal? amount = null;
+        var creditCount = 0;
+        if (request.Method == RefundMethodDto.Money)
+        {
+            amount = ValidateAmount(request.Amount);
+            if (request.CreditCount > 0)
+            {
+                throw new RefundException(
+                    ApiError.Codes.RefundAmountInvalid,
+                    "A money refund carries an amount, not a credit count.",
+                    400);
+            }
+        }
+        else
+        {
+            creditCount = ValidateCreditCount(request.CreditCount);
+            if (request.Amount is > 0)
+            {
+                throw new RefundException(
+                    ApiError.Codes.RefundAmountInvalid,
+                    "A credit refund carries a credit count, not an amount of money.",
+                    400);
+            }
+        }
 
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
 
@@ -186,7 +213,8 @@ public sealed class RefundService : IRefundService
             throw new RefundException(ApiError.Codes.UserNotFound, $"User {request.UserId} was not found.", 404);
         }
 
-        await AssertCeilingAsync(request.UserId, request.OrderId, creditCount, excludeRefundId: null, cancellationToken);
+        await AssertCeilingAsync(
+            request.UserId, request.OrderId, request.Method, amount ?? 0m, creditCount, cancellationToken);
         await AssertSubjectBelongsToLearnerAsync(request.UserId, request.OrderId, request.ComplaintId, cancellationToken);
 
         var refund = new Refund
@@ -194,10 +222,11 @@ public sealed class RefundService : IRefundService
             UserId = request.UserId,
             ComplaintId = request.ComplaintId,
             OrderId = request.OrderId,
-            Method = RefundMethod.Credit.ToCode(),
+            Method = request.Method == RefundMethodDto.Money ? RefundMethod.Money.ToCode() : RefundMethod.Credit.ToCode(),
             Reason = reason,
             Status = RefundStatus.Requested.ToCode(),
-            CreditCount = creditCount,
+            Amount = amount,
+            CreditCount = request.Method == RefundMethodDto.Money ? null : creditCount,
             RequestedByUserId = staffUserId,
             CreatedAt = _clock.GetUtcNow(),
         };
@@ -219,9 +248,10 @@ public sealed class RefundService : IRefundService
             throw new RefundException(ApiError.Codes.Validation, "Invalid staff user ID.", 400);
         }
 
-        // The ceiling check and the status flip share one serializable transaction: a second approval
-        // racing this one either waits and then reads 'approved', or is refused by the deadlock
-        // victim. A read-then-write without the transaction would let both through.
+        // The status flip and, for a credit refund, the ledger call share one serializable
+        // transaction: a second approval racing this one either waits and then reads 'approved', or is
+        // refused by the deadlock victim. A read-then-write without the transaction would let both
+        // through, and the learner would be paid twice.
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
 
         var refund = await _db.Refunds.SingleOrDefaultAsync(r => r.RefundId == refundId, cancellationToken);
@@ -232,25 +262,24 @@ public sealed class RefundService : IRefundService
 
         AssertUndecided(refund);
 
-        if (refund.Method != RefundMethod.Credit.ToCode())
+        // A money refund is approved by a decision only: nothing moves until the accountant settles it.
+        // So the ledger is called on the credit arm and nowhere else - a money refund that posted
+        // credits would pay the learner twice, once in each currency.
+        if (refund.Method == RefundMethod.Credit.ToCode())
         {
-            throw new RefundException(
-                ApiError.Codes.RefundMoneyNotSupported,
-                "A money refund is settled by accounting, not approved here.",
-                400);
+            var creditCount = refund.CreditCount ?? 0;
+
+            var note = $"Refund #{refund.RefundId}: {refund.Reason}";
+            var receipt = await _creditLedger.GrantRefundCreditsAsync(
+                refund.UserId,
+                staffUserId,
+                creditCount,
+                note,
+                cancellationToken);
+
+            refund.CreditTxnId = receipt.TxnId;
         }
 
-        var creditCount = refund.CreditCount ?? 0;
-
-        var note = $"Refund #{refund.RefundId}: {refund.Reason}";
-        var receipt = await _creditLedger.GrantRefundCreditsAsync(
-            refund.UserId,
-            staffUserId,
-            creditCount,
-            note,
-            cancellationToken);
-
-        refund.CreditTxnId = receipt.TxnId;
         refund.Status = RefundStatus.Approved.ToCode();
         refund.DecidedByUserId = staffUserId;
         refund.DecidedAt = _clock.GetUtcNow();
@@ -298,6 +327,59 @@ public sealed class RefundService : IRefundService
     }
 
     /// <summary>
+    /// #282: the accountant records that the transfer happened. <b>This is the moment money counts</b>
+    /// against revenue (ADR-0014), so it stamps who and when and moves nothing else: no credits, no
+    /// order change. It refuses a credit refund before the schema can, because
+    /// <c>CK_Refunds_SettledIsMoney</c> would answer a caller with a 500 for something they can fix
+    /// by reading the message.
+    /// </summary>
+    public async Task<AdminRefundDetailDto> SettleRefundAsync(
+        int staffUserId,
+        int refundId,
+        CancellationToken cancellationToken = default)
+    {
+        if (staffUserId <= 0)
+        {
+            throw new RefundException(ApiError.Codes.Validation, "Invalid staff user ID.", 400);
+        }
+
+        // Serialized for the same reason approval is: two accountants clicking settle must not both
+        // stamp, and the second must read 'settled' rather than overwrite the first one's date.
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+
+        var refund = await _db.Refunds.SingleOrDefaultAsync(r => r.RefundId == refundId, cancellationToken);
+        if (refund is null)
+        {
+            throw new RefundNotFoundException(refundId);
+        }
+
+        if (refund.Method != RefundMethod.Money.ToCode())
+        {
+            throw new RefundException(
+                ApiError.Codes.RefundCreditCannotSettle,
+                "A credit refund cannot be settled: the credits landed when it was approved, so there is no transfer to record.",
+                400);
+        }
+
+        if (refund.Status != RefundStatus.Approved.ToCode())
+        {
+            throw new RefundException(
+                ApiError.Codes.RefundNotApproved,
+                $"Refund {refund.RefundId} is {refund.Status}; only an approved money refund can be settled.",
+                400);
+        }
+
+        refund.Status = RefundStatus.Settled.ToCode();
+        refund.SettledByUserId = staffUserId;
+        refund.SettledAt = _clock.GetUtcNow();
+
+        await _db.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+
+        return (await GetAdminRefundDetailAsync(refundId, cancellationToken))!;
+    }
+
+    /// <summary>
     /// The ticket's "decided once" rule, in the same shape <see cref="ComplaintService"/> uses for an
     /// already-resolved complaint. Called while the serializable transaction holds the row, so the
     /// read and the write cannot disagree.
@@ -313,21 +395,32 @@ public sealed class RefundService : IRefundService
         }
     }
 
+    /// <summary>
+    /// The ceiling, in the one shape both methods share. What differs is only which column the value
+    /// lives in and what caps it: credits are capped by what the order <b>granted</b>, money by what it
+    /// was <b>paid</b>. A second hand-written count of "already refunded against this order" is how two
+    /// screens end up disagreeing about one order - the defect #279 was.
+    /// </summary>
     private async Task AssertCeilingAsync(
         int userId,
         int? orderId,
+        RefundMethodDto method,
+        decimal amount,
         int creditCount,
-        int? excludeRefundId,
         CancellationToken cancellationToken)
     {
+        var requested = method == RefundMethodDto.Money ? amount : creditCount;
+
         if (orderId is null)
         {
             var ceiling = _options.OrderlessCeiling > 0 ? _options.OrderlessCeiling : new RefundOptions().OrderlessCeiling;
-            if (creditCount > ceiling)
+            if (requested > ceiling)
             {
                 throw new RefundException(
                     ApiError.Codes.RefundExceedsCeiling,
-                    $"A refund with no order behind it may return at most {ceiling} credits; {creditCount} was requested.",
+                    method == RefundMethodDto.Money
+                        ? $"A money refund with no order behind it may return at most {ceiling:N0} dong; {amount:N0} was requested."
+                        : $"A refund with no order behind it may return at most {ceiling} credits; {creditCount} was requested.",
                     400);
             }
 
@@ -347,26 +440,46 @@ public sealed class RefundService : IRefundService
                 400);
         }
 
-        // GrantPurchaseAsync only credits a paid order, so an unpaid order granted nothing and its
-        // ceiling is zero rather than the package's sticker value.
-        var granted = order.Status == OrderStatus.Paid.ToCode() ? order.Package.Credits : 0;
+        // GrantPurchaseAsync only credits a paid order and only a paid order moved money, so an unpaid
+        // order's ceiling is zero in both units rather than the package's sticker value.
+        var paid = order.Status == OrderStatus.Paid.ToCode();
+        var cap = method == RefundMethodDto.Money
+            ? (paid ? order.Amount : 0m)
+            : (paid ? order.Package.Credits : 0m);
 
-        var alreadyRefunded = await _db.Refunds
-            .AsNoTracking()
-            .Where(r => r.OrderId == orderId.Value
-                && r.Method == RefundMethod.Credit.ToCode()
-                && LiveStatuses.Contains(r.Status)
-                && (excludeRefundId == null || r.RefundId != excludeRefundId.Value))
-            .SumAsync(r => r.CreditCount ?? 0, cancellationToken);
+        var alreadyRefunded = await AlreadyRefundedAsync(_db, orderId.Value, method, cancellationToken);
 
-        if (alreadyRefunded + creditCount > granted)
+        if (alreadyRefunded + requested > cap)
         {
             throw new RefundException(
                 ApiError.Codes.RefundExceedsOrderCeiling,
-                $"Order {order!.OrderCode} granted {granted} credits and {alreadyRefunded} are already refunded against it, "
-                + $"so {creditCount} more cannot be returned.",
+                method == RefundMethodDto.Money
+                    ? $"Order {order.OrderCode} was paid {order.Amount:N0} dong and {alreadyRefunded:N0} dong are already refunded against it, so {amount:N0} more cannot be returned."
+                    : $"Order {order!.OrderCode} granted {cap:N0} credits and {alreadyRefunded:N0} are already refunded against it, so {creditCount} more cannot be returned.",
                 400);
         }
+    }
+
+    /// <summary>
+    /// How much of one order is already spoken for, in the unit the method names. Counts the live
+    /// statuses only: a rejected refund returned nothing, so it releases its claim.
+    /// </summary>
+    private static Task<decimal> AlreadyRefundedAsync(
+        CompanionDbContext db,
+        int orderId,
+        RefundMethodDto method,
+        CancellationToken cancellationToken)
+    {
+        var methodCode = method == RefundMethodDto.Money ? RefundMethod.Money.ToCode() : RefundMethod.Credit.ToCode();
+        var live = db.Refunds
+            .AsNoTracking()
+            .Where(r => r.OrderId == orderId
+                && r.Method == methodCode
+                && LiveStatuses.Contains(r.Status));
+
+        return method == RefundMethodDto.Money
+            ? live.SumAsync(r => r.Amount ?? 0m, cancellationToken)
+            : live.SumAsync(r => (decimal)(r.CreditCount ?? 0), cancellationToken);
     }
 
     /// <summary>The composite FKs prove ownership in the database; this states it as a domain refusal
@@ -424,6 +537,33 @@ public sealed class RefundService : IRefundService
         return creditCount;
     }
 
+    /// <summary>
+    /// <c>Amount</c> is <c>DECIMAL(12,2)</c>, and the schema's own <c>CK_Refunds_MethodOwnsAmount</c>
+    /// requires it above zero. Checked here so the caller gets a code instead of a constraint error.
+    /// A third decimal place is refused rather than rounded: the stored figure must be the figure the
+    /// requester wrote, and rounding it would pay a different amount than the one on the form.
+    /// </summary>
+    private static decimal ValidateAmount(decimal? amount)
+    {
+        if (amount is null or <= 0m)
+        {
+            throw new RefundException(
+                ApiError.Codes.RefundAmountInvalid,
+                "A money refund must return more than zero dong.",
+                400);
+        }
+
+        if (decimal.Round(amount.Value, 2) != amount.Value)
+        {
+            throw new RefundException(
+                ApiError.Codes.RefundAmountInvalid,
+                "A money refund is stored to two decimal places; the amount stated has a smaller unit.",
+                400);
+        }
+
+        return amount.Value;
+    }
+
     private static AdminRefundListItemDto ToListItem(Refund refund) => new(
         refund.RefundId,
         refund.UserId,
@@ -435,7 +575,10 @@ public sealed class RefundService : IRefundService
         refund.Reason,
         refund.OrderId,
         refund.CreatedAt,
-        refund.DecidedAt);
+        refund.DecidedAt,
+        refund.Amount ?? 0m,
+        refund.Order?.OrderCode,
+        refund.SettledAt);
 
     private static AdminRefundDetailDto ToDetail(Refund refund) => new(
         refund.RefundId,
@@ -456,5 +599,10 @@ public sealed class RefundService : IRefundService
         refund.DecidedByUser?.FullName ?? refund.DecidedByUser?.Email,
         refund.DecidedAt,
         refund.CreditTxnId,
-        refund.CreditTransaction?.Delta);
+        refund.CreditTransaction?.Delta,
+        refund.Amount ?? 0m,
+        refund.Order?.Amount,
+        refund.SettledByUserId,
+        refund.SettledByUser?.FullName ?? refund.SettledByUser?.Email,
+        refund.SettledAt);
 }

@@ -29,6 +29,17 @@ public sealed record AdminRefundsViewModel(
             _ => "badge badge--danger",
         });
 
+    /// <summary>
+    /// #282: the value a row returns, in the unit its method names - dong for a money refund, credits
+    /// for a credit one. Money goes through <see cref="CurrencyFormatter"/> and nothing else, so an
+    /// amount on this page equals the amount in the database to the dong.
+    /// </summary>
+    public IReadOnlyDictionary<int, string> Values { get; } = Summary.Refunds.ToDictionary(
+        r => r.RefundId,
+        r => r.Method == RefundMethodDto.Money
+            ? CurrencyFormatter.FormatVnd(r.Amount)
+            : $"{r.CreditCount:N0} credits");
+
     public string CreditsRefunded => Summary.CreditsRefundedTotal.ToString("N0");
     public int FirstRow { get; } = (Summary.Page - 1) * Summary.PageSize + 1;
     public int LastRow { get; } = Math.Min(Summary.Page * Summary.PageSize, Summary.TotalCount);
@@ -40,6 +51,8 @@ public sealed record AdminRefundsViewModel(
 
     public AdminRefundsViewModel WithDates(DateTimeFormatter formatter) => this with
     {
-        Dates = FormattedDateViewModel.Prepare(Summary.Refunds.Select(r => r.CreatedAt), formatter),
+        Dates = FormattedDateViewModel.Prepare(
+            Summary.Refunds.SelectMany(r => r.SettledAt is { } settled ? new[] { r.CreatedAt, settled } : [r.CreatedAt]),
+            formatter),
     };
 }

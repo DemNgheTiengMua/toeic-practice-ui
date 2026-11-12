@@ -24,6 +24,9 @@ public sealed partial class CompanionApiClient
     public Task<AdminRefundDetailDto> RejectAdminRefundAsync(int refundId, RejectRefundRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<RejectRefundRequest, AdminRefundDetailDto>($"api/admin/refunds/{refundId}/reject", request, bearerToken, cancellationToken);
 
+    public Task<AdminRefundDetailDto> SettleAdminRefundAsync(int refundId, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<AdminRefundDetailDto>($"api/admin/refunds/{refundId}/settle", bearerToken, cancellationToken);
+
     public Task<AdminRefundsSummaryDto> GetAdminRefundsAsync(string? q, string? status, int page, int pageSize, CancellationToken cancellationToken = default) =>
         GetAdminRefundsAsync(q, status, page, pageSize, string.Empty, cancellationToken);
 
@@ -38,4 +41,7 @@ public sealed partial class CompanionApiClient
 
     public Task<AdminRefundDetailDto> RejectAdminRefundAsync(int refundId, RejectRefundRequest request, CancellationToken cancellationToken = default) =>
         RejectAdminRefundAsync(refundId, request, string.Empty, cancellationToken);
+
+    public Task<AdminRefundDetailDto> SettleAdminRefundAsync(int refundId, CancellationToken cancellationToken = default) =>
+        SettleAdminRefundAsync(refundId, string.Empty, cancellationToken);
 }

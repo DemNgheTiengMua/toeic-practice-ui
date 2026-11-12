@@ -3,7 +3,7 @@
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Refunds";
-    ViewData["Description"] = "Credit refunds recorded against learners.";
+    ViewData["Description"] = "Credit and money refunds recorded against learners.";
 
     var currentStatus = string.IsNullOrWhiteSpace(Model.Status) ? "all" : Model.Status.ToLowerInvariant();
 }
@@ -16,7 +16,7 @@
   </nav>
 
   <h1 class="m-0">Refunds</h1>
-  <p class="text-muted no-margin">A refund returns value the learner already paid for. A refund tied to an order is capped by the credits that order granted; one with no order behind it is capped by policy.</p>
+  <p class="text-muted no-margin">A refund returns value the learner already paid for. A credit refund is capped by the credits its order granted, a money refund by what that order was paid; one with no order behind it is capped by policy.</p>
 
   @if (Model.Summary.TotalCount == 0)
   {
@@ -61,6 +61,7 @@
       <a href="/admin/refunds?q=@Model.Query&status=all" class="btn btn--sm" aria-pressed="@(currentStatus == "all" ? "true" : "false")">All</a>
       <a href="/admin/refunds?q=@Model.Query&status=requested" class="btn btn--sm" aria-pressed="@(currentStatus == "requested" ? "true" : "false")">Requested</a>
       <a href="/admin/refunds?q=@Model.Query&status=approved" class="btn btn--sm" aria-pressed="@(currentStatus == "approved" ? "true" : "false")">Approved</a>
+      <a href="/admin/refunds?q=@Model.Query&status=settled" class="btn btn--sm" aria-pressed="@(currentStatus == "settled" ? "true" : "false")">Settled</a>
       <a href="/admin/refunds?q=@Model.Query&status=rejected" class="btn btn--sm" aria-pressed="@(currentStatus == "rejected" ? "true" : "false")">Rejected</a>
     </div>
   </form>
@@ -76,10 +77,11 @@
               <th scope="col">ID</th>
               <th scope="col">Learner</th>
               <th scope="col">Method</th>
-              <th scope="col" class="text-right">Credits</th>
+              <th scope="col" class="text-right">Value</th>
               <th scope="col">Order</th>
               <th scope="col">Status</th>
               <th scope="col">Requested</th>
+              <th scope="col">Settled</th>
               <th scope="col">Actions</th>
             </tr>
           </thead>
@@ -90,14 +92,23 @@
                 <td>#R-@r.RefundId</td>
                 <td>@r.LearnerName</td>
                 <td>@Model.MethodLabels[r.RefundId]</td>
-                <td class="text-right tabular-nums">@r.CreditCount.ToString("N0")</td>
-                <td>@(r.OrderId.HasValue ? $"#{r.OrderId.Value}" : "—")</td>
+                <td class="text-right tabular-nums">@Model.Values[r.RefundId]</td>
+                <td>@(r.OrderCode ?? (r.OrderId.HasValue ? $"#{r.OrderId.Value}" : "—"))</td>
                 <td><span class="@Model.StatusClasses[r.RefundId]">@Model.StatusLabels[r.RefundId]</span></td>
                 <td>@Model.Dates[r.CreatedAt].Date</td>
+                <td>@(r.SettledAt.HasValue ? Model.Dates[r.SettledAt.Value].Date : "—")</td>
                 <td>
                   @if (r.Status == RefundStatusDto.Requested)
                   {
                     <a href="/admin/refunds/@r.RefundId" class="btn btn--sm btn--primary">Review</a>
+                  }
+                  else if (r.Status == RefundStatusDto.Approved && r.Method == RefundMethodDto.Money)
+                  {
+                    <form method="post" action="/admin/refunds/@r.RefundId/settle" class="no-margin">
+                      @Html.AntiForgeryToken()
+                      <button type="submit" class="btn btn--sm btn--primary">Settle</button>
+                      <a href="/admin/refunds/@r.RefundId" class="btn btn--sm btn--ghost">View</a>
+                    </form>
                   }
                   else
                   {
@@ -139,9 +150,9 @@
 
   <form method="post" action="/admin/refunds" class="card" novalidate>
     @Html.AntiForgeryToken()
-    <div class="card__header"><strong>Record a credit refund</strong></div>
+    <div class="card__header"><strong>Record a refund</strong></div>
     <div class="card__body stack">
-      <p class="text-muted no-margin">Credits move when the refund is approved, not when it is recorded. A money refund is not available on this screen.</p>
+      <p class="text-muted no-margin">Approval decides the refund. A credit refund pays out at approval; a money refund is paid by the accountant outside the product and settled here once the transfer has happened.</p>
       <div class="grid-2">
         <div class="field">
           <label class="field__label" for="rf-user">Learner ID</label>
@@ -151,12 +162,28 @@
         <div class="field">
           <label class="field__label" for="rf-order">Order ID (optional)</label>
           <input class="field__input" id="rf-order" name="orderId" type="number" min="1">
-          <span class="field__hint">When the refund came from a purchase, tie it here so it is capped by what that order granted.</span>
+          <span class="field__hint">When the refund came from a purchase, tie it here: it is then capped by what that order granted or was paid.</span>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label class="field__label" for="rf-method">Method</label>
+          <select class="field__input" id="rf-method" name="method">
+            <option value="credit">Credits</option>
+            <option value="money">Money</option>
+          </select>
+          <span class="field__hint">Credits move on approval; money is paid outside and settled afterwards.</span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="rf-credits">Credits to return</label>
+          <input class="field__input" id="rf-credits" name="creditCount" type="number" min="0" value="1">
+          <span class="field__hint">A credit refund only. Leave at 0 for a money refund.</span>
         </div>
       </div>
       <div class="field">
-        <label class="field__label" for="rf-credits">Credits to return</label>
-        <input class="field__input" id="rf-credits" name="creditCount" type="number" min="1" value="1" required>
+        <label class="field__label" for="rf-amount">Amount in dong</label>
+        <input class="field__input" id="rf-amount" name="amount" type="number" min="0" step="0.01" inputmode="decimal">
+        <span class="field__hint">A money refund only, to two decimal places. It cannot exceed what the order was paid.</span>
       </div>
       <div class="field">
         <label class="field__label" for="rf-reason">Reason</label>
