@@ -45,10 +45,9 @@ public sealed class PoolOnlyPaperTests(DatabaseFixture database)
 
             await using var db = DbContextFactory.Create(connectionString);
 
-            // The precondition, asserted rather than assumed.
-            // #272: left legacy - reason 2, this proves an ABSENCE (a pool-only paper has no such rows).
-            Assert.Equal(0, await db.Questions.CountAsync(q => q.ExamId == fixture.ExamId));
-            Assert.Equal(0, await db.QuestionGroups.CountAsync(g => g.ExamId == fixture.ExamId));
+            // The precondition, asserted rather than assumed. #269: the three legacy tables are gone, so
+            // "this paper has no question rows" is now a fact about the schema, not a row count. The
+            // roster is the whole paper.
             Assert.Equal(3, await db.ExamItems.CountAsync(i => i.ExamId == fixture.ExamId));
 
             var engine = new AttemptEngine(db);
@@ -65,12 +64,13 @@ public sealed class PoolOnlyPaperTests(DatabaseFixture database)
             await engine.SaveAnswerAsync(
                 attempt.AttemptId, fixture.UserId, take.CurrentQuestion.QuestionId, correctOptionId, isFlagged: false);
 
-            // The stored answer names a roster position and NO legacy question.
+            // The stored answer names a roster position. #269: the legacy question column is gone, so
+            // the claim is that the position the sitting handed the learner is the one recorded.
             await using (var verify = DbContextFactory.Create(connectionString))
             {
                 var answer = await verify.AttemptAnswers.AsNoTracking()
                     .SingleAsync(a => a.AttemptId == attempt.AttemptId && a.ExamItemId == fixture.FirstExamItemId);
-                Assert.Null(answer.QuestionId);
+                Assert.Equal(take.CurrentQuestion.QuestionId, answer.ExamItemId);
                 Assert.Equal(fixture.FirstItemVersionId, answer.ItemVersionId);
                 Assert.Equal("A", answer.SelectedLabel);
                 Assert.True(answer.IsCorrect, "the pinned version's key is A");

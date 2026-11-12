@@ -49,7 +49,9 @@ public sealed class CefrLevelMigrationTests
             CefrLevelCode: code),
     };
 
-    public static TheoryData<Type> MigratedEntities => new() { typeof(Question) };
+    // #269: the legacy Question entity is gone, so the entity this scans is the pool's Item - the one
+    // content row that carries a level and could grow a second scale beside it.
+    public static TheoryData<Type> MigratedEntities => new() { typeof(Item) };
 
     [Theory]
     [MemberData(nameof(MigratedEntities))]
@@ -57,7 +59,9 @@ public sealed class CefrLevelMigrationTests
     {
         var level = entity.GetProperty("CefrLevel", BindingFlags.Public | BindingFlags.Instance);
         Assert.NotNull(level);
-        Assert.Equal(typeof(CefrLevel?), level.PropertyType);
+        // Pool stock is always at a level: the column is NOT NULL, so the member is the struct itself
+        // rather than a nullable one. That is a stricter statement than the legacy entity's.
+        Assert.Equal(typeof(CefrLevel), level.PropertyType);
 
         // #231 deleted the 1-5 member rather than leaving it beside the level. A type that grew one
         // back would reinstate the second scale D1 forbids, so its absence is the guard.
@@ -296,7 +300,7 @@ public sealed class CefrLevelMigrationTests
     /// model that still mapped a 1-5 column would let a writer put a rank back where a level belongs.
     /// </summary>
     [Fact]
-    public void The_question_level_is_mapped_and_no_difficulty_is()
+    public void The_item_level_is_mapped_and_no_difficulty_is()
     {
         var options = new DbContextOptionsBuilder<CompanionDbContext>()
             .UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=ModelOnly;Trusted_Connection=True;")
@@ -304,15 +308,15 @@ public sealed class CefrLevelMigrationTests
 
         using var db = new CompanionDbContext(options);
 
-        var question = db.Model.FindEntityType(typeof(Question));
-        Assert.NotNull(question);
-        Assert.Null(question.FindProperty("DifficultyLevel"));
-        Assert.NotNull(question.FindProperty("CefrLevel"));
+        var item = db.Model.FindEntityType(typeof(Item));
+        Assert.NotNull(item);
+        Assert.Null(item.FindProperty("DifficultyLevel"));
+        Assert.NotNull(item.FindProperty("CefrLevel"));
 
-        // A converted nullable struct: the column is a string code, not a second integer scale. Without
-        // this the mapping would compile and store a rank, which is the exact defect D1 forbids.
-        var mapped = question.FindProperty("CefrLevel")!;
-        Assert.Equal(typeof(CefrLevel?), mapped.ClrType);
+        // A converted struct: the column is a string code, not a second integer scale. Without this the
+        // mapping would compile and store a rank, which is the exact defect D1 forbids.
+        var mapped = item.FindProperty("CefrLevel")!;
+        Assert.Equal(typeof(CefrLevel), mapped.ClrType);
         Assert.Equal("varchar(10)", mapped.GetColumnType());
         Assert.Equal(typeof(string), mapped.GetValueConverter()!.ProviderClrType);
 

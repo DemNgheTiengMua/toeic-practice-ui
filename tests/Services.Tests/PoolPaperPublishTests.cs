@@ -93,11 +93,10 @@ public sealed class PoolPaperPublishTests(DatabaseFixture database)
             await db.SaveChangesAsync();
             examId = exam.ExamId;
 
-            // Exactly what the section declares, and nothing else: no Questions rows at all.
+            // Exactly what the section declares, and nothing else. #269 dropped the legacy Questions
+            // table, so "no legacy rows" is a schema fact.
             var q1 = await PoolFixture.AddMcqAsync(db, examId, cert.CertId, section.SectionId, "reading", "Pool Q1", displayOrder: 1);
             var q2 = await PoolFixture.AddMcqAsync(db, examId, cert.CertId, section.SectionId, "reading", "Pool Q2", displayOrder: 2);
-
-            Assert.Empty(await db.Questions.Where(q => q.ExamId == examId).ToListAsync());
 
             // INV-3 is a real rule, not a leftover: an item reaches a learner only after a human
             // clearance names it (#205's per-item 'clear', or #206's approved stratum). Pool stock

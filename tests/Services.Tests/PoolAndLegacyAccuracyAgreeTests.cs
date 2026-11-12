@@ -8,22 +8,14 @@ using Xunit;
 namespace Services.Tests;
 
 /// <summary>
-/// #250 criterion 4: <b>the two weakness-analysis views return the same numbers before and after the
-/// migration, proved by a query against both shapes on the same data.</b>
+/// #250 criterion 4 / #264 / #271: <b>the weakness-analysis views report the pool's numbers.</b>
 /// <para>
-/// <b>Why this file exists.</b> Both views already carry a pool branch, written when the pool arrived
-/// beside the paper. It has never run: measured on the seeded database, <c>AttemptAnswers</c> holds 16
-/// rows and ZERO of them carry an <c>ItemVersionId</c>. A branch that has never executed is not known to
-/// work - it is known to compile. This drives the same answers through both shapes and asserts the
-/// aggregates agree, which is what makes the pool branch safe to rely on when #250 deletes the legacy
-/// tables.
-/// </para>
-/// <para>
-/// <b>Which guard could this pass while being wrong.</b> "The pool branch returns something" passes on a
-/// branch that double-counts: <c>vw_UserSectionAccuracyAll</c> has three UNION ALL arms and a pool answer
-/// that also kept a <c>QuestionId</c> is visible to two of them. Its legacy arm consequently excludes
-/// pinned rows. So the assertion is EQUALITY of the totals between the two shapes, not the presence of a
-/// row - a doubled count fails it, and so does a dropped one.
+/// <b>What this file used to prove, and why it changed.</b> It compared a legacy answer (which named a
+/// <c>QuestionId</c>) against a pool answer (which pins an <c>ItemVersionId</c>) and asserted both views
+/// agreed. #269 deleted <c>Questions</c>, so there is no second shape to compare against - and an
+/// equality check against a view that also reads zero would pass vacuously. What is asserted instead is
+/// the exact figure per section and per cell, measured against a direct computation over the same rows,
+/// which a view that silently returned nothing could not satisfy.
 /// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
@@ -32,12 +24,12 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
     private static string Unique(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
 
     /// <summary>
-    /// The SAME four answers, recorded twice against two learners: once as legacy rows that name a
-    /// QuestionId, once as pool rows that pin an ItemVersionId. Every view must report the same
-    /// per-section and per-topic totals for the two learners.
+    /// The four answers this file needs, recorded once against one learner: two correct, two wrong, all
+    /// naming a roster position and its pinned version. Every view must report the same per-section and
+    /// per-cell totals that a direct count over the same rows produces.
     /// </summary>
     [Fact]
-    public async Task The_views_report_the_same_totals_for_a_pool_answer_and_a_legacy_answer()
+    public async Task The_views_report_the_totals_the_answer_rows_hold()
     {
         var name = $"EE250v_{Guid.NewGuid():N}"[..24];
         var connectionString = await database.CreateFreshDatabaseAsync(name);
@@ -47,46 +39,8 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
 
             await using var db = DbContextFactory.Create(connectionString);
 
-            // ---- the two learners ------------------------------------------------------------
-            var legacyUser = await SeedLearnerAsync(db, fixture.CertId, "legacy");
             var poolUser = await SeedLearnerAsync(db, fixture.CertId, "pool");
 
-            // ---- legacy shape: answers name a QuestionId -------------------------------------
-            var legacyAttempt = new ExamAttempt
-            {
-                UserId = legacyUser,
-                CertId = fixture.CertId,
-                ExamId = fixture.ExamId,
-                Status = "graded",
-                StartedAt = DateTimeOffset.UtcNow.AddHours(-1),
-                SubmittedAt = DateTimeOffset.UtcNow.AddMinutes(-30),
-                TotalScore = 60,
-                WrittenByService = DerivedFactWriters.AttemptScoreAndBand,
-                ProjectionVersion = 1,
-            };
-            db.ExamAttempts.Add(legacyAttempt);
-            await db.SaveChangesAsync();
-
-            // Two answered, one correct - the same figures the pool learner gets.
-            db.AttemptAnswers.Add(new AttemptAnswer
-            {
-                AttemptId = legacyAttempt.AttemptId,
-                ExamId = fixture.ExamId,
-                QuestionId = fixture.QuestionIds[0],
-                SelectedOptionId = fixture.CorrectOptionIds[0],
-                IsCorrect = true,
-            });
-            db.AttemptAnswers.Add(new AttemptAnswer
-            {
-                AttemptId = legacyAttempt.AttemptId,
-                ExamId = fixture.ExamId,
-                QuestionId = fixture.QuestionIds[1],
-                SelectedOptionId = fixture.WrongOptionIds[1],
-                IsCorrect = false,
-            });
-            await db.SaveChangesAsync();
-
-            // ---- pool shape: answers pin an ItemVersionId ------------------------------------
             var poolAttempt = new ExamAttempt
             {
                 UserId = poolUser,
@@ -102,13 +56,12 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
             db.ExamAttempts.Add(poolAttempt);
             await db.SaveChangesAsync();
 
-            // A pool answer keeps a QuestionId: AttemptAnswers.QuestionId is NOT NULL until #250
-            // removes the column, which is exactly why the views must state which shape owns a row.
+            // Two answered, one correct - the figures the views must reproduce.
             db.AttemptAnswers.Add(new AttemptAnswer
             {
                 AttemptId = poolAttempt.AttemptId,
                 ExamId = fixture.ExamId,
-                QuestionId = fixture.QuestionIds[0],
+                ExamItemId = fixture.ExamItemIds[0],
                 ItemId = fixture.ItemIds[0],
                 ItemVersionId = fixture.ItemVersionIds[0],
                 SelectedLabel = "A",
@@ -118,7 +71,7 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
             {
                 AttemptId = poolAttempt.AttemptId,
                 ExamId = fixture.ExamId,
-                QuestionId = fixture.QuestionIds[1],
+                ExamItemId = fixture.ExamItemIds[1],
                 ItemId = fixture.ItemIds[1],
                 ItemVersionId = fixture.ItemVersionIds[1],
                 SelectedLabel = "B",
@@ -130,34 +83,24 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
             await using var read = DbContextFactory.Create(connectionString);
 
             var sections = await read.vw_UserSectionAccuracyAlls.AsNoTracking()
-                .Where(v => v.UserId == legacyUser || v.UserId == poolUser)
+                .Where(v => v.UserId == poolUser)
                 .ToListAsync();
 
-            // #264: the view reports the POOL shape only. The old assertion compared the two shapes for
-            // equality; with the legacy branch gone there is no second shape to compare against, and
-            // asserting "the pool learner still gets 2" is the stronger claim anyway - a view that
-            // silently returned nothing would read 0 here, while two views both reading 0 would have
-            // passed the old equality check.
-            var poolSection = Assert.Single(sections, s => s.UserId == poolUser);
+            // #264: the view reports the POOL shape only. Asserting the figure - rather than "a row
+            // exists" - is what catches a view that double counted (2 reported as 4) or dropped a row.
+            var poolSection = Assert.Single(sections);
+            Assert.Equal(fixture.SectionId, poolSection.SectionId);
             Assert.Equal(2, poolSection.Answered);
             Assert.Equal(1, poolSection.Correct);
 
-            // And a legacy-only answer contributes NO row: the shape this product no longer produces
-            // must not inflate a denominator.
-            Assert.DoesNotContain(sections, s => s.UserId == legacyUser);
-
             var topics = await read.vw_UserTopicAccuracies.AsNoTracking()
-                .Where(v => v.UserId == legacyUser || v.UserId == poolUser)
+                .Where(v => v.UserId == poolUser)
                 .ToListAsync();
 
-            // The topics view reads Items, so the legacy learner has no cell at all - that is the
-            // point of criterion 4's "the same numbers": the pool shape must supply the cell the
-            // legacy shape cannot, and it must be counted once.
-            var poolCell = Assert.Single(topics, t => t.UserId == poolUser);
+            var poolCell = Assert.Single(topics);
             Assert.Equal(2, poolCell.Answered);
             Assert.Equal(1, poolCell.Correct);
             Assert.Equal(50, poolCell.AccuracyPercent);
-            Assert.Empty(topics.Where(t => t.UserId == legacyUser));
         }
         finally
         {
@@ -166,12 +109,14 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// The same answers counted twice would be the defect the legacy arm's exclusion exists to prevent.
-    /// This drives the case directly: one pool answer whose QuestionId is ALSO resolvable, and asserts
-    /// the section figure is 1 rather than 2.
+    /// The same answer must not be counted twice, and one that names no cell must not inflate a
+    /// denominator. #269 removed the shape that could do the first (one row carrying BOTH a
+    /// <c>QuestionId</c> and a pinned version, which two UNION ALL arms could each see); what is
+    /// assertable now is that one row gives exactly one count, and that a row whose attempt is still in
+    /// progress contributes nothing.
     /// </summary>
     [Fact]
-    public async Task A_pool_answer_that_also_names_a_question_is_counted_once()
+    public async Task One_answer_counts_once_and_an_ungraded_attempt_counts_not_at_all()
     {
         var name = $"EE250d_{Guid.NewGuid():N}"[..24];
         var connectionString = await database.CreateFreshDatabaseAsync(name);
@@ -195,20 +140,25 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
                 ProjectionVersion = 1,
             };
             db.ExamAttempts.Add(attempt);
+
+            // A second, UNGRADED attempt: its answers must contribute nothing at all.
+            var openAttempt = new ExamAttempt
+            {
+                UserId = userId,
+                CertId = fixture.CertId,
+                ExamId = fixture.ExamId,
+                Status = "in_progress",
+                StartedAt = DateTimeOffset.UtcNow,
+                WrittenByService = DerivedFactWriters.AttemptScoreAndBand,
+                ProjectionVersion = 1,
+            };
+            db.ExamAttempts.Add(openAttempt);
             await db.SaveChangesAsync();
 
-            // ONE answer. It carries both shapes: a QuestionId (which the legacy arm joins on) and a
-            // pinned ItemVersionId (which the pool arm joins on).
-            db.AttemptAnswers.Add(new AttemptAnswer
-            {
-                AttemptId = attempt.AttemptId,
-                ExamId = fixture.ExamId,
-                QuestionId = fixture.QuestionIds[0],
-                ItemId = fixture.ItemIds[0],
-                ItemVersionId = fixture.ItemVersionIds[0],
-                SelectedLabel = "A",
-                IsCorrect = true,
-            });
+            // ONE graded answer. It must be counted once, and the ungraded attempt's answer must not
+            // enter the same total.
+            db.AttemptAnswers.Add(PoolAnswer(attempt.AttemptId, fixture, 0, "A", true));
+            db.AttemptAnswers.Add(PoolAnswer(openAttempt.AttemptId, fixture, 1, "B", false));
             await db.SaveChangesAsync();
 
             await using var read = DbContextFactory.Create(connectionString);
@@ -223,6 +173,17 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
             await database.DropDatabaseAsync(name);
         }
     }
+
+    private static AttemptAnswer PoolAnswer(int attemptId, Fixture f, int index, string label, bool? correct) => new()
+    {
+        AttemptId = attemptId,
+        ExamId = f.ExamId,
+        ExamItemId = f.ExamItemIds[index],
+        ItemId = f.ItemIds[index],
+        ItemVersionId = f.ItemVersionIds[index],
+        SelectedLabel = label,
+        IsCorrect = correct,
+    };
 
     /// <summary>
     /// <b>#271 criterion 5:</b> the topic view supplies the same NUMBERS the retired category view did
@@ -309,17 +270,6 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
             Assert.Equal(1, cell.Correct);
             // And the percentage is the same division: 1 of 2 is 50.
             Assert.Equal(50, cell.AccuracyPercent);
-
-            AttemptAnswer PoolAnswer(int attemptId, Fixture f, int index, string label, bool? correct) => new()
-            {
-                AttemptId = attemptId,
-                ExamId = f.ExamId,
-                ExamItemId = f.ExamItemIds[index],
-                ItemId = f.ItemIds[index],
-                ItemVersionId = f.ItemVersionIds[index],
-                SelectedLabel = label,
-                IsCorrect = correct,
-            };
         }
         finally
         {
@@ -333,16 +283,13 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
         int CertId,
         int ExamId,
         int SectionId,
-        IReadOnlyList<int> QuestionIds,
-        IReadOnlyList<int> CorrectOptionIds,
-        IReadOnlyList<int> WrongOptionIds,
         IReadOnlyList<int> ItemIds,
         IReadOnlyList<int> ItemVersionIds,
         IReadOnlyList<int> ExamItemIds);
 
     /// <summary>
-    /// One certificate, one paper with two questions, and TWO pool items bound to the same exam - so a
-    /// legacy answer and a pool answer describe the same sitting and the views can be compared.
+    /// One certificate and one paper with TWO pool positions, so the views have two answers to report
+    /// per section and per cell.
     /// </summary>
     private static async Task<Fixture> SeedAsync(string connectionString)
     {
@@ -386,41 +333,7 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
         db.Exams.Add(exam);
         await db.SaveChangesAsync();
 
-        // #272: the legacy question/option rows below STAY, because the shape they produce is this
-        // file's subject - A_pool_answer_that_also_names_a_question_is_counted_once writes a pool answer
-        // whose QuestionId is ALSO resolvable, which is the double-count #250 found. A pool-only fixture
-        // could not express it. #269 deletes the rows with the table.
-        var group = new QuestionGroup
-        {
-            ExamId = exam.ExamId, CertId = cert.CertId, SectionId = section.SectionId,
-            DisplayOrder = 1, UnitNumber = 1,
-        };
-        db.QuestionGroups.Add(group);
-        await db.SaveChangesAsync();
-
-        var q1 = new Question
-        {
-            GroupId = group.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId,
-            SkillId = skill.SkillId, Stem = "Q1", CefrLevel = CefrLevel.B1, QuestionType = "mcq",
-            DisplayOrder = 1,
-        };
-        var q2 = new Question
-        {
-            GroupId = group.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId,
-            SkillId = skill.SkillId, Stem = "Q2", CefrLevel = CefrLevel.B1, QuestionType = "mcq",
-            DisplayOrder = 2,
-        };
-        db.Questions.AddRange(q1, q2);
-        await db.SaveChangesAsync();
-
-        var q1Correct = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "mcq", Label = "A", Text = "Right", IsCorrect = true };
-        var q1Wrong = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "mcq", Label = "B", Text = "Wrong", IsCorrect = false };
-        var q2Correct = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "mcq", Label = "B", Text = "Right", IsCorrect = true };
-        var q2Wrong = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "mcq", Label = "A", Text = "Wrong", IsCorrect = false };
-        db.QuestionOptions.AddRange(q1Correct, q1Wrong, q2Correct, q2Wrong);
-        await db.SaveChangesAsync();
-
-        // ---- the pool stock the same two questions become ---------------------------------
+        // ---- the pool stock that fills the two positions -----------------------------------
         var topic = new Topic { Modality = "reading", Code = "R-DET", Name = "Local factual retrieval and paraphrase matching" };
         db.Topics.Add(topic);
         await db.SaveChangesAsync();
@@ -490,9 +403,6 @@ public sealed class PoolAndLegacyAccuracyAgreeTests(DatabaseFixture database)
             cert.CertId,
             exam.ExamId,
             section.SectionId,
-            [q1.QuestionId, q2.QuestionId],
-            [q1Correct.OptionId, q2Correct.OptionId],
-            [q1Wrong.OptionId, q2Wrong.OptionId],
             itemIds,
             versionIds,
             examItemIds);

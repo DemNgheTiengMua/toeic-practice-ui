@@ -153,10 +153,10 @@ public sealed class PracticePoolTests(DatabaseFixture database)
         Assert.Equal(2, answers.Count);
         Assert.All(answers, a =>
         {
-            Assert.Null(a.QuestionId);
-            Assert.Null(a.SectionId);
+            // #269: a pool drill answer names an item and its version, and no micro-check card.
             Assert.NotNull(a.ItemId);
             Assert.NotNull(a.ItemVersionId);
+            Assert.Null(a.CardId);
         });
         Assert.Equal(
             new[] { cell.FirstVersionId, cell.SecondVersionId },
@@ -218,7 +218,6 @@ public sealed class PracticePoolTests(DatabaseFixture database)
         Assert.Equal(cell.FirstItemId, answer.ItemId);
         Assert.Equal("C", answer.SelectedLabel);
         Assert.Null(answer.SelectedOptionId);
-        Assert.Null(answer.QuestionId);
     }
 
     /// <summary>

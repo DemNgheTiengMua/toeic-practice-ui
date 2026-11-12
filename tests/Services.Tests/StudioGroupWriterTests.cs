@@ -47,9 +47,9 @@ public sealed class StudioGroupWriterTests(DatabaseFixture database)
             Assert.Equal(2, group.Questions.Count);
 
             // The precondition the whole ticket rests on: this paper has no legacy rows at all, so a
-            // writer that lands on one writes to nothing and the screen never changes.
-            // #272: left legacy - reason 2, an ABSENCE assertion; it is what makes the writer's target real.
-            Assert.Equal(0, await db.Questions.CountAsync(q => q.ExamId == fixture.ExamId));
+            // writer that lands on one writes to nothing and the screen never changes. #269 dropped the
+            // legacy tables, so that absence is a schema fact; the writer's target being real is what
+            // the re-read below proves.
 
             await service.UpdateExamStudioGroupAsync(
                 fixture.ExamId,
@@ -321,8 +321,9 @@ public sealed class StudioGroupWriterTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// The Studio is the pool editor. Nothing in this file may need a <c>QuestionGroups</c> row, and the
-    /// solo-position assertion above proves the read path draws one from the roster alone.
+    /// The Studio is the pool editor. #269 dropped <c>QuestionGroups</c>, so "this needs no such row" is
+    /// a schema fact rather than a count; what the test still proves is that the group write reaches the
+    /// pool row and the read keeps drawing two groups from the roster.
     /// </summary>
     [Fact]
     public async Task The_studio_group_write_needs_no_question_group_row()
@@ -334,9 +335,8 @@ public sealed class StudioGroupWriterTests(DatabaseFixture database)
             var fixture = await SeedAsync(connectionString);
 
             await using var db = DbContextFactory.Create(connectionString);
-            // #272: left legacy - reason 2, both lines are ABSENCE assertions (#273 removed the writer).
-            Assert.Equal(0, await db.QuestionGroups.CountAsync(g => g.ExamId == fixture.ExamId));
-
+            // #269: QuestionGroups is gone, so this file cannot need one. What it may still assert is
+            // that the read draws the same two groups from the roster alone.
             var service = new AdminExamService(db, TimeProvider.System);
             var studio = await service.GetExamStudioAsync(fixture.ExamId);
             Assert.Equal(2, studio.Sections.Single(s => s.SectionId == fixture.SectionId).Groups.Count);
@@ -346,7 +346,11 @@ public sealed class StudioGroupWriterTests(DatabaseFixture database)
                 fixture.StimulusId,
                 new UpdateQuestionGroupRequest(SectionId: fixture.SectionId, Passage: "Round-tripped.", UnitNumber: 1));
 
-            Assert.Equal(0, await db.QuestionGroups.CountAsync(g => g.ExamId == fixture.ExamId));
+            // The write reached the stimulus the pool group IS, and the read still sees two groups.
+            Assert.Equal(
+                "Round-tripped.",
+                await db.Stimuli.AsNoTracking()
+                    .Where(s => s.StimulusId == fixture.StimulusId).Select(s => s.Passage).SingleAsync());
         }
         finally
         {

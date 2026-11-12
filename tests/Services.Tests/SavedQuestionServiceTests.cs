@@ -1,4 +1,4 @@
-using BusinessObjects;
+﻿using BusinessObjects;
 using DataAccess;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
@@ -35,21 +35,13 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// A certificate with a legacy paper of three <c>Questions</c> rows.
+    /// A certificate with a paper of three pool positions, plus the section they sit in.
     /// <para>
-    /// <b>#272: stays legacy - reason 1, the subject is the legacy half of the bank.</b> The tests above
-    /// drive <c>SaveQuestionAsync</c> with a QUESTION id and then assert the legacy link's own
-    /// projection: <c>item.QuestionId</c>, <c>item.Hint</c>, the legacy section filter, and the two-option
-    /// set. A pool link carries <c>ItemId</c>/<c>ItemVersionId</c> instead and renders four options with
-    /// no hint, so migrating these would blank the question id, drop the hint assertion and widen the
-    /// option count - a weaker test, not a translated one.
-    /// </para>
-    /// <para>
-    /// The pool half of the same service is <c>SaveItemVersionAsync</c>, and it has its own tests in this
-    /// file (#224, from <c>SeedPoolCellAsync</c> down). #269 deletes these rows with the table.
+    /// #269: the bank is pool-native, so a link names an item and the version it pinned. A fixture that
+    /// still authored legacy rows would be testing a table that no longer exists.
     /// </para>
     /// </summary>
-    private async Task<(int CertId, int SectionId, List<int> QuestionIds, List<int> CorrectOptionIds, List<int> WrongOptionIds)> SeedCertificateWithQuestionsAsync(string certCode)
+    private async Task<(int CertId, int SectionId, List<int> PositionIds, List<int> ItemIds, List<int> WrongOptionIds)> SeedCertificateWithPositionsAsync(string certCode)
     {
         await using var db = DbContextFactory.Create(database.ConnectionString);
 
@@ -57,15 +49,11 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         db.Certificates.Add(cert);
         await db.SaveChangesAsync();
 
-        var cat = new QuestionCategory { CertId = cert.CertId, Code = Unique("CAT"), Name = "Grammar: Tenses" };
-        db.QuestionCategories.Add(cat);
-        await db.SaveChangesAsync();
-
         var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
         db.Skills.Add(skill);
         await db.SaveChangesAsync();
 
-        var readSec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
+        var readSec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 3 };
         db.Sections.Add(readSec);
         await db.SaveChangesAsync();
 
@@ -73,39 +61,28 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         db.Exams.Add(exam);
         await db.SaveChangesAsync();
 
-        var grp = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = readSec.SectionId, DisplayOrder = 1, Passage = "Sample Passage", Transcript = "Sample Transcript" };
-        db.QuestionGroups.Add(grp);
-        await db.SaveChangesAsync();
+        var positionIds = new List<int>();
+        var itemIds = new List<int>();
+        var wrongOptionIds = new List<int>();
+        for (var i = 1; i <= 3; i++)
+        {
+            // Key 'A', so the second option id (PoolOptionIndex 1) is the wrong one.
+            var position = await PoolFixture.AddMcqAsync(
+                db, exam.ExamId, cert.CertId, readSec.SectionId, "reading",
+                stem: $"Stem {i}", displayOrder: i, keyLabel: "A", hint: $"Hint {i}",
+                explanation: $"Explanation {i}");
+            positionIds.Add(position.ExamItemId);
+            itemIds.Add(position.ItemId);
+            wrongOptionIds.Add(position.ItemVersionId * 10 + 2);
+        }
 
-        var q1 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = readSec.SectionId, SkillId = skill.SkillId, CategoryId = cat.CategoryId, Stem = "Stem 1", CefrLevel = CefrLevel.B2, QuestionType = "mcq", Hint = "Hint 1", Explanation = "Explanation 1", DisplayOrder = 1 };
-        var q2 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = readSec.SectionId, SkillId = skill.SkillId, CategoryId = cat.CategoryId, Stem = "Stem 2", CefrLevel = CefrLevel.B2, QuestionType = "mcq", Hint = "Hint 2", Explanation = "Explanation 2", DisplayOrder = 2 };
-        var q3 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = readSec.SectionId, SkillId = skill.SkillId, CategoryId = cat.CategoryId, Stem = "Stem 3", CefrLevel = CefrLevel.B2, QuestionType = "mcq", Hint = "Hint 3", Explanation = "Explanation 3", DisplayOrder = 3 };
-        db.Questions.AddRange(q1, q2, q3);
-        await db.SaveChangesAsync();
-
-        var opt1A = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "mcq", Label = "A", Text = "Correct A", IsCorrect = true };
-        var opt1B = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "mcq", Label = "B", Text = "Wrong B", IsCorrect = false };
-
-        var opt2A = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "mcq", Label = "A", Text = "Wrong A", IsCorrect = false };
-        var opt2B = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "mcq", Label = "B", Text = "Correct B", IsCorrect = true };
-
-        var opt3A = new QuestionOption { QuestionId = q3.QuestionId, QuestionType = "mcq", Label = "A", Text = "Wrong A", IsCorrect = false };
-        var opt3B = new QuestionOption { QuestionId = q3.QuestionId, QuestionType = "mcq", Label = "B", Text = "Correct B", IsCorrect = true };
-        db.QuestionOptions.AddRange(opt1A, opt1B, opt2A, opt2B, opt3A, opt3B);
-        await db.SaveChangesAsync();
-
-        var qIds = new List<int> { q1.QuestionId, q2.QuestionId, q3.QuestionId };
-        var optionsInDb = await db.QuestionOptions.Where(o => qIds.Contains(o.QuestionId)).ToListAsync();
-        var correctOpts = qIds.Select(id => optionsInDb.First(o => o.QuestionId == id && o.IsCorrect).OptionId).ToList();
-        var wrongOpts = qIds.Select(id => optionsInDb.First(o => o.QuestionId == id && !o.IsCorrect).OptionId).ToList();
-
-        return (cert.CertId, readSec.SectionId, qIds, correctOpts, wrongOpts);
+        return (cert.CertId, readSec.SectionId, positionIds, itemIds, wrongOptionIds);
     }
+
 
     /// <summary>
     /// #224: one certificate (so a learner has an active one) and one reading topic with two active pool
-    /// items, each with version 1. Nothing names an exam, so a pool link cannot pass by reading a legacy
-    /// <c>Questions</c> row.
+    /// items, each with version 1. Nothing names an exam, so a pool link cannot pass by reading a paper.
     /// </summary>
     private async Task<(int CertId, int TopicId, int ItemId, int ItemVersionId)> SeedPoolCellAsync(string certCode)
     {
@@ -144,26 +121,26 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
     public async Task SaveQuestion_is_idempotent_when_called_multiple_times()
     {
         var certCode = Unique("SQ");
-        var (_, _, qIds, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var (_, _, positions, _, _) = await SeedCertificateWithPositionsAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (savedQuestions, _, _) = CreateServices();
-        var qId = qIds[0];
+        var positionId = positions[0];
 
-        // First call saves question
-        var res1 = await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Manual);
+        // First call files the position
+        var res1 = await savedQuestions.SaveQuestionAsync(userId, positionId, SavedQuestionSource.Manual);
         Assert.True(res1.IsSaved);
         Assert.Equal(SavedQuestionSource.Manual, res1.Source);
         Assert.NotNull(res1.SavedAt);
         Assert.NotNull(res1.SavedQuestionId);
 
-        // Second call on same question succeeds idempotently without error
-        var res2 = await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Manual);
+        // Second call on the same position succeeds idempotently without error
+        var res2 = await savedQuestions.SaveQuestionAsync(userId, positionId, SavedQuestionSource.Manual);
         Assert.True(res2.IsSaved);
         Assert.Equal(SavedQuestionSource.Manual, res2.Source);
         Assert.Equal(res1.SavedQuestionId, res2.SavedQuestionId);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var rows = await db.SavedQuestions.Where(sq => sq.UserId == userId && sq.QuestionId == qId).ToListAsync();
+        var rows = await db.SavedQuestions.Where(sq => sq.UserId == userId).ToListAsync();
         Assert.Single(rows);
     }
 
@@ -171,23 +148,23 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
     public async Task UnsaveQuestion_is_idempotent_when_called_for_unsaved_question()
     {
         var certCode = Unique("SQ");
-        var (_, _, qIds, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var (_, _, positions, _, _) = await SeedCertificateWithPositionsAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (savedQuestions, _, _) = CreateServices();
-        var qId = qIds[0];
+        var positionId = positions[0];
 
         // Unsaving something that is NOT currently saved succeeds idempotently
         var res1 = await savedQuestions.UnsaveAsync(userId, 999_999);
         Assert.False(res1.IsSaved);
 
         // Save it first
-        var saved = await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Manual);
-        Assert.True(await savedQuestions.IsQuestionSavedAsync(userId, qId));
+        var saved = await savedQuestions.SaveQuestionAsync(userId, positionId, SavedQuestionSource.Manual);
+        Assert.True(await savedQuestions.IsQuestionSavedAsync(userId, positionId));
 
         // Unsave it
         var res2 = await savedQuestions.UnsaveAsync(userId, saved.SavedQuestionId!.Value);
         Assert.False(res2.IsSaved);
-        Assert.False(await savedQuestions.IsQuestionSavedAsync(userId, qId));
+        Assert.False(await savedQuestions.IsQuestionSavedAsync(userId, positionId));
 
         // Second unsave succeeds idempotently
         var res3 = await savedQuestions.UnsaveAsync(userId, saved.SavedQuestionId!.Value);
@@ -198,18 +175,18 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
     public async Task SaveQuestion_promotes_incorrect_source_to_manual_when_manually_saved()
     {
         var certCode = Unique("SQ");
-        var (_, _, qIds, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var (_, _, positions, _, _) = await SeedCertificateWithPositionsAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (savedQuestions, _, _) = CreateServices();
-        var qId = qIds[0];
+        var positionId = positions[0];
 
         // Initially saved as incorrect
-        var saved = await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Incorrect);
+        var saved = await savedQuestions.SaveQuestionAsync(userId, positionId, SavedQuestionSource.Incorrect);
         var view1 = await savedQuestions.GetSavedQuestionAsync(userId, saved.SavedQuestionId!.Value);
         Assert.Equal(SavedQuestionSource.Incorrect, view1.Source);
 
         // Later learner explicitly saves it manually
-        await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Manual);
+        await savedQuestions.SaveQuestionAsync(userId, positionId, SavedQuestionSource.Manual);
         var view2 = await savedQuestions.GetSavedQuestionAsync(userId, saved.SavedQuestionId!.Value);
         Assert.Equal(SavedQuestionSource.Manual, view2.Source);
     }
@@ -219,27 +196,27 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
     {
         var certA = Unique("CA");
         var certB = Unique("CB");
-        var (_, _, qIdsA, _, _) = await SeedCertificateWithQuestionsAsync(certA);
-        var (_, _, qIdsB, _, _) = await SeedCertificateWithQuestionsAsync(certB);
+        var (_, _, positionsA, itemsA, _) = await SeedCertificateWithPositionsAsync(certA);
+        var (_, _, positionsB, itemsB, _) = await SeedCertificateWithPositionsAsync(certB);
 
         var user1 = await SeedLearnerAsync(certA);
         var user2 = await SeedLearnerAsync(certA);
         var (savedQuestions, _, learners) = CreateServices();
 
-        // User1 saves Q1 from CertA
-        await savedQuestions.SaveQuestionAsync(user1, qIdsA[0], SavedQuestionSource.Manual);
-        // User1 switches to CertB to save Q1 from CertB, then switches back to CertA
+        // User1 saves position 1 from CertA
+        await savedQuestions.SaveQuestionAsync(user1, positionsA[0], SavedQuestionSource.Manual);
+        // User1 switches to CertB to save position 1 from CertB, then switches back to CertA
         await learners.SwitchCertificateAsync(user1, certB);
-        await savedQuestions.SaveQuestionAsync(user1, qIdsB[0], SavedQuestionSource.Manual);
+        await savedQuestions.SaveQuestionAsync(user1, positionsB[0], SavedQuestionSource.Manual);
         await learners.SwitchCertificateAsync(user1, certA);
 
-        // User2 saves Q2 from CertA
-        await savedQuestions.SaveQuestionAsync(user2, qIdsA[1], SavedQuestionSource.Manual);
+        // User2 saves position 2 from CertA
+        await savedQuestions.SaveQuestionAsync(user2, positionsA[1], SavedQuestionSource.Manual);
 
-        // User1 viewing CertA should only see User1's question from CertA
+        // User1 viewing CertA should only see User1's item from CertA
         var viewUser1CertA = await savedQuestions.GetSavedQuestionsAsync(user1, new SavedQuestionFilterInput());
         Assert.Single(viewUser1CertA.Questions);
-        Assert.Equal(qIdsA[0], viewUser1CertA.Questions[0].QuestionId);
+        Assert.Equal(itemsA[0], viewUser1CertA.Questions[0].ItemId);
         Assert.Equal(certA, viewUser1CertA.Certificate.Code);
         Assert.Equal(1, viewUser1CertA.TotalSavedCount);
         Assert.Equal(1, viewUser1CertA.ManualSavedCount);
@@ -248,31 +225,31 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         // User2 viewing CertA should only see User2's item
         var viewUser2CertA = await savedQuestions.GetSavedQuestionsAsync(user2, new SavedQuestionFilterInput());
         Assert.Single(viewUser2CertA.Questions);
-        Assert.Equal(qIdsA[1], viewUser2CertA.Questions[0].QuestionId);
+        Assert.Equal(itemsA[1], viewUser2CertA.Questions[0].ItemId);
 
         // User1 switches to CertB
         await learners.SwitchCertificateAsync(user1, certB);
         var viewUser1CertB = await savedQuestions.GetSavedQuestionsAsync(user1, new SavedQuestionFilterInput());
         Assert.Single(viewUser1CertB.Questions);
-        Assert.Equal(qIdsB[0], viewUser1CertB.Questions[0].QuestionId);
+        Assert.Equal(itemsB[0], viewUser1CertB.Questions[0].ItemId);
         Assert.Equal(certB, viewUser1CertB.Certificate.Code);
     }
 
     [Fact]
-    public async Task GetSavedQuestions_filters_by_source_and_category()
+    public async Task GetSavedQuestions_filters_by_source()
     {
         var certCode = Unique("SQ");
-        var (_, secId, qIds, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var (_, _, positions, items, _) = await SeedCertificateWithPositionsAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (savedQuestions, _, _) = CreateServices();
 
-        await savedQuestions.SaveQuestionAsync(userId, qIds[0], SavedQuestionSource.Manual);
-        await savedQuestions.SaveQuestionAsync(userId, qIds[1], SavedQuestionSource.Incorrect);
+        await savedQuestions.SaveQuestionAsync(userId, positions[0], SavedQuestionSource.Manual);
+        await savedQuestions.SaveQuestionAsync(userId, positions[1], SavedQuestionSource.Incorrect);
 
         // Filter by manual
         var manualOnly = await savedQuestions.GetSavedQuestionsAsync(userId, new SavedQuestionFilterInput(Source: SavedQuestionSource.Manual));
         Assert.Single(manualOnly.Questions);
-        Assert.Equal(qIds[0], manualOnly.Questions[0].QuestionId);
+        Assert.Equal(items[0], manualOnly.Questions[0].ItemId);
         Assert.Equal(2, manualOnly.TotalSavedCount); // Total overall for cert remains 2
         Assert.Equal(1, manualOnly.ManualSavedCount);
         Assert.Equal(1, manualOnly.IncorrectSavedCount);
@@ -280,32 +257,26 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         // Filter by incorrect
         var incorrectOnly = await savedQuestions.GetSavedQuestionsAsync(userId, new SavedQuestionFilterInput(Source: SavedQuestionSource.Incorrect));
         Assert.Single(incorrectOnly.Questions);
-        Assert.Equal(qIds[1], incorrectOnly.Questions[0].QuestionId);
-
-        // Filter by section
-        var bySection = await savedQuestions.GetSavedQuestionsAsync(userId, new SavedQuestionFilterInput(SectionId: secId));
-        Assert.Equal(2, bySection.Questions.Count);
+        Assert.Equal(items[1], incorrectOnly.Questions[0].ItemId);
     }
 
     [Fact]
     public async Task GetSavedQuestion_returns_options_explanation_and_media()
     {
         var certCode = Unique("SQ");
-        var (_, _, qIds, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var (_, _, positions, itemIds, _) = await SeedCertificateWithPositionsAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (savedQuestions, _, _) = CreateServices();
-        var qId = qIds[0];
 
-        var saved = await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Manual);
+        var saved = await savedQuestions.SaveQuestionAsync(userId, positions[0], SavedQuestionSource.Manual);
 
         var item = await savedQuestions.GetSavedQuestionAsync(userId, saved.SavedQuestionId!.Value);
-        Assert.Equal(qId, item.QuestionId);
+        Assert.Equal(itemIds[0], item.ItemId);
         Assert.Equal("Stem 1", item.Stem);
-        Assert.Equal("Sample Passage", item.Passage);
         Assert.Equal("Explanation 1", item.Explanation);
-        Assert.Equal("Sample Transcript", item.Transcript);
         Assert.Equal("Hint 1", item.Hint);
-        Assert.Equal(2, item.Options.Count);
+        // A version stores four labels rather than option rows, so all four come back.
+        Assert.Equal(4, item.Options.Count);
         Assert.Contains(item.Options, o => o.Label == "A" && o.IsCorrect);
         Assert.Contains(item.Options, o => o.Label == "B" && !o.IsCorrect);
     }
@@ -314,12 +285,12 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
     public async Task GetSavedQuestion_throws_when_not_saved_by_user()
     {
         var certCode = Unique("SQ");
-        var (_, _, qIds, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        await SeedCertificateWithPositionsAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (savedQuestions, _, _) = CreateServices();
 
         var ex = await Assert.ThrowsAsync<SavedQuestionException>(() =>
-            savedQuestions.GetSavedQuestionAsync(userId, qIds[0]));
+            savedQuestions.GetSavedQuestionAsync(userId, 999_999));
         Assert.Equal(SavedQuestionException.SavedQuestionNotFound, ex.Code);
     }
 
@@ -327,22 +298,22 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
     public async Task SubmitAnswer_automatically_saves_incorrect_mcq_to_saved_questions()
     {
         var certCode = Unique("SQ");
-        var (_, secId, qIds, _, wrongOpts) = await SeedCertificateWithQuestionsAsync(certCode);
+        var (_, sectionId, positions, items, wrongOpts) = await SeedCertificateWithPositionsAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (savedQuestions, practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
-        var qId = qIds[0];
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
+        var versionId = positions[0] * 0 + await VersionIdAtAsync(positions[0]);
 
         // Submit wrong answer
-        var result = await practice.SubmitAnswerAsync(userId, session.SessionId, qId, new SubmitPracticeAnswerInput(wrongOpts[0]));
+        var result = await practice.SubmitAnswerAsync(userId, session.SessionId, versionId, new SubmitPracticeAnswerInput(wrongOpts[0]));
         Assert.False(result.IsCorrect);
         Assert.True(result.IsSaved);
         Assert.NotNull(result.SavedQuestionId);
 
-        // Verify question now exists in SavedQuestions with source = 'incorrect'
+        // Verify the item now exists in SavedQuestions with source = 'incorrect'
         var savedItem = await savedQuestions.GetSavedQuestionAsync(userId, result.SavedQuestionId!.Value);
-        Assert.Equal(qId, savedItem.QuestionId);
+        Assert.Equal(items[0], savedItem.ItemId);
         Assert.Equal(SavedQuestionSource.Incorrect, savedItem.Source);
     }
 
@@ -350,18 +321,18 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
     public async Task SubmitAnswer_does_not_overwrite_manual_source_if_already_saved_manually()
     {
         var certCode = Unique("SQ");
-        var (_, secId, qIds, _, wrongOpts) = await SeedCertificateWithQuestionsAsync(certCode);
+        var (_, sectionId, positions, _, wrongOpts) = await SeedCertificateWithPositionsAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (savedQuestions, practice, _) = CreateServices();
-        var qId = qIds[0];
+        var versionId = await VersionIdAtAsync(positions[0]);
 
         // Manually save first
-        var manual = await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Manual);
+        var manual = await savedQuestions.SaveQuestionAsync(userId, positions[0], SavedQuestionSource.Manual);
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
 
         // Submit wrong answer
-        var result = await practice.SubmitAnswerAsync(userId, session.SessionId, qId, new SubmitPracticeAnswerInput(wrongOpts[0]));
+        var result = await practice.SubmitAnswerAsync(userId, session.SessionId, versionId, new SubmitPracticeAnswerInput(wrongOpts[0]));
         Assert.False(result.IsCorrect);
         Assert.True(result.IsSaved);
         Assert.Equal(manual.SavedQuestionId, result.SavedQuestionId);
@@ -376,24 +347,23 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
     {
         var certCodeA = Unique("SQA");
         var certCodeB = Unique("SQB");
-        var (_, _, qIdsA, _, _) = await SeedCertificateWithQuestionsAsync(certCodeA);
-        await SeedCertificateWithQuestionsAsync(certCodeB);
+        var (_, _, positionsA, itemsA, _) = await SeedCertificateWithPositionsAsync(certCodeA);
+        await SeedCertificateWithPositionsAsync(certCodeB);
 
         var userId = await SeedLearnerAsync(certCodeA);
         var (savedQuestions, _, learner) = CreateServices();
-        var qIdA = qIdsA[0];
 
-        // Save question while cert A is active
-        var saved = await savedQuestions.SaveQuestionAsync(userId, qIdA, SavedQuestionSource.Manual);
+        // Save a position while cert A is active
+        var saved = await savedQuestions.SaveQuestionAsync(userId, positionsA[0], SavedQuestionSource.Manual);
 
         // Verify it loads when cert A is active
         var item = await savedQuestions.GetSavedQuestionAsync(userId, saved.SavedQuestionId!.Value);
-        Assert.Equal(qIdA, item.QuestionId);
+        Assert.Equal(itemsA[0], item.ItemId);
 
         // Switch learner's active cert to cert B
         await learner.SwitchCertificateAsync(userId, certCodeB);
 
-        // Certificate isolation: accessing cert A question while in cert B must throw 404 / not found
+        // Certificate isolation: accessing cert A item while in cert B must throw 404 / not found
         var ex = await Assert.ThrowsAsync<SavedQuestionException>(() =>
             savedQuestions.GetSavedQuestionAsync(userId, saved.SavedQuestionId!.Value));
         Assert.Equal(SavedQuestionException.SavedQuestionNotFound, ex.Code);
@@ -404,18 +374,25 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
     {
         var certCodeA = Unique("SQA");
         var certCodeB = Unique("SQB");
-        var (_, _, qIdsA, _, _) = await SeedCertificateWithQuestionsAsync(certCodeA);
-        await SeedCertificateWithQuestionsAsync(certCodeB);
+        var (_, _, positionsA, _, _) = await SeedCertificateWithPositionsAsync(certCodeA);
+        await SeedCertificateWithPositionsAsync(certCodeB);
 
         var userId = await SeedLearnerAsync(certCodeB); // active cert is B
         var (savedQuestions, _, _) = CreateServices();
-        var qIdA = qIdsA[0]; // question belongs to cert A
+        var positionA = positionsA[0]; // the position belongs to cert A
 
-        // Saving a question from another certificate must be rejected
+        // Saving a position from another certificate must be rejected
         var ex = await Assert.ThrowsAsync<SavedQuestionException>(() =>
-            savedQuestions.SaveQuestionAsync(userId, qIdA, SavedQuestionSource.Manual));
+            savedQuestions.SaveQuestionAsync(userId, positionA, SavedQuestionSource.Manual));
         Assert.Equal(SavedQuestionException.QuestionNotFound, ex.Code);
     }
+
+    private async Task<int> VersionIdAtAsync(int examItemId)
+    {
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        return await db.ExamItems.Where(i => i.ExamItemId == examItemId).Select(i => i.ItemVersionId).SingleAsync();
+    }
+
 
     // =============================================================================================
     // #224: a pool link pins the version, and nothing moves it.
@@ -541,29 +518,6 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
 
         var listed = await savedQuestions.GetSavedQuestionsAsync(userId, new SavedQuestionFilterInput());
         Assert.True(Assert.Single(listed.Questions).IsRetiredDefective);
-    }
-
-    /// <summary>
-    /// AC4 as a data rule: a legacy saved link is dropped, never re-pointed at a warehouse item. The
-    /// seed enforces this end to end (docs/schema-tests + DemoSeedTests); here the point is that the
-    /// service cannot manufacture a pool link out of a question id — the two shapes are addressed by
-    /// different routes and neither falls back to the other.
-    /// </summary>
-    [Fact]
-    public async Task Saving_a_question_id_never_creates_a_pool_link()
-    {
-        var certCode = Unique("P224L");
-        var (_, _, qIds, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-        var (savedQuestions, _, _) = CreateServices();
-
-        await savedQuestions.SaveQuestionAsync(userId, qIds[0], SavedQuestionSource.Manual);
-
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-        var row = await db.SavedQuestions.SingleAsync(sq => sq.UserId == userId);
-        Assert.Equal(qIds[0], row.QuestionId);
-        Assert.Null(row.ItemId);
-        Assert.Null(row.ItemVersionId);
     }
 
     /// <summary>

@@ -226,8 +226,6 @@ public sealed class DynamicPathGenerationTests(DatabaseFixture database)
             db.PracticeAnswers.Add(new PracticeAnswer
             {
                 SessionId = session.SessionId,
-                QuestionId = null,
-                SectionId = null,
                 ItemId = itemId,
                 ItemVersionId = versionId,
                 SelectedLabel = "B",

@@ -26,9 +26,34 @@ namespace Services.Tests;
 /// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
-public sealed class PoolGateOneTests(DatabaseFixture database)
+public sealed class PoolGateOneTests : IAsyncLifetime
 {
-    private CompanionDbContext Db() => DbContextFactory.Create(database.ConnectionString);
+    private readonly DatabaseFixture _database;
+    private readonly string _dbName = $"EEGate1_{Guid.NewGuid():N}"[..24];
+    private string _connectionString = null!;
+
+    public PoolGateOneTests(DatabaseFixture database) => _database = database;
+
+    /// <summary>
+    /// <b>#272: a database this class owns.</b> A gate-one cell is (topic, level), the balance rule reads
+    /// the WHOLE cell, and every reading item in the fixture database lands in one of twenty canonical
+    /// topics — so a test that seeded ten keys shared its cell with every other class that seeded a
+    /// reading item at that level. Measured in a full run: six tests here failed together, each reading a
+    /// fixture it did not own, while all six passed in isolation. The rule was right; the fixture was
+    /// shared.
+    /// </para>
+    /// <para>
+    /// A private topic would be the smaller fix, and the schema refuses it: a topic must be one of the
+    /// canonical twenty, so two tests at the same level cannot have different topics. A private database
+    /// is therefore the smallest fix that makes the arithmetic true, and it weakens nothing — the same
+    /// keys, the same expected percentage, now actually provable.
+    /// </para>
+    /// </summary>
+    public async Task InitializeAsync() => _connectionString = await _database.CreateFreshDatabaseAsync(_dbName);
+
+    public async Task DisposeAsync() => await _database.DropDatabaseAsync(_dbName);
+
+    private CompanionDbContext Db() => DbContextFactory.Create(_connectionString);
 
     /// <summary>
     /// One reading item whose four options are distinct, equally long noun phrases with a rationale

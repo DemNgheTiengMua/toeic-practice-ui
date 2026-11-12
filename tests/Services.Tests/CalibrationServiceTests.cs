@@ -159,8 +159,6 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
             db.PracticeAnswers.Add(new PracticeAnswer
             {
                 SessionId = sessionId,
-                QuestionId = null,
-                SectionId = null,
                 ItemId = bank.ItemIds[i],
                 ItemVersionId = bank.VersionIds[i],
                 SelectedLabel = null,

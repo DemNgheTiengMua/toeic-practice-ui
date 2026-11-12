@@ -265,34 +265,30 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
                 Assert.Equal(5.00m, rating);
             }
 
-            // 7. #224: the demo learner's bank is two POOL links, each pinned to an item version, and
-            //    no legacy link survives (D23 drops them rather than re-pointing them). The count is
-            //    the one docs/MANUAL-TEST-CREDENTIALS.md advertises, and the pin is checked on the row
-            //    so a link that stored a version it does not read would still be caught here.
+            // 7. #224: the demo learner's bank is two POOL links, each pinned to an item version. The
+            //    count is the one docs/MANUAL-TEST-CREDENTIALS.md advertises, and the pin is checked on
+            //    the row so a link that stored a version it does not read would still be caught here.
             Assert.Equal(2, await CountAsync("""
                 SELECT COUNT(*) FROM SavedQuestions sq
                 JOIN ItemVersions v ON v.ItemVersionId = sq.ItemVersionId AND v.ItemId = sq.ItemId
                 WHERE sq.UserId = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local')
-                  AND sq.QuestionId IS NULL
                   AND sq.CertId = (SELECT ActiveCertId FROM Users WHERE Email = 'learner@demo.local')
                 """));
-            Assert.Equal(0, await CountAsync("""
-                SELECT COUNT(*) FROM SavedQuestions
-                WHERE UserId = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local')
-                  AND QuestionId IS NOT NULL
-                """));
 
-            // 8. #267 / D23: a legacy saved link is DROPPED, not re-pointed. The generated seed carries
-            //    that rule as an explicit DELETE, because it is a statement about a database that
-            //    predates the pool - not a row a dump could carry. It is asserted HERE rather than by
-            //    planting a row: a planted link needs a real Questions row to satisfy its foreign key,
-            //    and the seed no longer creates one, so a planted fixture would be testing a database
-            //    shape the product no longer has.
-            Assert.True(await CountAsync("""
-                SELECT COUNT(*) FROM SavedQuestions
-                WHERE UserId = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local')
-                  AND QuestionId IS NOT NULL
-                """) == 0, "the seed must leave no legacy saved link behind");
+            // 8. #267 / D23: a legacy saved link is DROPPED, not re-pointed. #269 removed the
+            //    QuestionId column that rule was about, so the seed has no legacy shape left to delete
+            //    and the claim is now a schema fact rather than a row. It is asserted HERE rather than by
+            //    planting a row: the column is gone, so a planted legacy link cannot be written at all.
+            //    The second query is the control - a catalogue lookup that is answering nothing would
+            //    pass the absence assertion vacuously, and this is the shape the bank does have.
+            Assert.Equal(0, await CountAsync("""
+                SELECT COUNT(*) FROM sys.columns
+                WHERE object_id = OBJECT_ID('dbo.SavedQuestions') AND name = 'QuestionId'
+                """));
+            Assert.Equal(1, await CountAsync("""
+                SELECT COUNT(*) FROM sys.columns
+                WHERE object_id = OBJECT_ID('dbo.SavedQuestions') AND name = 'ItemVersionId'
+                """));
             Assert.Equal(2, await CountAsync("""
                 SELECT COUNT(*) FROM SavedQuestions
                 WHERE UserId = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local')

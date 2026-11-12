@@ -366,7 +366,8 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
             });
             await db.SaveChangesAsync();
 
-            Assert.Empty(await db.Questions.Where(q => q.ExamId == exam.ExamId).ToListAsync());
+            // #269: the legacy Questions table is gone, so "this fixture seeded no legacy question" is a
+            // schema fact rather than an assertion.
         }
 
         var (service, _) = CreateService();
@@ -1133,7 +1134,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
             new(20, "R-INF", "Bridging inference", "B2", 10, 2, 20)
         };
 
-        var fingerprints = service.ExtractErrorFingerprints(answers, Array.Empty<QuestionOption>(), topicAccuracies);
+        var fingerprints = service.ExtractErrorFingerprints(answers, topicAccuracies);
         Assert.Equal(2, fingerprints.Count);
 
         // Flagged error stays first even though its cell is not the weakest one.
@@ -1148,7 +1149,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
 
     /// <summary>
     /// <b>The wrong input this catches:</b> a ranker that throws or silently drops an answer when the
-    /// answer has no cell. A legacy answer pins no version, so it belongs to no accuracy row - it must
+    /// answer has no cell. An answer whose version is not loaded belongs to no accuracy row - it must
     /// rank last, not crash the insight and not be attributed to whichever topic happens to be first.
     /// </summary>
     [Fact]
@@ -1158,11 +1159,10 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         await SeedLearnerAsync(certCode);
         var (service, _) = CreateService();
 
-        var q1 = new Question { QuestionId = 1, Stem = "Legacy stem", Explanation = "Exp" };
         var answers = new List<AttemptAnswer>
         {
-            // Legacy answer: no ItemVersion, so no cell.
-            new AttemptAnswer { QuestionId = 1, SelectedOptionId = 101, IsCorrect = false, IsFlagged = false, Question = q1 },
+            // No version, so no cell.
+            new AttemptAnswer { SelectedLabel = "A", IsCorrect = false, IsFlagged = false },
             new AttemptAnswer
             {
                 ItemId = 2,
@@ -1184,15 +1184,13 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
             new(10, "R-DET", "Local detail", "B1", 10, 2, 20)
         };
 
-        var fingerprints = service.ExtractErrorFingerprints(
-            answers, new List<QuestionOption> { new() { OptionId = 101, QuestionId = 1, Text = "Legacy wrong", IsCorrect = false } },
-            topicAccuracies);
+        var fingerprints = service.ExtractErrorFingerprints(answers, topicAccuracies);
 
         Assert.Equal(2, fingerprints.Count);
         Assert.Equal("Pool stem", fingerprints[0].Stem);
         Assert.Equal("Local detail at B1", fingerprints[0].TopicName);
         // The cell-less answer is kept, ranked after the one that has a cell.
-        Assert.Equal("Legacy stem", fingerprints[1].Stem);
+        Assert.Equal(string.Empty, fingerprints[1].Stem);
         Assert.Null(fingerprints[1].TopicName);
     }
 }

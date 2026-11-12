@@ -173,8 +173,6 @@ public sealed class PracticeAnswerStateTests(DatabaseFixture database)
             db.PracticeAnswers.Add(new PracticeAnswer
             {
                 SessionId = session.SessionId,
-                QuestionId = null,
-                SectionId = null,
                 ItemId = items[i].ItemId,
                 ItemVersionId = items[i].ItemVersionId,
                 DisplayOrder = i + 1,

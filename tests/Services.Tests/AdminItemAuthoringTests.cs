@@ -15,9 +15,7 @@ namespace Services.Tests;
 /// #188: admin authoring writes the pool.
 /// <para>
 /// The fixture authors through the service and then reads the database directly, so no test can pass
-/// by trusting the service's own projection of what it wrote. The legacy <c>Questions</c> table is
-/// counted before and after: an item write that also touched it would be the exact expand-to-contract
-/// mistake this ticket must not make.
+/// by trusting the service's own projection of what it wrote.
 /// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
@@ -70,12 +68,6 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
             RationaleC: "The supervisor opens the gate, not the depot.",
             RationaleD: "Waiting outside is what visitors do, not when the depot opens.");
 
-    private async Task<int> CountLegacyQuestionsAsync()
-    {
-        await using var db = Db();
-        return await db.Questions.CountAsync();
-    }
-
     /// <summary>
     /// AC1: a created item is a pool item plus a version, and never an exam reference. The table
     /// columns are also checked, because "no exam reference" is a schema fact in #184 and a service
@@ -85,7 +77,6 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
     public async Task Creating_an_item_writes_one_pool_item_and_one_version_and_no_exam_reference()
     {
         var topicId = await ReadingTopicAsync();
-        var before = await CountLegacyQuestionsAsync();
 
         var created = await CreateService().CreateAsync(ReadingItem(topicId, "What time does the depot open?"));
 
@@ -110,7 +101,8 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
         Assert.DoesNotContain("SectionId", columns);
         Assert.DoesNotContain("CertId", columns);
 
-        Assert.Equal(before, await CountLegacyQuestionsAsync());
+        // #269: the legacy Questions table no longer exists, so "the item write touched no legacy row"
+        // is a schema fact now, not something a test can observe.
     }
 
     /// <summary>
@@ -510,23 +502,20 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
     /// <summary>
     /// AC4: the existing exam editor still previews, and once an authored item is bound it previews
     /// <em>the authored version</em>. This drives <c>GetExamPreviewTakeAsync</c> — the production
-    /// preview path, with no stub anywhere — on a paper whose position holds an authored item, and
-    /// the legacy question row there deliberately carries a different key and stem so only the pool
-    /// path can produce the expected answer.
+    /// preview path, with no stub anywhere — on a paper whose position holds an item the author created
+    /// through <c>CreateAsync</c> in the test body.
     /// <para>
-    /// <b>#272: the legacy row STAYS, because it is this test's subject.</b> The claim is a precedence
-    /// claim between two content sources - the authored version must win over the legacy skeleton - so
-    /// authoring only the pool would leave one source and the assertion could no longer fail. #269
-    /// deletes these rows with the table.
-    /// </para>
-    /// <para>
-    /// The skeleton was also load-bearing until #269: #186 resolved a binding to a paper position by
-    /// (section, 1-based order) against the legacy question list, so a position with no question row was
-    /// a paper with a hole in it and was refused before it rendered.
+    /// <b>#269: the legacy skeleton this fixture used to seed is gone with the table.</b> It carried its
+    /// own key (B) and its own stem so the test could prove the authored version won the precedence
+    /// contest. With one content source left there is no contest to referee, so what the test proves is
+    /// the round trip that remains: the author's write binds to a position, and the preview renders that
+    /// write's stem, key and explanation rather than anything the fixture invented. The skeleton was
+    /// also load-bearing until #269 - a position with no question row was refused as a hole - and a
+    /// binding row is now the whole of what a position needs.
     /// </para>
     /// </summary>
     [Fact]
-    public async Task The_preview_renders_the_authored_version_not_the_legacy_question_row()
+    public async Task The_preview_renders_the_version_the_author_wrote()
     {
         var topicId = await ReadingTopicAsync();
         var certCode = Unique("IPV");
@@ -544,17 +533,6 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
               (@cert, 'LOW', N'Low', 0, 499, 1), (@cert, 'HIGH', N'High', 500, 990, 2);
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount)
             VALUES (@cert, N'Authored preview paper', 'draft', 60, 'mock', 1);
-            DECLARE @exam INT = SCOPE_IDENTITY();
-
-            -- the skeleton a paper still needs, with its own key (B) and its own stem
-            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
-            DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @skill, N'Legacy skeleton stem.', 'A2', 'mcq', N'Legacy explanation.', 1);
-            DECLARE @q INT = SCOPE_IDENTITY();
-            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-              (@q, 'mcq', 'A', N'legacy-a', 0), (@q, 'mcq', 'B', N'legacy-b', 1),
-              (@q, 'mcq', 'C', N'legacy-c', 0), (@q, 'mcq', 'D', N'legacy-d', 0);
             """);
 
         int examId;
@@ -566,7 +544,7 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
             sectionId = await db.Sections.Where(s => s.CertId == cert.CertId).Select(s => s.SectionId).SingleAsync();
         }
 
-        // The author writes the item and its reason; the key is C, the legacy row's is B.
+        // The author writes the item and its reason; the key is C.
         var created = await CreateService().CreateAsync(
             new CreatePoolItemRequest(
                 ModalityDto.Reading, topicId, "B1", "sentence_cloze",

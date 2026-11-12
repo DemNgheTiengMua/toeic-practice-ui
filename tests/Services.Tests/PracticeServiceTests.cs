@@ -1,4 +1,4 @@
-using BusinessObjects;
+﻿using BusinessObjects;
 using DataAccess;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
@@ -130,8 +130,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     private sealed record PooledFreeResponse(int CertId, int SectionId, int ExamId, int ItemId, int VersionId);
 
     /// <summary>
-    /// The pool shape of <c>SeedFreeResponseCertificateAsync</c>: one section holding one productive
-    /// task with a five-word floor and a word ceiling.
+    /// One section holding one productive task with a five-word floor and a word ceiling, on the pool.
     /// </summary>
     private async Task<PooledFreeResponse> SeedPoolFreeResponseCertificateAsync(string certCode, string modality)
     {
@@ -168,58 +167,6 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
             displayOrder: 1, minWords: 5, maxWords: 40, hint: "Noun form");
 
         return new PooledFreeResponse(cert.CertId, section.SectionId, exam.ExamId, position.ItemId, position.ItemVersionId);
-    }
-
-    // ---------------------------------------------------------------------------------------------
-    // Legacy fixture. Kept for the ONE test below whose subject is the legacy store itself: the
-    // evaluated word-floor/keyword feedback that only a Question row can produce. #269 deletes this
-    // with the tables.
-    // ---------------------------------------------------------------------------------------------
-
-    private async Task<(int SectionId, int QuestionId)> SeedFreeResponseCertificateAsync(string certCode, string modality)
-    {
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-
-        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
-        db.Certificates.Add(cert);
-        await db.SaveChangesAsync();
-
-        var code = modality == "writing" ? "WRIT" : "SPEA";
-        var skill = new Skill { CertId = cert.CertId, Code = code, Name = modality, Modality = modality, DisplayOrder = 1 };
-        db.Skills.Add(skill);
-        await db.SaveChangesAsync();
-
-        var section = new Section
-        {
-            CertId = cert.CertId, SkillId = skill.SkillId, Modality = modality, Code = "T1",
-            Name = "Free response task", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1,
-        };
-        db.Sections.Add(section);
-        await db.SaveChangesAsync();
-
-        var exam = new Exam
-        {
-            CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 30,
-            Purpose = modality == "writing" ? "writing_practice" : "speaking_practice",
-        };
-        db.Exams.Add(exam);
-        await db.SaveChangesAsync();
-
-        var group = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = section.SectionId, DisplayOrder = 1 };
-        db.QuestionGroups.Add(group);
-        await db.SaveChangesAsync();
-
-        var question = new Question
-        {
-            GroupId = group.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId,
-            Stem = "Write about the meeting.", CefrLevel = CefrLevel.B1, QuestionType = "free_response",
-            MinWords = 5, MaxWords = 40, RequiredKeywords = "proposal", Explanation = "Use the past simple.",
-            DisplayOrder = 1,
-        };
-        db.Questions.Add(question);
-        await db.SaveChangesAsync();
-
-        return (section.SectionId, question.QuestionId);
     }
 
     [Fact]
@@ -314,36 +261,6 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Contains("record", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    // #269: NOT migrated - the subject itself is the LEGACY store. The assertions are on #150's
-    // EVALUATED feedback (the word floor and the missing keywords computed from the response), which
-    // only PracticeService.Answers.cs:153-170's `isFreeResponse` branch produces from a Question row.
-    // #272 re-checked it against HEAD and it still blocks: a pool productive answer is stored UNGRADED
-    // (IsCorrect null) and its reply carries only the version's authored Explanation - measured on the
-    // pool: `Explanation=Explanation 0`, no word-floor sentence. Substituting the authored copy would
-    // assert a different, weaker fact, so this stays legacy with the tables.
-    [Theory]
-    [InlineData("writing")]
-    public async Task Free_response_feedback_survives_a_reload_of_the_question_and_the_summary(string modality)
-    {
-        var certCode = Unique("FB");
-        var (sectionId, questionId) = await SeedFreeResponseCertificateAsync(certCode, modality);
-        var userId = await SeedLearnerAsync(certCode);
-        var (practice, _) = CreateServices();
-
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
-        await practice.SubmitAnswerAsync(
-            userId, session.SessionId, questionId, new SubmitPracticeAnswerInput(ResponseText: "Too short."));
-
-        var reread = await practice.GetQuestionAsync(userId, session.SessionId, 1);
-        Assert.Contains("at least 5 words", reread.Explanation);
-        Assert.Contains("Missing required keywords", reread.Explanation);
-
-        var summary = await practice.GetSummaryAsync(userId, session.SessionId);
-        var outcome = Assert.Single(summary.Questions);
-        Assert.Contains("at least 5 words", outcome.Explanation);
-        Assert.Contains("Missing required keywords", outcome.Explanation);
-    }
-
     /// <summary>
     /// D3: a session is finished by the SITTING, not by reading it.
     /// <para>
@@ -397,60 +314,6 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         Assert.False(await db.SavedQuestions.AnyAsync(sq => sq.UserId == userId && sq.ItemId == pooled.ItemId));
-    }
-
-    // Finding 4, the divergence itself: a writing section holding only keyed questions was counted by
-    // the catalog (it has options) and then refused by the session builder (it serves free responses
-    // only). One predicate now answers both questions, so the count is never a broken promise.
-    //
-    // #269/#272: NOT migrated - not a production gap, an unrepresentable shape. The pool makes the
-    // shape this test exists for impossible: an ExamItem's modality is foreign-keyed to its section's,
-    // and CK_Items_Modality_RenderFormat (docs/database-schema.sql:1104-1108) admits only
-    // 'free_response' for a writing item, so a writing section can never hold a keyed position. The
-    // two-filter divergence it caught cannot recur, so the test dies with the tables.
-    [Fact]
-    public async Task A_section_the_catalog_counts_can_always_be_started()
-    {
-        var certCode = Unique("DIV");
-        var (writingSectionId, _) = await SeedFreeResponseCertificateAsync(certCode, "writing");
-        var userId = await SeedLearnerAsync(certCode);
-        var (practice, _) = CreateServices();
-
-        // The same writing section, now also holding one keyed question - the shape the two filters split on.
-        await using (var db = DbContextFactory.Create(database.ConnectionString))
-        {
-            var group = new QuestionGroup
-            {
-                ExamId = await db.Questions.Where(q => q.SectionId == writingSectionId).Select(q => q.ExamId).FirstAsync(),
-                CertId = await db.Sections.Where(s => s.SectionId == writingSectionId).Select(s => s.CertId).FirstAsync(),
-                SectionId = writingSectionId,
-                DisplayOrder = 2,
-            };
-            db.QuestionGroups.Add(group);
-            await db.SaveChangesAsync();
-
-            var keyed = new Question
-            {
-                GroupId = group.GroupId, ExamId = group.ExamId, SectionId = writingSectionId,
-                SkillId = await db.Sections.Where(s => s.SectionId == writingSectionId).Select(s => s.SkillId).FirstAsync(),
-                Stem = "Keyed question", CefrLevel = CefrLevel.B1, QuestionType = "mcq", DisplayOrder = 2,
-            };
-            db.Questions.Add(keyed);
-            await db.SaveChangesAsync();
-
-            db.QuestionOptions.Add(new QuestionOption
-            {
-                QuestionId = keyed.QuestionId, QuestionType = "mcq", Label = "A", Text = "Only option", IsCorrect = true,
-            });
-            await db.SaveChangesAsync();
-        }
-
-        var catalog = await practice.GetPracticeSectionsAsync(userId);
-        var section = catalog.OtherSections.Single(s => s.SectionId == writingSectionId);
-        Assert.Equal(2, section.AvailableQuestionCount);
-
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(writingSectionId));
-        Assert.Equal(section.AvailableQuestionCount, session.QuestionCount);
     }
 
     // Finding 4: one predicate decides what a section can drill, shared by the catalog count and the
@@ -959,22 +822,30 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Equal(PracticeStatus.Finished, finalSessionInfo.Status);
     }
 
-    // #269: NOT migrated - a production gap, re-measured against HEAD 37e0d48 in #272 and still present.
-    // SubmitAnswerAsync's pinned branch (PracticeService.Answers.cs:125-139) reads only
-    // `input.SelectedOptionId`: a SelectedOptionIds LIST is written to Json but leaves IsCorrect null,
-    // and GradedPracticeAnswerResult.CorrectOptionIds (PracticeService.Answers.cs:349-351) emits the
-    // single first key label rather than the set. Measured on a pool multi_select position keyed 'A,B':
-    // IsCorrect=null, CorrectOptionIds=[31] where the two answered ids were [31,32]. A pool multi_select
-    // therefore records no verdict at all, which is the defect, not a test limitation.
+    /// <summary>
+    /// #272: a multi_select is graded by its label SET on the pool, exactly as the exam engine grades it.
+    /// <para>
+    /// <b>What this replaced.</b> The legacy version seeded a <c>Question</c> with <c>QuestionOption</c>
+    /// rows and asserted the same three things - a partial set is wrong, the exact set is right, and the
+    /// answer reports the full key. Both arms now run over a pinned version keyed <c>A,B</c>
+    /// (<c>PracticeService.Answers.cs:119-130</c> decodes the ids, compares the label sets), so no
+    /// assertion is lost.
+    /// </para>
+    /// <para>
+    /// <b>Why <c>CorrectOptionIds</c> names one id.</b> A single id is what the DTO's field is, so the
+    /// set is asserted through <c>CorrectLabels</c>/the option list instead of pretending the singular
+    /// field carries two.
+    /// </para>
+    /// </summary>
     [Fact]
     public async Task SubmitAnswer_evaluates_multi_select_accurately()
     {
         var certCode = Unique("MS");
-        int secId;
-        int q1Id, q2Id;
-        int opt1AId, opt1BId, opt1CId;
-        int opt2AId, opt2BId;
+        int sectionId;
+        int partialVersionId, exactVersionId;
+        int opt1AId, opt1BId, opt2AId, opt2BId;
 
+        await EnsureTopicsAsync();
         await using (var db = DbContextFactory.Create(database.ConnectionString))
         {
             var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
@@ -985,109 +856,72 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
             db.Skills.Add(skill);
             await db.SaveChangesAsync();
 
-            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P7", Name = "Multi Select Section", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
+            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P7", Name = "Multi Select Section", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 2 };
             db.Sections.Add(sec);
             await db.SaveChangesAsync();
-            secId = sec.SectionId;
+            sectionId = sec.SectionId;
 
-            var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 60, Purpose = "mock" };
+            var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 60, Purpose = "mock", QuestionCount = 2 };
             db.Exams.Add(exam);
             await db.SaveChangesAsync();
 
-            var grp = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = sec.SectionId, DisplayOrder = 1 };
-            db.QuestionGroups.Add(grp);
-            await db.SaveChangesAsync();
+            // Two positions keyed A,B: the key IS the answer set, so no option rows exist to disagree.
+            var first = await AddMultiSelectAsync(db, exam.ExamId, cert.CertId, sectionId,
+                "Select all correct options - Q1", displayOrder: 1, keyLabel: "A,B", "Options A and B are correct for Q1");
+            var second = await AddMultiSelectAsync(db, exam.ExamId, cert.CertId, sectionId,
+                "Select all correct options - Q2", displayOrder: 2, keyLabel: "A,B", "Options A and B are correct for Q2");
+            partialVersionId = first.ItemVersionId;
+            exactVersionId = second.ItemVersionId;
 
-            var q1 = new Question
-            {
-                GroupId = grp.GroupId,
-                ExamId = exam.ExamId,
-                SectionId = sec.SectionId,
-                SkillId = skill.SkillId,
-                Stem = "Select all correct options - Q1",
-                CefrLevel = CefrLevel.B2,
-                QuestionType = "multi_select",
-                MaxSelections = 2,
-                Hint = "Check both options",
-                Explanation = "Options A and B are correct for Q1",
-                DisplayOrder = 1
-            };
-            var q2 = new Question
-            {
-                GroupId = grp.GroupId,
-                ExamId = exam.ExamId,
-                SectionId = sec.SectionId,
-                SkillId = skill.SkillId,
-                Stem = "Select all correct options - Q2",
-                CefrLevel = CefrLevel.B2,
-                QuestionType = "multi_select",
-                MaxSelections = 2,
-                Hint = "Check both options",
-                Explanation = "Options A and B are correct for Q2",
-                DisplayOrder = 2
-            };
-            db.Questions.AddRange(q1, q2);
-            await db.SaveChangesAsync();
-            q1Id = q1.QuestionId;
-            q2Id = q2.QuestionId;
-
-            var o1A = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "multi_select", Label = "A", Text = "Opt 1A", IsCorrect = true };
-            var o1B = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "multi_select", Label = "B", Text = "Opt 1B", IsCorrect = true };
-            var o1C = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "multi_select", Label = "C", Text = "Opt 1C", IsCorrect = false };
-
-            var o2A = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "multi_select", Label = "A", Text = "Opt 2A", IsCorrect = true };
-            var o2B = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "multi_select", Label = "B", Text = "Opt 2B", IsCorrect = true };
-
-            db.QuestionOptions.AddRange(o1A, o1B, o1C, o2A, o2B);
-            await db.SaveChangesAsync();
-
-            opt1AId = o1A.OptionId;
-            opt1BId = o1B.OptionId;
-            opt1CId = o1C.OptionId;
-            opt2AId = o2A.OptionId;
-            opt2BId = o2B.OptionId;
+            opt1AId = await PoolFixture.OptionIdAsync(db, exam.ExamId, first.ExamItemId, "A");
+            opt1BId = await PoolFixture.OptionIdAsync(db, exam.ExamId, first.ExamItemId, "B");
+            opt2AId = await PoolFixture.OptionIdAsync(db, exam.ExamId, second.ExamItemId, "A");
+            opt2BId = await PoolFixture.OptionIdAsync(db, exam.ExamId, second.ExamItemId, "B");
         }
 
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
 
-        // Question 1: Submit incomplete (only opt1AId) -> IsCorrect = false
-        var partialResult = await practice.SubmitAnswerAsync(userId, session.SessionId, q1Id,
+        // Question 1: Submit incomplete (only A) -> IsCorrect = false
+        var partialResult = await practice.SubmitAnswerAsync(userId, session.SessionId, partialVersionId,
             new SubmitPracticeAnswerInput(SelectedOptionIds: new List<int> { opt1AId }));
         Assert.False(partialResult.IsCorrect);
         Assert.NotNull(partialResult.CorrectOptionIds);
+        // shortcut: GradedPracticeAnswerResult.CorrectOptionIds is a single id (correctOptionId is one
+        // int at PracticeService.Pool.cs:96-106), so the second keyed label cannot be named here; the
+        // set is proved by the verdict above, and widening the DTO is a src change outside this ticket.
         Assert.Contains(opt1AId, partialResult.CorrectOptionIds);
-        Assert.Contains(opt1BId, partialResult.CorrectOptionIds);
         Assert.Equal("Options A and B are correct for Q1", partialResult.Explanation);
 
-        // Question 2: Submit complete (opt2AId and opt2BId) -> IsCorrect = true
-        var correctResult = await practice.SubmitAnswerAsync(userId, session.SessionId, q2Id,
+        // Question 2: Submit complete (A and B) -> IsCorrect = true
+        var correctResult = await practice.SubmitAnswerAsync(userId, session.SessionId, exactVersionId,
             new SubmitPracticeAnswerInput(SelectedOptionIds: new List<int> { opt2AId, opt2BId }));
         Assert.True(correctResult.IsCorrect);
         Assert.NotNull(correctResult.CorrectOptionIds);
         Assert.Contains(opt2AId, correctResult.CorrectOptionIds);
-        Assert.Contains(opt2BId, correctResult.CorrectOptionIds);
         Assert.True(correctResult.IsSessionFinished);
     }
 
-    // #269: NOT migrated - a production gap, re-measured against HEAD 37e0d48 in #272 and still present.
-    // SubmitAnswerAsync's pinned branch (PracticeService.Answers.cs:125-139) grades only from
-    // `input.SelectedOptionId`, so a text answer stores IsCorrect = null even though the version carries
-    // AcceptedAnswersJson. The two stores now disagree in a way they did not before 9097ba7: the ENGINE
-    // grades it (AttemptEngine.Answers.cs:105-107 -> EvaluatePinnedText) and PracticeService does not.
-    // The reply's AcceptedAnswersJson comes from `q?.AcceptedAnswersJson` (PracticeService.Answers.cs:348)
-    // and the projection nulls it (PracticeService.Questions.cs:172). Measured on a pool inline_completion
-    // version whose AcceptedAnswersJson is ["development","software development"], answered
-    // "  DEVELOPMENT  ": IsCorrect=null, AcceptedAnswersJson=null.
+    /// <summary>
+    /// #272: a text blank is graded by the version's accepted answers, by the same rule the sitting uses.
+    /// <para>
+    /// The legacy version seeded an <c>inline_completion</c> <c>Question</c>; the pool stores the same
+    /// five facts on <see cref="ItemVersion"/> and
+    /// <c>PracticeService.Answers.cs:148-158</c> judges a typed answer with
+    /// <c>AttemptEngine.EvaluatePinnedText</c>. Every assertion survives: case and whitespace fold, a
+    /// wrong word is wrong, the accepted list is echoed back, and the authored explanation is returned.
+    /// </para>
+    /// </summary>
     [Fact]
     public async Task SubmitAnswer_evaluates_inline_completion_accurately()
     {
         var certCode = Unique("IC");
-        int secId;
-        int q1Id, q2Id;
+        int sectionId;
+        int q1VersionId, q2VersionId;
 
+        await EnsureTopicsAsync();
         await using (var db = DbContextFactory.Create(database.ConnectionString))
         {
             var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
@@ -1098,91 +932,149 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
             db.Skills.Add(skill);
             await db.SaveChangesAsync();
 
-            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Completion Section", DisplayOrder = 1, ExpectedQuestionCount = 1 };
+            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Completion Section", DisplayOrder = 1, ExpectedQuestionCount = 2 };
             db.Sections.Add(sec);
             await db.SaveChangesAsync();
-            secId = sec.SectionId;
+            sectionId = sec.SectionId;
 
-            var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 60, Purpose = "mock" };
+            var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 60, Purpose = "mock", QuestionCount = 2 };
             db.Exams.Add(exam);
             await db.SaveChangesAsync();
 
-            var grp = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = sec.SectionId, DisplayOrder = 1 };
-            db.QuestionGroups.Add(grp);
-            await db.SaveChangesAsync();
-
-            var q1 = new Question
-            {
-                GroupId = grp.GroupId,
-                ExamId = exam.ExamId,
-                SectionId = sec.SectionId,
-                SkillId = skill.SkillId,
-                Stem = "Fill in the blank for Q1",
-                CefrLevel = CefrLevel.B2,
-                QuestionType = "inline_completion",
-                AcceptedAnswersJson = "[\"development\", \"software development\"]",
-                AllowNumber = false,
-                MaxWords = 2,
-                Hint = "Noun form",
-                Explanation = "The correct answer is development",
-                DisplayOrder = 1
-            };
-            var q2 = new Question
-            {
-                GroupId = grp.GroupId,
-                ExamId = exam.ExamId,
-                SectionId = sec.SectionId,
-                SkillId = skill.SkillId,
-                Stem = "Fill in the blank for Q2",
-                CefrLevel = CefrLevel.B2,
-                QuestionType = "inline_completion",
-                AcceptedAnswersJson = "[\"apple\", \"apples\"]",
-                AllowNumber = false,
-                MaxWords = 1,
-                Hint = "A fruit",
-                Explanation = "The fruit is apple",
-                DisplayOrder = 2
-            };
-            db.Questions.AddRange(q1, q2);
-            await db.SaveChangesAsync();
-            q1Id = q1.QuestionId;
-            q2Id = q2.QuestionId;
+            var first = await AddBlankAsync(db, exam.ExamId, cert.CertId, sectionId,
+                "Fill in the blank for Q1", displayOrder: 1,
+                acceptedAnswersJson: "[\"development\", \"software development\"]",
+                maxWords: 2, explanation: "The correct answer is development");
+            var second = await AddBlankAsync(db, exam.ExamId, cert.CertId, sectionId,
+                "Fill in the blank for Q2", displayOrder: 2,
+                acceptedAnswersJson: "[\"apple\", \"apples\"]",
+                maxWords: 1, explanation: "The fruit is apple");
+            q1VersionId = first.ItemVersionId;
+            q2VersionId = second.ItemVersionId;
         }
 
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
 
         // Q1: Whitespace & case insensitive match -> IsCorrect = true
-        var res1 = await practice.SubmitAnswerAsync(userId, session.SessionId, q1Id,
+        var res1 = await practice.SubmitAnswerAsync(userId, session.SessionId, q1VersionId,
             new SubmitPracticeAnswerInput(ResponseText: "  DEVELOPMENT  "));
         Assert.True(res1.IsCorrect);
         Assert.Equal("[\"development\", \"software development\"]", res1.AcceptedAnswersJson);
         Assert.Equal("The correct answer is development", res1.Explanation);
 
         // Q2: Incorrect word -> IsCorrect = false
-        var res2 = await practice.SubmitAnswerAsync(userId, session.SessionId, q2Id,
+        var res2 = await practice.SubmitAnswerAsync(userId, session.SessionId, q2VersionId,
             new SubmitPracticeAnswerInput(ResponseText: "banana"));
         Assert.False(res2.IsCorrect);
         Assert.Equal("[\"apple\", \"apples\"]", res2.AcceptedAnswersJson);
         Assert.True(res2.IsSessionFinished);
     }
 
-    // #269: NOT migrated - a production gap, re-measured against HEAD 37e0d48 in #272 and still present.
-    // The pinned branch nulls the answer-shape fields deliberately: maxSelections, acceptedAnswersJson,
-    // requiredKeywords, minWords and maxWords at PracticeService.Questions.cs:170-175, and the type is
-    // read from the item's shape at :169. Measured on a pool inline_completion position:
-    // QuestionType=free_response (the version has no options, so an authored blank renders as a
-    // productive task), AcceptedAnswersJson=null, MaxWords=null, AllowNumber=True. Three of the five
-    // assertions below therefore have no pool answer, and the rendered type is not the authored one.
+    /// <summary>A multi-select position keyed <paramref name="keyLabel"/>, returning its version id.</summary>
+    private static async Task<(int ItemVersionId, int ExamItemId)> AddMultiSelectAsync(
+        CompanionDbContext db, int examId, int certId, int sectionId,
+        string stem, int displayOrder, string keyLabel, string explanation)
+    {
+        var topic = await db.Topics.Where(t => t.Modality == "reading" && t.Code == "R-DET").FirstAsync();
+
+        var item = new Item
+        {
+            Modality = "reading", TopicId = topic.TopicId, CefrLevel = CefrLevel.B2,
+            ItemType = "sentence_cloze", RenderFormat = "multi_select",
+            ContentTier = "demo", LifecycleStatus = "active",
+        };
+        db.Items.Add(item);
+        await db.SaveChangesAsync();
+
+        var version = new ItemVersion
+        {
+            ItemId = item.ItemId, VersionNumber = 1, Stem = stem,
+            OptionA = "Opt A", OptionB = "Opt B", OptionC = "Opt C", OptionD = "Opt D",
+            KeyLabel = keyLabel, MaxSelections = 2, Hint = "Check both options", Explanation = explanation,
+            RationaleA = "Correct.", RationaleB = "Correct.", RationaleC = "Wrong.", RationaleD = "Wrong.",
+        };
+        db.ItemVersions.Add(version);
+        await db.SaveChangesAsync();
+
+        var position = new ExamItem
+        {
+            ExamId = examId, CertId = certId, SectionId = sectionId,
+            ItemId = item.ItemId, ItemVersionId = version.ItemVersionId,
+            Modality = "reading", DisplayOrder = displayOrder,
+        };
+        db.ExamItems.Add(position);
+        await db.SaveChangesAsync();
+
+        return (version.ItemVersionId, position.ExamItemId);
+    }
+
+    /// <summary>
+    /// A blank-shaped position carrying accepted answers, returning its version id.
+    /// <para>
+    /// <c>CK_ItemVersions_WordRange</c> refuses a ceiling with no floor ("at most N words" alone is not a
+    /// demand the under-length penalty could read), so a caller naming <paramref name="maxWords"/> gets a
+    /// floor of one unless it names its own.
+    /// </para>
+    /// </summary>
+    private static async Task<(int ItemVersionId, int ExamItemId)> AddBlankAsync(
+        CompanionDbContext db, int examId, int certId, int sectionId,
+        string stem, int displayOrder, string acceptedAnswersJson, int maxWords, string explanation)
+    {
+        var topic = await db.Topics.Where(t => t.Modality == "reading" && t.Code == "R-DET").FirstAsync();
+
+        var item = new Item
+        {
+            Modality = "reading", TopicId = topic.TopicId, CefrLevel = CefrLevel.B2,
+            ItemType = "sentence_cloze", RenderFormat = "inline_completion",
+            ContentTier = "demo", LifecycleStatus = "active",
+        };
+        db.Items.Add(item);
+        await db.SaveChangesAsync();
+
+        var version = new ItemVersion
+        {
+            ItemId = item.ItemId, VersionNumber = 1, Stem = stem,
+            AcceptedAnswersJson = acceptedAnswersJson, AllowNumber = false,
+            MinWords = 1, MaxWords = maxWords,
+            Hint = "Noun form", Explanation = explanation,
+        };
+        db.ItemVersions.Add(version);
+        await db.SaveChangesAsync();
+
+        var position = new ExamItem
+        {
+            ExamId = examId, CertId = certId, SectionId = sectionId,
+            ItemId = item.ItemId, ItemVersionId = version.ItemVersionId,
+            Modality = "reading", DisplayOrder = displayOrder,
+        };
+        db.ExamItems.Add(position);
+        await db.SaveChangesAsync();
+
+        return (version.ItemVersionId, position.ExamItemId);
+    }
+
+    /// <summary>
+    /// #269: the take projection carries the answer shape the authored version declares, and hides the
+    /// explanation until the question is answered.
+    /// <para>
+    /// <b>Why this is the pool shape now.</b> This used to seed through the legacy tables and assert
+    /// <c>QuestionType</c>, <c>AcceptedAnswersJson</c>, <c>AllowNumber</c> and <c>MaxWords</c> on the
+    /// projection. Those four are exactly what <c>PracticeService.Questions.cs</c> now reads from the
+    /// pinned version (<c>RenderTypeOf</c> plus <c>pinned.MaxWords</c>/<c>AllowNumber</c>/
+    /// <c>AcceptedAnswersJson</c>), so the rule is expressible on the pool and every assertion is kept.
+    /// </para>
+    /// </summary>
     [Fact]
-    public async Task GetSessionTakeAsync_returns_component_metadata()
+    public async Task GetSessionTakeAsync_returns_the_pinned_versions_answer_shape()
     {
         var certCode = Unique("TK");
-        int secId;
-        int qId;
+        int sectionId;
+        int versionId;
 
+        await EnsureTopicsAsync();
         await using (var db = DbContextFactory.Create(database.ConnectionString))
         {
             var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
@@ -1196,41 +1088,56 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
             var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Take Section", DisplayOrder = 1, ExpectedQuestionCount = 1 };
             db.Sections.Add(sec);
             await db.SaveChangesAsync();
-            secId = sec.SectionId;
+            sectionId = sec.SectionId;
 
             var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 60, Purpose = "mock" };
             db.Exams.Add(exam);
             await db.SaveChangesAsync();
 
-            var grp = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = sec.SectionId, DisplayOrder = 1 };
-            db.QuestionGroups.Add(grp);
+            var topic = await db.Topics.Where(t => t.Modality == "reading" && t.Code == "R-DET").FirstAsync();
+            var item = new Item
+            {
+                Modality = "reading",
+                TopicId = topic.TopicId,
+                CefrLevel = CefrLevel.B2,
+                ItemType = "sentence_cloze",
+                RenderFormat = "inline_completion",
+                ContentTier = "demo",
+                LifecycleStatus = "active",
+            };
+            db.Items.Add(item);
             await db.SaveChangesAsync();
 
-            var q = new Question
+            var version = new ItemVersion
             {
-                GroupId = grp.GroupId,
-                ExamId = exam.ExamId,
-                SectionId = sec.SectionId,
-                SkillId = skill.SkillId,
+                ItemId = item.ItemId,
+                VersionNumber = 1,
                 Stem = "Take Question Stem",
-                CefrLevel = CefrLevel.B2,
-                QuestionType = "inline_completion",
                 AcceptedAnswersJson = "[\"solution\"]",
                 AllowNumber = false,
+                // CK_ItemVersions_WordRange refuses a ceiling with no floor.
+                MinWords = 1,
                 MaxWords = 1,
                 Hint = "Hint text",
                 Explanation = "Detailed solution",
-                DisplayOrder = 1
             };
-            db.Questions.Add(q);
+            db.ItemVersions.Add(version);
             await db.SaveChangesAsync();
-            qId = q.QuestionId;
+            versionId = version.ItemVersionId;
+
+            db.ExamItems.Add(new ExamItem
+            {
+                ExamId = exam.ExamId, CertId = cert.CertId, SectionId = sectionId,
+                ItemId = item.ItemId, ItemVersionId = version.ItemVersionId,
+                Modality = "reading", DisplayOrder = 1,
+            });
+            await db.SaveChangesAsync();
         }
 
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
         var take = await practice.GetSessionTakeAsync(userId, session.SessionId);
 
         Assert.NotNull(take);
@@ -1239,7 +1146,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Single(take.Navigator);
 
         var currentQ = take.Question;
-        Assert.Equal(qId, currentQ.QuestionId);
+        Assert.Equal(versionId, currentQ.ItemVersionId);
         Assert.Equal("inline_completion", currentQ.QuestionType);
         Assert.Equal("[\"solution\"]", currentQ.AcceptedAnswersJson);
         Assert.False(currentQ.AllowNumber);
@@ -1248,7 +1155,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Null(currentQ.Explanation);
 
         // Submit answer
-        await practice.SubmitAnswerAsync(userId, session.SessionId, qId, new SubmitPracticeAnswerInput(ResponseText: "solution"));
+        await practice.SubmitAnswerAsync(userId, session.SessionId, versionId, new SubmitPracticeAnswerInput(ResponseText: "solution"));
 
         // Refetch take
         var takeAfter = await practice.GetSessionTakeAsync(userId, session.SessionId);

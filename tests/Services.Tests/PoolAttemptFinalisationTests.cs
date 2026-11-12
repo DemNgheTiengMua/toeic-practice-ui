@@ -158,8 +158,6 @@ public sealed class PoolAttemptFinalisationTests(DatabaseFixture database)
             await db.SaveChangesAsync();
 
             await engine.SubmitAttemptAsync(attemptId, userId, isAutoSubmit: false);
-
-            Assert.Empty(await db.Questions.Where(q => q.ExamId == exam.ExamId).ToListAsync());
         }
 
         // Grade and finalise. The processor finalises the attempt itself once every grading settles,

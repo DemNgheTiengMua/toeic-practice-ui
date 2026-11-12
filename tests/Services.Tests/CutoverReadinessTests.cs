@@ -137,10 +137,10 @@ public sealed class CutoverReadinessTests(DatabaseFixture database)
     /// <summary>
     /// A certificate and one exam, optionally with a pool roster.
     /// <para>
-    /// #272: the legacy <c>Questions</c> rows here STAY, because they are this file's subject, not its
-    /// scaffolding - <paramref name="withRoster"/> = false builds exactly the "paper the pool cannot
-    /// rebuild" that <see cref="CutoverReadinessService"/> must block on. Migrating them would delete the
-    /// case under test. They are deleted with the table in #269.
+    /// <paramref name="withRoster"/> = false builds exactly the "paper the pool cannot rebuild" that
+    /// <see cref="CutoverReadinessService"/> must block on: an exam with no <c>ExamItems</c> rows. That
+    /// condition is structural, so no legacy question row is needed to build it - and #269 dropped the
+    /// tables that held them.
     /// </para>
     /// </summary>
     private static async Task<int> SeedCertAndExamAsync(string connectionString, bool withRoster)
@@ -184,31 +184,6 @@ public sealed class CutoverReadinessTests(DatabaseFixture database)
             QuestionCount = 1,
         };
         db.Exams.Add(exam);
-        await db.SaveChangesAsync();
-
-        var group = new BusinessObjects.Entities.QuestionGroup
-        {
-            ExamId = exam.ExamId,
-            SectionId = section.SectionId,
-            CertId = cert.CertId,
-            DisplayOrder = 1,
-            UnitNumber = 1,
-        };
-        db.QuestionGroups.Add(group);
-        await db.SaveChangesAsync();
-
-        var question = new BusinessObjects.Entities.Question
-        {
-            ExamId = exam.ExamId,
-            SectionId = section.SectionId,
-            SkillId = skill.SkillId,
-            GroupId = group.GroupId,
-            QuestionType = "mcq",
-            CefrLevel = BusinessObjects.CefrLevel.B1,
-            Stem = "What time does the depot open?",
-            DisplayOrder = 1,
-        };
-        db.Questions.Add(question);
         await db.SaveChangesAsync();
 
         if (withRoster)

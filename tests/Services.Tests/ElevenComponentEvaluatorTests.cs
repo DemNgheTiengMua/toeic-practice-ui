@@ -14,194 +14,116 @@ namespace Services.Tests;
 
 public sealed class ElevenComponentEvaluatorTests
 {
+    /// <summary>
+    /// #269: the durable rules <c>EvaluateObjectiveAnswer</c> applied, now asserted on a pinned version.
+    /// <para>
+    /// The legacy evaluator read a <c>Question</c> and its <c>QuestionOption</c> rows; both are gone, and
+    /// the pool grades a blank through <see cref="AttemptEngine.EvaluatePinnedText"/>. These are the
+    /// assertions that survived the move, unchanged in substance: case and whitespace do not decide an
+    /// answer, the word ceiling is strict, a digit is refused when the author forbade one, a required
+    /// keyword must be present, and a keyed option's text counts as an accepted answer.
+    /// </para>
+    /// <para>
+    /// The label-shaped half - an mcq is right only when the chosen label is the key, a multi_select keyed
+    /// A,B needs both - is no longer expressible as a pure function: <c>IsKeyLabel</c> is internal to
+    /// <c>Services</c>. It is asserted through the sitting path instead, by
+    /// <c>PoolOnlyPaperTests.A_paper_with_no_question_rows_is_sat_from_the_roster</c> (key A is right)
+    /// and <c>PoolDrillGradingTests.A_multi_select_is_right_only_when_the_whole_label_set_is_chosen</c>
+    /// (both labels right, one label wrong, an extra label wrong).
+    /// </para>
+    /// </summary>
     [Fact]
-    public void Mcq_And_Mcq3_Evaluates_Correct_Option()
+    public void A_pool_blank_is_graded_by_the_rules_the_legacy_evaluator_applied()
     {
-        var qMcq = new Question { QuestionType = "mcq" };
-        var qMcq3 = new Question { QuestionType = "mcq_3" };
-
-        var options = new List<QuestionOption>
+        // Case and surrounding whitespace: an accepted answer is right however it was typed.
+        var blank = new ItemVersion
         {
-            new() { OptionId = 1, Label = "A", Text = "Correct A", IsCorrect = true },
-            new() { OptionId = 2, Label = "B", Text = "Wrong B", IsCorrect = false },
-            new() { OptionId = 3, Label = "C", Text = "Wrong C", IsCorrect = false }
-        };
-
-        // Correct selection awards 1
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(qMcq, options, 1, null, null));
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(qMcq3, options, 1, null, null));
-
-        // Wrong selection awards 0
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(qMcq, options, 2, null, null));
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(qMcq3, options, 3, null, null));
-
-        // Missing selection awards 0
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(qMcq, options, null, null, null));
-    }
-
-    [Fact]
-    public void MultiSelect_Requires_Exact_Option_Set_Match()
-    {
-        var q = new Question { QuestionType = "multi_select", MaxSelections = 2 };
-
-        var options = new List<QuestionOption>
-        {
-            new() { OptionId = 10, Label = "A", Text = "Option A", IsCorrect = true },
-            new() { OptionId = 11, Label = "B", Text = "Option B", IsCorrect = false },
-            new() { OptionId = 12, Label = "C", Text = "Option C", IsCorrect = true },
-            new() { OptionId = 13, Label = "D", Text = "Option D", IsCorrect = false }
-        };
-
-        // Exact match [10, 12] awards 1
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, "[10, 12]", null));
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, "[12, 10]", null));
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, "10,12", null));
-
-        // Partial match [10] awards 0
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, "[10]", null));
-
-        // Extra option [10, 11, 12] awards 0
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, "[10, 11, 12]", null));
-
-        // Empty selection awards 0
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, null));
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, "[]", null));
-    }
-
-    [Fact]
-    public void InlineCompletion_Whitespace_Normalization_And_Case_Insensitivity()
-    {
-        var q = new Question
-        {
-            QuestionType = "inline_completion",
+            ItemId = 1,
+            VersionNumber = 1,
+            Stem = "The team built a new ____.",
             AcceptedAnswersJson = "[\"laboratory\", \"lab\"]",
-            AllowNumber = true
         };
+        Assert.True(AttemptEngine.EvaluatePinnedText(blank, "laboratory"));
+        Assert.True(AttemptEngine.EvaluatePinnedText(blank, "LABORATORY"));
+        Assert.True(AttemptEngine.EvaluatePinnedText(blank, "Lab"));
+        Assert.True(AttemptEngine.EvaluatePinnedText(blank, "   laboratory   "));
 
-        var options = new List<QuestionOption>();
+        // Anything else is wrong, including an empty and an absent answer.
+        Assert.False(AttemptEngine.EvaluatePinnedText(blank, "classroom"));
+        Assert.False(AttemptEngine.EvaluatePinnedText(blank, ""));
+        Assert.False(AttemptEngine.EvaluatePinnedText(blank, null));
 
-        // Exact match
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "laboratory"));
-
-        // Case insensitivity
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "LABORATORY"));
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "Lab"));
-
-        // Whitespace trimming and multiple spaces collapse
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "   laboratory   "));
-
-        // Incorrect text awards 0
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "classroom"));
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, ""));
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, null));
-    }
-
-    [Fact]
-    public void InlineCompletion_Matches_Against_Correct_QuestionOptions()
-    {
-        var q = new Question
+        // A keyed option's text is an accepted answer too, and only the keyed one.
+        var keyed = new ItemVersion
         {
-            QuestionType = "inline_completion",
-            AcceptedAnswersJson = null,
-            AllowNumber = true
+            ItemId = 2,
+            VersionNumber = 1,
+            Stem = "It was built in ____.",
+            OptionA = "Sydney Opera House",
+            OptionB = "Wrong Answer",
+            OptionC = "Third",
+            OptionD = "Fourth",
+            KeyLabel = "A",
         };
+        Assert.True(AttemptEngine.EvaluatePinnedText(keyed, "Sydney Opera House"));
+        Assert.True(AttemptEngine.EvaluatePinnedText(keyed, "sydney opera house"));
+        Assert.False(AttemptEngine.EvaluatePinnedText(keyed, "Wrong Answer"));
 
-        var options = new List<QuestionOption>
+        // The word ceiling is strict: a matching answer over the limit is still wrong.
+        var bounded = new ItemVersion
         {
-            new() { OptionId = 1, Text = "Sydney Opera House", IsCorrect = true },
-            new() { OptionId = 2, Text = "Wrong Answer", IsCorrect = false }
-        };
-
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "Sydney Opera House"));
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "sydney opera house"));
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "Wrong Answer"));
-    }
-
-    [Fact]
-    public void InlineCompletion_Enforces_MaxWords_Strictly()
-    {
-        var q = new Question
-        {
-            QuestionType = "inline_completion",
+            ItemId = 3,
+            VersionNumber = 1,
+            Stem = "Complete: ____.",
             MaxWords = 2,
             AcceptedAnswersJson = "[\"three blue cars\", \"blue cars\"]",
-            AllowNumber = true
         };
-
-        var options = new List<QuestionOption>();
-
-        // 2 words matches MaxWords limit
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "blue cars"));
-
-        // 3 words exceeds MaxWords (2) -> awards 0 despite being in AcceptedAnswersJson
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "three blue cars"));
+        Assert.True(AttemptEngine.EvaluatePinnedText(bounded, "blue cars"));
+        Assert.False(AttemptEngine.EvaluatePinnedText(bounded, "three blue cars"));
     }
 
     [Fact]
-    public void InlineCompletion_Enforces_AllowNumber_False()
+    public void A_blank_forbidding_digits_refuses_a_numeric_answer()
     {
-        var q = new Question
+        var blank = new ItemVersion
         {
-            QuestionType = "inline_completion",
+            ItemId = 4,
+            VersionNumber = 1,
+            Stem = "The lecture is held in ____.",
             AllowNumber = false,
-            AcceptedAnswersJson = "[\"room 101\", \"room one hundred\"]"
+            AcceptedAnswersJson = "[\"room 101\", \"room one hundred\"]",
         };
 
-        var options = new List<QuestionOption>();
-
-        // Without numbers: valid
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "room one hundred"));
-
-        // Contains digits when AllowNumber is false: awards 0
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "room 101"));
+        Assert.True(AttemptEngine.EvaluatePinnedText(blank, "room one hundred"));
+        Assert.False(AttemptEngine.EvaluatePinnedText(blank, "room 101"));
     }
 
     [Fact]
-    public void InlineCompletion_Verifies_RequiredKeywords_Presence()
+    public void A_blank_declaring_required_keywords_refuses_an_answer_without_them()
     {
-        var q = new Question
+        var blank = new ItemVersion
         {
-            QuestionType = "inline_completion",
+            ItemId = 5,
+            VersionNumber = 1,
+            Stem = "Describe what you built in one clause.",
             RequiredKeywords = "[\"develop\", \"system\"]",
             AcceptedAnswersJson = "[\"developing a computer system\", \"system developer\"]",
-            AllowNumber = true
         };
 
-        var options = new List<QuestionOption>();
+        // Both keyword stems are present, by lemmatisation ("developing" carries "develop").
+        Assert.True(AttemptEngine.EvaluatePinnedText(blank, "developing a computer system"));
+        Assert.True(AttemptEngine.EvaluatePinnedText(blank, "system developer"));
 
-        // Contains both keyword stems ("develop" and "system") -> awards 1
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "developing a computer system"));
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(q, options, null, null, "system developer"));
-
-        // Missing "develop" keyword -> awards 0
-        var qMissingKeyword = new Question
+        // One keyword missing: wrong, even though the answer is on the accepted list.
+        var missing = new ItemVersion
         {
-            QuestionType = "inline_completion",
+            ItemId = 6,
+            VersionNumber = 1,
+            Stem = "Describe what you built in one clause.",
             RequiredKeywords = "develop, system",
-            AcceptedAnswersJson = "[\"a computer system\"]"
+            AcceptedAnswersJson = "[\"a computer system\"]",
         };
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(qMissingKeyword, options, null, null, "a computer system"));
-    }
-
-    [Fact]
-    public void Dropdown_And_DragDrop_Support_OptionId_Or_ResponseText()
-    {
-        var qDropdown = new Question { QuestionType = "dropdown" };
-        var qDragDrop = new Question { QuestionType = "drag_drop", AcceptedAnswersJson = "[\"Category A\"]" };
-
-        var options = new List<QuestionOption>
-        {
-            new() { OptionId = 5, Label = "A", Text = "Category A", IsCorrect = true },
-            new() { OptionId = 6, Label = "B", Text = "Category B", IsCorrect = false }
-        };
-
-        // Match by SelectedOptionId
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(qDropdown, options, 5, null, null));
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(qDropdown, options, 6, null, null));
-
-        // Match by ResponseText
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(qDragDrop, options, null, null, "category a"));
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(qDragDrop, options, null, null, "category b"));
+        Assert.False(AttemptEngine.EvaluatePinnedText(missing, "a computer system"));
     }
 
     [Theory]
@@ -324,17 +246,10 @@ public sealed class ElevenComponentEvaluatorTests
     [Fact]
     public void EvaluateWritingResponse_Flags_UnderLength_When_Below_MinWords()
     {
-        // IELTS Task 1: MinWords = 150
-        var qTask1 = new Question
-        {
-            QuestionType = "free_response",
-            MinWords = 150,
-            MaxWords = 300
-        };
-
-        // 100 words -> UnderLength
+        // IELTS Task 1: MinWords = 150. #269: the overload takes the two facts it reads - the word window
+        // and the keywords - instead of a Question row that no longer exists.
         var shortEssay = string.Join(" ", Enumerable.Repeat("word", 100));
-        var evalShort = AttemptEngine.EvaluateWritingResponse(qTask1, shortEssay);
+        var evalShort = AttemptEngine.EvaluateWritingResponse(150, null, shortEssay);
         Assert.Equal(100, evalShort.WordCount);
         Assert.True(evalShort.IsUnderLength);
         Assert.NotNull(evalShort.Feedback);
@@ -343,45 +258,32 @@ public sealed class ElevenComponentEvaluatorTests
 
         // 160 words -> Not under length
         var adequateEssay = string.Join(" ", Enumerable.Repeat("word", 160));
-        var evalAdequate = AttemptEngine.EvaluateWritingResponse(qTask1, adequateEssay);
+        var evalAdequate = AttemptEngine.EvaluateWritingResponse(150, null, adequateEssay);
         Assert.Equal(160, evalAdequate.WordCount);
         Assert.False(evalAdequate.IsUnderLength);
 
         // IELTS Task 2: MinWords = 250
-        var qTask2 = new Question
-        {
-            QuestionType = "free_response",
-            MinWords = 250
-        };
-
         var task2Short = string.Join(" ", Enumerable.Repeat("word", 240));
-        var evalTask2Short = AttemptEngine.EvaluateWritingResponse(qTask2, task2Short);
+        var evalTask2Short = AttemptEngine.EvaluateWritingResponse(250, null, task2Short);
         Assert.True(evalTask2Short.IsUnderLength);
 
         var task2Pass = string.Join(" ", Enumerable.Repeat("word", 260));
-        var evalTask2Pass = AttemptEngine.EvaluateWritingResponse(qTask2, task2Pass);
+        var evalTask2Pass = AttemptEngine.EvaluateWritingResponse(250, null, task2Pass);
         Assert.False(evalTask2Pass.IsUnderLength);
     }
 
     [Fact]
     public void EvaluateWritingResponse_Detects_RequiredKeywords_With_Lemmatization()
     {
-        var q = new Question
-        {
-            QuestionType = "free_response",
-            MinWords = 10,
-            RequiredKeywords = "photograph, yesterday"
-        };
-
         // Contains lemma forms: "photographed" and "yesterday"
         var validResponse = "We took several photographed memories yesterday in the park.";
-        var evalValid = AttemptEngine.EvaluateWritingResponse(q, validResponse);
+        var evalValid = AttemptEngine.EvaluateWritingResponse(10, "photograph, yesterday", validResponse);
         Assert.True(evalValid.HasRequiredKeywords);
         Assert.Empty(evalValid.MissingKeywords);
 
         // Missing "photograph"
         var invalidResponse = "We went to the park yesterday afternoon.";
-        var evalInvalid = AttemptEngine.EvaluateWritingResponse(q, invalidResponse);
+        var evalInvalid = AttemptEngine.EvaluateWritingResponse(10, "photograph, yesterday", invalidResponse);
         Assert.False(evalInvalid.HasRequiredKeywords);
         Assert.Single(evalInvalid.MissingKeywords);
         Assert.Equal("photograph", evalInvalid.MissingKeywords[0]);

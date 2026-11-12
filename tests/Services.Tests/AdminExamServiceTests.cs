@@ -17,11 +17,16 @@ using Xunit;
 namespace Services.Tests;
 
 /// <summary>
-/// The legacy authoring service's rules: option sets, word bounds, timers, cluster sizes, delete guards
-/// and quick ingest. #272: this file stays on the legacy tables because its SUBJECT is that service -
-/// <c>CreateQuestionGroupAsync</c>/<c>CreateQuestionAsync</c> and the quick-ingest commit still write
-/// <c>QuestionGroups</c>/<c>Questions</c>, and asserting their validation against a pool fixture would
-/// test a writer those methods do not call.
+/// <c>AdminExamService</c>'s durable rules: the publish door and its audit codes, the exam lifecycle
+/// guards, cluster authorship, quick ingest, export and the Studio reads.
+/// <para>
+/// <b>#269: what left this file.</b> Its old subject was <c>CreateQuestionGroupAsync</c> /
+/// <c>CreateQuestionAsync</c> / <c>UpdateQuestionAsync</c> / <c>DeleteQuestionAsync</c>, which went with
+/// the <c>QuestionGroups</c> / <c>Questions</c> / <c>QuestionOptions</c> tables. A test whose subject is
+/// a deleted member has nothing left to assert and is gone; a test whose subject was a durable RULE is
+/// kept and re-expressed on the pool - <c>PoolFixture</c> for a fixture, and the pool writers for a
+/// write - with its assertion intact. Every removal is named where it stood.
+/// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
 public sealed class AdminExamServiceTests(DatabaseFixture database)
@@ -39,6 +44,128 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
     /// </summary>
     private Task PublishForFixtureAsync(int examId) =>
         database.SqlAsync($"UPDATE Exams SET Status = 'published' WHERE ExamId = {examId};");
+
+    /// <summary>
+    /// #226 / INV-3: a bound item reaches a learner only after a human clearance names it, and ADM-02's
+    /// trigger refuses a decision made by the batch's uploader or the item's last writer. The reviewer
+    /// is therefore a second account, which is the invariant rather than a fixture inconvenience.
+    /// </summary>
+    private async Task ClearItemsForPublishAsync(int certId, IReadOnlyList<int> itemIds)
+    {
+        var uploaderEmail = $"{Guid.NewGuid():N}@uploader.local";
+        var reviewerEmail = $"{Guid.NewGuid():N}@reviewer.local";
+
+        var logs = string.Join(", ", itemIds.Select((id, index) => $"(@batch, {index + 1}, 'info', N'ok', {id}, 1)"));
+        var decisions = string.Join(", ", itemIds.Select(id => $"(@batch, {id}, @reviewer, 'clear', SYSDATETIMEOFFSET())"));
+
+        await database.SqlAsync($"""
+            IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'reviewer')
+              INSERT INTO Roles (Code, Name) VALUES ('reviewer', N'Reviewer');
+            DECLARE @role INT = (SELECT RoleId FROM Roles WHERE Code = 'reviewer');
+
+            INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
+            VALUES (@role, '{uploaderEmail}', 0x01, N'Uploader');
+            DECLARE @uploader INT = SCOPE_IDENTITY();
+
+            INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
+            VALUES (@role, '{reviewerEmail}', 0x01, N'Reviewer');
+            DECLARE @reviewer INT = SCOPE_IDENTITY();
+
+            INSERT INTO ImportBatches (CertId, SourceName, Status, UploadedBy)
+            VALUES ({certId}, N'fixture.xlsx', 'done', @uploader);
+            DECLARE @batch INT = SCOPE_IDENTITY();
+
+            INSERT INTO ImportLog (BatchId, RowNo, Level, Message, ItemId, Attempt) VALUES {logs};
+            INSERT INTO ReviewSampleDecisions (BatchId, ItemId, ActorUserId, Decision, DecidedAt) VALUES {decisions};
+            """);
+    }
+
+    /// <summary>A topic of this modality, authored when the fresh catalog holds none.</summary>
+    private static async Task<int> TopicIdAsync(CompanionDbContext db, string modality)
+    {
+        var existing = await db.Topics.AsNoTracking()
+            .Where(t => t.Modality == modality)
+            .OrderBy(t => t.TopicId)
+            .Select(t => (int?)t.TopicId)
+            .FirstOrDefaultAsync();
+
+        if (existing is not null)
+        {
+            return existing.Value;
+        }
+
+        var (code, name) = modality switch
+        {
+            "listening" => ("L-DET", "Listening for detail"),
+            "speaking" => ("S-DESC", "Describing"),
+            "writing" => ("W-CORR", "Transactional correspondence"),
+            _ => ("R-DET", "Local factual retrieval"),
+        };
+
+        var topic = new Topic { Modality = modality, Code = code, Name = name };
+        db.Topics.Add(topic);
+        await db.SaveChangesAsync();
+        return topic.TopicId;
+    }
+
+    /// <summary>
+    /// One MCQ position carrying an evidence span, which is what INV-2 judges a bundle by. Written here
+    /// rather than through <see cref="PoolFixture"/> because a span is a scored field of the version and
+    /// the fixture authors none - a version with a null span is refused by
+    /// <c>PoolGateFour.ReviewBundleAsync</c>, so a publish fixture needs it.
+    /// </summary>
+    private static async Task<(int ItemId, int ExamItemId)> AddSpannedMcqAsync(
+        CompanionDbContext db, Exam exam, Section section, Stimulus? stimulus,
+        string stem, int displayOrder, int evidenceStart, int evidenceEnd, string evidenceUnit = "char")
+    {
+        var topicId = await TopicIdAsync(db, section.Modality);
+
+        var item = new Item
+        {
+            Modality = section.Modality,
+            TopicId = topicId,
+            CefrLevel = CefrLevel.B1,
+            // CK_Items_Modality_Type: the semantic type is the modality's own.
+            ItemType = section.Modality == "listening" ? "short_exchange" : "sentence_cloze",
+            RenderFormat = "mcq",
+            ContentTier = "demo",
+            LifecycleStatus = "active",
+            StimulusId = stimulus?.StimulusId,
+        };
+        db.Items.Add(item);
+        await db.SaveChangesAsync();
+
+        var version = new ItemVersion
+        {
+            ItemId = item.ItemId,
+            VersionNumber = 1,
+            Stem = stem,
+            OptionA = "at",
+            OptionB = "on",
+            KeyLabel = "A",
+            Explanation = "A clock time takes 'at'.",
+            EvidenceStart = evidenceStart,
+            EvidenceEnd = evidenceEnd,
+            EvidenceUnit = evidenceUnit,
+        };
+        db.ItemVersions.Add(version);
+        await db.SaveChangesAsync();
+
+        var binding = new ExamItem
+        {
+            ExamId = exam.ExamId,
+            CertId = exam.CertId,
+            SectionId = section.SectionId,
+            ItemId = item.ItemId,
+            ItemVersionId = version.ItemVersionId,
+            Modality = section.Modality,
+            DisplayOrder = displayOrder,
+        };
+        db.ExamItems.Add(binding);
+        await db.SaveChangesAsync();
+
+        return (item.ItemId, binding.ExamItemId);
+    }
 
     private async Task<(int certId, int secListeningId, int secReadingId, int secSpeakingId, int secWritingId)> SeedCertificateWithSectionsAsync(string certCode)
     {
@@ -89,158 +216,57 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         return (cert.CertId, secL.SectionId, secR.SectionId, secS.SectionId, secW.SectionId);
     }
 
+    // ---------------------------------------------------------------- deleted: the question doors
+    //
+    // Gone with their subjects, by design (#269):
+    //
+    //   McqQuestionValidation_ValidatesOptionsAndTimingAndWords - subject CreateQuestionAsync. Its rules
+    //     (two-to-four options, one key, no timers or word bounds on an MCQ) were CreateQuestionAsync's
+    //     input validation. The pool's answer-shape rule is CK_ItemVersions_OptionsComplete plus
+    //     AdminItemService.ValidateVersionShape, and its refusals are pinned by AdminItemAuthoringTests;
+    //     the timer and word-bound rules have no writer left at all.
+    //   FreeResponseValidation_ValidatesTimingWordsAndNoOptions - same subject, same reason.
+    //   DeleteQuestion_BlockedWhenAttemptAnswersExist_SucceedsWhenUnattempted - subject
+    //     DeleteQuestionAsync. The durable half ("an answered position cannot leave the paper") is
+    //     DeleteExamStudioGroupAsync's, pinned by StudioGroupWriterTests; the other half ("a locked
+    //     paper refuses it") is ExamStructureLock's, pinned by AdminExamPublishGateTests.
+    //   DeleteQuestion_UnattemptedExam_StillDeletes - subject DeleteQuestionAsync. There is no admin
+    //     delete-item route any more (CNT-43 retires an item rather than deleting it), so there is no
+    //     door to assert.
+    //   UpdateQuestion_SwitchingCorrectOption_SucceedsWithoutUniqueConstraintViolation - subject
+    //     UpdateQuestionAsync. The key is a column on ItemVersions, not a row with a filtered unique
+    //     index, and re-keying A to B is asserted through the only writer by
+    //     AdminItemAuthoringTests.Editing_a_scored_field_creates_a_new_version_and_leaves_the_first_identical.
+    //   UpdateQuestion_WhenDisplayOrderIsZeroOrNotProvided_PreservesExistingDisplayOrderAndUpdatesExplanation
+    //     - subject UpdateQuestionAsync. "0 means keep the order" was that method's rule and nothing
+    //     writes a position's order that way now: a reorder is ReorderSectionItemsAsync, and an
+    //     explanation edit in place is AdminItemService.UpdateAsync's, pinned by AdminItemAuthoringTests.
+    //   AuthoringQuestionComponentTypes_PersistsAllFieldsAndOptions - subject CreateQuestionAsync, four
+    //     calls deep. The durable claim ("every render format persists its answer shape") is the pool's
+    //     and is pinned by SchemaAndSixAxisModelTests, RenderFormatRepresentableTests and the pool
+    //     builder in ExamRebuildFullSystemE2ETests.
+
+    /// <summary>
+    /// The group card's own validation: an image needs alt text, a slice needs both ends and an end
+    /// after its start - and a complete slice is accepted.
+    /// <para>
+    /// #269: this drove <c>CreateQuestionGroupAsync</c>, which went with the <c>QuestionGroups</c>
+    /// table. The rules did not move: <c>ValidateQuestionGroup</c> is still their only statement, and
+    /// every Studio group write runs it, so the assertions are kept verbatim against
+    /// <c>UpdateExamStudioGroupAsync</c>.
+    /// </para>
+    /// <para>
+    /// The old fourth case, "a speaking-practice exam rejects a reading section", is no longer this
+    /// door's: #269 moved that rule to <c>trg_ExamItems_SkillPracticeOneModality</c>, because it is a
+    /// fact about the paper's POSITIONS rather than about a group card. It is asserted at the door that
+    /// now expresses it - <see cref="AdminExamService.BindItemAsync"/>, the write that creates a
+    /// position - in <c>BindItem_SpeakingPracticeExam_RejectsReadingSection</c> below.
+    /// </para>
+    /// </summary>
     [Fact]
-    public async Task McqQuestionValidation_ValidatesOptionsAndTimingAndWords()
+    public async Task UpdateExamStudioGroup_ValidatesImageAltAndAudioSlice()
     {
-        var (certId, secL, secR, _, _) = await SeedCertificateWithSectionsAsync($"MCQ_{Guid.NewGuid():N}"[..18]);
-        var service = CreateService();
-
-        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
-            certId,
-            $"MCQ Test {Guid.NewGuid():N}"[..25],
-            60,
-            ExamPurposeDto.Mock));
-
-        var group = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
-
-        // 1. Less than 2 options throws validation error
-        var ex1 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId,
-            "Stem 1",
-            QuestionTypeDto.Mcq,
-            Options: [new AdminQuestionOptionInput(null, "A", "Opt A", true, null)], CefrLevelCode: "B1")));
-        Assert.Equal(ApiError.Codes.Validation, ex1.Code);
-
-        // 2. 0 correct options throws validation error
-        var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId,
-            "Stem 2",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Opt A", false, null),
-                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ], CefrLevelCode: "B1")));
-        Assert.Equal(ApiError.Codes.Validation, ex2.Code);
-
-        // 3. More than 1 correct option throws validation error
-        var ex3 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId,
-            "Stem 3",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
-                new AdminQuestionOptionInput(null, "B", "Opt B", true, null)
-            ], CefrLevelCode: "B1")));
-        Assert.Equal(ApiError.Codes.Validation, ex3.Code);
-
-        // 4. MCQ with PrepSeconds or ResponseSeconds throws validation error
-        var ex4 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId,
-            "Stem 4",
-            QuestionTypeDto.Mcq,
-            PrepSeconds: 15,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
-                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ], CefrLevelCode: "B1")));
-        Assert.Equal(ApiError.Codes.Validation, ex4.Code);
-
-        // 5. MCQ with MinWords or MaxWords throws validation error
-        var ex5 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId,
-            "Stem 5",
-            QuestionTypeDto.Mcq,
-            MinWords: 50,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
-                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ], CefrLevelCode: "B1")));
-        Assert.Equal(ApiError.Codes.Validation, ex5.Code);
-
-        // 6. Valid MCQ succeeds
-        var validMcq = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId,
-            "Valid MCQ Stem",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Option A", true, "Rationale A"),
-                new AdminQuestionOptionInput(null, "B", "Option B", false, "Rationale B"),
-                new AdminQuestionOptionInput(null, "C", "Option C", false, "Rationale C"),
-                new AdminQuestionOptionInput(null, "D", "Option D", false, "Rationale D")
-            ], CefrLevelCode: "B1"));
-
-        Assert.NotNull(validMcq);
-        Assert.Equal("Valid MCQ Stem", validMcq.Stem);
-        Assert.Equal(4, validMcq.Options.Count);
-        Assert.Single(validMcq.Options, o => o.IsCorrect);
-    }
-
-    [Fact]
-    public async Task FreeResponseValidation_ValidatesTimingWordsAndNoOptions()
-    {
-        var (certId, _, _, _, secW) = await SeedCertificateWithSectionsAsync($"FR_{Guid.NewGuid():N}"[..18]);
-        var service = CreateService();
-
-        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
-            certId,
-            $"FR Test {Guid.NewGuid():N}"[..25],
-            60,
-            ExamPurposeDto.WritingPractice));
-
-        var group = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secW));
-
-        // 1. Free response cannot have options
-        var ex1 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId,
-            "FR Stem 1",
-            QuestionTypeDto.FreeResponse,
-            Options: [new AdminQuestionOptionInput(null, "A", "Opt A", true, null)], CefrLevelCode: "B1")));
-        Assert.Equal(ApiError.Codes.Validation, ex1.Code);
-
-        // 2. ResponseSeconds must be > 0
-        var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId,
-            "FR Stem 2",
-            QuestionTypeDto.FreeResponse,
-            ResponseSeconds: 0, CefrLevelCode: "B1")));
-        Assert.Equal(ApiError.Codes.Validation, ex2.Code);
-
-        // 3. MaxWords < MinWords throws validation error
-        var ex3 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId,
-            "FR Stem 3",
-            QuestionTypeDto.FreeResponse,
-            MinWords: 150,
-            MaxWords: 100, CefrLevelCode: "B1")));
-        Assert.Equal(ApiError.Codes.Validation, ex3.Code);
-
-        // 4. Valid Free Response succeeds
-        var validFr = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId,
-            "Write an essay about technology.",
-            QuestionTypeDto.FreeResponse,
-            PrepSeconds: 60,
-            ResponseSeconds: 1800,
-            MinWords: 150,
-            MaxWords: 300,
-            Hint: "Consider advantages and disadvantages.", CefrLevelCode: "B1"));
-
-        Assert.NotNull(validFr);
-        Assert.Equal(QuestionTypeDto.FreeResponse, validFr.QuestionType);
-        Assert.Empty(validFr.Options);
-        Assert.Equal(150, validFr.MinWords);
-        Assert.Equal(300, validFr.MaxWords);
-    }
-
-    [Fact]
-    public async Task QuestionGroupValidation_ImageAlt_AudioSlice_And_Modality()
-    {
-        var (certId, secL, secR, secS, secW) = await SeedCertificateWithSectionsAsync($"GRP_{Guid.NewGuid():N}"[..18]);
+        var (certId, secL, _, _, _) = await SeedCertificateWithSectionsAsync($"GRP_{Guid.NewGuid():N}"[..18]);
         var service = CreateService();
 
         var mockExam = await service.CreateExamAsync(new CreateAdminExamRequest(
@@ -249,263 +275,246 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             60,
             ExamPurposeDto.Mock));
 
+        // The group the write addresses: a cluster with a slice, so it is a stimulus rather than a
+        // solo position - a solo position has no passage or audio of its own to write.
+        var cluster = await service.CreateExamClusterAsync(mockExam.ExamId, new CreateExamClusterRequest(
+            SectionId: secL,
+            AudioPath: "/audio/group.mp3",
+            AudioStartMs: 1000,
+            AudioEndMs: 8000,
+            QuestionCount: 1,
+            CefrLevelCode: "B1"));
+
+        // 1. ImagePath without ImageAlt throws error
+        var ex1 = await Assert.ThrowsAsync<AdminExamException>(() => service.UpdateExamStudioGroupAsync(
+            mockExam.ExamId, cluster.GroupId, new UpdateQuestionGroupRequest(
+                secL,
+                ImagePath: "img/test.jpg",
+                ImageAlt: null)));
+        Assert.Equal(ApiError.Codes.Validation, ex1.Code);
+
+        // 2. AudioStartMs without AudioEndMs throws error
+        var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.UpdateExamStudioGroupAsync(
+            mockExam.ExamId, cluster.GroupId, new UpdateQuestionGroupRequest(
+                secL,
+                Passage: "A short notice.",
+                AudioStartMs: 1000,
+                AudioEndMs: null)));
+        Assert.Equal(ApiError.Codes.Validation, ex2.Code);
+
+        // 3. AudioEndMs <= AudioStartMs throws error
+        var ex3 = await Assert.ThrowsAsync<AdminExamException>(() => service.UpdateExamStudioGroupAsync(
+            mockExam.ExamId, cluster.GroupId, new UpdateQuestionGroupRequest(
+                secL,
+                Passage: "A short notice.",
+                AudioStartMs: 5000,
+                AudioEndMs: 4000)));
+        Assert.Equal(ApiError.Codes.Validation, ex3.Code);
+
+        // 4. Valid group succeeds
+        await service.UpdateExamStudioGroupAsync(mockExam.ExamId, cluster.GroupId, new UpdateQuestionGroupRequest(
+            secL,
+            Passage: "A short notice.",
+            AudioPath: "/audio/group.mp3",
+            ImagePath: "img/q1.jpg",
+            ImageAlt: "A desk with a laptop",
+            AudioStartMs: 1000,
+            AudioEndMs: 8000));
+
+        var studio = await service.GetExamStudioAsync(mockExam.ExamId);
+        var group = Assert.Single(studio.Sections.Single(s => s.SectionId == secL).Groups);
+        Assert.Equal("A desk with a laptop", group.ImageAlt);
+        // ExamAudio only resolves a window for a group that has a track to slice, so the payload names
+        // one - which is what the audio slicer on that screen sends.
+        Assert.Equal(1000, group.AudioStartMs);
+        Assert.Equal(8000, group.AudioEndMs);
+    }
+
+    /// <summary>
+    /// UI-36 / UI-38: a speaking-practice paper holds speaking sections and nothing else.
+    /// <para>
+    /// #269: this was a case inside the group-card test, because <c>CreateQuestionGroupAsync</c> ran
+    /// <c>ValidateQuestionGroup</c> and that function states the rule. The group write cannot express it
+    /// any more - it resolves a group's own section and refuses a section that is not that one. The
+    /// rule itself did not weaken: <c>trg_ExamItems_SkillPracticeOneModality</c> now refuses the
+    /// position, so this drives the write that creates one.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task BindItem_SpeakingPracticeExam_RejectsReadingSection()
+    {
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"SPKMOD_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
         var speakingExam = await service.CreateExamAsync(new CreateAdminExamRequest(
             certId,
             $"Speaking Test {Guid.NewGuid():N}"[..25],
             30,
             ExamPurposeDto.SpeakingPractice));
 
-        // 1. ImagePath without ImageAlt throws error
-        var ex1 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionGroupAsync(mockExam.ExamId, new CreateQuestionGroupRequest(
-            secR,
-            ImagePath: "img/test.jpg",
-            ImageAlt: null)));
-        Assert.Equal(ApiError.Codes.Validation, ex1.Code);
+        // An authored pool item with no position yet: the binding is the write under test, so the
+        // fixture must not make one. Written directly because PoolFixture always binds.
+        int versionId;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var topicId = await TopicIdAsync(db, "reading");
+            var item = new Item
+            {
+                Modality = "reading",
+                TopicId = topicId,
+                CefrLevel = CefrLevel.B1,
+                ItemType = "sentence_cloze",
+                RenderFormat = "mcq",
+                ContentTier = "demo",
+                LifecycleStatus = "active",
+            };
+            db.Items.Add(item);
+            await db.SaveChangesAsync();
 
-        // 2. AudioStartMs without AudioEndMs throws error
-        var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionGroupAsync(mockExam.ExamId, new CreateQuestionGroupRequest(
-            secL,
-            AudioStartMs: 1000,
-            AudioEndMs: null)));
-        Assert.Equal(ApiError.Codes.Validation, ex2.Code);
+            var version = new ItemVersion
+            {
+                ItemId = item.ItemId,
+                VersionNumber = 1,
+                Stem = "A reading item.",
+                OptionA = "at",
+                OptionB = "on",
+                KeyLabel = "A",
+                Explanation = "A clock time takes 'at'.",
+            };
+            db.ItemVersions.Add(version);
+            await db.SaveChangesAsync();
+            versionId = version.ItemVersionId;
+        }
 
-        // 3. AudioEndMs <= AudioStartMs throws error
-        var ex3 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionGroupAsync(mockExam.ExamId, new CreateQuestionGroupRequest(
-            secL,
-            AudioStartMs: 5000,
-            AudioEndMs: 4000)));
-        Assert.Equal(ApiError.Codes.Validation, ex3.Code);
+        // Binding it is the write the trigger judges: the paper is speaking-practice and the section is
+        // reading, so the position would be a sitting of the wrong skill.
+        var ex = await Assert.ThrowsAsync<AdminExamException>(() =>
+            service.BindItemAsync(speakingExam.ExamId, new BindPoolItemRequest(secR, versionId, 1)));
 
-        // 4. Speaking exam rejects reading section
-        var ex4 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionGroupAsync(speakingExam.ExamId, new CreateQuestionGroupRequest(
-            secR)));
-        Assert.Equal(ApiError.Codes.Validation, ex4.Code);
+        Assert.Equal(ApiError.Codes.Validation, ex.Code);
+        // Named rather than "a refusal happened": a certificate mismatch and a taken position both
+        // answer Validation through the same catch, so the sentence is what makes this about modality.
+        Assert.Contains("can only hold sections of that skill", ex.Message, StringComparison.Ordinal);
 
-        // 5. Valid group succeeds
-        var validGrp = await service.CreateQuestionGroupAsync(mockExam.ExamId, new CreateQuestionGroupRequest(
-            secL,
-            ImagePath: "img/q1.jpg",
-            ImageAlt: "A desk with a laptop",
-            AudioStartMs: 1000,
-            AudioEndMs: 8000));
-        Assert.NotNull(validGrp);
-        Assert.Equal("A desk with a laptop", validGrp.ImageAlt);
+        await using var verify = DbContextFactory.Create(database.ConnectionString);
+        Assert.Equal(0, await verify.ExamItems.CountAsync(i => i.ExamId == speakingExam.ExamId && i.SectionId == secR));
     }
 
+    /// <summary>
+    /// #157 / #226: the publish door refuses an incomplete paper with the audit's own codes, and a
+    /// paper that answers every one of them publishes.
+    /// <para>
+    /// #269: the fixture is a pool-authored paper - one listening skill, one section declaring two
+    /// items, and the positions bound on the roster. The four assertions are the ones this test always
+    /// made: empty refuses, a count shortfall refuses, a listening section with no audio refuses by
+    /// name, and the completed paper publishes.
+    /// </para>
+    /// </summary>
     [Fact]
     public async Task PublishExam_IncompleteExam_FailsWithDetails_CompleteExam_Succeeds()
     {
-        var (certId, secL, secR, secS, secW) = await SeedCertificateWithSectionsAsync($"PUB_{Guid.NewGuid():N}"[..18]);
+        var certCode = $"PUB_{Guid.NewGuid():N}"[..18];
+        int examId, certId, sectionId;
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+            db.Certificates.Add(cert);
+            await db.SaveChangesAsync();
+
+            var skill = new Skill
+            {
+                CertId = cert.CertId, Code = "LIST", Name = "Listening", Modality = "listening",
+                DisplayOrder = 1, DurationMinutes = 30,
+            };
+            db.Skills.Add(skill);
+            await db.SaveChangesAsync();
+
+            var section = new Section
+            {
+                CertId = cert.CertId, SkillId = skill.SkillId, Modality = "listening",
+                Code = "SL1", Name = "Listening Part 1", DisplayOrder = 1,
+                ExpectedQuestionCount = 2, OptionCount = 2,
+            };
+            db.Sections.Add(section);
+            await db.SaveChangesAsync();
+
+            var exam = new Exam
+            {
+                CertId = cert.CertId, Name = $"Publish Test {Guid.NewGuid():N}"[..25], Status = "draft",
+                DurationMinutes = 30, Purpose = "mock", QuestionCount = 2,
+            };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+
+            examId = exam.ExamId;
+            certId = cert.CertId;
+            sectionId = section.SectionId;
+        }
+
         var service = CreateService();
 
-        // #226: four sections × 15 minutes each. The exam declares 60 so INV-5's sum matches.
-        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
-            certId,
-            $"Publish Test {Guid.NewGuid():N}"[..25],
-            60,
-            ExamPurposeDto.Mock,
-            QuestionCount: 2));
-
-        // 1. Exam with 0 questions fails publishing
-        var ex1 = await Assert.ThrowsAsync<AdminExamException>(() => service.PublishExamAsync(exam.ExamId));
+        // 1. Exam with 0 questions fails publishing, and says which checks failed.
+        var ex1 = await Assert.ThrowsAsync<AdminExamException>(() => service.PublishExamAsync(examId));
         Assert.Equal(ApiError.Codes.ExamIncomplete, ex1.Code);
+        Assert.Contains("EXAM_QUESTION_COUNT_LOW", ex1.Message, StringComparison.Ordinal);
 
-        // Add 1 question in reading section
-        var grpR = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
-        await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grpR.GroupId,
-            "Question 1 Stem",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Correct", true, null),
-                new AdminQuestionOptionInput(null, "B", "Wrong", false, null)
-            ], CefrLevelCode: "B1"));
+        // One position of the two the section declares. Both positions share one stimulus - a listening
+        // bundle - so the paper has one group, and an uploaded master track therefore has only that
+        // group to slice. Each child carries a span in seconds, which CNT-10 orders and spaces.
+        int firstItem, secondItem;
+        int stimulusId;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var exam = await db.Exams.SingleAsync(e => e.ExamId == examId);
+            var section = await db.Sections.SingleAsync(s => s.SectionId == sectionId);
+
+            var stimulus = new Stimulus { CefrLevel = CefrLevel.B1, DisplayOrder = 1 };
+            db.Stimuli.Add(stimulus);
+            await db.SaveChangesAsync();
+            stimulusId = stimulus.StimulusId;
+
+            (firstItem, _) = await AddSpannedMcqAsync(
+                db, exam, section, stimulus, "Question 1 Stem", 1, 0, 10, "sec");
+        }
+        await ClearItemsForPublishAsync(certId, [firstItem]);
 
         // 2. QuestionCount requirement is 2, but only 1 question present -> fails
-        var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.PublishExamAsync(exam.ExamId));
+        var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.PublishExamAsync(examId));
         Assert.Equal(ApiError.Codes.ExamIncomplete, ex2.Code);
+        Assert.Contains("SEC_QUESTION_COUNT_LOW", ex2.Message, StringComparison.Ordinal);
 
-        // Add 2nd question in listening section
-        var grpL = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secL));
-        await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grpL.GroupId,
-            "Question 2 Listening Stem",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
-                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ], CefrLevelCode: "B1"));
+        // The second position, so the count is satisfied and only the audio is missing.
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var exam = await db.Exams.SingleAsync(e => e.ExamId == examId);
+            var section = await db.Sections.SingleAsync(s => s.SectionId == sectionId);
+            var stimulus = await db.Stimuli.SingleAsync(s => s.StimulusId == stimulusId);
+
+            // 20 s after the first child's span ends: CNT-10 asks for an 8 s gap at minimum.
+            (secondItem, _) = await AddSpannedMcqAsync(
+                db, exam, section, stimulus, "Question 2 Listening Stem", 2, 20, 30, "sec");
+        }
+        await ClearItemsForPublishAsync(certId, [secondItem]);
 
         // 3. Listening section present, but audio is missing -> fails
-        var ex3 = await Assert.ThrowsAsync<AdminExamException>(() => service.PublishExamAsync(exam.ExamId));
+        var ex3 = await Assert.ThrowsAsync<AdminExamException>(() => service.PublishExamAsync(examId));
         Assert.Equal(ApiError.Codes.ExamIncomplete, ex3.Code);
         Assert.Contains("audio", ex3.Message, StringComparison.OrdinalIgnoreCase);
 
         // Upload listening audio
-        await service.SaveSectionAudioAsync(exam.ExamId, new SaveExamSectionAudioRequest(
-            secL,
+        await service.SaveSectionAudioAsync(examId, new SaveExamSectionAudioRequest(
+            sectionId,
             "audio/test_part1.mp3",
             180,
             2048576));
 
-        // #157: every section now declares a question count, so the audit checks all four the
-        // fixture creates, not just the two this test filled. A mock exam covering its
-        // certificate's sections must answer them; an empty speaking/writing part is a real
-        // deficiency, so fill them rather than exempt them.
-        foreach (var sectionId in new[] { secS, secW })
-        {
-            var group = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(sectionId));
-            await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-                group.GroupId,
-                "Question for the remaining section",
-                QuestionTypeDto.Mcq,
-                Options:
-                [
-                    new AdminQuestionOptionInput(null, "A", "Correct", true, null),
-                    new AdminQuestionOptionInput(null, "B", "Wrong", false, null)
-                ], CefrLevelCode: "B1"));
-        }
-
-        // 5. #226 / INV-4: a paper that ENABLES a productive skill needs that skill's rubric locked,
-        // with its criteria anchored at bands 2, 3 and 4. This fixture has always published a speaking
-        // and a writing section, so the invariant names both until their rubrics exist - which is the
-        // gate doing its job rather than a setup problem. Lock them the way the rubric studio does.
-        int speakSkillId, writeSkillId;
-        await using (var dbSkills = DbContextFactory.Create(database.ConnectionString))
-        {
-            speakSkillId = await dbSkills.Sections.Where(s => s.SectionId == secS).Select(s => s.SkillId).SingleAsync();
-            writeSkillId = await dbSkills.Sections.Where(s => s.SectionId == secW).Select(s => s.SkillId).SingleAsync();
-        }
-
-        await database.SqlAsync($"""
-            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder) VALUES
-              ({certId}, {speakSkillId}, 'S_FC', N'Fluency and coherence', N'x', 6, 1.0, 1),
-              ({certId}, {speakSkillId}, 'S_PR', N'Pronunciation', N'x', 6, 1.0, 2),
-              ({certId}, {speakSkillId}, 'S_LR', N'Lexical resource', N'x', 6, 1.0, 3),
-              ({certId}, {speakSkillId}, 'S_GR', N'Grammatical range', N'x', 6, 1.0, 4),
-              ({certId}, {writeSkillId}, 'W_TR', N'Task response', N'x', 6, 1.0, 1),
-              ({certId}, {writeSkillId}, 'W_CC', N'Coherence and cohesion', N'x', 6, 1.0, 2),
-              ({certId}, {writeSkillId}, 'W_LR', N'Lexical resource', N'x', 6, 1.0, 3),
-              ({certId}, {writeSkillId}, 'W_GR', N'Grammatical range', N'x', 6, 1.0, 4);
-
-            INSERT INTO GradingCriterionDescriptors (CriterionId, Band, Descriptor, BinaryGates)
-              SELECT c.CriterionId, b.Band,
-                     N'Band ' + CAST(b.Band AS NVARCHAR(2)) + N' descriptor.',
-                     N'Binary gate at band ' + CAST(b.Band AS NVARCHAR(2)) + N'.'
-                FROM GradingCriteria c CROSS JOIN (VALUES (0),(1),(2),(3),(4),(5),(6)) AS b(Band)
-               WHERE c.SkillId IN ({speakSkillId}, {writeSkillId});
-
-            INSERT INTO GradingCriterionAnchors (CriterionId, Band, ResponseText)
-              SELECT c.CriterionId, b.Band, N'Anchor response at band ' + CAST(b.Band AS NVARCHAR(2)) + N'.'
-                FROM GradingCriteria c CROSS JOIN (VALUES (2),(3),(4)) AS b(Band)
-               WHERE c.SkillId IN ({speakSkillId}, {writeSkillId});
-
-            INSERT INTO GradingRubricLocks (SkillId, CertId, LadderOutcome, LadderReason, LadderRunAt) VALUES
-              ({speakSkillId}, {certId}, 'accepted', N'Separated.', SYSDATETIMEOFFSET()),
-              ({writeSkillId}, {certId}, 'accepted', N'Separated.', SYSDATETIMEOFFSET());
-            """);
-
-        // 6. Now exam is complete -> publish succeeds!
-        var publishResult = await service.PublishExamAsync(exam.ExamId);
+        // 4. Now exam is complete -> publish succeeds!
+        var publishResult = await service.PublishExamAsync(examId);
         Assert.True(publishResult.Success);
 
-        var updatedExam = await service.GetExamByIdAsync(exam.ExamId);
+        var updatedExam = await service.GetExamByIdAsync(examId);
         Assert.Equal(ExamStatusDto.Published, updatedExam.Status);
-    }
-
-    [Fact]
-    public async Task DeleteQuestion_BlockedWhenAttemptAnswersExist_SucceedsWhenUnattempted()
-    {
-        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"DEL_{Guid.NewGuid():N}"[..18]);
-        var service = CreateService();
-
-        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
-            certId,
-            $"Attempted Test {Guid.NewGuid():N}"[..25],
-            60,
-            ExamPurposeDto.Mock));
-
-        await PublishForFixtureAsync(exam.ExamId);
-
-        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
-        var q1 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grp.GroupId,
-            "Question 1 (will be answered)",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Correct", true, null),
-                new AdminQuestionOptionInput(null, "B", "Wrong", false, null)
-            ], CefrLevelCode: "B1"));
-
-        var q2 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grp.GroupId,
-            "Question 2 (unattempted)",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
-                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ], CefrLevelCode: "B1"));
-
-        // Record learner attempt and answer for q1
-        var userEmail = $"{Guid.NewGuid():N}@deltest.local";
-        await database.SqlAsync($"""
-            IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
-              INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
-            INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
-            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{userEmail}', 0x01, N'Learner Tester');
-            DECLARE @userId INT = SCOPE_IDENTITY();
-
-            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt)
-            VALUES (@userId, {exam.ExamId}, {certId}, 'submitted', SYSDATETIMEOFFSET(), DATEADD(HOUR, 2, SYSDATETIMEOFFSET()));
-            DECLARE @attemptId INT = SCOPE_IDENTITY();
-
-            INSERT INTO AttemptAnswers (AttemptId, QuestionId, ExamId, SelectedOptionId, IsCorrect, IsFlagged)
-            VALUES (@attemptId, {q1.QuestionId}, {exam.ExamId}, {q1.Options.First().OptionId}, 1, 0);
-            """);
-
-        // 1. Deleting q1 is blocked because it has recorded attempt answers
-        var ex = await Assert.ThrowsAsync<AdminExamException>(() => service.DeleteQuestionAsync(q1.QuestionId));
-        Assert.Equal(ApiError.Codes.QuestionHasAttemptAnswers, ex.Code);
-
-        // 2. Deleting q2 is now blocked too. #157 locks the whole structure of an exam with a
-        // finished attempt, because removing any question shrinks a section a learner's score was
-        // computed over — even a question that learner happened not to answer.
-        var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.DeleteQuestionAsync(q2.QuestionId));
-        Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, ex2.Code);
-
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-        var q2Exists = await db.Questions.AnyAsync(q => q.QuestionId == q2.QuestionId);
-        Assert.True(q2Exists);
-    }
-
-    [Fact]
-    public async Task DeleteQuestion_UnattemptedExam_StillDeletes()
-    {
-        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"DEL_OK_{Guid.NewGuid():N}"[..18]);
-        var service = CreateService();
-
-        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
-            certId, $"Delete Fixture {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.Mock));
-
-        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
-        var q = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grp.GroupId,
-            "Question (never sat)",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Correct", true, null),
-                new AdminQuestionOptionInput(null, "B", "Wrong", false, null)
-            ], CefrLevelCode: "B1"));
-
-        await service.DeleteQuestionAsync(q.QuestionId);
-
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-        Assert.False(await db.Questions.AnyAsync(x => x.QuestionId == q.QuestionId));
     }
 
     [Fact]
@@ -580,88 +589,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
 
         Assert.Equal(ApiError.Codes.Validation, ex.Code);
         Assert.Contains("already exists", ex.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task UpdateQuestion_SwitchingCorrectOption_SucceedsWithoutUniqueConstraintViolation()
-    {
-        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"SWOPT_{Guid.NewGuid():N}"[..18]);
-        var service = CreateService();
-
-        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
-            certId,
-            $"Switch Option Exam {Guid.NewGuid():N}"[..25],
-            60,
-            ExamPurposeDto.Mock));
-
-        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
-        var q = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grp.GroupId,
-            "MCQ to switch correct option",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Text A", true, null),
-                new AdminQuestionOptionInput(null, "B", "Text B", false, null)
-            ], CefrLevelCode: "B1"));
-
-        // Switch correct option from A to B
-        var updated = await service.UpdateQuestionAsync(q.QuestionId, new UpdateQuestionRequest(
-            grp.GroupId,
-            "MCQ with switched correct option",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Text A", false, null),
-                new AdminQuestionOptionInput(null, "B", "Text B", true, null)
-            ], CefrLevelCode: "B1"));
-
-        Assert.Equal(2, updated.Options.Count);
-        Assert.False(updated.Options.Single(o => o.Label == "A").IsCorrect);
-        Assert.True(updated.Options.Single(o => o.Label == "B").IsCorrect);
-    }
-
-    [Fact]
-    public async Task UpdateQuestion_WhenDisplayOrderIsZeroOrNotProvided_PreservesExistingDisplayOrderAndUpdatesExplanation()
-    {
-        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"UQ_{Guid.NewGuid():N}"[..18]);
-        var service = CreateService();
-
-        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
-            certId, $"UQ Exam {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.Mock));
-
-        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR, DisplayOrder: 1));
-
-        var q = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grp.GroupId,
-            "Initial stem",
-            QuestionTypeDto.Mcq,
-            Explanation: "Initial explanation",
-            DisplayOrder: 5,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Option A", true, null),
-                new AdminQuestionOptionInput(null, "B", "Option B", false, null)
-            ], CefrLevelCode: "B1"));
-
-        Assert.Equal(5, q.DisplayOrder);
-        Assert.Equal("Initial explanation", q.Explanation);
-
-        // Update with DisplayOrder = 0 (default in DTO when not explicitly provided)
-        var updated = await service.UpdateQuestionAsync(q.QuestionId, new UpdateQuestionRequest(
-            grp.GroupId,
-            "Initial stem",
-            QuestionTypeDto.Mcq,
-            Explanation: "Use 'before' directly in front of a day of the week to denote a deadline.",
-            DisplayOrder: 0,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Option A", true, null),
-                new AdminQuestionOptionInput(null, "B", "Option B", false, null)
-            ], CefrLevelCode: "B1"));
-
-        Assert.Equal(5, updated.DisplayOrder);
-        Assert.Equal("Use 'before' directly in front of a day of the week to denote a deadline.", updated.Explanation);
     }
 
     [Fact]
@@ -910,10 +837,18 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         Assert.Equal(1, questions[0].DisplayOrder);
     }
 
+    /// <summary>
+    /// #265: the Studio's read - the section tree, its groups, the cards, and the audit the rail shows.
+    /// <para>
+    /// #269: the fixture was written by the deleted question door. It is a pool position now, and the
+    /// claim is unchanged: one authored position reads back as one group of one card carrying its stem,
+    /// beside a populated audit.
+    /// </para>
+    /// </summary>
     [Fact]
     public async Task GetExamStudioAsync_ReturnsSectionsGroupsQuestionsAndAudit()
     {
-        var (certId, secL, secR, _, _) = await SeedCertificateWithSectionsAsync($"STUDIO_{Guid.NewGuid():N}"[..18]);
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"STUDIO_{Guid.NewGuid():N}"[..18]);
         var service = CreateService();
 
         var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
@@ -922,16 +857,10 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             60,
             ExamPurposeDto.Mock));
 
-        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
-        await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grp.GroupId,
-            "Studio Question 1",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
-                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ], CefrLevelCode: "B1"));
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            await PoolFixture.AddMcqAsync(db, exam.ExamId, certId, secR, "reading", "Studio Question 1", displayOrder: 1);
+        }
 
         var studio = await service.GetExamStudioAsync(exam.ExamId);
 
@@ -947,6 +876,14 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         Assert.Equal("Studio Question 1", rSection.Groups[0].Questions[0].Stem);
     }
 
+    /// <summary>
+    /// #265: the up/down buttons rewrite a section's ranks, and the rank is the paper's own order.
+    /// <para>
+    /// #269: the entries name roster ids, which is what the editor is given. The assertion is the one
+    /// this test always made - the moved position is first with rank 1 and its sibling second with rank
+    /// 2 - read from the roster, because that is the column the write touches.
+    /// </para>
+    /// </summary>
     [Fact]
     public async Task ReorderSectionItemsAsync_UpdatesDisplayOrder()
     {
@@ -959,44 +896,30 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             60,
             ExamPurposeDto.Mock));
 
-        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
-        var q1 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grp.GroupId,
-            "Question 1",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "A", true, null),
-                new AdminQuestionOptionInput(null, "B", "B", false, null)
-            ], CefrLevelCode: "B1"));
-
-        var q2 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grp.GroupId,
-            "Question 2",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "A", true, null),
-                new AdminQuestionOptionInput(null, "B", "B", false, null)
-            ], CefrLevelCode: "B1"));
+        PoolFixture.Position q1, q2;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            q1 = await PoolFixture.AddMcqAsync(db, exam.ExamId, certId, secR, "reading", "Question 1", displayOrder: 1);
+            q2 = await PoolFixture.AddMcqAsync(db, exam.ExamId, certId, secR, "reading", "Question 2", displayOrder: 2);
+        }
 
         // Reorder q2 first, q1 second
-        var reorderReq = new ReorderSectionItemsRequest(
+        await service.ReorderSectionItemsAsync(exam.ExamId, new ReorderSectionItemsRequest(
             SectionId: secR,
             Items:
             [
-                new ReorderSectionItemEntry(null, q2.QuestionId, 1),
-                new ReorderSectionItemEntry(null, q1.QuestionId, 2)
-            ]);
+                new ReorderSectionItemEntry(null, q2.ExamItemId, 1),
+                new ReorderSectionItemEntry(null, q1.ExamItemId, 2)
+            ]));
 
-        await service.ReorderSectionItemsAsync(exam.ExamId, reorderReq);
+        await using var verify = DbContextFactory.Create(database.ConnectionString);
+        var after = await verify.ExamItems.AsNoTracking()
+            .Where(i => i.ExamId == exam.ExamId && i.SectionId == secR)
+            .OrderBy(i => i.DisplayOrder)
+            .ToListAsync();
 
-        var studio = await service.GetExamStudioAsync(exam.ExamId);
-        var questions = studio.Sections.First(s => s.SectionId == secR).Groups[0].Questions;
-        Assert.Equal(q2.QuestionId, questions[0].QuestionId);
-        Assert.Equal(1, questions[0].DisplayOrder);
-        Assert.Equal(q1.QuestionId, questions[1].QuestionId);
-        Assert.Equal(2, questions[1].DisplayOrder);
+        Assert.Equal([q2.ExamItemId, q1.ExamItemId], after.Select(i => i.ExamItemId));
+        Assert.Equal([1, 2], after.Select(i => i.DisplayOrder));
     }
 
     [Fact]
@@ -1169,6 +1092,12 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         Assert.Equal("N/A", writingItem.AudioStatus);
     }
 
+    /// <summary>
+    /// #75 / #265: a section's master track must be sliced per group, or every group plays the whole
+    /// audio. #269: the groups are two pool stimuli - each with its own passage, so the audit reads them
+    /// as two blocks - and the slice is written through the Studio's group door, which is the only
+    /// writer a group has now.
+    /// </summary>
     [Fact]
     public async Task Audit_blocks_publish_when_a_listening_section_master_track_is_not_sliced_per_group()
     {
@@ -1176,8 +1105,21 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var service = CreateService();
         var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
             certId, $"Audio Audit {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.Mock));
-        var g1 = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secL));
-        var g2 = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secL, DisplayOrder: 2));
+
+        int g1, g2;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var first = await PoolFixture.AddMcqAsync(
+                db, exam.ExamId, certId, secL, "listening", "First exchange.", displayOrder: 1,
+                passage: "The first announcement.");
+            var second = await PoolFixture.AddMcqAsync(
+                db, exam.ExamId, certId, secL, "listening", "Second exchange.", displayOrder: 2,
+                passage: "The second announcement.");
+
+            g1 = await db.Items.Where(i => i.ItemId == first.ItemId).Select(i => i.StimulusId!.Value).SingleAsync();
+            g2 = await db.Items.Where(i => i.ItemId == second.ItemId).Select(i => i.StimulusId!.Value).SingleAsync();
+        }
+
         await database.SqlAsync($"""
             INSERT INTO ExamSectionAudio (ExamId, SectionId, CertId, AudioPath, DurationSec, SizeBytes)
             VALUES ({exam.ExamId}, {secL}, {certId}, N'/media/exams/{exam.ExamId}/master.mp3', 600, 1000);
@@ -1186,16 +1128,23 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         // Section audio alone used to pass; every cluster would play the whole master track.
         var unsliced = await service.AuditExamPublishReadinessAsync(exam.ExamId);
         Assert.Equal(
-            [g1.GroupId, g2.GroupId],
+            [g1, g2],
             unsliced.Issues.Where(i => i.Code == "GRP_AUDIO_UNSLICED" && i.Severity == "error").Select(i => i.GroupId!.Value).Order());
 
-        await service.UpdateQuestionGroupAsync(exam.ExamId, g1.GroupId, new UpdateQuestionGroupRequest(secL, AudioStartMs: 0, AudioEndMs: 4000, DisplayOrder: 1));
-        await service.UpdateQuestionGroupAsync(exam.ExamId, g2.GroupId, new UpdateQuestionGroupRequest(secL, AudioStartMs: 4000, AudioEndMs: 9000, DisplayOrder: 2));
+        await service.UpdateExamStudioGroupAsync(exam.ExamId, g1, new UpdateQuestionGroupRequest(
+            secL, Passage: "The first announcement.", AudioStartMs: 0, AudioEndMs: 4000, DisplayOrder: 1));
+        await service.UpdateExamStudioGroupAsync(exam.ExamId, g2, new UpdateQuestionGroupRequest(
+            secL, Passage: "The second announcement.", AudioStartMs: 4000, AudioEndMs: 9000, DisplayOrder: 2));
 
         var sliced = await service.AuditExamPublishReadinessAsync(exam.ExamId);
         Assert.DoesNotContain(sliced.Issues, i => i.Code is "GRP_AUDIO_UNSLICED" or "SEC_AUDIO_MISSING");
     }
 
+    /// <summary>
+    /// #75: a group's own audio file is silently overridden by the section's master track, which is a
+    /// warning rather than a refusal. #269: the group is a pool stimulus, written through the Studio's
+    /// group door.
+    /// </summary>
     [Fact]
     public async Task Audit_warns_when_a_section_master_track_overrides_a_groups_own_audio_file()
     {
@@ -1203,7 +1152,20 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var service = CreateService();
         var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
             certId, $"Audio Override {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.Mock));
-        var own = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secL, AudioPath: "/audio/own-file.mp3"));
+
+        int own;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var position = await PoolFixture.AddMcqAsync(
+                db, exam.ExamId, certId, secL, "listening", "The depot exchange.", displayOrder: 1,
+                passage: "A short announcement.");
+            own = await db.Items.Where(i => i.ItemId == position.ItemId).Select(i => i.StimulusId!.Value).SingleAsync();
+        }
+
+        // The group's own file, which the master track then overrides.
+        await service.UpdateExamStudioGroupAsync(exam.ExamId, own, new UpdateQuestionGroupRequest(
+            secL, Passage: "A short announcement.", AudioPath: "/audio/own-file.mp3"));
+
         await database.SqlAsync($"""
             INSERT INTO ExamSectionAudio (ExamId, SectionId, CertId, AudioPath, DurationSec, SizeBytes)
             VALUES ({exam.ExamId}, {secL}, {certId}, N'/media/exams/{exam.ExamId}/master.mp3', 600, 1000);
@@ -1213,14 +1175,25 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
 
         var issue = Assert.Single(audit.Issues, i => i.Code == "GRP_AUDIO_OVERRIDDEN");
         Assert.Equal("warning", issue.Severity);
-        Assert.Equal(own.GroupId, issue.GroupId);
+        Assert.Equal(own, issue.GroupId);
 
         // A group whose own file is the master track itself (seeded exams) is not overridden.
-        await service.UpdateQuestionGroupAsync(exam.ExamId, own.GroupId, new UpdateQuestionGroupRequest(secL, AudioPath: $"/media/exams/{exam.ExamId}/master.mp3"));
+        await service.UpdateExamStudioGroupAsync(exam.ExamId, own, new UpdateQuestionGroupRequest(
+            secL, Passage: "A short announcement.", AudioPath: $"/media/exams/{exam.ExamId}/master.mp3"));
         var same = await service.AuditExamPublishReadinessAsync(exam.ExamId);
         Assert.DoesNotContain(same.Issues, i => i.Code == "GRP_AUDIO_OVERRIDDEN");
     }
 
+    /// <summary>
+    /// #192 / #226: a writing task's rubric is its section's criteria, and its word window is the
+    /// version's. The audit names both gaps and stops naming them once they are filled.
+    /// <para>
+    /// #269: the task is a pool position, and filling the word window is a copy-on-write edit - the
+    /// scored column is immutable by trigger, so the fix is the next version the binding then pins,
+    /// which is exactly what <c>IAdminItemService.UpdateAsync</c> would do. Scoring criteria are
+    /// <c>SectionCriteria</c> rows, which the rubric studio writes.
+    /// </para>
+    /// </summary>
     [Fact]
     public async Task FreeResponseQuestions_SaveSectionRubric_AndAuditWordBounds()
     {
@@ -1228,7 +1201,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var service = CreateService();
         var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
             certId, $"Rubric Audit {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.WritingPractice));
-        var writingGroup = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secW));
 
         await database.SqlAsync($"""
             DECLARE @skillId INT = (SELECT SkillId FROM Sections WHERE SectionId = {secW});
@@ -1236,30 +1208,56 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             VALUES ({certId}, @skillId, 'TASK', N'Task achievement', 9, 1, 1);
             """);
 
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-        var criterionId = await db.GradingCriteria
-            .Where(c => c.CertId == certId && c.Code == "TASK")
-            .Select(c => c.CriterionId)
-            .SingleAsync();
+        PoolFixture.Position position;
+        int criterionId;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            criterionId = await db.GradingCriteria
+                .Where(c => c.CertId == certId && c.Code == "TASK")
+                .Select(c => c.CriterionId)
+                .SingleAsync();
 
-        var freeResponse = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            writingGroup.GroupId,
-            "Write a response to the prompt.",
-            QuestionTypeDto.FreeResponse,
-            ResponseSeconds: 1200, CefrLevelCode: "B1"));
+            position = await PoolFixture.AddProductiveAsync(
+                db, exam.ExamId, certId, secW, "writing", "Write a response to the prompt.",
+                displayOrder: 1, prepSeconds: 60, responseSeconds: 1200);
+        }
 
         var incompleteAudit = await service.AuditExamPublishReadinessAsync(exam.ExamId);
-        Assert.Contains(incompleteAudit.Issues, i => i.Code == "Q_FR_CRITERIA_MISSING" && i.QuestionId == freeResponse.QuestionId);
-        Assert.Contains(incompleteAudit.Issues, i => i.Code == "Q_FR_WORD_BOUNDS" && i.QuestionId == freeResponse.QuestionId);
+        Assert.Contains(incompleteAudit.Issues, i => i.Code == "Q_FR_CRITERIA_MISSING" && i.QuestionId == position.ExamItemId);
+        Assert.Contains(incompleteAudit.Issues, i => i.Code == "Q_FR_WORD_BOUNDS" && i.QuestionId == position.ExamItemId);
 
-        await service.UpdateQuestionAsync(freeResponse.QuestionId, new UpdateQuestionRequest(
-            GroupId: null,
-            Stem: freeResponse.Stem,
-            QuestionType: QuestionTypeDto.FreeResponse,
-            ResponseSeconds: 1200,
-            MinWords: 100,
-            MaxWords: 250,
-            CriterionIds: [criterionId], CefrLevelCode: "B1"));
+        // The rubric half: the section names the criterion its tasks are graded against.
+        await database.SqlAsync($"""
+            INSERT INTO SectionCriteria (SectionId, CriterionId, SkillId)
+            SELECT {secW}, {criterionId}, SkillId FROM Sections WHERE SectionId = {secW};
+            """);
+
+        // The word-window half: a scored change forks the version, and the position pins the new one.
+        // Written here rather than through a service because the binding move has no public writer -
+        // AdminExamService.UpdatePoolPositionAsync (the Studio autosave) is private and called by
+        // nothing since #265 removed the route. The fork itself is CNT-43's rule, and
+        // AdminItemAuthoringTests pins it at the door that does own it.
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var current = await db.ItemVersions.SingleAsync(v => v.ItemVersionId == position.ItemVersionId);
+            var next = new ItemVersion
+            {
+                ItemId = current.ItemId,
+                VersionNumber = current.VersionNumber + 1,
+                Stem = current.Stem,
+                PrepSeconds = current.PrepSeconds,
+                ResponseSeconds = current.ResponseSeconds,
+                MinWords = 100,
+                MaxWords = 250,
+                Explanation = current.Explanation,
+            };
+            db.ItemVersions.Add(next);
+            await db.SaveChangesAsync();
+
+            var binding = await db.ExamItems.SingleAsync(i => i.ExamItemId == position.ExamItemId);
+            binding.ItemVersionId = next.ItemVersionId;
+            await db.SaveChangesAsync();
+        }
 
         var studio = await service.GetExamStudioAsync(exam.ExamId);
         var studioQuestion = Assert.Single(studio.Sections
@@ -1271,21 +1269,20 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var completedAudit = await service.AuditExamPublishReadinessAsync(exam.ExamId);
         Assert.DoesNotContain(completedAudit.Issues, i => i.Code is "Q_FR_CRITERIA_MISSING" or "Q_FR_WORD_BOUNDS");
 
+        // An objective position is never asked for a rubric: the check is about free responses.
         var mcqExam = await service.CreateExamAsync(new CreateAdminExamRequest(
             certId, $"Rubric MCQ {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.Mock));
-        var readingGroup = await service.CreateQuestionGroupAsync(mcqExam.ExamId, new CreateQuestionGroupRequest(secR));
-        var mcq = await service.CreateQuestionAsync(mcqExam.ExamId, new CreateQuestionRequest(
-            readingGroup.GroupId,
-            "Choose the correct answer.",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Correct", true, null),
-                new AdminQuestionOptionInput(null, "B", "Incorrect", false, null)
-            ], CefrLevelCode: "B1"));
+        PoolFixture.Position mcq;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            mcq = await PoolFixture.AddMcqAsync(
+                db, mcqExam.ExamId, certId, secR, "reading", "Choose the correct answer.", displayOrder: 1);
+        }
+
         var afterMcqAudit = await service.AuditExamPublishReadinessAsync(mcqExam.ExamId);
-        Assert.DoesNotContain(afterMcqAudit.Issues, i => i.Code == "Q_FR_CRITERIA_MISSING" && i.QuestionId == mcq.QuestionId);
+        Assert.DoesNotContain(afterMcqAudit.Issues, i => i.Code == "Q_FR_CRITERIA_MISSING" && i.QuestionId == mcq.ExamItemId);
     }
+
     [Fact]
     public async Task GetExamStudioAsync_PopulatesDynamicSectionBlueprintModels()
     {
@@ -1317,11 +1314,11 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             RequireAudio = false,
             RequireImage = true,
             RequiredKeywordCount = 3,
-            AllowedComponentTypesJson = @"[""mcq"",""multi_select"",""inline_completion""]",
+            AllowedComponentTypesJson = """["mcq","multi_select","inline_completion"]""",
             LayoutType = "SPLIT_HORIZONTAL",
             NavigationMode = "UNIT_LOCKED_SANDBOX",
-            TimerPolicyJson = @"{""perSectionSec"":1800}",
-            ToolsConfigJson = @"{""calculator"":false}"
+            TimerPolicyJson = """{"perSectionSec":1800}""",
+            ToolsConfigJson = """{"calculator":false}"""
         };
         db.Sections.Add(section);
         await db.SaveChangesAsync();
@@ -1349,173 +1346,118 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         Assert.Equal(3, secDto.RequiredKeywordCount);
         Assert.Equal("SPLIT_HORIZONTAL", secDto.LayoutType);
         Assert.Equal("UNIT_LOCKED_SANDBOX", secDto.NavigationMode);
-        Assert.Equal(@"{""perSectionSec"":1800}", secDto.TimerPolicyJson);
-        Assert.Equal(@"{""calculator"":false}", secDto.ToolsConfigJson);
+        Assert.Equal("""{"perSectionSec":1800}""", secDto.TimerPolicyJson);
+        Assert.Equal("""{"calculator":false}""", secDto.ToolsConfigJson);
         Assert.Equal("Reading", secDto.SkillName);
     }
 
-    [Fact]
-    public async Task AuthoringQuestionComponentTypes_PersistsAllFieldsAndOptions()
-    {
-        var (certId, _, secR, _, secW) = await SeedCertificateWithSectionsAsync($"AUTH_{Guid.NewGuid():N}"[..18]);
-        var service = CreateService();
-
-        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
-            certId,
-            $"Authoring Exam {Guid.NewGuid():N}"[..25],
-            60,
-            ExamPurposeDto.Mock));
-
-        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR, UnitNumber: 2));
-        Assert.Equal(2, grp.UnitNumber);
-
-        // 1. MCQ 3
-        var qMcq3 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grp.GroupId,
-            "MCQ 3 Stem",
-            QuestionTypeDto.Mcq_3,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Opt A", true, "Correct rationale"),
-                new AdminQuestionOptionInput(null, "B", "Opt B", false, "Distractor B"),
-                new AdminQuestionOptionInput(null, "C", "Opt C", false, "Distractor C")
-            ], CefrLevelCode: "B1"));
-        Assert.Equal(QuestionTypeDto.Mcq_3, qMcq3.QuestionType);
-        Assert.Equal(3, qMcq3.Options.Count);
-
-        // 2. MultiSelect with MaxSelections
-        var qMulti = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grp.GroupId,
-            "MultiSelect Stem",
-            QuestionTypeDto.MultiSelect,
-            MaxSelections: 2,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
-                new AdminQuestionOptionInput(null, "B", "Opt B", true, null),
-                new AdminQuestionOptionInput(null, "C", "Opt C", false, null),
-                new AdminQuestionOptionInput(null, "D", "Opt D", false, null)
-            ], CefrLevelCode: "B1"));
-        Assert.Equal(QuestionTypeDto.MultiSelect, qMulti.QuestionType);
-        Assert.Equal(2, qMulti.MaxSelections);
-        Assert.Equal(2, qMulti.Options.Count(o => o.IsCorrect));
-
-        // 3. InlineCompletion with AcceptedAnswersJson and AllowNumber
-        var qInline = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grp.GroupId,
-            "Inline Stem",
-            QuestionTypeDto.InlineCompletion,
-            AcceptedAnswersJson: @"[""center"",""centre""]",
-            AllowNumber: false,
-            MaxWords: 2, CefrLevelCode: "B1"));
-        Assert.Equal(QuestionTypeDto.InlineCompletion, qInline.QuestionType);
-        Assert.Equal(@"[""center"",""centre""]", qInline.AcceptedAnswersJson);
-        Assert.False(qInline.AllowNumber);
-        Assert.Equal(2, qInline.MaxWords);
-
-        // 4. FreeResponse with RequiredKeywords
-        var grpW = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secW));
-        var qFree = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grpW.GroupId,
-            "Free Response Essay",
-            QuestionTypeDto.FreeResponse,
-            PrepSeconds: 30,
-            ResponseSeconds: 1200,
-            MinWords: 150,
-            MaxWords: 300,
-            RequiredKeywords: "climate, renewable, energy", CefrLevelCode: "B1"));
-        Assert.Equal(QuestionTypeDto.FreeResponse, qFree.QuestionType);
-        Assert.Equal("climate, renewable, energy", qFree.RequiredKeywords);
-        Assert.Equal(150, qFree.MinWords);
-        Assert.Equal(300, qFree.MaxWords);
-
-        // Reload via GetExamStudioAsync
-        var studio = await service.GetExamStudioAsync(exam.ExamId);
-        var allQs = studio.Sections.SelectMany(s => s.Groups).SelectMany(g => g.Questions).ToList();
-        Assert.Contains(allQs, q => q.QuestionType == QuestionTypeDto.Mcq_3 && q.Options.Count == 3);
-        Assert.Contains(allQs, q => q.QuestionType == QuestionTypeDto.MultiSelect && q.MaxSelections == 2);
-        Assert.Contains(allQs, q => q.QuestionType == QuestionTypeDto.InlineCompletion && q.AcceptedAnswersJson == @"[""center"",""centre""]");
-        Assert.Contains(allQs, q => q.QuestionType == QuestionTypeDto.FreeResponse && q.RequiredKeywords == "climate, renewable, energy");
-    }
-
+    /// <summary>
+    /// #226: the blueprint checks the rail shows - cluster size, required passage, required image, and
+    /// the section's declared count - are judged against the paper's positions, and clear when the
+    /// paper answers them.
+    /// <para>
+    /// #269: the fixture is pool stock. A blueprint'd section needs a bundle, so the two children share
+    /// one stimulus and each carries an evidence span (INV-2 refuses a child with none); the clearance
+    /// rows are INV-3's, so <c>CanPublish</c> is a real verdict rather than "no error yet".
+    /// </para>
+    /// </summary>
     [Fact]
     public async Task AuditExamPublishReadiness_DynamicBlueprintValidation()
     {
         var certCode = $"AUD_{Guid.NewGuid():N}"[..18];
-        await using var db = DbContextFactory.Create(database.ConnectionString);
+        int certId, examId, sectionId;
+        var itemIds = new List<int>();
 
-        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
-        db.Certificates.Add(cert);
-        await db.SaveChangesAsync();
-
-        var skill = new Skill { CertId = cert.CertId, Code = $"SK_{cert.CertId}", Name = "Reading", Modality = "reading", DisplayOrder = 1, DurationMinutes = 60 };
-        db.Skills.Add(skill);
-        await db.SaveChangesAsync();
-
-        var section = new Section
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
         {
-            SkillId = skill.SkillId,
-            CertId = cert.CertId,
-            Modality = "reading",
-            Code = "SEC_AUD",
-            Name = "Audit Section",
-            DisplayOrder = 1,
-            ExpectedQuestionCount = 2,
-            OptionCount = 2,
-            ClusterSize = 2,
-            RequirePassage = true,
-            RequireImage = true,
-            AllowedComponentTypesJson = @"[""mcq""]"
-        };
-        db.Sections.Add(section);
-        await db.SaveChangesAsync();
+            var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+            db.Certificates.Add(cert);
+            await db.SaveChangesAsync();
+
+            var skill = new Skill
+            {
+                CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading",
+                DisplayOrder = 1, DurationMinutes = 60,
+            };
+            db.Skills.Add(skill);
+            await db.SaveChangesAsync();
+
+            var section = new Section
+            {
+                SkillId = skill.SkillId,
+                CertId = cert.CertId,
+                Modality = "reading",
+                Code = "SEC_AUD",
+                Name = "Audit Section",
+                DisplayOrder = 1,
+                ExpectedQuestionCount = 2,
+                OptionCount = 2,
+                ClusterSize = 2,
+                RequirePassage = true,
+                RequireImage = true,
+                AllowedComponentTypesJson = """["mcq"]"""
+            };
+            db.Sections.Add(section);
+            await db.SaveChangesAsync();
+
+            var exam = new Exam
+            {
+                CertId = cert.CertId,
+                Name = $"Audit Test Exam {Guid.NewGuid():N}"[..25],
+                Status = "draft",
+                DurationMinutes = 60,
+                Purpose = "mock",
+                QuestionCount = 2,
+            };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+
+            // The bundle the section's cluster of two is drawn from. One child is bound, which is what
+            // the cluster-size mismatch reports.
+            var stimulus = new Stimulus { CefrLevel = CefrLevel.B1, DisplayOrder = 1 };
+            db.Stimuli.Add(stimulus);
+            await db.SaveChangesAsync();
+
+            var first = await AddSpannedMcqAsync(db, exam, section, stimulus, "Question 1", 1, 10, 40);
+            itemIds.Add(first.ItemId);
+
+            certId = cert.CertId;
+            examId = exam.ExamId;
+            sectionId = section.SectionId;
+        }
 
         var service = CreateService();
 
-        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
-            cert.CertId,
-            $"Audit Test Exam {Guid.NewGuid():N}"[..25],
-            60,
-            ExamPurposeDto.Mock));
-
         // 1. Cluster size mismatch (requires 2 questions per cluster, but only 1 added)
         // AND RequirePassage missing, AND RequireImage missing
-        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(section.SectionId));
-        await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grp.GroupId,
-            "Question 1",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
-                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ], CefrLevelCode: "B1"));
-
-        var audit1 = await service.AuditExamPublishReadinessAsync(exam.ExamId);
+        var audit1 = await service.AuditExamPublishReadinessAsync(examId);
         Assert.False(audit1.CanPublish);
         Assert.Contains(audit1.Issues, i => i.Code == "SEC_QUESTION_COUNT_LOW");
         Assert.Contains(audit1.Issues, i => i.Code == "GRP_CLUSTER_SIZE_MISMATCH");
         Assert.Contains(audit1.Issues, i => i.Code == "GRP_PASSAGE_MISSING");
         Assert.Contains(audit1.Issues, i => i.Code == "GRP_IMAGE_MISSING");
 
-        // 2. Fix group: add passage, image, image alt, and 2nd question
-        await service.UpdateQuestionGroupAsync(exam.ExamId, grp.GroupId, new UpdateQuestionGroupRequest(
-            section.SectionId,
-            Passage: "Reading passage stimulus text here.",
-            ImagePath: "/media/photo.jpg",
-            ImageAlt: "Photo of office workers"));
+        // 2. Fix the group: its passage, image, image alt and its second child.
+        int stimulusId;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var exam = await db.Exams.SingleAsync(e => e.ExamId == examId);
+            var section = await db.Sections.SingleAsync(s => s.SectionId == sectionId);
+            stimulusId = await db.Items.Where(i => i.ItemId == itemIds[0]).Select(i => i.StimulusId!.Value).SingleAsync();
 
-        await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            grp.GroupId,
-            "Question 2",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
-                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ], CefrLevelCode: "B1"));
+            var stimulus = await db.Stimuli.SingleAsync(s => s.StimulusId == stimulusId);
+            stimulus.Passage = "Reading passage stimulus text here, long enough for two spans.";
+            stimulus.ImagePath = "/media/photo.jpg";
+            stimulus.ImageAlt = "Photo of office workers";
+            await db.SaveChangesAsync();
 
-        var audit2 = await service.AuditExamPublishReadinessAsync(exam.ExamId);
+            var second = await AddSpannedMcqAsync(db, exam, section, stimulus, "Question 2", 2, 50, 80);
+            itemIds.Add(second.ItemId);
+        }
+
+        await ClearItemsForPublishAsync(certId, itemIds);
+
+        var audit2 = await service.AuditExamPublishReadinessAsync(examId);
         Assert.True(audit2.CanPublish, string.Join("; ", audit2.Issues.Select(i => i.Message)));
     }
 }

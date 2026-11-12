@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -49,6 +49,201 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
+    }
+
+    /// <summary>
+    /// #269: one authored position on the pool - an item, its first version and the binding that puts
+    /// it on the paper. Written directly because the answer-shape columns (accepted answers, the word
+    /// range, the keywords, the selection count) are writable only at INSERT and
+    /// <c>CreatePoolItemRequest</c> does not carry them; <see cref="PoolFixture"/> writes the same rows.
+    /// Returns the position id the sitting addresses and the version id its option ids derive from.
+    /// </summary>
+    private static async Task<(int ExamItemId, int ItemVersionId)> SeedPositionAsync(
+        CompanionDbContext db,
+        int examId,
+        int certId,
+        int sectionId,
+        string modality,
+        string itemType,
+        string renderFormat,
+        string stem,
+        int displayOrder,
+        int unitNumber,
+        int? stimulusId = null,
+        string? optionA = null,
+        string? optionB = null,
+        string? optionC = null,
+        string? optionD = null,
+        string? keyLabel = null,
+        int? maxSelections = null,
+        string? acceptedAnswersJson = null,
+        int? maxWords = null,
+        bool allowNumber = true,
+        int? minWords = null,
+        string? requiredKeywords = null,
+        string? explanation = null,
+        int? evidenceStart = null,
+        int? evidenceEnd = null,
+        string? evidenceUnit = null)
+    {
+        // The pool's topic vocabulary is a closed set of twenty that no certificate owns, so a fixture
+        // authors the row a fresh database lacks - the same way PoolFixture does.
+        var topicId = await EnsureTopicAsync(db, modality);
+
+        var item = new Item
+        {
+            Modality = modality,
+            TopicId = topicId,
+            CefrLevel = CefrLevel.B1,
+            ItemType = itemType,
+            RenderFormat = renderFormat,
+            ContentTier = "demo",
+            LifecycleStatus = "active",
+            StimulusId = stimulusId,
+        };
+        db.Items.Add(item);
+        await db.SaveChangesAsync();
+
+        var version = new ItemVersion
+        {
+            ItemId = item.ItemId,
+            VersionNumber = 1,
+            Stem = stem,
+            OptionA = optionA,
+            OptionB = optionB,
+            OptionC = optionC,
+            OptionD = optionD,
+            KeyLabel = keyLabel,
+            Explanation = explanation ?? "The passage states it.",
+            RationaleA = optionA is null ? null : "Correct.",
+            RationaleB = optionB is null ? null : "Wrong.",
+            RationaleC = optionC is null ? null : "Wrong.",
+            RationaleD = optionD is null ? null : "Wrong.",
+            MaxSelections = maxSelections,
+            AcceptedAnswersJson = acceptedAnswersJson,
+            MaxWords = maxWords,
+            AllowNumber = allowNumber,
+            MinWords = minWords,
+            RequiredKeywords = requiredKeywords,
+            // CNT-11: every child of a bundle carries an evidence span, so INV-2 can judge the overlap.
+            EvidenceStart = evidenceStart,
+            EvidenceEnd = evidenceEnd,
+            EvidenceUnit = evidenceUnit,
+        };
+        db.ItemVersions.Add(version);
+        await db.SaveChangesAsync();
+
+        var binding = new ExamItem
+        {
+            ExamId = examId,
+            CertId = certId,
+            SectionId = sectionId,
+            ItemId = item.ItemId,
+            ItemVersionId = version.ItemVersionId,
+            Modality = modality,
+            DisplayOrder = displayOrder,
+            UnitNumber = unitNumber,
+        };
+        db.ExamItems.Add(binding);
+        await db.SaveChangesAsync();
+
+        return (binding.ExamItemId, version.ItemVersionId);
+    }
+
+    /// <summary>
+    /// INV-3's precondition: a batch holding every position of the paper, and a reviewer who is neither
+    /// its uploader nor any item's author, clearing each one. ADM-02 refuses a clearance signed by the
+    /// account that uploaded the batch or wrote the item, so the fixture needs two accounts.
+    /// </summary>
+    private static async Task<int> SeedClearanceAsync(CompanionDbContext db, int certId, int examId)
+    {
+        var role = await db.Roles.Where(r => r.Code == "admin").Select(r => r.RoleId).FirstOrDefaultAsync();
+        if (role == 0)
+        {
+            var created = new Role { Code = "admin", Name = "Admin" };
+            db.Roles.Add(created);
+            await db.SaveChangesAsync();
+            role = created.RoleId;
+        }
+
+        var uploader = new User
+        {
+            RoleId = role,
+            Email = $"e2e-uploader-{Guid.NewGuid():N}@test.local",
+            PasswordHash = [0x01],
+            FullName = "E2E uploader",
+        };
+        var reviewer = new User
+        {
+            RoleId = role,
+            Email = $"e2e-reviewer-{Guid.NewGuid():N}@test.local",
+            PasswordHash = [0x01],
+            FullName = "E2E reviewer",
+        };
+        db.Users.AddRange(uploader, reviewer);
+        await db.SaveChangesAsync();
+
+        var batch = new ImportBatch
+        {
+            CertId = certId,
+            SourceName = "e2e-full-chain.xlsx",
+            Status = ImportBatchStatus.Done.ToCode(),
+            UploadedBy = uploader.UserId,
+        };
+        db.ImportBatches.Add(batch);
+        await db.SaveChangesAsync();
+
+        var itemIds = await db.ExamItems.Where(i => i.ExamId == examId)
+            .Select(i => i.ItemId).Distinct().ToListAsync();
+
+        foreach (var itemId in itemIds)
+        {
+            db.ImportLogs.Add(new ImportLog
+            {
+                BatchId = batch.BatchId,
+                ItemId = itemId,
+                Level = "info",
+                Message = "accepted by the E2E full-chain fixture",
+            });
+            db.ReviewSampleDecisions.Add(new ReviewSampleDecision
+            {
+                BatchId = batch.BatchId,
+                ItemId = itemId,
+                ActorUserId = reviewer.UserId,
+                Decision = "clear",
+                DecidedAt = DateTimeOffset.UtcNow,
+            });
+        }
+
+        await db.SaveChangesAsync();
+        return batch.BatchId;
+    }
+
+    /// <summary>
+    /// A topic of this modality, provisioned when the fresh database has none. The vocabulary is a
+    /// closed set of twenty, so a canonical code is reused rather than invented.
+    /// </summary>
+    private static async Task<int> EnsureTopicAsync(CompanionDbContext db, string modality)
+    {
+        var existing = await db.Topics.Where(t => t.Modality == modality)
+            .OrderBy(t => t.TopicId).Select(t => (int?)t.TopicId).FirstOrDefaultAsync();
+        if (existing is not null)
+        {
+            return existing.Value;
+        }
+
+        var (code, name) = modality switch
+        {
+            "listening" => ("L-DET", "Listening for detail"),
+            "speaking" => ("S-DESC", "Describing"),
+            "writing" => ("W-CORR", "Transactional correspondence"),
+            _ => ("R-DET", "Reading for detail"),
+        };
+
+        var topic = new Topic { Modality = modality, Code = code, Name = name };
+        db.Topics.Add(topic);
+        await db.SaveChangesAsync();
+        return topic.TopicId;
     }
 
     [Fact]
@@ -215,10 +410,9 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             Assert.Equal(3, blueprint.Skills.Count);
         }
 
-        // Fetch persisted IDs & seed ScoreBands & QuestionCategory
+        // Fetch persisted IDs
         int certId, secL1Id, secR1Id, secR2Id, secW1Id;
         int skillListId, skillReadId, skillWritId;
-        int catId;
         await using (var dbSetup = DbContextFactory.Create(database.ConnectionString))
         {
             var cert = await dbSetup.Certificates.SingleAsync(c => c.Code == certCode);
@@ -250,9 +444,11 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                 Code = Unique("CAT_TECH"),
                 Name = "Technical Vocabulary & Syntax"
             };
+            // #269: the category is still seeded (it is the retired axis, kept so this seam proves the
+            // paper does not depend on it), but no pool item names it - a position's cell is
+            // (TopicId, CefrLevel), which is what vw_UserTopicAccuracy groups by.
             dbSetup.QuestionCategories.Add(category);
             await dbSetup.SaveChangesAsync();
-            catId = category.CategoryId;
 
             // Seed GradingCriteria and SectionCriteria for SEC_W1
             var criterion = new GradingCriterion
@@ -314,6 +510,10 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
         // =========================================================================
         int examId;
         int q1Id, q2Id, q3Id, q4Id, q5Id, q6Id, q7Id, q8Id;
+        // #269: a SITTING answer addresses the roster position (an ExamItemId). A DRILL answer addresses
+        // the item version the session pinned - PracticeService resolves "questionId" by ItemVersionId -
+        // so the two seams need different ids for the same two items.
+        int q1VersionId, q2VersionId;
         int optQ1AId, optQ3AId, optQ4AId, optQ5AId, optQ5CId, optQ6AId, optQ7AId;
         int grpL1Id, grpR1_U1Id, grpR1_U2Id, grpR2Id, grpW1Id;
 
@@ -336,145 +536,165 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                 DurationSec: 180,
                 SizeBytes: 1048576));
 
-            // 3. Question Groups
-            var grpL1 = await adminExamService.CreateQuestionGroupAsync(examId, new CreateQuestionGroupRequest(secL1Id, UnitNumber: 1));
-            grpL1Id = grpL1.GroupId;
+            // 3+4. Author the eight positions on the pool.
+            //
+            // #269: the answer-shape columns (max selections, accepted answers, the word range, the
+            // keywords) live only on ItemVersions and are writable only at INSERT, so the fixture writes
+            // those rows directly - exactly what PoolDrillGradingTests and PracticeServiceTests do. The
+            // exam, its audio and the audit/publish doors below are still the real services, so this seam
+            // still proves the paper goes through them.
 
-            var grpR1_U1 = await adminExamService.CreateQuestionGroupAsync(examId, new CreateQuestionGroupRequest(secR1Id, UnitNumber: 1));
-            grpR1_U1Id = grpR1_U1.GroupId;
+            // Q1: mcq (Listening SEC_L1) - the bundle's first child, so it owns the stimulus.
+            var l1Stimulus = new Stimulus
+            {
+                CefrLevel = CefrLevel.B1,
+                Transcript = "The conference speaker arrives at 10:30 AM.",
+                DomainContext = "general",
+            };
+            dbStudio.Stimuli.Add(l1Stimulus);
+            await dbStudio.SaveChangesAsync();
+            grpL1Id = l1Stimulus.StimulusId;
 
-            var grpR1_U2 = await adminExamService.CreateQuestionGroupAsync(examId, new CreateQuestionGroupRequest(secR1Id, UnitNumber: 2));
-            grpR1_U2Id = grpR1_U2.GroupId;
-
-            var grpR2 = await adminExamService.CreateQuestionGroupAsync(examId, new CreateQuestionGroupRequest(secR2Id, UnitNumber: 2));
-            grpR2Id = grpR2.GroupId;
-
-            var grpW1 = await adminExamService.CreateQuestionGroupAsync(examId, new CreateQuestionGroupRequest(secW1Id, UnitNumber: 1, ResponseSeconds: 600));
-            grpW1Id = grpW1.GroupId;
-
-            // 4. Author Questions across components:
-            // Q1: mcq (in Listening SEC_L1)
-            var q1 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
-                grpL1Id,
+            (q1Id, q1VersionId) = await SeedPositionAsync(
+                dbStudio, examId, certId, secL1Id, "listening", "short_exchange", "mcq",
                 "What is the scheduled arrival time of the conference speaker?",
-                QuestionType: QuestionTypeDto.Mcq,
-                CategoryId: catId,
-                Options:
-                [
-                    new AdminQuestionOptionInput(null, "A", "10:30 AM", true, "Directly stated"),
-                    new AdminQuestionOptionInput(null, "B", "11:00 AM", false, "Distractor"),
-                    new AdminQuestionOptionInput(null, "C", "12:15 PM", false, "Distractor"),
-                    new AdminQuestionOptionInput(null, "D", "01:00 PM", false, "Distractor")
-                ], CefrLevelCode: "B1"));
-            q1Id = q1.QuestionId;
-            optQ1AId = q1.Options.Single(o => o.Label == "A").OptionId;
+                displayOrder: 1, unitNumber: 1, stimulusId: grpL1Id,
+                evidenceStart: 0, evidenceEnd: 4000, evidenceUnit: "sec",
+                optionA: "10:30 AM", optionB: "11:00 AM", optionC: "12:15 PM", optionD: "01:00 PM", keyLabel: "A",
+                explanation: "The transcript states 10:30 AM.");
 
-            // Q2: inline_completion (in Listening SEC_L1)
-            var q2 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
-                grpL1Id,
+            // Q2: inline_completion (same listening bundle, position 2). CK_ItemVersions_WordRange refuses
+            // a ceiling with no floor, so the blank declares both ends.
+            (q2Id, q2VersionId) = await SeedPositionAsync(
+                dbStudio, examId, certId, secL1Id, "listening", "short_exchange", "inline_completion",
                 "The corporate network is managed by the [blank] department.",
-                QuestionType: QuestionTypeDto.InlineCompletion,
-                CategoryId: catId,
-                AcceptedAnswersJson: "[\"telecommunications\",\"telecom\"]",
-                MaxWords: 2,
-                AllowNumber: false, CefrLevelCode: "B1"));
-            q2Id = q2.QuestionId;
+                displayOrder: 2, unitNumber: 1, stimulusId: grpL1Id,
+                evidenceStart: 8000, evidenceEnd: 12000, evidenceUnit: "sec",
+                acceptedAnswersJson: "[\"telecommunications\",\"telecom\"]",
+                minWords: 1, maxWords: 2, allowNumber: false,
+                explanation: "The blank takes a telecommunications department.");
 
-            // Q3: mcq (in Reading SEC_R1 Unit 1)
-            var q3 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
-                grpR1_U1Id,
+            // Q3: mcq (Reading SEC_R1 Unit 1) - its own bundle, so its own stimulus.
+            var r1u1Stimulus = new Stimulus
+            {
+                CefrLevel = CefrLevel.B1,
+                Passage = "The Managing Director approved the expenditure for the regional office in Da Nang City Center.",
+                DomainContext = "general",
+            };
+            dbStudio.Stimuli.Add(r1u1Stimulus);
+            await dbStudio.SaveChangesAsync();
+            grpR1_U1Id = r1u1Stimulus.StimulusId;
+
+            (q3Id, _) = await SeedPositionAsync(
+                dbStudio, examId, certId, secR1Id, "reading", "sentence_cloze", "mcq",
                 "Which executive approved the expenditure?",
-                QuestionType: QuestionTypeDto.Mcq,
-                CategoryId: catId,
-                Options:
-                [
-                    new AdminQuestionOptionInput(null, "A", "Managing Director", true, "Approved"),
-                    new AdminQuestionOptionInput(null, "B", "Sales Associate", false, null),
-                    new AdminQuestionOptionInput(null, "C", "Intern", false, null),
-                    new AdminQuestionOptionInput(null, "D", "Consultant", false, null)
-                ], CefrLevelCode: "B1"));
-            q3Id = q3.QuestionId;
-            optQ3AId = q3.Options.Single(o => o.Label == "A").OptionId;
+                displayOrder: 1, unitNumber: 1, stimulusId: grpR1_U1Id,
+                evidenceStart: 0, evidenceEnd: 40, evidenceUnit: "char",
+                optionA: "Managing Director", optionB: "Sales Associate", optionC: "Intern", optionD: "Consultant",
+                keyLabel: "A", explanation: "The passage names the Managing Director.");
 
-            // Q4: mcq_3 (in Reading SEC_R1 Unit 1)
-            var q4 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
-                grpR1_U1Id,
+            // Q4: mcq_3 (same R1 unit-1 bundle, position 2). CNT-06 admits three contiguous options.
+            (q4Id, _) = await SeedPositionAsync(
+                dbStudio, examId, certId, secR1Id, "reading", "sentence_cloze", "mcq_3",
                 "Where is the regional branch office located?",
-                QuestionType: QuestionTypeDto.Mcq_3,
-                CategoryId: catId,
-                Options:
-                [
-                    new AdminQuestionOptionInput(null, "A", "Da Nang City Center", true, "Downtown"),
-                    new AdminQuestionOptionInput(null, "B", "Suburban Industrial Park", false, null),
-                    new AdminQuestionOptionInput(null, "C", "International Airport", false, null)
-                ], CefrLevelCode: "B1"));
-            q4Id = q4.QuestionId;
-            optQ4AId = q4.Options.Single(o => o.Label == "A").OptionId;
+                displayOrder: 2, unitNumber: 1, stimulusId: grpR1_U1Id,
+                evidenceStart: 60, evidenceEnd: 90, evidenceUnit: "char",
+                optionA: "Da Nang City Center", optionB: "Suburban Industrial Park", optionC: "International Airport",
+                keyLabel: "A", explanation: "The passage places it downtown.");
 
-            // Q5: multi_select (in Reading SEC_R1 Unit 2 Adaptive)
-            var q5 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
-                grpR1_U2Id,
+            // Q5: multi_select (Reading SEC_R1 Unit 2 Adaptive) - a new bundle, so unit 2.
+            var r1u2Stimulus = new Stimulus
+            {
+                CefrLevel = CefrLevel.B1,
+                Passage = "Digital automation adoption and export market expansion drove the quarter.",
+                DomainContext = "general",
+            };
+            dbStudio.Stimuli.Add(r1u2Stimulus);
+            await dbStudio.SaveChangesAsync();
+            grpR1_U2Id = r1u2Stimulus.StimulusId;
+
+            (q5Id, _) = await SeedPositionAsync(
+                dbStudio, examId, certId, secR1Id, "reading", "sentence_cloze", "multi_select",
                 "Select TWO primary factors driving quarterly growth:",
-                QuestionType: QuestionTypeDto.MultiSelect,
-                CategoryId: catId,
-                MaxSelections: 2,
-                Options:
-                [
-                    new AdminQuestionOptionInput(null, "A", "Digital automation adoption", true, "Factor A"),
-                    new AdminQuestionOptionInput(null, "B", "Office lease cancellation", false, null),
-                    new AdminQuestionOptionInput(null, "C", "Export market expansion", true, "Factor C"),
-                    new AdminQuestionOptionInput(null, "D", "Hiring freeze", false, null)
-                ], CefrLevelCode: "B1"));
-            q5Id = q5.QuestionId;
-            optQ5AId = q5.Options.Single(o => o.Label == "A").OptionId;
-            optQ5CId = q5.Options.Single(o => o.Label == "C").OptionId;
+                // UQ_ExamItems_Exam_Section_Order ignores the unit, so this is R1's third position.
+                displayOrder: 3, unitNumber: 2, stimulusId: grpR1_U2Id,
+                evidenceStart: 0, evidenceEnd: 30, evidenceUnit: "char",
+                optionA: "Digital automation adoption", optionB: "Office lease cancellation",
+                optionC: "Export market expansion", optionD: "Hiring freeze",
+                keyLabel: "A,C", maxSelections: 2,
+                explanation: "The passage names automation and export expansion.");
+            // The option id the sitting renders, read from the projection rather than recomputed.
+            optQ5AId = await PoolFixture.OptionIdAsync(dbStudio, examId, q5Id, "A");
+            optQ5CId = await PoolFixture.OptionIdAsync(dbStudio, examId, q5Id, "C");
 
-            // Q6: dropdown (in Reading SEC_R2 FullSandbox)
-            var q6 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
-                grpR2Id,
+            // Q6: dropdown (Reading SEC_R2 FullSandbox)
+            var r2Stimulus = new Stimulus
+            {
+                CefrLevel = CefrLevel.B1,
+                Passage = "Consequently, the second quarter closed ahead of plan.",
+                DomainContext = "general",
+            };
+            dbStudio.Stimuli.Add(r2Stimulus);
+            await dbStudio.SaveChangesAsync();
+            grpR2Id = r2Stimulus.StimulusId;
+
+            (q6Id, _) = await SeedPositionAsync(
+                dbStudio, examId, certId, secR2Id, "reading", "passage_comprehension", "dropdown",
                 "Select the appropriate linking conjunction for paragraph 2.",
-                QuestionType: QuestionTypeDto.Dropdown,
-                CategoryId: catId,
-                Options:
-                [
-                    new AdminQuestionOptionInput(null, "A", "Consequently", true, "Correct conjunction"),
-                    new AdminQuestionOptionInput(null, "B", "Otherwise", false, null),
-                    new AdminQuestionOptionInput(null, "C", "Nevertheless", false, null)
-                ], CefrLevelCode: "B1"));
-            q6Id = q6.QuestionId;
-            optQ6AId = q6.Options.Single(o => o.Label == "A").OptionId;
+                displayOrder: 1, unitNumber: 2, stimulusId: grpR2Id,
+                evidenceStart: 0, evidenceEnd: 14, evidenceUnit: "char",
+                optionA: "Consequently", optionB: "Otherwise", optionC: "Nevertheless",
+                keyLabel: "A", explanation: "The clause names a consequence.");
 
-            // Q7: drag_drop (in Reading SEC_R2 FullSandbox)
-            var q7 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
-                grpR2Id,
+            // Q7: drag_drop (same R2 bundle, position 2)
+            (q7Id, _) = await SeedPositionAsync(
+                dbStudio, examId, certId, secR2Id, "reading", "passage_comprehension", "drag_drop",
                 "Match the project phase label to the milestone schedule.",
-                QuestionType: QuestionTypeDto.DragDrop,
-                CategoryId: catId,
-                Options:
-                [
-                    new AdminQuestionOptionInput(null, "A", "Phase 1: Discovery", true, "Correct slot"),
-                    new AdminQuestionOptionInput(null, "B", "Phase 2: Deployment", false, null),
-                    new AdminQuestionOptionInput(null, "C", "Phase 3: Retirement", false, null)
-                ], CefrLevelCode: "B1"));
-            q7Id = q7.QuestionId;
-            optQ7AId = q7.Options.Single(o => o.Label == "A").OptionId;
+                displayOrder: 2, unitNumber: 2, stimulusId: grpR2Id,
+                evidenceStart: 20, evidenceEnd: 44, evidenceUnit: "char",
+                optionA: "Phase 1: Discovery", optionB: "Phase 2: Deployment", optionC: "Phase 3: Retirement",
+                keyLabel: "A", explanation: "Discovery is the first milestone.");
 
-            // Q8: free_response (in Writing SEC_W1 HybridGroupLocked)
-            var q8 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
-                grpW1Id,
+            // Q8: free_response (Writing SEC_W1 HybridGroupLocked). No options and no key: the version
+            // carries the word range and the required keywords, and the stimulus carries the clock.
+            var w1Stimulus = new Stimulus
+            {
+                CefrLevel = CefrLevel.B1,
+                ResponseSeconds = 600,
+                DomainContext = "general",
+            };
+            dbStudio.Stimuli.Add(w1Stimulus);
+            await dbStudio.SaveChangesAsync();
+            grpW1Id = w1Stimulus.StimulusId;
+
+            (q8Id, _) = await SeedPositionAsync(
+                dbStudio, examId, certId, secW1Id, "writing", "transactional_correspondence", "free_response",
                 "Compose a concise proposal outlining environmental initiatives using the required keywords.",
-                QuestionType: QuestionTypeDto.FreeResponse,
-                ResponseSeconds: 600,
-                MinWords: 5,
-                MaxWords: 50,
-                RequiredKeywords: "sustainability, efficiency", CefrLevelCode: "B1"));
-            q8Id = q8.QuestionId;
+                displayOrder: 1, unitNumber: 1, stimulusId: grpW1Id,
+                evidenceStart: 0, evidenceEnd: 40, evidenceUnit: "char",
+                minWords: 5, maxWords: 50, requiredKeywords: "sustainability, efficiency",
+                explanation: "A passing answer uses both keywords within the word window.");
+
+            // 4b. INV-3: every bound item must have cleared a human audit. A hand-authored fixture is
+            // unbatched by construction, so the fixture records the clearance the review workbench would
+            // (#205's per-item 'clear'), naming an account that is neither the uploader nor the item's
+            // author - ADM-02 refuses a self-approval, which is the rule and not a fixture detail.
+            await SeedClearanceAsync(dbStudio, certId, examId);
+
+            // The option ids the sitting renders, read from the projection rather than recomputed: an
+            // answer has to echo what the learner was shown, and a second formula would let the two drift.
+            optQ1AId = await PoolFixture.OptionIdAsync(dbStudio, examId, q1Id, "A");
+            optQ3AId = await PoolFixture.OptionIdAsync(dbStudio, examId, q3Id, "A");
+            optQ4AId = await PoolFixture.OptionIdAsync(dbStudio, examId, q4Id, "A");
+            optQ6AId = await PoolFixture.OptionIdAsync(dbStudio, examId, q6Id, "A");
+            optQ7AId = await PoolFixture.OptionIdAsync(dbStudio, examId, q7Id, "A");
 
             // 5. Readiness Audit Check
             var audit = await adminExamService.AuditExamPublishReadinessAsync(examId);
-            Assert.True(audit.CanPublish, $"Readiness audit blocked: {string.Join("; ", audit.Issues.Select(i => i.Message))}");
-            Assert.Equal(0, audit.BlockingErrorCount);
             Assert.Equal(8, audit.TotalQuestions);
+            Assert.True(audit.CanPublish,
+                "a complete pool paper was refused: " + string.Join(" | ", audit.Issues.Select(i => i.Message)));
+            Assert.Equal(0, audit.BlockingErrorCount);
 
             // 6. Publish Exam
             var publishResult = await adminExamService.PublishExamAsync(examId);
@@ -567,7 +787,10 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                 engine.SaveAnswerAsync(attempt.AttemptId, learnerId, q3Id, optQ3AId, false));
             Assert.Equal(AttemptEngineException.WrongPhase, exLockedUnit1.Code);
 
-            // Answer Unit 2 question Q5 (MultiSelect exact set matching)
+            // Answer Unit 2 question Q5 (MultiSelect exact set matching). A label-set submission records
+            // its choices in SelectedOptionIdsJson and is graded against the pinned key set
+            // (AttemptEngine.Pool.cs EvaluatePinnedLabelSet), so the whole-set rule holds on the sitting
+            // path exactly as it does in a practice drill.
             await engine.SaveAnswerAsync(attempt.AttemptId, learnerId, q5Id,
                 selectedOptionId: null, isFlagged: false, selectedOptionIdsJson: $"[{optQ5AId}, {optQ5CId}]");
 
@@ -594,11 +817,12 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             var submitResult = await engine.SubmitAttemptAsync(attempt.AttemptId, learnerId, isAutoSubmit: false);
             Assert.NotNull(submitResult);
 
-            // Verify objective answers evaluation in database
+            // Verify objective answers evaluation in database. #269: an answer's identity is its roster
+            // position, and the position is what CreateQuestionAsync returns as its question id.
             await using var dbVerify = DbContextFactory.Create(database.ConnectionString);
             var savedAnswers = await dbVerify.AttemptAnswers
                 .Where(a => a.AttemptId == attempt.AttemptId)
-                .ToDictionaryAsync(a => a.QuestionId);
+                .ToDictionaryAsync(a => a.ExamItemId);
 
             Assert.True(savedAnswers[q1Id].IsCorrect, "Q1 (MCQ) must be correct.");
             Assert.True(savedAnswers[q2Id].IsCorrect, "Q2 (InlineCompletion) must be correct.");
@@ -608,15 +832,19 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             Assert.True(savedAnswers[q6Id].IsCorrect, "Q6 (Dropdown) must be correct.");
             Assert.True(savedAnswers[q7Id].IsCorrect, "Q7 (DragDrop) must be correct.");
 
-            // Evaluate FreeResponse writing response rules
-            var q8Entity = await dbVerify.Questions.SingleAsync(q => q.QuestionId == q8Id);
-            var frEval = AttemptEngine.EvaluateWritingResponse(q8Entity, "Our enterprise strategy advances sustainability and energy efficiency across operations.");
+            // Evaluate FreeResponse writing response rules. #269: the word floor and the required
+            // keywords live on the version the position pins, not on a question row.
+            var q8Version = await dbVerify.ItemVersions.SingleAsync(v =>
+                dbVerify.ExamItems.Any(ei => ei.ExamItemId == q8Id && ei.ItemVersionId == v.ItemVersionId));
+            var frEval = AttemptEngine.EvaluateWritingResponse(
+                q8Version.MinWords, q8Version.RequiredKeywords,
+                "Our enterprise strategy advances sustainability and energy efficiency across operations.");
             Assert.True(frEval.HasRequiredKeywords);
             Assert.False(frEval.IsUnderLength);
             Assert.Empty(frEval.MissingKeywords);
 
             // Simulate completed AI Grading for FreeResponse
-            var fr = await dbVerify.FreeResponses.SingleAsync(r => r.AttemptId == attempt.AttemptId && r.QuestionId == q8Id);
+            var fr = await dbVerify.FreeResponses.SingleAsync(r => r.AttemptId == attempt.AttemptId && r.ExamItemId == q8Id);
             await database.SqlAsync($"""
                 UPDATE AiGradings
                 SET Status = 'done', OverallScaled = 75.0, Model = 'fake-ai-mentor'
@@ -663,29 +891,34 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
 
             // Drill questions including non-MCQ item (Q2: inline_completion) in Listening section
             var pSession = await practiceService.StartSessionAsync(learnerId, new StartPracticeSessionInput(secL1Id));
-            var pAns1 = await practiceService.SubmitAnswerAsync(learnerId, pSession.SessionId, q1Id,
+            // #269: a drill answer is addressed by the pinned ItemVersionId - PracticeService resolves
+            // "questionId" by ItemVersionId - while a sitting answer is addressed by the roster position.
+            // The two seams need different ids for the same two items.
+            var pAns1 = await practiceService.SubmitAnswerAsync(learnerId, pSession.SessionId, q1VersionId,
                 new SubmitPracticeAnswerInput(SelectedOptionId: optQ1AId));
             Assert.True(pAns1.IsCorrect);
 
-            var pAnsResult = await practiceService.SubmitAnswerAsync(learnerId, pSession.SessionId, q2Id,
+            var pAnsResult = await practiceService.SubmitAnswerAsync(learnerId, pSession.SessionId, q2VersionId,
                 new SubmitPracticeAnswerInput(ResponseText: "telecommunications"));
 
             Assert.True(pAnsResult.IsCorrect, "Practice answer for inline_completion should be evaluated as correct.");
             Assert.True(pAnsResult.IsSessionFinished);
 
             // Verify Weakness Analysis Views
-            // 1. #271: this seam authors a LEGACY paper (QuestionGroups/Questions), so the answers it
-            //    produces carry no ItemId and therefore no accuracy cell. vw_UserTopicAccuracy has
-            //    nothing to report for them, and that is the documented behaviour rather than a gap:
-            //    the retired CategoryId is not a topic and no mapping exists. Asserting the absence is
-            //    what keeps a future "helpful" guess from attributing these answers to a topic nobody
-            //    was asked about.
+            // #269: this paper is authored ON THE POOL, so its answers carry ItemId and therefore a real
+            // accuracy cell. That is the inverse of the legacy behaviour this seam used to assert: a
+            // legacy answer had no topic, so the view was empty and the drill's weakness analysis could
+            // report nothing. Asserting the cells are present is the stronger claim - it proves the
+            // answers reached the pooling axis rather than being silently dropped.
             var topicAcc = await dbPractice.vw_UserTopicAccuracies
                 .AsNoTracking()
                 .Where(v => v.UserId == learnerId)
                 .ToListAsync();
 
-            Assert.Empty(topicAcc);
+            Assert.NotEmpty(topicAcc);
+            Assert.All(topicAcc, cell => Assert.True(cell.Answered > 0, "an accuracy cell with no answers is not evidence"));
+            // The listening answers (Q1 the sitting, plus the two practice drills) land on one topic cell.
+            Assert.Contains(topicAcc, cell => cell.Answered >= 2 && cell.Correct >= 2);
 
             // 2. Direct query against vw_UserSectionAccuracyAll
             var secAcc = await dbPractice.vw_UserSectionAccuracyAlls
@@ -943,91 +1176,5 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
         Assert.Equal(5, AttemptEngine.AggregateTotalScore("avg_whole", scores3));
     }
 
-    [Fact]
-    public void Eleven_Component_Evaluation_Nuances_Verification()
-    {
-        // 1. MCQ & MCQ_3
-        var qMcq = new Question { QuestionType = "mcq" };
-        var qMcq3 = new Question { QuestionType = "mcq_3" };
-        var opts = new List<QuestionOption>
-        {
-            new() { OptionId = 1, Label = "A", Text = "Correct", IsCorrect = true },
-            new() { OptionId = 2, Label = "B", Text = "Wrong", IsCorrect = false }
-        };
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(qMcq, opts, 1, null, null));
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(qMcq3, opts, 1, null, null));
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(qMcq, opts, 2, null, null));
-
-        // 2. MultiSelect: Exact set matching
-        var qMulti = new Question { QuestionType = "multi_select", MaxSelections = 2 };
-        var multiOpts = new List<QuestionOption>
-        {
-            new() { OptionId = 10, Label = "A", Text = "Opt A", IsCorrect = true },
-            new() { OptionId = 11, Label = "B", Text = "Opt B", IsCorrect = false },
-            new() { OptionId = 12, Label = "C", Text = "Opt C", IsCorrect = true }
-        };
-        // Exact set matches
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(qMulti, multiOpts, null, "[10, 12]", null));
-        // Partial set fails
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(qMulti, multiOpts, null, "[10]", null));
-        // Superset with distractor fails
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(qMulti, multiOpts, null, "[10, 11, 12]", null));
-
-        // 3. InlineCompletion: MAX_WORDS zeroing
-        var qInlineWords = new Question
-        {
-            QuestionType = "inline_completion",
-            MaxWords = 2,
-            AcceptedAnswersJson = "[\"rapid transit\",\"transit\"]",
-            AllowNumber = true
-        };
-        // Within limit matches
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(qInlineWords, [], null, null, "rapid transit"));
-        // Exceeds limit fails even if substring matches
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(qInlineWords, [], null, null, "rapid urban transit system"));
-
-        // 4. InlineCompletion: AllowNumber false
-        var qInlineNoNum = new Question
-        {
-            QuestionType = "inline_completion",
-            AllowNumber = false,
-            AcceptedAnswersJson = "[\"building ten\",\"building 10\"]"
-        };
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(qInlineNoNum, [], null, null, "building ten"));
-        Assert.False(AttemptEngine.EvaluateObjectiveAnswer(qInlineNoNum, [], null, null, "building 10"));
-
-        // 5. Dropdown & DragDrop: option or responseText match
-        var qDrop = new Question { QuestionType = "dropdown" };
-        var qDrag = new Question { QuestionType = "drag_drop" };
-        var dropOpts = new List<QuestionOption>
-        {
-            new() { OptionId = 20, Label = "A", Text = "Deployment Phase", IsCorrect = true }
-        };
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(qDrop, dropOpts, 20, null, null));
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(qDrag, dropOpts, 20, null, null));
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(qDrop, dropOpts, null, null, "Deployment Phase"));
-        Assert.True(AttemptEngine.EvaluateObjectiveAnswer(qDrag, dropOpts, null, null, "deployment phase"));
-
-        // 6. FreeResponse: Lemma keyword stem verification & word count
-        var qFree = new Question
-        {
-            QuestionType = "free_response",
-            MinWords = 5,
-            RequiredKeywords = "develop, environment"
-        };
-        // Matches "developing" via stem "develop" and "environmental" via stem "environment"
-        var evalSuccess = AttemptEngine.EvaluateWritingResponse(qFree, "Our team is developing modern environmental solutions.");
-        Assert.True(evalSuccess.HasRequiredKeywords);
-        Assert.False(evalSuccess.IsUnderLength);
-
-        // Missing keyword fails
-        var evalMissing = AttemptEngine.EvaluateWritingResponse(qFree, "Our team is working on software solutions.");
-        Assert.False(evalMissing.HasRequiredKeywords);
-        Assert.Contains("develop", evalMissing.MissingKeywords);
-        Assert.Contains("environment", evalMissing.MissingKeywords);
-
-        // Underlength triggers penalty flag
-        var evalShort = AttemptEngine.EvaluateWritingResponse(qFree, "Too short.");
-        Assert.True(evalShort.IsUnderLength);
-    }
 }
+

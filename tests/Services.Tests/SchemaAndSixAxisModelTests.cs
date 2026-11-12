@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using DataAccess;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
@@ -249,92 +249,6 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
         }
     }
 
-    [Fact]
-    public async Task MultiSelect_Allows_Multiple_Correct_Options_While_MCQ_Enforces_OneCorrect()
-    {
-        // #272: NOT migrated, and deliberately. The subject of this test IS the legacy index
-        // `UX_Options_OneCorrect` on QuestionOptions (a filtered unique index where IsCorrect = 1 and the
-        // type is not multi_select). The pool expresses the same authored shape differently - one key is
-        // MaxSelections NULL, a multi-answer key is 'A,C' in ItemVersions.KeyLabel - and it carries no
-        // constraint that refuses an mcq-rendered version with a two-label key. So migrating this would
-        // delete the "one correct" half of the assertion rather than translate it. It stays here, and it
-        // goes when #269 drops the table and the index with it.
-        var databaseName = $"MultiSelect_{Guid.NewGuid():N}";
-        var connectionString = await database.CreateFreshDatabaseAsync(databaseName);
-        try
-        {
-            await using var db = DbContextFactory.Create(connectionString);
-            var cert = new Certificate { Code = "MS_CERT", Name = "Cert" };
-            db.Certificates.Add(cert);
-            await db.SaveChangesAsync();
-
-            var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading" };
-            db.Skills.Add(skill);
-            await db.SaveChangesAsync();
-
-            var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Part 5", ExpectedQuestionCount = 1 };
-            db.Sections.Add(section);
-            await db.SaveChangesAsync();
-
-            var exam = new Exam { CertId = cert.CertId, Name = "Exam", DurationMinutes = 60, Purpose = "mock" };
-            db.Exams.Add(exam);
-            await db.SaveChangesAsync();
-
-            var group = new QuestionGroup { CertId = cert.CertId, ExamId = exam.ExamId, SectionId = section.SectionId, UnitNumber = 2 };
-            db.QuestionGroups.Add(group);
-            await db.SaveChangesAsync();
-
-            // 1. multi_select question with 2 correct options must SUCCEED
-            var msQuestion = new Question
-            {
-                GroupId = group.GroupId,
-                ExamId = exam.ExamId,
-                SectionId = section.SectionId,
-                SkillId = skill.SkillId,
-                Stem = "Choose two correct answers",
-                CefrLevel = CefrLevel.B1,
-                QuestionType = "multi_select",
-                MaxSelections = 2
-            };
-            db.Questions.Add(msQuestion);
-            await db.SaveChangesAsync();
-
-            var opt1 = new QuestionOption { QuestionId = msQuestion.QuestionId, QuestionType = "multi_select", Label = "A", Text = "Correct 1", IsCorrect = true };
-            var opt2 = new QuestionOption { QuestionId = msQuestion.QuestionId, QuestionType = "multi_select", Label = "B", Text = "Correct 2", IsCorrect = true };
-            var opt3 = new QuestionOption { QuestionId = msQuestion.QuestionId, QuestionType = "multi_select", Label = "C", Text = "Incorrect", IsCorrect = false };
-            db.QuestionOptions.AddRange(opt1, opt2, opt3);
-            await db.SaveChangesAsync();
-
-            var correctCount = await db.QuestionOptions.CountAsync(o => o.QuestionId == msQuestion.QuestionId && o.IsCorrect);
-            Assert.Equal(2, correctCount);
-
-            // 2. mcq question with 2 correct options must FAIL UX_Options_OneCorrect
-            var mcqQuestion = new Question
-            {
-                GroupId = group.GroupId,
-                ExamId = exam.ExamId,
-                SectionId = section.SectionId,
-                SkillId = skill.SkillId,
-                Stem = "Single choice question",
-                CefrLevel = CefrLevel.A2,
-                QuestionType = "mcq"
-            };
-            db.Questions.Add(mcqQuestion);
-            await db.SaveChangesAsync();
-
-            var mcqOpt1 = new QuestionOption { QuestionId = mcqQuestion.QuestionId, QuestionType = "mcq", Label = "A", Text = "Correct 1", IsCorrect = true };
-            db.QuestionOptions.Add(mcqOpt1);
-            await db.SaveChangesAsync();
-
-            var mcqOpt2 = new QuestionOption { QuestionId = mcqQuestion.QuestionId, QuestionType = "mcq", Label = "B", Text = "Correct 2 (Should Fail)", IsCorrect = true };
-            db.QuestionOptions.Add(mcqOpt2);
-            await Assert.ThrowsAsync<DbUpdateException>(async () => await db.SaveChangesAsync());
-        }
-        finally
-        {
-            await database.DropDatabaseAsync(databaseName);
-        }
-    }
 
     [Fact]
     public async Task InlineCompletion_Supports_MaxWords_And_AcceptedAnswersJson()

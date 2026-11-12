@@ -30,9 +30,28 @@ namespace Services.Tests;
 /// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
-public sealed class PoolIngestionTests(DatabaseFixture database)
+public sealed class PoolIngestionTests : IAsyncLifetime
 {
-    private CompanionDbContext Db() => DbContextFactory.Create(database.ConnectionString);
+    private readonly DatabaseFixture _database;
+    private readonly string _dbName = $"EEIngest_{Guid.NewGuid():N}"[..24];
+    private string _connectionString = null!;
+
+    public PoolIngestionTests(DatabaseFixture database) => _database = database;
+
+    /// <summary>
+    /// <b>#272: a database this class owns.</b> Gate one's key-balance rule reads a whole (topic, level)
+    /// cell, and every reading item in a shared fixture database lands in one of twenty canonical topics —
+    /// so a test seeding fifteen keys at 3/4/4/4 shared that cell with any other class seeding a reading
+    /// item at B1. Measured in a full run: the sibling key that should have been refused was not, because
+    /// the ratio the assertion names was not the ratio the rule saw. A private topic is refused by the
+    /// schema (a topic must be canonical), so a private database is the smallest fix that makes the
+    /// arithmetic true. No assertion changed.
+    /// </summary>
+    public async Task InitializeAsync() => _connectionString = await _database.CreateFreshDatabaseAsync(_dbName);
+
+    public async Task DisposeAsync() => await _database.DropDatabaseAsync(_dbName);
+
+    private CompanionDbContext Db() => DbContextFactory.Create(_connectionString);
 
     // ---- the fixture database ---------------------------------------------------------------
 
@@ -57,7 +76,7 @@ public sealed class PoolIngestionTests(DatabaseFixture database)
         // is the one place it may be stepped around, and PackageServiceTests sets the precedent. The
         // rows must go rather than be retired, because gate one counts every item in a cell whatever
         // its lifecycle: a retired leftover would skew the balance the next test asserts.
-        await database.SqlAsync("""
+        await _database.SqlAsync("""
             DELETE FROM ExamItems
             WHERE ItemId IN (SELECT ItemId FROM Items WHERE BatchTag IN ('ingest-198', 'gate1-cell'));
             DELETE FROM ImportLog
@@ -84,7 +103,7 @@ public sealed class PoolIngestionTests(DatabaseFixture database)
     private async Task<int> AdminIdAsync()
     {
         var email = $"ingest-{Guid.NewGuid():N}@test.local";
-        await database.SqlAsync($"""
+        await _database.SqlAsync($"""
             IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'admin') INSERT INTO Roles (Code, Name) VALUES ('admin', N'Admin');
             INSERT INTO Users (RoleId, Email, PasswordHash, FullName, EmailVerifiedAt)
             VALUES ((SELECT RoleId FROM Roles WHERE Code = 'admin'), '{email}', 0x01, N'Ingest Admin', SYSDATETIMEOFFSET());

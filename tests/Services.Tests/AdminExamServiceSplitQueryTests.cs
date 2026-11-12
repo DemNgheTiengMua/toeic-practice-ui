@@ -9,19 +9,15 @@ using Xunit;
 namespace Services.Tests;
 
 /// <summary>
-/// F5: the readiness audit loads two collection navigations (QuestionGroups, then their option
-/// navigations). Unsplitting that is a Cartesian product, which EF warns about (20504) and which
-/// multiplies rows by every option added. The guard below turns that warning into a failure, so
-/// dropping .AsSplitQuery() breaks a test instead of quietly reintroducing the latency.
-/// The studio, question list and both exports load the same groups → questions → options graph
-/// (plus categories) and are guarded the same way.
+/// F5: a read that loads more than one collection navigation in one query is a Cartesian product, which
+/// EF warns about (20504) and which multiplies rows by every child added. The guard below turns that
+/// warning into a failure, so reintroducing one breaks a test instead of quietly costing latency.
 /// <para>
-/// #272: stays on the legacy tables, and the subject is why. Every test here seeds through
-/// <c>CreateQuestionGroupAsync</c>/<c>CreateQuestionAsync</c> and reads the group tree back, because the
-/// split-query guard only means something over a query that loads TWO collection navigations - which is
-/// the legacy <c>QuestionGroups → Questions → QuestionOptions</c> graph. A pool paper's roster is a flat
-/// <c>ExamItems → ItemVersions</c> projection with no second collection level, so it cannot express the
-/// Cartesian product this file exists to refuse.
+/// #269: the graph these reads walk is now the pool's - a section's groups are the stimuli its positions
+/// bind, and each group's questions are positions with their version's options projected from four
+/// columns. The legacy <c>QuestionGroups → Questions → QuestionOptions</c> shape is gone, but the hazard
+/// is not: a future <c>Include</c> of two collections on this projection is the same mistake, so the
+/// strict context and the reads it guards both survive. Only the fixture changed.
 /// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
@@ -45,7 +41,7 @@ public sealed class AdminExamServiceSplitQueryTests(DatabaseFixture database)
         await using var db = CreateStrictDb();
         var audit = new AdminExamService(db, TimeProvider.System);
 
-        // Throws InvalidOperationException citing 20504 if the split-query call is ever removed.
+        // Throws InvalidOperationException citing 20504 if a split-query call is ever removed.
         var result = await audit.AuditExamPublishReadinessAsync(examId);
 
         Assert.NotNull(result);
@@ -61,7 +57,9 @@ public sealed class AdminExamServiceSplitQueryTests(DatabaseFixture database)
 
         var groups = studio.Sections.SelectMany(s => s.Groups).ToList();
         Assert.Equal(2, groups.Count);
-        Assert.All(groups, g => Assert.Equal(new[] { "A", "B" }, Assert.Single(g.Questions).Options.Select(o => o.Label)));
+        // CNT-06 fixes a version at four options, so the count a reader sees is four - what must survive
+        // the split is that every option of the one question in each group is still there.
+        Assert.All(groups, g => Assert.Equal(new[] { "A", "B", "C", "D" }, Assert.Single(g.Questions).Options.Select(o => o.Label)));
     }
 
     [Fact]
@@ -73,7 +71,7 @@ public sealed class AdminExamServiceSplitQueryTests(DatabaseFixture database)
         var list = await new AdminExamService(db, TimeProvider.System).GetExamQuestionsAsync(examId);
 
         Assert.Equal(2, list.Groups.Count);
-        Assert.All(list.Groups, g => Assert.Equal(new[] { "A", "B" }, Assert.Single(g.Questions).Options.Select(o => o.Label)));
+        Assert.All(list.Groups, g => Assert.Equal(new[] { "A", "B", "C", "D" }, Assert.Single(g.Questions).Options.Select(o => o.Label)));
     }
 
     [Fact]
@@ -95,8 +93,8 @@ public sealed class AdminExamServiceSplitQueryTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// Two groups, each with a question carrying two options: the shape that used to explode into
-    /// groups x questions x options rows.
+    /// Two groups, each holding one position with four options: the shape that used to explode into
+    /// groups x questions x options rows. The groups are two stimuli, which is what a pool "group" is.
     /// </summary>
     private async Task<int> SeedExamWithTwoGroupsAsync()
     {
@@ -124,18 +122,10 @@ public sealed class AdminExamServiceSplitQueryTests(DatabaseFixture database)
         var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
             cert.CertId, $"Split {Guid.NewGuid():N}"[..25], 40, ExamPurposeDto.Mock));
 
-        var g1 = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(sectionId));
-        var g2 = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(sectionId, DisplayOrder: 2));
-        foreach (var group in new[] { g1, g2 })
-        {
-            await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-                group.GroupId, "Pick one", QuestionTypeDto.Mcq,
-                Options:
-                [
-                    new AdminQuestionOptionInput(null, "A", "first", IsCorrect: true, null),
-                    new AdminQuestionOptionInput(null, "B", "second", IsCorrect: false, null),
-                ], CefrLevelCode: "B1"));
-        }
+        await PoolFixture.AddMcqAsync(seed, exam.ExamId, cert.CertId, sectionId, "listening", "first", displayOrder: 1,
+            passage: "The first passage.");
+        await PoolFixture.AddMcqAsync(seed, exam.ExamId, cert.CertId, sectionId, "listening", "second", displayOrder: 2,
+            passage: "The second passage.");
 
         return exam.ExamId;
     }

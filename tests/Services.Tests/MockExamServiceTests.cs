@@ -670,11 +670,10 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode, startingCredits: 5);
         var (service, _) = CreateServices();
 
-        // The fixture authors the paper on the pool; this proves it holds no legacy rows, so a green
-        // assertion cannot be the legacy branch answering.
+        // The fixture authors the paper on the pool. #269 dropped the legacy Questions table, so "no
+        // legacy rows" is a schema fact; what still matters is that the pool rows are there.
         await using (var db = DbContextFactory.Create(database.ConnectionString))
         {
-            Assert.Empty(await db.Questions.Where(q => q.ExamId == examId).ToListAsync());
             Assert.NotEmpty(await db.ExamItems.Where(i => i.ExamId == examId).ToListAsync());
         }
 

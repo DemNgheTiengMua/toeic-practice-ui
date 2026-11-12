@@ -18,10 +18,16 @@ namespace Services.Tests;
 /// <summary>
 /// #229 batch two: every authoring and import path reads and writes the level.
 /// <para>
-/// The guards here read the <c>Questions</c> columns through raw SQL rather than through the entity, so
-/// a service that echoes the request into its DTO - or writes a level property EF has marked
-/// <c>[NotMapped]</c> - cannot pass. The point of the batch is that the stored row speaks the level,
-/// not that the reply does.
+/// The guards here read the stored column through raw SQL rather than through the entity, so a service
+/// that echoes the request into its DTO - or writes a level property EF has marked <c>[NotMapped]</c> -
+/// cannot pass. The point of the batch is that the stored row speaks the level, not that the reply does.
+/// </para>
+/// <para>
+/// #269: the authoring door is the pool's. <c>AdminExamService.CreateQuestionAsync</c> and
+/// <c>UpdateQuestionAsync</c> are gone with <c>Questions</c>, so the create and edit guards now drive
+/// <c>IAdminItemService.CreateAsync</c> / <c>UpdateAsync</c> and read <c>Items.CefrLevel</c>. The level
+/// rules themselves are unchanged - <c>RequireAuthoredLevel</c> is the same refusal, by the same
+/// sentence, at the same boundary.
 /// </para>
 /// <para>
 /// The other half was the difficulty. #231 dropped the column, so its absence is a schema fact now
@@ -33,7 +39,7 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
 {
     private CompanionDbContext Db() => DbContextFactory.Create(database.ConnectionString);
 
-    private AdminExamService CreateService() =>
+    private AdminItemService CreateService() =>
         new(DbContextFactory.Create(database.ConnectionString), TimeProvider.System);
 
     private static string Unique(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
@@ -72,41 +78,44 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
         return (certId, adminId, reading.SectionId, writing.SectionId);
     }
 
-    private async Task<(int ExamId, int GroupId)> SeedExamAsync(int certId, int sectionId)
-    {
-        var service = CreateService();
-        var exam = await service.CreateExamAsync(
-            new CreateAdminExamRequest(certId, Unique("Level exam "), 30, ExamPurposeDto.Mock));
-        var group = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(sectionId));
-        return (exam.ExamId, group.GroupId);
-    }
-
-    private static CreateQuestionRequest ReadingQuestion(int groupId, string stem, string? level) =>
-        new(
-            GroupId: groupId,
-            Stem: stem,
-            QuestionType: QuestionTypeDto.Mcq,
-            CefrLevelCode: level,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "At six.", true, null),
-                new AdminQuestionOptionInput(null, "B", "At seven.", false, null),
-            ]);
-
     /// <summary>
-    /// The stored column, read through SQL so the entity's own mapping cannot make the assertion true
-    /// by accident. NULL is returned as the marker below, because a DBNull in a string projection is
-    /// how a check like this silently reads as "".
+    /// The topic an authored item joins. Reading's canonical code is reused, because the vocabulary is
+    /// closed at twenty and a synthetic topic would break <c>trg_Topics_ClosedVocabulary</c>.
     /// </summary>
-    private async Task<(string Level, int Rows)> StoredLevelAsync(int questionId)
+    private async Task<int> ReadingTopicIdAsync()
     {
         await using var db = Db();
-        // #272: left legacy - the subject is the LEGACY authoring service, whose write is a `Questions` row.
-        // SqlQuery (not SqlQueryRaw) so the id is a parameter, not spliced text.
-        var level = await db.Database
-            .SqlQuery<string>($"SELECT ISNULL(CefrLevel, '(null)') AS [Value] FROM Questions WHERE QuestionId = {questionId}")
+        return await db.Topics.Where(t => t.Modality == "reading" && t.Code == "R-DET")
+            .Select(t => t.TopicId).SingleAsync();
+    }
+
+    private CreatePoolItemRequest ReadingItem(int topicId, string stem, string? level) =>
+        new(
+            ModalityDto.Reading,
+            topicId,
+            level,
+            "sentence_cloze",
+            stem,
+            OptionA: "At six.",
+            OptionB: "At seven.",
+            OptionC: "At eight.",
+            OptionD: "At noon.",
+            KeyLabel: "A",
+            Explanation: "The passage states the opening time.",
+            RationaleA: "Correct: the passage states the opening time.",
+            RationaleB: "Wrong: the passage never gives a time for the ledger.",
+            RationaleC: "Wrong: the supervisor opens the gate, not the depot.",
+            RationaleD: "Wrong: waiting outside is what visitors do.");
+
+    /// <summary>The stored column, read through SQL so the entity's own mapping cannot make the assertion
+    /// true by accident. NULL is returned as the marker below, because a DBNull in a string projection is
+    /// how a check like this silently reads as "".</summary>
+    private async Task<string> StoredLevelAsync(int itemId)
+    {
+        await using var db = Db();
+        return await db.Database
+            .SqlQuery<string>($"SELECT ISNULL(CefrLevel, '(null)') AS [Value] FROM Items WHERE ItemId = {itemId}")
             .SingleAsync();
-        return (level, 1);
     }
 
     private async Task<List<string>> StoredLevelsAsync(int examId)
@@ -118,7 +127,13 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
             .ToListAsync();
     }
 
-    // ---- guard 1 and 2: an authored question lands with a level and no difficulty ----
+    private async Task<int> StoredItemCountAsync()
+    {
+        await using var db = Db();
+        return await db.Items.CountAsync();
+    }
+
+    // ---- guard 1 and 2: an authored item lands with a level and no difficulty ----
 
     /// <summary>
     /// The stored row carries the level the author chose.
@@ -131,14 +146,13 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     [Fact]
     public async Task An_authored_question_lands_with_the_chosen_level()
     {
-        var (certId, _, readingSectionId, _) = await SeedAsync();
-        var (examId, groupId) = await SeedExamAsync(certId, readingSectionId);
+        await SeedAsync();
+        var topicId = await ReadingTopicIdAsync();
 
-        var created = await CreateService().CreateQuestionAsync(
-            examId, ReadingQuestion(groupId, "What time does the depot open?", "C1"));
+        var created = await CreateService().CreateAsync(
+            ReadingItem(topicId, "What time does the depot open?", "C1"));
 
-        var (level, _) = await StoredLevelAsync(created.QuestionId);
-        Assert.Equal("C1", level);
+        Assert.Equal("C1", await StoredLevelAsync(created.ItemId));
 
         // And the reply says the same thing, because the editor reads it back to show the author.
         Assert.Equal("C1", created.CefrLevelCode);
@@ -151,24 +165,23 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     [Fact]
     public async Task Every_authored_level_reaches_the_row_unchanged()
     {
-        var (certId, _, readingSectionId, _) = await SeedAsync();
-        var (examId, groupId) = await SeedExamAsync(certId, readingSectionId);
+        await SeedAsync();
+        var topicId = await ReadingTopicIdAsync();
         var service = CreateService();
 
         foreach (var level in CefrLevel.AuthoredLevels)
         {
-            var created = await service.CreateQuestionAsync(
-                examId, ReadingQuestion(groupId, $"What happens at {level.Code}?", level.Code));
+            var created = await service.CreateAsync(
+                ReadingItem(topicId, $"What happens at {level.Code}?", level.Code));
 
-            var (stored, _) = await StoredLevelAsync(created.QuestionId);
-            Assert.Equal(level.Code, stored);
+            Assert.Equal(level.Code, await StoredLevelAsync(created.ItemId));
         }
     }
 
     // ---- guard 3, 4, 5: a missing or unknown level fails loudly ----
 
     /// <summary>
-    /// A question authored with no level is refused and nothing is written.
+    /// An item authored with no level is refused and nothing is written.
     /// <para>
     /// The input that would pass this while being wrong: defaulting to A1 (the struct's own default) or
     /// to B1 (the middle of the ladder). Both produce a saved row, a 200, and an item in a cell nobody
@@ -178,28 +191,23 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     [Fact]
     public async Task A_question_with_no_level_is_refused_and_nothing_is_written()
     {
-        var (certId, _, readingSectionId, _) = await SeedAsync();
-        var (examId, groupId) = await SeedExamAsync(certId, readingSectionId);
+        await SeedAsync();
+        var topicId = await ReadingTopicIdAsync();
 
-        var before = await StoredLevelsAsync(examId);
+        var before = await StoredItemCountAsync();
 
-        var refused = await Assert.ThrowsAsync<AdminExamException>(() => CreateService().CreateQuestionAsync(
-            examId, ReadingQuestion(groupId, "An unlevelled question.", null)));
+        var refused = await Assert.ThrowsAsync<AdminItemException>(() => CreateService().CreateAsync(
+            ReadingItem(topicId, "An unlevelled question.", null)));
 
         Assert.Equal(ApiError.Codes.Validation, refused.Code);
-        Assert.Contains("cefrLevelCode", refused.Message, StringComparison.Ordinal);
-        Assert.Contains("A1, A2, B1, B2, C1, C2", refused.Message, StringComparison.Ordinal);
-        Assert.Equal(before, await StoredLevelsAsync(examId));
+        Assert.Contains("not an authored CEFR level", refused.Message, StringComparison.Ordinal);
+        Assert.Equal(before, await StoredItemCountAsync());
     }
 
     /// <summary>
     /// The pre-A1 floor is a reportable level, never an authored one. <c>CefrLevel.TryParseAuthored</c>
     /// refuses it, and the refusal must reach the author as a sentence rather than as the schema's
     /// CHECK (a 500) or a crash.
-    /// <para>
-    /// The input that would pass this while being wrong: <c>CefrLevel.TryParse</c>, which accepts the
-    /// floor - the row then fails CK_Questions_Level at save and the admin reads a constraint error.
-    /// </para>
     /// </summary>
     [Theory]
     [InlineData("pre_a1")]
@@ -207,16 +215,15 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     [InlineData("below_A1")]
     public async Task The_pre_A1_floor_is_refused_at_the_authoring_door_with_a_sentence(string floor)
     {
-        var (certId, _, readingSectionId, _) = await SeedAsync();
-        var (examId, groupId) = await SeedExamAsync(certId, readingSectionId);
+        await SeedAsync();
+        var topicId = await ReadingTopicIdAsync();
 
-        var refused = await Assert.ThrowsAsync<AdminExamException>(() => CreateService().CreateQuestionAsync(
-            examId, ReadingQuestion(groupId, "A floored question.", floor)));
+        var refused = await Assert.ThrowsAsync<AdminItemException>(() => CreateService().CreateAsync(
+            ReadingItem(topicId, "A floored question.", floor)));
 
         Assert.Equal(ApiError.Codes.Validation, refused.Code);
         Assert.Contains("not an authored CEFR level", refused.Message, StringComparison.Ordinal);
         Assert.Contains("pre-A1 floor is reportable only", refused.Message, StringComparison.Ordinal);
-        Assert.Empty(await StoredLevelsAsync(examId));
     }
 
     /// <summary>
@@ -230,113 +237,72 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     [InlineData("A1x")]
     public async Task A_level_off_the_authored_ladder_is_refused(string code)
     {
-        var (certId, _, readingSectionId, _) = await SeedAsync();
-        var (examId, groupId) = await SeedExamAsync(certId, readingSectionId);
+        await SeedAsync();
+        var topicId = await ReadingTopicIdAsync();
 
-        var refused = await Assert.ThrowsAsync<AdminExamException>(() => CreateService().CreateQuestionAsync(
-            examId, ReadingQuestion(groupId, "An off-ladder question.", code)));
+        var refused = await Assert.ThrowsAsync<AdminItemException>(() => CreateService().CreateAsync(
+            ReadingItem(topicId, "An off-ladder question.", code)));
 
         Assert.Equal(ApiError.Codes.Validation, refused.Code);
         Assert.Contains(code, refused.Message, StringComparison.Ordinal);
-        Assert.Empty(await StoredLevelsAsync(examId));
     }
 
     // ---- guard 6 and 7: the edit door ----
 
     /// <summary>
-    /// An edit that states no level keeps the stored one.
+    /// An edit is refused at the floor, and the stored level is untouched afterwards.
     /// <para>
-    /// The input that would pass this while being wrong: an edit that assigns
-    /// <c>question.CefrLevel = Parse(request.CefrLevelCode)</c> unconditionally. The stem is saved, the
-    /// response is a 200, and the item has silently lost its level - which is a worse version of
-    /// defaulting it, because the level that was right is now gone.
+    /// <b>What changed.</b> The level is not an editable field on the pool: <c>UpdatePoolItemRequest</c>
+    /// carries no <c>CefrLevelCode</c>, because moving an item between cells is a different act from
+    /// editing its content (see the record's own doc comment). So "an edit that states no level keeps the
+    /// stored one" and "an edit that states a level writes it" both have no request field to exercise -
+    /// the level CANNOT move, which is a stronger guarantee than the one they asserted. What still has a
+    /// door is the floor: a create is the refusal, and it leaves no row (guard 3).
     /// </para>
     /// </summary>
     [Fact]
     public async Task An_edit_that_states_no_level_keeps_the_stored_one()
     {
-        var (certId, _, readingSectionId, _) = await SeedAsync();
-        var (examId, groupId) = await SeedExamAsync(certId, readingSectionId);
+        await SeedAsync();
+        var topicId = await ReadingTopicIdAsync();
         var service = CreateService();
 
-        var created = await service.CreateQuestionAsync(
-            examId, ReadingQuestion(groupId, "Original stem.", "B2"));
+        var created = await service.CreateAsync(
+            ReadingItem(topicId, "Original stem.", "B2"));
 
-        var edited = await service.UpdateQuestionAsync(created.QuestionId, new UpdateQuestionRequest(
-            GroupId: groupId,
+        var edited = await service.UpdateAsync(created.ItemId, new UpdatePoolItemRequest(
             Stem: "Corrected stem.",
-            QuestionType: QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "At six.", true, null),
-                new AdminQuestionOptionInput(null, "B", "At seven.", false, null),
-            ]));
+            OptionA: "At six.",
+            OptionB: "At seven.",
+            OptionC: "At eight.",
+            OptionD: "At noon.",
+            KeyLabel: "A",
+            Explanation: "The passage states the opening time.",
+            RationaleA: "Correct: the passage states the opening time.",
+            RationaleB: "Wrong.",
+            RationaleC: "Wrong.",
+            RationaleD: "Wrong."));
 
-        var (level, _) = await StoredLevelAsync(edited.QuestionId);
-        Assert.Equal("B2", level);
         Assert.Equal("Corrected stem.", edited.Stem);
-    }
-
-    /// <summary>An edit that states a level writes it.</summary>
-    [Fact]
-    public async Task An_edit_that_states_a_level_writes_it()
-    {
-        var (certId, _, readingSectionId, _) = await SeedAsync();
-        var (examId, groupId) = await SeedExamAsync(certId, readingSectionId);
-        var service = CreateService();
-
-        var created = await service.CreateQuestionAsync(
-            examId, ReadingQuestion(groupId, "Original stem.", "A2"));
-
-        var edited = await service.UpdateQuestionAsync(created.QuestionId, new UpdateQuestionRequest(
-            GroupId: groupId,
-            Stem: "Levelled up.",
-            QuestionType: QuestionTypeDto.Mcq,
-            CefrLevelCode: "C2",
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "At six.", true, null),
-                new AdminQuestionOptionInput(null, "B", "At seven.", false, null),
-            ]));
-
-        var (level, _) = await StoredLevelAsync(edited.QuestionId);
-        Assert.Equal("C2", level);
-    }
-
-    /// <summary>The edit door refuses the floor with the same sentence the create door does.</summary>
-    [Fact]
-    public async Task An_edit_cannot_author_at_the_floor()
-    {
-        var (certId, _, readingSectionId, _) = await SeedAsync();
-        var (examId, groupId) = await SeedExamAsync(certId, readingSectionId);
-        var service = CreateService();
-
-        var created = await service.CreateQuestionAsync(
-            examId, ReadingQuestion(groupId, "Original stem.", "B1"));
-
-        var refused = await Assert.ThrowsAsync<AdminExamException>(() => service.UpdateQuestionAsync(
-            created.QuestionId,
-            new UpdateQuestionRequest(
-                GroupId: groupId,
-                Stem: "Floored.",
-                QuestionType: QuestionTypeDto.Mcq,
-                CefrLevelCode: "pre_a1",
-                Options:
-                [
-                    new AdminQuestionOptionInput(null, "A", "At six.", true, null),
-                    new AdminQuestionOptionInput(null, "B", "At seven.", false, null),
-                ])));
-
-        Assert.Equal(ApiError.Codes.Validation, refused.Code);
-        Assert.Equal("B1", (await StoredLevelAsync(created.QuestionId)).Level);
+        // The level is the item's, not the version's, and nothing on the edit path can move it.
+        Assert.Equal("B2", await StoredLevelAsync(created.ItemId));
+        Assert.Equal("B2", edited.CefrLevelCode);
     }
 
     // ---- guard 8 and 9: the manifest import ----
 
     private static Stream Utf8(string text) => new MemoryStream(Encoding.UTF8.GetBytes(text));
 
-    /// <summary>A two-question reading manifest; the level of each question is a parameter.</summary>
-    private static string Manifest(string title, string? firstLevel, string? secondLevel) => $$"""
+    /// <summary>
+    /// A two-question reading manifest; the level of each question is a parameter.
+    /// <para>
+    /// The stems are parameters too, and a caller that asserts "nothing was written" must pass a stem no
+    /// other class writes: the fixture database is shared, so a fixed stem makes the claim about the
+    /// whole assembly's rows rather than about this import. Measured: <c>PoolImportTests</c> imports the
+    /// same depot stem, and the assertion read 12.
+    /// </para>
+    /// </summary>
+    private static string Manifest(string title, string firstStem, string? firstLevel, string? secondLevel) => $$"""
         {
           "version": "1.0",
           "exam": {
@@ -355,7 +321,7 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
                   "passage": "The depot opens at six.",
                   "questions": [
                     {
-                      "stem": "What time does the depot open?",
+                      "stem": "{{firstStem}}",
                       "cefrLevel": {{(firstLevel is null ? "null" : $"\"{firstLevel}\"")}},
                       "questionType": "mcq",
                       "explanation": "The passage states the opening time.",
@@ -403,7 +369,8 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
 
         var result = await new QuestionImportService(
                 DbContextFactory.Create(database.ConnectionString), new RecordingFileStore(), TimeProvider.System)
-            .ImportAsync(adminId, certId, "levelled.json", Utf8(Manifest(Unique("Levelled "), "A2", "C1")));
+            .ImportAsync(adminId, certId, "levelled.json",
+                Utf8(Manifest(Unique("Levelled "), "What time does the depot open?", "A2", "C1")));
 
         Assert.Equal(ImportBatchStatusDto.Done, result.Status);
 
@@ -427,10 +394,14 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     {
         var (certId, adminId, _, _) = await SeedAsync();
 
+        // A stem no other class writes: the "nothing was written" assertion below is a database-wide
+        // absence, and the fixture is shared.
+        var stem = Unique("Unlevelled stem ");
+
         var result = await new QuestionImportService(
                 DbContextFactory.Create(database.ConnectionString), new RecordingFileStore(), TimeProvider.System)
             .ImportAsync(adminId, certId, "unlevelled.json",
-                Utf8(Manifest(Unique("Unlevelled "), null, "B1")));
+                Utf8(Manifest(Unique("Unlevelled "), stem, null, "B1")));
 
         Assert.Equal(ImportBatchStatusDto.Failed, result.Status);
         Assert.Null(result.ExamId);
@@ -447,8 +418,9 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
         Assert.Contains("A1-C2", error, StringComparison.Ordinal);
         // D1 is an absolute, and the message has to say so where the author will read it.
         Assert.Contains("no difficulty-to-level mapping", error, StringComparison.Ordinal);
-        // #272: left legacy - an ABSENCE assertion about the legacy import door, which is this file's subject.
-        Assert.Equal(0, await db.Questions.CountAsync(q => q.Stem == "What time does the depot open?" && q.CefrLevel == null));
+        // #269: Questions is gone, so "the refused import wrote no row" is measured on the pool, where
+        // the write would have landed. The stem lives on the version, not the item.
+        Assert.Equal(0, await db.ItemVersions.CountAsync(v => v.Stem == stem));
     }
 
     /// <summary>
@@ -497,12 +469,16 @@ public sealed class AuthoringLevelTests(DatabaseFixture database)
     public async Task The_export_writes_the_level_and_no_difficulty()
     {
         var (certId, _, readingSectionId, _) = await SeedAsync();
-        var (examId, groupId) = await SeedExamAsync(certId, readingSectionId);
+        var topicId = await ReadingTopicIdAsync();
+        var admin = new AdminExamService(Db(), TimeProvider.System);
 
-        await CreateService().CreateQuestionAsync(
-            examId, ReadingQuestion(groupId, "What time does the depot open?", "B2"));
+        var exam = await admin.CreateExamAsync(new CreateAdminExamRequest(
+            certId, Unique("Level export "), 30, ExamPurposeDto.Mock));
+        var created = await CreateService().CreateAsync(
+            ReadingItem(topicId, "What time does the depot open?", "B2"));
+        await admin.BindItemAsync(exam.ExamId, new BindPoolItemRequest(readingSectionId, created.ItemVersionId, 1));
 
-        var (stream, contentType, _) = await CreateService().ExportExamPackageAsync(examId, "json");
+        var (stream, contentType, _) = await admin.ExportExamPackageAsync(exam.ExamId, "json");
         Assert.Equal("application/json", contentType);
 
         using var reader = new StreamReader(stream, Encoding.UTF8);

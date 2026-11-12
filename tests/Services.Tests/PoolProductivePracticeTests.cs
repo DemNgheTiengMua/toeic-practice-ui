@@ -35,7 +35,7 @@ public sealed class PoolProductivePracticeTests(DatabaseFixture database)
 
             await using var db = DbContextFactory.Create(connectionString);
 
-            Assert.Equal(0, await db.Questions.CountAsync(q => q.ExamId == fixture.ExamId));
+            // #269: Questions is gone, so the pool rows below are the whole paper.
             Assert.Equal(2, await db.ExamItems.CountAsync(i => i.ExamId == fixture.ExamId));
 
             var service = new WritingPracticeService(db, new LearnerService(db));
@@ -80,7 +80,7 @@ public sealed class PoolProductivePracticeTests(DatabaseFixture database)
 
             await using var db = DbContextFactory.Create(connectionString);
 
-            Assert.Equal(0, await db.Questions.CountAsync(q => q.ExamId == fixture.ExamId));
+            // #269: Questions is gone, so the pool rows below are the whole paper.
             Assert.Equal(2, await db.ExamItems.CountAsync(i => i.ExamId == fixture.ExamId));
 
             var service = new SpeakingPracticeService(db, new LearnerService(db), new LocalFileStore(

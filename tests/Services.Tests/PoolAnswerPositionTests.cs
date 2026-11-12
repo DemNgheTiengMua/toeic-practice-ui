@@ -46,7 +46,6 @@ public sealed class PoolAnswerPositionTests(DatabaseFixture database)
                 {
                     AttemptId = attempt.AttemptId,
                     ExamId = fixture.ExamId,
-                    QuestionId = null,
                     ItemId = fixture.ItemId,
                     ItemVersionId = fixture.ItemVersionId,
                     ExamItemId = fixture.ExamItemId,
@@ -58,7 +57,6 @@ public sealed class PoolAnswerPositionTests(DatabaseFixture database)
 
             await using var read = DbContextFactory.Create(connectionString);
             var stored = await read.AttemptAnswers.AsNoTracking().SingleAsync();
-            Assert.Null(stored.QuestionId);
             Assert.Equal(fixture.ExamItemId, stored.ExamItemId);
             Assert.Equal(fixture.ItemVersionId, stored.ItemVersionId);
         }
@@ -91,7 +89,6 @@ public sealed class PoolAnswerPositionTests(DatabaseFixture database)
                     {
                         AttemptId = attempt.AttemptId,
                         ExamId = fixture.ExamId,
-                        QuestionId = null,
                         ItemId = fixture.ItemId,
                         ItemVersionId = fixture.ItemVersionId,
                         ExamItemId = fixture.ExamItemIds[i],
@@ -129,7 +126,6 @@ public sealed class PoolAnswerPositionTests(DatabaseFixture database)
             {
                 AttemptId = attempt.AttemptId,
                 ExamId = fixture.ExamId,
-                QuestionId = null,
                 ItemId = fixture.ItemId,
                 ItemVersionId = fixture.ItemVersionId,
                 ExamItemId = fixture.ExamItemId,
@@ -141,7 +137,6 @@ public sealed class PoolAnswerPositionTests(DatabaseFixture database)
             {
                 AttemptId = attempt.AttemptId,
                 ExamId = fixture.ExamId,
-                QuestionId = null,
                 ItemId = fixture.ItemId,
                 ItemVersionId = fixture.ItemVersionId,
                 ExamItemId = fixture.ExamItemId,

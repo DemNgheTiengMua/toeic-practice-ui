@@ -213,11 +213,10 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var drafts = await db.FreeResponses.Where(r => r.AttemptId == attempt.AttemptId).ToListAsync();
 
         // #269: on a pool paper an answer is addressed by its roster position, so the identity to
-        // compare is ExamItemId. QuestionId is NULL by construction (CK_AttemptAnswers_HasShape lets a
-        // row name one identity or the other), which is why this asserts the position instead.
+        // compare is ExamItemId.
         Assert.Equal(
             new[] { q1Id, q2Id }.OrderBy(id => id),
-            answers.Select(a => a.ExamItemId!.Value).OrderBy(id => id));
+            answers.Select(a => a.ExamItemId).OrderBy(id => id));
         var draft = Assert.Single(drafts);
         Assert.Equal(freeResponseQuestionId, draft.ExamItemId);
         Assert.Equal(FreeResponseStatus.Draft.ToCode(), draft.Status);

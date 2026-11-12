@@ -186,7 +186,6 @@ public sealed class PoolImportTests(DatabaseFixture database)
     public async Task Manifest_import_writes_pool_items_and_versions_with_no_exam_reference()
     {
         var (certId, adminId, _, _, _) = await SeedAsync();
-        var before = await CountLegacyQuestionsAsync();
 
         var result = await CreateService().ImportAsync(adminId, certId, "two-child.json", Utf8(TwoChildManifest(Unique("Pool Import "))));
 
@@ -217,9 +216,8 @@ public sealed class PoolImportTests(DatabaseFixture database)
         Assert.Equal((4, 21, "char"), (timed.EvidenceStart, timed.EvidenceEnd, timed.EvidenceUnit));
         Assert.Equal("opens at six", timed.EvidenceQuote);
 
-        // #266: the importer writes ONE model. The legacy row count is unchanged by design - a pack
-        // that wrote to both would be the second content model this ticket removed.
-        Assert.Equal(before, await CountLegacyQuestionsAsync());
+        // #266: the importer writes ONE model. #269 then dropped the legacy tables, so "it wrote no
+        // legacy row" is a schema fact; the two pool bindings above are the observable half.
     }
 
     /// <summary>
@@ -307,7 +305,11 @@ public sealed class PoolImportTests(DatabaseFixture database)
         var exam = await new AdminExamService(setup, TimeProvider.System).CreateExamAsync(
             new CreateAdminExamRequest(certId, Unique("Quick no level "), 30, ExamPurposeDto.Mock));
 
-        var before = await CountLegacyQuestionsAsync();
+        int itemsBefore;
+        await using (var before = Db())
+        {
+            itemsBefore = await before.Items.CountAsync();
+        }
 
         var refused = await Assert.ThrowsAsync<AdminExamException>(() => CreateQuickIngest().CommitStagedAsync(
             exam.ExamId,
@@ -316,7 +318,11 @@ public sealed class PoolImportTests(DatabaseFixture database)
         Assert.Equal(ApiError.Codes.Validation, refused.Code);
         Assert.Contains("cefrLevel", refused.Message, StringComparison.Ordinal);
         Assert.Contains("A1, A2, B1, B2, C1, C2", refused.Message, StringComparison.Ordinal);
-        Assert.Equal(before, await CountLegacyQuestionsAsync());
+
+        // #269: the legacy Questions table is gone, so "the refused batch wrote no item" is measured on
+        // the pool, where the write would have landed.
+        await using var after = Db();
+        Assert.Equal(itemsBefore, await after.Items.CountAsync());
     }
 
     // ---- AC2: a stimulus and several children is one stimulus, not duplicated passages ----
@@ -441,8 +447,8 @@ public sealed class PoolImportTests(DatabaseFixture database)
 
         Assert.Equal(2, items.Count);
         Assert.All(items, i => Assert.Equal(CefrLevel.B1, i.CefrLevel));
-        // #272: left legacy - this proves an ABSENCE (the import wrote no legacy question row).
-        Assert.Equal(0, await db.Questions.CountAsync(q => q.ExamId == second.ExamId));
+        // #269: the legacy Questions table is gone, so "the import wrote no legacy question row" is a
+        // schema fact. The two pool bindings above are the whole assertion.
     }
 
     /// <summary>
@@ -752,8 +758,8 @@ public sealed class PoolImportTests(DatabaseFixture database)
 
         await using var db = Db();
         Assert.Equal(0, await db.Items.CountAsync(i => db.ExamItems.Any(b => b.ExamId == result.ExamId && b.ItemId == i.ItemId)));
-        // #272: left legacy - an ABSENCE assertion, the refused batch wrote no legacy question row.
-        Assert.Equal(0, await db.Questions.CountAsync(q => q.SectionId == listeningSectionId));
+        // #269: the legacy Questions table is gone, so "the refused batch wrote no question row" is a
+        // schema fact. No pool binding above is the observable half.
     }
 
     /// <summary>
@@ -801,13 +807,6 @@ public sealed class PoolImportTests(DatabaseFixture database)
     }
 
     // ---- helpers ----
-
-    /// <summary>#272: left legacy - an ABSENCE probe, read only to prove the importer wrote no question row.</summary>
-    private async Task<int> CountLegacyQuestionsAsync()
-    {
-        await using var db = Db();
-        return await db.Questions.CountAsync();
-    }
 
     private async Task<int> TopicIdAsync(string code)
     {

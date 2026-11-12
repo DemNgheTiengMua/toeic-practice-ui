@@ -124,7 +124,11 @@ public sealed class PlacementPaperPublishTests(DatabaseFixture database)
             CertId = cert.CertId, Name = $"Placement {certCode}", Status = "draft",
             Purpose = "placement",
             // INV-5: the served skills must sum to this. Reading alone is served, so it is 75.
-            DurationMinutes = 75, QuestionCount = boundItems,
+            DurationMinutes = 75,
+            // CK_Exams_QuestionCount refuses 0 and allows NULL, and the zero-bind case is a real state:
+            // "no count declared" is what a paper in progress holds, and the audit must still refuse it
+            // for having no content rather than for a constraint the fixture could not write.
+            QuestionCount = boundItems > 0 ? boundItems : null,
         };
         db.Exams.Add(exam);
         await db.SaveChangesAsync();

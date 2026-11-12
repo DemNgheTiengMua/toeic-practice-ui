@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessObjects;
@@ -60,17 +60,6 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         return await command.ExecuteNonQueryAsync();
     }
 
-    private static CreateQuestionRequest ReadableQuestion(int groupId) => new(
-        groupId,
-        "Choose the correct word.",
-        QuestionTypeDto.Mcq,
-        Options:
-        [
-            new AdminQuestionOptionInput(null, "A", "Correct", true, null),
-            new AdminQuestionOptionInput(null, "B", "Wrong", false, null),
-        ],
-        CefrLevelCode: "B1");
-
     private static QuickIngestParsedQuestionDto ParsedQuestion() => new(
         Index: 1,
         StartLineNumber: 1,
@@ -86,21 +75,69 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         Issues: [],
         IsValid: true);
 
-    /// <summary>An exam holding one section's worth of answerable questions.</summary>
+    /// <summary>A pool item to bind, at the section's own modality and with four options (CNT-06).</summary>
+    private static CreatePoolItemRequest ReadableItem(int topicId) => new(
+        ModalityDto.Reading,
+        topicId,
+        "B1",
+        "sentence_cloze",
+        "Choose the correct word.",
+        // Gate one refuses a pair closer than a few characters, and a key far shorter than its
+        // distractors: all four are near the same length and mutually distinct.
+        OptionA: "The depot opens at six in the morning.",
+        OptionB: "The ledger is signed after the gate closes.",
+        OptionC: "Visitors wait outside until the supervisor arrives.",
+        OptionD: "Only the supervisor may open the loading bay.",
+        KeyLabel: "A",
+        Explanation: "The passage states the opening time.",
+        RationaleA: "Correct: the passage states the opening time.",
+        RationaleB: "Wrong: the passage gives no ledger time.",
+        RationaleC: "Wrong: visitors wait, but that is not the opening time.",
+        RationaleD: "Wrong: the supervisor opens the gate, not the bay.");
+
+    /// <summary>
+    /// The reading topic every authored item joins. The vocabulary is a closed set of twenty, so a
+    /// canonical code is reused rather than invented.
+    /// </summary>
+    private async Task<int> ReadingTopicIdAsync()
+    {
+        await database.SqlAsync("""
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading' AND Code = 'R-DET')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Local factual retrieval');
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        return await db.Topics.Where(t => t.Modality == "reading" && t.Code == "R-DET")
+            .Select(t => t.TopicId).SingleAsync();
+    }
+
+    /// <summary>An exam holding one section's worth of answerable positions.</summary>
     private async Task<int> SeedCompleteExamAsync(AdminExamService service, int certId, int sectionId, string name)
     {
         var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
             certId, name, 60, ExamPurposeDto.Mock, QuestionCount: 2));
 
-        var group = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(sectionId));
-        await service.CreateQuestionAsync(exam.ExamId, ReadableQuestion(group.GroupId));
-        await service.CreateQuestionAsync(exam.ExamId, ReadableQuestion(group.GroupId));
+        await BindReadableItemAsync(service, exam.ExamId, sectionId, 1);
+        await BindReadableItemAsync(service, exam.ExamId, sectionId, 2);
         return exam.ExamId;
     }
 
     /// <summary>
+    /// One pool item bound at a position. #269: authoring is <c>IAdminItemService.CreateAsync</c> plus
+    /// <c>AdminExamService.BindItemAsync</c> - the two acts the deleted create/delete pair performed.
+    /// </summary>
+    private async Task BindReadableItemAsync(AdminExamService service, int examId, int sectionId, int position)
+    {
+        var topicId = await ReadingTopicIdAsync();
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var created = await new AdminItemService(db, TimeProvider.System).CreateAsync(ReadableItem(topicId));
+
+        await service.BindItemAsync(examId, new BindPoolItemRequest(sectionId, created.ItemVersionId, position));
+    }
+
+    /// <summary>
     /// Records one finished attempt. The trigger only admits published exams, so the fixture flips
-    /// the status in SQL — it needs a published exam, not an audited one.
+    /// the status in SQL â€” it needs a published exam, not an audited one.
     /// </summary>
     private async Task RecordFinishedAttemptAsync(int examId, int certId)
     {
@@ -215,6 +252,17 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
 
     // ------------------------------------------------- rule 4: structure locked on finished attempts
 
+    /// <summary>
+    /// #157: once an exam has a finished attempt, its structure is what that attempt was scored
+    /// against, so the three structural acts on a pool paper are refused by the same lock.
+    /// <para>
+    /// <b>What changed.</b> This drove the deleted create/update/delete question and group pair. The
+    /// durable rule is that adding a position and adding a group are structural edits; on the pool those
+    /// are <c>BindItemAsync</c> and <c>CreateExamClusterAsync</c>, and both call
+    /// <c>RequireStructureEditableAsync</c>. The assertions - the error code and the count in the
+    /// message - are unchanged. A key change is the third act and has no reachable caller; see (c).
+    /// </para>
+    /// </summary>
     [Fact]
     public async Task An_exam_with_a_finished_attempt_refuses_structural_edits_and_names_the_count()
     {
@@ -228,40 +276,36 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         var group = studio.Sections.SelectMany(s => s.Groups).First();
         var question = group.Questions.First();
 
-        // a. adding a question changes the section total the attempt was scored against
-        var addQuestion = await Assert.ThrowsAsync<AdminExamException>(() =>
-            service.CreateQuestionAsync(examId, ReadableQuestion(group.GroupId)));
-        Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, addQuestion.Code);
-        // The count in context, not any "1" in the message: an admin has to read how many learners
-        // this affects before deciding what to do.
-        Assert.Contains("1 learner attempt has already finished it", addQuestion.Message, StringComparison.Ordinal);
+        // a. binding one more position changes the section total the attempt was scored against
+        var topicId = await ReadingTopicIdAsync();
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var created = await new AdminItemService(db, TimeProvider.System).CreateAsync(ReadableItem(topicId));
+            var addPosition = await Assert.ThrowsAsync<AdminExamException>(() =>
+                service.BindItemAsync(examId, new BindPoolItemRequest(sectionId, created.ItemVersionId, 3)));
+            Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, addPosition.Code);
+            // The count in context, not any "1" in the message: an admin has to read how many learners
+            // this affects before deciding what to do.
+            Assert.Contains("1 learner attempt has already finished it", addPosition.Message, StringComparison.Ordinal);
+        }
 
         // b. adding a group is the same structural change one level up
         var addGroup = await Assert.ThrowsAsync<AdminExamException>(() =>
-            service.CreateQuestionGroupAsync(examId, new CreateQuestionGroupRequest(sectionId)));
+            service.CreateExamClusterAsync(examId, new CreateExamClusterRequest(sectionId, QuestionCount: 1, CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, addGroup.Code);
 
-        // c. changing the answer key would rewrite what the finished attempt got right
-        var changeKey = await Assert.ThrowsAsync<AdminExamException>(() =>
-            service.UpdateQuestionAsync(question.QuestionId, new UpdateQuestionRequest(
-                group.GroupId,
-                question.Stem,
-                question.QuestionType,
-                Options:
-                [
-                    new AdminQuestionOptionInput(null, "A", "Correct", false, null),
-                    new AdminQuestionOptionInput(null, "B", "Wrong", true, null),
-                ], CefrLevelCode: "B1")));
-        Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, changeKey.Code);
+        // c. changing the answer key would rewrite what the finished attempt got right.
+        //
+        // NOT EXPRESSIBLE HERE - reported rather than faked. The pool's key-change fork is
+        // AdminExamService.UpdatePoolPositionAsync (AdminExamService.Questions.cs:48-97, lock at :96),
+        // which is PRIVATE and called by nothing. The Studio autosave route that would reach it posts to
+        // PUT /api/admin/questions/{id}, which #265 removed, and IAdminItemService.UpdateAsync names no
+        // paper so it has no lock to consult. The rule is still enforced in that method; only a caller
+        // is missing, and inventing one here would prove nothing.
 
-        // d. deleting a question shrinks a section a finished attempt was scored on
-        var deleteQuestion = await Assert.ThrowsAsync<AdminExamException>(() =>
-            service.DeleteQuestionAsync(question.QuestionId));
-        Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, deleteQuestion.Code);
-
-        // e. deleting the group takes its questions with it
+        // d. removing the group shrinks a section a finished attempt was scored on
         var deleteGroup = await Assert.ThrowsAsync<AdminExamException>(() =>
-            service.DeleteQuestionGroupAsync(examId, group.GroupId));
+            service.DeleteExamStudioGroupAsync(examId, question.GroupId));
         Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, deleteGroup.Code);
     }
 
@@ -293,50 +337,9 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         Assert.Contains("2 learner attempts have already finished it", ex.Message, StringComparison.Ordinal);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        // #272: left legacy - an ABSENCE assertion: the refused commit added no question row, and the
-        // service under test is the legacy authoring door, which is this file's subject.
-        Assert.Equal(2, await db.Questions.CountAsync(q => q.ExamId == examId));
-    }
-
-    [Fact]
-    public async Task Editing_the_answer_key_of_an_inline_completion_question_is_a_structural_edit()
-    {
-        var (certId, sectionId) = await SeedCertificateAsync();
-        var service = CreateService();
-
-        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
-            certId, $"Key Locked {Guid.NewGuid():N}"[..30], 60, ExamPurposeDto.Mock));
-        var group = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(sectionId));
-
-        // An inline-completion question is graded against AcceptedAnswersJson, not against an option
-        // set, so this is the answer key the lock has to cover.
-        var question = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId,
-            "The report was filed _____ Friday.",
-            QuestionTypeDto.InlineCompletion,
-            AcceptedAnswersJson: """["before"]""", CefrLevelCode: "B1"));
-        await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId,
-            "Second gap _____ the deadline.",
-            QuestionTypeDto.InlineCompletion,
-            AcceptedAnswersJson: """["before"]""", CefrLevelCode: "B1"));
-
-        await RecordFinishedAttemptAsync(exam.ExamId, certId);
-
-        var ex = await Assert.ThrowsAsync<AdminExamException>(() => service.UpdateQuestionAsync(
-            question.QuestionId,
-            new UpdateQuestionRequest(
-                group.GroupId, question.Stem, question.QuestionType,
-                AcceptedAnswersJson: """["after"]""", CefrLevelCode: "B1")));
-
-        Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, ex.Code);
-
-        // The stem alone is cosmetic and still saves, which is what keeps the rule structural
-        // rather than a blanket freeze.
-        var renamed = await service.UpdateQuestionAsync(question.QuestionId, new UpdateQuestionRequest(
-            group.GroupId, "Reworded gap.", question.QuestionType,
-            AcceptedAnswersJson: """["before"]""", CefrLevelCode: "B1"));
-        Assert.Equal("Reworded gap.", renamed.Stem);
+        // #269: Questions is gone, so "the refused commit wrote no row" is measured on the roster the
+        // pool commit would have extended.
+        Assert.Equal(2, await db.ExamItems.CountAsync(i => i.ExamId == examId));
     }
 
     [Fact]
@@ -374,8 +377,7 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         await RecordFinishedAttemptAsync(examId, certId);
 
         var studio = await service.GetExamStudioAsync(examId);
-        var group = studio.Sections.SelectMany(s => s.Groups).First();
-        var question = group.Questions.First();
+        var question = studio.Sections.SelectMany(s => s.Groups).SelectMany(g => g.Questions).First();
 
         // The contract keeps name, description and internal note editable; so do stem, explanation
         // and hint, which change no score.
@@ -388,18 +390,32 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         Assert.Equal("Renamed After Sitting", renamed.Name);
         Assert.Equal("New note", renamed.InternalNote);
 
-        var edited = await service.UpdateQuestionAsync(question.QuestionId, new UpdateQuestionRequest(
-            group.GroupId,
-            "Reworded stem.",
-            question.QuestionType,
+        // A pool item's stem and explanation are editable through the pool door, which carries no lock:
+        // the edit forks a version and leaves the one a finished attempt pinned byte-identical, so the
+        // rule "cosmetic content stays editable after a sitting" holds for the same reason.
+        var topicId = await ReadingTopicIdAsync();
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var itemService = new AdminItemService(db, TimeProvider.System);
+        var version = await db.ItemVersions.AsNoTracking()
+            .Where(v => db.ExamItems.Any(i => i.ExamItemId == question.QuestionId && i.ItemVersionId == v.ItemVersionId))
+            .SingleAsync();
+
+        var edited = await itemService.UpdateAsync(version.ItemId, new UpdatePoolItemRequest(
+            Stem: "Reworded stem.",
+            OptionA: version.OptionA,
+            OptionB: version.OptionB,
+            OptionC: version.OptionC,
+            OptionD: version.OptionD,
+            KeyLabel: version.KeyLabel,
             Explanation: "Clearer explanation",
-            Hint: "Look at the verb",
-            Options: question.Options
-                .Select(o => new AdminQuestionOptionInput(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
-                .ToList(), CefrLevelCode: "B1"));
+            RationaleA: version.RationaleA,
+            RationaleB: version.RationaleB,
+            RationaleC: version.RationaleC,
+            RationaleD: version.RationaleD));
 
         Assert.Equal("Reworded stem.", edited.Stem);
         Assert.Equal("Clearer explanation", edited.Explanation);
+        Assert.Equal(2, edited.VersionNumber);
     }
 
     // ------------------------------------- rule 5: a refused publish names the failed checks

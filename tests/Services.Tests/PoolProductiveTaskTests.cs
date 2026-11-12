@@ -40,21 +40,20 @@ public sealed class PoolProductiveTaskTests(DatabaseFixture database)
             await using var db = DbContextFactory.Create(connectionString);
 
             // The precondition, asserted rather than assumed: the paper's content is the roster only.
-            Assert.Equal(0, await db.Questions.CountAsync(q => q.ExamId == fixture.ExamId));
+            // #269: the legacy question tables are gone, so this is the roster count alone.
             Assert.Equal(2, await db.ExamItems.CountAsync(i => i.ExamId == fixture.ExamId));
 
             var engine = new AttemptEngine(db);
 
             var attempt = await engine.CreateAttemptAsync(fixture.UserId, fixture.CertId, fixture.ExamId, 40);
 
-            // One row per delivered productive task, each naming its roster position and NO question.
+            // One row per delivered productive task, each naming its roster position.
             await using (var verify = DbContextFactory.Create(connectionString))
             {
                 var responses = await verify.FreeResponses.AsNoTracking()
                     .Where(fr => fr.AttemptId == attempt.AttemptId)
                     .ToListAsync();
                 Assert.Equal(2, responses.Count);
-                Assert.All(responses, r => Assert.Null(r.QuestionId));
                 Assert.All(responses, r => Assert.Equal("free_response", r.QuestionType));
                 Assert.Contains(responses, r => r.ExamItemId == fixture.FirstExamItemId);
                 Assert.Contains(responses, r => r.ExamItemId == fixture.SecondExamItemId);
@@ -88,13 +87,11 @@ public sealed class PoolProductiveTaskTests(DatabaseFixture database)
                     .OrderBy(fr => fr.FreeResponseId)
                     .ToListAsync();
 
-                // One row per delivered task, both addressed by the roster and neither by a question.
+                // One row per delivered task, both addressed by the roster position.
                 Assert.Equal(2, responses.Count);
-                Assert.All(responses, r => Assert.Null(r.QuestionId));
-                Assert.All(responses, r => Assert.NotNull(r.ExamItemId));
                 Assert.Equal(
                     new[] { fixture.FirstExamItemId, fixture.SecondExamItemId }.OrderBy(id => id),
-                    responses.Select(r => r.ExamItemId!.Value).OrderBy(id => id));
+                    responses.Select(r => r.ExamItemId).OrderBy(id => id));
             }
 
             Assert.Equal(AttemptStatus.Submitted.ToCode(), graded.Attempt.Status);

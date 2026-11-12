@@ -657,8 +657,8 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
                 "The team is discussing the new proposal in the meeting room.");
             await writing.SubmitAttemptAsync(userId, attemptId);
 
-            // The shape that makes this test mean something.
-            Assert.Empty(await db.Questions.Where(q => q.ExamId == examId).ToListAsync());
+            // #269: the legacy Questions table is gone, so "this fixture seeded no legacy question" is a
+            // schema fact rather than an assertion.
         }
 
         await using var gradeDb = DbContextFactory.Create(database.ConnectionString);

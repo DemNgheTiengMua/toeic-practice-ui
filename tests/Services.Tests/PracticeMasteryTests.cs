@@ -440,10 +440,11 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
         Assert.Equal(10, questions.Select(q => q.ItemVersionId).Distinct().Count());
 
         // With nothing ever answered, all ten are unseen - the ">= 6 unseen" floor of the mix - and
-        // no evidence has been recorded for the cell or for any legacy per-question history.
+        // no evidence has been recorded for the cell.
         await using var db = DbContextFactory.Create(database.ConnectionString);
         Assert.Empty(await db.UserCellMasteries.Where(m => m.UserId == userId).ToListAsync());
-        Assert.Empty(await db.UserQuestionHistories.Where(h => h.UserId == userId).ToListAsync());
+        // #269: UserQuestionHistory went with the legacy question model, so there is no second ledger
+        // to check here.
     }
 
     // ---- Rule 9: a session shorter than 10 is honest, not padded with duplicates ----

@@ -21,13 +21,41 @@ namespace Services.Tests;
 /// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
-public sealed class PathStepCompletionTests(DatabaseFixture database)
+public sealed class PathStepCompletionTests : IAsyncLifetime
 {
+    private readonly DatabaseFixture _database;
+    private readonly string _dbName = $"EEPath_{Guid.NewGuid():N}"[..24];
+    private string _connectionString = null!;
+
+    public PathStepCompletionTests(DatabaseFixture database) => _database = database;
+
+    /// <summary>
+    /// <b>#272: a database this class owns.</b> The planner reads the pool to decide which steps a path
+    /// can hold, and the closure reads the path's own steps to decide what unlocks next — so a fixture
+    /// that stocked one reading cell and wrote one active path shared both with every other class in
+    /// the assembly. Measured in a full run: two walk tests failed together while both passed in
+    /// isolation, each walking a plan assembled from another class's rows. A private database is the
+    /// smallest fix that makes "the plan is the plan this test wrote" true, and it weakens nothing — the
+    /// same steps, the same assertions, now actually provable.
+    /// </summary>
+    public async Task InitializeAsync() => _connectionString = await _database.CreateFreshDatabaseAsync(_dbName);
+
+    public async Task DisposeAsync() => await _database.DropDatabaseAsync(_dbName);
+
+    private CompanionDbContext Db() => DbContextFactory.Create(_connectionString);
+
+    /// <summary>An ad-hoc batch against this class's own database (not the shared fixture's).</summary>
+    private async Task SqlAsync(string batch)
+    {
+        await using var db = Db();
+        await db.Database.ExecuteSqlRawAsync(batch);
+    }
+
     private static string Unique(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
 
     private (LearningPathService paths, LearnerService learners, MockExamService mocks, LessonService lessons, CompanionDbContext db) CreateServices()
     {
-        var db = DbContextFactory.Create(database.ConnectionString);
+        var db = Db();
         var learners = new LearnerService(db);
         return (
             new LearningPathService(db, learners),
@@ -50,7 +78,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
     /// </summary>
     private async Task<(int certId, int skillId, int topicId, int mockExamItemId, int examId, int lessonId, int cardId)> SeedCertAsync(string certCode)
     {
-        await database.SqlAsync($"""
+        await SqlAsync($"""
             -- #232: the canonical twenty topics are the step coordinate's topic axis.
             INSERT INTO Topics (Modality, Code, Name)
             SELECT v.Modality, v.Code, v.Name
@@ -135,7 +163,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
             CLOSE topics_cursor; DEALLOCATE topics_cursor;
             """);
 
-        await using var db = DbContextFactory.Create(database.ConnectionString);
+        await using var db = DbContextFactory.Create(_connectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
         var skillId = await db.Skills.Where(s => s.CertId == cert.CertId).Select(s => s.SkillId).SingleAsync();
         var topicId = await db.Topics.Where(t => t.Modality == "reading" && t.Code == "R-DET").Select(t => t.TopicId).SingleAsync();
@@ -155,7 +183,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
     private async Task<int> SeedLearnerAsync(int certId, decimal weeklyHours = 10m)
     {
         var email = $"{Guid.NewGuid():N}@test.local";
-        await database.SqlAsync($"""
+        await SqlAsync($"""
             IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
               INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
             INSERT INTO Users (RoleId, Email, PasswordHash, FullName, ActiveCertId)
@@ -180,14 +208,14 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
             VALUES (@measAttempt, @measSkill, {certId}, 18, 700);
             """);
 
-        await using var db = DbContextFactory.Create(database.ConnectionString);
+        await using var db = DbContextFactory.Create(_connectionString);
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
 
     /// <summary>Ten credits so a mock exam can be started (one credit a sitting).</summary>
     private async Task GrantCreditsAsync(int userId, int credits)
     {
-        await database.SqlAsync($"""
+        await SqlAsync($"""
             IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'admin')
               INSERT INTO Roles (Code, Name) VALUES ('admin', N'Admin');
             INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
@@ -271,7 +299,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
 
         if (step.Status == "locked")
         {
-            await database.SqlAsync($"UPDATE LearnerPathSteps SET Status = 'available' WHERE StepId = {step.StepId};");
+            await SqlAsync($"UPDATE LearnerPathSteps SET Status = 'available' WHERE StepId = {step.StepId};");
             await db.Entry(step).ReloadAsync();
         }
 
@@ -335,7 +363,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         await mocks.SubmitAttemptAsync(userId, attempt.AttemptId, isAutoSubmit: false);
 
         // Re-read from a fresh context: `done` has to be in the row, not drawn by a read path.
-        await using var verifyDb = DbContextFactory.Create(database.ConnectionString);
+        await using var verifyDb = DbContextFactory.Create(_connectionString);
         var persisted = await verifyDb.LearnerPathSteps.SingleAsync(s => s.StepId == mockStep.StepId);
 
         Assert.Equal("done", persisted.Status);
@@ -378,7 +406,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         // Read the only card — that is what completes the lesson.
         await lessons.RecordCardViewAsync(userId, lessonId, cardId);
 
-        await using var verifyDb = DbContextFactory.Create(database.ConnectionString);
+        await using var verifyDb = DbContextFactory.Create(_connectionString);
         var persisted = await verifyDb.LearnerPathSteps.SingleAsync(s => s.StepId == lessonStep.StepId);
 
         Assert.Equal("done", persisted.Status);
@@ -419,7 +447,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
 
     private async Task<LearnerPathStep> FreshStepAsync(int stepId)
     {
-        await using var db = DbContextFactory.Create(database.ConnectionString);
+        await using var db = DbContextFactory.Create(_connectionString);
         return await db.LearnerPathSteps.AsNoTracking().SingleAsync(s => s.StepId == stepId);
     }
 
@@ -470,7 +498,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         var steps = await StepsAsync(db, summary.LearnerPathId!.Value);
         var drillStep = steps.First(s => s.StepType == "focus_practice");
 
-        await database.SqlAsync($"UPDATE LearnerPathSteps SET Status = 'available' WHERE StepId = {drillStep.StepId};");
+        await SqlAsync($"UPDATE LearnerPathSteps SET Status = 'available' WHERE StepId = {drillStep.StepId};");
         await db.Entry(drillStep).ReloadAsync();
 
         var start = await paths.StartStepAsync(userId, drillStep.StepId);
@@ -541,7 +569,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         var steps = await StepsAsync(db, summary.LearnerPathId!.Value);
 
         // The learner abandons this path; its steps stay exactly where they are.
-        await database.SqlAsync($"""
+        await SqlAsync($"""
             UPDATE LearnerPaths SET Status = 'reset' WHERE LearnerPathId = {summary.LearnerPathId};
             """);
 
@@ -552,7 +580,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         Assert.NotEqual("done", first.Status);
         Assert.Null(first.Score);
 
-        await using var reread = DbContextFactory.Create(database.ConnectionString);
+        await using var reread = DbContextFactory.Create(_connectionString);
         var path = await reread.LearnerPaths.AsNoTracking()
             .SingleAsync(p => p.LearnerPathId == summary.LearnerPathId);
         Assert.Equal("reset", path.Status);

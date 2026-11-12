@@ -7,8 +7,7 @@ using Xunit;
 namespace Services.Tests;
 
 /// <summary>
-/// #250 criteria 1 and 5 together: <b>after the migration, a real seeded paper can be sat with its
-/// legacy rows deleted.</b>
+/// #250 criteria 1 and 5 together: <b>a real seeded paper can be sat end to end off the roster.</b>
 /// <para>
 /// <b>Why this is the test the ticket needs.</b> Two separate proofs already exist and neither is
 /// enough: <c>PaperMigrationCountsTests</c> shows the roster has the right count, and
@@ -17,25 +16,23 @@ namespace Services.Tests;
 /// sitting path that works on a fixture says nothing about the seeded catalogue.
 /// </para>
 /// <para>
-/// So this runs the real seed, runs the real migration, DELETES the three legacy tables' rows for one
-/// exam, and then sits that exam end to end. If any reader still needs <c>Questions</c>, it fails here.
+/// <b>#269 removed the purge, and with it the "after its legacy rows are deleted" claim.</b> The three
+/// legacy tables no longer exist, so there are no rows to delete and the seed writes none: the catalogue
+/// is pool-native. Asserting zero <c>Questions</c> rows would now be an assertion about a table that
+/// cannot be named. What remains, and what this test is for, is that the shipped seed's largest published
+/// mock paper is sittable start to submit and scores from the roster.
 /// </para>
 /// <para>
 /// <b>Which guard could this pass while being wrong.</b> Asserting "the attempt was created" passes on
 /// an empty paper. The assertions are the paper's own length, the pinned content appearing in the
 /// take view, an answer being recorded against a roster position, and a score after submission.
 /// </para>
-/// <para>
-/// <b>#272: stays legacy - reason 2, the DELETION is the subject.</b> Deleting the three legacy tables'
-/// rows for one exam is what the test does, not scaffolding it needs; a fixture with no legacy rows to
-/// purge would prove nothing about a paper that has them. The rows go in #269 with the tables.
-/// </para>
 /// </summary>
 [Collection(DatabaseCollection.Name)]
 public sealed class MigratedPaperIsSittableTests(DatabaseFixture database)
 {
     [Fact]
-    public async Task A_seeded_paper_is_sat_from_the_pool_after_its_legacy_rows_are_deleted()
+    public async Task A_seeded_paper_is_sat_end_to_end_from_the_roster()
     {
         var name = $"EE250M_{Guid.NewGuid():N}"[..24];
         var connectionString = await database.CreateFreshDatabaseAsync(name);
@@ -43,8 +40,6 @@ public sealed class MigratedPaperIsSittableTests(DatabaseFixture database)
         {
             await database.SqlCmdFileToDatabaseAsync(
                 name, Path.Combine(DatabaseFixture.RepoRootPath, "docs", "seed-demo.sql"));
-            await database.SqlCmdFileToDatabaseAsync(
-                name, Path.Combine(DatabaseFixture.RepoRootPath, "docs", "migrate-paper-to-pool.sql"));
 
             int examId, userId, expectedQuestions, certId;
             await using (var setup = DbContextFactory.Create(connectionString))
@@ -70,47 +65,30 @@ public sealed class MigratedPaperIsSittableTests(DatabaseFixture database)
 
             Assert.True(expectedQuestions >= 2, $"the chosen paper holds {expectedQuestions} roster row(s)");
 
-            // Remove the legacy rows for THIS exam, so the sitting path has to use the roster.
-            //
-            // Narrow on purpose. The first four attempts at this purge walked the whole foreign-key
-            // graph and kept finding one more table (PracticeAnswers, AiInsights, Recommendations,
-            // Complaints), and disabling constraints then tripped
+            // Detach the attempts from the paper's groups, and clear the answer rows, so the sitting
+            // below starts clean. Narrow on purpose: the first four attempts at this purge walked the
+            // whole foreign-key graph and kept finding one more table (PracticeAnswers, AiInsights,
+            // Recommendations, Complaints), and disabling constraints then tripped
             // trg_Attempts_TotalMatchesSkills - which fires on DELETE and recomputes the sum over
-            // AttemptSkillScores. None of that is necessary: the attempts themselves are PRESERVED by
-            // criterion 5, so the cheap correct move is to detach them from the questions instead of
-            // deleting them.
+            // AttemptSkillScores. None of that is necessary: the seeded attempts are PRESERVED, so the
+            // cheap correct move is to detach them.
             await using (var purge = DbContextFactory.Create(connectionString))
             {
-                // Detach the attempts. #269: the remembered position is a roster id now, so only
-                // ActiveGroupId still names a legacy row.
                 await purge.Database.ExecuteSqlRawAsync(
                     "UPDATE ExamAttempts SET ActiveGroupId = NULL WHERE ExamId = {0}",
                     examId);
 
-                // Answers and responses record what was asked, so they go with the questions.
                 await purge.Database.ExecuteSqlRawAsync(
                     "DELETE FROM AttemptAnswers WHERE ExamId = {0}", examId);
                 await purge.Database.ExecuteSqlRawAsync(
                     "DELETE FROM FreeResponses WHERE ExamId = {0}", examId);
 
-                // Legacy readers that name a question directly. Criterion 5 drops these tables.
                 await purge.Database.ExecuteSqlRawAsync("DELETE FROM SavedQuestions");
-                await purge.Database.ExecuteSqlRawAsync("DELETE FROM UserQuestionHistories");
                 await purge.Database.ExecuteSqlRawAsync("DELETE FROM PracticeAnswers");
                 await purge.Database.ExecuteSqlRawAsync("DELETE FROM Recommendations");
                 await purge.Database.ExecuteSqlRawAsync("DELETE FROM AiInsights");
                 await purge.Database.ExecuteSqlRawAsync("DELETE FROM PracticeSessions");
 
-                await purge.Database.ExecuteSqlRawAsync(
-                    "DELETE FROM QuestionOptions WHERE QuestionId IN (SELECT QuestionId FROM Questions WHERE ExamId = {0})",
-                    examId);
-                await purge.Database.ExecuteSqlRawAsync(
-                    "DELETE FROM Questions WHERE ExamId = {0}", examId);
-                await purge.Database.ExecuteSqlRawAsync(
-                    "DELETE FROM QuestionGroups WHERE ExamId = {0}", examId);
-
-                Assert.Equal(0, await purge.Questions.CountAsync(q => q.ExamId == examId));
-                Assert.Equal(0, await purge.QuestionGroups.CountAsync(g => g.ExamId == examId));
                 Assert.Equal(expectedQuestions, await purge.ExamItems.CountAsync(i => i.ExamId == examId));
             }
 
@@ -143,8 +121,9 @@ public sealed class MigratedPaperIsSittableTests(DatabaseFixture database)
             {
                 var saved = await verify.AttemptAnswers.AsNoTracking()
                     .SingleAsync(a => a.AttemptId == attempt.AttemptId && a.IsCorrect != null);
-                Assert.Null(saved.QuestionId);
-                Assert.NotNull(saved.ExamItemId);
+                // #269: an answer's identity is its roster position; there is no legacy column to be
+                // null. The position it names is the one the sitting handed the learner.
+                Assert.Equal(first.QuestionId, saved.ExamItemId);
 
                 var answeredCount = await verify.AttemptAnswers.CountAsync(a => a.AttemptId == attempt.AttemptId);
                 Assert.Equal(expectedQuestions, answeredCount);

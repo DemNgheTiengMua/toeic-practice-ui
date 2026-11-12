@@ -185,6 +185,11 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
               (@sR, @cert, 'reading', 'SR_' + @certStr, N'Reading Part 5', 1, 1);
+
+            -- The pool's topic vocabulary is a closed set of twenty that no certificate owns, so an
+            -- authoring path needs one to exist; a fresh test database has none.
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading' AND Code = 'R-DET')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Local factual retrieval');
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -203,22 +208,78 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
         Assert.NotNull(exam);
         Assert.Equal(ExamStatusDto.Draft, exam.Status);
 
-        // 2. Add question group
-        var group = await adminService.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR.SectionId));
+        // 2. Add a group (a stimulus plus its positions) on the pool. #269: this replaced
+        // CreateQuestionGroupAsync/CreateQuestionAsync with CreateExamClusterAsync, which authors the
+        // items, their versions and the bindings in one act.
+        var group = await adminService.CreateExamClusterAsync(exam.ExamId, new CreateExamClusterRequest(
+            secR.SectionId, QuestionCount: 1, CefrLevelCode: "B1"));
         Assert.NotNull(group);
 
-        // 3. Add question with valid MCQ options
-        var question = await adminService.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
-            group.GroupId,
-            "What is the correct answer?",
-            QuestionTypeDto.Mcq,
-            Options:
-            [
-                new AdminQuestionOptionInput(null, "A", "Correct Option", true, null),
-                new AdminQuestionOptionInput(null, "B", "Distractor Option", false, null)
-            ], CefrLevelCode: "B1"));
-        Assert.NotNull(question);
-        Assert.Equal(2, question.Options.Count);
+        // 3. The position the cluster authored, with the four options CNT-06 fixes and the section
+        // blueprint declares.
+        var question = Assert.Single(group.Questions);
+        Assert.Equal(4, question.Options.Count);
+        Assert.Single(question.Options.Where(o => o.IsCorrect));
+
+        // 3b. INV-3: an item created by authoring is 'draft' until review promotes it, and only an
+        // active item is served. CNT-42 fixes the legal transitions, so the promotion is the two steps
+        // the specification names - draft -> validated -> active - rather than a direct flip. The real
+        // flow also records a reviewer's clearance (#205); this scenario's subject is the author-publish
+        // lifecycle, so it walks the lifecycle and asserts the effect.
+        var position = await db.ExamItems.AsNoTracking()
+            .Where(i => i.ExamId == exam.ExamId)
+            .Select(i => new { i.ItemId })
+            .SingleAsync();
+        await database.SqlAsync($"""
+            UPDATE Items SET LifecycleStatus = 'validated' WHERE ItemId = {position.ItemId};
+            UPDATE Items SET LifecycleStatus = 'active' WHERE ItemId = {position.ItemId};
+            """);
+
+        // 3c. INV-3's other half: an item must also have cleared a human audit. A hand-authored item is
+        // unbatched, so the fixture records the clearance the review workbench would (#205's per-item
+        // 'clear'), signed by an account that is neither the batch's uploader nor the item's author -
+        // ADM-02 refuses a self-approval.
+        var roleId = await db.Roles.Where(r => r.Code == "admin").Select(r => r.RoleId).FirstOrDefaultAsync();
+        if (roleId == 0)
+        {
+            var role = new Role { Code = "admin", Name = "Admin" };
+            db.Roles.Add(role);
+            await db.SaveChangesAsync();
+            roleId = role.RoleId;
+        }
+
+        var uploader = new User
+        {
+            RoleId = roleId, Email = $"t4-up-{Guid.NewGuid():N}@test.local",
+            PasswordHash = [0x01], FullName = "Tier4 uploader",
+        };
+        var reviewer = new User
+        {
+            RoleId = roleId, Email = $"t4-rv-{Guid.NewGuid():N}@test.local",
+            PasswordHash = [0x01], FullName = "Tier4 reviewer",
+        };
+        db.Users.AddRange(uploader, reviewer);
+        await db.SaveChangesAsync();
+
+        var clearanceBatch = new ImportBatch
+        {
+            CertId = cert.CertId, SourceName = "tier4-authoring.xlsx",
+            Status = ImportBatchStatus.Done.ToCode(), UploadedBy = uploader.UserId,
+        };
+        db.ImportBatches.Add(clearanceBatch);
+        await db.SaveChangesAsync();
+
+        db.ImportLogs.Add(new ImportLog
+        {
+            BatchId = clearanceBatch.BatchId, ItemId = position.ItemId,
+            Level = "info", Message = "accepted by the tier4 scenario",
+        });
+        db.ReviewSampleDecisions.Add(new ReviewSampleDecision
+        {
+            BatchId = clearanceBatch.BatchId, ItemId = position.ItemId,
+            ActorUserId = reviewer.UserId, Decision = "clear", DecidedAt = DateTimeOffset.UtcNow,
+        });
+        await db.SaveChangesAsync();
 
         // 4. Audit exam readiness
         var audit = await adminService.AuditExamPublishReadinessAsync(exam.ExamId);

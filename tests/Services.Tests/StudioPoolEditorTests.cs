@@ -36,8 +36,8 @@ public sealed class StudioPoolEditorTests(DatabaseFixture database)
 
             await using var db = DbContextFactory.Create(connectionString);
 
-            // The precondition, asserted rather than assumed.
-            Assert.Equal(0, await db.Questions.CountAsync(q => q.ExamId == fixture.ExamId));
+            // #269: Questions is gone, so "no legacy row" is a schema fact; the roster below is what
+            // must be there.
             Assert.Equal(3, await db.ExamItems.CountAsync(i => i.ExamId == fixture.ExamId));
 
             var studio = await new AdminExamService(db, TimeProvider.System).GetExamStudioAsync(fixture.ExamId);
@@ -67,8 +67,26 @@ public sealed class StudioPoolEditorTests(DatabaseFixture database)
         }
     }
 
+    /// <summary>
+    /// #265 / #269: an edit to a pool paper's position forks a version and leaves the pinned one intact.
+    /// <para>
+    /// <b>What changed.</b> This drove <c>AdminExamService.UpdateQuestionAsync</c>, which went with the
+    /// <c>Questions</c> table. The durable rule it asserted - CNT-43 copy-on-write: a scored edit inserts
+    /// the next version and the previous row stays byte-identical, so a finished attempt that pinned it
+    /// still reads what it saw - is now the pool's, and <c>IAdminItemService.UpdateAsync</c> is its only
+    /// writer. That is the door this test drives.
+    /// </para>
+    /// <para>
+    /// <b>What is no longer asserted here, and why.</b> The old test also proved the Studio's autosave
+    /// moved the paper's <c>ExamItem</c> binding onto the new version, so a re-read showed the edit. That
+    /// write has no public surface any more: <c>AdminExamService.UpdatePoolPositionAsync</c> is private and
+    /// called by nothing, and the MVC autosave route posts to <c>PUT /api/admin/questions/{id}</c>, which
+    /// #265 removed. Re-asserting it would mean inventing a caller. The copy-on-write half is kept and the
+    /// binding half is reported rather than faked.
+    /// </para>
+    /// </summary>
     [Fact]
-    public async Task An_autosave_writes_the_pinned_version_and_the_edit_survives_a_reread()
+    public async Task A_scored_edit_forks_a_version_and_never_rewrites_the_pinned_one()
     {
         var name = $"EE265W_{Guid.NewGuid():N}"[..24];
         var connectionString = await database.CreateFreshDatabaseAsync(name);
@@ -77,34 +95,31 @@ public sealed class StudioPoolEditorTests(DatabaseFixture database)
             var fixture = await SeedPoolPaperAsync(connectionString);
 
             await using var db = DbContextFactory.Create(connectionString);
-            var service = new AdminExamService(db, TimeProvider.System);
-
-            var studio = await service.GetExamStudioAsync(fixture.ExamId);
+            var studio = await new AdminExamService(db, TimeProvider.System).GetExamStudioAsync(fixture.ExamId);
             var position = studio.Sections.Single(s => s.SectionId == fixture.SectionId)
                 .Groups.SelectMany(g => g.Questions).First();
 
-            var updated = await service.UpdateQuestionAsync(
-                position.QuestionId,
-                new UpdateQuestionRequest(
-                    GroupId: null,
+            var updated = await new AdminItemService(db, TimeProvider.System).UpdateAsync(
+                fixture.FirstItemId,
+                new UpdatePoolItemRequest(
                     Stem: "Pool studio item: the edited stem.",
-                    QuestionType: QuestionTypeDto.Mcq,
+                    OptionA: "at six o'clock in the morning",
+                    OptionB: "only after seven in the evening",
+                    OptionC: "sometime around half past eight",
+                    OptionD: "by the middle of the following day",
+                    KeyLabel: "A",
                     Explanation: "Edited explanation.",
-                    Options:
-                    [
-                        new AdminQuestionOptionInput(null, "B", "on", false, "Wrong: a day takes 'on'."),
-                        new AdminQuestionOptionInput(null, "A", "at", true, "Correct."),
-                        new AdminQuestionOptionInput(null, "C", "in", false, "Wrong."),
-                        new AdminQuestionOptionInput(null, "D", "by", false, "Wrong."),
-                    ],
-                    CefrLevelCode: "B1"));
+                    RationaleA: "Correct.",
+                    RationaleB: "Wrong: a day takes 'on'.",
+                    RationaleC: "Wrong.",
+                    RationaleD: "Wrong."));
 
             Assert.Equal("Pool studio item: the edited stem.", updated.Stem);
-            Assert.True(updated.Options.Single(o => o.Label == "A").IsCorrect);
+            Assert.Equal(2, updated.VersionNumber);
 
-            // The edit landed as a NEW version and the binding moved to it - copy-on-write, because a
-            // version's scored fields are immutable by trigger (CNT-43). Writing in place was refused by
-            // that trigger by name, which is the guard working; this asserts the behaviour it demands.
+            // The edit landed as a NEW version and the first is untouched - copy-on-write, because a
+            // version's scored fields are immutable by trigger (CNT-43). The trigger is the guard; this
+            // asserts the behaviour it demands.
             await using (var verify = DbContextFactory.Create(connectionString))
             {
                 var versions = await verify.ItemVersions
@@ -114,27 +129,25 @@ public sealed class StudioPoolEditorTests(DatabaseFixture database)
 
                 Assert.Equal(2, versions.Count);
 
-                // The original is untouched: a finished attempt that pinned it still reads what it saw.
+                // The original is byte-identical: a finished attempt that pinned it still reads what it saw.
                 Assert.Equal("Pool studio item 1: the depot opens _____ six.", versions[0].Stem);
                 Assert.Equal("A", versions[0].KeyLabel);
+                Assert.Equal("at", versions[0].OptionA);
 
-                // The new version carries the edit, and the binding points at it.
+                // The new version carries the edit.
                 Assert.Equal("Pool studio item: the edited stem.", versions[1].Stem);
                 Assert.Equal("A", versions[1].KeyLabel);
-                Assert.Equal("at", versions[1].OptionA);
-                Assert.Equal("on", versions[1].OptionB);
-
-                var binding = await verify.ExamItems.AsNoTracking()
-                    .SingleAsync(i => i.ItemVersionId == versions[1].ItemVersionId);
-                Assert.Equal(fixture.ExamId, binding.ExamId);
+                Assert.Equal("at six o'clock in the morning", versions[1].OptionA);
+                Assert.Equal("only after seven in the evening", versions[1].OptionB);
             }
 
-            // A re-read shows the edit - the behaviour that was broken when the write went to a table
-            // the read did not consult.
-            var reread = await service.GetExamStudioAsync(fixture.ExamId);
+            // The paper itself is unchanged by a pool edit: its position still pins the version it was
+            // bound to, and the Studio still reads the whole paper.
+            var reread = await new AdminExamService(db, TimeProvider.System).GetExamStudioAsync(fixture.ExamId);
             var after = reread.Sections.Single(s => s.SectionId == fixture.SectionId)
-                .Groups.SelectMany(g => g.Questions).First();
-            Assert.Equal("Pool studio item: the edited stem.", after.Stem);
+                .Groups.SelectMany(g => g.Questions).ToList();
+            Assert.Equal(3, after.Count);
+            Assert.Equal(position.QuestionId, after[0].QuestionId);
         }
         finally
         {

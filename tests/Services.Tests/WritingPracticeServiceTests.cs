@@ -354,7 +354,8 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
                 "The team is discussing the new proposal in the meeting room.");
             await writing.SubmitAttemptAsync(userId, attemptId);
 
-            Assert.Empty(await db.Questions.Where(q => q.ExamId == examId).ToListAsync());
+            // #269: the legacy Questions table is gone, so "no legacy question was seeded" is a schema
+            // fact rather than an assertion.
         }
 
         var (service, _, gradingProcessor, _) = CreateServices();

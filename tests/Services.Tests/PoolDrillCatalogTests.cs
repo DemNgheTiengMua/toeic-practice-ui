@@ -36,8 +36,8 @@ public sealed class PoolDrillCatalogTests(DatabaseFixture database)
 
             await using var db = DbContextFactory.Create(connectionString);
 
-            // The precondition, asserted rather than assumed.
-            Assert.Equal(0, await db.Questions.CountAsync(q => q.Section.CertId == fixture.CertId));
+            // The precondition, asserted rather than assumed. #269: the legacy question tables are gone,
+            // so the certificate's drillable stock is its roster alone.
             Assert.Equal(5, await db.ExamItems.CountAsync(i => i.CertId == fixture.CertId));
 
             var practice = new PracticeService(db, new LearnerService(db));
@@ -59,9 +59,11 @@ public sealed class PoolDrillCatalogTests(DatabaseFixture database)
                     .ToListAsync();
 
                 Assert.Equal(5, answers.Count);
-                Assert.All(answers, a => Assert.Null(a.QuestionId));
+                // #269: the legacy question column is gone, so a pool answer must be a pool answer -
+                // an item, its exact version, and no micro-check card.
                 Assert.All(answers, a => Assert.NotNull(a.ItemId));
                 Assert.All(answers, a => Assert.NotNull(a.ItemVersionId));
+                Assert.All(answers, a => Assert.Null(a.CardId));
             }
 
             // Answer one wrong, then read the summary: grading must work through the pool shape.
@@ -114,12 +116,9 @@ public sealed class PoolDrillCatalogTests(DatabaseFixture database)
                 new SubmitPracticeAnswerInput(
                     SelectedOptionId: first.Options.Single(o => o.Label == "B").OptionId));
 
-            // No per-question history row was written: the cooldown lives in the answer rows now.
-            await using (var verify = DbContextFactory.Create(connectionString))
-            {
-                Assert.Equal(0, await verify.UserQuestionHistories.CountAsync(
-                    h => h.UserId == fixture.UserId));
-            }
+            // The cooldown lives in the answer rows, not in a per-question history table. #269 dropped
+            // UserQuestionHistories with the legacy model, so the cooldown is proved below by the
+            // selector refusing to serve the item again.
 
             // The same cell, drawn again, must not lead with the item just missed.
             var selector = new ItemSelector(db);
