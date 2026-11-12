@@ -230,10 +230,15 @@ public sealed partial class AttemptEngine
     }
 
     /// <summary>
-    /// #186 / #269: a pinned answer is right when the label it recorded is the pinned version's key, or
-    /// when its text matches the version's accepted answers.
+    /// The one place a submitted answer is judged. A pinned answer is right when its keyed LABEL is the
+    /// version's key, its keyed LABEL SET equals the version's key set, or its TEXT matches the version's
+    /// accepted answers.
+    /// <para>
+    /// Public so the rule can be pinned by a test over an <see cref="ItemVersion"/> without a database -
+    /// the same reason <see cref="EvaluatePinnedText"/> is. Its callers inside the engine are unchanged.
+    /// </para>
     /// </summary>
-    private static bool EvaluateAnswer(
+    public static bool EvaluateAnswer(
         AttemptAnswer answer,
         IReadOnlyDictionary<int, ItemVersion> pinnedVersions)
     {
@@ -248,9 +253,51 @@ public sealed partial class AttemptEngine
         // meant an inline_completion (a text answer with no label) was re-graded to false on submit,
         // overwriting the correct grade the save had written - so the sitting said right and the
         // review said wrong. The two now agree because both ask this one method.
-        return string.IsNullOrWhiteSpace(answer.SelectedLabel) && !string.IsNullOrWhiteSpace(answer.ResponseText)
-            ? EvaluatePinnedText(version, answer.ResponseText)
-            : IsKeyLabel(version, answer.SelectedLabel);
+        // #269: a pinned answer is graded by its KEYED LABEL, its KEYED LABEL SET, or its TEXT.
+        //
+        // Two defects this closes, both measured:
+        //  - reading only SelectedLabel meant an inline_completion (text, no label) was re-graded to
+        //    false on submit, overwriting the correct grade the save had written - the sitting said
+        //    right and the review said wrong;
+        //  - reading only SelectedLabel meant a multi_select keyed 'A,C' was ALSO false, because a set
+        //    answer records its choices in SelectedOptionIdsJson and leaves the single label null. A
+        //    learner who ticked both correct boxes was told they were wrong.
+        //
+        // The same rule PracticeService.EvaluatePinnedResponse applies to a drill, so the two cannot
+        // disagree about one item.
+        if (!string.IsNullOrWhiteSpace(answer.SelectedLabel))
+        {
+            return IsKeyLabel(version, answer.SelectedLabel);
+        }
+
+        if (!string.IsNullOrWhiteSpace(answer.SelectedOptionIdsJson))
+        {
+            return EvaluatePinnedLabelSet(version, answer.SelectedOptionIdsJson);
+        }
+
+        return EvaluatePinnedText(version, answer.ResponseText ?? string.Empty);
+    }
+
+    /// <summary>
+    /// #269: whether a set of chosen option ids is exactly the version's key set. A <c>multi_select</c>
+    /// keyed <c>A,C</c> is right only when both and neither more are chosen - the same comparison
+    /// <c>EvaluateObjectiveAnswer</c> made against legacy option rows, expressed over labels because a
+    /// version stores no option rows.
+    /// <para>
+    /// Each chosen id decodes to (version, index); an id from another version decodes to -1 and is
+    /// dropped rather than counted.
+    /// </para>
+    /// </summary>
+    private static bool EvaluatePinnedLabelSet(ItemVersion version, string selectedOptionIdsJson)
+    {
+        var chosen = ParseOptionIds(selectedOptionIdsJson)
+            .Select(id => PoolOptionIndex(id, version.ItemVersionId))
+            .Where(index => index >= 0)
+            .Select(OptionLabel)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var key = KeyLabels(version.KeyLabel);
+        return key.Count > 0 && chosen.SetEquals(key);
     }
 
     /// <summary>
