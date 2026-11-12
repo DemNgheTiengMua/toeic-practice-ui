@@ -66,6 +66,7 @@ public class FullAuditCampaignTests : PlaywrightTestBase
         "/admin/orders/1/detail",
         "/admin/complaints",
         "/admin/complaints/1",
+        "/admin/refunds",
         "/admin/audit",
     ];
 
@@ -117,7 +118,7 @@ public class FullAuditCampaignTests : PlaywrightTestBase
 
             // Money only appears on a handful of screens, but the guard is cheap and a wrong figure is
             // the one thing this campaign must not photograph silently.
-            if (route is "/admin" or "/admin/packages" or "/admin/orders")
+            if (route is "/admin" or "/admin/packages" or "/admin/orders" or "/admin/refunds")
             {
                 await shots.AssertNoAbbreviatedMoneyAsync(route);
             }
@@ -224,7 +225,7 @@ public class FullAuditCampaignTests : PlaywrightTestBase
 
         if (route.StartsWith("/admin/users") || route.StartsWith("/admin/orders")
             || route.StartsWith("/admin/packages") || route.StartsWith("/admin/complaints")
-            || route.StartsWith("/admin/mentors"))
+            || route.StartsWith("/admin/refunds") || route.StartsWith("/admin/mentors"))
         {
             return "operations";
         }
