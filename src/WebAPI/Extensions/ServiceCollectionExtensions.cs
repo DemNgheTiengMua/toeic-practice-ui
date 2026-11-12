@@ -143,6 +143,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<StratifiedAuditService>();
         services.AddScoped<IAdminAuditService, AdminAuditService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+        // #286: the live revision. Registered here so the dead-service guard sees it wired, and scoped so
+        // it shares the request's DbContext rather than taking a second connection per poll.
+        services.AddScoped<IDashboardRevisionService, DashboardRevisionService>();
         services.AddScoped<IPlacementService, PlacementService>();
         // #276: the two-stage draw. Registered so the interface a caller resolves is the same one the
         // dead-service guard checks for - before this, both classes were complete, tested, and reachable

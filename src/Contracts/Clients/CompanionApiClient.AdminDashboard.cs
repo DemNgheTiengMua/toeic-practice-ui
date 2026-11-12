@@ -13,4 +13,7 @@ public sealed partial class CompanionApiClient
 
     public Task<AdminDashboardDto> GetAdminDashboardAsync(CancellationToken cancellationToken = default) =>
         GetAdminDashboardAsync(string.Empty, cancellationToken);
+
+    public Task<DashboardRevision> GetDashboardRevisionAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<DashboardRevision>("api/admin/dashboard/revision", bearerToken, cancellationToken);
 }
