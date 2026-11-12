@@ -127,5 +127,36 @@ public static partial class RefundEndpoints
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
         });
+
+        // #283: the accountant's batch file. A GET because it reads: exporting twice must yield the same
+        // rows, so there is no state for a second call to disturb.
+        admin.MapGet("/export", async (
+            DateOnly? from,
+            DateOnly? to,
+            IRefundService refunds,
+            TimeProvider clock,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                // No range means "today", the day accounting is most often paying for, rather than an
+                // unbounded file that would export the company's whole refund history by accident.
+                var now = ReportingPeriod.LocalInstant(clock.GetUtcNow());
+                var toDay = to ?? DateOnly.FromDateTime(now.DateTime);
+                var fromDay = from ?? toDay;
+
+                var rows = await refunds.GetRefundExportRowsAsync(fromDay, toDay, cancellationToken);
+                var bytes = RefundExportCsv.Format(rows, now);
+
+                return Results.File(
+                    bytes,
+                    RefundExportCsv.ContentType,
+                    $"refunds-{fromDay:yyyy-MM-dd}-to-{toDay:yyyy-MM-dd}.csv");
+            }
+            catch (RefundException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
     }
 }

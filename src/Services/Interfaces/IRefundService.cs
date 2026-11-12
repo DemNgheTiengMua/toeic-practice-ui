@@ -65,4 +65,15 @@ public interface IRefundService
         int staffUserId,
         int refundId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #283: the rows accounting receives for a settling period, oldest settlement first. The range
+    /// selects on <b>settlement</b> date, not request date (ADR-0014): a refund belongs to the period the
+    /// money left, and a refund requested in September but paid in October is October's payment. Reading
+    /// only, so an export changes no status and a second export of the same range yields the same rows.
+    /// </summary>
+    Task<IReadOnlyList<RefundExportRow>> GetRefundExportRowsAsync(
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken = default);
 }

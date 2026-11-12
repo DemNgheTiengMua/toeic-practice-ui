@@ -15,4 +15,8 @@ public interface IAdminRefundsClient
     Task<AdminRefundDetailDto> RejectAdminRefundAsync(int refundId, RejectRefundRequest request, string bearerToken, CancellationToken cancellationToken = default) => RejectAdminRefundAsync(refundId, request, cancellationToken);
     Task<AdminRefundDetailDto> SettleAdminRefundAsync(int refundId, CancellationToken cancellationToken = default);
     Task<AdminRefundDetailDto> SettleAdminRefundAsync(int refundId, string bearerToken, CancellationToken cancellationToken = default) => SettleAdminRefundAsync(refundId, cancellationToken);
+
+    /// <summary>#283: the accounting CSV for a settlement-date range, as a download.</summary>
+    Task<(Stream Stream, string ContentType, string FileName)> ExportAdminRefundsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
+    Task<(Stream Stream, string ContentType, string FileName)> ExportAdminRefundsAsync(DateOnly from, DateOnly to, string bearerToken, CancellationToken cancellationToken = default) => ExportAdminRefundsAsync(from, to, cancellationToken);
 }
