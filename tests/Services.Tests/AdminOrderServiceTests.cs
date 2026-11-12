@@ -135,13 +135,20 @@ public sealed class AdminOrderServiceTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// #279: the dashboard and the orders screen are one question asked twice, so they must answer with
-    /// one number. The rows below are chosen so the old pair of predicates could not agree and neither
-    /// matched the accountant's October: a month is cut at UTC+7 midnight, and a paid order whose
-    /// payment timestamp is missing is counted once, by the day it was created.
+    /// #279 / #284: the dashboard and the orders screen are one question asked twice, so they must answer
+    /// with one number. The rows below are chosen so the old pair of predicates could not agree and neither
+    /// matched the accountant's October: a month is cut at UTC+7 midnight, and a paid order whose payment
+    /// timestamp is missing is counted once, by the day it was created.
+    /// <para>
+    /// #284 splits one question into two. The orders screen reports <b>gross receipts</b> - the money the
+    /// gateway took, which is what an order list is a list of - and the dashboard reports <b>net</b>, which
+    /// subtracts refunds. The two are asserted to agree on the paid half exactly, and the refund row below
+    /// proves the difference is the refund and nothing else: a dashboard that silently went back to gross,
+    /// or an orders screen that started subtracting money it does not list, fails here.
+    /// </para>
     /// </summary>
     [Fact]
-    public async Task Dashboard_and_orders_screen_report_the_same_paid_total_for_the_accountants_month()
+    public async Task Dashboard_and_orders_screen_report_the_same_paid_total_and_differ_only_by_refunds()
     {
         var dbName = $"EEOrderAgree_{Guid.NewGuid():N}"[..25];
         var connStr = await database.CreateFreshDatabaseAsync(dbName);
@@ -152,10 +159,13 @@ public sealed class AdminOrderServiceTests(DatabaseFixture database)
             await using (var db = DbContextFactory.Create(connStr))
             {
                 await db.Database.ExecuteSqlRawAsync("""
-                    INSERT INTO Roles (Code, Name) VALUES ('learner', 'Learner');
+                    INSERT INTO Roles (Code, Name) VALUES ('learner', 'Learner'), ('admin', 'Admin');
                     INSERT INTO Users (RoleId, Email, PasswordHash, FullName, IsDeleted, CreatedAt)
                     VALUES ((SELECT RoleId FROM Roles WHERE Code='learner'), 'agree@test.local', 0x01, N'Agree User', 0, '2026-10-01 00:00:00 +00:00');
                     DECLARE @UserId INT = SCOPE_IDENTITY();
+                    INSERT INTO Users (RoleId, Email, PasswordHash, FullName, IsDeleted, CreatedAt)
+                    VALUES ((SELECT RoleId FROM Roles WHERE Code='admin'), 'agreeadmin@test.local', 0x01, N'Agree Admin', 0, '2026-10-01 00:00:00 +00:00');
+                    DECLARE @AdminId INT = SCOPE_IDENTITY();
 
                     INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
                     VALUES (N'AgreePack', 5, 199000, 1, 0, N'Features', 1);
@@ -176,6 +186,11 @@ public sealed class AdminOrderServiceTests(DatabaseFixture database)
                     -- Paid in September: in neither screen's October.
                     INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
                     VALUES (@UserId, @PkgId, 'paid', 299000, 'DH-AGREE-0004', 30004, 'payos', '2026-09-20 10:00:00 +00:00', '2026-09-20 10:05:00 +00:00');
+
+                    -- One money refund settled in October. It is the whole difference between the screens.
+                    INSERT INTO Refunds (UserId, Method, Reason, Status, Amount, RequestedByUserId, DecidedByUserId, DecidedAt, SettledByUserId, SettledAt, CreatedAt)
+                    VALUES (@UserId, 'money', N'Service not delivered', 'settled', 100000, @AdminId, @AdminId,
+                            '2026-10-10 09:00:00 +00:00', @AdminId, '2026-10-12 09:00:00 +00:00', '2026-10-10 09:00:00 +00:00');
                     """);
             }
 
@@ -187,9 +202,11 @@ public sealed class AdminOrderServiceTests(DatabaseFixture database)
                 .GetOrdersAsync();
 
             Assert.Equal(2, dashboard.PaidOrdersThisMonthCount);
-            Assert.Equal(199000m + 99000m, dashboard.RevenueThisMonthVnd);
             Assert.Equal(dashboard.PaidOrdersThisMonthCount, orders.PaidThisMonthCount);
-            Assert.Equal(dashboard.RevenueThisMonthVnd, orders.PaidThisMonthAmount);
+
+            // Gross: the gateway took 298,000. Net: 100,000 of it went back, so October kept 198,000.
+            Assert.Equal(199000m + 99000m, orders.PaidThisMonthAmount);
+            Assert.Equal(199000m + 99000m - 100000m, dashboard.RevenueThisMonthVnd);
         }
         finally
         {

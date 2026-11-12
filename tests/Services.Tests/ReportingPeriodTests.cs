@@ -22,6 +22,17 @@ public sealed class ReportingPeriodTests
 
     private static IQueryable<Order> Orders(params Order[] orders) => orders.AsQueryable();
 
+    private static IQueryable<Refund> Refunds(params Refund[] refunds) => refunds.AsQueryable();
+
+    private static Refund Settled(DateTimeOffset? settledAt, decimal amount = 100000m) => new()
+    {
+        Method = RefundMethod.Money.ToCode(),
+        Status = settledAt is null ? RefundStatus.Approved.ToCode() : RefundStatus.Settled.ToCode(),
+        SettledAt = settledAt,
+        Amount = amount,
+        CreatedAt = settledAt ?? default,
+    };
+
     /// <summary>
     /// 23:30 on 31 October in Vietnam is 16:30Z the same day. Shifting the boundary by UTC instead of by
     /// the accountant's offset files this order in November, and October closes one order early.
@@ -90,5 +101,66 @@ public sealed class ReportingPeriodTests
         Assert.Equal(new DateTimeOffset(2026, 10, 1, 0, 0, 0, Vn), september.End);
         Assert.Empty(Orders(atBoundary).PaidIn(september));
         Assert.Single(Orders(atBoundary).PaidIn(october));
+    }
+
+    /// <summary>
+    /// #284: a money refund counts on the day the money actually left - settlement - and not on the day
+    /// somebody asked for it. An accountant reading October is owed the transfers that left in October.
+    /// </summary>
+    [Fact]
+    public void A_money_refund_counts_in_its_settlement_window_not_its_request_window()
+    {
+        var requested = new DateTimeOffset(2026, 10, 2, 9, 0, 0, Vn);
+        var settled = new DateTimeOffset(2026, 11, 3, 9, 0, 0, Vn);
+
+        var refund = Settled(settled);
+        refund.CreatedAt = requested;
+
+        Assert.Empty(Refunds(refund).MoneyRefundedIn(ReportingPeriod.Month(requested)));
+        Assert.Single(Refunds(refund).MoneyRefundedIn(ReportingPeriod.Month(settled)));
+    }
+
+    /// <summary>
+    /// #284: credits are not money. A credit refund moved no money, so subtracting it from revenue would
+    /// state a figure nobody can reconcile against a bank statement.
+    /// </summary>
+    [Fact]
+    public void A_credit_refund_is_never_money_refunded()
+    {
+        var at = new DateTimeOffset(2026, 10, 5, 10, 0, 0, Vn);
+        var refund = Settled(at);
+        refund.Method = RefundMethod.Credit.ToCode();
+        refund.Amount = null;
+        refund.CreditCount = 5;
+        refund.Status = RefundStatus.Approved.ToCode();
+        refund.SettledAt = null;
+
+        Assert.Empty(Refunds(refund).MoneyRefundedIn(ReportingPeriod.Month(at)));
+    }
+
+    /// <summary>
+    /// A money refund that has been approved but not paid out has no settlement date yet, so it belongs to
+    /// no window at all. Approving is a decision; only the transfer moves the revenue figure.
+    /// </summary>
+    [Fact]
+    public void An_unsettled_money_refund_belongs_to_no_window()
+    {
+        var at = new DateTimeOffset(2026, 10, 5, 10, 0, 0, Vn);
+
+        Assert.Empty(Refunds(Settled(null)).MoneyRefundedIn(ReportingPeriod.Month(at)));
+    }
+
+    /// <summary>
+    /// 23:30 on 31 October Vietnam time is 16:30Z the same day, so a refund settled in the last half hour
+    /// of the month closes October rather than opening November.
+    /// </summary>
+    [Fact]
+    public void A_refund_settled_at_half_past_eleven_at_night_belongs_to_that_day()
+    {
+        var settled = new DateTimeOffset(2026, 10, 31, 23, 30, 0, Vn);
+
+        Assert.Single(Refunds(Settled(settled)).MoneyRefundedIn(ReportingPeriod.Day(settled)));
+        Assert.Single(Refunds(Settled(settled)).MoneyRefundedIn(ReportingPeriod.Month(settled)));
+        Assert.Empty(Refunds(Settled(settled)).MoneyRefundedIn(ReportingPeriod.Day(settled.AddDays(1))));
     }
 }
