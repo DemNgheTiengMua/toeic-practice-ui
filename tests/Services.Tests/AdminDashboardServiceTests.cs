@@ -433,8 +433,9 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
         var connStr = await database.CreateFreshDatabaseAsync(dbName);
         try
         {
-            // Leap year: 2028-02-29
-            var leapClock = new ManualTimeProvider(new DateTimeOffset(2028, 2, 29, 23, 59, 59, TimeSpan.Zero));
+            // Leap year: 2028-02-29, at 19:00 Vietnam time so the accountant's calendar agrees with the
+            // instant. 23:59:59Z would be 1 March locally and this test would no longer be about February.
+            var leapClock = new ManualTimeProvider(new DateTimeOffset(2028, 2, 29, 12, 0, 0, TimeSpan.Zero));
             var now = leapClock.GetUtcNow();
 
             await using (var db = DbContextFactory.Create(connStr))

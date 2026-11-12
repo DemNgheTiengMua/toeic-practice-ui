@@ -12,7 +12,7 @@ public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider cl
     public async Task<AdminDashboardDto> GetDashboardMetricsAsync(CancellationToken cancellationToken = default)
     {
         var now = clock.GetUtcNow();
-        var startOfMonth = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+        var startOfMonth = ReportingPeriod.Month(now).Start;
         var sevenDaysAgo = now.AddDays(-7);
         var thirtyMinutesAgo = now.AddMinutes(-30);
 
@@ -41,14 +41,13 @@ public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider cl
 
         var creditsUsedThisMonth = Math.Max(0, creditsDebited - creditsRefunded);
 
-        var dayOfMonth = Math.Max(1, now.Day);
+        var dayOfMonth = Math.Max(1, ReportingPeriod.LocalInstant(now).Day);
         var creditsPerDayAverage = Math.Round((decimal)creditsUsedThisMonth / dayOfMonth, 1);
 
         // 3. Revenue (This Month)
         var paidOrdersQuery = db.Orders
             .AsNoTracking()
-            .Where(o => o.Status == OrderStatus.Paid.ToCode() &&
-                        (o.PaidAt >= startOfMonth || (o.PaidAt == null && o.CreatedAt >= startOfMonth)));
+            .PaidIn(ReportingPeriod.Month(now));
 
         var paidOrdersThisMonthCount = await paidOrdersQuery.CountAsync(cancellationToken);
         var revenueThisMonthVnd = await paidOrdersQuery.SumAsync(o => (decimal?)o.Amount, cancellationToken) ?? 0m;
