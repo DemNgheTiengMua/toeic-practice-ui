@@ -133,4 +133,67 @@ public sealed class AdminOrderServiceTests(DatabaseFixture database)
         var detail = await service.GetOrderDetailAsync(999999);
         Assert.Null(detail);
     }
+
+    /// <summary>
+    /// #279: the dashboard and the orders screen are one question asked twice, so they must answer with
+    /// one number. The rows below are chosen so the old pair of predicates could not agree and neither
+    /// matched the accountant's October: a month is cut at UTC+7 midnight, and a paid order whose
+    /// payment timestamp is missing is counted once, by the day it was created.
+    /// </summary>
+    [Fact]
+    public async Task Dashboard_and_orders_screen_report_the_same_paid_total_for_the_accountants_month()
+    {
+        var dbName = $"EEOrderAgree_{Guid.NewGuid():N}"[..25];
+        var connStr = await database.CreateFreshDatabaseAsync(dbName);
+        try
+        {
+            var clock = new ManualTimeProvider(new DateTimeOffset(2026, 10, 15, 12, 0, 0, TimeSpan.Zero));
+
+            await using (var db = DbContextFactory.Create(connStr))
+            {
+                await db.Database.ExecuteSqlRawAsync("""
+                    INSERT INTO Roles (Code, Name) VALUES ('learner', 'Learner');
+                    INSERT INTO Users (RoleId, Email, PasswordHash, FullName, IsDeleted, CreatedAt)
+                    VALUES ((SELECT RoleId FROM Roles WHERE Code='learner'), 'agree@test.local', 0x01, N'Agree User', 0, '2026-10-01 00:00:00 +00:00');
+                    DECLARE @UserId INT = SCOPE_IDENTITY();
+
+                    INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
+                    VALUES (N'AgreePack', 5, 199000, 1, 0, N'Features', 1);
+                    DECLARE @PkgId INT = SCOPE_IDENTITY();
+
+                    -- Paid 23:30 on 31 October Vietnam time: the last half hour of the month. October.
+                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, @PkgId, 'paid', 199000, 'DH-AGREE-0001', 30001, 'payos', '2026-10-31 16:20:00 +00:00', '2026-10-31 16:30:00 +00:00');
+
+                    -- Paid 00:30 on 1 November Vietnam time = 17:30Z on 31 October. November, not October.
+                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, @PkgId, 'paid', 499000, 'DH-AGREE-0002', 30002, 'payos', '2026-10-31 17:25:00 +00:00', '2026-10-31 17:30:00 +00:00');
+
+                    -- Paid with no payment timestamp, created 5 October: counted once, by its creation day.
+                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, @PkgId, 'paid', 99000, 'DH-AGREE-0003', 30003, 'mock', '2026-10-05 10:00:00 +00:00', NULL);
+
+                    -- Paid in September: in neither screen's October.
+                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, @PkgId, 'paid', 299000, 'DH-AGREE-0004', 30004, 'payos', '2026-09-20 10:00:00 +00:00', '2026-09-20 10:05:00 +00:00');
+                    """);
+            }
+
+            await using var dashboardDb = DbContextFactory.Create(connStr);
+            await using var ordersDb = DbContextFactory.Create(connStr);
+
+            var dashboard = await new AdminDashboardService(dashboardDb, clock).GetDashboardMetricsAsync();
+            var orders = await new AdminOrderService(ordersDb, new PaymentService(ordersDb, new MockPaymentGateway()), clock)
+                .GetOrdersAsync();
+
+            Assert.Equal(2, dashboard.PaidOrdersThisMonthCount);
+            Assert.Equal(199000m + 99000m, dashboard.RevenueThisMonthVnd);
+            Assert.Equal(dashboard.PaidOrdersThisMonthCount, orders.PaidThisMonthCount);
+            Assert.Equal(dashboard.RevenueThisMonthVnd, orders.PaidThisMonthAmount);
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(dbName);
+        }
+    }
 }
