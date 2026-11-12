@@ -13,6 +13,25 @@
   var inFlight = false;
   var queued = false;
 
+  // Focusable things inside the region, in document order - the ordinal is how focus is put back after a
+  // swap. The fragment renders the same structure, so ordinal N before the swap is the same control after
+  // it. Without this, a keyboard user tabbing to the card footer has focus silently dropped to the body
+  // every thirty seconds.
+  var focusable = "a[href], button, input, select, textarea, [tabindex]:not([tabindex='-1'])";
+
+  function captureFocus() {
+    if (!region.contains(document.activeElement)) return -1;
+    return Array.prototype.indexOf.call(region.querySelectorAll(focusable), document.activeElement);
+  }
+
+  function restoreFocus(index) {
+    if (index < 0) return;
+    var target = region.querySelectorAll(focusable)[index];
+    // focus() only works on an attached, visible element; a fragment that legitimately dropped the control
+    // leaves focus where the browser put it rather than throwing inside the refresh.
+    if (target) target.focus({ preventScroll: true });
+  }
+
   function setState(text, modifier) {
     if (!indicator) return;
     indicator.textContent = text;
@@ -26,6 +45,7 @@
     }
 
     inFlight = true;
+    var focused = captureFocus();
     try {
       var response = await fetch(fragmentUrl, {
         credentials: "same-origin",
@@ -38,6 +58,7 @@
       // position, focus and any half-filled form, and replays no reveal animation - the animations in this
       // system run once on a fresh element, and the region element itself is never recreated.
       region.innerHTML = await response.text();
+      restoreFocus(focused);
     } catch (error) {
       // The stream may still be up; a single failed fragment read is not a dropped connection, so the
       // indicator is left to the stream's own handlers rather than being painted as dead here.
