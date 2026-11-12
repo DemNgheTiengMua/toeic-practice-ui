@@ -59,6 +59,16 @@ public static class DashboardStream
         response.Headers.CacheControl = "no-store";
         response.Headers["X-Accel-Buffering"] = "no";
 
+        // A comment line, then the first reading is taken as a baseline. Both matters:
+        //
+        // The comment is what makes the connection observable. SSE dispatches `open` to the client only once
+        // bytes arrive, and the first tick is thirty seconds away, so without this a freshly loaded
+        // dashboard sits on "Connecting..." for half a minute while the stream is in fact healthy. Measured:
+        // twenty seconds of a browser showing "Connecting..." on a stream that had already answered 200 with
+        // text/event-stream. A line beginning with ':' is a comment per the SSE format and dispatches no
+        // event, so this announces liveness without buying the redundant fragment fetch a real event would.
+        await WriteRawAsync(response, ": connected\n\n", cancellationToken);
+
         DashboardRevision? baseline = null;
 
         try
@@ -88,6 +98,12 @@ public static class DashboardStream
             // not a fault: nothing is logged and nothing is rethrown, or every closed dashboard would leave
             // an exception in the log and read as an outage.
         }
+    }
+
+    private static async Task WriteRawAsync(HttpResponse response, string text, CancellationToken cancellationToken)
+    {
+        await response.WriteAsync(text, cancellationToken);
+        await response.Body.FlushAsync(cancellationToken);
     }
 
     private static async Task WriteEventAsync(

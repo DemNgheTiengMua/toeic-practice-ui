@@ -95,6 +95,40 @@ public sealed class DashboardStreamTests
         Assert.Equal("no", response.Headers["X-Accel-Buffering"].ToString());
     }
 
+    /// <summary>
+    /// The connection must be observable before the first tick.
+    /// <para>
+    /// SSE dispatches <c>open</c> only when bytes arrive, and the first tick is thirty seconds away, so a
+    /// freshly loaded dashboard sat on "Connecting..." for half a minute while the stream was healthy. Found
+    /// in a browser, not here: the stream answered 200 with <c>text/event-stream</c> and then wrote nothing.
+    /// The leading comment line is what fixes it, and it must come before any reading.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task The_stream_writes_a_comment_first_so_the_connection_is_observable_at_once()
+    {
+        var body = await Run(Revision(7), Revision(7));
+
+        Assert.StartsWith(": connected\n\n", body);
+
+        // A comment dispatches no event, so it must not be mistaken for one.
+        Assert.Equal(0, Occurrences(body, "event: connected"));
+    }
+
+    /// <summary>
+    /// Slack's SSE convention, and the reason the comment is ':' rather than a named event: the browser
+    /// dispatches nothing for it. Pinned as a literal so a future edit that "tidies" it into an event fails
+    /// here rather than in a browser nobody is watching.
+    /// </summary>
+    [Fact]
+    public async Task The_comment_line_is_not_delivered_as_an_event_name()
+    {
+        var body = await Run(Revision(1), Revision(2));
+
+        var firstLine = body.Split('\n')[0];
+        Assert.Equal(": connected", firstLine);
+    }
+
     private static async Task<string> Run(params DashboardRevision[] readings)
     {
         var response = await RunResponse(readings);
