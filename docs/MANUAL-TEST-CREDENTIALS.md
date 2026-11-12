@@ -133,6 +133,18 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5001/api/learner/weak
 
 Health check: `curl http://localhost:5001/healthz` → `Healthy`.
 
+### Browsing the API instead
+
+The API documents itself. Open **http://localhost:5001/scalar**, and the page has already signed
+in as `admin@demo.local` — the bearer token is attached, so an authenticated route can be called
+with no token handling. The document is at `/openapi/v1.json`.
+
+The page and the token are produced by one flag, and the flag's sign-in is a **complete back
+door**: `POST /api/auth/demo-sign-in` mints an admin token for anyone who can reach it, and the
+demo password is in this file. It is convenient on a laptop and unacceptable on the public
+internet. Set `OpenApi__Enabled=false` on anything reachable from outside; that removes the
+document, the UI and the sign-in endpoint together. The shipped default is on.
+
 ---
 
 ## 6. What is NOT covered by the seed

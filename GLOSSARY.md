@@ -98,3 +98,27 @@ _Avoid_: Question group, item set, composite question
 The specification of millisecond offsets (`AudioStartMs`, `AudioEndMs`) against an exam section's master audio track to isolate playback for a specific question cluster.
 _Avoid_: Audio clipping, audio trimming, time stamping
 
+**Refund**:
+A return of value to a learner, recorded as a decision with a requester, a decider and a reason. It is not the make-good grant on a complaint, which is a bounded apology rather than a return of what was taken.
+_Avoid_: Compensation, cashback, reimbursement, payment reversal
+
+**Refund method**:
+Which form of value a refund returns: **credit**, posted to the credit ledger the moment it is approved, or **money**, paid by the accountant outside the product. One refund carries exactly one method.
+_Avoid_: Refund type, refund kind
+
+**Settlement**:
+The act of the accountant recording that a money refund has actually been paid. It is the only moment money is treated as having left, and it is distinct from approval, which is only the decision to pay.
+_Avoid_: Payout, disbursement, completion
+
+**Net revenue**:
+Money received from paid orders in a period, minus money refunds settled in that same period. It may be negative, and a negative figure is a fact about the period rather than an error.
+_Avoid_: Income, earnings, turnover, gross revenue
+
+**Reporting day**:
+The day an accounting figure is attributed to, cut at UTC+7 regardless of the server's timezone. A payment timestamped 23:30 Vietnam time belongs to that reporting day.
+_Avoid_: Business day, calendar day, local day
+
+**Live metrics revision**:
+A comparable value derived from counts and sums over dashboard-relevant rows. The dashboard refreshes when it changes, so this is its own concept and not a cache key.
+_Avoid_: Watermark, version stamp, updated-at, ETag
+

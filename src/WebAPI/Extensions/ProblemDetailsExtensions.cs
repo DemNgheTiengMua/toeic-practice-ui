@@ -28,13 +28,21 @@ public static class ProblemDetailsExtensions
         app.UseExceptionHandler(errorApp =>
             errorApp.Run(async context =>
             {
-                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                // A binding failure is the CLIENT's error, not ours: minimal APIs throw
+                // BadHttpRequestException for a missing or unparseable parameter, and on .NET 10 and
+                // earlier that arrives here looking like any other crash. Without this line a caller
+                // who forgets a query parameter is told the server is broken (500 UNEXPECTED) and the
+                // detail page logs a defect that never happened.
+                var error = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+                var badRequest = error as BadHttpRequestException;
+
+                context.Response.StatusCode = badRequest?.StatusCode ?? StatusCodes.Status500InternalServerError;
                 var problem = new ProblemDetails
                 {
-                    Title = "An unexpected error occurred.",
-                    Status = StatusCodes.Status500InternalServerError,
+                    Title = badRequest is null ? "An unexpected error occurred." : "The request is not valid.",
+                    Status = context.Response.StatusCode,
                 };
-                problem.Extensions["code"] = ApiError.Codes.Unexpected;
+                problem.Extensions["code"] = badRequest is null ? ApiError.Codes.Unexpected : ApiError.Codes.Validation;
                 await context.Response.WriteAsJsonAsync(problem);
             }));
 
@@ -71,12 +79,20 @@ public static class ProblemDetailsExtensions
             var response = context.HttpContext.Response;
             var problem = new ProblemDetails
             {
-                Title = status == StatusCodes.Status404NotFound ? "Not Found" : "Error",
+                Title = status switch
+                {
+                    StatusCodes.Status404NotFound => "Not Found",
+                    StatusCodes.Status400BadRequest => "The request is not valid.",
+                    _ => "Error",
+                },
                 Status = status,
             };
-            problem.Extensions["code"] = status == StatusCodes.Status404NotFound
-                ? ApiError.Codes.NotFound
-                : ApiError.Codes.Unexpected;
+            problem.Extensions["code"] = status switch
+            {
+                StatusCodes.Status404NotFound => ApiError.Codes.NotFound,
+                StatusCodes.Status400BadRequest => ApiError.Codes.Validation,
+                _ => ApiError.Codes.Unexpected,
+            };
             await response.WriteAsJsonAsync(problem);
         });
 

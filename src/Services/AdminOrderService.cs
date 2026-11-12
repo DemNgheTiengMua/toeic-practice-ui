@@ -27,11 +27,10 @@ public sealed class AdminOrderService(
         await paymentService.ExpireStaleOrdersAsync(olderThanMinutes: 15, cancellationToken);
 
         var now = clock.GetUtcNow();
-        var startOfMonth = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
 
         var paidThisMonth = await db.Orders
             .AsNoTracking()
-            .Where(o => o.Status == OrderStatus.Paid.ToCode() && o.PaidAt >= startOfMonth)
+            .PaidIn(ReportingPeriod.Month(now))
             .Select(o => o.Amount)
             .ToListAsync(cancellationToken);
 
