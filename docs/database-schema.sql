@@ -4035,7 +4035,8 @@ CREATE TABLE CreditTransactions (
   Reason   VARCHAR(16) NOT NULL
     CONSTRAINT CK_CreditTxn_Reason CHECK (Reason IN
       ('purchase','admin_grant','mock_exam_start','ai_grading','mentor_booking','admin_revoke',
-       'booking_cancel')),   -- UI-31 (gap 8): refund of a cancelled booking
+       'booking_cancel',   -- UI-31 (gap 8): refund of a cancelled booking
+       'refund_credit')),  -- #280: the credits a credit refund granted
   Delta    INT NOT NULL CONSTRAINT CK_CreditTxn_NonZero CHECK (Delta <> 0),
   OrderId       INT NULL,
   AttemptId     INT NULL,
@@ -4045,8 +4046,8 @@ CREATE TABLE CreditTransactions (
   Note          NVARCHAR(400) NULL,
   CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   CONSTRAINT CK_CreditTxn_AdminActor CHECK (
-       (Reason IN ('admin_grant','admin_revoke') AND AdminUserId IS NOT NULL AND Note IS NOT NULL)
-    OR (Reason NOT IN ('admin_grant','admin_revoke') AND AdminUserId IS NULL)),
+       (Reason IN ('admin_grant','admin_revoke','refund_credit') AND AdminUserId IS NOT NULL AND Note IS NOT NULL)
+    OR (Reason NOT IN ('admin_grant','admin_revoke','refund_credit') AND AdminUserId IS NULL)),
   -- M-16: lets Complaints prove the linked grant belongs to the complainant
   CONSTRAINT UQ_CreditTxn_Id_User UNIQUE (TxnId, UserId),
   -- H-1: composite FKs carry UserId so the source row's owner must match the charged wallet.
@@ -4062,18 +4063,25 @@ CREATE TABLE CreditTransactions (
   CONSTRAINT FK_CreditTxn_Attempt FOREIGN KEY (AttemptId, UserId)     REFERENCES ExamAttempts(AttemptId, UserId),
   CONSTRAINT FK_CreditTxn_Booking FOREIGN KEY (BookingId, UserId)     REFERENCES Bookings(BookingId, UserId),
   -- sign per reason
+  -- #280: refund_credit is positive - a refund gives value back, it never takes it. The negative
+  -- variant (clawing back a refund) would be a separate reason with its own evidence, not this one
+  -- with a flipped sign.
   CONSTRAINT CK_CreditTxn_DeltaSign CHECK (
-       (Reason IN ('purchase','admin_grant','booking_cancel') AND Delta > 0)
+       (Reason IN ('purchase','admin_grant','booking_cancel','refund_credit') AND Delta > 0)
     OR (Reason IN ('mock_exam_start','ai_grading','mentor_booking','admin_revoke') AND Delta < 0)
   ),
   -- exactly the source column matching the reason is set (admin_* carry none)
+  -- #280: refund_credit carries NO source column either, for a reason the ledger cannot express: the
+  -- order that was refunded is already claimed by the 'purchase' row under UX_CreditTxn_Order (unique
+  -- on OrderId), so a refund credit pointing at the order would be refused as a second row for one
+  -- order. The order link therefore lives on Refunds.OrderId, one table over.
   CONSTRAINT CK_CreditTxn_Source CHECK (
        (Reason='purchase'        AND OrderId IS NOT NULL AND AttemptId IS NULL AND BookingId IS NULL)
     OR (Reason='mock_exam_start' AND AttemptId IS NOT NULL AND OrderId IS NULL AND BookingId IS NULL)
     OR (Reason='ai_grading'      AND AttemptId IS NOT NULL AND OrderId IS NULL AND BookingId IS NULL)
     OR (Reason IN ('mentor_booking','booking_cancel')
                                  AND BookingId IS NOT NULL AND OrderId IS NULL AND AttemptId IS NULL)
-    OR (Reason IN ('admin_grant','admin_revoke') AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL)
+    OR (Reason IN ('admin_grant','admin_revoke','refund_credit') AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL)
   )
 );
 GO
@@ -4235,6 +4243,108 @@ BEGIN
       AND t.Reason <> 'admin_grant'
   )
     THROW 50023, 'ResolvedByGrantTxnId must reference an admin_grant transaction.', 1;
+END;
+GO
+-- #280: a refund is a first-class record with two methods. It exists here, after CreditTransactions,
+-- because a credit refund names the ledger row it posted (FK_Refunds_CreditTxn) and only that table
+-- carries the (TxnId, UserId) target.
+--
+-- The complaint half needs a composite target of its own first: Complaints had no (ComplaintId, UserId)
+-- unique key because nothing until now pointed at a complaint and proved its owner in one FK.
+ALTER TABLE Complaints ADD CONSTRAINT UQ_Complaints_Id_User UNIQUE (ComplaintId, UserId);
+GO
+--
+-- Method and amount are ONE decision enforced by the schema, not two the service keeps in step: the
+-- method names which column the value lives in, and CK_Refunds_MethodOwnsAmount refuses both a money
+-- refund with no amount and a credit refund that also carries one. A service that forgot the second
+-- half would leave a row saying "credit" next to a cash figure, which is the shape accounting cannot
+-- read and nobody can repair later.
+CREATE TABLE Refunds (
+  RefundId   INT IDENTITY(1,1) PRIMARY KEY,
+  UserId     INT NOT NULL REFERENCES Users(UserId),
+  -- optional: a refund can compensate a failure that produced no complaint (spec AC 4)
+  ComplaintId INT NULL,
+  -- optional: a refund with no order behind it is capped by a configured ceiling at the service
+  -- boundary, so NULL here is legal and not an omission.
+  OrderId    INT NULL,
+  Method     VARCHAR(6) NOT NULL
+    CONSTRAINT CK_Refunds_Method CHECK (Method IN ('money','credit')),
+  Reason     NVARCHAR(400) NOT NULL
+    CONSTRAINT CK_Refunds_ReasonNotEmpty CHECK (LEN(LTRIM(RTRIM(Reason))) > 0),
+  Status     VARCHAR(10) NOT NULL DEFAULT 'requested'
+    CONSTRAINT CK_Refunds_Status CHECK (Status IN ('requested','approved','settled','rejected')),
+  -- DECIMAL(12,2) is Orders.Amount's exact type on purpose: net revenue subtracts one from the other,
+  -- and a narrower or differently-scaled column would round in the middle of a money report.
+  Amount     DECIMAL(12,2) NULL,
+  CreditCount INT NULL,
+  RequestedByUserId INT NOT NULL CONSTRAINT FK_Refunds_RequestedBy REFERENCES Users(UserId),
+  DecidedByUserId   INT NULL CONSTRAINT FK_Refunds_DecidedBy   REFERENCES Users(UserId),
+  DecidedAt  DATETIMEOFFSET NULL,
+  SettledByUserId   INT NULL CONSTRAINT FK_Refunds_SettledBy   REFERENCES Users(UserId),
+  SettledAt  DATETIMEOFFSET NULL,
+  -- the ledger row a credit refund posted (spec: also the evidence the credits were really granted)
+  CreditTxnId INT NULL,
+  CreatedAt  DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- the method OWNS the amount: exactly one of the two value columns is set, and it is the one the
+  -- method names. Written as two arms rather than an XOR so a credit refund carrying money is refused
+  -- by its own reason instead of looking like a mistyped money refund.
+  CONSTRAINT CK_Refunds_MethodOwnsAmount CHECK (
+       (Method='money'  AND Amount IS NOT NULL AND Amount > 0 AND CreditCount IS NULL)
+    OR (Method='credit' AND CreditCount IS NOT NULL AND CreditCount > 0 AND Amount IS NULL)),
+  -- a credit refund ends at 'approved': the ledger, not a bank, is where the value lands, so there is
+  -- nothing left for an accountant to settle.
+  CONSTRAINT CK_Refunds_SettledIsMoney CHECK (Status <> 'settled' OR Method='money'),
+  -- a status that RECORDS A DECISION cannot be reached without the decision: both the actor and the
+  -- timestamp, because "who" without "when" cannot be reported on and "when" without "who" is not an
+  -- audit trail. 'requested' is the only status with no decision behind it.
+  CONSTRAINT CK_Refunds_DecisionStamped CHECK (
+       Status='requested'
+    OR (DecidedByUserId IS NOT NULL AND DecidedAt IS NOT NULL)),
+  -- the settle stamps belong to 'settled' and to nothing else, and a money refund marked settled must
+  -- carry them. Same reason as the decision arm, on the second transition.
+  CONSTRAINT CK_Refunds_SettleStamped CHECK (
+       (Status='settled' AND SettledByUserId IS NOT NULL AND SettledAt IS NOT NULL)
+    OR (Status<>'settled' AND SettledByUserId IS NULL AND SettledAt IS NULL)),
+  -- the ledger row a credit refund posted is a fact about a CREDIT refund only
+  CONSTRAINT CK_Refunds_CreditTxnIsCredit CHECK (CreditTxnId IS NULL OR Method='credit'),
+  -- composite targets: each FK proves the referenced row belongs to the refunded learner, the same
+  -- H-1 pattern CreditTransactions uses for its three source columns.
+  CONSTRAINT UQ_Refunds_Id_User UNIQUE (RefundId, UserId),
+  CONSTRAINT FK_Refunds_OrderUser FOREIGN KEY (OrderId, UserId) REFERENCES Orders(OrderId, UserId),
+  CONSTRAINT FK_Refunds_ComplaintUser FOREIGN KEY (ComplaintId, UserId) REFERENCES Complaints(ComplaintId, UserId),
+  CONSTRAINT FK_Refunds_CreditTxn FOREIGN KEY (CreditTxnId, UserId) REFERENCES CreditTransactions(TxnId, UserId)
+);
+GO
+-- the queue an accountant works from, and the range its CSV is exported over
+CREATE INDEX IX_Refunds_Status ON Refunds(Status, CreatedAt);
+CREATE INDEX IX_Refunds_User   ON Refunds(UserId);
+CREATE INDEX IX_Refunds_Order  ON Refunds(OrderId) WHERE OrderId IS NOT NULL;
+GO
+-- #280: no delete path. A rejected refund stays a rejected refund (spec: "append-and-transition only"),
+-- and a deleted refund would silently move the month's net revenue after accounting had exported it.
+CREATE TRIGGER trg_Refunds_AppendOnly
+ON Refunds AFTER DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (SELECT 1 FROM deleted)
+    THROW 50041, 'Refunds is append-and-transition only; a refund cannot be deleted.', 1;
+END;
+GO
+-- #280: the row a credit refund posts is a 'refund_credit' grant, not an arbitrary ledger row. A CHECK
+-- cannot read another table, so it is a trigger - the same reason trg_Complaints_GrantMustBeAdminGrant
+-- exists beside FK_Complaints_GrantTxn.
+CREATE TRIGGER trg_Refunds_CreditTxnIsRefundCredit
+ON Refunds AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN CreditTransactions t ON t.TxnId = i.CreditTxnId
+    WHERE i.CreditTxnId IS NOT NULL
+      AND (t.Reason <> 'refund_credit' OR t.Delta <> i.CreditCount)
+  )
+    THROW 50042, 'A credit refund must point at the refund_credit ledger row that granted exactly its CreditCount.', 1;
 END;
 GO
 -- expire stale pending orders (carried from old schema; frees UX_Orders_OnePendingPerUser)

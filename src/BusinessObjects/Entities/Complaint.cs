@@ -59,6 +59,10 @@ public partial class Complaint
     [InverseProperty("Complaints")]
     public virtual Order? Order { get; set; }
 
+    /// <summary>#280: refunds recorded against this complaint. A make-good grant may sit beside them.</summary>
+    [InverseProperty("Complaint")]
+    public virtual ICollection<Refund> Refunds { get; set; } = new List<Refund>();
+
     [ForeignKey("ResolvedByUserId")]
     [InverseProperty("ComplaintResolvedByUsers")]
     public virtual User? ResolvedByUser { get; set; }

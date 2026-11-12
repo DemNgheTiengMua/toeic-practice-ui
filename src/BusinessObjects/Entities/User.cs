@@ -140,4 +140,20 @@ public partial class User
     /// <summary>#159 review: micro-checks this learner has already had graded.</summary>
     [InverseProperty("User")]
     public virtual ICollection<LearnerLessonMicroCheck> LearnerLessonMicroChecks { get; set; } = new List<LearnerLessonMicroCheck>();
+
+    /// <summary>#280: refunds made to this learner.</summary>
+    [InverseProperty("User")]
+    public virtual ICollection<Refund> RefundUsers { get; set; } = new List<Refund>();
+
+    /// <summary>#280: refunds this account requested.</summary>
+    [InverseProperty("RequestedByUser")]
+    public virtual ICollection<Refund> RefundRequestedByUsers { get; set; } = new List<Refund>();
+
+    /// <summary>#280: refunds this account approved or rejected.</summary>
+    [InverseProperty("DecidedByUser")]
+    public virtual ICollection<Refund> RefundDecidedByUsers { get; set; } = new List<Refund>();
+
+    /// <summary>#280: refunds this account marked settled.</summary>
+    [InverseProperty("SettledByUser")]
+    public virtual ICollection<Refund> RefundSettledByUsers { get; set; } = new List<Refund>();
 }
