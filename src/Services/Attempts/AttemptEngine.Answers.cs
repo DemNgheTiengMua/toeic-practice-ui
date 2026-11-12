@@ -196,7 +196,8 @@ public sealed partial class AttemptEngine
                 AttemptId = attemptId,
                 ExamItemId = position.ExamItemId,
                 ExamId = attempt.ExamId,
-                SkillId = position.Section.SkillId,
+                SectionId = position.SectionId,
+            SkillId = position.Section.SkillId,
                 QuestionType = QuestionType.FreeResponse.ToCode(),
                 Status = FreeResponseStatus.Draft.ToCode(),
                 SubmittedAt = null

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
@@ -148,7 +148,8 @@ public sealed partial class AttemptEngine
                             AttemptId = attempt.AttemptId,
                             ExamItemId = q.ExamItemId,
                             ExamId = examId,
-                            SkillId = q.Section.SkillId,
+                            SectionId = q.SectionId,
+            SkillId = q.Section.SkillId,
                             QuestionType = QuestionType.FreeResponse.ToCode(),
                             ResponseText = string.Empty,
                             Status = FreeResponseStatus.Draft.ToCode(),

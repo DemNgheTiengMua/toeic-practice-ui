@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -171,7 +171,8 @@ public sealed class SpeakingPracticeService(
                 AttemptId = attempt.AttemptId,
                 ExamItemId = q.ExamItemId,
                 ExamId = examId,
-                SkillId = q.Section.SkillId,
+                SectionId = q.SectionId,
+            SkillId = q.Section.SkillId,
                 QuestionType = QuestionType.FreeResponse.ToCode(),
                 ResponseText = string.Empty,
                 AudioPath = null,
@@ -390,7 +391,8 @@ public sealed class SpeakingPracticeService(
                 // #269: a response names the roster position; there is no question id to carry.
                 ExamItemId = position.ExamItemId,
                 ExamId = attempt.ExamId,
-                SkillId = position.Section.SkillId,
+                SectionId = position.SectionId,
+            SkillId = position.Section.SkillId,
                 QuestionType = QuestionType.FreeResponse.ToCode(),
                 AudioPath = relativePath,
                 DurationMs = durationMs,

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
@@ -65,7 +65,8 @@ public sealed partial class AttemptEngine
                 AttemptId = attemptId,
                 ExamItemId = question.ExamItemId,
                 ExamId = attempt.ExamId,
-                SkillId = question.Section.SkillId,
+                SectionId = question.SectionId,
+            SkillId = question.Section.SkillId,
                 QuestionType = QuestionType.FreeResponse.ToCode(),
                 AudioPath = relativePath,
                 DurationMs = durationMs,
@@ -140,7 +141,8 @@ public sealed partial class AttemptEngine
                 AttemptId = attemptId,
                 ExamItemId = question.ExamItemId,
                 ExamId = attempt.ExamId,
-                SkillId = question.Section.SkillId,
+                SectionId = question.SectionId,
+            SkillId = question.Section.SkillId,
                 QuestionType = QuestionType.FreeResponse.ToCode(),
                 AudioPath = audioPath,
                 DurationMs = durationMs,

@@ -120,10 +120,17 @@ public sealed class DataDispositionTests
                      "AiInsights", "Recommendations", "Items", "ItemVersions", "Stimuli", "Topics",
                      "Lessons", "LessonCards", "GradingCriteria", "SectionCriteria",
                      "GradingCriterionDescriptors", "GradingCriterionAnchors", "GradingRubricLocks",
-                     "Questions", "QuestionGroups", "QuestionOptions",
                  })
         {
             Assert.Equal(Disposition.Drop, DataDisposition.For(table)!.Disposition);
+        }
+
+        // #269: the four tables that carried the legacy content model are GONE from the schema, so the
+        // list must not classify them any more - a disposition describes a table that exists. Asserted
+        // rather than merely deleted, so re-adding one is a failure instead of a silent resurrection.
+        foreach (var gone in new[] { "Questions", "QuestionGroups", "QuestionOptions", "UserQuestionHistories" })
+        {
+            Assert.Null(DataDisposition.For(gone));
         }
 
         // #246.5: legacy saved links are dropped.
