@@ -32,7 +32,7 @@ namespace Services;
 /// What to do about a deficit - refuse, or run a degraded form - belongs to the caller (#215).
 /// </para>
 /// </summary>
-public sealed class PlacementStageOneDrawService(CompanionDbContext db)
+public sealed class PlacementStageOneDrawService(CompanionDbContext db) : IPlacementStageOneDrawService
 {
     private const string ActiveLifecycle = "active";
 

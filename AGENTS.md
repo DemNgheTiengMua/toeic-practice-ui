@@ -4,6 +4,23 @@ Guidance and instructions for AI coding assistants (Antigravity/AGY, Claude Code
 
 ---
 
+## 0. Start here — one command, every session
+
+**A compacted session loses its working memory but keeps the repository, so anything phrased as
+"remember to…" eventually fails. The defence is not memory, it is derivation.** Run this before reading a
+file, running a test, or trusting anything you think you know about the current state:
+
+```sh
+bash scripts/preflight.sh
+```
+
+It reads the live state every time — branch, HEAD, dirty files, the **open tickets**, the last twelve
+commits, and `docs/audit/remaining.md` — so it cannot go stale and cannot be forgotten. `remaining.md`
+carries the part a script cannot infer: which tickets are done and *why*, the decisions already made and
+not to be re-litigated, and the traps the previous session hit.
+
+If `preflight.sh` and your memory disagree, the script is right.
+
 ## 1. Core Architecture & Layering
 
 The backend is a .NET 10 solution (`ExtraEfficiency.slnx`) structured in six strict layers:

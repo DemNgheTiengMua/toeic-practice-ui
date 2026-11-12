@@ -144,6 +144,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAdminAuditService, AdminAuditService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         services.AddScoped<IPlacementService, PlacementService>();
+        // #276: the two-stage draw. Registered so the interface a caller resolves is the same one the
+        // dead-service guard checks for - before this, both classes were complete, tested, and reachable
+        // from nothing.
+        services.AddScoped<IPlacementStageOneDrawService, PlacementStageOneDrawService>();
+        services.AddScoped<IPlacementStageTwoDrawService, PlacementStageTwoDrawService>();
         services.AddScoped<ICalibrationService, CalibrationService>();
         services.AddScoped<ILearningPathService, LearningPathService>();
         services.AddScoped<ILessonService, LessonService>();

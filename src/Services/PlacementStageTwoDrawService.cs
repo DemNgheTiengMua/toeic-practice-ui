@@ -29,7 +29,7 @@ namespace Services;
 /// seam is finished and tested; #250 wires both stages once the roster and the stage index exist.
 /// </para>
 /// </summary>
-public sealed class PlacementStageTwoDrawService(CompanionDbContext db)
+public sealed class PlacementStageTwoDrawService(CompanionDbContext db) : IPlacementStageTwoDrawService
 {
     private const string ActiveLifecycle = "active";
 

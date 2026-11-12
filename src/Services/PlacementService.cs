@@ -15,9 +15,17 @@ public sealed partial class PlacementService(
     CompanionDbContext db,
     ILearnerService learners,
     IAttemptEngine? attemptEngine = null,
-    TimeProvider? clock = null) : IPlacementService
+    TimeProvider? clock = null,
+    IPlacementStageOneDrawService? stageOneDraw = null,
+    IPlacementStageTwoDrawService? stageTwoDraw = null) : IPlacementService
 {
     private readonly IAttemptEngine _attemptEngine = attemptEngine ?? new AttemptEngine(db);
+
+    // #276: the two draws, constructed over the same DbContext when no caller supplies them - so a
+    // test that does `new PlacementService(db, learners)` still exercises the real draw rather than a
+    // branch nobody runs in production.
+    private readonly IPlacementStageOneDrawService _stageOneDraw = stageOneDraw ?? new PlacementStageOneDrawService(db);
+    private readonly IPlacementStageTwoDrawService _stageTwoDraw = stageTwoDraw ?? new PlacementStageTwoDrawService(db);
 
     /// <summary>#213: the cooldown is a wall-clock rule, so the clock is injected rather than assumed.</summary>
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
@@ -182,7 +190,10 @@ public sealed partial class PlacementService(
             }
         }
 
-        var attempt = await _attemptEngine.CreateAttemptAsync(userId, certId, examId, exam.DurationMinutes, cancellationToken);
+        var attempt = await _attemptEngine.CreateAttemptAsync(
+            userId, certId, examId, exam.DurationMinutes,
+            await BuildStageOnePaperAsync(certId, exam, cancellationToken),
+            cancellationToken);
 
         var placement = new PlacementTest
         {
@@ -363,6 +374,16 @@ public sealed partial class PlacementService(
         {
             return false;
         }
+
+        // #276: stage two is entered HERE, at the stage-one/stage-two boundary - the moment the learner
+        // leaves a skill. The stage-one score for the skill about to close only exists once its items are
+        // behind the learner, and the routed pair is recorded on the attempt so stage two's paper is a
+        // fact about this sitting rather than a number recomputed at every read.
+        //
+        // Before the transition, because the transition may submit the attempt on the last skill and
+        // RecordStageTwoRouteAsync refuses a sitting that is no longer open. A repeated boundary click
+        // re-records nothing: the engine returns false when the row already exists.
+        await RecordStageTwoRoutingAsync(take.AttemptId, activeSkillId, cancellationToken);
 
         // Safe under a duplicate request: the engine derives the next skill from the attempt's
         // active one, so a racing second advance repeats this one instead of skipping a skill, and

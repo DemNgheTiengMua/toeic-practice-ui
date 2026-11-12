@@ -16,6 +16,30 @@ public interface IAttemptEngine
         int durationMinutes,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// #274: the same creation, with the paper this sitting is served supplied by the caller. The
+    /// attempt-scoped paper is recorded in the same transaction as the attempt row.
+    /// </summary>
+    Task<ExamAttempt> CreateAttemptAsync(
+        int userId,
+        int certId,
+        int examId,
+        int durationMinutes,
+        AttemptPaperDraw? drawnPaper,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #276: record the band pair stage one routed one skill to. The sole writer of
+    /// <c>AttemptStageBundles</c> (ADR-0012); returns false when there is nothing to write.
+    /// </summary>
+    Task<bool> RecordStageTwoRouteAsync(
+        int attemptId,
+        int userId,
+        int skillId,
+        CefrLevel bandLower,
+        CefrLevel bandUpper,
+        CancellationToken cancellationToken = default);
+
     Task<AttemptTakeView> GetAttemptTakeAsync(
         int attemptId,
         int userId,
