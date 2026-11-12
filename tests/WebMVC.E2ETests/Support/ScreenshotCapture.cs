@@ -60,7 +60,7 @@ public sealed class ScreenshotCapture
     /// </summary>
     public async Task CaptureAsync(string flow, string name)
     {
-        await _page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await WaitForSettledAsync();
         await FreezeAsync();
 
         var dir = Path.Combine(CampaignRoot, flow);
@@ -75,13 +75,65 @@ public sealed class ScreenshotCapture
     }
 
     /// <summary>
+    /// Waits for the document and its layout to settle, but never for <c>networkidle</c>.
+    /// <para>
+    /// The admin dashboard holds a server-sent event stream open for the life of the page (#286), so the
+    /// network is <i>never</i> idle there by design. Waiting for it hangs for the full timeout and then
+    /// fails, which is how this was found: the campaign timed out on /admin and nowhere else. A settled
+    /// document plus two animation frames is the honest signal — the stream is meant to stay open.
+    /// </para>
+    /// </summary>
+    public async Task WaitForSettledAsync()
+    {
+        // Not LoadState.Load either: an open EventSource keeps the document from reaching `load` in
+        // Chromium, so waiting for it times out on exactly the pages that have a live stream. The
+        // document is parsed at DOMContentLoaded, and two frames let layout and fonts settle.
+        await _page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+        await _page.EvaluateAsync("() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))");
+
+        // A page with a live stream says "Connecting…" for a moment and only then says "Live". Photographing
+        // the first state would record a transient as if it were the screen, and the audit would show a
+        // dashboard that looks broken when it is merely early.
+        var indicator = _page.Locator("[data-dashboard-live-state]");
+        if (await indicator.CountAsync() > 0)
+        {
+            try
+            {
+                await indicator.First.WaitForAsync(new LocatorWaitForOptions
+                {
+                    State = WaitForSelectorState.Visible,
+                    Timeout = 5000,
+                });
+
+                // Wait for the badge to stop saying "Connecting".
+                var deadline = DateTime.UtcNow.AddSeconds(5);
+                while (DateTime.UtcNow < deadline)
+                {
+                    var text = await indicator.First.InnerTextAsync();
+                    if (!text.StartsWith("Connecting", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return;
+                    }
+
+                    await Task.Delay(100);
+                }
+            }
+            catch (TimeoutException)
+            {
+                // Still connecting after five seconds is itself worth recording: the image will show it.
+            }
+        }
+    }
+
+    /// <summary>
     /// Navigates and captures in one step, so a broken route is recorded as a broken route rather than
     /// aborting the rest of the pass.
     /// </summary>
     /// <returns>True when the page answered 2xx.</returns>
     public async Task<bool> VisitAsync(string url, string flow, string name, bool capture = true)
     {
-        var response = await _page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        // Deliberately not WaitUntilState.NetworkIdle: see WaitForSettledAsync.
+        var response = await _page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
         var ok = response is not null && response.Ok;
 
         if (capture)
