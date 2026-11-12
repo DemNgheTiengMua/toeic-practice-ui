@@ -241,12 +241,13 @@ foreach ($t in $order) {
     if ($n -gt 0) { $withRows += "$t=$n"; $total += $n }
 }
 
-# A D23 rule a straightforward dump cannot express: a saved link that names a legacy question is
-# DROPPED, not re-pointed. The dump only writes rows, so the deletion is stated here - and it has to
-# run on every load, because the row it removes exists only in a database that predates the pool.
-[void]$sb.AppendLine('-- D23 / #224: a legacy saved link is dropped rather than re-pointed. This is a rule about a')
-[void]$sb.AppendLine('-- database that predates the pool, so it is not a row the dump could carry.')
-[void]$sb.AppendLine('DELETE FROM [SavedQuestions] WHERE [QuestionId] IS NOT NULL;')
+# A D23 rule a straightforward dump cannot express: a saved link that named a legacy question was
+# DROPPED, not re-pointed. #269 removed SavedQuestions.QuestionId, which is the column that rule was
+# about, so there is no legacy shape left for the dump to delete. The statement that used to say so
+# named the dropped column and aborted the whole dump with "Msg 207 Invalid column name 'QuestionId'" -
+# a seed generator nobody could run. Stated as a comment so the rule stays readable.
+[void]$sb.AppendLine('-- D23 / #224: a legacy saved link used to be dropped rather than re-pointed. #269 removed')
+[void]$sb.AppendLine('-- SavedQuestions.QuestionId, the column that rule was about, so no legacy shape is left to delete.')
 [void]$sb.AppendLine('GO')
 [void]$sb.AppendLine('')
 
