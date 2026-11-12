@@ -114,8 +114,13 @@ cmd_start() {
 
   provision_signing_key
 
-  say "Building solution"
-  dotnet build "$ROOT/ExtraEfficiency.slnx" -c "$CONFIG" -v q -nologo > "$LOG_DIR/build.log" \
+  # #269: only the two projects this script RUNS. Building the whole solution also builds
+  # tests/Services.Tests, so one broken test file stops a browser environment from starting - and a crawl
+  # environment has no use for the test assembly. The test suite is built and run by `dotnet test`.
+  say "Building servers"
+  dotnet build "$ROOT/src/WebAPI/WebAPI.csproj" -c "$CONFIG" -v q -nologo > "$LOG_DIR/build.log" \
+    || { tail -n 30 "$LOG_DIR/build.log" >&2; die "build failed (log: $LOG_DIR/build.log)"; }
+  dotnet build "$ROOT/src/WebMVC/WebMVC.csproj" -c "$CONFIG" -v q -nologo >> "$LOG_DIR/build.log" \
     || { tail -n 30 "$LOG_DIR/build.log" >&2; die "build failed (log: $LOG_DIR/build.log)"; }
 
   # The working directory is the content root: appsettings, wwwroot, mail-drop
