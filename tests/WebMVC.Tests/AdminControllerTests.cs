@@ -17,7 +17,9 @@ public sealed class AdminControllerTests
         ActiveLearnersCount: 1284,
         NewLearners7DaysCount: 47,
         CreditsUsedThisMonth: 3912,
+        CreditsRefundedThisMonth: 18,
         CreditsPerDayAverage: 130.4m,
+        RevenueTodayVnd: 1250000m,
         RevenueThisMonthVnd: 64700000m,
         PaidOrdersThisMonthCount: 328,
         MostAttemptedExams:
@@ -84,6 +86,7 @@ public sealed class AdminControllerTests
         Assert.Equal(47, model.NewLearners7DaysCount);
         Assert.Equal(3912, model.CreditsUsedThisMonth);
         Assert.Equal(130.4m, model.CreditsPerDayAverage);
+        Assert.Equal(1250000m, model.RevenueTodayVnd);
         Assert.Equal(64700000m, model.RevenueThisMonthVnd);
         Assert.Equal(328, model.PaidOrdersThisMonthCount);
         Assert.Equal(4, model.MostAttemptedExams.Count);
@@ -93,6 +96,58 @@ public sealed class AdminControllerTests
         Assert.Equal(2, model.NeedsAttention.DraftExamsCount);
         Assert.Equal(5, model.NeedsAttention.StalePendingOrdersCount);
         Assert.Equal(1, model.NeedsAttention.OpenComplaintsCount);
+    }
+
+    /// <summary>
+    /// #284: a negative figure is a fact, and the screen must say so twice - the formatter emits a true
+    /// minus sign, and the value carries the refusal colour. The pair matters: a red zero, or a plain
+    /// negative, is a screen an owner reads as a broken number.
+    /// </summary>
+    [Fact]
+    public void A_negative_revenue_renders_a_true_minus_sign_and_the_danger_class()
+    {
+        var viewModel = new WebMVC.Models.AdminDashboardViewModel(
+            AdminDashboardDto.Empty with { RevenueTodayVnd = -250000m, RevenueThisMonthVnd = -180000m });
+
+        Assert.Equal("\u2212250,000 ₫", viewModel.RevenueToday);
+        Assert.Equal("\u2212180,000 ₫", viewModel.RevenueThisMonth);
+        Assert.Equal("stat__value text-danger", viewModel.RevenueTodayClass);
+        Assert.Equal("stat__value text-danger", viewModel.RevenueThisMonthClass);
+    }
+
+    /// <summary>
+    /// The other half of the same rule: a positive figure must render exactly as it did before #284. A
+    /// screen that painted every revenue figure red would pass a test that only looked at the negative one.
+    /// </summary>
+    [Fact]
+    public void A_positive_revenue_keeps_its_plain_rendering()
+    {
+        var viewModel = new WebMVC.Models.AdminDashboardViewModel(
+            AdminDashboardDto.Empty with { RevenueTodayVnd = 1250000m, RevenueThisMonthVnd = 64700000m });
+
+        Assert.Equal("1,250,000 ₫", viewModel.RevenueToday);
+        Assert.Equal("64,700,000 ₫", viewModel.RevenueThisMonth);
+        Assert.Equal("stat__value", viewModel.RevenueTodayClass);
+        Assert.Equal("stat__value", viewModel.RevenueThisMonthClass);
+    }
+
+    /// <summary>
+    /// #284: the view model decides the colour, and this proves the view actually uses that decision. A
+    /// screen that formatted the minus sign but rendered every figure in the plain class would pass the two
+    /// tests above; this is the test that catches it.
+    /// </summary>
+    [Fact]
+    public void The_dashboard_renders_both_revenue_figures_through_their_class()
+    {
+        var view = File.ReadAllText(Path.Combine(
+            TestPathHelper.FindRepoRoot(), "src", "WebMVC", "Views", "Admin", "Index.cshtml"));
+
+        Assert.Contains("class=\"@Model.RevenueTodayClass\"", view);
+        Assert.Contains("class=\"@Model.RevenueThisMonthClass\"", view);
+
+        // And no inline style or hard-coded colour: the design system owns the palette (§5).
+        Assert.DoesNotContain("style=", view);
+        Assert.DoesNotContain("#b31217", view);
     }
 
     [Fact]

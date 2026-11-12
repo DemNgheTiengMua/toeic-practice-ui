@@ -13,6 +13,7 @@ public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider cl
     {
         var now = clock.GetUtcNow();
         var monthWindow = ReportingPeriod.Month(now);
+        var dayWindow = ReportingPeriod.Day(now);
         var startOfMonth = monthWindow.Start;
         var endOfMonth = monthWindow.End;
         var sevenDaysAgo = now.AddDays(-7);
@@ -39,9 +40,16 @@ public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider cl
             .SumAsync(t => (int?)t.Delta, cancellationToken) ?? 0;
         var creditsDebited = -debitedDelta;
 
+        // #284: a credit refund and a booking cancellation both give credits back, so both reduce what the
+        // learner spent. Counting only the cancellation - which is what this did - understates the figure by
+        // every refund ever issued. The codes are hoisted for the same reason PaidIn hoists its status: a
+        // method call inside the expression is not something SQL Server can be asked to evaluate.
+        var bookingCancel = CreditReason.BookingCancel.ToCode();
+        var refundCredit = CreditReason.RefundCredit.ToCode();
         var creditsRefunded = await db.CreditTransactions
             .AsNoTracking()
-            .Where(t => t.CreatedAt >= startOfMonth && t.CreatedAt < endOfMonth && t.Reason == "booking_cancel")
+            .Where(t => t.CreatedAt >= startOfMonth && t.CreatedAt < endOfMonth
+                && (t.Reason == bookingCancel || t.Reason == refundCredit))
             .SumAsync(t => (int?)t.Delta, cancellationToken) ?? 0;
 
         var creditsUsedThisMonth = Math.Max(0, creditsDebited - creditsRefunded);
@@ -49,13 +57,35 @@ public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider cl
         var dayOfMonth = Math.Max(1, ReportingPeriod.LocalInstant(now).Day);
         var creditsPerDayAverage = Math.Round((decimal)creditsUsedThisMonth / dayOfMonth, 1);
 
-        // 3. Revenue (This Month)
+        // 3. Net Revenue (Today and This Month)
+        // #284 / ADR-0014: revenue is paid orders minus money refunds settled in the same window, and a
+        // negative answer is a fact rather than a defect - a day whose refunds exceed its income is a loss.
+        // Both halves ask ReportingPeriod, so the two money figures cannot drift apart from each other or
+        // from the orders screen.
         var paidOrdersQuery = db.Orders
             .AsNoTracking()
             .PaidIn(monthWindow);
 
         var paidOrdersThisMonthCount = await paidOrdersQuery.CountAsync(cancellationToken);
-        var revenueThisMonthVnd = await paidOrdersQuery.SumAsync(o => (decimal?)o.Amount, cancellationToken) ?? 0m;
+        var paidThisMonthVnd = await paidOrdersQuery.SumAsync(o => (decimal?)o.Amount, cancellationToken) ?? 0m;
+
+        var refundedThisMonthVnd = await db.Refunds
+            .AsNoTracking()
+            .MoneyRefundedIn(monthWindow)
+            .SumAsync(r => (decimal?)r.Amount, cancellationToken) ?? 0m;
+
+        var paidTodayVnd = await db.Orders
+            .AsNoTracking()
+            .PaidIn(dayWindow)
+            .SumAsync(o => (decimal?)o.Amount, cancellationToken) ?? 0m;
+
+        var refundedTodayVnd = await db.Refunds
+            .AsNoTracking()
+            .MoneyRefundedIn(dayWindow)
+            .SumAsync(r => (decimal?)r.Amount, cancellationToken) ?? 0m;
+
+        var revenueThisMonthVnd = paidThisMonthVnd - refundedThisMonthVnd;
+        var revenueTodayVnd = paidTodayVnd - refundedTodayVnd;
 
         // 4. Most Attempted Exams (Top 5)
         var topExams = await db.ExamAttempts
@@ -104,7 +134,9 @@ public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider cl
             ActiveLearnersCount: activeLearnersCount,
             NewLearners7DaysCount: newLearners7DaysCount,
             CreditsUsedThisMonth: creditsUsedThisMonth,
+            CreditsRefundedThisMonth: creditsRefunded,
             CreditsPerDayAverage: creditsPerDayAverage,
+            RevenueTodayVnd: revenueTodayVnd,
             RevenueThisMonthVnd: revenueThisMonthVnd,
             PaidOrdersThisMonthCount: paidOrdersThisMonthCount,
             MostAttemptedExams: mostAttemptedExams,

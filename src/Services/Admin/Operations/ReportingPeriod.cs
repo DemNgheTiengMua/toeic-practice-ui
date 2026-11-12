@@ -74,4 +74,30 @@ public static class ReportingPeriod
             (o.PaidAt ?? o.CreatedAt) >= start &&
             (o.PaidAt ?? o.CreatedAt) < end);
     }
+
+    /// <summary>
+    /// #284: the money that actually left inside <paramref name="window"/>, so net revenue subtracts it.
+    /// <para>
+    /// <b>Why settlement and not the request.</b> A refund is a promise until the accountant transfers the
+    /// money; <c>SettledAt</c> is the only timestamp at which money is treated as having left. Attributing
+    /// a refund to its request date would report a loss against revenue the business still held - and it
+    /// would let a refund requested in one month land on a figure already closed.
+    /// </para>
+    /// <para>
+    /// <b>Why only <c>money</c>.</b> A credit refund grants credits from the ledger; no money moved, so it
+    /// cannot reduce revenue. It is counted in its own figure (credits refunded) instead.
+    /// </para>
+    /// </summary>
+    public static IQueryable<Refund> MoneyRefundedIn(this IQueryable<Refund> refunds, ReportingWindow window)
+    {
+        var start = window.Start;
+        var end = window.End;
+        var money = RefundMethod.Money.ToCode();
+
+        return refunds.Where(r =>
+            r.Method == money &&
+            r.SettledAt != null &&
+            r.SettledAt >= start &&
+            r.SettledAt < end);
+    }
 }

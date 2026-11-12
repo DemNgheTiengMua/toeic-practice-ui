@@ -18,9 +18,12 @@
 
 <div class="grid-3">
   <div class="stat">
-    <div class="stat__label">Paid (this month)</div>
+    @* #284: this is what the gateway took - gross receipts - while the dashboard's revenue figure is net of
+       refunds settled in the month. Both labels say which, so the two numbers cannot be mistaken for each
+       other's. *@
+    <div class="stat__label">Paid receipts (this month)</div>
     <div class="stat__value">@summary.PaidThisMonthCount</div>
-    <div class="stat__hint">@Model.PaidAmount</div>
+    <div class="stat__hint">@Model.PaidAmount gross · dashboard revenue is net of refunds</div>
   </div>
   <div class="stat">
     <div class="stat__label">Reconciling</div>

@@ -25,10 +25,28 @@
     <div class="stat__value">@Model.CreditsUsed</div>
     <div class="stat__hint">Average @Model.CreditsPerDay credits/day</div>
   </div>
+  @* #284: credits a refund gave back, kept apart from revenue because no money moved for them. *@
   <div class="stat">
-    <div class="stat__label">Revenue this month</div>
-    <div class="stat__value">@Model.Revenue</div>
-    <div class="stat__hint">@Model.PaidOrders @(Model.Dashboard.PaidOrdersThisMonthCount == 1 ? "paid order" : "paid orders")</div>
+    <div class="stat__label">Credits refunded (this month)</div>
+    <div class="stat__value">@Model.CreditsRefunded</div>
+    <div class="stat__hint">Already subtracted from credits used</div>
+  </div>
+</div>
+
+@* #284 / ADR-0014: both money figures are NET - paid orders minus money refunds settled in the window - so a
+   negative one is a loss, not a defect, and must not be clamped. The labels say "net" because a reader who
+   took them for gross would be reading a different number from a different calculation. Two columns, not
+   four: an exact amount in tabular mono needs the width. *@
+<div class="grid-2">
+  <div class="stat">
+    <div class="stat__label">Net revenue (today)</div>
+    <div class="@Model.RevenueTodayClass">@Model.RevenueToday</div>
+    <div class="stat__hint">Paid orders less money refunds settled today</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Net revenue (this month)</div>
+    <div class="@Model.RevenueThisMonthClass">@Model.RevenueThisMonth</div>
+    <div class="stat__hint">@Model.PaidOrders @(Model.Dashboard.PaidOrdersThisMonthCount == 1 ? "paid order" : "paid orders") less money refunds settled this month</div>
   </div>
 </div>
 

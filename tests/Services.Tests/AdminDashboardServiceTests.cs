@@ -38,6 +38,8 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
             Assert.Equal(0m, result.CreditsPerDayAverage);
             Assert.Equal(0m, result.RevenueThisMonthVnd);
             Assert.Equal(0, result.PaidOrdersThisMonthCount);
+            Assert.Equal(0m, result.RevenueTodayVnd);
+            Assert.Equal(0, result.CreditsRefundedThisMonth);
             Assert.Empty(result.MostAttemptedExams);
             Assert.Equal(0, result.NeedsAttention.DraftExamsCount);
             Assert.Equal(0, result.NeedsAttention.StalePendingOrdersCount);
@@ -210,6 +212,10 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                     -- Order 4: Paid in PREVIOUS month (September -> excluded)
                     INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
                     VALUES (@UserId, @PkgId, 'paid', 299000, 'DH-20260920-0001', 9001, 'payos', '2026-09-20 10:00:00 +00:00', '2026-09-20 10:05:00 +00:00');
+
+                    -- Order 5: Paid today, so the day figure is not the month figure.
+                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, @PkgId, 'paid', 99000, 'DH-20261015-0005', 10005, 'payos', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
                     """);
             }
 
@@ -218,8 +224,152 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                 var service = CreateService(db, clock);
                 var result = await service.GetDashboardMetricsAsync();
 
-                Assert.Equal(199000m + 499000m, result.RevenueThisMonthVnd);
-                Assert.Equal(2, result.PaidOrdersThisMonthCount);
+                Assert.Equal(199000m + 499000m + 99000m, result.RevenueThisMonthVnd);
+                Assert.Equal(99000m, result.RevenueTodayVnd);
+                Assert.Equal(3, result.PaidOrdersThisMonthCount);
+            }
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(dbName);
+        }
+    }
+
+    /// <summary>
+    /// #284: the month figure is <b>net</b>. Revenue is paid orders minus money refunds settled in the same
+    /// window, so a month whose refunds exceed its income is a loss - and it is reported as one, not
+    /// clamped to zero. A clamp would hide exactly the month an owner needs to read.
+    /// <para>
+    /// The credit refund is the control: it moved no money, so it changes neither figure. The money refund
+    /// dated in September is the second control: it was settled before this window, so it is not October's
+    /// loss even though it was requested in October.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task Net_revenue_is_paid_orders_minus_money_refunds_settled_in_the_window_and_may_be_negative()
+    {
+        var dbName = $"EEDashNet_{Guid.NewGuid():N}"[..25];
+        var connStr = await database.CreateFreshDatabaseAsync(dbName);
+        try
+        {
+            var clock = new ManualTimeProvider(new DateTimeOffset(2026, 10, 15, 12, 0, 0, TimeSpan.Zero));
+            var now = clock.GetUtcNow();
+
+            await using (var db = DbContextFactory.Create(connStr))
+            {
+                await db.Database.ExecuteSqlRawAsync($"""
+                    INSERT INTO Roles (Code, Name) VALUES ('learner', 'Learner'), ('admin', 'Admin');
+                    INSERT INTO Users (RoleId, Email, PasswordHash, FullName, IsLocked, EmailVerifiedAt, IsDeleted, CreatedAt)
+                    VALUES
+                      ((SELECT RoleId FROM Roles WHERE Code='learner'), 'net@test.local', 0x01, N'Net User', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      ((SELECT RoleId FROM Roles WHERE Code='admin'), 'netadmin@test.local', 0x01, N'Net Admin', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+                    DECLARE @UserId INT = (SELECT UserId FROM Users WHERE Email='net@test.local');
+                    DECLARE @AdminId INT = (SELECT UserId FROM Users WHERE Email='netadmin@test.local');
+
+                    INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
+                    VALUES (N'NetPack', 5, 100000, 1, 0, N'Features', 1);
+                    DECLARE @PkgId INT = SCOPE_IDENTITY();
+
+                    -- 100,000 dong came in on the 5th.
+                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, @PkgId, 'paid', 100000, 'DH-NET-0001', 40001, 'payos', '{now.AddDays(-10):yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now.AddDays(-10):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+
+                    -- And 250,000 went back out, settled today: the day is a 250,000 loss and the month is
+                    -- a 150,000 loss, because 100,000 of it came in ten days earlier.
+                    INSERT INTO Refunds (UserId, Method, Reason, Status, Amount, RequestedByUserId, DecidedByUserId, DecidedAt, SettledByUserId, SettledAt, CreatedAt)
+                    VALUES (@UserId, 'money', N'Service not delivered', 'settled', 250000, @AdminId, @AdminId,
+                            '{now.AddDays(-8):yyyy-MM-dd HH:mm:ss.fffffff zzz}', @AdminId,
+                            '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now.AddDays(-8):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+
+                    -- A credit refund returns credits, not money: it must move neither revenue figure.
+                    INSERT INTO Refunds (UserId, Method, Reason, Status, CreditCount, RequestedByUserId, DecidedByUserId, DecidedAt, CreatedAt)
+                    VALUES (@UserId, 'credit', N'Make-good for a grading fault', 'approved', 5, @AdminId, @AdminId,
+                            '{now.AddDays(-2):yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now.AddDays(-2):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+
+                    -- Settled in September: not October's money, whatever month it was requested in. The
+                    -- request date is inside the window on purpose, so a figure that read the request would
+                    -- subtract this 50,000 and land on -200,000.
+                    INSERT INTO Refunds (UserId, Method, Reason, Status, Amount, RequestedByUserId, DecidedByUserId, DecidedAt, SettledByUserId, SettledAt, CreatedAt)
+                    VALUES (@UserId, 'money', N'Closed before the window', 'settled', 50000, @AdminId, @AdminId,
+                            '2026-10-02 10:00:00 +00:00', @AdminId, '2026-09-29 10:00:00 +00:00', '2026-10-02 10:00:00 +00:00');
+
+                    -- Settled yesterday: October's transfer, not today's.
+                    INSERT INTO Refunds (UserId, Method, Reason, Status, Amount, RequestedByUserId, DecidedByUserId, DecidedAt, SettledByUserId, SettledAt, CreatedAt)
+                    VALUES (@UserId, 'money', N'Refunded yesterday', 'settled', 30000, @AdminId, @AdminId,
+                            '{now.AddDays(-2):yyyy-MM-dd HH:mm:ss.fffffff zzz}', @AdminId,
+                            '{now.AddDays(-1):yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now.AddDays(-2):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+                    """);
+            }
+
+            await using (var db = DbContextFactory.Create(connStr))
+            {
+                var service = CreateService(db, clock);
+                var result = await service.GetDashboardMetricsAsync();
+
+                // 100,000 in, 280,000 out (250,000 today + 30,000 yesterday): the month is a 180,000 loss.
+                Assert.Equal(-180000m, result.RevenueThisMonthVnd);
+                // The day holds the refund and none of the income: the deeper loss of the two, which is the
+                // clearest proof that the two figures read two different windows.
+                Assert.Equal(-250000m, result.RevenueTodayVnd);
+                Assert.Equal(1, result.PaidOrdersThisMonthCount);
+            }
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(dbName);
+        }
+    }
+
+    /// <summary>
+    /// The <c>refund_credit</c> ledger row is a make-good in credits. It must land in the refunded-credits
+    /// figure beside a booking cancellation, and it must leave both revenue figures alone because no money
+    /// moved. Counting only <c>booking_cancel</c> - what the dashboard did before #284 - reports a figure
+    /// that is wrong by every credit refund ever issued.
+    /// </summary>
+    [Fact]
+    public async Task A_credit_refund_moves_the_refunded_credits_figure_and_not_revenue()
+    {
+        var dbName = $"EEDashCreditRefund_{Guid.NewGuid():N}"[..25];
+        var connStr = await database.CreateFreshDatabaseAsync(dbName);
+        try
+        {
+            var clock = new ManualTimeProvider(new DateTimeOffset(2026, 10, 10, 10, 0, 0, TimeSpan.Zero));
+            var now = clock.GetUtcNow();
+
+            await using (var db = DbContextFactory.Create(connStr))
+            {
+                await db.Database.ExecuteSqlRawAsync($"""
+                    INSERT INTO Roles (Code, Name) VALUES ('learner', 'Learner'), ('admin', 'Admin');
+                    INSERT INTO Users (RoleId, Email, PasswordHash, FullName, IsLocked, EmailVerifiedAt, IsDeleted, CreatedAt)
+                    VALUES
+                      ((SELECT RoleId FROM Roles WHERE Code='learner'), 'credref@test.local', 0x01, N'Credit Refund User', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      ((SELECT RoleId FROM Roles WHERE Code='admin'), 'credrefadmin@test.local', 0x01, N'Credit Refund Admin', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+                    DECLARE @UserId INT = (SELECT UserId FROM Users WHERE Email='credref@test.local');
+                    DECLARE @AdminId INT = (SELECT UserId FROM Users WHERE Email='credrefadmin@test.local');
+
+                    -- A 50-credit opening balance, so the positive refund rows have room to post.
+                    INSERT INTO CreditTransactions (UserId, AdminUserId, Reason, Delta, Note, CreatedAt)
+                    VALUES (@UserId, @AdminId, 'admin_grant', 50, N'Opening balance', '{now.AddDays(-3):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+
+                    -- 5 credits given back by a refund. The figure must count it; revenue must not move,
+                    -- because no money left the bank for it.
+                    INSERT INTO CreditTransactions (UserId, AdminUserId, Reason, Delta, Note, CreatedAt)
+                    VALUES (@UserId, @AdminId, 'refund_credit', 5, N'Grading fault', '{now.AddDays(-1):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+
+                    INSERT INTO Refunds (UserId, Method, Reason, Status, CreditCount, RequestedByUserId, DecidedByUserId, DecidedAt, CreatedAt)
+                    VALUES (@UserId, 'credit', N'Grading fault', 'approved', 5, @AdminId, @AdminId,
+                            '{now.AddDays(-1):yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now.AddDays(-1):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+                    """);
+            }
+
+            await using (var db = DbContextFactory.Create(connStr))
+            {
+                var service = CreateService(db, clock);
+                var result = await service.GetDashboardMetricsAsync();
+
+                Assert.Equal(5, result.CreditsRefundedThisMonth);
+                Assert.Equal(0m, result.RevenueThisMonthVnd);
+                Assert.Equal(0m, result.RevenueTodayVnd);
             }
         }
         finally
