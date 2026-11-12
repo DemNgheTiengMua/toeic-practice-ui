@@ -199,7 +199,7 @@ public sealed partial class AttemptEngine
     /// <summary>
     /// #158: an exam as a learner would sit it, with no attempt behind it. Nothing here writes: no
     /// attempt, no answer, no ledger row. Navigation is unlocked so an admin can jump to any
-    /// question, and a draft exam is readable — the caller is what decides who may ask.
+    /// question, and a draft exam is readable â€” the caller is what decides who may ask.
     /// </summary>
     public async Task<AttemptTakeView> GetExamPreviewTakeAsync(
         int examId,
