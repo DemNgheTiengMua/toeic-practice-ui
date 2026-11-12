@@ -62,6 +62,30 @@ gets a placement" into "most get a 500".
 
 ---
 
+## The refund / live-dashboard wave (branch `feat/refunds-realtime-dashboard`)
+
+Spec: `docs/specs/2026-11-12-refunds-realtime-dashboard-swagger-docker.md`. Tickets #279-#287.
+Nine tickets, three independent roots: the reporting-period fix (#279), the refund schema (#280), and the
+OpenAPI document (#285). Everything else hangs off those.
+
+**Two decisions already made, do not re-litigate:**
+
+1. **No `UpdatedAt` and no `rowversion` for live change detection.** ADR-0013. The revision is counts and
+   sums over already-indexed columns. The limit is deliberate: an edit changing neither a count nor a sum
+   is invisible, which is fine because the dashboard shows only counts and sums. Do not "improve" this
+   into a timestamp column without reading the ADR — `Orders` already carries 9 indexes, 8 constraints and
+   an `AFTER UPDATE` trigger.
+2. **Revenue is net and may be negative.** ADR-0014. A money refund lands on its **settlement** date, not
+   its request date. Credit refunds never touch revenue. Reporting days are cut at a fixed UTC+7, never
+   the container's timezone.
+
+**Facts worth not re-deriving:** `POST /api/auth/sign-in` is the login route (there is no `/login`), it is
+rate-limited to 10/min outside Development, and the solution has **no CORS policy** at all (ADR-0002). The
+API is **239 endpoint registrations** across 22 mappers; `LessonEndpoints.cs` dual-mounts 6 handlers under
+two prefixes, so registrations exceed distinct route shapes.
+
+---
+
 ## Traps this session hit, so the next one does not
 
 - **Do not slice a C# file by line index with PowerShell.** It was done six times and wrong six times —
