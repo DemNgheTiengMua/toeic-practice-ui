@@ -1,0 +1,171 @@
+@using Contracts
+@model WebMVC.Models.AdminRefundsViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Refunds";
+    ViewData["Description"] = "Credit refunds recorded against learners.";
+
+    var currentStatus = string.IsNullOrWhiteSpace(Model.Status) ? "all" : Model.Status.ToLowerInvariant();
+}
+
+<div class="stack">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/admin" class="breadcrumbs__item">Admin</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">Refunds</span>
+  </nav>
+
+  <h1 class="m-0">Refunds</h1>
+  <p class="text-muted no-margin">A refund returns value the learner already paid for. A refund tied to an order is capped by the credits that order granted; one with no order behind it is capped by policy.</p>
+
+  @if (Model.Summary.TotalCount == 0)
+  {
+    <div class="card">
+      <div class="card__body">
+        <div class="state-block">
+          <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+          <div class="state-block__title">No refunds recorded</div>
+          <p class="state-block__desc">Record one below when a learner is owed value back.</p>
+        </div>
+      </div>
+    </div>
+  }
+  else
+  {
+    <div class="grid-3">
+      <div class="stat">
+        <div class="stat__label">Waiting for a decision</div>
+        <div class="stat__value">@Model.Summary.RequestedCount</div>
+        <div class="stat__hint">requested, not yet paid</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Credits refunded</div>
+        <div class="stat__value">@Model.CreditsRefunded</div>
+        <div class="stat__hint">approved credit refunds only</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Rejected</div>
+        <div class="stat__value">@Model.Summary.RejectedCount</div>
+        <div class="stat__hint">nothing was paid</div>
+      </div>
+    </div>
+  }
+
+  <form method="get" action="/admin/refunds" class="toolbar">
+    <div class="field toolbar__grow">
+      <label class="field__label" for="r-q">Search by refund ID or learner</label>
+      <input class="field__input" id="r-q" name="q" type="search" placeholder="#R-… or learner name" value="@Model.Query">
+    </div>
+    <input type="hidden" name="status" value="@currentStatus">
+    <div class="row row--tight" role="group" aria-label="Filter by status">
+      <a href="/admin/refunds?q=@Model.Query&status=all" class="btn btn--sm" aria-pressed="@(currentStatus == "all" ? "true" : "false")">All</a>
+      <a href="/admin/refunds?q=@Model.Query&status=requested" class="btn btn--sm" aria-pressed="@(currentStatus == "requested" ? "true" : "false")">Requested</a>
+      <a href="/admin/refunds?q=@Model.Query&status=approved" class="btn btn--sm" aria-pressed="@(currentStatus == "approved" ? "true" : "false")">Approved</a>
+      <a href="/admin/refunds?q=@Model.Query&status=rejected" class="btn btn--sm" aria-pressed="@(currentStatus == "rejected" ? "true" : "false")">Rejected</a>
+    </div>
+  </form>
+
+  @if (Model.Summary.Refunds.Count > 0)
+  {
+    <div class="card">
+      <div class="card__body">
+        <table class="table table--striped">
+          <caption class="visually-hidden">Refunds, newest first</caption>
+          <thead>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">Learner</th>
+              <th scope="col">Method</th>
+              <th scope="col" class="text-right">Credits</th>
+              <th scope="col">Order</th>
+              <th scope="col">Status</th>
+              <th scope="col">Requested</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var r in Model.Summary.Refunds)
+            {
+              <tr>
+                <td>#R-@r.RefundId</td>
+                <td>@r.LearnerName</td>
+                <td>@Model.MethodLabels[r.RefundId]</td>
+                <td class="text-right tabular-nums">@r.CreditCount.ToString("N0")</td>
+                <td>@(r.OrderId.HasValue ? $"#{r.OrderId.Value}" : "—")</td>
+                <td><span class="@Model.StatusClasses[r.RefundId]">@Model.StatusLabels[r.RefundId]</span></td>
+                <td>@Model.Dates[r.CreatedAt].Date</td>
+                <td>
+                  @if (r.Status == RefundStatusDto.Requested)
+                  {
+                    <a href="/admin/refunds/@r.RefundId" class="btn btn--sm btn--primary">Review</a>
+                  }
+                  else
+                  {
+                    <a href="/admin/refunds/@r.RefundId" class="btn btn--sm btn--ghost">View</a>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (Model.Summary.TotalCount > Model.Summary.PageSize)
+      {
+        <div class="card__footer">
+          <div class="pagination">
+            <span class="pagination__info">Showing @Model.FirstRow–@Model.LastRow of @Model.Summary.TotalCount refunds</span>
+            @if (Model.Summary.Page > 1)
+            {
+              <a class="pagination__page" href="/admin/refunds?page=@(Model.Summary.Page - 1)&q=@Model.Query&status=@Model.Status">Previous</a>
+            }
+            else
+            {
+              <span class="pagination__page" aria-disabled="true">Previous</span>
+            }
+            <span class="pagination__page is-current" aria-current="page">@Model.Summary.Page</span>
+            @if (Model.Summary.Page * Model.Summary.PageSize < Model.Summary.TotalCount)
+            {
+              <a class="pagination__page" href="/admin/refunds?page=@(Model.Summary.Page + 1)&q=@Model.Query&status=@Model.Status">Next</a>
+            }
+            else
+            {
+              <span class="pagination__page" aria-disabled="true">Next</span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <form method="post" action="/admin/refunds" class="card" novalidate>
+    @Html.AntiForgeryToken()
+    <div class="card__header"><strong>Record a credit refund</strong></div>
+    <div class="card__body stack">
+      <p class="text-muted no-margin">Credits move when the refund is approved, not when it is recorded. A money refund is not available on this screen.</p>
+      <div class="grid-2">
+        <div class="field">
+          <label class="field__label" for="rf-user">Learner ID</label>
+          <input class="field__input" id="rf-user" name="userId" type="number" min="1" required>
+          <span class="field__hint">The learner who is owed the value back.</span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="rf-order">Order ID (optional)</label>
+          <input class="field__input" id="rf-order" name="orderId" type="number" min="1">
+          <span class="field__hint">When the refund came from a purchase, tie it here so it is capped by what that order granted.</span>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="rf-credits">Credits to return</label>
+        <input class="field__input" id="rf-credits" name="creditCount" type="number" min="1" value="1" required>
+      </div>
+      <div class="field">
+        <label class="field__label" for="rf-reason">Reason</label>
+        <textarea class="field__input" id="rf-reason" name="reason" rows="3" placeholder="Why is this learner owed the value back?…" required></textarea>
+        <span class="field__hint">Mandatory: no refund exists without a recorded justification.</span>
+      </div>
+    </div>
+    <div class="card__footer">
+      <button type="submit" class="btn btn--primary">Record refund</button>
+    </div>
+  </form>
+</div>

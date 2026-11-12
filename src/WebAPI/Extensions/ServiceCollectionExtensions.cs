@@ -155,6 +155,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAdminLessonService, AdminLessonService>();
         services.AddScoped<IMentorService, MentorService>();
         services.AddScoped<IComplaintService, ComplaintService>();
+        // #281: the credit half of refunds. Registered here so the dead-service guard sees it wired,
+        // and so the ceiling config is read at container build rather than per request.
+        services.AddSingleton(
+            configuration.GetSection(RefundOptions.SectionName).Get<RefundOptions>() ?? new RefundOptions());
+        services.AddScoped<IRefundService, RefundService>();
 
         // AI and background worker configuration
         services.AddAiServices(configuration, environment);

@@ -75,6 +75,8 @@ internal static class OperationsLabels
             ("mentor_booking", "Mentor booking"),
             ("admin_revoke", "Revoked by staff"),
             ("booking_cancel", "Booking cancelled"),
+            // #281: a refund is a return of value, not the bounded apology an admin_grant is.
+            ("refund_credit", "Refund credits"),
         ]);
 
         LabelFamily.Add<BookingStatusDto>(families, "Booking status not reported", [
@@ -93,6 +95,20 @@ internal static class OperationsLabels
         LabelFamily.Add<MentorTypeDto>(families, "Mentor type not reported", [
             ("human", "Human mentor"),
             ("ai", "AI coach"),
+        ]);
+
+        // #281: the refund vocabulary. A refused refund reads as "Rejected" rather than a status code,
+        // and a money refund says so, because it is not the credit path this screen creates.
+        LabelFamily.Add<RefundStatusDto>(families, "Refund status not reported", [
+            ("requested", "Requested"),
+            ("approved", "Approved"),
+            ("settled", "Settled"),
+            ("rejected", "Rejected"),
+        ]);
+
+        LabelFamily.Add<RefundMethodDto>(families, "Refund method not reported", [
+            ("money", "Money"),
+            ("credit", "Credits"),
         ]);
     }
 }

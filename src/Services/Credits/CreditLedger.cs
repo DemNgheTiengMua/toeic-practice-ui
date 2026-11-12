@@ -330,6 +330,51 @@ public sealed class CreditLedger : ICreditLedger
         return await SaveTransactionAsync(txn, creditReason, delta, currentBalance + delta, now, cancellationToken);
     }
 
+    /// <summary>
+    /// #281: the credits an approved credit refund returns. Separate from
+    /// <see cref="AdjustCreditsAsync"/> because the reason is not a parameter there - an adjustment is
+    /// an <c>admin_grant</c>, and a refund is not: the ledger distinguishes the two so "credits refunded"
+    /// can be counted, and <c>trg_Refunds_CreditTxnIsRefundCredit</c> demands the refund point at a row
+    /// whose reason is exactly <c>refund_credit</c> and whose delta equals its credit count.
+    /// </summary>
+    public async Task<CreditReceipt> GrantRefundCreditsAsync(int userId, int adminUserId, int amount, string note, CancellationToken cancellationToken = default)
+    {
+        if (amount <= 0)
+        {
+            throw new CreditLedgerException(CreditLedgerException.InvalidCharge, "Refund credits must be positive.");
+        }
+
+        if (adminUserId <= 0)
+        {
+            throw new CreditLedgerException(CreditLedgerException.InvalidCharge, "AdminUserId is required for credit adjustments.");
+        }
+
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            throw new CreditLedgerException(CreditLedgerException.InvalidCharge, "Reason is required for credit adjustments.");
+        }
+
+        var trimmedNote = note.Trim();
+        if (trimmedNote.Length > 400)
+        {
+            trimmedNote = trimmedNote[..400];
+        }
+
+        var balance = await GetBalanceAsync(userId, cancellationToken);
+        var now = _clock.GetUtcNow();
+        var txn = new CreditTransaction
+        {
+            UserId = userId,
+            Reason = CreditReason.RefundCredit.ToCode(),
+            Delta = amount,
+            AdminUserId = adminUserId,
+            Note = trimmedNote,
+            CreatedAt = now
+        };
+
+        return await SaveTransactionAsync(txn, CreditReason.RefundCredit, amount, balance + amount, now, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<CreditLedgerEntryDto>> GetLedgerHistoryAsync(int userId, CancellationToken cancellationToken = default)
     {
         var ledger = await _db.CreditTransactions

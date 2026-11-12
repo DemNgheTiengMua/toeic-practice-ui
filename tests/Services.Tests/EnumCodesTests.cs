@@ -44,6 +44,9 @@ public sealed class EnumCodesTests
         { typeof(BookingStatus), typeof(BookingStatusDto), "CK_Bookings_Status" },
         { typeof(ComplaintType), typeof(ComplaintTypeDto), "CK_Complaints_Type" },
         { typeof(ComplaintStatus), typeof(ComplaintStatusDto), "CK_Complaints_Status" },
+        // #281: the refund's two closed vocabularies, mirroring the CHECKs #280 added.
+        { typeof(RefundMethod), typeof(RefundMethodDto), "CK_Refunds_Method" },
+        { typeof(RefundStatus), typeof(RefundStatusDto), "CK_Refunds_Status" },
         { typeof(ImportBatchStatus), typeof(ImportBatchStatusDto), "CK_ImportBatches_Status" },
         { typeof(ImportLogLevel), typeof(ImportLogLevelDto), "CK_ImportLog_Level" },
         { typeof(CardType), typeof(CardTypeDto), "CK_LessonCards_CardType" },
@@ -60,7 +63,14 @@ public sealed class EnumCodesTests
     public void Domain_enum_codes_match_the_schema_check_constraint(Type domain, Type wire, string constraint)
     {
         _ = wire;
-        var schema = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "database-schema.sql"));
+        // #281: strip SQL line comments BEFORE matching, because a comment can contain a ')'. The
+        // CK_CreditTxn_Reason comment "#280 ... -- UI-31 (gap 8)" closed the capture group early, so
+        // the reader saw 7 of 8 codes and reported drift that did not exist. Stripping comments is the
+        // general fix: a code that appears only in prose is not a constraint value either.
+        var schema = Regex.Replace(
+            File.ReadAllText(Path.Combine(RepoRoot(), "docs", "database-schema.sql")),
+            @"--[^\r\n]*",
+            string.Empty);
         // The CHECK may be written as `x IN (...)` or, where NULL is legal, `x IS NULL OR x IN (...)`.
         var match = Regex.Match(schema, $@"CONSTRAINT {constraint} CHECK \([^)]*?(?:IS NULL OR )?\w+ IN\s*\((?<codes>[^)]*)\)");
         Assert.True(match.Success, $"{constraint} not found in docs/database-schema.sql");

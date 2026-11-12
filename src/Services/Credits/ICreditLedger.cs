@@ -45,6 +45,14 @@ public interface ICreditLedger
     Task<CreditReceipt> AdjustCreditsAsync(int targetUserId, int? adminUserId, int delta, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #281: the credits an approved credit refund returns. It is the same adjust path as
+    /// <see cref="AdjustCreditsAsync"/> but states its own reason, because the ledger's
+    /// <c>refund_credit</c> code is what lets "credits refunded this month" be a number the product can
+    /// answer - and what <c>trg_Refunds_CreditTxnIsRefundCredit</c> demands the refund point at.
+    /// </summary>
+    Task<CreditReceipt> GrantRefundCreditsAsync(int userId, int adminUserId, int amount, string note, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves the ordered ledger history for a learner's wallet.
     /// </summary>
     Task<IReadOnlyList<CreditLedgerEntryDto>> GetLedgerHistoryAsync(int userId, CancellationToken cancellationToken = default);

@@ -125,6 +125,34 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string ComplaintInvalidSubject = "COMPLAINT_INVALID_SUBJECT";
         public const string ComplaintAlreadyResolved = "COMPLAINT_ALREADY_RESOLVED";
 
+        /// <summary>#281: a refund that is not there.</summary>
+        public const string RefundNotFound = "REFUND_NOT_FOUND";
+
+        /// <summary>#281: a refund with no recorded justification is refused; no value leaves the
+        /// company without one.</summary>
+        public const string RefundReasonRequired = "REFUND_REASON_REQUIRED";
+
+        /// <summary>#281: a credit refund of zero or fewer credits.</summary>
+        public const string RefundCreditCountInvalid = "REFUND_CREDIT_COUNT_INVALID";
+
+        /// <summary>#281: cumulative credits refunded against one order would exceed what that order
+        /// granted. Distinct from <see cref="RefundExceedsCeiling"/> so the screen can name the order
+        /// rather than the policy.</summary>
+        public const string RefundExceedsOrderCeiling = "REFUND_EXCEEDS_ORDER_CEILING";
+
+        /// <summary>#281: a refund with no order behind it exceeds the configured ceiling.</summary>
+        public const string RefundExceedsCeiling = "REFUND_EXCEEDS_CEILING";
+
+        /// <summary>#281: requested, approved or rejected already - a decided refund is final.</summary>
+        public const string RefundAlreadyDecided = "REFUND_ALREADY_DECIDED";
+
+        /// <summary>#281: a money refund is refused until #282 adds it. Credits are the only method
+        /// this screen can create.</summary>
+        public const string RefundMoneyNotSupported = "REFUND_MONEY_NOT_SUPPORTED";
+
+        /// <summary>#281: the order or complaint a refund names is not the learner's.</summary>
+        public const string RefundInvalidSubject = "REFUND_INVALID_SUBJECT";
+
         public const string ExamIncomplete = "EXAM_INCOMPLETE";
         public const string ExamHasFinishedAttempts = "EXAM_HAS_FINISHED_ATTEMPTS";
         public const string QuestionHasAttemptAnswers = "QUESTION_HAS_ATTEMPT_ANSWERS";
