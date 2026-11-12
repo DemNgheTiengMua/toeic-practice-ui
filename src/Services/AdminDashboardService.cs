@@ -12,7 +12,9 @@ public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider cl
     public async Task<AdminDashboardDto> GetDashboardMetricsAsync(CancellationToken cancellationToken = default)
     {
         var now = clock.GetUtcNow();
-        var startOfMonth = ReportingPeriod.Month(now).Start;
+        var monthWindow = ReportingPeriod.Month(now);
+        var startOfMonth = monthWindow.Start;
+        var endOfMonth = monthWindow.End;
         var sevenDaysAgo = now.AddDays(-7);
         var thirtyMinutesAgo = now.AddMinutes(-30);
 
@@ -28,15 +30,18 @@ public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider cl
             .CountAsync(cancellationToken);
 
         // 2. Credits Used (This Month)
+        // Both halves are bounded on BOTH ends. A start-only filter is correct until the clock crosses into
+        // next month, at which point next month's rows silently join this month's figure - and on a dashboard
+        // nobody notices a total that is merely too large.
         var debitedDelta = await db.CreditTransactions
             .AsNoTracking()
-            .Where(t => t.CreatedAt >= startOfMonth && t.Delta < 0 && t.Reason != "admin_revoke")
+            .Where(t => t.CreatedAt >= startOfMonth && t.CreatedAt < endOfMonth && t.Delta < 0 && t.Reason != "admin_revoke")
             .SumAsync(t => (int?)t.Delta, cancellationToken) ?? 0;
         var creditsDebited = -debitedDelta;
 
         var creditsRefunded = await db.CreditTransactions
             .AsNoTracking()
-            .Where(t => t.CreatedAt >= startOfMonth && t.Reason == "booking_cancel")
+            .Where(t => t.CreatedAt >= startOfMonth && t.CreatedAt < endOfMonth && t.Reason == "booking_cancel")
             .SumAsync(t => (int?)t.Delta, cancellationToken) ?? 0;
 
         var creditsUsedThisMonth = Math.Max(0, creditsDebited - creditsRefunded);
@@ -47,7 +52,7 @@ public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider cl
         // 3. Revenue (This Month)
         var paidOrdersQuery = db.Orders
             .AsNoTracking()
-            .PaidIn(ReportingPeriod.Month(now));
+            .PaidIn(monthWindow);
 
         var paidOrdersThisMonthCount = await paidOrdersQuery.CountAsync(cancellationToken);
         var revenueThisMonthVnd = await paidOrdersQuery.SumAsync(o => (decimal?)o.Amount, cancellationToken) ?? 0m;
