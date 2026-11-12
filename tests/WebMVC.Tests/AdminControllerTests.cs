@@ -225,5 +225,9 @@ public sealed class AdminControllerTests
             if (ReturnNull) return Task.FromResult<AdminDashboardDto>(null!);
             return Task.FromResult(DashboardToReturn ?? EmptyDashboard());
         }
+
+        public Task<Contracts.DashboardRevision> GetDashboardRevisionAsync(
+            string bearerToken, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Contracts.DashboardRevision.Empty);
     }
 }
