@@ -45,6 +45,10 @@ public partial class CreditTransaction
     [InverseProperty("CreditTransaction")]
     public virtual ICollection<Complaint> Complaints { get; set; } = new List<Complaint>();
 
+    /// <summary>#280: the credit refunds that posted this ledger row.</summary>
+    [InverseProperty("CreditTransaction")]
+    public virtual ICollection<Refund> Refunds { get; set; } = new List<Refund>();
+
     [ForeignKey("AttemptId, UserId")]
     [InverseProperty("CreditTransactions")]
     public virtual ExamAttempt? ExamAttempt { get; set; }
