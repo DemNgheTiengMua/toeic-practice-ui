@@ -1,7 +1,7 @@
 using Contracts;
 namespace WebMVC.Models;
 
-public sealed record AdminDashboardViewModel(AdminDashboardDto Dashboard)
+public sealed record AdminDashboardViewModel(AdminDashboardDto Dashboard, string LastUpdated = "")
 {
     /// <summary>#284: both revenue figures are net and both may be negative.</summary>
     private const string StatValueClass = "stat__value";

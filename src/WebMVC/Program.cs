@@ -68,6 +68,10 @@ builder.Services.AddScoped<IAdminPackagesClient>(sp => sp.GetRequiredService<ICo
 builder.Services.AddScoped<IAdminOrdersClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAdminUsersClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAdminDashboardClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+// #286: the live dashboard's revision, read through the same cookie-forwarded client the page uses. Scoped
+// because it reads the caller's bearer from the request; a singleton would hand one admin's stream another's
+// token, which is precisely the leak the policy gate exists to prevent.
+builder.Services.AddScoped<WebMVC.Live.IDashboardRevisionSource, WebMVC.Live.ApiDashboardRevisionSource>();
 builder.Services.AddScoped<IAdminMentorsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAdminComplaintsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAdminRefundsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());builder.Services.AddScoped<IAdminExamsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());

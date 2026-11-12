@@ -135,12 +135,17 @@ public sealed class AdminControllerTests
     /// #284: the view model decides the colour, and this proves the view actually uses that decision. A
     /// screen that formatted the minus sign but rendered every figure in the plain class would pass the two
     /// tests above; this is the test that catches it.
+    /// <para>
+    /// #286: the figures moved into the partial the live update swaps in, so this reads that file. The
+    /// claim is unchanged - the markup must render through the class the view model chose - and reading the
+    /// file the markup now lives in is what keeps the test pointed at reality rather than at the page shell.
+    /// </para>
     /// </summary>
     [Fact]
     public void The_dashboard_renders_both_revenue_figures_through_their_class()
     {
         var view = File.ReadAllText(Path.Combine(
-            TestPathHelper.FindRepoRoot(), "src", "WebMVC", "Views", "Admin", "Index.cshtml"));
+            TestPathHelper.FindRepoRoot(), "src", "WebMVC", "Views", "Admin", "_DashboardMetrics.cshtml"));
 
         Assert.Contains("class=\"@Model.RevenueTodayClass\"", view);
         Assert.Contains("class=\"@Model.RevenueThisMonthClass\"", view);
@@ -225,5 +230,9 @@ public sealed class AdminControllerTests
             if (ReturnNull) return Task.FromResult<AdminDashboardDto>(null!);
             return Task.FromResult(DashboardToReturn ?? EmptyDashboard());
         }
+
+        public Task<Contracts.DashboardRevision> GetDashboardRevisionAsync(
+            string bearerToken, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Contracts.DashboardRevision.Empty);
     }
 }
