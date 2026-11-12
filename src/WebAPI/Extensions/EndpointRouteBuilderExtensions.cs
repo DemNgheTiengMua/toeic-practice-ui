@@ -28,6 +28,7 @@ public static class EndpointRouteBuilderExtensions
         app.MapLessonEndpoints();
         app.MapMentorEndpoints();
         app.MapComplaintEndpoints();
+        app.MapRefundEndpoints();
 
         return app;
     }

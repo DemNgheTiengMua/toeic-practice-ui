@@ -456,6 +456,9 @@ public sealed class ProductivePracticeTests(DatabaseFixture database)
         public Task<CreditReceipt> AdjustCreditsAsync(int targetUserId, int? adminUserId, int delta, string reason, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
+        public Task<CreditReceipt> GrantRefundCreditsAsync(int userId, int adminUserId, int amount, string note, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Writing practice never refunds credits.");
+
         public Task<IReadOnlyList<CreditLedgerEntryDto>> GetLedgerHistoryAsync(int userId, CancellationToken cancellationToken = default) =>
             _inner.GetLedgerHistoryAsync(userId, cancellationToken);
     }

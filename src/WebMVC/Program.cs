@@ -70,7 +70,7 @@ builder.Services.AddScoped<IAdminUsersClient>(sp => sp.GetRequiredService<ICompa
 builder.Services.AddScoped<IAdminDashboardClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAdminMentorsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAdminComplaintsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
-builder.Services.AddScoped<IAdminExamsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IAdminRefundsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());builder.Services.AddScoped<IAdminExamsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAdminItemsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IStimulusStudioClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IProductiveStudioClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
