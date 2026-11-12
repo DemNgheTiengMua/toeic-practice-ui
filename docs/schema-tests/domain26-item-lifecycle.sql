@@ -320,15 +320,9 @@ VALUES (@skill, @cert, 'reading', 'P5', N'Incomplete Sentences', 4, 1, 1);
 DECLARE @sec INT = SCOPE_IDENTITY();
 INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES (@cert, N'Lifecycle paper', 'published', 60, 'mock');
 DECLARE @exam INT = SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
-DECLARE @grp INT = SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-VALUES (@grp, @exam, @sec, @skill, N'Lifecycle legacy stem.', 'A2', 'mcq', 1);
-DECLARE @q INT = SCOPE_IDENTITY();
-INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES (@q, 'mcq', 'A', N'a', 1);
-DECLARE @opt INT = SCOPE_IDENTITY();
 
--- a draft item a learner has answered
+-- a draft item a learner has answered. #269: the answer names the roster POSITION it was written
+-- against, so the position has to exist before the answer can.
 DECLARE @answered INT, @answeredVersion INT;
 INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, BatchTag)
 VALUES ('reading', @topic, 'B1', 'sentence_cloze', 'demo', 'draft', 'lifecycle-delete-answered');
@@ -336,12 +330,15 @@ SET @answered = SCOPE_IDENTITY();
 INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
 VALUES (@answered, 1, N'Answered draft stem.', N'a', N'b', N'c', N'd', 'A');
 SET @answeredVersion = SCOPE_IDENTITY();
+INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder)
+VALUES (@exam, @sec, @cert, @answeredVersion, @answered, 'reading', 1);
+DECLARE @answeredPos INT = SCOPE_IDENTITY();
 
 INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, ExpiresAt)
 VALUES (@user, @exam, @cert, 'in_progress', DATEADD(HOUR, 1, SYSDATETIMEOFFSET()));
 DECLARE @att INT = SCOPE_IDENTITY();
-INSERT INTO AttemptAnswers (AttemptId, QuestionId, ExamId, ItemId, ItemVersionId, SelectedLabel, IsCorrect)
-VALUES (@att, @q, @exam, @answered, @answeredVersion, 'A', 1);
+INSERT INTO AttemptAnswers (AttemptId, ExamId, ItemId, ItemVersionId, ExamItemId, SelectedLabel, IsCorrect)
+VALUES (@att, @exam, @answered, @answeredVersion, @answeredPos, 'A', 1);
 
 BEGIN TRY
   DELETE FROM Items WHERE ItemId = @answered;
@@ -418,7 +415,7 @@ INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC
 VALUES (@bound, 1, N'Bound draft stem.', N'a', N'b', N'c', N'd', 'A');
 SET @boundVersion = SCOPE_IDENTITY();
 INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder)
-VALUES (@exam, @sec, @cert, @boundVersion, @bound, 'reading', 1);
+VALUES (@exam, @sec, @cert, @boundVersion, @bound, 'reading', 2);
 
 BEGIN TRY
   DELETE FROM Items WHERE ItemId = @bound;

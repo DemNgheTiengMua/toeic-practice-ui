@@ -1,4 +1,4 @@
-﻿using BusinessObjects.Entities;
+using BusinessObjects.Entities;
 using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
 
@@ -122,22 +122,8 @@ public partial class CompanionDbContext
                 .HasConstraintName("FK_UCM_User");
         });
 
-        modelBuilder.Entity<UserQuestionHistory>(entity =>
-        {
-            entity.HasKey(e => new { e.UserId, e.QuestionId }).HasName("PK_UserQuestionHistories");
-
-            entity.HasIndex(e => new { e.UserId, e.CooldownUntil }, "IX_UQH_User_Cooldown");
-
-            entity.Property(e => e.LastAnsweredAt).HasDefaultValueSql("(sysdatetimeoffset())", "DF_UQH_Last");
-
-            entity.HasOne(d => d.Question).WithMany(p => p.UserQuestionHistories)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_UQH_Question");
-
-            entity.HasOne(d => d.User).WithMany(p => p.UserQuestionHistories)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_UQH_User");
-        });
+        // #269: UserQuestionHistories is GONE with the Questions table it was keyed by. The cooldown
+        // it used to store is derived from PracticeAnswers by ItemSelector, never written.
 
 
 

@@ -152,7 +152,10 @@ public interface IAttemptEngine
         int capturedMs,
         CancellationToken cancellationToken = default);
 
-    WritingEvaluationResult EvaluateWriting(Question question, string? responseText);
+    // #269: EvaluateWriting(Question, ...) is gone with the Questions table. Its only implementation
+    // judged a legacy question row; a pool position is judged by
+    // AttemptEngine.EvaluateWritingResponse(minWords, requiredKeywords, text), which reads exactly the
+    // two facts the rule needs.
 
     Task<SaveSpeakingAudioResult> SaveSpeakingAudioAsync(
         int attemptId,

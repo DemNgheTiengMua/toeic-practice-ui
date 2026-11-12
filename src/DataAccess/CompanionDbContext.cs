@@ -133,9 +133,6 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<PracticeSession> PracticeSessions { get; set; }
 
 
-    public virtual DbSet<Question> Questions { get; set; }
-
-
     public virtual DbSet<QuestionCategory> QuestionCategories { get; set; }
 
     /// <summary>#183: the twenty-topic axis. Certificate-agnostic, closed set.</summary>
@@ -178,12 +175,6 @@ public partial class CompanionDbContext : DbContext
 
     /// <summary>#199 / D0.7: one item's stored-answer verdict at one administration checkpoint.</summary>
     public virtual DbSet<ItemTelemetryEvaluation> ItemTelemetryEvaluations { get; set; }
-
-
-    public virtual DbSet<QuestionGroup> QuestionGroups { get; set; }
-
-
-    public virtual DbSet<QuestionOption> QuestionOptions { get; set; }
 
 
     public virtual DbSet<Recommendation> Recommendations { get; set; }
@@ -241,9 +232,6 @@ public partial class CompanionDbContext : DbContext
 
     /// <summary>#237: one row per learner per cell — the unit of mastery (D4).</summary>
     public virtual DbSet<UserCellMastery> UserCellMasteries { get; set; }
-
-
-    public virtual DbSet<UserQuestionHistory> UserQuestionHistories { get; set; }
 
 
     public virtual DbSet<vw_MentorAvgRating> vw_MentorAvgRatings { get; set; }

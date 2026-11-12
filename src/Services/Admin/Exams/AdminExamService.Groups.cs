@@ -18,172 +18,10 @@ namespace Services;
 public sealed partial class AdminExamService
 {
 
-    public async Task<AdminQuestionGroupDto> CreateQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, CancellationToken cancellationToken = default)
-    {
-        var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
-        if (exam == null)
-        {
-            throw new ExamNotFoundException(examId);
-        }
-
-        // #157: a group brings questions with it, so it changes the section's shape.
-        await RequireStructureEditableAsync(examId, cancellationToken);
-
-        var section = await db.Sections.FirstOrDefaultAsync(s => s.SectionId == request.SectionId && s.CertId == exam.CertId, cancellationToken);
-        if (section == null)
-        {
-            throw new AdminExamException(ApiError.Codes.Validation, $"Section with id {request.SectionId} not found for certificate {exam.CertId}.");
-        }
-
-        ValidateQuestionGroup(exam.Purpose, section.Modality, request.ImagePath, request.ImageAlt, request.AudioStartMs, request.AudioEndMs, request.PrepSeconds, request.ResponseSeconds);
-
-        var group = new QuestionGroup
-        {
-            ExamId = examId,
-            CertId = exam.CertId,
-            SectionId = request.SectionId,
-            Passage = Normalize(request.Passage),
-            AudioPath = Normalize(request.AudioPath),
-            AudioStartMs = request.AudioStartMs,
-            AudioEndMs = request.AudioEndMs,
-            ImagePath = Normalize(request.ImagePath),
-            ImageAlt = Normalize(request.ImageAlt),
-            Transcript = Normalize(request.Transcript),
-            PrepSeconds = request.PrepSeconds,
-            ResponseSeconds = request.ResponseSeconds,
-            DisplayOrder = request.DisplayOrder,
-            UnitNumber = request.UnitNumber > 0 ? request.UnitNumber : 1
-        };
-
-        db.QuestionGroups.Add(group);
-        exam.UpdatedAt = clock.GetUtcNow();
-        await db.SaveChangesAsync(cancellationToken);
-
-        return new AdminQuestionGroupDto(
-            group.GroupId,
-            group.ExamId,
-            group.CertId,
-            group.SectionId,
-            section.Code,
-            section.Name,
-            EnumCodes.Parse<ModalityDto>(section.Modality),
-            group.Passage,
-            group.AudioPath,
-            group.AudioStartMs,
-            group.AudioEndMs,
-            group.ImagePath,
-            group.ImageAlt,
-            group.Transcript,
-            group.PrepSeconds,
-            group.ResponseSeconds,
-            group.DisplayOrder,
-            Array.Empty<AdminQuestionDto>(),
-            group.UnitNumber);
-    }
-
-    public async Task<AdminQuestionGroupDto> UpdateQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default)
-    {
-        var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
-        if (exam == null)
-        {
-            throw new ExamNotFoundException(examId);
-        }
-
-        var group = await db.QuestionGroups
-            .FirstOrDefaultAsync(g => g.GroupId == groupId && g.ExamId == examId, cancellationToken);
-
-        if (group == null)
-        {
-            throw new QuestionGroupNotFoundException(groupId);
-        }
-
-        var section = await db.Sections.FirstOrDefaultAsync(s => s.SectionId == request.SectionId && s.CertId == exam.CertId, cancellationToken);
-        if (section == null)
-        {
-            throw new AdminExamException(ApiError.Codes.Validation, $"Section with id {request.SectionId} not found for certificate {exam.CertId}.");
-        }
-
-        // #157: moving a group between sections changes which section a finished attempt was scored
-        // over. Content edits inside the same section stay allowed.
-        if (group.SectionId != request.SectionId)
-        {
-            await RequireStructureEditableAsync(examId, cancellationToken);
-        }
-
-        ValidateQuestionGroup(exam.Purpose, section.Modality, request.ImagePath, request.ImageAlt, request.AudioStartMs, request.AudioEndMs, request.PrepSeconds, request.ResponseSeconds);
-
-        group.SectionId = request.SectionId;
-        group.Passage = Normalize(request.Passage);
-        group.AudioPath = Normalize(request.AudioPath);
-        group.AudioStartMs = request.AudioStartMs;
-        group.AudioEndMs = request.AudioEndMs;
-        group.ImagePath = Normalize(request.ImagePath);
-        group.ImageAlt = Normalize(request.ImageAlt);
-        group.Transcript = Normalize(request.Transcript);
-        group.PrepSeconds = request.PrepSeconds;
-        group.ResponseSeconds = request.ResponseSeconds;
-        if (request.DisplayOrder > 0)
-        {
-            group.DisplayOrder = request.DisplayOrder;
-        }
-        group.UnitNumber = request.UnitNumber > 0 ? request.UnitNumber : 1;
-
-        exam.UpdatedAt = clock.GetUtcNow();
-        await db.SaveChangesAsync(cancellationToken);
-
-        return new AdminQuestionGroupDto(
-            group.GroupId,
-            group.ExamId,
-            group.CertId,
-            group.SectionId,
-            section.Code,
-            section.Name,
-            EnumCodes.Parse<ModalityDto>(section.Modality),
-            group.Passage,
-            group.AudioPath,
-            group.AudioStartMs,
-            group.AudioEndMs,
-            group.ImagePath,
-            group.ImageAlt,
-            group.Transcript,
-            group.PrepSeconds,
-            group.ResponseSeconds,
-            group.DisplayOrder,
-            Array.Empty<AdminQuestionDto>(),
-            group.UnitNumber);
-    }
-
-    public async Task DeleteQuestionGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default)
-    {
-        var group = await db.QuestionGroups
-            .Include(g => g.QuestionGroups)
-                .ThenInclude(q => q.QuestionOptionQuestionNavigations)
-            .FirstOrDefaultAsync(g => g.GroupId == groupId && g.ExamId == examId, cancellationToken);
-
-        if (group == null)
-        {
-            throw new QuestionGroupNotFoundException(groupId);
-        }
-
-        // #157: deleting the group removes its questions, shrinking a section a finished attempt was
-        // scored over. The per-question answer check below only sees the questions that have answers.
-        await RequireStructureEditableAsync(examId, cancellationToken);
-
-        // #269: no attempt answer or free response can cite a legacy question id - the column is gone with
-        // the table - so no question in this group has a recorded answer, and the refusal that guarded
-        // against deleting an answered one has nothing left to test.
-
-        foreach (var q in group.QuestionGroups)
-        {
-            // #269: practice answers name an item, not a question, so there is no per-question row to cascade.
-
-            db.QuestionOptions.RemoveRange(q.QuestionOptionQuestionNavigations);
-            db.Questions.Remove(q);
-        }
-
-        db.QuestionGroups.Remove(group);
-        await db.SaveChangesAsync(cancellationToken);
-    }
+    // #269: Create/Update/DeleteQuestionGroupAsync are GONE with the QuestionGroups table. Every group
+    // write is the pool path below - CreateExamClusterAsync for a new cluster, and
+    // UpdateExamStudioGroupAsync / DeleteExamStudioGroupAsync for an existing one. No route called the
+    // removed three (they went in #265), so no screen lost a feature.
 
     /// <summary>
     /// #269: a cluster - one bundle plus its children - authored on the pool.
@@ -317,13 +155,8 @@ public sealed partial class AdminExamService
         var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken)
             ?? throw new ExamNotFoundException(examId);
 
-        // A legacy paper's group is its own row and keeps its own writer: the two addresses share the
-        // integer, and which table holds the id is what decides the shape (#265).
-        if (await db.QuestionGroups.AnyAsync(g => g.GroupId == groupId && g.ExamId == examId, cancellationToken))
-        {
-            await UpdateQuestionGroupAsync(examId, groupId, request, cancellationToken);
-            return;
-        }
+        // #269: the legacy branch is gone. It dispatched to UpdateQuestionGroupAsync when the id named a
+        // QuestionGroups row; that table no longer exists, so every group here is a pool group.
 
         var (stimulus, positions) = await ResolveStudioGroupAsync(examId, groupId, cancellationToken);
         var section = await RequireOneStudioSectionAsync(exam, positions, request.SectionId, cancellationToken);
@@ -400,12 +233,7 @@ public sealed partial class AdminExamService
         var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken)
             ?? throw new ExamNotFoundException(examId);
 
-        if (await db.QuestionGroups.AnyAsync(g => g.GroupId == groupId && g.ExamId == examId, cancellationToken))
-        {
-            await DeleteQuestionGroupAsync(examId, groupId, cancellationToken);
-            return;
-        }
-
+        // #269: the legacy branch is gone. A group is always a pool group now.
         var (_, positions) = await ResolveStudioGroupAsync(examId, groupId, cancellationToken);
         var positionIds = positions.Select(p => p.ExamItemId).ToList();
 

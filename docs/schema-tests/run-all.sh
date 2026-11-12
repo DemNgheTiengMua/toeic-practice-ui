@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# docs/schema-tests/run-all.sh — load the schema on a fresh DB per test, run every domain file,
+# docs/schema-tests/run-all.sh â€” load the schema on a fresh DB per test, run every domain file,
 # report each verdict, and exit non-zero if any failed.
 #
 # It does NOT stop at the first failure. Until 2026-11 this script used `set -e`, so domain04 failing
-# hid domain05..19 and the seed load behind it. AGENTS.md §1.1 names this the way to validate a schema
+# hid domain05..19 and the seed load behind it. AGENTS.md Â§1.1 names this the way to validate a schema
 # change, so the documented command could not be run to completion.
 #
 # scripts/schema-tests-baseline.sh runs the same domain files one at a time and must report the same
@@ -32,7 +32,7 @@ run_one () {  # $1 = label, $2 = .sql file, $3 = 1 to inject the fixture guard, 
     # fixture-guard.awk asserts @@ROWCOUNT after every INSERT ... SELECT, so a fixture that matched
     # nothing aborts naming itself instead of letting the test's own THROW report the wrong reason.
     #
-    # If awk itself fails, `sql` would point at an empty file and sqlcmd would exit 0 on it — every
+    # If awk itself fails, `sql` would point at an empty file and sqlcmd would exit 0 on it â€” every
     # domain file would report PASS while running nothing. So awk's status is checked, and the
     # guarded file is required to be non-empty, before sqlcmd is allowed near it.
     if ! awk -v LABEL="$label" -f "$DIR/fixture-guard.awk" "$sql" > "$TMP/guarded.sql"; then
@@ -71,12 +71,11 @@ run_one "docs/seed-demo.sql" "$ROOT/docs/seed-demo.sql" 0
 echo "=== docs/seed-demo.sql (idempotency re-run, same database)"
 run_one "docs/seed-demo.sql re-run" "$ROOT/docs/seed-demo.sql" 0 1
 
-# AGENTS.md §6 lists this seed as a command, and nothing here ran it: #232 dropped the four path
-# tables while this file still INSERTed into them, so the documented command aborted with
-# "Invalid object name 'dbo.PathTemplates'" and the harness still reported 41/41. A seed the
-# project tells people to run is part of the schema's contract.
-echo "=== docs/seed-diagnostic-benchmark.sql (after the demo seed, same database)"
-run_one "docs/seed-diagnostic-benchmark.sql" "$ROOT/docs/seed-diagnostic-benchmark.sql" 0 1
+# #269: docs/seed-diagnostic-benchmark.sql is RETIRED. It was 1,527 lines of the legacy content model
+# (21 QuestionGroups, 32 Questions, 30 QuestionOptions inserts) and the tables no longer exist. Its content
+# is already in docs/seed-demo.sql, which provides the same TOEIC diagnostic exams through the pool -
+# measured: every seeded exam holds pool items, "Diagnostic Benchmark 45M" among them. One demo seed is
+# the single source of demo content, which is also what #269 asks for.
 
 echo
 echo "=== summary: ${#results[@]} checks, $(( ${#results[@]} - fails )) pass, $fails fail"

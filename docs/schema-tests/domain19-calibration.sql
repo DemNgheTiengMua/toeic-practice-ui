@@ -15,24 +15,35 @@ INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose,QuestionCount)
   VALUES (@c,N'P','published',20,'placement',1);
 DECLARE @e INT=SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@e,@c,@sec,1);
-DECLARE @g INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
-  VALUES (@g,@e,@sec,@s,N'Q','B1','mcq',1);
-DECLARE @q INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
-  VALUES (@g,@e,@sec,@s,N'Q2','B1','mcq',2);
-DECLARE @q2 INT=SCOPE_IDENTITY();
+-- #269: a paper position is a pool item's version on a section. Two positions, so the two answers below
+-- are two distinct rows rather than two answers to one.
+INSERT INTO Topics (Modality,Code,Name) VALUES ('listening','L-DET',N'Explicit factual detail and extraction');
+DECLARE @topic INT=(SELECT TopicId FROM Topics WHERE Code='L-DET');
+INSERT INTO Items (Modality,TopicId,CefrLevel,ItemType,RenderFormat,BatchTag) VALUES
+  ('listening',@topic,'B1','short_exchange','mcq','cal-a'),
+  ('listening',@topic,'B1','short_exchange','mcq','cal-b');
+DECLARE @i1 INT=(SELECT ItemId FROM Items WHERE BatchTag='cal-a');
+DECLARE @i2 INT=(SELECT ItemId FROM Items WHERE BatchTag='cal-b');
+INSERT INTO ItemVersions (ItemId,VersionNumber,Stem,OptionA,OptionB,OptionC,OptionD,KeyLabel) VALUES
+  (@i1,1,N'Q', N'a',N'b',N'c',N'd',N'A'),
+  (@i2,1,N'Q2',N'a',N'b',N'c',N'd',N'A');
+DECLARE @v1 INT=(SELECT ItemVersionId FROM ItemVersions WHERE ItemId=@i1);
+DECLARE @v2 INT=(SELECT ItemVersionId FROM ItemVersions WHERE ItemId=@i2);
+INSERT INTO ExamItems (ExamId,SectionId,CertId,ItemVersionId,ItemId,Modality,DisplayOrder) VALUES
+  (@e,@sec,@c,@v1,@i1,'listening',1),
+  (@e,@sec,@c,@v2,@i2,'listening',2);
+DECLARE @pos1 INT=(SELECT ExamItemId FROM ExamItems WHERE ExamId=@e AND DisplayOrder=1);
+DECLARE @pos2 INT=(SELECT ExamItemId FROM ExamItems WHERE ExamId=@e AND DisplayOrder=2);
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,StartedAt,ExpiresAt)
   VALUES (@u,@e,@c,'in_progress',SYSDATETIMEOFFSET(),DATEADD(hour,1,SYSDATETIMEOFFSET()));
 DECLARE @a INT=SCOPE_IDENTITY();
 
 -- #167: AttemptAnswers carries no AnsweredAt any more — nothing read it. The row inserts below stay
 -- so the answer table is still exercised; only PracticeAnswers has a response time.
-INSERT INTO AttemptAnswers (AttemptId,QuestionId,ExamId,IsCorrect)
-  VALUES (@a,@q,@e,1);
-INSERT INTO AttemptAnswers (AttemptId,QuestionId,ExamId,IsCorrect)
-  VALUES (@a,@q2,@e,0);
+INSERT INTO AttemptAnswers (AttemptId,ExamId,ItemId,ItemVersionId,ExamItemId,IsCorrect)
+  VALUES (@a,@e,@i1,@v1,@pos1,1);
+INSERT INTO AttemptAnswers (AttemptId,ExamId,ItemId,ItemVersionId,ExamItemId,IsCorrect)
+  VALUES (@a,@e,@i2,@v2,@pos2,0);
 PRINT 'attempt answers store without a response time';
 
 -- accept: a decision the learner made, with the numbers behind it
@@ -101,8 +112,8 @@ END CATCH
 INSERT INTO PracticeSessions (UserId,CertId,SectionId,Modality,QuestionCount,Status)
   VALUES (@u,@c,@sec,'listening',1,'in_progress');
 DECLARE @ps INT=SCOPE_IDENTITY();
-INSERT INTO PracticeAnswers (SessionId,QuestionId,SectionId,IsCorrect,DisplayOrder,AnsweredAt)
-  VALUES (@ps,@q,@sec,1,1,SYSDATETIMEOFFSET());
+INSERT INTO PracticeAnswers (SessionId,ItemId,ItemVersionId,IsCorrect,DisplayOrder,AnsweredAt)
+  VALUES (@ps,@i1,@v1,1,1,SYSDATETIMEOFFSET());
 PRINT 'practice answer timestamps accepted';
 
 PRINT 'calibration constraints hold';

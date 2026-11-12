@@ -109,10 +109,7 @@ public partial class Exam
     public virtual ICollection<PlacementTest> PlacementTestExams { get; set; } = new List<PlacementTest>();
 
     [InverseProperty("Exam")]
-    public virtual ICollection<QuestionGroup> QuestionGroups { get; set; } = new List<QuestionGroup>();
-
     /// <summary>#226: the recorded readiness pass that unlocks the publish door. At most one row.</summary>
-    [InverseProperty("Exam")]
     public virtual ExamPublishAudit? PublishAudit { get; set; }
 
     /// <summary>

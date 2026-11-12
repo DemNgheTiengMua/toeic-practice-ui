@@ -1,15 +1,22 @@
 SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
--- #224: a saved link pins the item version, in one of two shapes.
+-- #224 / #269: a saved link pins the item version. There is ONE shape now.
 --
--- The half a constraint can express is here; the half only a service can show (a re-versioned item
--- leaves the saved link alone, a retired-defective item is flagged) is in
--- tests/Services.Tests/SavedQuestionServiceTests.cs.
+-- QuestionId went with the Questions table, so the entire "two shapes are exclusive" section of this
+-- file is gone - and named, because each of its four assertions tested something that no longer has a
+-- representation:
+--   * "a legacy link names its question and no pool column" - no question column exists.
+--   * "a link cannot mix the two shapes" - there is no second shape to mix.
+--   * "a link cannot half-fill the pool pair" - ItemId and ItemVersionId are NOT NULL, so SQL Server's
+--     own NOT NULL refusal is the guard (that is a weaker report than a named CHECK, so it is not
+--     dressed up as one below).
+--   * "a legacy link carrying a certificate is refused" - CertId is NOT NULL now, and a legacy link is
+--     unrepresentable. What survives is the reason the column is required: an item is
+--     certificate-agnostic, so the link carries the scope.
+-- CK_SavedQuestions_Shape itself was dropped in #269 for the same reason: with one shape there is
+-- nothing to keep apart.
 --
---   1. a pool link names its item and version, and survives a re-versioned item
---   2. a legacy link names its question and no pool column
---   3. a link cannot mix the two shapes, nor half-fill the pool pair (CK_SavedQuestions_Shape)
---   4. a link cannot name one item and another item's version (FK_SavedQuestions_VersionItem)
---   5. one bookmark per question and one per item, and a second item is a second bookmark
+-- What survives, and is proved here: the pin (the link names the version it saved and a re-versioned
+-- item leaves it alone), the composite foreign key, and one bookmark per item per learner.
 --
 -- Every CATCH checks the specific guard by name: a catch that proves only "something failed" cannot
 -- tell a working guard from a typo in this file.
@@ -17,7 +24,7 @@ SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 DECLARE @guardWrong NVARCHAR(2048);
 
 -- ---------------------------------------------------------------------------------------------
--- 0. the shape: one certificate, one reading topic, one item with two versions, one learner
+-- 0. the shape: one certificate, one reading topic, two items, one learner
 -- ---------------------------------------------------------------------------------------------
 INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
 DECLARE @role INT = SCOPE_IDENTITY();
@@ -28,8 +35,6 @@ DECLARE @skill INT = SCOPE_IDENTITY();
 INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
 VALUES (@skill, @cert, 'reading', 'P5', N'Incomplete Sentences', 4, 1, 1);
 DECLARE @sec INT = SCOPE_IDENTITY();
-INSERT INTO QuestionCategories (CertId, Code, Name) VALUES (@cert, 'sq224-cat', N'Grammar');
-DECLARE @cat INT = SCOPE_IDENTITY();
 INSERT INTO Users (RoleId, Email, PasswordHash, FullName, ActiveCertId)
 VALUES (@role, 'sq224@x.com', 0x01, N'Saved Learner', @cert);
 DECLARE @user INT = SCOPE_IDENTITY();
@@ -49,31 +54,15 @@ INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC
 DECLARE @v1 INT = (SELECT ItemVersionId FROM ItemVersions WHERE ItemId = @item1 AND VersionNumber = 1);
 DECLARE @v2 INT = (SELECT ItemVersionId FROM ItemVersions WHERE ItemId = @item2 AND VersionNumber = 1);
 
--- the legacy shape still works, unchanged: a question-shaped link with no pool column
-INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount)
-VALUES (@cert, N'Saved links paper', 'draft', 60, 'mock', 1);
-DECLARE @exam INT = SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
-DECLARE @grp INT = SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, CefrLevel, QuestionType, DisplayOrder)
-VALUES (@grp, @exam, @sec, @skill, @cat, N'Legacy stem.', 'A2', 'mcq', 1);
-DECLARE @q INT = SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, CategoryId, Stem, CefrLevel, QuestionType, DisplayOrder)
-VALUES (@grp, @exam, @sec, @skill, @cat, N'Legacy stem two.', 'A2', 'mcq', 2);
-DECLARE @q2 INT = SCOPE_IDENTITY();
-
-INSERT INTO SavedQuestions (UserId, QuestionId, Source) VALUES (@user, @q, 'manual');
-PRINT 'accepted a legacy saved link, unchanged';
-
 -- ---------------------------------------------------------------------------------------------
--- 1. a pool link pins the item and the version, and a re-versioned item leaves it alone
+-- 1. a link pins the item and the version, and a re-versioned item leaves it alone
 -- ---------------------------------------------------------------------------------------------
 INSERT INTO SavedQuestions (UserId, CertId, ItemId, ItemVersionId, Source)
 VALUES (@user, @cert, @item1, @v1, 'manual');
 
 IF (SELECT ItemVersionId FROM SavedQuestions WHERE UserId = @user AND ItemId = @item1) <> @v1
-  THROW 50000, 'EXPECT_REJECT FAILED: a pool link did not store the version it was given', 1;
-PRINT 'a pool link pins the item version';
+  THROW 50000, 'EXPECT_REJECT FAILED: a link did not store the version it was given', 1;
+PRINT 'a saved link pins the item version';
 
 INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel, Explanation)
 VALUES (@item1, 2, N'Corrected stem.', N'a', N'b', N'c', N'd', 'A', N'Corrected.');
@@ -85,60 +74,32 @@ IF (SELECT COUNT(*) FROM ItemVersions WHERE ItemId = @item1) <> 2
 PRINT 'a re-versioned item leaves the pinned saved link and both versions intact';
 
 -- ---------------------------------------------------------------------------------------------
--- 2. the two shapes are exclusive: no half pool pair, no row that is both
+-- 2. half a pair is unrepresentable: the columns are NOT NULL, so this is the database's refusal
 -- ---------------------------------------------------------------------------------------------
 BEGIN TRY
   INSERT INTO SavedQuestions (UserId, CertId, ItemId, Source) VALUES (@user, @cert, @item2, 'manual');
   THROW 50000, 'EXPECT_REJECT FAILED: an item with no version was accepted', 1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  IF ERROR_MESSAGE() NOT LIKE '%CK_SavedQuestions_Shape%'
+  IF ERROR_MESSAGE() NOT LIKE '%ItemVersionId%'
   BEGIN
     SET @guardWrong = N'EXPECT_REJECT FAILED: the item-only pair was refused by the wrong guard: ' + ERROR_MESSAGE();
     THROW 50000, @guardWrong, 1;
   END
-  PRINT 'rejected an item with no version, by CK_SavedQuestions_Shape';
+  PRINT 'rejected an item with no version, by the NOT NULL on ItemVersionId';
 END CATCH
 
 BEGIN TRY
   INSERT INTO SavedQuestions (UserId, ItemId, ItemVersionId, Source) VALUES (@user, @item2, @v2, 'manual');
-  THROW 50000, 'EXPECT_REJECT FAILED: a pool link with no certificate was accepted', 1;
+  THROW 50000, 'EXPECT_REJECT FAILED: a link with no certificate was accepted', 1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  IF ERROR_MESSAGE() NOT LIKE '%CK_SavedQuestions_Shape%'
+  IF ERROR_MESSAGE() NOT LIKE '%CertId%'
   BEGIN
-    SET @guardWrong = N'EXPECT_REJECT FAILED: the certificate-less pool link was refused by the wrong guard: ' + ERROR_MESSAGE();
+    SET @guardWrong = N'EXPECT_REJECT FAILED: the certificate-less link was refused by the wrong guard: ' + ERROR_MESSAGE();
     THROW 50000, @guardWrong, 1;
   END
-  PRINT 'rejected a pool link with no certificate, by CK_SavedQuestions_Shape';
-END CATCH
-
-BEGIN TRY
-  INSERT INTO SavedQuestions (UserId, CertId, QuestionId, ItemId, ItemVersionId, Source)
-  VALUES (@user, @cert, @q2, @item2, @v2, 'manual');
-  THROW 50000, 'EXPECT_REJECT FAILED: a link carrying both shapes was accepted', 1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  IF ERROR_MESSAGE() NOT LIKE '%CK_SavedQuestions_Shape%'
-  BEGIN
-    SET @guardWrong = N'EXPECT_REJECT FAILED: the two-shape link was refused by the wrong guard: ' + ERROR_MESSAGE();
-    THROW 50000, @guardWrong, 1;
-  END
-  PRINT 'rejected a link carrying both shapes, by CK_SavedQuestions_Shape';
-END CATCH
-
--- a legacy link with a certificate has no meaning either: a question already carries one
-BEGIN TRY
-  INSERT INTO SavedQuestions (UserId, CertId, QuestionId, Source) VALUES (@user, @cert, @q2, 'manual');
-  THROW 50000, 'EXPECT_REJECT FAILED: a legacy link with a certificate was accepted', 1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  IF ERROR_MESSAGE() NOT LIKE '%CK_SavedQuestions_Shape%'
-  BEGIN
-    SET @guardWrong = N'EXPECT_REJECT FAILED: the certificate-bearing legacy link was refused by the wrong guard: ' + ERROR_MESSAGE();
-    THROW 50000, @guardWrong, 1;
-  END
-  PRINT 'rejected a legacy link carrying a certificate, by CK_SavedQuestions_Shape';
+  PRINT 'rejected a link with no certificate, by the NOT NULL on CertId';
 END CATCH
 
 -- ---------------------------------------------------------------------------------------------
@@ -159,7 +120,7 @@ END TRY BEGIN CATCH
 END CATCH
 
 -- ---------------------------------------------------------------------------------------------
--- 4. one bookmark per item, one per question, and a second item is a second bookmark
+-- 4. one bookmark per item, and a second item is a second bookmark
 -- ---------------------------------------------------------------------------------------------
 INSERT INTO SavedQuestions (UserId, CertId, ItemId, ItemVersionId, Source)
 VALUES (@user, @cert, @item2, @v2, 'incorrect');
@@ -179,23 +140,10 @@ END TRY BEGIN CATCH
   PRINT 'rejected a second bookmark on the same item, by UQ_SavedQuestions_Item';
 END CATCH
 
-BEGIN TRY
-  INSERT INTO SavedQuestions (UserId, QuestionId, Source) VALUES (@user, @q, 'incorrect');
-  THROW 50000, 'EXPECT_REJECT FAILED: the same question was bookmarked twice', 1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  IF ERROR_MESSAGE() NOT LIKE '%UQ_SavedQuestions_Question%'
-  BEGIN
-    SET @guardWrong = N'EXPECT_REJECT FAILED: the duplicate question was refused by the wrong guard: ' + ERROR_MESSAGE();
-    THROW 50000, @guardWrong, 1;
-  END
-  PRINT 'rejected a second bookmark on the same question, by UQ_SavedQuestions_Question';
-END CATCH
-
 -- ---------------------------------------------------------------------------------------------
 -- 5. the count, once more: no refusal above left a row behind
 -- ---------------------------------------------------------------------------------------------
-IF (SELECT COUNT(*) FROM SavedQuestions WHERE UserId = @user) <> 3
+IF (SELECT COUNT(*) FROM SavedQuestions WHERE UserId = @user) <> 2
   THROW 50000, 'EXPECT_REJECT FAILED: a refusal above left a saved link behind', 1;
 IF (SELECT COUNT(*) FROM ItemVersions WHERE ItemId = @item1) <> 2
   THROW 50000, 'EXPECT_REJECT FAILED: a refusal above created or removed a version', 1;

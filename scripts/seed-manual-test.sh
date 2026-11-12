@@ -4,7 +4,7 @@
 # with the MOCK payment gateway and FAKE AI so a manual pass never spends real
 # credits or real API quota.
 #
-#   scripts/seed-manual-test.sh seed     drop → schema → seed-demo → seed-diagnostic-benchmark
+#   scripts/seed-manual-test.sh seed     reset, then schema and demo seed
 #   scripts/seed-manual-test.sh start    build and start WebAPI (5001) + WebMVC (5000)
 #   scripts/seed-manual-test.sh fresh    stop → seed → start   (use before each pass)
 #   scripts/seed-manual-test.sh stop     stop whatever listens on 5000 / 5001
@@ -66,9 +66,6 @@ cmd_seed() {
 
   say "Loading demo seed (docs/seed-demo.sql)"
   sql -d "$DB" -i docs/seed-demo.sql >> "$LOG_DIR/seed.log"
-
-  say "Loading diagnostic benchmark seed (docs/seed-diagnostic-benchmark.sql)"
-  sql -d "$DB" -i docs/seed-diagnostic-benchmark.sql >> "$LOG_DIR/seed.log"
 
   say "Learner balance: $(learner_balance) credits"
 }

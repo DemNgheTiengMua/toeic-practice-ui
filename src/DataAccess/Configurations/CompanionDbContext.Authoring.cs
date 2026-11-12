@@ -182,7 +182,7 @@ public partial class CompanionDbContext
                 .HasConstraintName("FK_TargetBands_Band");
 
             // #153: the starting band is a band of the same certificate, or NULL when the goal
-            // predates the rule. Optional relationship — MATCH SIMPLE keeps the NULL legal.
+            // predates the rule. Optional relationship â€” MATCH SIMPLE keeps the NULL legal.
             entity.HasOne(d => d.CurrentScoreBand).WithMany(p => p.CurrentBandTargetBands)
                 .HasPrincipalKey(p => new { p.CertId, p.Code })
                 .HasForeignKey(d => new { d.CertId, d.CurrentBandCode })
@@ -514,107 +514,9 @@ public partial class CompanionDbContext
         });
 
 
-        modelBuilder.Entity<QuestionGroup>(entity =>
-        {
-            entity.HasKey(e => e.GroupId).HasName("PK__Question__149AF36A03E95EE7");
-
-            entity.ToTable(tb => tb.HasTrigger("trg_QGroups_SkillPracticeOneModality"));
-
-            entity.Property(e => e.UnitNumber).HasDefaultValue(1);
-
-            entity.HasIndex(e => new { e.GroupId, e.CertId }, "UQ_QGroups_Id_Cert").IsUnique();
-
-            entity.HasOne(d => d.Exam).WithMany(p => p.QuestionGroups)
-                .HasPrincipalKey(p => new { p.ExamId, p.CertId })
-                .HasForeignKey(d => new { d.ExamId, d.CertId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_QGroups_ExamCert");
-
-            entity.HasOne(d => d.Section).WithMany(p => p.QuestionGroups)
-                .HasPrincipalKey(p => new { p.SectionId, p.CertId })
-                .HasForeignKey(d => new { d.SectionId, d.CertId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_QGroups_SectionCert");
-        });
-
-
-
-        modelBuilder.Entity<Question>(entity =>
-        {
-            entity.HasKey(e => e.QuestionId).HasName("PK__Question__0DC06FACD56E3AE0");
-
-            // #229 / D1: the level is stored by its code, never as an integer - an integer scale
-            // beside the level codes is the second scale #182 exists to prevent. A NULL column stays a
-            // NULL level: EF never passes null through a value converter.
-            entity.Property(e => e.CefrLevel)
-                .HasConversion(
-                    v => v == null ? null : v.Value.Code,
-                    v => v == null ? null : (CefrLevel?)ParseAuthoredLevel(v))
-                .HasMaxLength(10)
-                .IsUnicode(false);
-
-            entity.HasIndex(e => e.CategoryId, "IX_Questions_Category").HasFilter("([CategoryId] IS NOT NULL)");
-
-            entity.Property(e => e.QuestionType).HasMaxLength(30);
-            entity.Property(e => e.AllowNumber).HasDefaultValue(true);
-            entity.Property(e => e.MaxSelections);
-            entity.Property(e => e.AcceptedAnswersJson);
-            entity.Property(e => e.RequiredKeywords);
-
-            entity.Ignore(e => e.QuestionOptionQuestion);
-
-            entity.HasOne(d => d.Category).WithMany(p => p.Questions).HasConstraintName("FK_Questions_Category");
-
-            entity.HasOne(d => d.Group).WithMany(p => p.QuestionGroups)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Questions__Group__3A4CA8FD");
-
-            entity.HasOne(d => d.QuestionGroup).WithMany(p => p.QuestionQuestionGroups)
-                .HasPrincipalKey(p => new { p.GroupId, p.ExamId })
-                .HasForeignKey(d => new { d.GroupId, d.ExamId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Questions_GroupExam");
-
-            entity.HasOne(d => d.QuestionGroupNavigation).WithMany(p => p.QuestionQuestionGroupNavigations)
-                .HasPrincipalKey(p => new { p.GroupId, p.SectionId })
-                .HasForeignKey(d => new { d.GroupId, d.SectionId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Questions_GroupSection");
-
-            entity.HasOne(d => d.Section).WithMany(p => p.Questions)
-                .HasPrincipalKey(p => new { p.SectionId, p.SkillId })
-                .HasForeignKey(d => new { d.SectionId, d.SkillId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Questions_SectionSkill");
-        });
-
-
-
-        modelBuilder.Entity<QuestionOption>(entity =>
-        {
-            entity.HasKey(e => e.OptionId).HasName("PK__Question__92C7A1FFB8F0027D");
-
-            entity.Property(e => e.QuestionType).HasMaxLength(30);
-
-            entity.HasIndex(e => e.QuestionId, "UX_Options_OneCorrect")
-                .IsUnique()
-                .HasFilter("([IsCorrect]=(1) AND [QuestionType]<>'multi_select')");
-
-            entity.Property(e => e.OptionId).ValueGeneratedOnAdd();
-
-            entity.HasOne(d => d.Question).WithMany()
-                .HasForeignKey(d => d.QuestionId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__QuestionO__Quest__339FAB6E");
-
-            entity.HasOne(d => d.QuestionNavigation).WithMany(p => p.QuestionOptionQuestionNavigations)
-                .HasPrincipalKey(p => new { p.QuestionId, p.QuestionType })
-                .HasForeignKey(d => new { d.QuestionId, d.QuestionType })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Options_QuestionType");
-        });
-
-
+        // #269: QuestionGroup, Question and QuestionOption are GONE with their tables. Their entity
+        // classes are deleted and nothing maps them, so this file no longer configures a content model
+        // the schema does not have.
 
         modelBuilder.Entity<ReviewSampleDecision>(entity =>
         {

@@ -19,9 +19,15 @@ INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,ExpectedQuestionCount,Di
   VALUES (@sk,@c,'listening','L1',N'Listening',1,1); DECLARE @sec INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'Placement 216','published',45,'placement');
 DECLARE @e INT=SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@e,@c,@sec,1); DECLARE @g INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
-  VALUES (@g,@e,@sec,@sk,N'Record an answer.','B1','free_response',1); DECLARE @q INT=SCOPE_IDENTITY();
+-- #269: the task is a pool item's version at a roster position; the free response names the position.
+INSERT INTO Topics (Modality,Code,Name) VALUES ('listening','L-DET',N'Explicit factual detail and extraction');
+DECLARE @topic INT=(SELECT TopicId FROM Topics WHERE Code='L-DET');
+INSERT INTO Items (Modality,TopicId,CefrLevel,ItemType,RenderFormat)
+  VALUES ('listening',@topic,'B1','extended_dialogue','mcq'); DECLARE @it INT=SCOPE_IDENTITY();
+INSERT INTO ItemVersions (ItemId,VersionNumber,Stem,OptionA,OptionB,OptionC,OptionD,KeyLabel)
+  VALUES (@it,1,N'Record an answer.',N'a',N'b',N'c',N'd',N'A'); DECLARE @v INT=SCOPE_IDENTITY();
+INSERT INTO ExamItems (ExamId,SectionId,CertId,ItemVersionId,ItemId,Modality,DisplayOrder)
+  VALUES (@e,@sec,@c,@v,@it,'listening',1); DECLARE @pos INT=SCOPE_IDENTITY();
 INSERT INTO Users (RoleId,Email,PasswordHash,ActiveCertId) VALUES (@r,'resume216@x.com',0x00,@c); DECLARE @u INT=SCOPE_IDENTITY();
 
 -- 1. the inactivity stamp exists, and is nullable so nothing is invented at insert time
@@ -40,8 +46,8 @@ IF (SELECT LastActivityAt FROM ExamAttempts WHERE AttemptId=@a) IS NOT NULL
 PRINT 'the inactivity stamp is nullable and starts empty';
 
 -- 2. the retry count defaults to zero and its token starts empty
-INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,Status,DraftSavedAt,SubmittedAt,AudioPath,DurationMs)
-  VALUES (@a,@q,@e,@sk,'free_response','draft',SYSDATETIMEOFFSET(),NULL,N'/audio/resume216.webm',9000);
+INSERT INTO FreeResponses (AttemptId,ExamItemId,ExamId,SectionId,SkillId,QuestionType,Status,DraftSavedAt,SubmittedAt,AudioPath,DurationMs)
+  VALUES (@a,@pos,@e,@sec,@sk,'free_response','draft',SYSDATETIMEOFFSET(),NULL,N'/audio/resume216.webm',9000);
 DECLARE @fr INT=SCOPE_IDENTITY();
 IF (SELECT RecordingInterruptions FROM FreeResponses WHERE FreeResponseId=@fr) <> 0
   THROW 50000, 'EXPECT_REJECT FAILED: a task that was never interrupted claims interruptions', 1;

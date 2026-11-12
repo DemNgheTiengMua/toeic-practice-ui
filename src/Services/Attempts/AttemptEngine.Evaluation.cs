@@ -8,61 +8,9 @@ namespace Services;
 
 public sealed partial class AttemptEngine
 {
-    public WritingEvaluationResult EvaluateWriting(Question question, string? responseText) =>
-        EvaluateWritingResponse(question, responseText);
-
-    public static bool EvaluateObjectiveAnswer(
-        Question question,
-        IEnumerable<QuestionOption> options,
-        int? selectedOptionId,
-        string? selectedOptionIdsJson,
-        string? responseText)
-    {
-        var qType = question.QuestionType?.ToLowerInvariant() ?? QuestionType.Mcq.ToCode();
-
-        switch (qType)
-        {
-            case "mcq":
-            case "mcq_3":
-            {
-                if (!selectedOptionId.HasValue) return false;
-                return options.Any(o => o.OptionId == selectedOptionId.Value && o.IsCorrect);
-            }
-
-            case "multi_select":
-            {
-                var selectedIds = ParseOptionIds(selectedOptionIdsJson, selectedOptionId);
-                var correctIds = options.Where(o => o.IsCorrect).Select(o => o.OptionId).ToHashSet();
-                if (correctIds.Count == 0) return false;
-                return selectedIds.SetEquals(correctIds);
-            }
-
-            case "inline_completion":
-            {
-                return EvaluateTextCompletion(question, options, responseText);
-            }
-
-            case "dropdown":
-            case "drag_drop":
-            {
-                if (selectedOptionId.HasValue && options.Any(o => o.OptionId == selectedOptionId.Value && o.IsCorrect))
-                {
-                    return true;
-                }
-
-                if (!string.IsNullOrWhiteSpace(responseText))
-                {
-                    return EvaluateTextCompletion(question, options, responseText);
-                }
-
-                return false;
-            }
-
-            default:
-                return false;
-        }
-    }
-
+    // #269: EvaluateObjectiveAnswer, EvaluateTextCompletion and the Question-shaped
+    // EvaluateWriting overloads are gone. They judged a legacy Questions row, which no longer exists,
+    // and every pool path already grades a pinned ItemVersion through AttemptEngine.Pool.
     public static HashSet<int> ParseOptionIds(string? selectedOptionIdsJson, int? fallbackOptionId = null)
     {
         var set = new HashSet<int>();
@@ -103,9 +51,6 @@ public sealed partial class AttemptEngine
 
         return set;
     }
-
-    public static WritingEvaluationResult EvaluateWritingResponse(Question question, string? responseText) =>
-        EvaluateWritingResponse(question.MinWords, question.RequiredKeywords, responseText);
 
     /// <summary>
     /// #269: the same evaluation over the two facts it actually reads, so a pool position - which has
@@ -158,59 +103,6 @@ public sealed partial class AttemptEngine
             feedback);
     }
 
-    public static bool EvaluateTextCompletion(
-        Question question,
-        IEnumerable<QuestionOption> options,
-        string? responseText)
-    {
-        if (string.IsNullOrWhiteSpace(responseText)) return false;
-
-        var normalizedCandidate = System.Text.RegularExpressions.Regex.Replace(responseText.Trim(), @"\s+", " ");
-
-        if (!question.AllowNumber && System.Text.RegularExpressions.Regex.IsMatch(normalizedCandidate, @"\d"))
-        {
-            return false;
-        }
-
-        var words = normalizedCandidate.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (question.MaxWords.HasValue && words.Length > question.MaxWords.Value)
-        {
-            return false;
-        }
-
-        if (!string.IsNullOrWhiteSpace(question.RequiredKeywords))
-        {
-            var keywords = ParseKeywords(question.RequiredKeywords);
-            foreach (var kw in keywords)
-            {
-                if (string.IsNullOrWhiteSpace(kw)) continue;
-                if (!ContainsKeywordStem(normalizedCandidate, kw.Trim()))
-                {
-                    return false;
-                }
-            }
-        }
-
-        var accepted = ParseAcceptedAnswers(question.AcceptedAnswersJson);
-        foreach (var opt in options.Where(o => o.IsCorrect))
-        {
-            if (!string.IsNullOrWhiteSpace(opt.Text))
-            {
-                accepted.Add(opt.Text.Trim());
-            }
-        }
-
-        foreach (var acc in accepted)
-        {
-            var normalizedAcc = System.Text.RegularExpressions.Regex.Replace(acc.Trim(), @"\s+", " ");
-            if (string.Equals(normalizedCandidate, normalizedAcc, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     public static List<string> ParseKeywords(string requiredKeywords)
     {

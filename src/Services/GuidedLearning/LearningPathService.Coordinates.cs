@@ -483,12 +483,11 @@ public sealed partial class LearningPathService
                 && e.Purpose == ExamPurpose.Mock.ToCode()
                 && e.Status == ExamStatus.Published.ToCode()
                 && !e.IsDeleted
-                // #269: a paper's skills come from its ROSTER once it is authored on the pool. Reading
-                // QuestionGroups alone meant a pool-bound paper planned no mock step at all - the path
-                // silently omitted the mock stage for every certificate built after the migration, which
-                // is why the LearningPath fixtures could not migrate.
-                && (e.QuestionGroups.Any(g => g.Section.SkillId == skillId)
-                    || e.ExamItems.Any(i => i.Section.SkillId == skillId)))
+                // #269: a paper's skills come from its ROSTER. Reading QuestionGroups alone meant a
+                // pool-bound paper planned no mock step at all - the path silently omitted the mock stage
+                // for every certificate built after the migration, which is why the LearningPath fixtures
+                // could not migrate. The legacy arm is gone with that table, so the roster is the answer.
+                && e.ExamItems.Any(i => i.Section.SkillId == skillId))
             .OrderBy(e => e.ExamId)
             .Select(e => (int?)e.ExamId)
             .FirstOrDefaultAsync(cancellationToken);

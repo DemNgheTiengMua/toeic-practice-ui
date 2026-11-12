@@ -1,5 +1,9 @@
 -- docs/schema-tests/domain07-aigrading.sql — abbreviated setup via the harness state
 SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
+-- #269: a free response names the roster POSITION it was recorded against, so every fixture below
+-- builds a position (ExamItems) rather than a Questions row. The grading chain above and below the
+-- response is unchanged: AiGradings -> AiGradingScores against a criterion and its MaxScore.
+--
 -- minimal chain: cert, skill(speaking), rubric criterion
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('IELTS',N'I',1); DECLARE @c INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c,'SPK',N'S','speaking',1);
@@ -16,19 +20,33 @@ INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQues
 DECLARE @sec0 INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'M9 Exam','published',60);
 DECLARE @exam0 INT=SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@exam0,@c,@sec0,1);
-DECLARE @grp0 INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
-  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-q1','B2','free_response',1);
-DECLARE @qfr1 INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
-  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-q2','B2','free_response',2);
-DECLARE @qfr2 INT=SCOPE_IDENTITY();
+-- three speaking positions on one paper: two for the first attempt, one for the late-response case
+INSERT INTO Topics (Modality,Code,Name) VALUES ('speaking','S-ARG',N'Sustained monologic argumentation and justification');
+DECLARE @topic INT=(SELECT TopicId FROM Topics WHERE Code='S-ARG');
+INSERT INTO Items (Modality,TopicId,CefrLevel,ItemType,RenderFormat,BatchTag) VALUES
+  ('speaking',@topic,'B2','argumentative_monologue','free_response','d269-a'),
+  ('speaking',@topic,'B2','argumentative_monologue','free_response','d269-b'),
+  ('speaking',@topic,'B2','argumentative_monologue','free_response','d269-c');
+DECLARE @i1 INT=(SELECT ItemId FROM Items WHERE BatchTag='d269-a');
+DECLARE @i2 INT=(SELECT ItemId FROM Items WHERE BatchTag='d269-b');
+DECLARE @i3 INT=(SELECT ItemId FROM Items WHERE BatchTag='d269-c');
+INSERT INTO ItemVersions (ItemId,VersionNumber,Stem,ResponseSeconds) VALUES
+  (@i1,1,N'fr-q1',90),(@i2,1,N'fr-q2',90),(@i3,1,N'fr-q3',90);
+DECLARE @v1 INT=(SELECT ItemVersionId FROM ItemVersions WHERE ItemId=@i1);
+DECLARE @v2 INT=(SELECT ItemVersionId FROM ItemVersions WHERE ItemId=@i2);
+DECLARE @v3 INT=(SELECT ItemVersionId FROM ItemVersions WHERE ItemId=@i3);
+INSERT INTO ExamItems (ExamId,SectionId,CertId,ItemVersionId,ItemId,Modality,DisplayOrder) VALUES
+  (@exam0,@sec0,@c,@v1,@i1,'speaking',1),
+  (@exam0,@sec0,@c,@v2,@i2,'speaking',2),
+  (@exam0,@sec0,@c,@v3,@i3,'speaking',3);
+DECLARE @e1 INT=(SELECT ExamItemId FROM ExamItems WHERE ExamId=@exam0 AND DisplayOrder=1);
+DECLARE @e2 INT=(SELECT ExamItemId FROM ExamItems WHERE ExamId=@exam0 AND DisplayOrder=2);
+DECLARE @e3 INT=(SELECT ExamItemId FROM ExamItems WHERE ExamId=@exam0 AND DisplayOrder=3);
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt) VALUES (@usr0,@exam0,@c,'submitted',SYSDATETIMEOFFSET());
 DECLARE @a0 INT=SCOPE_IDENTITY();
-INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText) VALUES (@a0,@qfr1,@exam0,@sk,'free_response',N'r1');
+INSERT INTO FreeResponses (AttemptId,ExamItemId,ExamId,SectionId,SkillId,QuestionType,ResponseText) VALUES (@a0,@e1,@exam0,@sec0,@sk,'free_response',N'r1');
 DECLARE @fr1 INT=SCOPE_IDENTITY();
-INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText) VALUES (@a0,@qfr2,@exam0,@sk,'free_response',N'r2');
+INSERT INTO FreeResponses (AttemptId,ExamItemId,ExamId,SectionId,SkillId,QuestionType,ResponseText) VALUES (@a0,@e2,@exam0,@sec0,@sk,'free_response',N'r2');
 DECLARE @fr2 INT=SCOPE_IDENTITY();
 -- reject: grading status outside the set
 BEGIN TRY
@@ -57,14 +75,17 @@ INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQues
 DECLARE @sec INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'M6 Exam','published',60);
 DECLARE @exam INT=SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@exam,@c,@sec,1);
-DECLARE @grp INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
-  VALUES (@grp,@exam,@sec,@sk,N'm6-q','B2','free_response',1);
-DECLARE @qm6 INT=SCOPE_IDENTITY();
+INSERT INTO Items (Modality,TopicId,CefrLevel,ItemType,RenderFormat)
+  VALUES ('speaking',@topic,'B2','argumentative_monologue','free_response');
+DECLARE @im6 INT=SCOPE_IDENTITY();
+INSERT INTO ItemVersions (ItemId,VersionNumber,Stem,ResponseSeconds) VALUES (@im6,1,N'm6-q',90);
+DECLARE @vm6 INT=SCOPE_IDENTITY();
+INSERT INTO ExamItems (ExamId,SectionId,CertId,ItemVersionId,ItemId,Modality,DisplayOrder)
+  VALUES (@exam,@sec,@c,@vm6,@im6,'speaking',1);
+DECLARE @em6 INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt) VALUES (@usr,@exam,@c,'submitted',SYSDATETIMEOFFSET());
 DECLARE @am6 INT=SCOPE_IDENTITY();
-INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText) VALUES (@am6,@qm6,@exam,@sk,'free_response',N'resp');
+INSERT INTO FreeResponses (AttemptId,ExamItemId,ExamId,SectionId,SkillId,QuestionType,ResponseText) VALUES (@am6,@em6,@exam,@sec,@sk,'free_response',N'resp');
 BEGIN TRY
   UPDATE ExamAttempts SET Status='graded' WHERE AttemptId=@am6;
   THROW 50000,'EXPECT_REJECT FAILED: graded attempt with pending_ai free response accepted',1;
@@ -100,8 +121,8 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected criterion from mismatched skill as expected';
 END CATCH
--- M-3 clause 3: reject an AiGradings row naming a skill that is NOT its free response's
--- question's section's skill (cross-certificate, unambiguous)
+-- M-3 clause 3: reject an AiGradings row naming a skill that is NOT its free response's own
+-- (cross-certificate, unambiguous)
 BEGIN TRY
   INSERT INTO AiGradings (FreeResponseId,SkillId,Status) VALUES (@fr1,@sk2,'pending');
   THROW 50000,'EXPECT_REJECT FAILED: AiGradings skill unrelated to free response chain accepted',1;
@@ -110,10 +131,7 @@ END TRY BEGIN CATCH
   PRINT 'rejected AiGradings skill unrelated to free response chain as expected';
 END CATCH
 -- M-3 clause 3: the free response's own skill IS accepted
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
-  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-q3','B2','free_response',3);
-DECLARE @qfr3 INT=SCOPE_IDENTITY();
-INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText) VALUES (@a0,@qfr3,@exam0,@sk,'free_response',N'r3');
+INSERT INTO FreeResponses (AttemptId,ExamItemId,ExamId,SectionId,SkillId,QuestionType,ResponseText) VALUES (@a0,@e3,@exam0,@sec0,@sk,'free_response',N'r3');
 DECLARE @fr3 INT=SCOPE_IDENTITY();
 INSERT INTO AiGradings (FreeResponseId,SkillId,Status) VALUES (@fr3,@sk,'pending');
 PRINT 'valid AiGradings skill matching free response chain accepted';
@@ -143,12 +161,17 @@ END CATCH
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt) VALUES (@usr0,@exam0,@c,'in_progress',SYSDATETIMEOFFSET());
 DECLARE @aGraded INT=SCOPE_IDENTITY();
 UPDATE ExamAttempts SET Status='graded' WHERE AttemptId=@aGraded;   -- legal: it has no free responses yet
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
-  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-late','B2','free_response',9);
-DECLARE @qLate INT=SCOPE_IDENTITY();
+INSERT INTO Items (Modality,TopicId,CefrLevel,ItemType,RenderFormat)
+  VALUES ('speaking',@topic,'B2','argumentative_monologue','free_response');
+DECLARE @ilate INT=SCOPE_IDENTITY();
+INSERT INTO ItemVersions (ItemId,VersionNumber,Stem,ResponseSeconds) VALUES (@ilate,1,N'fr-late',90);
+DECLARE @vlate INT=SCOPE_IDENTITY();
+INSERT INTO ExamItems (ExamId,SectionId,CertId,ItemVersionId,ItemId,Modality,DisplayOrder)
+  VALUES (@exam0,@sec0,@c,@vlate,@ilate,'speaking',9);
+DECLARE @elate INT=SCOPE_IDENTITY();
 BEGIN TRY
-  INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText)
-    VALUES (@aGraded,@qLate,@exam0,@sk,'free_response',N'late');
+  INSERT INTO FreeResponses (AttemptId,ExamItemId,ExamId,SectionId,SkillId,QuestionType,ResponseText)
+    VALUES (@aGraded,@elate,@exam0,@sec0,@sk,'free_response',N'late');
   THROW 50000,'EXPECT_REJECT FAILED: pending free response added to a graded attempt',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
@@ -164,8 +187,8 @@ PRINT 'accepted reopening a graded attempt to submitted';
 INSERT INTO GradingCriteria (CertId,SkillId,Code,Name,MaxScore,Weight,DisplayOrder)
   VALUES (@c,@sk,'R7C',N'R7 Criterion',9,1.0,7);
 DECLARE @crR7 INT=SCOPE_IDENTITY();
-INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText)
-  VALUES (@aGraded,@qLate,@exam0,@sk,'free_response',N'r7');
+INSERT INTO FreeResponses (AttemptId,ExamItemId,ExamId,SectionId,SkillId,QuestionType,ResponseText)
+  VALUES (@aGraded,@elate,@exam0,@sec0,@sk,'free_response',N'r7');
 DECLARE @frR7 INT=SCOPE_IDENTITY();
 INSERT INTO AiGradings (FreeResponseId,SkillId,Status) VALUES (@frR7,@sk,'pending');
 DECLARE @grR7 INT=SCOPE_IDENTITY();

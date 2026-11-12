@@ -1,5 +1,20 @@
 -- docs/schema-tests/domain19-mastery.sql
--- #155: the mastery and question-history tables, and the constraints that keep them honest.
+-- #155 / #237 / #269: the mastery tables, and the constraints that keep them honest.
+--
+-- WHAT WENT WITH UserQuestionHistories. That table held one row per (learner, question) - a cooldown
+-- clock and a last-answer flag - and it was DROPPED with Questions in #269, because a cooldown over one
+-- question is "spaced repetition over one question", which #155 itself replaced with UserCellMasteries
+-- (a fact about a cell, not a question). So these four assertions are gone, named:
+--
+--   * "a valid (learner, question) history row is accepted"
+--   * "the same learner/question pair cannot be filed twice"      (PK_UserQuestionHistories)
+--   * "a right answer clears the cooldown"
+--   * "UserQuestionHistories.CooldownUntil is nullable"           (#155's scheduler date)
+--
+-- Their replacement is already asserted below and in domain45: the cooldown axis is
+-- UserCellMasteries.NextReviewDueAt, whose nullability this file still checks, and the "one row per
+-- learner per cell" rule is that table's primary key. Nothing about the retired per-question clock is
+-- silently re-expressed: a cell *can* be served again, and the four-state ceiling is what governs it.
 SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 INSERT INTO Roles (Code,Name) VALUES ('student',N'S'); DECLARE @r INT=SCOPE_IDENTITY();
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('TOEIC',N'T',1); DECLARE @c INT=SCOPE_IDENTITY();
@@ -13,14 +28,6 @@ INSERT INTO QuestionCategories (CertId,Code,Name) VALUES (@c,'tense',N'Verb tens
 DECLARE @cat INT=SCOPE_IDENTITY();
 INSERT INTO QuestionCategories (CertId,Code,Name) VALUES (@c2,'ielts_detail',N'Detail');
 DECLARE @cat2 INT=SCOPE_IDENTITY();
-INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'Mastery Src','published',60);
-DECLARE @ex INT=SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@ex,@c,@sec,1);
-DECLARE @grp INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,CategoryId,Stem,CefrLevel,QuestionType,DisplayOrder)
-  VALUES (@grp,@ex,@sec,@sk,@cat,N'q1','B2','mcq',1); DECLARE @q1 INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,CategoryId,Stem,CefrLevel,QuestionType,DisplayOrder)
-  VALUES (@grp,@ex,@sec,@sk,@cat,N'q2','B2','mcq',2); DECLARE @q2 INT=SCOPE_IDENTITY();
 
 -- a valid mastery row is accepted, and starts Untested by default
 INSERT INTO UserCategoryMasteries (UserId,CategoryId,CertId) VALUES (@u,@cat,@c);
@@ -57,30 +64,10 @@ END TRY BEGIN CATCH
   PRINT 'rejected correct answers exceeding total answers';
 END CATCH
 
--- a valid question-history row is accepted, and a wrong answer's cooldown is a real moment
-INSERT INTO UserQuestionHistories (UserId,QuestionId,LastIsCorrect,CooldownUntil)
-  VALUES (@u,@q1,0,SYSDATETIMEOFFSET());
-PRINT 'valid question history accepted';
--- the same learner/question pair cannot be filed twice: it is the cooldown row, not a log
-BEGIN TRY
-  INSERT INTO UserQuestionHistories (UserId,QuestionId,LastIsCorrect) VALUES (@u,@q1,1);
-  THROW 50000,'EXPECT_REJECT FAILED: duplicate question history accepted',1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  PRINT 'rejected a duplicate question history row as expected';
-END CATCH
-
--- a right answer writes NULL, which is what lets the picker serve the question again
-UPDATE UserQuestionHistories SET LastIsCorrect=1, CooldownUntil=NULL WHERE UserId=@u AND QuestionId=@q1;
-IF EXISTS (SELECT 1 FROM UserQuestionHistories WHERE UserId=@u AND QuestionId=@q1 AND CooldownUntil IS NOT NULL)
-  THROW 50000,'EXPECT_FAIL: clearing a cooldown did not take',1;
-PRINT 'cleared cooldown accepted';
-
--- SELECT * never sees this schema; assert the two columns the picker reads are nullable
-IF (SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_NAME='UserQuestionHistories' AND COLUMN_NAME='CooldownUntil') <> 'YES'
-  THROW 50000,'EXPECT_FAIL: CooldownUntil is not nullable',1;
+-- The per-cell record is the cooldown axis now; domain45 owns it in full (its writer declaration, its
+-- four-state transition table and its evidence CHECK). What this file still owns is the category
+-- mastery's own scheduler date: "no next review due" is a real answer, so the column is nullable.
 IF (SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
       WHERE TABLE_NAME='UserCategoryMasteries' AND COLUMN_NAME='NextReviewDueAt') <> 'YES'
   THROW 50000,'EXPECT_FAIL: NextReviewDueAt is not nullable',1;
-PRINT 'both scheduler dates are nullable as designed';
+PRINT 'the category mastery scheduler date is nullable as designed';

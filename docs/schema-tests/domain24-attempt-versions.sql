@@ -1,16 +1,20 @@
 SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
--- #186: an attempt answers a version, and a past attempt renders the version it sat.
+-- #186 / #269: an attempt answers a roster POSITION and the version it pinned, and a past attempt
+-- renders the version it sat.
 --
 -- The half a constraint can express is here; the half only a service can show (a re-versioned item
 -- leaves a finished attempt's review unchanged) is in
 -- tests/Services.Tests/AttemptVersionPinTests.cs.
 --
---   1. an answer may name an item version, and the pair survives a re-versioned item
---   2. an answer may name no version at all, because a paper the pool has not assembled has none
---   3. an answer cannot name a version of an item other than the one it claims
+--   1. an answer pins the item version, and the pin survives a re-versioned item
+--   2. an answer cannot name a version of an item other than the one it claims
 --      (FK_AttemptAnswers_VersionItem)
---   4. an answer cannot name half a pair - an item with no version, or a version with no item
---      (CK_AttemptAnswers_ItemPair)
+--   3. the same item version bound at two positions is two answers, because the POSITION is the
+--      answer's identity (UX_AttemptAnswers_ExamItem) - this replaces the old "an answer may name no
+--      version at all" case, which only existed because a Questions row could have no pool pin. A
+--      position always has one now, so that case is unrepresentable and its assertion is gone.
+--   4. half a pair is unrepresentable too: ItemId, ItemVersionId and ExamItemId are all NOT NULL, so
+--      CK_AttemptAnswers_ItemPair was dropped with the nullable columns it guarded.
 --   5. an answer cannot name a label outside A-D (CK_AttemptAnswers_SelectedLabel)
 --
 -- Every CATCH checks the specific guard by name: a catch that proves only "something failed" cannot
@@ -19,7 +23,7 @@ SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 DECLARE @guardWrong NVARCHAR(2048);
 
 -- ---------------------------------------------------------------------------------------------
--- 1. the shape: one certificate, one reading section, one published exam, two pool items
+-- 1. the shape: one certificate, one reading section, one published exam, three pool items
 -- ---------------------------------------------------------------------------------------------
 INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
 DECLARE @role INT = SCOPE_IDENTITY();
@@ -38,45 +42,36 @@ DECLARE @user INT = SCOPE_IDENTITY();
 INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES (@cert, N'Pin paper', 'published', 60, 'mock');
 DECLARE @exam INT = SCOPE_IDENTITY();
 
--- The legacy shape the sitting projection still reads. Its key is B, which disagrees with the pinned
--- version's key below: that is what makes the pinned read path provable rather than incidental.
-INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
-DECLARE @grp INT = SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-VALUES (@grp, @exam, @sec, @skill, N'Legacy stem one.', 'A2', 'mcq', 1),
-       (@grp, @exam, @sec, @skill, N'Legacy stem two.', 'A2', 'mcq', 2),
-       (@grp, @exam, @sec, @skill, N'Legacy stem three.', 'A2', 'mcq', 3),
-       (@grp, @exam, @sec, @skill, N'Legacy stem four.', 'A2', 'mcq', 4),
-       (@grp, @exam, @sec, @skill, N'Legacy stem five.', 'A2', 'mcq', 5);
-DECLARE @q1 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 1);
-DECLARE @q2 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 2);
--- one question per refusal below, because UQ_AttemptAnswers makes (attempt, question) unique: reusing a
--- question would make the duplicate key win and the guard under test never run
-DECLARE @q3 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 3);
-DECLARE @q4 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 4);
-DECLARE @q5 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 5);
-INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-  (@q1, 'mcq', 'A', N'a', 0), (@q1, 'mcq', 'B', N'b', 1), (@q1, 'mcq', 'C', N'c', 0), (@q1, 'mcq', 'D', N'd', 0),
-  (@q2, 'mcq', 'A', N'a', 1), (@q2, 'mcq', 'B', N'b', 0), (@q2, 'mcq', 'C', N'c', 0), (@q2, 'mcq', 'D', N'd', 0);
-
 INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Local factual retrieval and paraphrase matching');
 DECLARE @topic INT = (SELECT TopicId FROM Topics WHERE Code = 'R-DET');
 
-INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus) VALUES
-  ('reading', @topic, 'B1', 'sentence_cloze', 'demo', 'active'),
-  ('reading', @topic, 'B1', 'sentence_cloze', 'demo', 'active');
-DECLARE @item1 INT = (SELECT MIN(ItemId) FROM Items);
-DECLARE @item2 INT = (SELECT MAX(ItemId) FROM Items);
+INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, BatchTag) VALUES
+  ('reading', @topic, 'B1', 'sentence_cloze', 'demo', 'active', 'pin-a'),
+  ('reading', @topic, 'B1', 'sentence_cloze', 'demo', 'active', 'pin-b'),
+  ('reading', @topic, 'B1', 'sentence_cloze', 'demo', 'active', 'pin-c');
+DECLARE @item1 INT = (SELECT ItemId FROM Items WHERE BatchTag = 'pin-a');
+DECLARE @item2 INT = (SELECT ItemId FROM Items WHERE BatchTag = 'pin-b');
+DECLARE @item3 INT = (SELECT ItemId FROM Items WHERE BatchTag = 'pin-c');
 
 INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel) VALUES
   (@item1, 1, N'Pinned stem one.', N'a', N'b', N'c', N'd', 'C'),
-  (@item2, 1, N'Pinned stem two.', N'a', N'b', N'c', N'd', 'A');
+  (@item2, 1, N'Pinned stem two.', N'a', N'b', N'c', N'd', 'A'),
+  (@item3, 1, N'Pinned stem three.', N'a', N'b', N'c', N'd', 'B');
 DECLARE @v1 INT = (SELECT ItemVersionId FROM ItemVersions WHERE ItemId = @item1);
 DECLARE @v2 INT = (SELECT ItemVersionId FROM ItemVersions WHERE ItemId = @item2);
+DECLARE @v3 INT = (SELECT ItemVersionId FROM ItemVersions WHERE ItemId = @item3);
 
+-- item1 bound TWICE: the same version at two positions is the case the old uniqueness index could not
+-- express, and the reason the roster position - not the version pair - is the answer's identity.
 INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder) VALUES
   (@exam, @sec, @cert, @v1, @item1, 'reading', 1),
-  (@exam, @sec, @cert, @v2, @item2, 'reading', 2);
+  (@exam, @sec, @cert, @v2, @item2, 'reading', 2),
+  (@exam, @sec, @cert, @v1, @item1, 'reading', 3),
+  (@exam, @sec, @cert, @v3, @item3, 'reading', 4);
+DECLARE @pos1 INT = (SELECT ExamItemId FROM ExamItems WHERE ExamId = @exam AND DisplayOrder = 1);
+DECLARE @pos2 INT = (SELECT ExamItemId FROM ExamItems WHERE ExamId = @exam AND DisplayOrder = 2);
+DECLARE @pos3 INT = (SELECT ExamItemId FROM ExamItems WHERE ExamId = @exam AND DisplayOrder = 3);
+DECLARE @pos4 INT = (SELECT ExamItemId FROM ExamItems WHERE ExamId = @exam AND DisplayOrder = 4);
 
 INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, ExpiresAt)
 VALUES (@user, @exam, @cert, 'in_progress', DATEADD(HOUR, 1, SYSDATETIMEOFFSET()));
@@ -85,12 +80,12 @@ DECLARE @att INT = SCOPE_IDENTITY();
 -- ---------------------------------------------------------------------------------------------
 -- 2. the happy path: an answer pins the version the binding pinned
 -- ---------------------------------------------------------------------------------------------
-INSERT INTO AttemptAnswers (AttemptId, QuestionId, ExamId, ItemId, ItemVersionId, SelectedLabel, IsCorrect)
-VALUES (@att, @q1, @exam, @item1, @v1, 'C', 1);
+INSERT INTO AttemptAnswers (AttemptId, ExamId, ItemId, ItemVersionId, ExamItemId, SelectedLabel, IsCorrect)
+VALUES (@att, @exam, @item1, @v1, @pos1, 'C', 1);
 
-IF (SELECT ItemVersionId FROM AttemptAnswers WHERE AttemptId = @att AND QuestionId = @q1) <> @v1
+IF (SELECT ItemVersionId FROM AttemptAnswers WHERE AttemptId = @att AND ExamItemId = @pos1) <> @v1
   THROW 50000, 'EXPECT_REJECT FAILED: a pinned answer did not store the version it was given', 1;
-IF (SELECT SelectedLabel FROM AttemptAnswers WHERE AttemptId = @att AND QuestionId = @q1) <> 'C'
+IF (SELECT SelectedLabel FROM AttemptAnswers WHERE AttemptId = @att AND ExamItemId = @pos1) <> 'C'
   THROW 50000, 'EXPECT_REJECT FAILED: a pinned answer did not store its label', 1;
 PRINT 'an answer pins the item version and the label it recorded';
 
@@ -98,25 +93,39 @@ PRINT 'an answer pins the item version and the label it recorded';
 -- past attempt renderable after a correction
 INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
 VALUES (@item1, 2, N'Pinned stem one, corrected.', N'a', N'b', N'c', N'd', 'A');
-IF (SELECT ItemVersionId FROM AttemptAnswers WHERE AttemptId = @att AND QuestionId = @q1) <> @v1
+IF (SELECT ItemVersionId FROM AttemptAnswers WHERE AttemptId = @att AND ExamItemId = @pos1) <> @v1
   THROW 50000, 'EXPECT_REJECT FAILED: re-versioning an item moved an answer off the version it sat', 1;
 IF (SELECT COUNT(*) FROM ItemVersions WHERE ItemId = @item1) <> 2
   THROW 50000, 'EXPECT_REJECT FAILED: the re-versioned item did not keep both versions', 1;
 PRINT 'a re-versioned item leaves the pinned answer and both versions intact';
 
 -- ---------------------------------------------------------------------------------------------
--- 3. an answer with no pool pin is still legal: every paper #231 has not reached has none
+-- 3. one version bound at two positions is two answers, and one answer per position
 -- ---------------------------------------------------------------------------------------------
-INSERT INTO AttemptAnswers (AttemptId, QuestionId, ExamId, ItemId, ItemVersionId, SelectedOptionId)
-SELECT @att, @q2, @exam, NULL, NULL, OptionId FROM QuestionOptions WHERE QuestionId = @q2 AND IsCorrect = 1;
-PRINT 'accepted an answer with no pool pin, because an unbind paper has none';
+INSERT INTO AttemptAnswers (AttemptId, ExamId, ItemId, ItemVersionId, ExamItemId, SelectedLabel)
+VALUES (@att, @exam, @item1, @v1, @pos3, 'A');
+PRINT 'accepted a second answer to the same version at a different position';
+
+BEGIN TRY
+  INSERT INTO AttemptAnswers (AttemptId, ExamId, ItemId, ItemVersionId, ExamItemId, SelectedLabel)
+  VALUES (@att, @exam, @item1, @v1, @pos3, 'B');
+  THROW 50000, 'EXPECT_REJECT FAILED: one position was answered twice', 1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_MESSAGE() NOT LIKE '%UX_AttemptAnswers_ExamItem%'
+  BEGIN
+    SET @guardWrong = N'EXPECT_REJECT FAILED: the duplicate position was refused by the wrong guard: ' + ERROR_MESSAGE();
+    THROW 50000, @guardWrong, 1;
+  END
+  PRINT 'rejected a second answer to one roster position, by UX_AttemptAnswers_ExamItem';
+END CATCH
 
 -- ---------------------------------------------------------------------------------------------
 -- 4. the version must be a version of the item the answer names
 -- ---------------------------------------------------------------------------------------------
 BEGIN TRY
-  INSERT INTO AttemptAnswers (AttemptId, QuestionId, ExamId, ItemId, ItemVersionId)
-  VALUES (@att, @q3, @exam, @item2, @v1);
+  INSERT INTO AttemptAnswers (AttemptId, ExamId, ItemId, ItemVersionId, ExamItemId)
+  VALUES (@att, @exam, @item2, @v1, @pos4);
   THROW 50000, 'EXPECT_REJECT FAILED: an answer named one item and another item''s version', 1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
@@ -129,42 +138,10 @@ END TRY BEGIN CATCH
 END CATCH
 
 -- ---------------------------------------------------------------------------------------------
--- 5. half a pair is refused, in both directions. MATCH SIMPLE would let this through the composite
---    foreign key, which is why the CHECK exists.
+-- 5. a label outside A-D is not an answer
 -- ---------------------------------------------------------------------------------------------
 BEGIN TRY
-  INSERT INTO AttemptAnswers (AttemptId, QuestionId, ExamId, ItemId, ItemVersionId)
-  VALUES (@att, @q4, @exam, @item2, NULL);
-  THROW 50000, 'EXPECT_REJECT FAILED: an answer named an item with no version', 1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  IF ERROR_MESSAGE() NOT LIKE '%CK_AttemptAnswers_ItemPair%'
-  BEGIN
-    SET @guardWrong = N'EXPECT_REJECT FAILED: the item-only pair was refused by the wrong guard: ' + ERROR_MESSAGE();
-    THROW 50000, @guardWrong, 1;
-  END
-  PRINT 'rejected an item with no version, by CK_AttemptAnswers_ItemPair';
-END CATCH
-
-BEGIN TRY
-  INSERT INTO AttemptAnswers (AttemptId, QuestionId, ExamId, ItemId, ItemVersionId)
-  VALUES (@att, @q5, @exam, NULL, @v2);
-  THROW 50000, 'EXPECT_REJECT FAILED: an answer named a version with no item', 1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  IF ERROR_MESSAGE() NOT LIKE '%CK_AttemptAnswers_ItemPair%'
-  BEGIN
-    SET @guardWrong = N'EXPECT_REJECT FAILED: the version-only pair was refused by the wrong guard: ' + ERROR_MESSAGE();
-    THROW 50000, @guardWrong, 1;
-  END
-  PRINT 'rejected a version with no item, by CK_AttemptAnswers_ItemPair';
-END CATCH
-
--- ---------------------------------------------------------------------------------------------
--- 6. a label outside A-D is not an answer
--- ---------------------------------------------------------------------------------------------
-BEGIN TRY
-  UPDATE AttemptAnswers SET SelectedLabel = 'E' WHERE AttemptId = @att AND QuestionId = @q1;
+  UPDATE AttemptAnswers SET SelectedLabel = 'E' WHERE AttemptId = @att AND ExamItemId = @pos1;
   THROW 50000, 'EXPECT_REJECT FAILED: label E was accepted', 1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
@@ -177,7 +154,7 @@ END TRY BEGIN CATCH
 END CATCH
 
 -- ---------------------------------------------------------------------------------------------
--- 7. the count, once more: no refusal above left a row behind
+-- 6. the count, once more: no refusal above left a row behind
 -- ---------------------------------------------------------------------------------------------
 IF (SELECT COUNT(*) FROM AttemptAnswers WHERE AttemptId = @att) <> 2
   THROW 50000, 'EXPECT_REJECT FAILED: a refused answer left a row behind', 1;

@@ -10,11 +10,9 @@ SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 --   3. a pool answer pins an item and a version, and survives a re-versioned item
 --   4. a pool answer cannot name a version of an item other than the one it claims
 --      (FK_PracticeAnswers_VersionItem)
---   5. an answer cannot mix the two shapes, nor half-fill the pool pair
---      (CK_PracticeAnswers_Shape)
+--   5. half a pool pair cannot be written at all: ItemId and ItemVersionId are NOT NULL (#269)
 --   6. a pool answer cannot name a label outside A-D (CK_PracticeAnswers_SelectedLabel)
---   7. a session holds one answer per item version, and still one per question on the legacy path
---      (UQ_PracticeAnswers_Version / UQ_PracticeAnswers_Question)
+--   7. a session holds one answer per item version (UQ_PracticeAnswers_Version)
 --
 -- Every CATCH checks the specific guard by name: a catch that proves only "something failed" cannot
 -- tell a working guard from a typo in this file.
@@ -144,7 +142,17 @@ IF (SELECT COUNT(*) FROM PracticeAnswers WHERE SessionId = @mismatchSess) <> 0
   THROW 50000, 'EXPECT_REJECT FAILED: a refused mismatched answer left a row behind', 1;
 
 -- ---------------------------------------------------------------------------------------------
--- 5. one shape or the other: no half pool pair, and no row that is both
+-- 5. the pool pair is fully required: half a pair cannot be written at all
+--
+-- #269: ItemId and ItemVersionId are NOT NULL now, so SQL Server refuses half a pair with its own
+-- NOT NULL error BEFORE CK_PracticeAnswers_Shape is consulted. The CHECK's remaining job is to keep
+-- the card arm and the item arm apart, which domain40 owns (a lesson micro-check names a CardId and
+-- nothing else). What is asserted here is that the columns admit no half pair.
+--
+-- #269: the guard is now CK_PracticeAnswers_Shape, not a NOT NULL. ItemId and ItemVersionId had to
+-- become nullable again because the CARD arm requires both to be NULL - and a NOT NULL column makes that
+-- arm unreachable, which broke lesson micro-check grading at runtime. So a half pair is refused by the
+-- CHECK rather than by the column. The rule is identical; only which guard states it changed.
 -- ---------------------------------------------------------------------------------------------
 BEGIN TRY
   INSERT INTO PracticeAnswers (SessionId, ItemId, SelectedLabel, DisplayOrder)
@@ -174,46 +182,6 @@ END TRY BEGIN CATCH
   PRINT 'rejected a version with no item, by CK_PracticeAnswers_Shape';
 END CATCH
 
--- a legacy session's answer is still the legacy shape, and the pairing rules still hold it
-DECLARE @lsess INT = (SELECT TOP 1 SessionId FROM PracticeSessions WHERE UserId = @user AND SectionId = @sec);
-
-INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, QuestionCount)
-VALUES (@cert, N'Legacy paper', 'draft', 60, 'mock', 1);
-DECLARE @exam INT = SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
-DECLARE @grp INT = SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-VALUES (@grp, @exam, @sec, @skill, N'Legacy stem.', 'A2', 'mcq', 1);
-DECLARE @q INT = SCOPE_IDENTITY();
-INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES (@q, 'mcq', 'A', N'a', 1);
-DECLARE @opt INT = SCOPE_IDENTITY();
-
-INSERT INTO PracticeAnswers (SessionId, QuestionId, SectionId, SelectedOptionId, IsCorrect, DisplayOrder)
-VALUES (@lsess, @q, @sec, @opt, 1, 1);
-PRINT 'accepted a legacy practice answer, unchanged';
-
--- a two-shape answer, in a session and on a question of its own so no unique index fires first
-INSERT INTO PracticeSessions (UserId, CertId, SectionId, Modality, QuestionCount, Status)
-VALUES (@user, @cert, @sec, 'reading', 1, 'in_progress');
-DECLARE @bothSess INT = SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
-VALUES (@grp, @exam, @sec, @skill, N'Legacy stem two.', 'A2', 'mcq', 2);
-DECLARE @q2 INT = SCOPE_IDENTITY();
-
-BEGIN TRY
-  INSERT INTO PracticeAnswers (SessionId, QuestionId, SectionId, ItemId, ItemVersionId, DisplayOrder)
-  VALUES (@bothSess, @q2, @sec, @item2, @v2, 1);
-  THROW 50000, 'EXPECT_REJECT FAILED: an answer carrying both shapes was accepted', 1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  IF ERROR_MESSAGE() NOT LIKE '%CK_PracticeAnswers_Shape%'
-  BEGIN
-    SET @guardWrong = N'EXPECT_REJECT FAILED: the two-shape answer was refused by the wrong guard: ' + ERROR_MESSAGE();
-    THROW 50000, @guardWrong, 1;
-  END
-  PRINT 'rejected an answer carrying both shapes, by CK_PracticeAnswers_Shape';
-END CATCH
-
 -- ---------------------------------------------------------------------------------------------
 -- 6. a label outside A-D is not an answer
 -- ---------------------------------------------------------------------------------------------
@@ -231,7 +199,11 @@ END TRY BEGIN CATCH
 END CATCH
 
 -- ---------------------------------------------------------------------------------------------
--- 7. one answer per item version per session, and one per question on the legacy path
+-- 7. one answer per item version per session.
+--
+-- #269: UQ_PracticeAnswers_Question and the "one per question on the legacy path" arm are GONE with
+-- the legacy shape - there is no second shape left to have a second uniqueness rule. That assertion is
+-- deleted, not weakened: the legacy answer it inserted names a Questions row that no longer exists.
 -- ---------------------------------------------------------------------------------------------
 INSERT INTO PracticeAnswers (SessionId, ItemId, ItemVersionId, SelectedLabel, DisplayOrder)
 VALUES (@psess, @item2, @v2, 'A', 2);
@@ -251,27 +223,11 @@ END TRY BEGIN CATCH
   PRINT 'rejected a second answer to the same item version, by UQ_PracticeAnswers_Version';
 END CATCH
 
-BEGIN TRY
-  INSERT INTO PracticeAnswers (SessionId, QuestionId, SectionId, DisplayOrder)
-  VALUES (@lsess, @q, @sec, 2);
-  THROW 50000, 'EXPECT_REJECT FAILED: the same question was answered twice in one session', 1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  IF ERROR_MESSAGE() NOT LIKE '%UQ_PracticeAnswers_Question%'
-  BEGIN
-    SET @guardWrong = N'EXPECT_REJECT FAILED: the duplicate question was refused by the wrong guard: ' + ERROR_MESSAGE();
-    THROW 50000, @guardWrong, 1;
-  END
-  PRINT 'rejected a second answer to the same question, by UQ_PracticeAnswers_Question';
-END CATCH
-
 -- ---------------------------------------------------------------------------------------------
 -- 8. the count, once more: no refusal above left a row behind
 -- ---------------------------------------------------------------------------------------------
 IF (SELECT COUNT(*) FROM PracticeAnswers WHERE SessionId = @psess) <> 2
   THROW 50000, 'EXPECT_REJECT FAILED: a refused pool answer left a row behind', 1;
-IF (SELECT COUNT(*) FROM PracticeAnswers WHERE SessionId = @lsess) <> 1
-  THROW 50000, 'EXPECT_REJECT FAILED: a refused legacy answer left a row behind', 1;
 IF (SELECT COUNT(*) FROM ItemVersions WHERE ItemId = @item1) <> 2
   THROW 50000, 'EXPECT_REJECT FAILED: a refusal above created or removed a version', 1;
 PRINT 'the pin stands, every guard fired by name, and no refusal left a row behind';

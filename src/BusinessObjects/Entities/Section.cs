@@ -77,12 +77,6 @@ public partial class Section
     public virtual ICollection<PracticeSession> PracticeSessionSections { get; set; } = new List<PracticeSession>();
 
     [InverseProperty("Section")]
-    public virtual ICollection<QuestionGroup> QuestionGroups { get; set; } = new List<QuestionGroup>();
-
-    [InverseProperty("Section")]
-    public virtual ICollection<Question> Questions { get; set; } = new List<Question>();
-
-    [InverseProperty("Section")]
     public virtual ICollection<SectionCriterion> SectionCriteria { get; set; } = new List<SectionCriterion>();
 
     [ForeignKey("SkillId, CertId")]

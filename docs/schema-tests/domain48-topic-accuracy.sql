@@ -119,16 +119,14 @@ IF (SELECT COUNT(*) FROM vw_UserTopicAccuracy WHERE UserId = @user AND TopicId =
 PRINT 'a topic at two levels is two cells, each with its own accuracy';
 
 -- ---------------------------------------------------------------------------------------------
--- 5. TWO ATTRIBUTION TRAPS, and neither is #250's.
+-- 5. TWO ATTRIBUTION TRAPS.
 --
---    #250's double count was a view that reached a SECTION through Questions in one branch and
---    through ExamItems in another. A topic view cannot repeat it: Questions carries no TopicId, so
---    there is no second route to a cell and no second way to count one answer. Saying so is worth the
---    paragraph, because "the shapes overlap" is true here too - AttemptAnswers.QuestionId is NOT NULL,
---    so a pool attempt answer always names a legacy question - and a reader who assumed the fix was a
---    copy of #250's would look for a branch that does not exist.
+--    #269: the double count #250 fixed can no longer be expressed. Questions is gone, so an attempt
+--    answer has exactly ONE route to a cell - its roster position's item - and there is no second branch
+--    to disagree with. The figure below still asserts the answer is counted ONCE, which is the property
+--    that mattered; what changed is that a second route no longer exists to be wrong.
 --
---    What CAN go wrong here is attribution in two directions, and both are asserted below:
+--    What CAN still go wrong is attribution in two directions, and both are asserted below:
 --
 --      5a. A session's cell is not the item's cell. Item selection may substitute a sibling topic, so
 --          a drill opened at R-DET B1 can serve an R-INF B2 item. Crediting the SESSION's cell would
@@ -138,20 +136,18 @@ PRINT 'a topic at two levels is two cells, each with its own accuracy';
 INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
 VALUES (@cert, N'Topic paper', 'published', 60, 'mock');
 DECLARE @exam INT = SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
-DECLARE @grp INT = SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder) VALUES
-  (@grp, @exam, @sec, @skill, N'Legacy 1', 'B1', 'mcq', 1);
-DECLARE @q1 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 1);
 INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder) VALUES
   (@exam, @sec, @cert, @vB1b, @iB1b, 'reading', 1);
+DECLARE @pos INT = SCOPE_IDENTITY();
 
 INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, ExpiresAt)
 VALUES (@user, @exam, @cert, 'in_progress', DATEADD(HOUR, 1, SYSDATETIMEOFFSET()));
 DECLARE @attempt INT = SCOPE_IDENTITY();
--- The same answer, twice over: it names the legacy question AND pins the pool version.
-INSERT INTO AttemptAnswers (AttemptId, QuestionId, ExamId, ItemId, ItemVersionId, SelectedLabel, IsCorrect)
-VALUES (@attempt, @q1, @exam, @iB1b, @vB1b, 'A', 0);
+-- #269: the answer names the roster position and the version it pinned. The legacy half of this fixture
+-- (the same answer also naming a Questions row) is gone with that table, so "counted twice" is now
+-- proved by the figure itself rather than by giving the view two routes to walk.
+INSERT INTO AttemptAnswers (AttemptId, ExamId, ItemId, ItemVersionId, ExamItemId, SelectedLabel, IsCorrect)
+VALUES (@attempt, @exam, @iB1b, @vB1b, @pos, 'A', 0);
 
 -- 5b: an in-progress attempt contributes nothing.
 IF (SELECT Answered FROM vw_UserTopicAccuracy WHERE UserId = @user AND TopicId = @tDet AND CefrLevel = 'B1') <> 1

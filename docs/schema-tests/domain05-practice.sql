@@ -1,5 +1,20 @@
 -- docs/schema-tests/domain05-practice.sql
 SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
+-- #269: a practice answer names a pool item and the version it was written against. The legacy
+-- containment columns (QuestionId, SectionId) are gone, and with them the three rules that read them:
+--
+--   * "an answer selecting an option of a different question is refused" (H-6,
+--     FK_PracticeAnswers_OptionQuestion). An ItemVersion stores labels A-D rather than option rows, so
+--     a pool answer records a label; the label's domain is CK_PracticeAnswers_SelectedLabel (domain25).
+--   * "a question outside the session's own section is refused" (the legacy containment FK). The schema
+--     states the replacement: a drill answer's containment is the session's own CELL (TopicId +
+--     CefrLevel), which a pool drill has instead of a section. The item is certificate-agnostic and
+--     section-free by design, so no foreign key can express the old rule.
+--   * "an answer must name an item and a version of that item" survives, as
+--     FK_PracticeAnswers_VersionItem - proved in domain25 rather than duplicated here.
+--
+-- What is asserted here is the session's own shape, its coupling to the section's modality, and the
+-- section-accuracy view's arithmetic.
 INSERT INTO Roles (Code,Name) VALUES ('student',N'S'); DECLARE @r INT=SCOPE_IDENTITY();
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('TOEIC',N'T',1); DECLARE @c INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c,'READ',N'R','reading',1);
@@ -38,51 +53,25 @@ END TRY BEGIN CATCH
     THROW 50000,'EXPECT_REJECT FAILED: refused by something other than FK_Practice_SectionModality',1;
   PRINT 'rejected a session whose modality is not its section''s own (FK_Practice_SectionModality)';
 END CATCH
--- Content fixtures for PracticeAnswers containment + H-6 tests
-INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'Practice Src','published',60);
-DECLARE @ex INT=SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@ex,@c,@sec,1);
-DECLARE @grp INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
-  VALUES (@grp,@ex,@sec,@sk,N'q1','B2','mcq',1);
-DECLARE @pq1 INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
-  VALUES (@grp,@ex,@sec,@sk,N'q2','B2','mcq',2);
-DECLARE @pq2 INT=SCOPE_IDENTITY();
-INSERT INTO QuestionOptions (QuestionId,QuestionType,Label,Text,IsCorrect) VALUES (@pq1,'mcq','A',N'q1 opt',1);
-DECLARE @pq1opt INT=SCOPE_IDENTITY();
-INSERT INTO QuestionOptions (QuestionId,QuestionType,Label,Text,IsCorrect) VALUES (@pq2,'mcq','A',N'q2 opt',1);
-DECLARE @pq2opt INT=SCOPE_IDENTITY();
-INSERT INTO PracticeAnswers (SessionId,QuestionId,SectionId,SelectedOptionId,IsCorrect)
-  VALUES (@sess,@pq1,@sec,@pq1opt,1);
+-- the pool the drill draws from: two reading items, one version each
+INSERT INTO Topics (Modality,Code,Name) VALUES ('reading','R-GRAM',N'Morphosyntactic structure and lexical precision');
+DECLARE @topic INT=(SELECT TopicId FROM Topics WHERE Modality='reading' AND Code='R-GRAM');
+INSERT INTO Items (Modality,TopicId,CefrLevel,ItemType,RenderFormat) VALUES
+  ('reading',@topic,'B2','sentence_cloze','mcq'),
+  ('reading',@topic,'B2','sentence_cloze','mcq');
+DECLARE @i1 INT=(SELECT MIN(ItemId) FROM Items);
+DECLARE @i2 INT=(SELECT MAX(ItemId) FROM Items);
+INSERT INTO ItemVersions (ItemId,VersionNumber,Stem,OptionA,OptionB,OptionC,OptionD,KeyLabel) VALUES
+  (@i1,1,N'q1',N'a',N'b',N'c',N'd',N'A'),
+  (@i2,1,N'q2',N'a',N'b',N'c',N'd',N'A');
+DECLARE @v1 INT=(SELECT ItemVersionId FROM ItemVersions WHERE ItemId=@i1);
+DECLARE @v2 INT=(SELECT ItemVersionId FROM ItemVersions WHERE ItemId=@i2);
+INSERT INTO PracticeAnswers (SessionId,ItemId,ItemVersionId,SelectedLabel,IsCorrect)
+  VALUES (@sess,@i1,@v1,'A',1);
 PRINT 'valid practice answer accepted';
--- H-6: reject an answer selecting an option belonging to a different question
-BEGIN TRY
-  INSERT INTO PracticeAnswers (SessionId,QuestionId,SectionId,SelectedOptionId,IsCorrect)
-    VALUES (@sess,@pq2,@sec,@pq1opt,1);
-  THROW 50000,'EXPECT_REJECT FAILED: cross-question option accepted',1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  PRINT 'rejected cross-question option as expected';
-END CATCH
--- Low: reject a question that doesn't belong to the session's own section
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@sk,@c,'reading','P6',N'Other',4,10,2);
-DECLARE @secOther INT=SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@ex,@c,@secOther,2);
-DECLARE @grpOther INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,DisplayOrder)
-  VALUES (@grpOther,@ex,@secOther,@sk,N'other-q','B2','mcq',1);
-DECLARE @qOther INT=SCOPE_IDENTITY();
-BEGIN TRY
-  INSERT INTO PracticeAnswers (SessionId,QuestionId,SectionId) VALUES (@sess,@qOther,@sec);
-  THROW 50000,'EXPECT_REJECT FAILED: cross-section question accepted in practice answer',1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  PRINT 'rejected cross-section practice question as expected';
-END CATCH
 -- Low: vw_UserSectionAccuracy math on one answered + one skipped question
-INSERT INTO PracticeAnswers (SessionId,QuestionId,SectionId,SelectedOptionId,IsCorrect)
-  VALUES (@sess,@pq2,@sec,NULL,NULL);
+INSERT INTO PracticeAnswers (SessionId,ItemId,ItemVersionId,SelectedLabel,IsCorrect)
+  VALUES (@sess,@i2,@v2,NULL,NULL);
 IF NOT EXISTS (
   SELECT 1 FROM vw_UserSectionAccuracy WHERE UserId=@u AND SectionId=@sec AND Answered=1 AND Correct=1
 )

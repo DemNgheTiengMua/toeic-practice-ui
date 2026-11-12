@@ -13,6 +13,11 @@ SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 --      directions (#212's two triggers). PLC-19's "nothing measurable is abandoned, not done" rides on
 --      that guard rather than replacing it: this file re-asserts both arms so a later change that
 --      relaxed them for a partial result would fail here.
+--
+-- #269: the fixture authors the POOL shape. It used QuestionGroups/Questions/QuestionOptions, which no
+-- longer exist; two positions over two item versions express the same "one answered, one blank", and the
+-- blank-vs-incorrect distinction is unchanged because it is about IsCorrect, not about where the item
+-- came from.
 
 INSERT INTO Roles (Code,Name) VALUES ('student',N'S'); DECLARE @r INT=SCOPE_IDENTITY();
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('SUB217',N'Submit cert',1); DECLARE @c INT=SCOPE_IDENTITY();
@@ -20,25 +25,38 @@ INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder,MinScaledScore,MaxSca
   VALUES (@c,'R',N'Reading','reading',1,0,100,1); DECLARE @sk INT=SCOPE_IDENTITY();
 INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,ExpectedQuestionCount,DisplayOrder)
   VALUES (@sk,@c,'reading','R1',N'Reading',2,1); DECLARE @sec INT=SCOPE_IDENTITY();
-INSERT INTO QuestionCategories (CertId,Code,Name) VALUES (@c,'R217',N'Detail'); DECLARE @cat INT=SCOPE_IDENTITY();
+
+INSERT INTO Topics (Modality,Code,Name) VALUES ('reading','R-DET',N'Local factual retrieval and paraphrase matching');
+DECLARE @topic INT = (SELECT TopicId FROM Topics WHERE Code='R-DET');
+
+INSERT INTO Items (Modality,TopicId,CefrLevel,ItemType,RenderFormat,ContentTier,LifecycleStatus,BatchTag) VALUES
+  ('reading',@topic,'B1','sentence_cloze','mcq','demo','active','sub-answered'),
+  ('reading',@topic,'B1','sentence_cloze','mcq','demo','active','sub-blank');
+DECLARE @i1 INT = (SELECT ItemId FROM Items WHERE BatchTag='sub-answered');
+DECLARE @i2 INT = (SELECT ItemId FROM Items WHERE BatchTag='sub-blank');
+
+INSERT INTO ItemVersions (ItemId,VersionNumber,Stem,OptionA,OptionB,OptionC,OptionD,KeyLabel) VALUES
+  (@i1,1,N'Answered',N'Right',N'Wrong',N'Wrong',N'Wrong','A'),
+  (@i2,1,N'Blank',   N'Right',N'Wrong',N'Wrong',N'Wrong','A');
+DECLARE @v1 INT = (SELECT ItemVersionId FROM ItemVersions WHERE ItemId=@i1);
+DECLARE @v2 INT = (SELECT ItemVersionId FROM ItemVersions WHERE ItemId=@i2);
+
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'Placement 217','published',30,'placement');
 DECLARE @e INT=SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@e,@c,@sec,1); DECLARE @g INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,CategoryId,DisplayOrder)
-  VALUES (@g,@e,@sec,@sk,N'Answered','B1','mcq',@cat,1), (@g,@e,@sec,@sk,N'Blank','B1','mcq',@cat,2);
-DECLARE @q1 INT = (SELECT QuestionId FROM Questions WHERE ExamId=@e AND Stem=N'Answered');
-DECLARE @q2 INT = (SELECT QuestionId FROM Questions WHERE ExamId=@e AND Stem=N'Blank');
-INSERT INTO QuestionOptions (QuestionId,QuestionType,Label,Text,IsCorrect)
-  VALUES (@q1,'mcq','A',N'Right',1), (@q1,'mcq','B',N'Wrong',0),
-         (@q2,'mcq','A',N'Right',1), (@q2,'mcq','B',N'Wrong',0);
-DECLARE @right1 INT = (SELECT OptionId FROM QuestionOptions WHERE QuestionId=@q1 AND IsCorrect=1);
+INSERT INTO ExamItems (ExamId,SectionId,CertId,ItemVersionId,ItemId,Modality,DisplayOrder) VALUES
+  (@e,@sec,@c,@v1,@i1,'reading',1),
+  (@e,@sec,@c,@v2,@i2,'reading',2);
+DECLARE @p1 INT = (SELECT ExamItemId FROM ExamItems WHERE ExamId=@e AND DisplayOrder=1);
+DECLARE @p2 INT = (SELECT ExamItemId FROM ExamItems WHERE ExamId=@e AND DisplayOrder=2);
+
 INSERT INTO Users (RoleId,Email,PasswordHash,ActiveCertId) VALUES (@r,'submit217@x.com',0x00,@c); DECLARE @u INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt) VALUES (@u,@e,@c,SYSDATETIMEOFFSET());
 DECLARE @a INT=SCOPE_IDENTITY();
 
 -- the shape submission writes: one answered-and-correct row, one blank left UNJUDGED
-INSERT INTO AttemptAnswers (AttemptId,QuestionId,ExamId,SelectedOptionId,IsCorrect)
-  VALUES (@a,@q1,@e,@right1,1), (@a,@q2,@e,NULL,NULL);
+INSERT INTO AttemptAnswers (AttemptId,ExamId,ItemId,ItemVersionId,ExamItemId,SelectedLabel,IsCorrect)
+  VALUES (@a,@e,@i1,@v1,@p1,'A',1),
+         (@a,@e,@i2,@v2,@p2,NULL,NULL);
 UPDATE ExamAttempts SET Status='graded' WHERE AttemptId=@a;
 
 -- 1. the blank is NOT in the answered denominator, and the answered one IS
@@ -49,18 +67,20 @@ DECLARE @correct INT = (SELECT Correct FROM vw_UserSectionAccuracyAll WHERE User
 IF @correct <> 1
   THROW 50000, 'EXPECT_REJECT FAILED: the accuracy view lost the one answered item''s correct mark', 1;
 -- and the topic view agrees, so the two axes cannot disagree about one sitting. #271: the category
--- view this used to read is gone; a legacy answer has no cell, and this fixture's questions are
--- legacy, so what is asserted here is the SECTION axis plus the topic view's silence.
-IF EXISTS (SELECT 1 FROM vw_UserTopicAccuracy WHERE UserId=@u)
-  THROW 50000, 'EXPECT_REJECT FAILED: a legacy answer produced a topic cell, which no answer supports', 1;
+-- view this used to read is gone. #269: this fixture's items DO carry a cell now (they are pool items),
+-- so the topic axis is asserted rather than its silence - which is the stronger claim.
+IF (SELECT Answered FROM vw_UserTopicAccuracy WHERE UserId=@u AND TopicId=@topic AND CefrLevel='B1') <> 1
+  THROW 50000, 'EXPECT_REJECT FAILED: the topic view did not count the one answered item', 1;
+IF (SELECT Correct FROM vw_UserTopicAccuracy WHERE UserId=@u AND TopicId=@topic AND CefrLevel='B1') <> 1
+  THROW 50000, 'EXPECT_REJECT FAILED: the topic view lost the answered item''s correct mark', 1;
 PRINT 'a blank is not counted as an answered item; the answered one is';
 
 -- the wrong-but-passing input, stated as a refusal: a blank written as INCORRECT inflates the denominator
-UPDATE AttemptAnswers SET IsCorrect = 0 WHERE AttemptId=@a AND QuestionId=@q2;
+UPDATE AttemptAnswers SET IsCorrect = 0 WHERE AttemptId=@a AND ExamItemId=@p2;
 IF (SELECT Answered FROM vw_UserSectionAccuracyAll WHERE UserId=@u AND SectionId=@sec) <> 2
   THROW 50000, 'EXPECT_REJECT FAILED: the view no longer reflects IsCorrect = 0, so this test no longer proves the blank is excluded', 1;
 PRINT 'marking a blank incorrect demonstrably inflates the denominator - which is why submission leaves it NULL';
-UPDATE AttemptAnswers SET IsCorrect = NULL WHERE AttemptId=@a AND QuestionId=@q2;
+UPDATE AttemptAnswers SET IsCorrect = NULL WHERE AttemptId=@a AND ExamItemId=@p2;
 
 -- 2. #217 / PLC-19 rides on #212's completion guard: `done` with no measurement and no failure is refused
 INSERT INTO PlacementTests (UserId,CertId,ExamId,AttemptId,Status)

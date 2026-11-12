@@ -133,10 +133,6 @@ public partial class User
     [InverseProperty("User")]
     public virtual ICollection<UserCellMastery> UserCellMasteries { get; set; } = new List<UserCellMastery>();
 
-    /// <summary>#155: one row per question this learner has ever answered.</summary>
-    [InverseProperty("User")]
-    public virtual ICollection<UserQuestionHistory> UserQuestionHistories { get; set; } = new List<UserQuestionHistory>();
-
     /// <summary>#156: the learner's answers to calibration proposals.</summary>
     [InverseProperty("User")]
     public virtual ICollection<CalibrationDecision> CalibrationDecisions { get; set; } = new List<CalibrationDecision>();

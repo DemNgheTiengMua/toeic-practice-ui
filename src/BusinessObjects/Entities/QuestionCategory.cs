@@ -29,9 +29,6 @@ public partial class QuestionCategory
     [InverseProperty("Category")]
     public virtual ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
 
-    [InverseProperty("Category")]
-    public virtual ICollection<Question> Questions { get; set; } = new List<Question>();
-
     /// <summary>#155: the mastery rows that point at this category, one per learner.</summary>
     [InverseProperty("Category")]
     public virtual ICollection<UserCategoryMastery> UserCategoryMasteries { get; set; } = new List<UserCategoryMastery>();

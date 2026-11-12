@@ -211,7 +211,6 @@ dotnet build                                   # Build whole solution
 dotnet test                                    # Run test suite against LocalDB
 sqlcmd -S "(localdb)\MSSQLLocalDB" -d ExtraEfficiency -I -b -f 65001 -i docs/database-schema.sql
 sqlcmd -S "(localdb)\MSSQLLocalDB" -d ExtraEfficiency -I -b -f 65001 -i docs/seed-demo.sql
-sqlcmd -S "(localdb)\MSSQLLocalDB" -d ExtraEfficiency -I -b -f 65001 -i docs/seed-diagnostic-benchmark.sql
 dotnet run --project src/WebAPI                # http://localhost:5001
 dotnet run --project src/WebMVC                # http://localhost:5000/certificates
 scripts/seed-manual-test.sh fresh              # reset + seed + start, payment=mock, ai=fake

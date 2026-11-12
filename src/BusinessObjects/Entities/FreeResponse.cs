@@ -25,6 +25,17 @@ public partial class FreeResponse
 
     public int ExamId { get; set; }
 
+    /// <summary>
+    /// #269: the section of the position this response was recorded against.
+    /// <para>
+    /// Needed because dropping <c>Questions</c> removed <c>FK_FreeResp_QuestionSkill</c>, which used to
+    /// pin <see cref="SkillId"/> to the question's skill. Without it a response on a reading position
+    /// could claim the speaking skill and <c>AiGradings</c> accepted it, so the rubric it was scored
+    /// against belonged to a different skill.
+    /// </para>
+    /// </summary>
+    public int SectionId { get; set; }
+
     public int SkillId { get; set; }
 
     [StringLength(30)]

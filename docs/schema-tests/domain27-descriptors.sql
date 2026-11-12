@@ -240,20 +240,26 @@ UPDATE GradingCriterionDescriptors SET Descriptor=N'Band 4: speech rate at least
 PRINT 'accepted editing a descriptor on an unlocked rubric while another rubric is locked';
 
 -- ===== the lock is not reversible once it has graded something =====
--- full grading chain, because a score needs a response to belong to
+-- full grading chain, because a score needs a response to belong to.
+-- #269: the response names a roster POSITION, so the paper binds the item before the attempt exists.
 INSERT INTO Roles (Code,Name) VALUES ('student',N'S'); DECLARE @role INT=SCOPE_IDENTITY();
 INSERT INTO Users (RoleId,Email,PasswordHash) VALUES (@role,'d27@x.com',0x00); DECLARE @u INT=SCOPE_IDENTITY();
 INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder)
   VALUES (@wr,@c,'writing','W1',N'Essay',4,1,1); DECLARE @sec INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'D27','published',60,'writing_practice');
 DECLARE @ex INT=SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@ex,@c,@sec,1); DECLARE @g INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,MinWords,DisplayOrder)
-  VALUES (@g,@ex,@sec,@wr,N'Essay','B2','free_response',100,1); DECLARE @q INT=SCOPE_IDENTITY();
+INSERT INTO Topics (Modality,Code,Name) VALUES ('writing','W-ARG',N'Thesis-driven persuasive and opinion argumentation');
+DECLARE @tWr INT=(SELECT TopicId FROM Topics WHERE Code='W-ARG');
+INSERT INTO Items (Modality,TopicId,CefrLevel,ItemType,RenderFormat)
+  VALUES ('writing',@tWr,'B2','persuasive_essay','free_response'); DECLARE @it INT=SCOPE_IDENTITY();
+INSERT INTO ItemVersions (ItemId,VersionNumber,Stem,MinWords,ResponseSeconds)
+  VALUES (@it,1,N'Essay',100,1800); DECLARE @v INT=SCOPE_IDENTITY();
+INSERT INTO ExamItems (ExamId,SectionId,CertId,ItemVersionId,ItemId,Modality,DisplayOrder)
+  VALUES (@ex,@sec,@c,@v,@it,'writing',1); DECLARE @pos INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt) VALUES (@u,@ex,@c,'submitted',SYSDATETIMEOFFSET());
 DECLARE @a INT=SCOPE_IDENTITY();
-INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText)
-  VALUES (@a,@q,@ex,@wr,'free_response',N'Some text.'); DECLARE @fr INT=SCOPE_IDENTITY();
+INSERT INTO FreeResponses (AttemptId,ExamItemId,ExamId,SectionId,SkillId,QuestionType,ResponseText)
+  VALUES (@a,@pos,@ex,@sec,@wr,'free_response',N'Some text.'); DECLARE @fr INT=SCOPE_IDENTITY();
 INSERT INTO AiGradings (FreeResponseId,SkillId,Status) VALUES (@fr,@wr,'pending'); DECLARE @grd INT=SCOPE_IDENTITY();
 INSERT INTO AiGradingScores (GradingId,CriterionId,SkillId,Score) VALUES (@grd,@crit,@wr,4);
   EXEC ExpectFixtureRows N'domain27-descriptors.sql: a score against the locked rubric';

@@ -1,6 +1,10 @@
 -- docs/schema-tests/domain18-writing-feedback.sql — E2.1 (#151): actionable feedback belongs to a
 -- finished grading, and nowhere else. A pending row has not been read and a failed one was never
 -- scored, so neither may claim that a learner has something to fix.
+--
+-- #269: the free response names a roster POSITION (ExamItemId) instead of a Questions row. Nothing
+-- else in this chain changed; MinWords is asserted where it now lives, on the version (the under-length
+-- penalty reads it, so an in-place edit is refused by trg_ItemVersions_ScoredFieldsImmutable).
 SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 INSERT INTO Roles (Code,Name) VALUES ('student',N'S'); DECLARE @r INT=SCOPE_IDENTITY();
 INSERT INTO Users (RoleId,Email,PasswordHash) VALUES (@r,'f151@x.com',0x00); DECLARE @u INT=SCOPE_IDENTITY();
@@ -10,12 +14,19 @@ INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,ExpectedQuestionCount) V
 INSERT INTO GradingCriteria (CertId,SkillId,Code,Name,RubricDescription,MaxScore,Weight,DisplayOrder)
   VALUES (@c,@wr,'GRAM',N'Grammar',N'5: accurate. 3: frequent errors.',5,1,1); DECLARE @crit INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'W151','published',60,'writing_practice'); DECLARE @ex INT=SCOPE_IDENTITY();
-INSERT INTO QuestionGroups (ExamId,CertId,SectionId) VALUES (@ex,@c,@sec); DECLARE @g INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,MinWords,DisplayOrder)
-  VALUES (@g,@ex,@sec,@wr,N'Essay','B2','free_response',250,1); DECLARE @q INT=SCOPE_IDENTITY();
+INSERT INTO Topics (Modality,Code,Name) VALUES ('writing','W-ARG',N'Thesis-driven persuasive and opinion argumentation');
+DECLARE @topic INT=(SELECT TopicId FROM Topics WHERE Code='W-ARG');
+INSERT INTO Items (Modality,TopicId,CefrLevel,ItemType,RenderFormat)
+  VALUES ('writing',@topic,'B2','persuasive_essay','free_response'); DECLARE @item INT=SCOPE_IDENTITY();
+INSERT INTO ItemVersions (ItemId,VersionNumber,Stem,MinWords,ResponseSeconds)
+  VALUES (@item,1,N'Essay',250,1800); DECLARE @v INT=SCOPE_IDENTITY();
+IF (SELECT MinWords FROM ItemVersions WHERE ItemVersionId=@v) <> 250
+  THROW 50000,'EXPECT_REJECT FAILED: the version did not keep its 250-word minimum',1;
+INSERT INTO ExamItems (ExamId,SectionId,CertId,ItemVersionId,ItemId,Modality,DisplayOrder)
+  VALUES (@ex,@sec,@c,@v,@item,'writing',1); DECLARE @pos INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt) VALUES (@u,@ex,@c,DATEADD(HOUR,1,SYSDATETIMEOFFSET())); DECLARE @a INT=SCOPE_IDENTITY();
-INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText,Status,SubmittedAt)
-  VALUES (@a,@q,@ex,@wr,'free_response',N'Dog run fast.','pending_ai',SYSDATETIMEOFFSET()); DECLARE @fr INT=SCOPE_IDENTITY();
+INSERT INTO FreeResponses (AttemptId,ExamItemId,ExamId,SectionId,SkillId,QuestionType,ResponseText,Status,SubmittedAt)
+  VALUES (@a,@pos,@ex,@sec,@wr,'free_response',N'Dog run fast.','pending_ai',SYSDATETIMEOFFSET()); DECLARE @fr INT=SCOPE_IDENTITY();
 INSERT INTO AiGradings (FreeResponseId,SkillId) VALUES (@fr,@wr); DECLARE @gr INT=SCOPE_IDENTITY();
 
 -- reject: a pending grading carrying feedback - nothing has read the answer yet

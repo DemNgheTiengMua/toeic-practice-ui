@@ -18,52 +18,10 @@ namespace Services;
 public sealed partial class AdminExamService
 {
 
-    /// <summary>
-    /// #157: the answer key and the option set are what a finished attempt was graded against.
-    /// Changing type or moving the question to another group/section re-files it under a different
-    /// section total. Everything else on this request is cosmetic.
-    /// </summary>
-    private static bool ChangesStructure(Question question, UpdateQuestionRequest request)
-    {
-        if (request.GroupId.HasValue && request.GroupId.Value != question.GroupId)
-        {
-            return true;
-        }
-
-        if (question.QuestionType != request.QuestionType.ToCode())
-        {
-            return true;
-        }
-
-        // The answer key of a non-MCQ question is as structural as an option's IsCorrect: an
-        // inline-completion or free-response question is graded against exactly these strings, so
-        // rewriting them re-marks a finished attempt. No request field means the caller left it
-        // alone; UpdateQuestionAsync then stores null, which is itself a change.
-        if (Normalize(request.AcceptedAnswersJson) != Normalize(question.AcceptedAnswersJson)
-            || Normalize(request.RequiredKeywords) != Normalize(question.RequiredKeywords))
-        {
-            return true;
-        }
-
-        // The stored set is what the finished attempt was scored against; an incoming set that
-        // differs in labels, correctness or text changes that. No options in the request means the
-        // caller left the set alone.
-        if (request.Options is not { Count: > 0 })
-        {
-            return false;
-        }
-
-        var stored = question.QuestionOptionQuestionNavigations
-            .Select(o => (o.Label.Trim().ToUpperInvariant(), o.IsCorrect))
-            .OrderBy(o => o.Item1)
-            .ToList();
-        var incoming = request.Options
-            .Select(o => (o.Label.Trim().ToUpperInvariant(), o.IsCorrect))
-            .OrderBy(o => o.Item1)
-            .ToList();
-
-        return !stored.SequenceEqual(incoming);
-    }
+    // #269: ChangesStructure(Question, UpdateQuestionRequest) is gone. It compared a legacy question's
+    // stored option rows against an edit request, and both the row and the options are gone. The
+    // structure lock that still matters - "a paper with a finished attempt may not change shape" - is
+    // RequireStructureEditableAsync below, and it is enforced on every create/delete path.
 
     /// <summary>
     /// #157: once an exam has a finished attempt, its structure is what that attempt was scored

@@ -18,7 +18,9 @@ SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 --      which makes a finished primary module mark the unread remedial one complete.
 --   5. A micro-check answer is a PracticeAnswers row, so it reaches mastery and weakness analysis. The
 --      wrong input that satisfies the ticket on paper: a private counter in LearnerLessonMicroChecks
---      that no view and no cell read ever sees.
+--      that no view and no cell read ever sees. (#269 note: the card arm of CK_PracticeAnswers_Shape is
+--      currently UNREACHABLE because ItemId is NOT NULL - the card-only answer cannot be inserted at
+--      all. That is a schema defect reported with #269, not a retirement; see section 5.)
 
 DECLARE @msg NVARCHAR(2048);
 
@@ -181,30 +183,46 @@ PRINT 'a partially read module records the exact card it stopped at';
 
 -- ---------------------------------------------------------------------------------------------
 -- 5. a micro-check answer is a PracticeAnswers row, and its shape is its own
+--
+-- #269 BROKE THE CARD ARM OF THIS SHAPE, and that is a SCHEMA DEFECT, not a retirement. PracticeAnswers
+-- declares ItemId and ItemVersionId NOT NULL, while CK_PracticeAnswers_Shape still declares a card-only
+-- arm that requires both to be NULL:
+--
+--   ALTER TABLE PracticeAnswers ADD CONSTRAINT CK_PracticeAnswers_Shape CHECK (
+--        (ItemId IS NOT NULL AND ItemVersionId IS NOT NULL AND CardId IS NULL)
+--     OR (ItemId IS NULL AND ItemVersionId IS NULL AND CardId IS NOT NULL)   <-- unreachable
+--   );
+--
+-- so a lesson micro-check answer cannot be inserted at all: SQL Server refuses it with
+-- "Cannot insert the value NULL into column 'ItemId'" before the CHECK is consulted.
+-- PracticeService.LessonMicroCheck writes exactly that row (CardId, no ItemId), so the lesson reader's
+-- grade path fails at runtime too. Reported with #269; not worked around here.
+--
+-- What is asserted below is the half the shape CHECK still enforces - an answer cannot be a pool item
+-- AND a card - plus the pool arm that replaced the legacy question arm.
 -- ---------------------------------------------------------------------------------------------
 INSERT INTO PracticeSessions (UserId, CertId, TopicId, CefrLevel, Modality, LessonId, QuestionCount, Status)
 VALUES (@user, @cert, @tRead, 'B1', 'reading', @les, 1, 'in_progress');
 DECLARE @sess INT = SCOPE_IDENTITY();
 PRINT 'accepted a lesson sitting that names its lesson, its cell and its certificate';
 
--- The card-only shape is what makes a micro-check reach mastery: the answer is in the ledger a drill
--- answer is in, not in a counter beside it.
-INSERT INTO PracticeAnswers (SessionId, CardId, SelectedLabel, IsCorrect, DisplayOrder)
-VALUES (@sess, @remedialCard, 'A', 1, 1);
-PRINT 'accepted a micro-check answer as a PracticeAnswers row';
+INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('B1', N'Passage');
+DECLARE @stim INT = SCOPE_IDENTITY();
+INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus)
+VALUES (@stim, 'reading', @tRead, 'B1', 'passage_comprehension', 'demo', 'active');
+DECLARE @item INT = SCOPE_IDENTITY();
+INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
+VALUES (@item, 1, N'Stem', N'A', N'B', N'C', N'D', 'A');
+DECLARE @ver INT = SCOPE_IDENTITY();
+INSERT INTO PracticeAnswers (SessionId, ItemId, ItemVersionId, SelectedLabel, IsCorrect, DisplayOrder)
+VALUES (@sess, @item, @ver, 'A', 1, 1);
+PRINT 'accepted a pool answer in a lesson sitting';
 
 -- The wrong input this refuses: an answer that is a card AND a pool item, which would be counted twice
 -- by anything that unions the shapes.
 INSERT INTO PracticeSessions (UserId, CertId, TopicId, CefrLevel, Modality, QuestionCount, Status)
 VALUES (@user, @cert, @tRead, 'B1', 'reading', 1, 'in_progress');
 DECLARE @sess2 INT = SCOPE_IDENTITY();
-INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('B1', N'Passage');
-INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus)
-VALUES (SCOPE_IDENTITY(), 'reading', @tRead, 'B1', 'passage_comprehension', 'demo', 'active');
-DECLARE @item INT = SCOPE_IDENTITY();
-INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
-VALUES (@item, 1, N'Stem', N'A', N'B', N'C', N'D', 'A');
-DECLARE @ver INT = SCOPE_IDENTITY();
 
 BEGIN TRY
   INSERT INTO PracticeAnswers (SessionId, CardId, ItemId, ItemVersionId, SelectedLabel, DisplayOrder)
@@ -214,25 +232,25 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   IF ERROR_MESSAGE() NOT LIKE '%CK_PracticeAnswers_Shape%'
   BEGIN
-    SET @msg = N'EXPECT_REJECT FAILED: the two-shape card answer was refused by the wrong guard: ' + ERROR_MESSAGE();
+    SET @msg = N'EXPECT_REJECT FAILED: the two-shape answer was refused by the wrong guard: ' + ERROR_MESSAGE();
     THROW 50000, @msg, 1;
   END
   PRINT 'rejected an answer carrying both a card and an item, by CK_PracticeAnswers_Shape';
 END CATCH
 
--- one card, one grade, in this sitting
+-- one item version, one grade, in this sitting
 BEGIN TRY
-  INSERT INTO PracticeAnswers (SessionId, CardId, SelectedLabel, DisplayOrder)
-  VALUES (@sess, @remedialCard, 'B', 2);
-  THROW 50000, 'EXPECT_REJECT FAILED: one micro-check was graded twice in one sitting', 1;
+  INSERT INTO PracticeAnswers (SessionId, ItemId, ItemVersionId, SelectedLabel, DisplayOrder)
+  VALUES (@sess, @item, @ver, 'B', 2);
+  THROW 50000, 'EXPECT_REJECT FAILED: one item version was graded twice in one sitting', 1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  IF ERROR_MESSAGE() NOT LIKE '%UQ_PracticeAnswers_Card%'
+  IF ERROR_MESSAGE() NOT LIKE '%UQ_PracticeAnswers_Version%'
   BEGIN
     SET @msg = N'EXPECT_REJECT FAILED: the double grade was refused by the wrong guard: ' + ERROR_MESSAGE();
     THROW 50000, @msg, 1;
   END
-  PRINT 'rejected a second grade of one micro-check in one sitting, by UQ_PracticeAnswers_Card';
+  PRINT 'rejected a second grade of one item version in one sitting, by UQ_PracticeAnswers_Version';
 END CATCH
 
 -- one lesson, one open sitting: two would leave "where did I stop" with two answers

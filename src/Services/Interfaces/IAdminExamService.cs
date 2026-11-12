@@ -34,21 +34,21 @@ public interface IAdminExamService
     Task<AdminForkEditionResultDto> ForkEditionAsync(int examId, ForkExamEditionRequest request, CancellationToken cancellationToken = default);
 
     Task<AdminExamQuestionsDto> GetExamQuestionsAsync(int examId, CancellationToken cancellationToken = default);
-    Task<AdminQuestionGroupDto> CreateQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, CancellationToken cancellationToken = default);
-    Task<AdminQuestionGroupDto> UpdateQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default);
-    Task DeleteQuestionGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// #273: the Studio's group autosave against a pool-authored paper. The address is the Studio's -
     /// a stimulus id, or a solo position's negated id - and it writes the stimulus chrome and the
-    /// positions' unit. The legacy pair above stays for the papers still authored on <c>QuestionGroups</c>.
+    /// positions' unit.
+    /// <para>
+    /// #269: the legacy Create/Update/Delete pair for QuestionGroups and for Questions is GONE with the
+    /// tables they wrote. Every authoring door is now the pool's: <c>IAdminItemService.CreateAsync</c> /
+    /// <c>UpdateAsync</c> for an item, <c>BindItemAsync</c> for a position, and these two for a group.
+    /// No route called the removed members (they went in #265), so nothing a learner or an admin could
+    /// reach has changed.
+    /// </para>
     /// </summary>
     Task UpdateExamStudioGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default);
     Task DeleteExamStudioGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default);
-
-    Task<AdminQuestionDto> CreateQuestionAsync(int examId, CreateQuestionRequest request, CancellationToken cancellationToken = default);
-    Task<AdminQuestionDto> UpdateQuestionAsync(int questionId, UpdateQuestionRequest request, CancellationToken cancellationToken = default);
-    Task DeleteQuestionAsync(int questionId, CancellationToken cancellationToken = default);
 
     Task<AdminExamSectionAudioDto> SaveSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, CancellationToken cancellationToken = default);
     Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default);
