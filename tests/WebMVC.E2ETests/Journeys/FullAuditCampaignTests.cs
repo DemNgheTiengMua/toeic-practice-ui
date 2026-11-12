@@ -63,11 +63,16 @@ public class FullAuditCampaignTests : PlaywrightTestBase
         "/admin/packages/create",
         "/admin/packages/edit/1",
         "/admin/orders",
-        "/admin/orders/1/detail",
+        // The detail panel is not a page: "Details" links to /admin/orders?...&detailId=N and the panel is
+        // rendered server-side from that query string. /admin/orders/{id}/detail is a JSON endpoint for
+        // script use only, which is why pointing a browser at it photographs raw JSON rather than a screen.
+        "/admin/orders?detailId=1",
         "/admin/complaints",
         "/admin/complaints/1",
         "/admin/refunds",
-        "/admin/audit",
+        // No "/admin/audit": the audit queue is scoped to a batch and every route there carries
+        // {batchId}, so the bare path is correctly a 404. The seed ships no audit batch, so there is no
+        // id to walk to. Adding one would need a fixture, not a route.
     ];
 
     private static readonly string[] LearnerRoutes =
@@ -273,5 +278,9 @@ public class FullAuditCampaignTests : PlaywrightTestBase
     private static string Slug(string route) =>
         route == "/"
             ? "01-root"
-            : route.Trim('/').Replace('/', '-');
+            : route.Trim('/')
+                .Replace('/', '-')
+                .Replace('?', '-')
+                .Replace('=', '-')
+                .Replace('&', '-');
 }
