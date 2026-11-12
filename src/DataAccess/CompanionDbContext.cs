@@ -28,6 +28,17 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<AttemptSkillScore> AttemptSkillScores { get; set; }
 
 
+    /// <summary>
+    /// #274: the paper a sitting was served - its stage plan and routed band pair per skill. Empty
+    /// means the attempt reads the exam's shared roster.
+    /// </summary>
+    public virtual DbSet<AttemptStageBundle> AttemptStageBundles { get; set; }
+
+
+    /// <summary>#274: the positions that paper served, in sitting order.</summary>
+    public virtual DbSet<AttemptItemResponse> AttemptItemResponses { get; set; }
+
+
     public virtual DbSet<Booking> Bookings { get; set; }
 
 

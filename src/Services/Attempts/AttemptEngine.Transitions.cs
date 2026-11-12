@@ -25,7 +25,7 @@ public sealed partial class AttemptEngine
 
         // #250 / #269: the sitting state of a position is a property of the PAPER - a roster row on
         // ExamItems - so this resolves through the same seam the projection uses.
-        var questions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var questions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
         var question = questions.FirstOrDefault(q => q.Id == questionId)
             ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found in attempt.");
 
@@ -70,7 +70,7 @@ public sealed partial class AttemptEngine
         // #250: the paper's skills and their order come from the seam. For a pool-only paper the old
         // query returned an empty list, so the transition immediately submitted the attempt instead of
         // moving to the next skill.
-        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
         var examSkills = paperQuestions
             .Select(q => q.Section.Skill)
             .DistinctBy(s => s.SkillId)
@@ -177,7 +177,7 @@ public sealed partial class AttemptEngine
         //
         // No re-sort: LoadSittingQuestionsAsync already returns sitting order (skill, section, then the
         // binding's own position), so the first match is the unit's first question.
-        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
         var firstUnitQuestion = paperQuestions
             .FirstOrDefault(q => q.Section.SkillId == attempt.ActiveSkillId
                 && q.Group.UnitNumber == targetUnitNumber);
@@ -213,7 +213,7 @@ public sealed partial class AttemptEngine
         // #269: a "group" is the block of positions a paper shares, and on the pool that block IS the
         // stimulus. A solo position has no block id, so a caller addresses it by its own negated position
         // id - the same convention the projection uses for GroupId.
-        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
         var groupQuestions = paperQuestions.Where(q => q.GroupId == targetGroupId).ToList();
 
         var firstGroupQuestion = groupQuestions.FirstOrDefault()
@@ -287,7 +287,7 @@ public sealed partial class AttemptEngine
         }
 
         // #250: the section's timer policy is a property of the paper, so it comes from the seam.
-        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
         var section = paperQuestions
             .FirstOrDefault(q => attempt.ActiveSkillId == null || q.Section.SkillId == attempt.ActiveSkillId.Value)
             ?.Section;

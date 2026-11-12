@@ -91,6 +91,10 @@ public partial class Skill
     [InverseProperty("SkillNavigation")]
     public virtual ICollection<PlacementSkillResult> PlacementSkillResults { get; set; } = new List<PlacementSkillResult>();
 
+    /// <summary>#274: the stage bundles this skill was drawn for, across every sitting.</summary>
+    [InverseProperty("SkillNavigation")]
+    public virtual ICollection<AttemptStageBundle> AttemptStageBundleSkillNavigations { get; set; } = new List<AttemptStageBundle>();
+
     [InverseProperty("SkillNavigation")]
     public virtual ICollection<Section> SectionSkillNavigations { get; set; } = new List<Section>();
 

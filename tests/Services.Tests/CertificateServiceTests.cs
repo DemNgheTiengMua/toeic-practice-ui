@@ -133,7 +133,9 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // #269 audit: one more, 66 -> 67 - trg_PracticeSessions_StatusTransitions. A finished or
         // abandoned practice session is terminal; before it, a finished drill could be reopened with its
         // stamp cleared and its already-counted answers still in place.
-        Assert.Equal(67, triggerCount);
+        // #274: one more, 67 -> 68 - trg_AttemptStageBundles_SingleWriter, the tenth covered derived
+        // fact: the paper a sitting was served has exactly one writer.
+        Assert.Equal(68, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
@@ -178,6 +180,8 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
                      // #237: the ninth covered derived fact, and the four-state transition table.
                      "trg_UserCellMasteries_SingleWriter",
                      "trg_UserCellMasteries_StateIsEarned",
+                     // #274: the tenth covered derived fact - the paper a sitting was served.
+                     "trg_AttemptStageBundles_SingleWriter",
                      // #269 audit: a finished practice session is terminal.
                      "trg_PracticeSessions_StatusTransitions",
                  })

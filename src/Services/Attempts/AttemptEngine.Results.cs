@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -146,7 +146,7 @@ public sealed partial class AttemptEngine
         // #250: the review enumerates the PAPER, not a Questions query. A pool-only paper has no
         // question rows to enumerate, so the old query produced an empty review for an attempt that
         // was sat and graded.
-        var questions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var questions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
 
         // #269: an answer names the roster position it was recorded against.
         var answers = await db.AttemptAnswers

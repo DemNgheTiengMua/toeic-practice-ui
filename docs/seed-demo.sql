@@ -216,7 +216,13 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 
--- ---- DerivedFactOwners (10 rows)
+-- ---- DerivedFactOwners (11 rows)
+BEGIN TRY
+  INSERT INTO [DerivedFactOwners] ([FactCode], [OwningService], [Coverage], [CoveredTable], [Note]) VALUES (N'attempt_paper', N'AttemptEngine', N'covered', N'AttemptStageBundles', N'#274: the paper THIS sitting was served - the stage plan and the routed band pair per skill. A second draw restating it would show a learner a paper they are not sitting, so AttemptEngine is the only writer.');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
 BEGIN TRY
   INSERT INTO [DerivedFactOwners] ([FactCode], [OwningService], [Coverage], [CoveredTable], [Note]) VALUES (N'attempt_score_and_band', N'AttemptEngine', N'covered', N'ExamAttempts', N'TotalScore and BandCode, the two values the snapshot is copied from.');
 END TRY

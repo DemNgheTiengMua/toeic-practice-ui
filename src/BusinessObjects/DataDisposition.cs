@@ -119,6 +119,10 @@ public static class DataDisposition
         new("CefrCutScores", Disposition.Rebuild, "The rows that place a score on the CEFR axis."),
         new("DerivedFactOwners", Disposition.Rebuild, "ADR-0012's registry; it describes THIS build's writers."),
         new("ExamItems", Disposition.Rebuild, "#250's roster: the paper's positions, read from the pool."),
+        new("AttemptStageBundles", Disposition.Rebuild,
+            "#274: the stage plan and routed band pair a sitting was served. A sitting is not history before #246's cutover, and a preserved attempt's paper is carried by its answers."),
+        new("AttemptItemResponses", Disposition.Rebuild,
+            "#274: the positions one sitting was served. Rebuilt, not migrated: a preserved attempt is read through the answers it holds."),
         new("CatalogMode", Disposition.Rebuild, "A test-environment switch, not data."),
     ];
 

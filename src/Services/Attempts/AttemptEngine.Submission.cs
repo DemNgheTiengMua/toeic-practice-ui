@@ -185,7 +185,7 @@ public sealed partial class AttemptEngine
 
             // #250: a position's render format and section come from the paper, which is the one place
             // that knows them.
-            var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+            var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
             var positionByExamItemId = paperQuestions
                 .ToDictionary(q => q.ExamItemId);
 
@@ -442,7 +442,7 @@ public sealed partial class AttemptEngine
                 .ToListAsync(cancellationToken);
 
             // #269: the section, the skill and the length rule come from the roster position a row names.
-            var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+            var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
             var positionByExamItemId = paperQuestions
                 .ToDictionary(q => q.ExamItemId);
 

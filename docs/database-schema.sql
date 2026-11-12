@@ -5,17 +5,17 @@ SET QUOTED_IDENTIFIER ON;
 SET ANSI_NULLS ON;
 GO
 -- ============ Domain 0: Single-writer registry ============
--- #191 / D14 / TRN-06, TRN-07: ten derived facts, ten owners, declared here rather than agreed by
+-- #191 / D14 / TRN-06, TRN-07: eleven derived facts, eleven owners, declared here rather than agreed by
 -- convention. Each covered table carries a `WrittenByService` foreign key to this registry and a
 -- trigger comparing it against the fact's owner, so an invented or mistyped service name is
 -- unstorable and a real second writer is refused at write time.
 --
--- This is a table rather than a comment because the coverage is the thing that must not drift. Eight
--- of the ten have a table today; one is waiting on a table another ticket creates; one is
--- exempt because its table already carries the guarantee and the SRS decision log D-09 forbids a
--- second one. `Coverage` says which, and a CHECK makes "claims coverage but names no table"
--- unrepresentable - a mechanism that silently covers two and claims seven is this ticket's worst
--- failure mode. (#227 moved one fact out of `awaiting_table` and added `exam_edition_snapshot`.)
+-- This is a table rather than a comment because the coverage is the thing that must not drift. Ten
+-- of the eleven have a table today; one is exempt because its table already carries the guarantee and
+-- the SRS decision log D-09 forbids a second one. `Coverage` says which, and a CHECK makes "claims
+-- coverage but names no table" unrepresentable - a mechanism that silently covers two and claims
+-- seven is this ticket's worst failure mode. (#227 moved one fact out of `awaiting_table` and added
+-- `exam_edition_snapshot`; #274 added `attempt_paper`.)
 --
 -- PRN-01: the writer identity is a parameter on the write, never `sp_set_session_context`. Session
 -- context survives commit and rollback, so a writer name left in it would be read by the next
@@ -54,6 +54,8 @@ INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable, 
    N'#233: one row per archived week. The snapshot is derived from the week closed steps and is written by the slide alone, so a late answer cannot restate it.'),
   ('exam_edition_snapshot',  'ExamEditionFreeze',  'covered',        'ExamEditions',
    N'#227: what was in force when a paper went live - timers, phase weights, aggregation rule, band grid, cut-score version. Written by the freeze and by nothing else, because a review that re-derived them would print a number nobody was measured against.'),
+  ('attempt_paper',          'AttemptEngine',      'covered',        'AttemptStageBundles',
+   N'#274: the paper THIS sitting was served - the stage plan and the routed band pair per skill. A second draw restating it would show a learner a paper they are not sitting, so AttemptEngine is the only writer.'),
   ('credit_movement',        'CreditLedger',       'exempt',         NULL,
    N'CreditTransactions is append-only and immutable already (trg_*_AppendOnly, trg_*_NoRewrite); SRS D-09 refuses a second mutation guard.');
 GO
@@ -1904,6 +1906,127 @@ CREATE TABLE AttemptAnswers (
   -- Measured without it: an attempt on a TOEIC paper accepted an IELTS position.
   CONSTRAINT FK_AttemptAnswers_ExamItemExam FOREIGN KEY (ExamItemId, ExamId) REFERENCES ExamItems(ExamItemId, ExamId)
 );
+GO
+-- ============ Domain 7b: #274 the sitting's own paper ============
+-- A paper is served from the exam's shared roster (`ExamItems`), and that roster is per EXAM: one
+-- position per (exam, section, position), enforced by UQ_ExamItems_Exam_Section_Order. A placement
+-- sitting draws its own paper per learner, so it cannot be stored there - rewriting the roster per
+-- learner would collide on that key and would put learner sittings in the admin catalogue.
+--
+-- These two tables are the attempt-scoped paper instead, and the roster is never mutated:
+--   AttemptStageBundles  - WHY this sitting was served what it was (the stage one plan and the routed
+--                          stage two pair, per skill). This is the derived fact ADR-0012 guards.
+--   AttemptItemResponses - WHAT it was served, as roster positions in sitting order. An attempt's
+--                          answers keep naming an ExamItemId, so nothing downstream changes.
+--
+-- CefrLevel codes, not a "B1_B2" string: the pair is two values, and a packed string would need
+-- parsing at every reader - a second definition of the level scale #182 forbids.
+CREATE TABLE AttemptStageBundles (
+  AttemptId      INT NOT NULL,
+  -- H-5: carried down from the attempt, so the bundled skill must be the attempt's own certificate's.
+  -- Without it a bundle could name another certificate's skill - the isolation rule header 4 states.
+  CertId         INT NOT NULL,
+  SkillId        INT NOT NULL,
+  -- 1 = the fixed per-band draw every objective skill gets; 2 = the pair stage one routed to.
+  StageNumber    INT NOT NULL
+    CONSTRAINT CK_ASB_Stage CHECK (StageNumber IN (1, 2)),
+  BandLower      VARCHAR(10) NOT NULL
+    CONSTRAINT CK_ASB_BandLower CHECK (BandLower IN ('A1','A2','B1','B2','C1','C2')),
+  BandUpper      VARCHAR(10) NOT NULL
+    CONSTRAINT CK_ASB_BandUpper CHECK (BandUpper IN ('A1','A2','B1','B2','C1','C2')),
+  -- A pair is an interval, never a point and never inverted. Lexicographic order is the level order
+  -- for these codes ('A1'..'C2') because the ladder is one letter then one digit, which is why the
+  -- routing table's five rows (A1_A2 .. C1_C2) all sort correctly.
+  CONSTRAINT CK_ASB_BandOrder CHECK (BandLower < BandUpper),
+  -- #191 / D14: the writer identity and the ordering token, as every covered table carries them.
+  WrittenByService VARCHAR(64) NULL,
+  ProjectionVersion INT NOT NULL CONSTRAINT DF_ASB_ProjectionVersion DEFAULT 0,
+  CONSTRAINT PK_AttemptStageBundles PRIMARY KEY (AttemptId, SkillId, StageNumber),
+  CONSTRAINT FK_ASB_AttemptCert FOREIGN KEY (AttemptId, CertId) REFERENCES ExamAttempts(AttemptId, CertId),
+  CONSTRAINT FK_ASB_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId)
+);
+GO
+-- The positions THIS attempt was served, in the order the learner meets them. `PositionNumber` is the
+-- sitting order, which is what the navigator numbers and what a resume returns to; `ExamItemId` is the
+-- roster position the answer still names (AttemptAnswers.ExamItemId), so locks, clustering, submission
+-- and review read the paper exactly as they did.
+CREATE TABLE AttemptItemResponses (
+  AttemptId      INT NOT NULL,
+  -- H-5: carried down from the attempt so the served position must be of the attempt's own exam.
+  ExamId         INT NOT NULL,
+  PositionNumber INT NOT NULL
+    CONSTRAINT CK_AIR_Position CHECK (PositionNumber > 0),
+  ExamItemId     INT NOT NULL,
+  CONSTRAINT PK_AttemptItemResponses PRIMARY KEY (AttemptId, PositionNumber),
+  -- One position cannot appear twice on one sitting's paper: two rows would make the navigator count
+  -- the same cell twice and the answer column ambiguous.
+  CONSTRAINT UQ_AIR_Attempt_Item UNIQUE (AttemptId, ExamItemId),
+  CONSTRAINT FK_AIR_AttemptExam FOREIGN KEY (AttemptId, ExamId)
+    REFERENCES ExamAttempts(AttemptId, ExamId),
+  -- #269's idiom, reused: the position must belong to the attempt's OWN exam. Measured on
+  -- AttemptAnswers, where the same omission let a TOEIC attempt answer an IELTS position.
+  CONSTRAINT FK_AIR_ExamItemExam FOREIGN KEY (ExamItemId, ExamId)
+    REFERENCES ExamItems(ExamItemId, ExamId)
+);
+GO
+-- #274 / D14: the paper a sitting was served has exactly one writer, AttemptEngine.
+--
+-- Every insert declares, because the whole row IS the fact ("this skill's stage was routed to this
+-- band pair"). An update must re-declare AND move the version forward: a second draw landing after a
+-- later one would otherwise restate what the learner was already sitting on.
+--
+-- The served POSITIONS (AttemptItemResponses) deliberately carry no writer column of their own. They
+-- are the same fact, written in the same transaction by the same owner, and a second guard over them
+-- would be a second mechanism on one fact - the duplication SRS D-09 refuses for the credit ledger.
+CREATE TRIGGER trg_AttemptStageBundles_SingleWriter
+ON AttemptStageBundles AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @owner VARCHAR(64) =
+    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'attempt_paper');
+
+  DECLARE @touched TABLE (AttemptId INT NOT NULL, SkillId INT NOT NULL, StageNumber INT NOT NULL,
+                          WasVersion INT NOT NULL,
+                          PRIMARY KEY (AttemptId, SkillId, StageNumber));
+  INSERT INTO @touched (AttemptId, SkillId, StageNumber, WasVersion)
+    SELECT i.AttemptId, i.SkillId, i.StageNumber, ISNULL(d.ProjectionVersion, 0)
+    FROM inserted i
+    LEFT JOIN deleted d
+      ON d.AttemptId = i.AttemptId AND d.SkillId = i.SkillId AND d.StageNumber = i.StageNumber
+    WHERE d.SkillId IS NULL
+       OR ISNULL(i.BandLower, '') <> ISNULL(d.BandLower, '')
+       OR ISNULL(i.BandUpper, '') <> ISNULL(d.BandUpper, '')
+       OR i.ProjectionVersion <> d.ProjectionVersion;
+
+  IF NOT EXISTS (SELECT 1 FROM @touched)
+    RETURN;
+
+  -- The declaration must be IN THIS STATEMENT. A column already holding the owner's name vouches for
+  -- nobody: a second writer that changes only BandUpper leaves that value untouched, so a value-only
+  -- check passes it. `UPDATE()` is the half that catches it.
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN @touched t
+      ON t.AttemptId = i.AttemptId AND t.SkillId = i.SkillId AND t.StageNumber = i.StageNumber
+    WHERE ISNULL(i.WrittenByService, '') <> @owner
+       OR (EXISTS (SELECT 1 FROM deleted d
+                   WHERE d.AttemptId = i.AttemptId AND d.SkillId = i.SkillId
+                     AND d.StageNumber = i.StageNumber)
+           AND NOT UPDATE(WrittenByService))
+  )
+    THROW 50117, 'The paper a sitting was served has exactly one writer, AttemptEngine. A write declaring another writer (or none) is refused.', 1;
+
+  -- Monotonic: a draw that lands after a later one must not restate the paper the learner is sitting.
+  -- `<=` is the point - an equal version is a replay, not progress.
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN @touched t
+      ON t.AttemptId = i.AttemptId AND t.SkillId = i.SkillId AND t.StageNumber = i.StageNumber
+    WHERE i.ProjectionVersion <= t.WasVersion
+  )
+    THROW 50118, 'The attempt paper projection version must be newer than the stored one; an older draw cannot overwrite a newer paper.', 1;
+END;
 GO
 -- CNT-43: no hard delete. An item that has left draft, or that any learner has answered, is retired
 -- instead; retirement removes it from future assembly and leaves every past attempt renderable.

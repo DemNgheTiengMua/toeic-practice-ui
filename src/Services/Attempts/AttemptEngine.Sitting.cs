@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -199,7 +199,7 @@ public sealed partial class AttemptEngine
     /// <summary>
     /// #158: an exam as a learner would sit it, with no attempt behind it. Nothing here writes: no
     /// attempt, no answer, no ledger row. Navigation is unlocked so an admin can jump to any
-    /// question, and a draft exam is readable — the caller is what decides who may ask.
+    /// question, and a draft exam is readable � the caller is what decides who may ask.
     /// </summary>
     public async Task<AttemptTakeView> GetExamPreviewTakeAsync(
         int examId,
@@ -249,7 +249,7 @@ public sealed partial class AttemptEngine
         bool unlockNavigation,
         CancellationToken cancellationToken)
     {
-        var questions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var questions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
         int totalQuestions = questions.Count;
         if (totalQuestions == 0)
         {

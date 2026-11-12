@@ -102,6 +102,17 @@ public partial class ExamAttempt
     [InverseProperty("ExamAttempt")]
     public virtual ICollection<AttemptSkillScore> AttemptSkillScoreExamAttempts { get; set; } = new List<AttemptSkillScore>();
 
+    /// <summary>
+    /// #274: the paper this sitting was served, per skill and stage. Empty for an attempt that reads
+    /// the exam's shared roster, which is every attempt created before #274 and every mock sitting.
+    /// </summary>
+    [InverseProperty("ExamAttempt")]
+    public virtual ICollection<AttemptStageBundle> AttemptStageBundleExamAttempts { get; set; } = new List<AttemptStageBundle>();
+
+    /// <summary>#274: the positions this sitting was served, in sitting order.</summary>
+    [InverseProperty("ExamAttempt")]
+    public virtual ICollection<AttemptItemResponse> AttemptItemResponseExamAttempts { get; set; } = new List<AttemptItemResponse>();
+
     [ForeignKey("CertId")]
     [InverseProperty("ExamAttempts")]
     public virtual Certificate Cert { get; set; } = null!;

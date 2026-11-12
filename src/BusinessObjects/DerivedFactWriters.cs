@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace BusinessObjects;
 
 /// <summary>
-/// #191 / D14 / TRN-06: the ten derived facts and the one service allowed to write each.
+/// #191 / D14 / TRN-06: the eleven derived facts and the one service allowed to write each.
 ///
 /// These names are what a write declares in <c>WrittenByService</c>, and a trigger compares the
 /// declaration against <c>DerivedFactOwners</c>. A string that is not exactly one of these is refused
@@ -14,9 +14,9 @@ namespace BusinessObjects;
 /// <c>sp_set_session_context</c> — session context survives commit and rollback on a pooled
 /// connection and would vouch for whatever ran next.
 ///
-/// Coverage today is nine of the eleven (#237 added per-cell mastery). The rest are named here so
-/// the registry has one source in the application as well as in the schema, and so a later ticket has
-/// a name to declare rather than inventing one.
+/// Coverage today is ten of the eleven (#237 added per-cell mastery, #274 the attempt paper). The rest
+/// are named here so the registry has one source in the application as well as in the schema, and so a
+/// later ticket has a name to declare rather than inventing one.
 /// </summary>
 public static class DerivedFactWriters
 {
@@ -66,6 +66,13 @@ public static class DerivedFactWriters
     /// pure function in <see cref="MasteryCellMachine"/>, so the arithmetic has exactly one home.
     /// </summary>
     public const string TopicCapability = "CapabilityWriter";
+
+    /// <summary>
+    /// #274: the paper a sitting was served, <c>AttemptStageBundles</c>. The stage plan and the routed
+    /// band pair per skill are derived from the draw, and a second draw restating them would show a
+    /// learner a paper they are not sitting - so <c>AttemptEngine</c> is the only writer.
+    /// </summary>
+    public const string AttemptPaper = "AttemptEngine";
 
     // ---- awaiting a table ----
 

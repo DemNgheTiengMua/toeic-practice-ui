@@ -72,7 +72,7 @@ public sealed partial class AttemptEngine
                 // #250: the phase clock is a property of the paper, so it comes from the same seam the
                 // projection reads. A pool-only paper has no Questions row for this skill, and the old
                 // query returned null for it - which silently fell through to the whole-sitting deadline.
-                var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+                var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
                 var firstQuestion = paperQuestions.FirstOrDefault(q => q.Section.SkillId == attempt.ActiveSkillId);
 
                 var firstSkill = firstQuestion?.Section.Skill;

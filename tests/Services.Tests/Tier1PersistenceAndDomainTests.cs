@@ -52,6 +52,9 @@ public sealed class Tier1PersistenceAndDomainTests(DatabaseFixture database)
             // guards. Exercised through real saves in StratifiedAuditTests for the same reason.
             "ReviewStrata",
             "ReviewSampleItems",
+            // #274: the paper a sitting was served. Its writer guard fires on the insert creation makes,
+            // so a missing declaration here would fail the very first attempt created.
+            "AttemptStageBundles",
         ];
 
         foreach (var tableName in auditedTables)

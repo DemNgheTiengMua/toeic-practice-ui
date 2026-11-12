@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -82,7 +82,7 @@ public sealed partial class AttemptEngine
         // #269: the resume screen reads the same roster the taking screen reads. It used to load
         // Questions rows and key its answer/response maps on the nullable legacy column, which throws
         // on the second pool row - and on a pool paper every row is such a row.
-        var questions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var questions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
 
         var attemptAnswers = await db.AttemptAnswers
             .AsNoTracking()

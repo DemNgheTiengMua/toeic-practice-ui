@@ -16,6 +16,29 @@ public sealed partial class AttemptEngine
         int certId,
         int examId,
         int durationMinutes,
+        CancellationToken cancellationToken = default) =>
+        await CreateAttemptAsync(userId, certId, examId, durationMinutes, drawnPaper: null, cancellationToken);
+
+    /// <summary>
+    /// #274: the same creation, with the paper this sitting is served supplied by the caller.
+    /// <para>
+    /// <b>Why the paper arrives here rather than being drawn here.</b> The draw is a decision with its
+    /// own rules (bands, topics, unseen-first); the engine's job is the sitting's lifecycle. This method
+    /// records what the draw decided - the bundles and the served positions - and from then on reads
+    /// them back through <see cref="LoadSittingQuestionsAsync"/>, so an attempt-scoped paper is not a
+    /// second mechanism the take view, navigator, locks and submission each have to learn.
+    /// </para>
+    /// <para>
+    /// A null paper is the shared roster, which is every sitting before #274 and every mock today; the
+    /// two branches differ in what is written, not in how the attempt behaves afterwards.
+    /// </para>
+    /// </summary>
+    public async Task<ExamAttempt> CreateAttemptAsync(
+        int userId,
+        int certId,
+        int examId,
+        int durationMinutes,
+        AttemptPaperDraw? drawnPaper,
         CancellationToken cancellationToken = default)
     {
         var tx = db.Database.CurrentTransaction is null
@@ -47,13 +70,19 @@ public sealed partial class AttemptEngine
             var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(examId, cancellationToken);
             var requiresPreflight = requiresAudio || requiresMic;
 
-            // #250: ONE source for the paper. LoadSittingQuestionsAsync resolves the roster when the
-            // paper was authored on the pool and the legacy rows otherwise, and it has already applied
-            // the pinned-version overlay and resolved the audio chain. Creation and the sitting
-            // projection therefore cannot disagree about what the paper is - before this, creation read
-            // Questions directly, so a pool-only paper was refused here with "that position holds no
-            // question". PoolOnlyPaperTests pins that.
-            var questions = await LoadSittingQuestionsAsync(examId, cancellationToken);
+            // #250 / #274: ONE source for the paper. A drawn paper is projected from the positions the
+            // draw chose; otherwise LoadSittingQuestionsAsync resolves the exam's roster. Either way it
+            // has already applied the pinned-version overlay and resolved the audio chain, so creation
+            // and the sitting projection cannot disagree about what the paper is - before this, creation
+            // read Questions directly, so a pool-only paper was refused here with "that position holds
+            // no question". PoolOnlyPaperTests pins that.
+            var servedPositionIds = drawnPaper?.Positions
+                .OrderBy(p => p.PositionNumber)
+                .Select(p => p.ExamItemId)
+                .ToList();
+            var questions = servedPositionIds is { Count: > 0 }
+                ? await ProjectPaperAsync(examId, servedPositionIds, cancellationToken)
+                : await LoadSittingQuestionsAsync(examId, cancellationToken);
 
             var firstQuestion = questions.FirstOrDefault();
             var firstSkill = questions
@@ -115,6 +144,20 @@ public sealed partial class AttemptEngine
 
             db.ExamAttempts.Add(attempt);
             await db.SaveChangesAsync(cancellationToken);
+
+            // #274: record the paper this sitting is served, in the same transaction as the attempt and
+            // its seeded answers - so a half-written paper is not a state anyone can observe. The
+            // bundles say why (the stage plan and routed pair); the responses say what (the positions,
+            // in sitting order). Written through the one seam that then reads them back.
+            //
+            // Only when the projection produced positions: a draw whose every position failed to project
+            // would otherwise claim a served paper while the sitting read the shared roster - two
+            // answers to "what paper is this", which is the defect this ticket is about.
+            if (drawnPaper is not null && questions.Count > 0)
+            {
+                RecordServedPaper(attempt, drawnPaper, questions);
+                await db.SaveChangesAsync(cancellationToken);
+            }
 
             if (questions.Count > 0)
             {
@@ -286,7 +329,7 @@ public sealed partial class AttemptEngine
             // #250: the same seam the sitting projection reads, so a position means the same thing in
             // both places. Before this, sync resolved positions against Questions directly and a pool
             // paper's position could not be found at all.
-            var orderedQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+            var orderedQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
 
             var targetIdx = orderedQuestions.FindIndex(q => q.Id == request.LastQuestionId.Value);
             if (targetIdx >= 0 && !IsPhaseOrUnitOrGroupLocked(attempt, orderedQuestions[targetIdx]))
@@ -373,7 +416,7 @@ public sealed partial class AttemptEngine
             .ToDictionary(fr => fr.ExamItemId);
 
         // The paper's positions in order, from the seam.
-        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, cancellationToken);
+        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
 
         var answerSheet = paperQuestions.Select(q =>
         {
