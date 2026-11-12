@@ -20,6 +20,9 @@ Generated for the **ExtraEfficiency** local database (`(localdb)\MSSQLLocalDB`, 
 http://localhost:5000/auth/sign-in
 ```
 
+No SQL Server on your machine? `docs/DOCKER.md` runs the same stack — database, schema, seed, both
+apps — in containers with one `docker compose up`.
+
 Other subcommands:
 
 | Command | What it does |

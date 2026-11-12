@@ -1,0 +1,51 @@
+# #287: keep the build context to source. Everything here is either a build artifact the image
+# rebuilds, a large file no image reads, or something that must never enter an image.
+
+# Build output — the restore stage regenerates it, and a stray host obj/ carries Windows paths.
+**/bin
+**/obj
+.vs
+
+# Repository metadata and local caches.
+.git
+.gitignore
+.gitattributes
+graphify-out
+.agents
+.impeccable
+.vscode
+
+# 137 MB of sample audio that no project references: it exists for manual listening tests only.
+media
+
+# Local secrets. The API also reads a .env from its content root on boot, and an image must never
+# carry one.
+.env
+.env.docker
+.env.*
+
+# Runtime state. App_Data holds uploaded audio (a named volume in compose) and mail-drop holds the
+# dev mail sender's output; both are container-local, never build inputs.
+App_Data
+mail-drop
+logs
+test-results
+TestResults
+
+# Not needed to publish the two web apps: the image builds src/, and the loader mounts its .sql
+# files from the host at run time rather than baking them in.
+tests
+docs
+specs
+prototype
+scripts
+node_modules
+
+# Repository-root documents and stray drop-ins. Anchored with / so this cannot swallow a file the
+# apps serve: src/WebMVC/wwwroot/img/*.svg and wwwroot/audio/*.mp3 are assets the web app serves,
+# and an unanchored *.mp3 rule silently removed six exam audio tracks from the image.
+/*.md
+/*.diff
+/*.mp3
+/*.jpg
+/*.png
