@@ -24,14 +24,53 @@ public sealed class CurrencyFormatterTests
         Assert.Equal(expected, CurrencyFormatter.FormatUnitPrice(price, credits));
     }
 
+    // Money is never abbreviated. "20.2M" reads as 20,200,000 and is 49,999 short of 20,249,999, so a
+    // revenue figure that rounded would be wrong by an amount a reader cannot see. Every case here is
+    // exact to the dong, and each pair differs in a digit the old compact form discarded.
     [Theory]
     [InlineData(0, "0 ₫")]
     [InlineData(500000, "500,000 ₫")]
-    [InlineData(20200000, "20.2M ₫")]
-    [InlineData(56900000, "56.9M ₫")]
-    [InlineData(109900000, "109.9M ₫")]
-    public void FormatRevenue_formats_large_sums_compactly_with_M_suffix(decimal amount, string expected)
+    [InlineData(999999, "999,999 ₫")]
+    [InlineData(1000000, "1,000,000 ₫")]
+    [InlineData(20200000, "20,200,000 ₫")]
+    [InlineData(20249999, "20,249,999 ₫")]
+    [InlineData(56900000, "56,900,000 ₫")]
+    [InlineData(109949999, "109,949,999 ₫")]
+    public void FormatRevenue_states_the_exact_amount_never_an_abbreviation(decimal amount, string expected)
     {
         Assert.Equal(expected, CurrencyFormatter.FormatRevenue(amount));
+    }
+
+    // A refund can push a day's net revenue below zero (#284). The minus must be U+2212 and must sit
+    // outside the grouping, or the figure reads as a dash-prefixed positive.
+    [Theory]
+    [InlineData(-1, "\u22121 ₫")]
+    [InlineData(-500000, "\u2212500,000 ₫")]
+    [InlineData(-20249999, "\u221220,249,999 ₫")]
+    public void FormatRevenue_renders_a_negative_amount_with_a_true_minus_sign(decimal amount, string expected)
+    {
+        Assert.Equal(expected, CurrencyFormatter.FormatRevenue(amount));
+    }
+
+    [Theory]
+    [InlineData(0.5, "0.50 ₫")]
+    [InlineData(1234.56, "1,234.56 ₫")]
+    [InlineData(199000.00, "199,000 ₫")]
+    public void FormatVnd_keeps_the_two_decimal_places_the_schema_stores(decimal amount, string expected)
+    {
+        Assert.Equal(expected, CurrencyFormatter.FormatVnd(amount));
+    }
+
+    [Fact]
+    public void FormatVnd_never_loses_a_dong_of_a_stored_amount()
+    {
+        // Every amount the schema can hold is DECIMAL(12,2). Formatting then re-parsing must return the
+        // same value, or a figure on screen is not the figure in the database.
+        foreach (var amount in new[] { 0m, 0.01m, 0.5m, 1234.56m, 999999.99m, 1000000000.00m })
+        {
+            var text = CurrencyFormatter.FormatVnd(amount).Replace(" ₫", "");
+            var parsed = decimal.Parse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture);
+            Assert.Equal(amount, parsed);
+        }
     }
 }

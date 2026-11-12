@@ -89,7 +89,7 @@ else
                data-id="@pkg.PackageId"
                data-name="@pkg.Name"
                data-credits="@pkg.Credits"
-               data-price="@((long)pkg.Price)"
+               data-price="@pkg.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                data-active="@pkg.IsActive.ToString().ToLower()"
                data-featured="@pkg.IsFeatured.ToString().ToLower()"
                data-order="@pkg.DisplayOrder"

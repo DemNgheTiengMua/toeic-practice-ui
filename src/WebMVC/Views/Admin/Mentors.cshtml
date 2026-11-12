@@ -93,7 +93,7 @@ else
                 <strong>@mentor.PriceCredits @(mentor.PriceCredits == 1 ? "credit" : "credits")</strong>
                 @if (!isAi)
                 {
-                  <br><small class="text-muted">Payout: @mentor.PricePerSlot.ToString("N0") VND</small>
+                  <br><small class="text-muted">Payout: @CurrencyFormatter.FormatVnd(mentor.PricePerSlot)</small>
                 }
               </td>
               <td>

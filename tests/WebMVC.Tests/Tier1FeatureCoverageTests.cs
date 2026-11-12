@@ -190,7 +190,7 @@ public sealed class Tier1FeatureCoverageTests
     {
         Assert.Equal("49,000 ₫/credit", CurrencyFormatter.FormatUnitPrice(49000, 1));
         Assert.Equal("39,800 ₫/credit", CurrencyFormatter.FormatUnitPrice(199000, 5));
-        Assert.Equal("20.2M ₫", CurrencyFormatter.FormatRevenue(20200000));
+        Assert.Equal("20,200,000 ₫", CurrencyFormatter.FormatRevenue(20200000));
     }
 
     [Fact]
