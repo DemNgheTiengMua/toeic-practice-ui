@@ -68,12 +68,18 @@ public sealed partial class QuestionImportService
             }
             catch (DbUpdateException ex)
             {
-                // Validation mirrors every constraint, so reaching here is a bug (ADR-0001): log it,
-                // undo everything, and tell the admin plainly.
+                // Validation is supposed to mirror every constraint, so reaching here means the two
+                // disagree - a bug (ADR-0001). #277 measured what that costs an author: the batch said
+                // only "the database refused the import", and the real reason was
+                // "String or binary data would be truncated ... column 'ReferenceText'". So the inner
+                // message is now part of what the admin reads. It is a database sentence rather than a
+                // product one, but it names the column, which is the difference between a dead end and a
+                // fix. Validation is still the thing that should have caught it.
                 log?.LogError(ex, "Import batch {BatchId}: database rejected a validated plan", batch.BatchId);
                 await transaction.RollbackAsync(cancellationToken);
                 await DeleteStoredAsync(stored.Values);
-                report.Error(null, "The database refused the import. Nothing was imported; the error has been logged.");
+                report.Error(null, "The database refused the import. Nothing was imported. "
+                    + "The database said: " + InnermostMessage(ex));
                 return await FailAsync(batch, report, cancellationToken, resetTracker: true);
             }
             catch (PoolImport.RefusedException ex)
@@ -331,4 +337,20 @@ public sealed partial class QuestionImportService
         Level = level.ToCode(),
         Message = message.Length > 1000 ? message[..997] + "..." : message,
     };
+
+    /// <summary>
+    /// The deepest exception's message. #277: an EF <c>DbUpdateException</c> wraps the SQL error two or
+    /// three levels down, and the outer two say only "an error occurred while saving the entity changes" -
+    /// so reporting the top one tells an author nothing. The inner one names the column.
+    /// </summary>
+    private static string InnermostMessage(Exception exception)
+    {
+        var current = exception;
+        while (current.InnerException is not null)
+        {
+            current = current.InnerException;
+        }
+
+        return current.Message;
+    }
 }

@@ -14,7 +14,9 @@ public sealed class EnumCodesTests
     public static TheoryData<Type, Type, string> Enums => new()
     {
         { typeof(Modality), typeof(ModalityDto), "CK_Skills_Modality" },
-        { typeof(QuestionType), typeof(QuestionTypeDto), "CK_Questions_Type" },
+        // #269: the render vocabulary moved off the dropped Questions table. A version's shape is now
+        // Items.RenderFormat, and CK_Items_RenderFormat is the constraint that closes it.
+        { typeof(QuestionType), typeof(QuestionTypeDto), "CK_Items_RenderFormat" },
         { typeof(ExamStatus), typeof(ExamStatusDto), "CK_Exams_Status" },
         { typeof(ExamPurpose), typeof(ExamPurposeDto), "CK_Exams_Purpose" },
         { typeof(AttemptStatus), typeof(AttemptStatusDto), "CK_Attempts_Status" },

@@ -1225,7 +1225,13 @@ CREATE TABLE ItemVersions (
   EvidenceQuote  NVARCHAR(MAX) NULL,
   -- #152: the text a spoken answer is judged against (a Read Aloud script, a picture description) and
   -- what that text is. Text with no kind is not a reference this system knows how to use.
-  ReferenceText  NVARCHAR(1000) NULL,
+  --
+  -- #277: NVARCHAR(MAX), not NVARCHAR(1000). Measured: a B2 writing task asks for 180-220 words, and its
+  -- model answer is 1,220 characters - so 1000 refused every realistic essay model answer at the write,
+  -- with "String or binary data would be truncated" rather than a sentence the author could act on. The
+  -- column holds a model answer, which is prose of the same length as the answer it models; a 1000-char
+  -- ceiling silently caps it below the task it describes.
+  ReferenceText  NVARCHAR(MAX) NULL,
   ReferenceKind  VARCHAR(12) NULL
     CONSTRAINT CK_ItemVersions_ReferenceKind CHECK (ReferenceKind IN ('script','image_desc')),
   -- #204: a productive task's output demand and its two timed windows.

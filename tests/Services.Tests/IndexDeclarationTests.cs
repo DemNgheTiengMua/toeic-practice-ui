@@ -9,7 +9,12 @@ namespace Services.Tests;
 
 /// <summary>
 /// Removing a duplicated index attribute must not remove the index. This asserts the EF model still
-/// carries all ten by name, so the dedupe deleted the *copy* and kept the declaration.
+/// carries each one by name, so the dedupe deleted the *copy* and kept the declaration.
+/// <para>
+/// #269: <c>IX_PracticeAnswers_Question</c> and <c>UQ_QGroups_Id_Cert</c> are gone from this list because
+/// the columns and the table they indexed are gone from the schema. Naming an index that no longer has a
+/// declaration would assert a fact about a model that does not exist.
+/// </para>
 /// </summary>
 public sealed class IndexDeclarationTests(ITestOutputHelper output)
 {
@@ -18,12 +23,10 @@ public sealed class IndexDeclarationTests(ITestOutputHelper output)
         "UQ_Topics_Id_Modality",
         "IX_Items_Cell",
         "IX_Items_Selection",
-        "IX_PracticeAnswers_Question",
         "UQ_ItemVersions_Item_Number",
         "UQ_ExamItems_Exam_Section_Order",
         "IX_RSD_Batch_Item",
         "IX_UCM_User_Due",
-        "UQ_QGroups_Id_Cert",
         "IX_LSS_UserCert",
     ];
 

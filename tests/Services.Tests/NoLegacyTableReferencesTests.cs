@@ -71,16 +71,15 @@ public sealed class NoLegacyTableReferencesTests
     private static readonly Dictionary<string, string> Allowed = new(StringComparer.OrdinalIgnoreCase)
     {
         ["tests/Services.Tests/LegacyContentModelIsGoneTests.cs"] = "absence: names each removed object to assert it is gone",
-        ["tests/Services.Tests/DataDispositionTests.cs"] = "absence: asserts the disposition list classifies them",
+        ["tests/Services.Tests/DataDispositionTests.cs"] = "absence: asserts the disposition list no longer classifies them",
+        ["tests/Services.Tests/NoLegacyTableReferencesTests.cs"] = "control: the scan's own matcher tests quote a reference to prove the matcher sees one",
         ["tests/Services.Tests/FixtureLevelGuardTests.cs"] = "absence: allowlists a schema test that asserts a removed column is gone",
         ["tests/Services.Tests/PoolOnlyPaperTests.cs"] = "absence: asserts a pool paper needs no legacy row",
         ["tests/Services.Tests/StudioGroupWriterTests.cs"] = "absence: asserts the group write needs no QuestionGroups row",
         ["tests/Services.Tests/PoolImportTests.cs"] = "absence: asserts an import writes no legacy row",
         ["tests/Services.Tests/AdminExamPublishGateTests.cs"] = "absence: asserts the publish gate reads the roster",
         ["tests/Services.Tests/PaperMigrationCountsTests.cs"] = "former state: compares the legacy roster against the pool it became",
-        ["tests/Services.Tests/MigratedPaperIsSittableTests.cs"] = "former state: deletes the legacy rows, which is the subject",
         ["tests/Services.Tests/CutoverReadinessTests.cs"] = "former state: builds the unrebuildable paper",
-        ["tests/Services.Tests/PoolAnswerShapesTests.cs"] = "coexistence: a legacy answer is one of the shapes under test",
         ["tests/Services.Tests/AdminExamServiceSplitQueryTests.cs"] = "guard: the split-query warning needs the two-navigation legacy graph",
     };
 
