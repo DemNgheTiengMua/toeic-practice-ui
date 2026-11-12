@@ -144,6 +144,10 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<PracticeSession> PracticeSessions { get; set; }
 
 
+    /// <summary>#280: a refund with two methods - money leaves by transfer, credits leave by ledger.</summary>
+    public virtual DbSet<Refund> Refunds { get; set; }
+
+
     public virtual DbSet<QuestionCategory> QuestionCategories { get; set; }
 
     /// <summary>#183: the twenty-topic axis. Certificate-agnostic, closed set.</summary>

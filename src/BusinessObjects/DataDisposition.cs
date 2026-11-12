@@ -56,6 +56,8 @@ public static class DataDisposition
         new("MentorPayouts", Disposition.Preserve, "Money owed to a mentor."),
         new("MentorPayoutItems", Disposition.Preserve, "The bookings a payout covers."),
         new("Complaints", Disposition.Preserve, "A support case is independent of any level model."),
+        new("Refunds", Disposition.Rebuild,
+            "#280: refunds are new to this build. A refund records money or credits the product returned; there is no prior refund record to migrate, because until now the product had no refund at all."),
         new("ExamAttempts", Disposition.Preserve,
             "Completed mock sittings are preserved and tagged legacy_v1 (#246.2). In-progress and placement attempts are dropped at the row level, not by table."),
         new("AttemptAnswers", Disposition.Preserve, "What a preserved attempt chose; dropping it would leave the attempt unreadable."),

@@ -118,6 +118,55 @@ public partial class CompanionDbContext
 
 
 
+        // #280: a refund posts its credit through the ledger, so its configuration sits beside the
+        // credit transaction's. The two triggers are declared here or every EF save on this table fails
+        // on the OUTPUT clause (ADR-0001).
+        modelBuilder.Entity<Refund>(entity =>
+        {
+            entity.HasKey(e => e.RefundId).HasName("PK__Refunds__725AB920C69EA814");
+
+            entity.ToTable(tb =>
+                {
+                    tb.HasTrigger("trg_Refunds_AppendOnly");
+                    tb.HasTrigger("trg_Refunds_CreditTxnIsRefundCredit");
+                });
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+            entity.Property(e => e.Status).HasDefaultValue("requested");
+
+            // Filtered: a refund with no order is legal, so the index only covers the ones that have one.
+            entity.HasIndex(e => e.OrderId, "IX_Refunds_Order").HasFilter("([OrderId] IS NOT NULL)");
+
+            entity.HasOne(d => d.DecidedByUser).WithMany(p => p.RefundDecidedByUsers).HasConstraintName("FK_Refunds_DecidedBy");
+
+            entity.HasOne(d => d.RequestedByUser).WithMany(p => p.RefundRequestedByUsers)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Refunds_RequestedBy");
+
+            entity.HasOne(d => d.SettledByUser).WithMany(p => p.RefundSettledByUsers).HasConstraintName("FK_Refunds_SettledBy");
+
+            entity.HasOne(d => d.User).WithMany(p => p.RefundUsers)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__Refunds__UserId__2FBA0BF1");
+
+            entity.HasOne(d => d.Complaint).WithMany(p => p.Refunds)
+                .HasPrincipalKey(p => new { p.ComplaintId, p.UserId })
+                .HasForeignKey(d => new { d.ComplaintId, d.UserId })
+                .HasConstraintName("FK_Refunds_ComplaintUser");
+
+            entity.HasOne(d => d.CreditTransaction).WithMany(p => p.Refunds)
+                .HasPrincipalKey(p => new { p.TxnId, p.UserId })
+                .HasForeignKey(d => new { d.CreditTxnId, d.UserId })
+                .HasConstraintName("FK_Refunds_CreditTxn");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.Refunds)
+                .HasPrincipalKey(p => new { p.OrderId, p.UserId })
+                .HasForeignKey(d => new { d.OrderId, d.UserId })
+                .HasConstraintName("FK_Refunds_OrderUser");
+        });
+
+
+
         modelBuilder.Entity<MentorPayout>(entity =>
         {
             entity.HasKey(e => e.PayoutId).HasName("PK__MentorPa__35C3DF8E859EADFC");

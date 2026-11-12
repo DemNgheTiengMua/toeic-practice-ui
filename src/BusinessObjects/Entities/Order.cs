@@ -61,6 +61,10 @@ public partial class Order
     [InverseProperty("Order")]
     public virtual ICollection<PaymentEvent> PaymentEvents { get; set; } = new List<PaymentEvent>();
 
+    /// <summary>#280: refunds recorded against this order - the order link the ledger cannot carry.</summary>
+    [InverseProperty("Order")]
+    public virtual ICollection<Refund> Refunds { get; set; } = new List<Refund>();
+
     [ForeignKey("UserId")]
     [InverseProperty("Order")]
     public virtual User User { get; set; } = null!;
