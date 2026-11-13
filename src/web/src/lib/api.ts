@@ -168,8 +168,11 @@ export interface PackageDto {
 
 export interface LearnerContextDto {
   active: CertificateOptionDto;
-  available: CertificateOptionDto[];
+  certificates: CertificateOptionDto[];
+  available?: CertificateOptionDto[];
   creditBalance: number;
+  examinedSkills?: ModalityCode[];
+  examDate?: string | null;
 }
 
 export interface AttemptOptionDto {
@@ -380,6 +383,377 @@ export interface PreflightStatusDto {
   verifiedAt?: string | null;
   sampleAudioUrl?: string | null;
   rules: string[];
+}
+
+export type ModalityCode = 'listening' | 'reading' | 'speaking' | 'writing' | string;
+export type PracticeStatusCode = 'in_progress' | 'finished' | 'abandoned' | string;
+export type QuestionSourceCode = 'all' | 'wrong_before' | 'unseen' | string;
+export type PracticeCellMasteryValue =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 'Untested'
+  | 'Learning'
+  | 'Reviewing'
+  | 'Mastered'
+  | string;
+export type SavedQuestionSourceCode = 'manual' | 'incorrect' | string;
+
+export interface PracticeSectionDto {
+  sectionId: number;
+  skillCode: string;
+  skillName: string;
+  modality: ModalityCode;
+  code: string;
+  name: string;
+  optionCount?: number | null;
+  expectedQuestionCount: number;
+  availableQuestionCount: number;
+  accuracyPercentage?: number | null;
+  answeredCount: number;
+  displayOrder: number;
+  totalCategoryCount: number;
+  categoriesInCooldown: number;
+  nextReviewDueAt?: string | null;
+}
+
+export interface PracticeSessionDto {
+  sessionId: number;
+  sectionId?: number | null;
+  sectionCode: string;
+  sectionName: string;
+  modality: ModalityCode;
+  questionCount: number;
+  status: PracticeStatusCode;
+  correctCount: number;
+  questionSource: QuestionSourceCode;
+  startedAt: string;
+  finishedAt?: string | null;
+  topicId?: number | null;
+  cefrLevelCode?: string | null;
+  isShort?: boolean;
+}
+
+export interface PracticeCatalogDto {
+  certificate: CertificateOptionDto;
+  listeningSections: PracticeSectionDto[];
+  readingSections: PracticeSectionDto[];
+  otherSections: PracticeSectionDto[];
+  weakestSection?: PracticeSectionDto | null;
+  unfinishedSession?: PracticeSessionDto | null;
+  speakingSections?: PracticeSectionDto[] | null;
+  speakingPracticeExamId?: number | null;
+}
+
+export interface PracticeCellDto {
+  topicId: number;
+  topicCode: string;
+  topicName: string;
+  modality: ModalityCode;
+  levelCode: string;
+  mastery: PracticeCellMasteryValue;
+  isPrioritised: boolean;
+  reopensAt?: string | null;
+  isResting: boolean;
+  isRestingNow?: boolean;
+}
+
+export interface PrioritisedCoordinateDto {
+  skillId: number;
+  skillCode: string;
+  skillName: string;
+  modality: ModalityCode;
+  topicId: number;
+  topicCode: string;
+  topicName: string;
+  levelCode: string;
+  reason: string;
+}
+
+export interface IncompleteStepDto {
+  stepId: number;
+  weekNumber: number;
+  title: string;
+  topicCode: string;
+  estimatedMinutes: number;
+}
+
+export interface FreeDrillStateDto {
+  isUnlocked: boolean;
+  incompleteSteps: IncompleteStepDto[];
+  remainingMinutes: number;
+  priorities: PrioritisedCoordinateDto[];
+  cellUsedToday: boolean;
+  dailyCeilingReached: boolean;
+  answeredToday: number;
+  dailyItemCeiling: number;
+  lockNotice?: string | null;
+}
+
+export interface PracticeOptionDto {
+  optionId: number;
+  label: string;
+  text: string;
+}
+
+export interface PracticeQuestionDto {
+  sessionId: number;
+  sectionName: string;
+  questionId?: number | null;
+  displayOrder: number;
+  totalQuestions: number;
+  stem: string;
+  categoryName?: string | null;
+  hint?: string | null;
+  hintUsed: boolean;
+  options: PracticeOptionDto[];
+  selectedOptionId?: number | null;
+  isCorrect?: boolean | null;
+  correctOptionId?: number | null;
+  explanation?: string | null;
+  transcript?: string | null;
+  passage?: string | null;
+  audioPath?: string | null;
+  imagePath?: string | null;
+  imageAlt?: string | null;
+  isSaved: boolean;
+  audioStartMs?: number | null;
+  audioEndMs?: number | null;
+  questionType: string;
+  maxSelections?: number | null;
+  allowNumber: boolean;
+  acceptedAnswersJson?: string | null;
+  requiredKeywords?: string | null;
+  minWords?: number | null;
+  maxWords?: number | null;
+  responseText?: string | null;
+  selectedOptionIds?: number[] | null;
+  selectedOptionIdsJson?: string | null;
+  correctOptionIds?: number[] | null;
+  itemVersionId?: number | null;
+  savedQuestionId?: number | null;
+  cefrLevelCode?: string | null;
+  address?: number;
+}
+
+export interface PracticeNavigatorItemDto {
+  questionId?: number | null;
+  displayOrder: number;
+  isAnswered: boolean;
+  isCorrect?: boolean | null;
+  isSaved: boolean;
+  isCurrent: boolean;
+  itemVersionId?: number | null;
+  savedQuestionId?: number | null;
+  address?: number;
+}
+
+export interface PracticeSessionTakeDto {
+  session: PracticeSessionDto;
+  question: PracticeQuestionDto;
+  questions: PracticeQuestionDto[];
+  navigator: PracticeNavigatorItemDto[];
+}
+
+export interface RevealHintResponseDto {
+  hint?: string | null;
+  hintUsed: boolean;
+}
+
+export interface GradedAnswerDto {
+  isCorrect?: boolean | null;
+  selectedOptionId?: number | null;
+  correctOptionId?: number | null;
+  explanation?: string | null;
+  transcript?: string | null;
+  isSessionFinished: boolean;
+  nextQuestionDisplayOrder?: number | null;
+  isSaved: boolean;
+  acceptedAnswersJson?: string | null;
+  correctOptionIds?: number[] | null;
+  responseText?: string | null;
+  selectedOptionIdsJson?: string | null;
+  savedQuestionId?: number | null;
+  cefrLevelCode?: string | null;
+}
+
+export interface QuestionOutcomeDto {
+  displayOrder: number;
+  questionId?: number | null;
+  categoryName?: string | null;
+  stem: string;
+  selectedOptionLabel?: string | null;
+  selectedOptionText?: string | null;
+  correctOptionLabel?: string | null;
+  correctOptionText?: string | null;
+  isCorrect?: boolean | null;
+  hintUsed: boolean;
+  explanation?: string | null;
+  audioPath?: string | null;
+  audioStartMs?: number | null;
+  audioEndMs?: number | null;
+  transcript?: string | null;
+  questionType: string;
+  responseText?: string | null;
+  selectedOptionIdsJson?: string | null;
+  acceptedAnswersJson?: string | null;
+  itemVersionId?: number | null;
+}
+
+export interface PracticeSummaryDto {
+  sessionId: number;
+  sectionCode: string;
+  sectionName: string;
+  modality: ModalityCode;
+  startedAt: string;
+  finishedAt?: string | null;
+  totalQuestions: number;
+  answeredCount: number;
+  correctCount: number;
+  incorrectCount: number;
+  skippedCount: number;
+  accuracyPercentage: number;
+  hintUsedCount: number;
+  correctWithHintCount: number;
+  incorrectWithHintCount: number;
+  questions: QuestionOutcomeDto[];
+}
+
+export interface RecommendationDto {
+  recId: number;
+  insightId?: number | null;
+  practiceSessionId?: number | null;
+  attemptId?: number | null;
+  text: string;
+  severity: string;
+  targetBandCode?: string | null;
+  skillName?: string | null;
+  isResolved: boolean;
+  createdAt: string;
+}
+
+export interface AiInsightDto {
+  insightId: number;
+  userId: number;
+  certId: number;
+  scope: string;
+  practiceSessionId?: number | null;
+  attemptId?: number | null;
+  narrative?: string | null;
+  trend?: 'improving' | 'flat' | 'declining' | string | null;
+  status: 'pending' | 'done' | 'failed' | string;
+  failureReason?: string | null;
+  model?: string | null;
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  sourceFingerprint: string;
+  createdAt: string;
+  completedAt?: string | null;
+  recommendations: RecommendationDto[];
+  learnerPathId?: number | null;
+  formattedNarrative?: string | null;
+}
+
+export interface SavedQuestionOptionDto {
+  optionId: number;
+  label: string;
+  text: string;
+  isCorrect: boolean;
+}
+
+export interface SavedQuestionItemDto {
+  savedQuestionId: number;
+  questionId?: number | null;
+  itemId?: number | null;
+  itemVersionId?: number | null;
+  isRetiredDefective: boolean;
+  source: SavedQuestionSourceCode;
+  savedAt: string;
+  sectionId?: number | null;
+  sectionCode?: string | null;
+  sectionName?: string | null;
+  topicCode?: string | null;
+  topicName?: string | null;
+  categoryId?: number | null;
+  categoryName?: string | null;
+  stem: string;
+  passage?: string | null;
+  imagePath?: string | null;
+  audioPath?: string | null;
+  hint?: string | null;
+  explanation?: string | null;
+  transcript?: string | null;
+  options: SavedQuestionOptionDto[];
+  scopeCode?: string;
+  scopeName?: string;
+}
+
+export interface SavedQuestionSectionFilterDto {
+  sectionId: number;
+  code: string;
+  name: string;
+  count: number;
+}
+
+export interface SavedQuestionCategoryFilterDto {
+  categoryId: number;
+  name: string;
+  count: number;
+}
+
+export interface SavedQuestionsViewDto {
+  certificate: CertificateOptionDto;
+  totalSavedCount: number;
+  manualSavedCount: number;
+  incorrectSavedCount: number;
+  questions: SavedQuestionItemDto[];
+  sections: SavedQuestionSectionFilterDto[];
+  categories: SavedQuestionCategoryFilterDto[];
+}
+
+export interface SaveQuestionResultDto {
+  isSaved: boolean;
+  source?: SavedQuestionSourceCode | null;
+  savedAt?: string | null;
+  savedQuestionId?: number | null;
+}
+
+export interface PathStepDto {
+  stepId: number;
+  weekNumber: number;
+  weekSequence: number;
+  stepType: string;
+  route: string;
+  title: string;
+  status: string;
+  skillCode: string;
+  skillName: string;
+  modality: ModalityCode;
+  topicCode: string;
+  topicName: string;
+  targetCefr: string;
+  sizingTier: string;
+  plannedItemCount?: number | null;
+  estimatedMinutes?: number | null;
+  score?: number | null;
+  actualAccuracyPct?: number | null;
+  targetAccuracyPct: number;
+  canStart: boolean;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  refLessonId?: number | null;
+  refExamId?: number | null;
+}
+
+export interface StartStepResultDto {
+  stepId: number;
+  stepType: string;
+  route: string;
+  redirectUrl: string;
+  sessionId?: number | null;
+  attemptId?: number | null;
+  substitutedFromTopicId?: number | null;
 }
 
 export interface PlacementPreflightScopeOfferDto {
@@ -735,81 +1109,105 @@ export const api = {
   },
 
   practice: {
-    catalog: () => apiFetch<any>('/api/learner/practice/catalog'),
-    matrix: () => apiFetch<any[]>('/api/learner/practice/matrix'),
+    catalog: () => apiFetch<PracticeCatalogDto>('/api/learner/practice/catalog'),
+    matrix: () => apiFetch<PracticeCellDto[]>('/api/learner/practice/matrix'),
     freeDrill: (topicId?: number, cefrLevelCode?: string) => {
       const params = new URLSearchParams();
       if (topicId != null) params.set('topicId', String(topicId));
       if (cefrLevelCode) params.set('cefrLevelCode', cefrLevelCode);
       const q = params.toString();
-      return apiFetch<any>(`/api/learner/practice/free-drill${q ? `?${q}` : ''}`);
+      return apiFetch<FreeDrillStateDto>(`/api/learner/practice/free-drill${q ? `?${q}` : ''}`);
     },
     startSession: (body: {
       sectionId?: number | null;
-      questionCount?: number;
       topicId?: number | null;
       cefrLevelCode?: string | null;
+      contentTier?: string | null;
+      questionCount?: number;
       skillId?: number | null;
       learnerPathStepId?: number | null;
     }) =>
-      apiFetch<any>('/api/learner/practice/sessions', {
+      apiFetch<PracticeSessionDto>('/api/learner/practice/sessions', {
         method: 'POST',
         body: JSON.stringify(body),
       }),
     sessionTake: (sessionId: number, q?: number | null) =>
-      apiFetch<any>(
+      apiFetch<PracticeSessionTakeDto>(
         q != null
           ? `/api/learner/practice/sessions/${sessionId}/take?q=${q}`
           : `/api/learner/practice/sessions/${sessionId}/take`,
       ),
     revealHint: (sessionId: number, questionId: number) =>
-      apiFetch<any>(`/api/learner/practice/sessions/${sessionId}/questions/${questionId}/hint`, {
-        method: 'POST',
-      }),
+      apiFetch<RevealHintResponseDto>(
+        `/api/learner/practice/sessions/${sessionId}/questions/${questionId}/hint`,
+        {
+          method: 'POST',
+        },
+      ),
     submitAnswer: (
       sessionId: number,
       questionId: number,
-      body: { selectedOptionId?: number | null; responseText?: string | null },
+      body: {
+        selectedOptionId?: number | null;
+        responseText?: string | null;
+        selectedOptionIdsJson?: string | null;
+        selectedOptionIds?: number[] | null;
+      },
     ) =>
-      apiFetch<any>(`/api/learner/practice/sessions/${sessionId}/questions/${questionId}/answer`, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
+      apiFetch<GradedAnswerDto>(
+        `/api/learner/practice/sessions/${sessionId}/questions/${questionId}/answer`,
+        {
+          method: 'POST',
+          body: JSON.stringify(body),
+        },
+      ),
     summary: (sessionId: number) =>
-      apiFetch<any>(`/api/learner/practice/sessions/${sessionId}/summary`),
+      apiFetch<PracticeSummaryDto>(`/api/learner/practice/sessions/${sessionId}/summary`),
+    insight: (sessionId: number) =>
+      apiFetch<AiInsightDto>(`/api/learner/insights/practice/${sessionId}`),
+    retryInsight: (sessionId: number) =>
+      apiFetch<void>(`/api/learner/insights/practice/${sessionId}/retry`, {
+        method: 'POST',
+      }),
     savedQuestions: (params?: { source?: string; sectionId?: number; categoryId?: number }) => {
       const sp = new URLSearchParams();
       if (params?.source) sp.set('source', params.source);
       if (params?.sectionId != null) sp.set('sectionId', String(params.sectionId));
       if (params?.categoryId != null) sp.set('categoryId', String(params.categoryId));
       const q = sp.toString();
-      return apiFetch<any>(`/api/learner/saved-questions${q ? `?${q}` : ''}`);
+      return apiFetch<SavedQuestionsViewDto>(`/api/learner/saved-questions${q ? `?${q}` : ''}`);
     },
+    savedQuestion: (savedQuestionId: number) =>
+      apiFetch<SavedQuestionItemDto>(`/api/learner/saved-questions/${savedQuestionId}`),
     saveQuestion: (questionId: number, source = 'manual') =>
-      apiFetch<any>(`/api/learner/saved-questions/questions/${questionId}`, {
+      apiFetch<SaveQuestionResultDto>(`/api/learner/saved-questions/questions/${questionId}`, {
         method: 'POST',
         body: JSON.stringify({ source }),
       }),
     saveItemVersion: (itemVersionId: number, source = 'manual') =>
-      apiFetch<any>(`/api/learner/saved-questions/item-versions/${itemVersionId}`, {
-        method: 'POST',
-        body: JSON.stringify({ source }),
-      }),
+      apiFetch<SaveQuestionResultDto>(
+        `/api/learner/saved-questions/item-versions/${itemVersionId}`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ source }),
+        },
+      ),
     unsaveQuestion: (savedQuestionId: number) =>
-      apiFetch<any>(`/api/learner/saved-questions/${savedQuestionId}`, {
+      apiFetch<SaveQuestionResultDto>(`/api/learner/saved-questions/${savedQuestionId}`, {
         method: 'DELETE',
       }),
   },
 
   learningPath: {
     get: () => apiFetch<any>('/api/learner/learning-path'),
+    step: (stepId: number) => apiFetch<PathStepDto>(`/api/learner/learning-path/steps/${stepId}`),
     generate: (body?: { targetBandCode?: string; archiveExisting?: boolean }) =>
       apiFetch<any>('/api/learner/learning-path/generate', {
         method: 'POST',
         body: JSON.stringify(body ?? {}),
       }),
     startStep: (stepId: number) =>
-      apiFetch<any>(`/api/learner/learning-path/steps/${stepId}/start`, {
+      apiFetch<StartStepResultDto>(`/api/learner/learning-path/steps/${stepId}/start`, {
         method: 'POST',
         body: JSON.stringify({}),
       }),

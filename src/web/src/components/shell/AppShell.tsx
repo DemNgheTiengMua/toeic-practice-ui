@@ -218,7 +218,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </Select.Trigger>
                   <Select.Popover>
                     <ListBox>
-                      {learnerContext.available.map((cert) => (
+                      {(learnerContext.certificates ?? learnerContext.available ?? []).map((cert) => (
                         <ListBox.Item
                           key={cert.code}
                           id={cert.code}

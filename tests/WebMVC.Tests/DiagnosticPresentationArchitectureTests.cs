@@ -8,7 +8,7 @@ public sealed class DiagnosticPresentationArchitectureTests
     public void Diagnostic_views_use_display_models_and_external_assets()
     {
         var root = TestPathHelper.FindRepoRoot();
-        foreach (var area in new[] { "Practice", "SavedQuestions", "WeaknessAnalysis" })
+        foreach (var area in new[] { "WeaknessAnalysis" })
         foreach (var path in Directory.GetFiles(Path.Combine(root, "src/WebMVC/Views", area), "*.cshtml"))
         {
             var view = File.ReadAllText(path);
@@ -48,14 +48,6 @@ public sealed class DiagnosticPresentationArchitectureTests
         Assert.Contains(method, File.ReadAllText(partial));
     }
 
-    [Fact]
-    public void Practice_question_composes_explanation_and_transcript_partials()
-    {
-        var folder = Path.Combine(TestPathHelper.FindRepoRoot(), "src/WebMVC/Views/Practice");
-        var question = File.ReadAllText(Path.Combine(folder, "_TakeQuestion.cshtml"));
-        Assert.Contains("_TakeExplanation", question);
-        Assert.Contains("_TakeTranscript", question);
-    }
     [Fact]
     public void Insight_panel_renders_prepared_display_state()
     {
