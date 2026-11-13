@@ -81,6 +81,45 @@ export function normalizeMasteryState(value: PracticeCellMasteryValue | undefine
   return 'Untested';
 }
 
+export function formatModalityLabel(modality?: string | null): string {
+  switch ((modality ?? '').toLowerCase()) {
+    case 'listening':
+      return 'Listening';
+    case 'reading':
+      return 'Reading';
+    case 'speaking':
+      return 'Speaking';
+    case 'writing':
+      return 'Writing';
+    default:
+      return 'Skill';
+  }
+}
+
+export function formatInsightTrendLabel(trend?: string | null): string {
+  switch ((trend ?? '').toLowerCase()) {
+    case 'improving':
+      return 'Improving';
+    case 'flat':
+      return 'Holding steady';
+    case 'declining':
+      return 'Declining';
+    default:
+      return 'Trend not reported';
+  }
+}
+
+export function formatSavedSourceLabel(source?: string | null): string {
+  switch ((source ?? '').toLowerCase()) {
+    case 'manual':
+      return 'Saved by you';
+    case 'incorrect':
+      return 'Wrong answer';
+    default:
+      return 'Saved item';
+  }
+}
+
 export function formatLocalReopenTime(isoString?: string | null): string | null {
   if (!isoString) return null;
   const date = new Date(isoString);

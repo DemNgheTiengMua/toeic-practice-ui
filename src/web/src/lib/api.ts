@@ -142,8 +142,11 @@ export interface CertificateDto {
 
 export interface LearnerContextDto {
   active: CertificateOptionDto;
-  available: CertificateOptionDto[];
+  certificates: CertificateOptionDto[];
+  available?: CertificateOptionDto[];
   creditBalance: number;
+  examinedSkills?: ModalityCode[];
+  examDate?: string | null;
 }
 
 export interface AttemptOptionDto {

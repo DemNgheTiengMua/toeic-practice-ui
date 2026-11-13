@@ -18,6 +18,7 @@ import { toBrowserMediaUrl } from '@/lib/security';
 import { PracticeAudioPane } from './PracticeAudioPane';
 import {
   formatLocalReopenTime,
+  formatSavedSourceLabel,
   getPracticeErrorMessage,
   readSavedNote,
   removeSavedNote,
@@ -130,7 +131,7 @@ export function SavedQuestionDetailPage() {
             {item.scopeName || item.sectionName || item.topicName || 'Saved question review'}
           </h1>
           <Chip size="sm" variant="soft" color={item.source === 'incorrect' ? 'danger' : 'accent'}>
-            <Chip.Label className="capitalize">{item.source}</Chip.Label>
+            <Chip.Label>{formatSavedSourceLabel(item.source)}</Chip.Label>
           </Chip>
           {savedAtLabel && (
             <span className="font-mono-tabular text-xs text-muted">Saved {savedAtLabel}</span>

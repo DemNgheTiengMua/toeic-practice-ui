@@ -35,6 +35,7 @@ import {
   buildStartSessionPayload,
   CanonicalMasteryState,
   formatLocalReopenTime,
+  formatModalityLabel,
   getPracticeErrorMessage,
   normalizeMasteryState,
 } from './practiceUtils';
@@ -249,6 +250,8 @@ export function PracticeBuilderPage() {
     );
   };
 
+  const availableCertificates = learnerContext?.certificates ?? learnerContext?.available ?? [];
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-separator pb-4">
@@ -273,7 +276,7 @@ export function PracticeBuilderPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {learnerContext && learnerContext.available.length > 1 && (
+          {learnerContext && availableCertificates.length > 1 && (
             <Select
               aria-label="Active certificate"
               className="w-56"
@@ -294,7 +297,7 @@ export function PracticeBuilderPage() {
               </Select.Trigger>
               <Select.Popover>
                 <ListBox>
-                  {learnerContext.available.map((cert) => (
+                  {availableCertificates.map((cert) => (
                     <ListBox.Item key={cert.code} id={cert.code} textValue={cert.name}>
                       {cert.name}
                       <ListBox.ItemIndicator />
@@ -689,13 +692,13 @@ export function PracticeBuilderPage() {
                                 <span className="font-mono-tabular font-medium">{cell.levelCode}</span>
                               </Table.Cell>
                               <Table.Cell>
-                                <span className="inline-flex items-center gap-1 capitalize text-muted">
+                                <span className="inline-flex items-center gap-1 text-muted">
                                   {String(cell.modality).toLowerCase() === 'listening' ? (
                                     <Headphones className="h-3.5 w-3.5" aria-hidden="true" />
                                   ) : (
                                     <Compass className="h-3.5 w-3.5" aria-hidden="true" />
                                   )}
-                                  {cell.modality}
+                                  {formatModalityLabel(cell.modality)}
                                 </span>
                               </Table.Cell>
                               <Table.Cell>

@@ -169,7 +169,7 @@ async function renderPracticeBuilder(initialEntry = '/practice') {
   });
   qc.setQueryData(['learner', 'context', 1], {
     active: { code: 'TOEIC', name: 'TOEIC Listening & Reading' },
-    available: [
+    certificates: [
       { code: 'TOEIC', name: 'TOEIC Listening & Reading' },
       { code: 'IELTS', name: 'IELTS Academic' },
     ],

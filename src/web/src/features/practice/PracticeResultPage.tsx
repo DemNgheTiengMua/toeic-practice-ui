@@ -15,6 +15,7 @@ import {
 import { api, QuestionOutcomeDto } from '@/lib/api';
 import { PracticeAudioPane } from './PracticeAudioPane';
 import {
+  formatInsightTrendLabel,
   formatLocalReopenTime,
   getPracticeErrorMessage,
   parseAcceptedAnswers,
@@ -222,7 +223,7 @@ export function PracticeResultPage() {
                     : 'default'
               }
             >
-              <Chip.Label className="capitalize">{insight.trend}</Chip.Label>
+              <Chip.Label>{formatInsightTrendLabel(insight.trend)}</Chip.Label>
             </Chip>
           )}
         </Card.Header>

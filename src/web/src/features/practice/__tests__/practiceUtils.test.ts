@@ -2,8 +2,11 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import {
   buildSaveTogglePlan,
   buildStartSessionPayload,
+  formatInsightTrendLabel,
   formatLocalReopenTime,
+  formatModalityLabel,
   formatMsTime,
+  formatSavedSourceLabel,
   getPracticeQuestionAddress,
   normalizeMasteryState,
   parseAcceptedAnswers,
@@ -93,5 +96,15 @@ describe('practiceUtils', () => {
     expect(parseSelectedOptionIds({ selectedOptionIds: [4, 7], selectedOptionIdsJson: null })).toEqual([4, 7]);
     expect(parseSelectedOptionIds({ selectedOptionIds: null, selectedOptionIdsJson: '[9, 11]' })).toEqual([9, 11]);
     expect(formatMsTime(65_000)).toBe('01:05');
+  });
+
+  it('maps wire enum codes to explicit LearnerLabels copy', () => {
+    expect(formatInsightTrendLabel('improving')).toBe('Improving');
+    expect(formatInsightTrendLabel('flat')).toBe('Holding steady');
+    expect(formatInsightTrendLabel('declining')).toBe('Declining');
+    expect(formatModalityLabel('listening')).toBe('Listening');
+    expect(formatModalityLabel('reading')).toBe('Reading');
+    expect(formatSavedSourceLabel('manual')).toBe('Saved by you');
+    expect(formatSavedSourceLabel('incorrect')).toBe('Wrong answer');
   });
 });
