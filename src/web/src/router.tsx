@@ -8,6 +8,13 @@ import {
 } from '@tanstack/react-router';
 import { Button, Card } from '@heroui/react';
 import { AppShell } from './components/shell/AppShell';
+import {
+  PracticeBuilderPage,
+  PracticeResultPage,
+  PracticeSessionPage,
+  SavedQuestionDetailPage,
+  SavedQuestionsPage,
+} from './features/practice';
 
 function PlaceholderView({ title, ticket }: { title: string; ticket: string }) {
   return (
@@ -71,8 +78,31 @@ const routeTree = rootRoute.addChildren([
   stubRoute('/verify-email', 'Verify email', '295'),
   stubRoute('/placement', 'Placement', '296'),
   stubRoute('/exams', 'Mock exams', '297'),
-  stubRoute('/practice', 'Practice session', '298'),
-  stubRoute('/saved-questions', 'Saved questions', '298'),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/practice',
+    component: PracticeBuilderPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/practice/session/$sessionId',
+    component: PracticeSessionPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/practice/result/$sessionId',
+    component: PracticeResultPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/saved-questions',
+    component: SavedQuestionsPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/saved-questions/$savedQuestionId',
+    component: SavedQuestionDetailPage,
+  }),
   stubRoute('/speaking', 'Speaking practice', '299'),
   stubRoute('/writing', 'Writing practice', '299'),
   stubRoute('/dashboard', 'Dashboard', '300'),
