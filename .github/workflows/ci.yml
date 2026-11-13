@@ -42,11 +42,19 @@ jobs:
           sudo ACCEPT_EULA=Y apt-get install -y mssql-tools18 unixodbc-dev
           echo "/opt/mssql-tools18/bin" >> "$GITHUB_PATH"
 
-      - name: Build
-        run: dotnet build --configuration Release
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
 
-      - name: Install Playwright Browsers
-        run: pwsh tests/WebMVC.E2ETests/bin/Release/net10.0/playwright.ps1 install chromium --with-deps
+      - name: Build
+        run: |
+          dotnet build --configuration Release
+          npm --prefix src/web ci
+          npm --prefix src/web test -- --run
+          npm --prefix src/web run build
 
       - name: Seed Database & Start Web Services
         run: |
@@ -82,22 +90,22 @@ jobs:
             sleep 1
           done
 
-          # 4. Start WebMVC on port 5000
-          env \
-            ASPNETCORE_ENVIRONMENT=Development \
-            ASPNETCORE_URLS="http://localhost:5000" \
-            ApiBaseUrl="http://localhost:5001" \
-            dotnet run --project src/WebMVC --no-build --configuration Release > mvc.log 2>&1 &
+          # 4. Start React SPA (vite preview) on port 5000
+          (
+            cd src/web
+            VITE_API_TARGET="http://localhost:5001" \
+              npx vite preview --host 127.0.0.1 --port 5000 --strictPort > ../../web.log 2>&1 &
+          )
 
-          # 5. Wait for WebMVC to be healthy
+          # 5. Wait for React SPA to be healthy
           for i in $(seq 1 30); do
             if curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/auth/sign-in | grep -q "200"; then
-              echo "WebMVC is up"
+              echo "Web SPA is up"
               break
             fi
             if [ "$i" -eq 30 ]; then
-              echo "WebMVC failed to start in 30s"
-              cat mvc.log
+              echo "Web SPA failed to start in 30s"
+              cat web.log
               exit 1
             fi
             sleep 1
@@ -129,6 +137,6 @@ jobs:
         run: |
           echo "=== WebAPI Log ==="
           cat api.log || true
-          echo "=== WebMVC Log ==="
-          cat mvc.log || true
+          echo "=== Web SPA Log ==="
+          cat web.log || true
 

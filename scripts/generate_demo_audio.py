@@ -14,17 +14,17 @@ FRAME = HEADER + SIDE_INFO + MAIN_DATA
 SILENCE_MP3 = FRAME * 50
 
 paths = [
-    "src/WebMVC/wwwroot/audio/toeic/placement-p1.mp3",
-    "src/WebMVC/wwwroot/audio/toeic/placement-p2.mp3",
-    "src/WebMVC/wwwroot/audio/toeic/placement-quick.mp3",
-    "src/WebMVC/wwwroot/audio/toeic/test1-p1.mp3",
-    "src/WebMVC/wwwroot/audio/toeic/test1-p2.mp3",
-    "src/WebMVC/wwwroot/audio/toeic/test1-p3.mp3",
-    "src/WebMVC/wwwroot/audio/toeic/test1-p4.mp3",
-    "src/WebMVC/wwwroot/audio/ielts/cambridge18-t1-listening.mp3",
-    "src/WebMVC/wwwroot/audio/ielts/placement-diagnostic.mp3",
-    "src/WebMVC/wwwroot/audio/vstep/sample1-listening.mp3",
-    "src/WebMVC/wwwroot/audio/vstep/placement-diagnostic.mp3",
+    "src/web/public/audio/toeic/placement-p1.mp3",
+    "src/web/public/audio/toeic/placement-p2.mp3",
+    "src/web/public/audio/toeic/placement-quick.mp3",
+    "src/web/public/audio/toeic/test1-p1.mp3",
+    "src/web/public/audio/toeic/test1-p2.mp3",
+    "src/web/public/audio/toeic/test1-p3.mp3",
+    "src/web/public/audio/toeic/test1-p4.mp3",
+    "src/web/public/audio/ielts/cambridge18-t1-listening.mp3",
+    "src/web/public/audio/ielts/placement-diagnostic.mp3",
+    "src/web/public/audio/vstep/sample1-listening.mp3",
+    "src/web/public/audio/vstep/placement-diagnostic.mp3",
 ]
 
 for p in paths:

@@ -5,7 +5,7 @@
 # credits or real API quota.
 #
 #   scripts/seed-manual-test.sh seed     reset, then schema and demo seed
-#   scripts/seed-manual-test.sh start    build and start WebAPI (5001) + WebMVC (5000)
+#   scripts/seed-manual-test.sh start    build and start WebAPI (5001) + React SPA (5000)
 #   scripts/seed-manual-test.sh fresh    stop → seed → start   (use before each pass)
 #   scripts/seed-manual-test.sh stop     stop whatever listens on 5000 / 5001
 #   scripts/seed-manual-test.sh status   ports, learner balance, seeded row counts
@@ -18,7 +18,7 @@
 #     works too, and it loads BOTH seed files (demo + diagnostic benchmark).
 #
 # You may pass --real-ai to call SpeechSuper/Claude for real (costs money, needs
-# .env keys). Logs land in logs/manual/{api,mvc}.log (gitignored).
+# .env keys). Logs land in logs/manual/{api,web}.log (gitignored).
 
 set -euo pipefail
 
@@ -28,7 +28,7 @@ SERVER='(localdb)\MSSQLLocalDB'
 DB='ExtraEfficiency'
 LOG_DIR="$ROOT/logs/manual"
 API_URL='http://localhost:5001'
-MVC_URL='http://localhost:5000'
+WEB_URL='http://localhost:5000'
 CONFIG='Debug'
 TFM='net10.0'
 
@@ -121,18 +121,20 @@ cmd_start() {
   )
   wait_up "$API_URL/api/certificates" WebAPI "$LOG_DIR/api.log"
 
-  say "Starting WebMVC → $LOG_DIR/mvc.log"
-  (
-    cd "$ROOT/src/WebMVC"
-    nohup env \
-      ASPNETCORE_ENVIRONMENT=Development \
-      ASPNETCORE_URLS="$MVC_URL" \
-      ApiBaseUrl="$API_URL" \
-      dotnet "bin/$CONFIG/$TFM/WebMVC.dll" > "$LOG_DIR/mvc.log" 2>&1 &
-  )
-  wait_up "$MVC_URL/auth/sign-in" WebMVC "$LOG_DIR/mvc.log"
+  say "Building React SPA"
+  npm --prefix "$ROOT/src/web" run build >> "$LOG_DIR/build.log" 2>&1 \
+    || { tail -n 30 "$LOG_DIR/build.log" >&2; die "frontend build failed (log: $LOG_DIR/build.log)"; }
 
-  say "Ready: $MVC_URL/auth/sign-in  (payment=mock, ai=$AI_MODE, db=$DB)"
+  say "Starting Web (React SPA) → $LOG_DIR/web.log"
+  (
+    cd "$ROOT/src/web"
+    nohup env \
+      VITE_API_TARGET="$API_URL" \
+      npx vite preview --host 127.0.0.1 --port 5000 --strictPort > "$LOG_DIR/web.log" 2>&1 &
+  )
+  wait_up "$WEB_URL/auth/sign-in" "Web (React SPA)" "$LOG_DIR/web.log"
+
+  say "Ready: $WEB_URL/auth/sign-in  (payment=mock, ai=$AI_MODE, db=$DB)"
 }
 
 cmd_status() {
@@ -156,7 +158,7 @@ cmd_status() {
 # Every unhandled exception, with the stack trace that the browser never sees.
 cmd_errors() {
   local f
-  for f in "$LOG_DIR/api.log" "$LOG_DIR/mvc.log"; do
+  for f in "$LOG_DIR/api.log" "$LOG_DIR/web.log"; do
     [[ -f "$f" ]] || continue
     printf '\n===== %s =====\n' "${f##*/}"
     grep -n -A 25 -E '^(fail|crit):' "$f" || echo '  (no fail/crit entries)'

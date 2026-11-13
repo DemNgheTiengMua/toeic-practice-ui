@@ -10,13 +10,13 @@
 #
 #   scripts/crawl-env.sh fresh    stop → reset DB → build → start   (use before each loop)
 #   scripts/crawl-env.sh reset    drop + recreate + schema + seed the crawl DB
-#   scripts/crawl-env.sh start    build and start WebAPI (5001) and WebMVC (5000)
+#   scripts/crawl-env.sh start    build and start WebAPI (5001) and React SPA (5000)
 #   scripts/crawl-env.sh stop     stop whatever listens on 5000 / 5001
 #   scripts/crawl-env.sh status   ports, learner balance, log paths
 #   scripts/crawl-env.sh errors   server-side exceptions logged since start
 #
 # Overrides: CRAWL_AI=real to call SpeechSuper/Claude for real (costs money,
-# needs .env keys). Logs land in logs/crawl/{api,mvc}.log (gitignored).
+# needs .env keys). Logs land in logs/crawl/{api,web}.log (gitignored).
 
 set -euo pipefail
 
@@ -26,7 +26,7 @@ SERVER='(localdb)\MSSQLLocalDB'
 DB='ExtraEfficiencyCrawl'   # never the everyday ExtraEfficiency database
 LOG_DIR="$ROOT/logs/crawl"
 API_URL='http://localhost:5001'
-MVC_URL='http://localhost:5000'
+WEB_URL='http://localhost:5000'
 CONFIG='Debug'
 TFM='net10.0'
 
@@ -120,8 +120,8 @@ cmd_start() {
   say "Building servers"
   dotnet build "$ROOT/src/WebAPI/WebAPI.csproj" -c "$CONFIG" -v q -nologo > "$LOG_DIR/build.log" \
     || { tail -n 30 "$LOG_DIR/build.log" >&2; die "build failed (log: $LOG_DIR/build.log)"; }
-  dotnet build "$ROOT/src/WebMVC/WebMVC.csproj" -c "$CONFIG" -v q -nologo >> "$LOG_DIR/build.log" \
-    || { tail -n 30 "$LOG_DIR/build.log" >&2; die "build failed (log: $LOG_DIR/build.log)"; }
+  npm --prefix "$ROOT/src/web" run build >> "$LOG_DIR/build.log" 2>&1 \
+    || { tail -n 30 "$LOG_DIR/build.log" >&2; die "frontend build failed (log: $LOG_DIR/build.log)"; }
 
   # The working directory is the content root: appsettings, wwwroot, mail-drop
   # and the .env lookup all resolve from the project folder, as with dotnet run.
@@ -141,16 +141,15 @@ cmd_start() {
   )
   wait_up "$API_URL/api/certificates" WebAPI "$LOG_DIR/api.log"
 
-  say "Starting WebMVC → $LOG_DIR/mvc.log"
+  say "Starting Web (React SPA) → $LOG_DIR/web.log"
   (
-    cd "$ROOT/src/WebMVC"
-    ASPNETCORE_ENVIRONMENT=Development \
-    ASPNETCORE_URLS="$MVC_URL" \
-    ApiBaseUrl="$API_URL" \
-    nohup dotnet "bin/$CONFIG/$TFM/WebMVC.dll" > "$LOG_DIR/mvc.log" 2>&1 &
+    cd "$ROOT/src/web"
+    nohup env \
+      VITE_API_TARGET="$API_URL" \
+      npx vite preview --host 127.0.0.1 --port 5000 --strictPort > "$LOG_DIR/web.log" 2>&1 &
   )
-  wait_up "$MVC_URL/auth/sign-in" WebMVC "$LOG_DIR/mvc.log"
-  say "Ready: $MVC_URL  (payment=mock, ai=${CRAWL_AI:-fake}, db=$DB)"
+  wait_up "$WEB_URL/auth/sign-in" "Web (React SPA)" "$LOG_DIR/web.log"
+  say "Ready: $WEB_URL  (payment=mock, ai=${CRAWL_AI:-fake}, db=$DB)"
 }
 
 cmd_status() {
@@ -166,7 +165,7 @@ cmd_status() {
 # Every unhandled exception, with the stack trace that the browser never sees.
 cmd_errors() {
   local f
-  for f in "$LOG_DIR/api.log" "$LOG_DIR/mvc.log"; do
+  for f in "$LOG_DIR/api.log" "$LOG_DIR/web.log"; do
     [[ -f "$f" ]] || continue
     printf '\n===== %s =====\n' "${f##*/}"
     grep -n -A 25 -E '^(fail|crit):' "$f" || echo '  (no fail/crit entries)'

@@ -29,10 +29,10 @@ Other subcommands:
 | :--- | :--- |
 | `./scripts/seed-manual-test.sh fresh` | Full reset + seed + build + start (use before each manual pass) |
 | `./scripts/seed-manual-test.sh seed` | Stop apps, drop DB, reload schema + both seeds (no start) |
-| `./scripts/seed-manual-test.sh start` | Build and start WebAPI (5001) + WebMVC (5000) |
+| `./scripts/seed-manual-test.sh start` | Build and start WebAPI (5001) + React SPA (5000) |
 | `./scripts/seed-manual-test.sh stop` | Stop whatever listens on 5000 / 5001 |
 | `./scripts/seed-manual-test.sh status` | Ports, learner credit balance, seeded row counts |
-| `./scripts/seed-manual-test.sh errors` | Unhandled exceptions from `logs/manual/{api,mvc}.log` |
+| `./scripts/seed-manual-test.sh errors` | Unhandled exceptions from `logs/manual/{api,web}.log` |
 
 Runtime mode: **payment = `mock`**, **AI = `fake`** (deterministic offline fakes).
 Neither spends a real credit nor a real SpeechSuper/Claude call. Add `--real-ai` to
