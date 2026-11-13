@@ -132,8 +132,11 @@ Fourteen types, constrained per skill. Use exactly these strings:
 | Speaking | `descriptive_monologue`, `situational_negotiation`, `argumentative_monologue`, `visual_data_synthesis` |
 | Writing | `transactional_correspondence`, `visual_data_synthesis`, `persuasive_essay`, `analytical_evaluation_essay` |
 
-A reading item typed `short_exchange` is refused. Derive it from the shape: a passage means
-`passage_comprehension`; its absence means `sentence_cloze`.
+A reading item typed `short_exchange` is refused. Derive it from the shape: **a passage with questions about
+its meaning is `passage_comprehension`; a blank to fill is `sentence_cloze`**, whether or not it sits in a
+passage. A `P6` clozes text, so it is `sentence_cloze`; a `P7` asks about the passage, so it is
+`passage_comprehension`. Only use `text_insertion_cohesion` for a genuine "where does this sentence
+belong" task.
 
 ### `questionType` is the widget
 
@@ -204,23 +207,44 @@ almost-right file costs a round trip.
 
 Placement draws a **fixed** 8 items per objective skill at stage one, then routes to a band pair and
 draws 5–6 more per band. It needs **at least 5 items at every band of every objective skill**, or it
-falls back to a static paper.
+falls back to a static paper. That floor is per **skill**, not per section.
 
-For TOEIC (Listening + Reading), the minimum that makes the draw work:
+### Group size is only enforced where it is greater than 1
 
-| Section | Items per band | Bands | Total |
+`P3` and `P4` have `ClusterSize = 3`, so a conversation group must hold exactly 3 questions.
+**`P5`, `P6` and `P7` have `ClusterSize = 1`, so no group size is enforced.** A `P6` passage group may
+hold 4 questions and a `P7` passage group may hold 4 — which is what the shipped seed does.
+
+Do not split a passage to hit an item count. Write whole groups.
+
+### For a Reading-only batch (`P5`, `P6`, `P7`)
+
+| Section | Groups per band | Items per band | itemType |
 |---|---|---|---|
-| P5 (sentence) | 2 | A1–C2 (6) | 12 |
-| P6 (text completion) | 1 | A1–C2 (6) | 6 |
-| P7 (comprehension) | 2 | A1–C2 (6) | 12 |
-| P1 (photographs) | 1 | A1–C2 (6) | 6 |
-| P2 (question-response) | 1 | A1–C2 (6) | 6 |
-| P3 (conversations, ÷3 questions) | 1 group | A1–C2 (6) | 18 |
-| P4 (talks, ÷3 questions) | 1 group | A1–C2 (6) | 18 |
-| **Total** | | | **78** |
+| `P5` | 3 groups × 1 question | 3 | `sentence_cloze` |
+| `P6` | 1 group × 4 questions | 4 | `sentence_cloze` |
+| `P7` | 1 group × 4 questions | 4 | `passage_comprehension` |
+| **Total** | | **11 per band** | |
 
-That is the smallest batch that lets every band supply its draw. Aim higher: **30+ Listening and 30+
-Reading placement-eligible items** gives the draw room to avoid repeating an item across two sittings.
+Six bands → **66 questions**. Any band supplying fewer than 5 items makes the draw fall back to a static
+paper for that band.
+
+### For a Listening batch (`P1`–`P4`)
+
+Needs real audio (and a real image for `P1`). If you do not have assets, do not write these sections —
+see the assets rule above.
+
+| Section | Groups per band | Items per band |
+|---|---|---|
+| `P1` | 1 group × 1 | 1 |
+| `P2` | 2 groups × 1 | 2 |
+| `P3` | 1 group × 3 | 3 |
+| `P4` | 1 group × 3 | 3 |
+
+`P2` expects **3 options**, not 4; every other objective section expects 4. The importer enforces it.
+
+Aim higher than the floor. **30+ placement-eligible items per objective skill** gives the draw room to
+avoid repeating an item across two sittings.
 
 Aim for an even spread. Six items at A1 and six at C2 is better than twelve at B1, because the draw
 routes a beginner to A1+A2 and an advanced learner to C1+C2.
