@@ -64,6 +64,19 @@ public partial class PlacementTest
     /// </summary>
     public bool ReusesPriorResults { get; set; }
 
+    /// <summary>#289: the skill scope chosen for this placement (<c>all_skills</c> or <c>listening_and_reading</c>).</summary>
+    [StringLength(24)]
+    [Unicode(false)]
+    public string Scope { get; set; } = "all_skills";
+
+    /// <summary>#289: the ledger debit written when starting a paid retake; NULL for a free first placement.</summary>
+    public int? CreditTxnId { get; set; }
+
+    /// <summary>#289: optional caller-supplied key ensuring retried start confirmations do not double-charge.</summary>
+    [StringLength(64)]
+    [Unicode(false)]
+    public string? IdempotencyKey { get; set; }
+
     /// <summary>
     /// #212: the per-skill results, one per skill the sitting touched. The placement is done when at
     /// least one of these is <see cref="PlacementResultStatus.Measured"/> or
@@ -88,6 +101,10 @@ public partial class PlacementTest
     [ForeignKey("ExamId, CertId, ExamPurpose")]
     [InverseProperty("PlacementTestExamNavigations")]
     public virtual Exam? ExamNavigation { get; set; }
+
+    [ForeignKey("CreditTxnId, UserId")]
+    [InverseProperty("PlacementTests")]
+    public virtual CreditTransaction? CreditTransaction { get; set; }
 
     [InverseProperty("PlacementTest")]
     public virtual ICollection<LearnerPath> LearnerPaths { get; set; } = new List<LearnerPath>();

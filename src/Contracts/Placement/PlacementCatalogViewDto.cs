@@ -9,4 +9,8 @@ public sealed record PlacementCatalogViewDto(
     int? CurrentTotalScore,
     List<PlacementCatalogItemDto> Exams,
     int? ActivePlacementId,
-    int? ActiveAttemptId);
+    int? ActiveAttemptId,
+    bool IsRetake = false,
+    int AllSkillsRetakeCredits = 5,
+    int ListeningAndReadingRetakeCredits = 3,
+    int? CreditBalance = null);

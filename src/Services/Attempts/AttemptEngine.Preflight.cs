@@ -14,7 +14,8 @@ public sealed partial class AttemptEngine
 {
     public async Task<bool> RequiresPreflightAsync(int examId, CancellationToken cancellationToken = default)
     {
-        var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(examId, cancellationToken);
+        var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(
+            examId, paperQuestions: null, placementScope: null, cancellationToken);
         return requiresAudio || requiresMic;
     }
 
@@ -28,8 +29,11 @@ public sealed partial class AttemptEngine
             .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
             ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
 
-        var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(attempt.ExamId, cancellationToken);
-        var audioUrls = await GetExamAudioUrlsAsync(attempt.ExamId, cancellationToken);
+        PlacementScope? scope = EnumCodes.TryParse<PlacementScope>(attempt.PlacementScope, out var parsed) ? parsed : null;
+        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, scope, cancellationToken);
+        var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(
+            attempt.ExamId, paperQuestions, scope, cancellationToken);
+        var audioUrls = await GetExamAudioUrlsAsync(attempt.ExamId, paperQuestions, scope, cancellationToken);
         var requiresPreflight = requiresAudio || requiresMic;
 
         return new PreflightStatusView(
@@ -111,7 +115,10 @@ public sealed partial class AttemptEngine
             return;
         }
 
-        var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(attempt.ExamId, cancellationToken);
+        PlacementScope? scope = EnumCodes.TryParse<PlacementScope>(attempt.PlacementScope, out var parsed) ? parsed : null;
+        var paperQuestions = await LoadSittingQuestionsAsync(attempt.ExamId, attempt.AttemptId, scope, cancellationToken);
+        var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(
+            attempt.ExamId, paperQuestions, scope, cancellationToken);
         if (requiresAudio || requiresMic)
         {
             throw new AttemptEngineException(
@@ -120,16 +127,23 @@ public sealed partial class AttemptEngine
         }
     }
 
-    private async Task<(bool RequiresAudio, bool RequiresMicrophone)> InspectPreflightRequirementsAsync(int examId, CancellationToken cancellationToken)
+    private async Task<(bool RequiresAudio, bool RequiresMicrophone)> InspectPreflightRequirementsAsync(
+        int examId,
+        IReadOnlyList<SittingQuestion>? paperQuestions,
+        PlacementScope? placementScope,
+        CancellationToken cancellationToken)
     {
         // #250: the sections a paper uses come from the paper itself, not from a Questions query. For a
         // pool-only paper the old query returned nothing, and the fallback then asked every section of
         // the CERTIFICATE for a microphone - a TOEIC reading paper would have demanded one.
-        var paperQuestions = await LoadSittingQuestionsAsync(examId, cancellationToken);
+        paperQuestions ??= await LoadSittingQuestionsAsync(examId, attemptId: null, placementScope, cancellationToken);
         var questionSectionIds = paperQuestions
             .Select(q => q.SectionId)
             .Distinct()
             .ToList();
+
+        var listening = Modality.Listening.ToCode();
+        var reading = Modality.Reading.ToCode();
 
         List<Section> sections;
         if (questionSectionIds.Count > 0)
@@ -148,46 +162,111 @@ public sealed partial class AttemptEngine
                 .Select(e => e.CertId)
                 .SingleOrDefaultAsync(cancellationToken);
 
-            sections = await db.Sections
+            var sectionsQuery = db.Sections
                 .AsNoTracking()
-                .Where(s => s.CertId == certId)
+                .Where(s => s.CertId == certId);
+            if (placementScope == PlacementScope.ListeningAndReading)
+            {
+                sectionsQuery = sectionsQuery.Where(s => s.Modality == listening || s.Modality == reading);
+            }
+
+            sections = await sectionsQuery
                 .Include(s => s.Skill)
                 .ToListAsync(cancellationToken);
         }
 
         var hasSectionAudioFlag = sections.Any(s => s.RequireAudio);
-        // #269: audio is a property of the stimulus a paper's items share, not of a legacy question
-        // group. Asking the old table made every pool paper report "no audio to preflight", so a
-        // listening sitting opened without checking the learner could hear anything.
-        var hasPooledAudio = await db.ExamItems
-            .AsNoTracking()
-            .Where(i => i.ExamId == examId)
-            .Join(db.Items.AsNoTracking(), i => i.ItemId, item => item.ItemId, (i, item) => item)
-            .Join(db.Stimuli.AsNoTracking(), item => item.StimulusId, s => s.StimulusId, (item, s) => s)
-            .AnyAsync(s => !string.IsNullOrWhiteSpace(s.AudioPath), cancellationToken);
+        // #269 / #289: audio comes from the sitting's own scoped paper when one exists, so a
+        // Listening & Reading sitting never checks unserved Speaking/Writing items for audio or mic.
+        bool hasPooledAudio;
+        if (paperQuestions.Count > 0)
+        {
+            hasPooledAudio = paperQuestions.Any(q => !string.IsNullOrWhiteSpace(q.Group.AudioPath));
+        }
+        else if (placementScope == PlacementScope.ListeningAndReading)
+        {
+            hasPooledAudio = await db.ExamItems
+                .AsNoTracking()
+                .Where(i => i.ExamId == examId)
+                .Join(db.Sections.AsNoTracking(), i => i.SectionId, sec => sec.SectionId, (i, sec) => new { i, sec })
+                .Where(x => x.sec.Modality == listening || x.sec.Modality == reading)
+                .Join(db.Items.AsNoTracking(), x => x.i.ItemId, item => item.ItemId, (x, item) => item)
+                .Join(db.Stimuli.AsNoTracking(), item => item.StimulusId, s => s.StimulusId, (item, s) => s)
+                .AnyAsync(s => !string.IsNullOrWhiteSpace(s.AudioPath), cancellationToken);
+        }
+        else
+        {
+            hasPooledAudio = await db.ExamItems
+                .AsNoTracking()
+                .Where(i => i.ExamId == examId)
+                .Join(db.Items.AsNoTracking(), i => i.ItemId, item => item.ItemId, (i, item) => item)
+                .Join(db.Stimuli.AsNoTracking(), item => item.StimulusId, s => s.StimulusId, (item, s) => s)
+                .AnyAsync(s => !string.IsNullOrWhiteSpace(s.AudioPath), cancellationToken);
+        }
 
-        var hasUploadedAudio = await db.ExamSectionAudios.AnyAsync(a => a.ExamId == examId, cancellationToken)
-            || hasPooledAudio;
-        var requiresAudio = hasSectionAudioFlag || hasUploadedAudio;
+        bool hasSectionUploads;
+        if (questionSectionIds.Count > 0)
+        {
+            hasSectionUploads = await db.ExamSectionAudios
+                .AnyAsync(a => a.ExamId == examId && questionSectionIds.Contains(a.SectionId), cancellationToken);
+        }
+        else if (placementScope == PlacementScope.ListeningAndReading)
+        {
+            hasSectionUploads = await db.ExamSectionAudios
+                .Join(db.Sections.AsNoTracking(), a => a.SectionId, sec => sec.SectionId, (a, sec) => new { a, sec })
+                .AnyAsync(x => x.a.ExamId == examId && (x.sec.Modality == listening || x.sec.Modality == reading), cancellationToken);
+        }
+        else
+        {
+            hasSectionUploads = await db.ExamSectionAudios.AnyAsync(a => a.ExamId == examId, cancellationToken);
+        }
 
-        // #160: the old third clause compared Skill.Code against "speaking" - a name, not a code - so it
-        // could never match. The second one is redundant as well: FK_Sections_SkillModality already pins
-        // a section's modality to its skill's. The section's own modality is the whole rule.
-        var requiresMicrophone = sections.Any(s =>
-            string.Equals(s.Modality, Modality.Speaking.ToCode(), StringComparison.OrdinalIgnoreCase));
+        var requiresAudio = hasSectionAudioFlag || hasSectionUploads || hasPooledAudio;
+
+        // #160 / #289: the section's modality is the rule, and ListeningAndReading never requires a mic.
+        var requiresMicrophone = placementScope != PlacementScope.ListeningAndReading
+            && sections.Any(s => string.Equals(s.Modality, Modality.Speaking.ToCode(), StringComparison.OrdinalIgnoreCase));
 
         return (requiresAudio, requiresMicrophone);
     }
 
-    private async Task<IReadOnlyList<string>> GetExamAudioUrlsAsync(int examId, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<string>> GetExamAudioUrlsAsync(
+        int examId,
+        IReadOnlyList<SittingQuestion>? paperQuestions,
+        PlacementScope? placementScope,
+        CancellationToken cancellationToken)
     {
         var urls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var sectionIds = paperQuestions?.Select(q => q.SectionId).Distinct().ToList() ?? [];
+        var listening = Modality.Listening.ToCode();
+        var reading = Modality.Reading.ToCode();
 
-        var sectionAudios = await db.ExamSectionAudios
-            .AsNoTracking()
-            .Where(a => a.ExamId == examId && !string.IsNullOrWhiteSpace(a.AudioPath))
-            .Select(a => a.AudioPath)
-            .ToListAsync(cancellationToken);
+        List<string> sectionAudios;
+        if (sectionIds.Count > 0)
+        {
+            sectionAudios = await db.ExamSectionAudios
+                .AsNoTracking()
+                .Where(a => a.ExamId == examId && sectionIds.Contains(a.SectionId) && !string.IsNullOrWhiteSpace(a.AudioPath))
+                .Select(a => a.AudioPath)
+                .ToListAsync(cancellationToken);
+        }
+        else if (placementScope == PlacementScope.ListeningAndReading)
+        {
+            sectionAudios = await db.ExamSectionAudios
+                .AsNoTracking()
+                .Join(db.Sections.AsNoTracking(), a => a.SectionId, sec => sec.SectionId, (a, sec) => new { a, sec })
+                .Where(x => x.a.ExamId == examId && (x.sec.Modality == listening || x.sec.Modality == reading) && !string.IsNullOrWhiteSpace(x.a.AudioPath))
+                .Select(x => x.a.AudioPath)
+                .ToListAsync(cancellationToken);
+        }
+        else
+        {
+            sectionAudios = await db.ExamSectionAudios
+                .AsNoTracking()
+                .Where(a => a.ExamId == examId && !string.IsNullOrWhiteSpace(a.AudioPath))
+                .Select(a => a.AudioPath)
+                .ToListAsync(cancellationToken);
+        }
 
         foreach (var path in sectionAudios)
         {
@@ -198,16 +277,41 @@ public sealed partial class AttemptEngine
             }
         }
 
-        // #269: the audio a pool paper needs is its stimuli's, reached through the roster.
-        var pooledAudios = await db.ExamItems
-            .AsNoTracking()
-            .Where(i => i.ExamId == examId)
-            .Join(db.Items.AsNoTracking(), i => i.ItemId, item => item.ItemId, (i, item) => item)
-            .Join(db.Stimuli.AsNoTracking(), item => item.StimulusId, s => s.StimulusId, (item, s) => s)
-            .Where(s => !string.IsNullOrWhiteSpace(s.AudioPath))
-            .Select(s => s.AudioPath!)
-            .Distinct()
-            .ToListAsync(cancellationToken);
+        IEnumerable<string> pooledAudios;
+        if (paperQuestions is { Count: > 0 })
+        {
+            pooledAudios = paperQuestions
+                .Select(q => q.Group.AudioPath)
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => path!)
+                .Distinct();
+        }
+        else if (placementScope == PlacementScope.ListeningAndReading)
+        {
+            pooledAudios = await db.ExamItems
+                .AsNoTracking()
+                .Where(i => i.ExamId == examId)
+                .Join(db.Sections.AsNoTracking(), i => i.SectionId, sec => sec.SectionId, (i, sec) => new { i, sec })
+                .Where(x => x.sec.Modality == listening || x.sec.Modality == reading)
+                .Join(db.Items.AsNoTracking(), x => x.i.ItemId, item => item.ItemId, (x, item) => item)
+                .Join(db.Stimuli.AsNoTracking(), item => item.StimulusId, s => s.StimulusId, (item, s) => s)
+                .Where(s => !string.IsNullOrWhiteSpace(s.AudioPath))
+                .Select(s => s.AudioPath!)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+        }
+        else
+        {
+            pooledAudios = await db.ExamItems
+                .AsNoTracking()
+                .Where(i => i.ExamId == examId)
+                .Join(db.Items.AsNoTracking(), i => i.ItemId, item => item.ItemId, (i, item) => item)
+                .Join(db.Stimuli.AsNoTracking(), item => item.StimulusId, s => s.StimulusId, (item, s) => s)
+                .Where(s => !string.IsNullOrWhiteSpace(s.AudioPath))
+                .Select(s => s.AudioPath!)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+        }
 
         foreach (var path in pooledAudios)
         {

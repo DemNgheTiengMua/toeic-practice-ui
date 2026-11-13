@@ -33,12 +33,23 @@ public sealed partial class AttemptEngine
     /// two branches differ in what is written, not in how the attempt behaves afterwards.
     /// </para>
     /// </summary>
+    public Task<ExamAttempt> CreateAttemptAsync(
+        int userId,
+        int certId,
+        int examId,
+        int durationMinutes,
+        AttemptPaperDraw? drawnPaper,
+        CancellationToken cancellationToken = default) =>
+        CreateAttemptAsync(
+            userId, certId, examId, durationMinutes, drawnPaper, placementScope: null, cancellationToken);
+
     public async Task<ExamAttempt> CreateAttemptAsync(
         int userId,
         int certId,
         int examId,
         int durationMinutes,
         AttemptPaperDraw? drawnPaper,
+        PlacementScope? placementScope,
         CancellationToken cancellationToken = default)
     {
         var tx = db.Database.CurrentTransaction is null
@@ -67,9 +78,6 @@ public sealed partial class AttemptEngine
                 // placement opens with 48 hours, not 72. The 72-hour arm is the cap every later
                 // stamp is clamped against, never a deadline of its own.
                 : PlacementSitting.ExpiresAt(now);
-            var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(examId, cancellationToken);
-            var requiresPreflight = requiresAudio || requiresMic;
-
             // #250 / #274: ONE source for the paper. A drawn paper is projected from the positions the
             // draw chose; otherwise LoadSittingQuestionsAsync resolves the exam's roster. Either way it
             // has already applied the pinned-version overlay and resolved the audio chain, so creation
@@ -81,8 +89,12 @@ public sealed partial class AttemptEngine
                 .Select(p => p.ExamItemId)
                 .ToList();
             var questions = servedPositionIds is { Count: > 0 }
-                ? await ProjectPaperAsync(examId, servedPositionIds, cancellationToken)
-                : await LoadSittingQuestionsAsync(examId, cancellationToken);
+                ? await ProjectPaperAsync(examId, servedPositionIds, placementScope, cancellationToken)
+                : await LoadSittingQuestionsAsync(examId, attemptId: null, placementScope, cancellationToken);
+
+            var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(
+                examId, questions, placementScope, cancellationToken);
+            var requiresPreflight = requiresAudio || requiresMic;
 
             var firstQuestion = questions.FirstOrDefault();
             var firstSkill = questions
@@ -139,7 +151,8 @@ public sealed partial class AttemptEngine
                 ActiveGroupId = activeGroupId,
                 PhaseDeadlineAt = phaseDeadlineAt,
                 IsAutoSubmitted = false,
-                PreflightVerifiedAt = requiresPreflight ? null : now
+                PreflightVerifiedAt = requiresPreflight ? null : now,
+                PlacementScope = placementScope?.ToCode()
             };
 
             db.ExamAttempts.Add(attempt);

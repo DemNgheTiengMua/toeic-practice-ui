@@ -55,6 +55,7 @@ public sealed class EnumCodesTests
         // #153: the domain enum has three members and the CHECK accepts exactly those three. There is
         // no Unknown member on purpose — an undecidable goal stores NULL, not a fourth code.
         { typeof(FeasibilityStatus), typeof(FeasibilityStatusDto), "CK_TargetBands_Feasibility" },
+        { typeof(PlacementScope), typeof(PlacementScopeDto), "CK_Placement_Scope" },
     };
 
 

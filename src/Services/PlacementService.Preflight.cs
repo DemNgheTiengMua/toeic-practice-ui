@@ -18,8 +18,8 @@ namespace Services;
 /// the path service could call is exactly how that invariant would break without anyone noticing.
 /// </para>
 /// <para>
-/// <b>Placement is free, and this file is part of that promise.</b> Nothing here reads a credit balance
-/// and nothing here writes a ledger row. The preflight is the first screen a learner sees on this path,
+/// <b>First placement per certificate is free, and this file preserves that promise.</b> On a learner's
+/// first placement nothing here reads a credit balance; retakes read the balance to show affordability. The preflight is the first screen a learner sees on this path,
 /// so a balance lookup added here would put a price on a free flow — the criterion says "no balance is
 /// read", not merely "no row is written".
 /// </para>
@@ -84,6 +84,14 @@ public sealed partial class PlacementService
             .Select(e => (int?)e.ExamId)
             .FirstOrDefaultAsync(cancellationToken);
 
+        var isRetake = await db.PlacementTests
+            .AsNoTracking()
+            .AnyAsync(p => p.UserId == userId && p.CertId == certId && p.Status != PlacementStatus.InProgress.ToCode(), cancellationToken);
+
+        int? creditBalance = isRetake
+            ? await _creditLedger.GetBalanceAsync(userId, cancellationToken)
+            : null;
+
         return new PlacementPreflightView(
             certId,
             certCode,
@@ -91,7 +99,11 @@ public sealed partial class PlacementService
             offers,
             cooldown.Until,
             cooldown.Waived,
-            offers.Any(o => o.CanReuse));
+            offers.Any(o => o.CanReuse),
+            IsRetake: isRetake,
+            AllSkillsRetakeCredits: _options.AllSkillsRetakeCredits,
+            ListeningAndReadingRetakeCredits: _options.ListeningAndReadingRetakeCredits,
+            CreditBalance: creditBalance);
     }
 
     /// <summary>

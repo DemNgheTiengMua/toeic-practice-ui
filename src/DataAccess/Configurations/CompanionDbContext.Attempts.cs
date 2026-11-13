@@ -34,6 +34,7 @@ public partial class CompanionDbContext
             // #246: the cutover tag. Nullable and unset by default: a default would make every new
             // attempt claim an epoch, and "taken before" vs "taken after" is the whole distinction.
             entity.Property(e => e.EpochTag).HasMaxLength(16).IsUnicode(false);
+            entity.Property(e => e.PlacementScope).HasMaxLength(24).IsUnicode(false);
 
             entity.Property(e => e.StartedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.Status).HasDefaultValue("in_progress");
@@ -225,6 +226,15 @@ public partial class CompanionDbContext
                 .HasFilter("([AttemptId] IS NOT NULL)");
 
             entity.Property(e => e.ExamPurpose).HasDefaultValue("placement", "DF_Placement_ExamPurpose");
+            entity.Property(e => e.Scope).HasDefaultValue("all_skills", "DF_Placement_Scope");
+
+            entity.HasIndex(e => e.CreditTxnId, "UX_PlacementTests_CreditTxn")
+                .IsUnique()
+                .HasFilter("([CreditTxnId] IS NOT NULL)");
+
+            entity.HasIndex(e => new { e.UserId, e.IdempotencyKey }, "UX_PlacementTests_Idempotency")
+                .IsUnique()
+                .HasFilter("([IdempotencyKey] IS NOT NULL)");
             entity.Property(e => e.Status).HasDefaultValue("in_progress");
             entity.Property(e => e.TakenAt).HasDefaultValueSql("(sysdatetimeoffset())");
 
@@ -250,6 +260,11 @@ public partial class CompanionDbContext
                 .HasPrincipalKey(p => new { p.ExamId, p.CertId, p.Purpose })
                 .HasForeignKey(d => new { d.ExamId, d.CertId, d.ExamPurpose })
                 .HasConstraintName("FK_Placement_ExamPurpose");
+
+            entity.HasOne(d => d.CreditTransaction).WithMany(p => p.PlacementTests)
+                .HasPrincipalKey(p => new { p.TxnId, p.UserId })
+                .HasForeignKey(d => new { d.CreditTxnId, d.UserId })
+                .HasConstraintName("FK_Placement_CreditTxn");
         });
     }
 }

@@ -87,6 +87,14 @@ public partial class ExamAttempt
     [Unicode(false)]
     public string? EpochTag { get; set; }
 
+    /// <summary>
+    /// #289: the chosen placement scope (<c>all_skills</c> or <c>listening_and_reading</c>); NULL for
+    /// mock sittings and legacy rows.
+    /// </summary>
+    [StringLength(24)]
+    [Unicode(false)]
+    public string? PlacementScope { get; set; }
+
     [InverseProperty("ExamAttempt")]
     public virtual ICollection<AiInsight> AiInsights { get; set; } = new List<AiInsight>();
 

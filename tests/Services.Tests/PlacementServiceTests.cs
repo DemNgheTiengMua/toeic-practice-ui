@@ -259,7 +259,7 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
         Assert.Null(placement.TotalScore);
         Assert.Null(placement.ResultBandCode);
 
-        // INVARIANT: Credit wallet is UNTOUCHED (still 5 credits, 0 transactions)
+        // INVARIANT (#289): First placement per cert per learner is free; credit wallet is UNTOUCHED (still 5 credits, 0 transactions)
         var balance = await db.vw_UserCreditBalances.Where(b => b.UserId == userId).Select(b => b.Balance).SingleAsync();
         Assert.Equal(5, balance);
         var txCount = await db.CreditTransactions.CountAsync(t => t.AttemptId == info.AttemptId);
@@ -544,7 +544,7 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
     {
         var certCode = Unique("PC12");
         var (_, standardExamId, quickExamId, _, _, _, _) = await SeedPlacementFixtureAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 5);
         var (service, _) = CreateServices();
 
         var first = await service.StartPlacementTestAsync(userId, standardExamId);

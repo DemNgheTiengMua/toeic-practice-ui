@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using DataAccess;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
+using Services.Credits;
 
 namespace Services;
 
@@ -17,7 +19,9 @@ public sealed partial class PlacementService(
     IAttemptEngine? attemptEngine = null,
     TimeProvider? clock = null,
     IPlacementStageOneDrawService? stageOneDraw = null,
-    IPlacementStageTwoDrawService? stageTwoDraw = null) : IPlacementService
+    IPlacementStageTwoDrawService? stageTwoDraw = null,
+    ICreditLedger? creditLedger = null,
+    PlacementOptions? options = null) : IPlacementService
 {
     private readonly IAttemptEngine _attemptEngine = attemptEngine ?? new AttemptEngine(db);
 
@@ -29,6 +33,8 @@ public sealed partial class PlacementService(
 
     /// <summary>#213: the cooldown is a wall-clock rule, so the clock is injected rather than assumed.</summary>
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
+    private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db, clock ?? TimeProvider.System);
+    private readonly PlacementOptions _options = options ?? new PlacementOptions();
 
     private static PlacementException MapPlacementException(AttemptEngineException ex) => ex.Code switch
     {
@@ -105,6 +111,14 @@ public sealed partial class PlacementService(
                 activePlacementId));
         }
 
+        var isRetake = await db.PlacementTests
+            .AsNoTracking()
+            .AnyAsync(p => p.UserId == userId && p.CertId == certId && p.Status != PlacementStatus.InProgress.ToCode(), cancellationToken);
+
+        int? creditBalance = isRetake
+            ? await _creditLedger.GetBalanceAsync(userId, cancellationToken)
+            : null;
+
         return new PlacementCatalogView(
             cert,
             latestDone?.ResultBandCode,
@@ -112,24 +126,70 @@ public sealed partial class PlacementService(
             latestDone?.TotalScore,
             items,
             activePlacement?.PlacementId,
-            activePlacement?.AttemptId);
+            activePlacement?.AttemptId,
+            IsRetake: isRetake,
+            AllSkillsRetakeCredits: _options.AllSkillsRetakeCredits,
+            ListeningAndReadingRetakeCredits: _options.ListeningAndReadingRetakeCredits,
+            CreditBalance: creditBalance);
     }
 
-    public async Task<PlacementTestInfo> StartPlacementTestAsync(int userId, int examId, CancellationToken cancellationToken = default)
+    public Task<PlacementTestInfo> StartPlacementTestAsync(int userId, int examId, CancellationToken cancellationToken = default) =>
+        StartPlacementInternalAsync(userId, examId, PlacementReuseChoice.Remeasure, PlacementScope.AllSkills, idempotencyKey: null, cancellationToken);
+
+    public Task<PlacementTestInfo> StartPlacementTestAsync(
+        int userId, int examId, PlacementReuseChoice reuse, CancellationToken cancellationToken = default) =>
+        StartPlacementInternalAsync(userId, examId, reuse, PlacementScope.AllSkills, idempotencyKey: null, cancellationToken);
+
+    public Task<PlacementTestInfo> StartPlacementTestAsync(
+        int userId,
+        int examId,
+        PlacementReuseChoice reuse,
+        PlacementScope scope,
+        string? idempotencyKey = null,
+        CancellationToken cancellationToken = default) =>
+        StartPlacementInternalAsync(userId, examId, reuse, scope, idempotencyKey, cancellationToken);
+
+    private static PlacementTestInfo ToPlacementTestInfo(PlacementTest placement, int fallbackExamId, int creditsCharged)
     {
-        return await StartPlacementInternalAsync(userId, examId, PlacementReuseChoice.Remeasure, cancellationToken);
+        var remaining = placement.ExamAttempt is not null
+            ? Math.Max(0, (int)(placement.ExamAttempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds)
+            : 0;
+        var parsedScope = EnumCodes.TryParse<PlacementScope>(placement.Scope, out var ps)
+            ? ps
+            : PlacementScope.AllSkills;
+
+        return new PlacementTestInfo(
+            placement.PlacementId,
+            placement.AttemptId ?? 0,
+            placement.ExamId ?? fallbackExamId,
+            EnumCodes.Parse<PlacementStatus>(placement.Status),
+            placement.ExamAttempt?.StartedAt ?? placement.TakenAt,
+            placement.ExamAttempt?.ExpiresAt ?? DateTimeOffset.UtcNow,
+            remaining,
+            placement.ExamAttempt?.IsAutoSubmitted ?? false,
+            Scope: parsedScope,
+            CreditsCharged: creditsCharged);
     }
 
-    public async Task<PlacementTestInfo> StartPlacementTestAsync(
-        int userId, int examId, PlacementReuseChoice reuse, CancellationToken cancellationToken = default)
+    private static bool IsUniqueOrSerializationConflict(Exception ex)
     {
-        return await StartPlacementInternalAsync(userId, examId, reuse, cancellationToken);
+        for (var cur = ex; cur is not null; cur = cur.InnerException)
+        {
+            if (cur is Microsoft.Data.SqlClient.SqlException sqlEx
+                && sqlEx.Number is 2601 or 2627 or 1205)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private async Task<PlacementTestInfo> StartPlacementInternalAsync(
         int userId,
         int examId,
         PlacementReuseChoice reuse,
+        PlacementScope scope,
+        string? idempotencyKey,
         CancellationToken cancellationToken)
     {
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
@@ -138,92 +198,127 @@ public sealed partial class PlacementService(
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PlacementException(PlacementException.ExamNotFound, $"Placement exam {examId} not found.");
 
-        // Check if there is already an in-progress placement test for this exam
-        var existingPlacement = await db.PlacementTests
-            .Include(p => p.ExamAttempt)
-            .Where(p => p.UserId == userId && p.ExamId == examId && p.Status == PlacementStatus.InProgress.ToCode())
-            .FirstOrDefaultAsync(cancellationToken);
+        var normalizedKey = string.IsNullOrWhiteSpace(idempotencyKey) ? null : idempotencyKey.Trim();
 
-        if (existingPlacement is not null)
+        for (var attemptNo = 0; attemptNo < 3; attemptNo++)
         {
-            if (existingPlacement.ExamAttempt is not null && DateTimeOffset.UtcNow >= existingPlacement.ExamAttempt.ExpiresAt)
+            await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            try
             {
-                await SubmitPlacementInternalAsync(existingPlacement.PlacementId, userId, isAutoSubmit: true, cancellationToken);
-            }
-            else
-            {
-                var remaining = existingPlacement.ExamAttempt is not null
-                    ? Math.Max(0, (int)(existingPlacement.ExamAttempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds)
-                    : 0;
+                if (normalizedKey is not null)
+                {
+                    var existingByKey = await db.PlacementTests
+                        .Include(p => p.ExamAttempt)
+                        .FirstOrDefaultAsync(p => p.UserId == userId && p.IdempotencyKey == normalizedKey, cancellationToken);
+                    if (existingByKey is not null)
+                    {
+                        await tx.CommitAsync(cancellationToken);
+                        return ToPlacementTestInfo(existingByKey, examId, creditsCharged: 0);
+                    }
+                }
 
-                return new PlacementTestInfo(
-                    existingPlacement.PlacementId,
-                    existingPlacement.AttemptId ?? 0,
-                    existingPlacement.ExamId ?? examId,
-                    EnumCodes.Parse<PlacementStatus>(existingPlacement.Status),
-                    existingPlacement.ExamAttempt?.StartedAt ?? existingPlacement.TakenAt,
-                    existingPlacement.ExamAttempt?.ExpiresAt ?? DateTimeOffset.UtcNow,
-                    remaining,
-                    existingPlacement.ExamAttempt?.IsAutoSubmitted ?? false);
+                // Check if there is already an in-progress placement test for this exam
+                var existingPlacement = await db.PlacementTests
+                    .Include(p => p.ExamAttempt)
+                    .Where(p => p.UserId == userId && p.ExamId == examId && p.Status == PlacementStatus.InProgress.ToCode())
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (existingPlacement is not null)
+                {
+                    if (existingPlacement.ExamAttempt is not null && DateTimeOffset.UtcNow >= existingPlacement.ExamAttempt.ExpiresAt)
+                    {
+                        await SubmitPlacementInternalAsync(existingPlacement.PlacementId, userId, isAutoSubmit: true, cancellationToken);
+                    }
+                    else
+                    {
+                        await tx.CommitAsync(cancellationToken);
+                        return ToPlacementTestInfo(existingPlacement, examId, creditsCharged: 0);
+                    }
+                }
+
+                // #213 / PLC-07: the retake cooldown. It reads the most recent FINISHED sitting and nothing else,
+                // so there is no lifetime cap anywhere in this rule. A resume of the sitting already in progress
+                // returned above and is never refused by it - a cooldown that blocked a resume would strand a
+                // learner halfway through a paper.
+                await EnsureCooldownElapsedAsync(userId, certId, cancellationToken);
+
+                // #289: the first placement per certificate per learner is free and never touches the credit ledger;
+                // every subsequent placement charges the configured price for the chosen scope inside this serializable
+                // transaction before abandoning any prior sitting or creating the attempt.
+                var isRetake = await db.PlacementTests
+                    .AnyAsync(p => p.UserId == userId && p.CertId == certId, cancellationToken);
+
+                CreditReceipt? chargeTxn = null;
+                if (isRetake)
+                {
+                    var price = _options.PriceFor(scope);
+                    try
+                    {
+                        chargeTxn = await _creditLedger.ChargePlacementRetakeAsync(userId, scope, price, cancellationToken);
+                    }
+                    catch (CreditLedgerException ex) when (ex.Code == CreditLedgerException.InsufficientCredits)
+                    {
+                        throw new PlacementException(PlacementException.InsufficientCredits, ex.Message);
+                    }
+                }
+
+                // Abandon any other in-progress placement test for this certificate and its linked attempt
+                var otherPlacements = await db.PlacementTests
+                    .Include(p => p.ExamAttempt)
+                    .Where(p => p.UserId == userId && p.CertId == certId && p.Status == PlacementStatus.InProgress.ToCode())
+                    .ToListAsync(cancellationToken);
+                foreach (var other in otherPlacements)
+                {
+                    other.Status = PlacementStatus.Abandoned.ToCode();
+                    if (other.ExamAttempt != null && other.ExamAttempt.Status == AttemptStatus.InProgress.ToCode())
+                    {
+                        other.ExamAttempt.Status = AttemptStatus.Abandoned.ToCode();
+                    }
+                }
+
+                var attempt = await _attemptEngine.CreateAttemptAsync(
+                    userId, certId, examId, exam.DurationMinutes,
+                    await BuildStageOnePaperAsync(certId, exam, scope, cancellationToken),
+                    scope,
+                    cancellationToken);
+
+                var placement = new PlacementTest
+                {
+                    UserId = userId,
+                    CertId = certId,
+                    ExamId = examId,
+                    AttemptId = attempt.AttemptId,
+                    Status = PlacementStatus.InProgress.ToCode(),
+                    ExamPurpose = ExamPurpose.Placement.ToCode(),
+                    Scope = scope.ToCode(),
+                    CreditTxnId = chargeTxn?.TxnId,
+                    IdempotencyKey = normalizedKey,
+                    TakenAt = attempt.StartedAt,
+                    TotalScore = null,
+                    ResultBandCode = null,
+                    // The choice lives on the sitting; the result writer reads it per skill.
+                    ReusesPriorResults = reuse == PlacementReuseChoice.ReuseValid,
+                };
+
+                db.PlacementTests.Add(placement);
+                await db.SaveChangesAsync(cancellationToken);
+                await tx.CommitAsync(cancellationToken);
+
+                placement.ExamAttempt = attempt;
+                return ToPlacementTestInfo(
+                    placement,
+                    examId,
+                    creditsCharged: chargeTxn is not null ? Math.Abs(chargeTxn.Delta) : 0);
+            }
+            catch (Exception ex) when (normalizedKey is not null && attemptNo < 2 && IsUniqueOrSerializationConflict(ex))
+            {
+                try { await tx.RollbackAsync(cancellationToken); } catch { /* already rolled back on deadlock */ }
+                db.ChangeTracker.Clear();
+                await Task.Delay(25 * (attemptNo + 1), cancellationToken);
             }
         }
 
-        // #213 / PLC-07: the retake cooldown. It reads the most recent FINISHED sitting and nothing else,
-        // so there is no lifetime cap anywhere in this rule. A resume of the sitting already in progress
-        // returned above and is never refused by it - a cooldown that blocked a resume would strand a
-        // learner halfway through a paper.
-        await EnsureCooldownElapsedAsync(userId, certId, cancellationToken);
-
-        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
-
-        // Abandon any other in-progress placement test for this certificate and its linked attempt
-        var otherPlacements = await db.PlacementTests
-            .Include(p => p.ExamAttempt)
-            .Where(p => p.UserId == userId && p.CertId == certId && p.Status == PlacementStatus.InProgress.ToCode())
-            .ToListAsync(cancellationToken);
-        foreach (var other in otherPlacements)
-        {
-            other.Status = PlacementStatus.Abandoned.ToCode();
-            if (other.ExamAttempt != null && other.ExamAttempt.Status == AttemptStatus.InProgress.ToCode())
-            {
-                other.ExamAttempt.Status = AttemptStatus.Abandoned.ToCode();
-            }
-        }
-
-        var attempt = await _attemptEngine.CreateAttemptAsync(
-            userId, certId, examId, exam.DurationMinutes,
-            await BuildStageOnePaperAsync(certId, exam, cancellationToken),
-            cancellationToken);
-
-        var placement = new PlacementTest
-        {
-            UserId = userId,
-            CertId = certId,
-            ExamId = examId,
-            AttemptId = attempt.AttemptId,
-            Status = PlacementStatus.InProgress.ToCode(),
-            ExamPurpose = ExamPurpose.Placement.ToCode(),
-            TakenAt = attempt.StartedAt,
-            TotalScore = null,
-            ResultBandCode = null,
-            // The choice lives on the sitting; the result writer reads it per skill.
-            ReusesPriorResults = reuse == PlacementReuseChoice.ReuseValid,
-        };
-
-        db.PlacementTests.Add(placement);
-        await db.SaveChangesAsync(cancellationToken);
-        await tx.CommitAsync(cancellationToken);
-
-        var remainingSeconds = Math.Max(0, (int)(attempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds);
-        return new PlacementTestInfo(
-            placement.PlacementId,
-            attempt.AttemptId,
-            examId,
-            EnumCodes.Parse<PlacementStatus>(placement.Status),
-            attempt.StartedAt,
-            attempt.ExpiresAt,
-            remainingSeconds,
-            attempt.IsAutoSubmitted);
+        throw new InvalidOperationException("Unreachable: placement start conflict retry exhausted.");
     }
 
     public async Task<PreflightStatusView> GetPlacementPreflightStatusAsync(int userId, int placementId, CancellationToken cancellationToken = default)
@@ -1205,6 +1300,10 @@ public sealed partial class PlacementService(
         var (freeResponseCount, gradedFreeResponseCount, failedFreeResponseCount, isGraded) =
             await GetAttemptGradingCountsAsync(attempt.AttemptId, attempt.Status, cancellationToken);
 
+        var resultScope = EnumCodes.TryParse<PlacementScope>(placement.Scope, out var parsedResultScope)
+            ? parsedResultScope
+            : PlacementScope.AllSkills;
+
         return new PlacementResultView(
             placement.PlacementId,
             attempt.AttemptId,
@@ -1229,6 +1328,7 @@ public sealed partial class PlacementService(
             isGraded)
         {
             SkillResults = skillResults,
+            Scope = resultScope,
         };
     }
     private async Task<(int Total, int Graded, int Failed, bool IsGraded)> GetAttemptGradingCountsAsync(

@@ -10,4 +10,6 @@ public sealed record PlacementTestInfoDto(
     DateTimeOffset StartedAt,
     DateTimeOffset ExpiresAt,
     int RemainingSeconds,
-    bool IsAutoSubmitted);
+    bool IsAutoSubmitted,
+    PlacementScopeDto Scope = PlacementScopeDto.AllSkills,
+    int CreditsCharged = 0);

@@ -375,6 +375,41 @@ public sealed class CreditLedger : ICreditLedger
         return await SaveTransactionAsync(txn, CreditReason.RefundCredit, amount, balance + amount, now, cancellationToken);
     }
 
+    public async Task<CreditReceipt> ChargePlacementRetakeAsync(int userId, PlacementScope scope, int amount, CancellationToken cancellationToken = default)
+    {
+        if (amount <= 0)
+        {
+            throw new CreditLedgerException(CreditLedgerException.InvalidCharge, "Charge amount must be positive.");
+        }
+
+        var balance = await GetBalanceAsync(userId, cancellationToken);
+        if (balance < amount)
+        {
+            throw new CreditLedgerException(
+                CreditLedgerException.InsufficientCredits,
+                $"Insufficient credits. Balance is {balance}, required is {amount}.");
+        }
+
+        var note = scope switch
+        {
+            PlacementScope.AllSkills => "Placement retake: all 4 skills",
+            PlacementScope.ListeningAndReading => "Placement retake: Listening & Reading",
+            _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, "Unknown placement scope.")
+        };
+
+        var now = _clock.GetUtcNow();
+        var txn = new CreditTransaction
+        {
+            UserId = userId,
+            Reason = CreditReason.PlacementRetake.ToCode(),
+            Delta = -amount,
+            Note = note,
+            CreatedAt = now
+        };
+
+        return await SaveTransactionAsync(txn, CreditReason.PlacementRetake, -amount, balance - amount, now, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<CreditLedgerEntryDto>> GetLedgerHistoryAsync(int userId, CancellationToken cancellationToken = default)
     {
         var ledger = await _db.CreditTransactions

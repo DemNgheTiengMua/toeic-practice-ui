@@ -44,6 +44,8 @@ public static partial class PlacementEndpoints
                     CurrentUserId(http),
                     request.ExamId,
                     request.ReuseValidSkills ? PlacementReuseChoice.ReuseValid : PlacementReuseChoice.Remeasure,
+                    request.Scope.MapTo<PlacementScope>(),
+                    request.IdempotencyKey,
                     cancellationToken);
                 return Results.Ok(ToPlacementTestInfoDto(info));
             }
@@ -54,6 +56,10 @@ public static partial class PlacementEndpoints
             catch (PlacementException ex) when (ex.Code == PlacementException.PlacementCooldown)
             {
                 return Problem(StatusCodes.Status429TooManyRequests, "Retake cooldown", ApiError.Codes.PlacementCooldown, ex.Message);
+            }
+            catch (PlacementException ex) when (ex.Code == PlacementException.InsufficientCredits)
+            {
+                return Problem(StatusCodes.Status402PaymentRequired, "Insufficient credits", ApiError.Codes.InsufficientCredits, ex.Message);
             }
         });
     }

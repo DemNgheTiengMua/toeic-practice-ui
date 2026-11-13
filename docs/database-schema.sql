@@ -1,4 +1,4 @@
-﻿-- docs/database-schema.sql
+-- docs/database-schema.sql
 -- Multi-certificate mock-exam companion schema.
 -- Spec: docs/superpowers/specs/2026-09-24-multi-cert-companion-design.md
 SET QUOTED_IDENTIFIER ON;
@@ -1827,6 +1827,9 @@ CREATE TABLE ExamAttempts (
   -- this build no longer has and no reader can honestly recompute it.
   EpochTag VARCHAR(16) NULL
     CONSTRAINT CK_Attempts_EpochTag CHECK (EpochTag IS NULL OR EpochTag IN ('legacy_v1')),
+  -- #289: the skill scope of a placement sitting; NULL for mocks and legacy sittings.
+  PlacementScope VARCHAR(24) NULL
+    CONSTRAINT CK_Attempts_PlacementScope CHECK (PlacementScope IS NULL OR PlacementScope IN ('all_skills','listening_and_reading')),
   -- H-5: ExamId's CertId must be the attempt's own (pins the carried-down value)
   CONSTRAINT FK_Attempts_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
   CONSTRAINT FK_Attempts_ActiveSkill FOREIGN KEY (ActiveSkillId, CertId) REFERENCES Skills(SkillId, CertId),
@@ -2966,6 +2969,11 @@ CREATE TABLE PlacementTests (
   -- the result writer reads it to decide which skills are carried - and it is NOT a stored result: the
   -- per-skill rows still say, per skill, whether this sitting measured it or reused it.
   ReusesPriorResults BIT NOT NULL CONSTRAINT DF_Placement_ReusesPriorResults DEFAULT 0,
+  -- #289: learner's chosen scope ('all_skills' or 'listening_and_reading') and optional retake charge/idempotence links.
+  Scope VARCHAR(24) NOT NULL CONSTRAINT DF_Placement_Scope DEFAULT 'all_skills'
+    CONSTRAINT CK_Placement_Scope CHECK (Scope IN ('all_skills','listening_and_reading')),
+  CreditTxnId INT NULL,
+  IdempotencyKey VARCHAR(64) NULL,
   -- M-2: the placement exam must belong to the same certificate (NULL stays legal, MATCH SIMPLE)
   CONSTRAINT FK_Placement_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
   -- UI-3: and must be a placement exam, not a mock
@@ -3252,6 +3260,10 @@ BEGIN
 END;
 GO
 CREATE UNIQUE INDEX UX_PlacementTests_Attempt ON PlacementTests(AttemptId) WHERE AttemptId IS NOT NULL;
+GO
+CREATE UNIQUE INDEX UX_PlacementTests_CreditTxn ON PlacementTests(CreditTxnId) WHERE CreditTxnId IS NOT NULL;
+GO
+CREATE UNIQUE INDEX UX_PlacementTests_Idempotency ON PlacementTests(UserId, IdempotencyKey) WHERE IdempotencyKey IS NOT NULL;
 GO
 -- #191 / D14: the placement snapshot has exactly one writer, AttemptEngine. This is the confirmed
 -- defect's table (docs/research/placement-free-response-defect.md): AttemptEngine wrote the snapshot
@@ -4086,6 +4098,9 @@ CREATE TABLE CreditTransactions (
     OR (Reason IN ('admin_grant','admin_revoke','refund_credit','placement_retake') AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL)
   )
 );
+GO
+ALTER TABLE PlacementTests ADD CONSTRAINT FK_Placement_CreditTxn
+  FOREIGN KEY (CreditTxnId, UserId) REFERENCES CreditTransactions(TxnId, UserId);
 GO
 CREATE VIEW vw_UserCreditBalance AS
   SELECT UserId, SUM(Delta) AS Balance

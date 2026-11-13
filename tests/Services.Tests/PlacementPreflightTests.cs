@@ -145,18 +145,43 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         return new Fixture(code, certId, examId, skillIds, positionIds, correctOptionBySkillId);
     }
 
-    private async Task<int> SeedLearnerAsync(string certCode)
+    private async Task<int> SeedLearnerAsync(string certCode, int credits = 0)
     {
         var email = $"{Guid.NewGuid():N}@test.local";
         await SqlAsync($"""
             IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
               INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
+            IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'admin')
+              INSERT INTO Roles (Code, Name) VALUES ('admin', N'Admin');
             INSERT INTO Users (RoleId, Email, PasswordHash, ActiveCertId)
             VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{email}', 0x01,
                     (SELECT CertId FROM Certificates WHERE Code = '{certCode}'));
             """);
         await using var db = Db();
-        return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
+        var userId = await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
+        if (credits > 0)
+        {
+            var adminId = await db.Users.Where(u => u.Email == "preflight-admin@test.local").Select(u => (int?)u.UserId).FirstOrDefaultAsync();
+            if (adminId is null)
+            {
+                await SqlAsync("""
+                    INSERT INTO Users (RoleId, Email, PasswordHash)
+                    VALUES ((SELECT RoleId FROM Roles WHERE Code = 'admin'), 'preflight-admin@test.local', 0x01);
+                    """);
+                adminId = await db.Users.Where(u => u.Email == "preflight-admin@test.local").Select(u => u.UserId).SingleAsync();
+            }
+            db.CreditTransactions.Add(new BusinessObjects.Entities.CreditTransaction
+            {
+                UserId = userId,
+                Reason = CreditReason.AdminGrant.ToCode(),
+                Delta = credits,
+                AdminUserId = adminId,
+                Note = "Seed test credits",
+                CreatedAt = DateTimeOffset.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+        return userId;
     }
 
     private PlacementService Service(CompanionDbContext db, TimeProvider? clock = null) =>
@@ -308,7 +333,7 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
     public async Task Reusing_a_valid_skill_carries_it_with_its_original_date_and_badges_it()
     {
         var fixture = await SeedAsync(Unique("T213B"), ("LIST", "listening", false), ("READ", "reading", false));
-        var userId = await SeedLearnerAsync(fixture.CertCode);
+        var userId = await SeedLearnerAsync(fixture.CertCode, credits: 10);
         await SitAsync(userId, fixture);
 
         DateTimeOffset originalMeasuredAt;
@@ -380,7 +405,7 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
     public async Task Choosing_to_remeasure_measures_the_skills_again_instead_of_carrying_them()
     {
         var fixture = await SeedAsync(Unique("T213C"), ("LIST", "listening", false), ("READ", "reading", false));
-        var userId = await SeedLearnerAsync(fixture.CertCode);
+        var userId = await SeedLearnerAsync(fixture.CertCode, credits: 10);
         await SitAsync(userId, fixture);
 
         DateTimeOffset originalMeasuredAt;
@@ -484,7 +509,7 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
     public async Task A_third_placement_is_allowed_once_its_cooldown_has_elapsed()
     {
         var fixture = await SeedAsync(Unique("T213F"), ("LIST", "listening", false));
-        var userId = await SeedLearnerAsync(fixture.CertCode);
+        var userId = await SeedLearnerAsync(fixture.CertCode, credits: 15);
         await SitAsync(userId, fixture);
 
         // second sitting: 25 hours later
@@ -524,7 +549,7 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
     public async Task A_previous_sitting_whose_grading_failed_waives_the_cooldown()
     {
         var fixture = await SeedAsync(Unique("T213G"), ("WRIT", "writing", true));
-        var userId = await SeedLearnerAsync(fixture.CertCode);
+        var userId = await SeedLearnerAsync(fixture.CertCode, credits: 10);
 
         var placementId = await SitFreeResponseFailingAsync(userId, fixture);
 
@@ -673,7 +698,7 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
     // -------------------------------------------------------------------------------------------
 
     /// <summary>
-    /// Criterion 5, read literally: "no balance is read anywhere on this path". Counting ledger rows
+    /// #213 / #289: on a learner's first placement per certificate, "no balance is read anywhere on this path". Counting ledger rows
     /// catches a deduction; it does not catch a <c>GetBalance</c> left in a view model, which is the way
     /// a price gets onto a free flow. So the context used for the whole path is instrumented and every
     /// command that mentions the ledger or the balance view is recorded.
@@ -758,7 +783,7 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
     public async Task The_result_view_carries_each_skills_reuse_flag_and_original_measurement_date()
     {
         var fixture = await SeedAsync(Unique("T213N"), ("LIST", "listening", false), ("READ", "reading", false));
-        var userId = await SeedLearnerAsync(fixture.CertCode);
+        var userId = await SeedLearnerAsync(fixture.CertCode, credits: 10);
         await SitAsync(userId, fixture);
 
         DateTimeOffset originalMeasuredAt;

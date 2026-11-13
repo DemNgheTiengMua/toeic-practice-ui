@@ -1,3 +1,4 @@
+using BusinessObjects;
 using Contracts;
 
 namespace Services.Credits;
@@ -51,6 +52,12 @@ public interface ICreditLedger
     /// answer - and what <c>trg_Refunds_CreditTxnIsRefundCredit</c> demands the refund point at.
     /// </summary>
     Task<CreditReceipt> GrantRefundCreditsAsync(int userId, int adminUserId, int amount, string note, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #289: debits credits for starting a placement retake, posting a <c>placement_retake</c>
+    /// negative delta with the chosen scope recorded in <c>Note</c> and no source/admin columns.
+    /// </summary>
+    Task<CreditReceipt> ChargePlacementRetakeAsync(int userId, PlacementScope scope, int amount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves the ordered ledger history for a learner's wallet.

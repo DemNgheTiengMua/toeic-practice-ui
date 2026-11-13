@@ -6,6 +6,7 @@ using BusinessObjects.Entities;
 using Contracts;
 using DataAccess;
 using Microsoft.EntityFrameworkCore;
+using Services;
 using Services.Credits;
 using Xunit;
 
@@ -157,6 +158,64 @@ public sealed class PlacementRetakeLedgerSchemaTests(DatabaseFixture database)
 
         var error = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
         Assert.Contains("CK_CreditTxn_Source", error.InnerException?.Message ?? error.Message);
+    }
+
+    [Theory]
+    [InlineData(PlacementScope.AllSkills, 5, "all 4 skills")]
+    [InlineData(PlacementScope.ListeningAndReading, 3, "Listening & Reading")]
+    public async Task CreditLedger_ChargePlacementRetakeAsync_debits_configured_amount_and_records_scope_in_note(
+        PlacementScope scope, int price, string expectedNoteFragment)
+    {
+        var learner = await SeedUserAsync("learner");
+        var admin = await SeedUserAsync("admin");
+        await GrantCreditsAsync(learner, admin, 10);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var ledger = new CreditLedger(db);
+
+        var receipt = await ledger.ChargePlacementRetakeAsync(learner, scope, price);
+
+        Assert.Equal(CreditReason.PlacementRetake, receipt.Reason);
+        Assert.Equal(-price, receipt.Delta);
+        Assert.Equal(10 - price, receipt.BalanceAfter);
+        Assert.Equal(10 - price, await ledger.GetBalanceAsync(learner));
+
+        var row = await db.CreditTransactions.SingleAsync(t => t.TxnId == receipt.TxnId);
+        Assert.Equal(CreditReason.PlacementRetake.ToCode(), row.Reason);
+        Assert.Null(row.AdminUserId);
+        Assert.Null(row.OrderId);
+        Assert.Null(row.AttemptId);
+        Assert.Null(row.BookingId);
+        Assert.NotNull(row.Note);
+        Assert.Contains(expectedNoteFragment, row.Note, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CreditLedger_ChargePlacementRetakeAsync_blocks_overdraft_before_charging()
+    {
+        var learner = await SeedUserAsync("learner");
+        var admin = await SeedUserAsync("admin");
+        await GrantCreditsAsync(learner, admin, 2);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var ledger = new CreditLedger(db);
+
+        var ex = await Assert.ThrowsAsync<CreditLedgerException>(() =>
+            ledger.ChargePlacementRetakeAsync(learner, PlacementScope.ListeningAndReading, 3));
+
+        Assert.Equal(CreditLedgerException.InsufficientCredits, ex.Code);
+        Assert.Equal(2, await ledger.GetBalanceAsync(learner));
+        Assert.Equal(1, await db.CreditTransactions.CountAsync(t => t.UserId == learner));
+    }
+
+    [Fact]
+    public void PlacementOptions_defaults_to_5_for_all_skills_and_3_for_listening_and_reading()
+    {
+        var options = new PlacementOptions();
+        Assert.Equal(5, options.AllSkillsRetakeCredits);
+        Assert.Equal(3, options.ListeningAndReadingRetakeCredits);
+        Assert.Equal(5, options.PriceFor(PlacementScope.AllSkills));
+        Assert.Equal(3, options.PriceFor(PlacementScope.ListeningAndReading));
     }
 
     private async Task<int> SeedUserAsync(string roleCode)
