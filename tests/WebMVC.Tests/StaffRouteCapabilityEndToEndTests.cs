@@ -52,7 +52,7 @@ public sealed class StaffRouteCapabilityEndToEndTests : IClassFixture<StaffRoute
     {
         using var client = site.ClientFor([]);
 
-        var response = await client.GetAsync("/admin/users");
+        var response = await client.GetAsync("/admin/certificates");
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Contains("/auth/denied", response.Headers.Location?.ToString() ?? "");

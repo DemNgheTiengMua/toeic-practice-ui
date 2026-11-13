@@ -41,6 +41,9 @@ import { PlacementTakePage } from './features/placement/PlacementTakePage';
 import { PlacementResultPage } from './features/placement/PlacementResultPage';
 import { AdminFinancePage } from './features/admin/ops/AdminFinancePage';
 import { AdminOperationsPage } from './features/admin/ops/AdminOperationsPage';
+import { AdminOverviewPage } from './features/admin/AdminOverviewPage';
+import { AdminUsersPage } from './features/admin/AdminUsersPage';
+import { AdminAuditBatchPage } from './features/admin/AdminAuditBatchPage';
 
 function PlaceholderView({ title, ticket }: { title: string; ticket: string }) {
   return (
@@ -305,8 +308,21 @@ const routeTree = rootRoute.addChildren([
   stubRoute('/profile', 'Profile', '301'),
   stubRoute('/support', 'Support', '301'),
   stubRoute('/instructor/sessions', 'Instructor sessions', '301'),
-  stubRoute('/admin', 'Admin overview', '302'),
-  stubRoute('/admin/users', 'People & audit', '302'),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/admin',
+    component: AdminOverviewPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/admin/users',
+    component: AdminUsersPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/admin/audit/$batchId',
+    component: AdminAuditBatchPage,
+  }),
   stubRoute('/admin/certificates', 'Certificates studio', '303'),
   stubRoute('/admin/exams', 'Exams studio', '303'),
   stubRoute('/admin/question-bank', 'Question bank studio', '303'),

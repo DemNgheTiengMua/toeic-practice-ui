@@ -9,20 +9,7 @@ namespace WebMVC.Tests;
 public sealed class AdminViewsLayoutTests
 {
 
-    [Fact]
-    public void AdminViews_UsersAndOrders_MustDeclareAdminLayout()
-    {
-        var repoRoot = TestPathHelper.FindRepoRoot();
-        var adminViewsDir = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin");
 
-        var usersView = Path.Combine(adminViewsDir, "Users.cshtml");
-
-        Assert.True(File.Exists(usersView), "Users.cshtml must exist");
-
-        var usersContent = File.ReadAllText(usersView);
-
-        Assert.Matches(@"Layout\s*=\s*""_AdminLayout"";?", usersContent);
-    }
 
     [Fact]
     public void AdminViews_DirectoryMustContainViewStartWithAdminLayout()

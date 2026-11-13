@@ -71,12 +71,12 @@ public sealed class StaffGatesUseCapabilitiesTests : IClassFixture<StaffGatesUse
     [Fact]
     public void Async_actions_are_enumerated_not_skipped()
     {
-        // AdminUsersController's actions all return Task<IActionResult>. If the enumeration drops
+        // AdminExamsController's actions all return Task<IActionResult>. If the enumeration drops
         // them, every other assertion in this file is about a handful of synchronous actions.
         var staff = StaffActions().ToList();
-        var userActions = staff.Where(s => s.Controller.Name == "AdminUsersController").ToList();
-        Assert.NotEmpty(userActions);
-        Assert.All(userActions, s => Assert.Equal(typeof(Task<IActionResult>), s.Action.ReturnType));
+        var examActions = staff.Where(s => s.Controller.Name == "AdminExamsController").ToList();
+        Assert.NotEmpty(examActions);
+        Assert.All(examActions, s => Assert.Equal(typeof(Task<IActionResult>), s.Action.ReturnType));
     }
 
     [Fact]

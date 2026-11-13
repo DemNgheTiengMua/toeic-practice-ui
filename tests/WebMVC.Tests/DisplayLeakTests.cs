@@ -73,23 +73,7 @@ public sealed class DisplayLeakTests
             + string.Join("\n  ", offenders));
     }
 
-    /// <summary>
-    /// The other side of the same rule, and the trap in the ticket: the query-string filters must stay
-    /// codes. <b>The input that would pass a wrong fix:</b> replacing <c>@Model.Status</c> in a
-    /// pagination link with its label, which makes <c>?status=Paid</c> and silently returns nothing.
-    /// </summary>
-    [Theory]
-    [InlineData("Admin/Users.cshtml")]
-    public void A_query_string_filter_keeps_its_code(string view)
-    {
-        var source = File.ReadAllText(Path.Combine(ViewsRoot, view.Replace('/', Path.DirectorySeparatorChar)));
 
-        // Every `?param=@expr` or `&param=@expr` in an href still receives a code-shaped value.
-        var filters = Regex.Matches(source, @"[?&](?:status|gateway|state)=@(?<expr>[\w\.]+(?:\(\))?)");
-        Assert.NotEmpty(filters);
-        Assert.All(filters, match =>
-            Assert.DoesNotContain("Label", match.Groups["expr"].Value, StringComparison.Ordinal));
-    }
 
     /// <summary>
     /// <b>The input that would pass a wrong fix:</b> a view model that returns the code when the
