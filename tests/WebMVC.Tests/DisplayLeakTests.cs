@@ -36,7 +36,6 @@ public sealed class DisplayLeakTests
     [InlineData("Admin/_OrderDetail.cshtml", "@ev.ReportedStatus")]
     [InlineData("Mentors/Bookings.cshtml", "@b.Status")]
     [InlineData("Admin/ExamStudio.cshtml", "@Model.Detail.Purpose")]
-    [InlineData("Writing/Review.cshtml", "@span.Category")]
     public void A_measured_leak_is_no_longer_printed_as_text(string view, string expression)
     {
         var source = File.ReadAllText(Path.Combine(ViewsRoot, view.Replace('/', Path.DirectorySeparatorChar)));

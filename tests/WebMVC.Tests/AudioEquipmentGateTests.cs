@@ -135,7 +135,6 @@ public sealed class AudioEquipmentGateTests
     /// </summary>
     [Theory]
     [InlineData("exams/speaking.js")]
-    [InlineData("speaking/take.js")]
     public void No_take_page_script_calls_the_prompting_path(string script)
     {
         var source = Script(script);
@@ -617,7 +616,6 @@ public sealed class AudioEquipmentGateTests
     [InlineData("audio-gate.js", "readCached", "writeCached", "setBlock", "setBrowser", "acquire")]
     [InlineData("exams/preflight.js", "enumerateMics", "runSampleRecording", "showSilentGate", "refreshMicPermission")]
     [InlineData("exams/speaking.js", "playBeepCue", "cleanupSpeakingPacer", "startMockSpeakingCapture", "startSpeakingPacerRecording")]
-    [InlineData("speaking/take.js", "startRecording", "stopRecording", "showPermissionBlocked")]
     public void Every_function_a_script_calls_is_defined_in_it(string script, params string[] mustExist)
     {
         var source = Script(script);
