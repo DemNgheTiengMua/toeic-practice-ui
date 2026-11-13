@@ -155,6 +155,7 @@ export interface CertificateDto {
 export interface PackageDto {
   packageId: number;
   name: string;
+  packageName?: string;
   credits: number;
   price: number;
   isActive: boolean;
@@ -578,6 +579,234 @@ export interface AiInsightDto {
   recommendations: RecommendationDto[];
   learnerPathId?: number | null;
   formattedNarrative?: string | null;
+}
+
+export interface ProfileDto {
+  fullName: string;
+  phone?: string | null;
+  timeZoneId: string;
+}
+
+export interface OrderDto {
+  orderId: number;
+  orderCode: string;
+  paymentNo?: number;
+  packageId: number;
+  packageName: string;
+  credits: number;
+  amount: number;
+  status: 'pending' | 'reconciling' | 'paid' | 'failed' | 'expired' | string;
+  gateway: 'payos' | 'mock' | string;
+  gatewayTxnRef?: string | null;
+  gatewayErrorCode?: string | null;
+  createdAt: string;
+  paidAt?: string | null;
+  checkoutUrl?: string | null;
+}
+
+export interface CreditLedgerEntryDto {
+  txnId: number;
+  reason: string;
+  delta: number;
+  note?: string | null;
+  createdAt: string;
+  orderCode?: string | null;
+}
+
+export interface WalletDto {
+  balance: number;
+  creditsPurchased: number;
+  creditsUsed: number;
+  amountPurchased: number;
+  paidOrderCount: number;
+  orders: OrderDto[];
+  ledger: CreditLedgerEntryDto[];
+}
+
+export interface CheckoutPreviewDto {
+  packageId: number;
+  packageName: string;
+  credits: number;
+  price: number;
+  currentBalance: number;
+  balanceAfter: number;
+  openOrder?: OrderDto | null;
+}
+
+export interface CreateOrderResponseDto {
+  orderId: number;
+  orderCode: string;
+  paymentNo: number;
+  amount: number;
+  gateway: string;
+  checkoutUrl?: string | null;
+  status: string;
+}
+
+export interface PaymentResultDto {
+  orderId: number;
+  orderCode: string;
+  status: string;
+  packageName: string;
+  credits: number;
+  amount: number;
+  gateway: string;
+  createdAt: string;
+  paidAt?: string | null;
+  currentBalance: number;
+  gatewayErrorCode?: string | null;
+  message?: string | null;
+  checkoutUrl?: string | null;
+  packageId: number;
+}
+
+export interface MentorSummaryDto {
+  mentorId: number;
+  userId?: number | null;
+  displayName: string;
+  bio?: string | null;
+  certId: number;
+  certCode: string;
+  certName: string;
+  skillId?: number | null;
+  skillCode?: string | null;
+  skillName?: string | null;
+  modality?: string | null;
+  type: 'human' | 'ai' | string;
+  pricePerSlot: number;
+  priceCredits: number;
+  headline?: string | null;
+  expertise?: string | null;
+  sessionMinutes: number;
+  isActive: boolean;
+  avgRating?: number | null;
+  reviewCount: number;
+}
+
+export interface MentorSlotDto {
+  slotId: number;
+  mentorId: number;
+  startAt: string;
+  endAt: string;
+  status: 'open' | 'booked' | 'closed' | string;
+}
+
+export interface MentorReviewDto {
+  reviewId: number;
+  rating: number;
+  text?: string | null;
+  userDisplayName: string;
+  createdAt: string;
+}
+
+export interface MentorDetailDto {
+  mentor: MentorSummaryDto;
+  availableSlots: MentorSlotDto[];
+  reviews: MentorReviewDto[];
+}
+
+export interface MentorSkillStandingDto {
+  skillId?: number | null;
+  modality: string;
+  skillCode?: string | null;
+  skillName?: string | null;
+  status: 'measured' | 'not_measured' | 'not_examined' | string;
+  levelCode?: string | null;
+  positionInBand?: number | null;
+  isStale: boolean;
+}
+
+export interface MentorLearnerStandingDto {
+  certId: number;
+  certCode: string;
+  hasNoMeasurement: boolean;
+  overallLevelCode?: string | null;
+  limitingSkillId?: number | null;
+  limitingSkillCode?: string | null;
+  skills: MentorSkillStandingDto[];
+}
+
+export interface MentorBookingDto {
+  bookingId: number;
+  userId: number;
+  mentorId: number;
+  mentorName: string;
+  mentorHeadline?: string | null;
+  mentorType: 'human' | 'ai' | string;
+  slotId?: number | null;
+  startAt?: string | null;
+  endAt?: string | null;
+  status: 'pending' | 'confirmed' | 'done' | 'cancelled' | string;
+  meetLink?: string | null;
+  focusArea?: string | null;
+  priceCredits: number;
+  cancelledAt?: string | null;
+  createdAt: string;
+  attemptId?: number | null;
+  redirectUrl?: string | null;
+  review?: MentorReviewDto | null;
+  standing?: MentorLearnerStandingDto | null;
+}
+
+export interface CancelBookingResultDto {
+  bookingId: number;
+  status: string;
+  cancelledAt: string;
+  refundedCredits: number;
+}
+
+export interface LearnerComplaintDto {
+  complaintId: number;
+  type: 'mentor_no_show' | 'mentor_quality' | 'grading_issue' | 'technical_error' | 'payment_issue' | string;
+  reason: string;
+  status: 'open' | 'reviewing' | 'resolved' | string;
+  resolution?: string | null;
+  resolvedAt?: string | null;
+  resolvedByGrantTxnId?: number | null;
+  grantedCredits?: number | null;
+  createdAt: string;
+  bookingId?: number | null;
+  attemptId?: number | null;
+  orderId?: number | null;
+  subjectSummary?: string | null;
+}
+
+export interface EligibleBookingSubjectDto {
+  bookingId: number;
+  mentorName: string;
+  scheduledAt?: string | null;
+  status: string;
+}
+
+export interface EligibleAttemptSubjectDto {
+  attemptId: number;
+  examTitle: string;
+  startedAt: string;
+  status: string;
+  totalScore?: number | null;
+}
+
+export interface EligibleOrderSubjectDto {
+  orderId: number;
+  orderCode: string;
+  packageName: string;
+  amount: number;
+  createdAt: string;
+  status: string;
+}
+
+export interface EligibleSubjectsDto {
+  bookings: EligibleBookingSubjectDto[];
+  attempts: EligibleAttemptSubjectDto[];
+  orders: EligibleOrderSubjectDto[];
+}
+
+export interface CreateComplaintRequest {
+  type: string;
+  reason: string;
+  bookingId?: number | null;
+  attemptId?: number | null;
+  orderId?: number | null;
 }
 
 export interface AttemptOptionDto {
@@ -1536,29 +1765,6 @@ export interface AdminMentorListItemDto {
   isActive: boolean;
 }
 
-export interface MentorSummaryDto {
-  mentorId: number;
-  userId?: number | null;
-  displayName: string;
-  bio?: string | null;
-  certId: number;
-  certCode: string;
-  certName: string;
-  skillId?: number | null;
-  skillCode?: string | null;
-  skillName?: string | null;
-  modality?: string | null;
-  type: string;
-  pricePerSlot: number;
-  priceCredits: number;
-  headline?: string | null;
-  expertise?: string | null;
-  sessionMinutes: number;
-  isActive: boolean;
-  avgRating?: number | null;
-  reviewCount: number;
-}
-
 export interface AdminMentorSlotDto {
   slotId: number;
   mentorId: number;
@@ -1832,16 +2038,24 @@ export const api = {
   },
 
   learner: {
-    context: () => apiFetch<LearnerContextDto>('/api/learner/context'),
+    context: async () => {
+      const ctx = await apiFetch<LearnerContextDto>('/api/learner/context');
+      const certs = ctx.available ?? ctx.certificates ?? [];
+      return {
+        ...ctx,
+        available: certs,
+        certificates: ctx.certificates ?? certs,
+      };
+    },
     switchCertificate: (code: string) =>
       apiFetch<void>('/api/learner/active-certificate', {
         method: 'PUT',
         body: JSON.stringify({ code }),
       }),
     dashboard: () => apiFetch<LearnerDashboardDto>('/api/learner/dashboard'),
-    profile: () => apiFetch<any>('/api/profile'),
+    profile: () => apiFetch<ProfileDto>('/api/profile'),
     updateProfile: (body: { fullName: string; phone?: string | null; timeZoneId: string }) =>
-      apiFetch<any>('/api/profile', {
+      apiFetch<ProfileDto>('/api/profile', {
         method: 'PUT',
         body: JSON.stringify(body),
       }),
@@ -2281,28 +2495,32 @@ export const api = {
   },
 
   finance: {
-    wallet: () => apiFetch<any>('/api/learner/wallet'),
+    wallet: () => apiFetch<WalletDto>('/api/learner/wallet'),
     checkoutPreview: (packageId: number) =>
-      apiFetch<any>(`/api/checkout/preview?packageId=${packageId}`),
+      apiFetch<CheckoutPreviewDto>(`/api/checkout/preview?packageId=${packageId}`),
     createOrder: (packageId: number) =>
-      apiFetch<any>('/api/checkout/orders', {
+      apiFetch<CreateOrderResponseDto>('/api/checkout/orders', {
         method: 'POST',
         body: JSON.stringify({ packageId }),
       }),
     cancelOrder: (orderCode: string) =>
-      apiFetch<void>('/api/checkout/cancel', {
+      apiFetch<{ message: string }>('/api/checkout/cancel', {
         method: 'POST',
         body: JSON.stringify({ orderCode }),
       }),
     handleReturn: (orderCode: string) =>
-      apiFetch<any>('/api/checkout/return', {
+      apiFetch<PaymentResultDto>('/api/checkout/return', {
         method: 'POST',
         body: JSON.stringify({ orderCode }),
       }),
     paymentResult: (orderCode: string) =>
-      apiFetch<any>(`/api/checkout/orders/${encodeURIComponent(orderCode)}/result`),
-    mockGatewayAction: (body: { orderCode: string; action: string; errorCode?: string }) =>
-      apiFetch<any>('/api/mock-gateway/action', {
+      apiFetch<PaymentResultDto>(`/api/checkout/orders/${encodeURIComponent(orderCode)}/result`),
+    mockGatewayAction: (body: {
+      orderCode: string;
+      action: 'success' | 'failed' | 'pending' | 'expired' | string;
+      errorCode?: string;
+    }) =>
+      apiFetch<PaymentResultDto>('/api/mock-gateway/action', {
         method: 'POST',
         body: JSON.stringify(body),
       }),
@@ -2314,37 +2532,37 @@ export const api = {
       if (certCode) sp.set('certCode', certCode);
       if (skill) sp.set('skill', skill);
       const q = sp.toString();
-      return apiFetch<any[]>(`/api/mentors${q ? `?${q}` : ''}`);
+      return apiFetch<MentorSummaryDto[]>(`/api/mentors${q ? `?${q}` : ''}`);
     },
-    detail: (mentorId: number) => apiFetch<any>(`/api/mentors/${mentorId}`),
+    detail: (mentorId: number) => apiFetch<MentorDetailDto>(`/api/mentors/${mentorId}`),
     book: (
       mentorId: number,
       body: { slotId?: number | null; focusArea?: string | null; examId?: number | null },
     ) =>
-      apiFetch<any>(`/api/mentors/${mentorId}/book`, {
+      apiFetch<MentorBookingDto>(`/api/mentors/${mentorId}/book`, {
         method: 'POST',
         body: JSON.stringify(body),
       }),
-    bookings: () => apiFetch<any[]>('/api/mentors/bookings'),
+    bookings: () => apiFetch<MentorBookingDto[]>('/api/mentors/bookings'),
     bookingDetail: (bookingId: number) =>
-      apiFetch<any>(`/api/mentors/bookings/${bookingId}`),
+      apiFetch<MentorBookingDto>(`/api/mentors/bookings/${bookingId}`),
     cancelBooking: (bookingId: number) =>
-      apiFetch<any>(`/api/mentors/bookings/${bookingId}/cancel`, {
+      apiFetch<CancelBookingResultDto>(`/api/mentors/bookings/${bookingId}/cancel`, {
         method: 'POST',
         body: JSON.stringify({}),
       }),
     rateBooking: (bookingId: number, body: { rating: number; text?: string | null }) =>
-      apiFetch<any>(`/api/mentors/bookings/${bookingId}/rate`, {
+      apiFetch<MentorReviewDto>(`/api/mentors/bookings/${bookingId}/rate`, {
         method: 'POST',
         body: JSON.stringify(body),
       }),
   },
 
   support: {
-    complaints: () => apiFetch<any[]>('/api/learner/complaints'),
-    eligibleSubjects: () => apiFetch<any>('/api/learner/complaints/eligible-subjects'),
-    fileComplaint: (body: any) =>
-      apiFetch<any>('/api/learner/complaints', {
+    complaints: () => apiFetch<LearnerComplaintDto[]>('/api/learner/complaints'),
+    eligibleSubjects: () => apiFetch<EligibleSubjectsDto>('/api/learner/complaints/eligible-subjects'),
+    fileComplaint: (body: CreateComplaintRequest) =>
+      apiFetch<LearnerComplaintDto>('/api/learner/complaints', {
         method: 'POST',
         body: JSON.stringify(body),
       }),

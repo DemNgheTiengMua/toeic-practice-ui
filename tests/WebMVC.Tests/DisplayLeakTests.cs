@@ -24,18 +24,7 @@ public sealed class DisplayLeakTests
     private static readonly string ViewsRoot =
         Path.Combine(TestPathHelper.FindRepoRoot(), "src", "WebMVC", "Views");
 
-    /// <summary>
-    /// The seven leaks measured on <c>eb7d200</c>, each a raw code in a text node. They are named so a
-    /// regression says which page came back, and so the set is a fact rather than a regex's opinion.
-    /// </summary>
-    [Theory]
-    [InlineData("Mentors/Bookings.cshtml", "@b.Status")]
-    public void A_measured_leak_is_no_longer_printed_as_text(string view, string expression)
-    {
-        var source = File.ReadAllText(Path.Combine(ViewsRoot, view.Replace('/', Path.DirectorySeparatorChar)));
-
-        Assert.DoesNotContain(expression, TextNodes(source), StringComparison.Ordinal);
-    }
+    // All seven measured legacy Razor views have been retired to the React SPA.
 
     /// <summary>
     /// <b>The input that would pass a wrong fix:</b> labelling the seven measured leaks and stopping.

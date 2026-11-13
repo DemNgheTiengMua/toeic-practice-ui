@@ -53,6 +53,16 @@ import { LearningPathPage } from './features/learner/LearningPathPage';
 import { LearningPathStepPage } from './features/learner/LearningPathStepPage';
 import { LessonReaderPage } from './features/learner/LessonReaderPage';
 import { WeaknessAnalysisPage } from './features/learner/WeaknessAnalysisPage';
+import { WalletPage } from './features/wallet/WalletPage';
+import { CheckoutPage } from './features/wallet/CheckoutPage';
+import { OrderStatusPage } from './features/wallet/OrderStatusPage';
+import { MentorsCatalogPage } from './features/mentors/MentorsCatalogPage';
+import { MentorDetailPage } from './features/mentors/MentorDetailPage';
+import { MentorBookingsPage } from './features/mentors/MentorBookingsPage';
+import { MentorBookingDetailPage } from './features/mentors/MentorBookingDetailPage';
+import { InstructorSessionsPage } from './features/instructor/InstructorSessionsPage';
+import { ProfilePage } from './features/profile/ProfilePage';
+import { SupportPage } from './features/support/SupportPage';
 
 function PlaceholderView({ title, ticket }: { title: string; ticket: string }) {
   return (
@@ -349,11 +359,71 @@ const routeTree = rootRoute.addChildren([
     path: '/weakness-analysis',
     component: WeaknessAnalysisPage,
   }),
-  stubRoute('/wallet', 'Wallet & billing', '301'),
-  stubRoute('/mentors', 'Mentors', '301'),
-  stubRoute('/profile', 'Profile', '301'),
-  stubRoute('/support', 'Support', '301'),
-  stubRoute('/instructor/sessions', 'Instructor sessions', '301'),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/wallet',
+    component: WalletPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/checkout',
+    component: CheckoutPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/orders/$orderCode',
+    component: OrderStatusPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/payment/result',
+    component: OrderStatusPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/mentors',
+    component: MentorsCatalogPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/mentors/$mentorId',
+    component: MentorDetailPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/mentors/bookings',
+    component: MentorBookingsPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/mentors/bookings/$bookingId',
+    component: MentorBookingDetailPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/profile',
+    component: ProfilePage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/support',
+    component: SupportPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/support/report',
+    component: SupportPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/support/history',
+    component: SupportPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/instructor/sessions',
+    component: InstructorSessionsPage,
+  }),
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/admin',
