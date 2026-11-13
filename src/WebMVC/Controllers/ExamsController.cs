@@ -138,7 +138,7 @@ public sealed class ExamsController(
         {
             await api.VerifyPreflightAsync(effectiveAttemptId.Value, cancellationToken);
             return placementId.HasValue
-                ? RedirectToAction(nameof(PlacementController.Take), "Placement", new { placementId })
+                ? Redirect($"/placement/take/{placementId.Value}")
                 : RedirectToAction(nameof(Take), new { attemptId = effectiveAttemptId.Value });
         }
         catch (ApiException ex)

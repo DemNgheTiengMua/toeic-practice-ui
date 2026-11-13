@@ -155,33 +155,55 @@ export interface AttemptOptionDto {
 export interface AttemptQuestionDto {
   questionId: number;
   displayOrder: number;
+  totalQuestions?: number;
   sectionId: number;
-  skillId: number;
+  skillId?: number;
   sectionCode: string;
   sectionName: string;
   skillCode: string;
   skillName: string;
-  modality: 'Listening' | 'Reading' | 'Speaking' | 'Writing' | string;
+  modality: 'listening' | 'reading' | 'speaking' | 'writing' | string;
   stem: string;
-  passage?: string | null;
   imagePath?: string | null;
+  imageAlt?: string | null;
   audioPath?: string | null;
   audioStartMs?: number | null;
   audioEndMs?: number | null;
-  groupId?: number | null;
-  questionType?: string | null;
+  transcript?: string | null;
+  passage?: string | null;
   options: AttemptOptionDto[];
   selectedOptionId?: number | null;
   isFlagged: boolean;
-  responseText?: string | null;
+  questionType?: string | null;
+  minWords?: number | null;
+  maxWords?: number | null;
   prepSeconds?: number | null;
   responseSeconds?: number | null;
-  allowReplay?: boolean;
-  maxReplays?: number | null;
+  responseText?: string | null;
+  responseAudioPath?: string | null;
+  responseDurationMs?: number | null;
+  draftSavedAt?: string | null;
+  skillDurationMinutes?: number | null;
+  skillDisplayOrder?: number;
+  selectedOptionIds?: number[] | null;
+  maxSelections?: number | null;
+  allowNumber?: boolean;
+  acceptedAnswersJson?: string | null;
+  requiredKeywords?: string | null;
+  layoutType?: string | null;
+  requirePassage?: boolean;
+  navigationMode?: string | null;
+  toolsConfigJson?: string | null;
   hideOptionText?: boolean;
   optionCount?: number;
-  hasSpeakingAudio?: boolean;
-  speakingAudioPath?: string | null;
+  clusterSize?: number;
+  requireImage?: boolean;
+  unitNumber?: number;
+  groupId?: number | null;
+  timerPolicyJson?: string | null;
+  // Optional legacy/UI helper fields
+  allowReplay?: boolean;
+  maxReplays?: number | null;
 }
 
 export interface NavigatorItemDto {
@@ -200,11 +222,13 @@ export interface AttemptPhaseDto {
   skillId: number;
   skillCode: string;
   skillName: string;
-  displayOrder: number;
+  skillDisplayOrder: number;
   startOffsetSeconds: number;
   durationSeconds: number;
   lockNavigationOneWay?: boolean;
 }
+
+export type PlacementScopeCode = 'all_skills' | 'listening_and_reading';
 
 export interface PlacementTakeViewDto {
   placementId: number;
@@ -223,7 +247,7 @@ export interface PlacementTakeViewDto {
   navigator: NavigatorItemDto[];
   isAutoSubmitted: boolean;
   questions: AttemptQuestionDto[];
-  phases?: AttemptPhaseDto[];
+  phases?: AttemptPhaseDto[] | null;
   activeSkillId?: number | null;
   activeUnitNumber?: number;
   activeGroupId?: number | null;
@@ -247,12 +271,15 @@ export interface AttemptTakeDto {
   navigator: NavigatorItemDto[];
   isAutoSubmitted: boolean;
   questions: AttemptQuestionDto[];
-  phases: AttemptPhaseDto[];
+  phases?: AttemptPhaseDto[] | null;
   activeSkillId?: number | null;
   activeUnitNumber: number;
   activeGroupId?: number | null;
   phaseDeadlineAt?: string | null;
+  isSkillLocked?: boolean;
   authorizationCode?: string | null;
+  lastAudioOffsetMs?: number;
+  candidateNotesJson?: string | null;
   navigationMode?: string | null;
 }
 
@@ -266,8 +293,8 @@ export interface SaveAnswerResultDto {
 
 export interface PlacementResumeSkillDto {
   skillId: number;
-  skillCode: string;
-  skillName: string;
+  code: string;
+  name: string;
   isDone: boolean;
   isActive: boolean;
   answeredCount: number;
@@ -284,24 +311,43 @@ export interface PlacementResumeViewDto {
   skills: PlacementResumeSkillDto[];
   activeSkillId?: number | null;
   activeSkillName?: string | null;
-  activeStage: number;
+  activeStage?: number | null;
   totalStages: number;
   syncedAnswerCount: number;
   totalQuestions: number;
   lastQuestionId?: number | null;
-  lastQuestionDisplayOrder?: number | null;
 }
 
 export interface PlacementSkillResultInfoDto {
   skillId: number;
   skillCode: string;
   skillName: string;
-  status: 'measured' | 'grading' | 'not_measured' | string;
-  level?: string | null;
-  scaledScore?: number | null;
+  status: string;
+  levelCode?: string | null;
+  positionInBand?: number | null;
   measuredAt?: string | null;
   reusedFromPrior: boolean;
   failureReason?: string | null;
+}
+
+export interface CefrBandInfoDto {
+  code: string;
+  name: string;
+  minTotal: number;
+  maxTotal: number;
+  isReached: boolean;
+  isCurrent: boolean;
+  isTarget?: boolean;
+}
+
+export interface PlacementSkillScoreInfoDto {
+  skillId: number;
+  skillCode: string;
+  skillName: string;
+  rawScore: number;
+  totalQuestions: number;
+  scaledScore: number;
+  bandCode?: string | null;
 }
 
 export interface PlacementResultViewDto {
@@ -314,30 +360,34 @@ export interface PlacementResultViewDto {
   durationMinutes: number;
   totalQuestions: number;
   totalScore: number;
-  resultBandCode?: string | null;
-  resultBandName?: string | null;
-  cefrBands: Array<{
-    bandId: number;
-    code: string;
-    name: string;
-    minTotal: number;
-    maxTotal: number;
-    isCurrent: boolean;
-    isReached: boolean;
-  }>;
-  skillScores: Array<{
-    skillId: number;
-    skillCode: string;
-    skillName: string;
-    rawScore: number;
-    maxQuestions: number;
-    scaledScore: number;
-    maxScaledScore: number;
-  }>;
+  resultBandCode: string;
+  resultBandName: string;
+  cefrBands: CefrBandInfoDto[];
+  skillScores: PlacementSkillScoreInfoDto[];
   weakerSkillName?: string | null;
   bandNote?: string | null;
+  isAutoSubmitted?: boolean;
+  freeResponseCount?: number;
+  gradedFreeResponseCount?: number;
+  failedFreeResponseCount?: number;
+  scoreDisplayFactor?: number;
   isGraded: boolean;
-  skillResults?: PlacementSkillResultInfoDto[];
+  skillResults?: PlacementSkillResultInfoDto[] | null;
+  scope?: PlacementScopeCode | string;
+}
+
+export interface PlacementGradingStatusDto {
+  placementId: number;
+  attemptId: number;
+  isGraded: boolean;
+  freeResponseCount: number;
+  gradedFreeResponseCount: number;
+  failedFreeResponseCount: number;
+  totalScore?: number | null;
+  bandCode?: string | null;
+  bandName?: string | null;
+  skillScores: PlacementSkillScoreInfoDto[];
+  stageDescriptor: string;
 }
 
 export interface PreflightStatusDto {
@@ -347,42 +397,104 @@ export interface PreflightStatusDto {
   certCode: string;
   certName: string;
   durationMinutes: number;
-  requiresListening: boolean;
-  requiresSpeaking: boolean;
   requiresPreflight: boolean;
+  requiresAudio: boolean;
+  requiresMicrophone: boolean;
   isVerified: boolean;
   verifiedAt?: string | null;
-  sampleAudioUrl?: string | null;
-  rules: string[];
+  audioUrls: string[];
 }
 
-export interface PlacementPreflightScopeOfferDto {
-  scope: string;
-  title: string;
-  includedSkills: string[];
-  excludedSkills: string[];
-  creditCost: number;
-  isFree: boolean;
-  canAfford: boolean;
+export interface PlacementSkillOfferDto {
+  skillId: number;
+  skillCode: string;
+  skillName: string;
+  modality: string;
+  requiresMicrophone: boolean;
+  requiresAudio: boolean;
+  levelCode?: string | null;
+  positionInBand?: number | null;
+  measuredAt?: string | null;
+  expiresAt?: string | null;
+  canReuse: boolean;
+  isAged: boolean;
 }
 
 export interface PlacementPreflightViewDto {
   certId: number;
   certCode: string;
-  certName: string;
+  examId?: number | null;
+  offers: PlacementSkillOfferDto[];
+  cooldownUntil?: string | null;
+  cooldownWaived: boolean;
+  hasReusableSkills: boolean;
+  isStartable: boolean;
+  requiresMicrophone: boolean;
+  requiresAudio: boolean;
+  isRetake?: boolean;
+  allSkillsRetakeCredits?: number;
+  listeningAndReadingRetakeCredits?: number;
+  creditBalance?: number | null;
+}
+
+export interface PlacementCatalogItemDto {
   examId: number;
-  examName: string;
-  isRetake: boolean;
-  isInCooldown: boolean;
-  cooldownEndsAt?: string | null;
-  creditBalance: number;
-  validPriorSkills: Array<{
-    skillCode: string;
-    skillName: string;
-    level: string;
-    measuredAt: string;
+  certId: number;
+  certCode: string;
+  name: string;
+  description?: string | null;
+  durationMinutes: number;
+  questionCount: number;
+  isRecommended: boolean;
+  activePlacementId?: number | null;
+}
+
+export interface PlacementCatalogViewDto {
+  activeCert: CertificateOptionDto;
+  currentBandCode?: string | null;
+  currentBandName?: string | null;
+  currentTotalScore?: number | null;
+  exams: PlacementCatalogItemDto[];
+  activePlacementId?: number | null;
+  activeAttemptId?: number | null;
+  isRetake?: boolean;
+  allSkillsRetakeCredits?: number;
+  listeningAndReadingRetakeCredits?: number;
+  creditBalance?: number | null;
+}
+
+export interface PlacementTestInfoDto {
+  placementId: number;
+  attemptId: number;
+  examId: number;
+  status: string;
+  startedAt: string;
+  expiresAt: string;
+  remainingSeconds: number;
+  isAutoSubmitted: boolean;
+  scope?: PlacementScopeCode | string;
+  creditsCharged?: number;
+}
+
+export interface TargetBandViewDto {
+  activeCert: CertificateOptionDto;
+  currentBandCode?: string | null;
+  currentTotalScore?: number | null;
+  currentBandName?: string | null;
+  targetBandCode?: string | null;
+  cefrBands: CefrBandInfoDto[];
+  availableBands: Array<{
+    code: string;
+    name: string;
+    minTotal: number;
+    maxTotal: number;
   }>;
-  offers: PlacementPreflightScopeOfferDto[];
+  goal?: {
+    targetBandCode: string;
+    weeklyHours?: number | null;
+    examDate?: string | null;
+    feasibility?: string | null;
+  } | null;
 }
 
 // ============================================================================
@@ -464,15 +576,15 @@ export const api = {
   },
 
   placement: {
-    catalog: () => apiFetch<any>('/api/learner/placement'),
+    catalog: () => apiFetch<PlacementCatalogViewDto>('/api/learner/placement'),
     preflightGate: () => apiFetch<PlacementPreflightViewDto>('/api/learner/placement/preflight'),
     start: (body: {
       examId: number;
       reuseValidSkills?: boolean;
-      scope?: string;
+      scope?: PlacementScopeCode | string;
       idempotencyKey?: string;
     }) =>
-      apiFetch<{ placementId: number; attemptId: number }>('/api/learner/placement/start', {
+      apiFetch<PlacementTestInfoDto>('/api/learner/placement/start', {
         method: 'POST',
         body: JSON.stringify(body),
       }),
@@ -487,7 +599,12 @@ export const api = {
     saveAnswer: (
       placementId: number,
       questionId: number,
-      body: { selectedOptionId?: number | null; isFlagged: boolean; responseText?: string | null },
+      body: {
+        selectedOptionId?: number | null;
+        isFlagged: boolean;
+        responseText?: string | null;
+        selectedOptionIdsJson?: string | null;
+      },
     ) =>
       apiFetch<SaveAnswerResultDto>(
         `/api/learner/placement/take/${placementId}/answers/${questionId}`,
@@ -500,10 +617,13 @@ export const api = {
       placementId: number,
       body: { questionId: number; responseText: string },
     ) =>
-      apiFetch<{ savedAt: string }>(`/api/learner/placement/take/${placementId}/draft`, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
+      apiFetch<{ freeResponseId: number; questionId: number; savedAt: string; wordCount: number }>(
+        `/api/learner/placement/take/${placementId}/draft`,
+        {
+          method: 'POST',
+          body: JSON.stringify(body),
+        },
+      ),
     submit: (placementId: number, isAutoSubmit = false) =>
       apiFetch<PlacementResultViewDto>(`/api/learner/placement/take/${placementId}/submit`, {
         method: 'POST',
@@ -517,7 +637,7 @@ export const api = {
       }),
     recordInterruption: (
       placementId: number,
-      body: { questionId: number; sessionToken: string; reason?: string },
+      body: { questionId: number; sessionToken: string; capturedMs: number },
     ) =>
       apiFetch<{ interruptions: number; outcome: string; replacementQuestionId?: number | null }>(
         `/api/learner/placement/take/${placementId}/recording-interruptions`,
@@ -529,12 +649,15 @@ export const api = {
     result: (placementId: number) =>
       apiFetch<PlacementResultViewDto>(`/api/learner/placement/result/${placementId}`),
     gradingStatus: (placementId: number) =>
-      apiFetch<any>(`/api/learner/placement/result/${placementId}/status`),
+      apiFetch<PlacementGradingStatusDto>(`/api/learner/placement/result/${placementId}/status`),
     retryGrading: (placementId: number) =>
-      apiFetch<{ requeuedCount: number }>(`/api/learner/placement/result/${placementId}/retry`, {
-        method: 'POST',
-      }),
-    targetBand: () => apiFetch<any>('/api/learner/target-band'),
+      apiFetch<{ placementId: number; attemptId: number; requeuedCount: number }>(
+        `/api/learner/placement/result/${placementId}/retry`,
+        {
+          method: 'POST',
+        },
+      ),
+    targetBand: () => apiFetch<TargetBandViewDto>('/api/learner/target-band'),
     setTargetBand: (targetBandCode: string) =>
       apiFetch<any>('/api/learner/target-band', {
         method: 'POST',

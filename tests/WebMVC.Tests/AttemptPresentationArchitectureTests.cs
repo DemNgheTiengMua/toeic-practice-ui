@@ -19,7 +19,6 @@ public sealed class AttemptPresentationArchitectureTests
 
     [Theory]
     [InlineData("Exams")]
-    [InlineData("Placement")]
     public void Attempt_views_only_render_prepared_data_and_link_executable_assets(string feature)
     {
         var folder = Path.Combine(TestPathHelper.FindRepoRoot(), "src", "WebMVC", "Views", feature);

@@ -139,6 +139,21 @@ public sealed class SingleExperienceGuardTests
             served.Add(name[..^"Controller".Length]);
         }
 
+        // Routes migrated to the React + HeroUI SPA live in src/web/src/router.tsx rather than MVC controllers.
+        var spaRouter = Path.Combine(root, "src", "web", "src", "router.tsx");
+        if (File.Exists(spaRouter))
+        {
+            var spaRoute = new Regex(@"path:\s*['""](/[^'""]*)['""]");
+            foreach (var match in spaRoute.Matches(File.ReadAllText(spaRouter)).Cast<Match>())
+            {
+                var segment = match.Groups[1].Value.Trim('/').Split('/')[0];
+                if (segment.Length > 0)
+                {
+                    served.Add(segment);
+                }
+            }
+        }
+
         var href = new Regex(@"href=""(/[^""]*)""");
         var checkedCount = 0;
         var dangling = new List<string>();
