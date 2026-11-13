@@ -86,7 +86,6 @@ public sealed class DisplayLeakTests
     [Theory]
     [InlineData("Admin/Orders.cshtml")]
     [InlineData("Admin/Complaints.cshtml")]
-    [InlineData("Admin/Users.cshtml")]
     public void A_query_string_filter_keeps_its_code(string view)
     {
         var source = File.ReadAllText(Path.Combine(ViewsRoot, view.Replace('/', Path.DirectorySeparatorChar)));

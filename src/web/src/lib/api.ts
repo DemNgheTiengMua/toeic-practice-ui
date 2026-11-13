@@ -412,6 +412,164 @@ export interface PlacementPreflightViewDto {
 }
 
 // ============================================================================
+// Admin & Audit DTO Types (#302)
+// ============================================================================
+
+export interface AdminNeedsAttentionDto {
+  draftExamsCount: number;
+  stalePendingOrdersCount: number;
+  openComplaintsCount: number;
+}
+
+export interface AdminMostAttemptedExamDto {
+  examId: number;
+  examName: string;
+  attemptsCount: number;
+  averageScore?: number | null;
+}
+
+export interface AdminDashboardDto {
+  activeLearnersCount: number;
+  newLearners7DaysCount: number;
+  creditsUsedThisMonth: number;
+  creditsRefundedThisMonth: number;
+  creditsPerDayAverage: number;
+  revenueTodayVnd: number;
+  revenueThisMonthVnd: number;
+  paidOrdersThisMonthCount: number;
+  mostAttemptedExams: AdminMostAttemptedExamDto[];
+  needsAttention: AdminNeedsAttentionDto;
+}
+
+export interface DashboardRevision {
+  paidOrdersCount: number;
+  paidOrdersAmount: number;
+  complaintsOpen: number;
+  complaintsReviewing: number;
+  complaintsResolved: number;
+  refundsRequested: number;
+  refundsApproved: number;
+  refundsSettled: number;
+  refundsRejected: number;
+  settledMoneyRefundsCount: number;
+  settledMoneyRefundsAmount: number;
+  token?: string;
+}
+
+export interface AdminUserDto {
+  userId: number;
+  email: string;
+  fullName: string;
+  phone?: string | null;
+  creditsLeft: number;
+  examsTaken: number;
+  bestScore?: number | null;
+  lastLoginAt?: string | null;
+  isLocked: boolean;
+  emailVerifiedAt?: string | null;
+  createdAt: string;
+}
+
+export interface AdminUsersSummaryDto {
+  users: AdminUserDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  activeCount: number;
+  lockedCount: number;
+  notActivatedCount: number;
+}
+
+export interface AdminPlacementHistoryItemDto {
+  placementId: number;
+  certCode: string;
+  examName: string;
+  status: string;
+  scope: string;
+  paid: boolean;
+  creditsCharged: number;
+  totalScore?: number | null;
+  resultBandCode?: string | null;
+  takenAt: string;
+}
+
+export interface AdminUserDetailDto {
+  user: AdminUserDto;
+  placements: AdminPlacementHistoryItemDto[];
+}
+
+export interface AdjustCreditsRequest {
+  delta: number;
+  reason: string;
+}
+
+export interface AdjustCreditsResultDto {
+  txnId: number;
+  userId: number;
+  newBalance: number;
+  delta: number;
+  reason: string;
+}
+
+export interface AuditSampleDto {
+  sampleItemId: number;
+  itemId: number;
+  stem: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  solvedLabel?: string | null;
+  solvedAt?: string | null;
+  keyRevealedAt?: string | null;
+  keyRevealed: boolean;
+  verdict?: string | null;
+}
+
+export interface AuditStratumDto {
+  stratumId: number;
+  batchId: number;
+  topicCode: string;
+  cefrLevel: string;
+  modality: string;
+  itemCount: number;
+  sampleSize: number;
+  sampled: number;
+  unsampled: number;
+  status: string;
+  quarantineReason?: string | null;
+  decidedAt?: string | null;
+  items: AuditSampleDto[];
+}
+
+export interface AuditQueueDto {
+  batchId: number;
+  sourceName: string;
+  status: string;
+  strata: AuditStratumDto[];
+  sampledTotal: number;
+  unsampledTotal: number;
+}
+
+export interface AuditKeyRevealDto {
+  sampleItemId: number;
+  itemId: number;
+  keyLabel: string;
+  explanation?: string | null;
+  solvedLabel?: string | null;
+  revealedAt: string;
+}
+
+export interface AuditDecisionDto {
+  stratumId: number;
+  status: string;
+  quarantineReason?: string | null;
+  sampledPromoted: number;
+  unsampledPromoted: number;
+  quarantined: number;
+}
+
+// ============================================================================
 // Domain API Surface
 // ============================================================================
 
@@ -911,8 +1069,29 @@ export const api = {
   },
 
   admin: {
-    dashboard: () => apiFetch<any>('/api/admin/dashboard'),
-    dashboardRevision: () => apiFetch<any>('/api/admin/dashboard/revision'),
+    dashboard: () => apiFetch<AdminDashboardDto>('/api/admin/dashboard'),
+    dashboardRevision: () => apiFetch<DashboardRevision>('/api/admin/dashboard/revision'),
+    auditQueue: (batchId: number) => apiFetch<AuditQueueDto>(`/api/admin/audit/batches/${batchId}`),
+    auditDraw: (batchId: number) =>
+      apiFetch<AuditQueueDto>(`/api/admin/audit/batches/${batchId}/draw`, { method: 'POST' }),
+    auditSolve: (sampleItemId: number, label: string) =>
+      apiFetch<void>(`/api/admin/audit/samples/${sampleItemId}/solve`, {
+        method: 'POST',
+        body: JSON.stringify({ label }),
+      }),
+    auditReveal: (sampleItemId: number) =>
+      apiFetch<AuditKeyRevealDto>(`/api/admin/audit/samples/${sampleItemId}/reveal`, {
+        method: 'POST',
+      }),
+    auditVerdict: (sampleItemId: number, verdict: string) =>
+      apiFetch<void>(`/api/admin/audit/samples/${sampleItemId}/verdict`, {
+        method: 'POST',
+        body: JSON.stringify({ verdict }),
+      }),
+    auditDecide: (stratumId: number) =>
+      apiFetch<AuditDecisionDto>(`/api/admin/audit/strata/${stratumId}/decide`, {
+        method: 'POST',
+      }),
     ingestionBatches: () => apiFetch<any>('/api/admin/ingestion'),
     ingestionBatch: (batchId: number, rule?: string) =>
       apiFetch<any>(
@@ -984,15 +1163,17 @@ export const api = {
       sp.set('pageSize', String(params?.pageSize ?? 25));
       if (params?.q) sp.set('q', params.q);
       if (params?.status) sp.set('status', params.status);
-      return apiFetch<any>(`/api/admin/users?${sp.toString()}`);
+      return apiFetch<AdminUsersSummaryDto>(`/api/admin/users?${sp.toString()}`);
     },
-    userDetail: (userId: number) => apiFetch<any>(`/api/admin/users/${userId}`),
+    userDetail: (userId: number) => apiFetch<AdminUserDetailDto>(`/api/admin/users/${userId}`),
     lockUser: (userId: number) =>
-      apiFetch<any>(`/api/admin/users/${userId}/lock`, { method: 'POST' }),
+      apiFetch<void>(`/api/admin/users/${userId}/lock`, { method: 'POST' }),
     unlockUser: (userId: number) =>
-      apiFetch<any>(`/api/admin/users/${userId}/unlock`, { method: 'POST' }),
-    adjustCredits: (userId: number, body: { amount: number; reason: string }) =>
-      apiFetch<any>(`/api/admin/users/${userId}/adjust-credits`, {
+      apiFetch<void>(`/api/admin/users/${userId}/unlock`, { method: 'POST' }),
+    resendUserActivation: (userId: number) =>
+      apiFetch<void>(`/api/admin/users/${userId}/resend-activation`, { method: 'POST' }),
+    adjustCredits: (userId: number, body: AdjustCreditsRequest) =>
+      apiFetch<AdjustCreditsResultDto>(`/api/admin/users/${userId}/adjust-credits`, {
         method: 'POST',
         body: JSON.stringify(body),
       }),

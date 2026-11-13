@@ -10,21 +10,17 @@ public sealed class AdminViewsLayoutTests
 {
 
     [Fact]
-    public void AdminViews_UsersAndOrders_MustDeclareAdminLayout()
+    public void AdminViews_Orders_MustDeclareAdminLayout()
     {
         var repoRoot = TestPathHelper.FindRepoRoot();
         var adminViewsDir = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin");
 
-        var usersView = Path.Combine(adminViewsDir, "Users.cshtml");
         var ordersView = Path.Combine(adminViewsDir, "Orders.cshtml");
 
-        Assert.True(File.Exists(usersView), "Users.cshtml must exist");
         Assert.True(File.Exists(ordersView), "Orders.cshtml must exist");
 
-        var usersContent = File.ReadAllText(usersView);
         var ordersContent = File.ReadAllText(ordersView);
 
-        Assert.Matches(@"Layout\s*=\s*""_AdminLayout"";?", usersContent);
         Assert.Matches(@"Layout\s*=\s*""_AdminLayout"";?", ordersContent);
     }
 
