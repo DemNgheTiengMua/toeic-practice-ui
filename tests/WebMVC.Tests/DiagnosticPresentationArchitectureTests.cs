@@ -8,7 +8,7 @@ public sealed class DiagnosticPresentationArchitectureTests
     public void Diagnostic_views_use_display_models_and_external_assets()
     {
         var root = TestPathHelper.FindRepoRoot();
-        foreach (var area in new[] { "Practice", "SavedQuestions", "WeaknessAnalysis" })
+        foreach (var area in new[] { "Practice", "SavedQuestions" })
         foreach (var path in Directory.GetFiles(Path.Combine(root, "src/WebMVC/Views", area), "*.cshtml"))
         {
             var view = File.ReadAllText(path);

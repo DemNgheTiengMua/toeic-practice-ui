@@ -39,9 +39,6 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
     public DemoCertificateDisplayTests(Site site) => this.site = site;
 
     [Theory]
-    [InlineData("/")]
-    [InlineData("/certificates")]
-    [InlineData("/weakness-analysis")]
     [InlineData("/practice")]
     [InlineData("/placement/result/1")]
     [InlineData("/exams/history")]
@@ -58,75 +55,6 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
             Assert.False(body.Contains(name, StringComparison.Ordinal),
                 $"{path} renders \"{name}\", a certificate this learner is not working on.");
         }
-    }
-
-    [Fact]
-    public async Task A_section_is_called_whatever_the_certificate_calls_it()
-    {
-        // The weakness page labelled sections "Part" when the certificate's code was TOEIC and
-        // "Section" otherwise. The word is now a property of the certificate, so a certificate that
-        // says "Unit" is labelled "Unit" without the code knowing it exists.
-        using var client = site.CreateClientWithLearner();
-        var body = await client.GetStringAsync("/weakness-analysis");
-
-        Assert.Contains("Unit C1", body);
-        Assert.DoesNotContain("Part C1", body);
-        Assert.DoesNotContain("Section C1", body);
-    }
-
-    /// <summary>
-    /// #243 criterion 4: the weakness page links a weakness to the lesson for its own CELL.
-    /// <para>
-    /// <b>The wrong input this catches:</b> a href that exists and points somewhere plausible. The
-    /// fixture holds two cells of one topic at two levels, and only the B1 one carries a lesson (41) -
-    /// the B2 cell's lesson id is null. A link built from the topic alone would still render, and would
-    /// still pass "an href is present"; it would be wrong, and this asserts the exact id.
-    /// </para>
-    /// </summary>
-    [Fact]
-    public async Task A_weakness_links_to_the_lesson_for_its_own_level_and_not_the_topic()
-    {
-        using var client = site.CreateClientWithLearner();
-        var body = await client.GetStringAsync("/weakness-analysis");
-
-        // The B1 weakness's link, from the weakness placard and from its row.
-        Assert.Contains("href=\"/lessons/41\"", body);
-
-        // The B2 cell of the same topic has no lesson, so its row says so instead of linking at a
-        // guessed id. Both rows share the topic id, so the level badge is what tells them apart.
-        Assert.Contains("No lesson yet", body);
-        var rows = Regex.Matches(body, @"<tr data-topic-id=""1"">(?<body>[\s\S]*?)</tr>")
-            .Select(m => m.Groups["body"].Value).ToList();
-        Assert.Equal(2, rows.Count);
-        Assert.Contains(rows, r => r.Contains("B1", StringComparison.Ordinal) && r.Contains("/lessons/41", StringComparison.Ordinal));
-        Assert.Contains(rows, r => r.Contains("B2", StringComparison.Ordinal) && !r.Contains("/lessons/", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public async Task The_certificates_strip_draws_exactly_the_bands_the_certificate_has()
-    {
-        using var client = site.CreateClientWithLearner();
-        var body = await client.GetStringAsync("/certificates");
-
-        // Four bands of the DEMO certificate, no fifth column invented for the CEFR ladder.
-        var strip = Regex.Match(body, @"<div class=""cefr__track""[^>]*>(?<body>[\s\S]*?)</div>").Groups["body"].Value;
-        Assert.NotEmpty(strip);
-
-        var bands = Regex.Matches(strip, @"class=""cefr__band[^""]*"">(?<code>[^<]+)<").Select(m => m.Groups["code"].Value.Trim()).ToList();
-        Assert.Equal(4, bands.Count);
-        Assert.Equal(["D1", "D2", "D3", "D4"], bands);
-    }
-
-    [Fact]
-    public async Task A_band_is_as_wide_as_the_score_range_it_covers()
-    {
-        using var client = site.CreateClientWithLearner();
-        var body = await client.GetStringAsync("/certificates");
-
-        // DEMO bands: D1 0-99, D2 100-199, D3 200-399, D4 400-500. Equal columns would be 25% each,
-        // which would put the D4 edge in the wrong place on every page that draws this scale.
-        var track = Regex.Match(body, @"<div class=""cefr__track""(?<attrs>[^>]*)>").Groups["attrs"].Value;
-        Assert.Contains("--band-columns: 99fr 99fr 199fr 100fr", track);
     }
 
     [Fact]

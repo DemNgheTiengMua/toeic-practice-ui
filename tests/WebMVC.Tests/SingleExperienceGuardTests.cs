@@ -139,6 +139,18 @@ public sealed class SingleExperienceGuardTests
             served.Add(name[..^"Controller".Length]);
         }
 
+        // ADR-0015: routes ported from WebMVC to the React SPA in src/web
+        var spaRoutes = new[]
+        {
+            "auth", "dashboard", "pricing", "certificates", "sign-in", "register", "forgot-password", "reset-password",
+            "verify-email", "learning-path", "weakness", "weakness-analysis", "onboarding", "placement", "lessons",
+            "practice", "speaking", "writing", "saved-questions", "wallet", "mentors", "profile", "support"
+        };
+        foreach (var route in spaRoutes)
+        {
+            served.Add(route);
+        }
+
         var href = new Regex(@"href=""(/[^""]*)""");
         var checkedCount = 0;
         var dangling = new List<string>();

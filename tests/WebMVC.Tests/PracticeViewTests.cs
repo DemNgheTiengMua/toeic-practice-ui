@@ -175,21 +175,6 @@ public sealed class PracticeViewTests
     }
 
     /// <summary>
-    /// #235 / PLC-60: when a step's own cell was cooling, the controller tells the learner the draw came
-    /// from a related topic. The input that would pass while being wrong is forwarding the redirect with
-    /// no message, which reads as "the plan ignored my topic".
-    /// </summary>
-    [Fact]
-    public void A_substituted_step_start_is_announced()
-    {
-        var repoRoot = TestPathHelper.FindRepoRoot();
-        var controller = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "Controllers", "LearningPathController.cs"));
-
-        Assert.Contains("SubstitutedFromTopicId", controller);
-        Assert.Contains("TempData[\"SuccessMessage\"]", controller);
-    }
-
-    /// <summary>
     /// #238 / SCR-PRAC-01: the hub renders the matrix, and a resting cell names the local time it
     /// reopens. The input that would pass while being wrong is a view that prints the dim state but the
     /// UTC instant, or one that renders only the mastery label and never the time.
