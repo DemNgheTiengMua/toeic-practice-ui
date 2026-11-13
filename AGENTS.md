@@ -44,7 +44,7 @@ The backend is a .NET 10 solution (`ExtraEfficiency.slnx`) structured in six str
    - Credit balance is always `SUM(Amount)` over the append-only `CreditTransactions` ledger.
    - There is no stored wallet balance column.
    - Invariant: "Block before you charge" — check all preconditions before creating a debit transaction.
-   - The free diagnostic loop (practice, weakness analysis, placement test) is completely free and never writes a ledger row.
+   - Practice, weakness analysis, and the first placement test per certificate per learner are free and never write a ledger row; subsequent placement retakes charge configured credits by scope (`placement_retake`).
 4. **Certificate Isolation (`PRODUCT.md`)**:
    - Composite foreign keys carry `CertId` down through exams, sections, attempts, and learning paths.
    - One certificate's content, scoring, or rubric can never leak into another.
@@ -61,7 +61,7 @@ The backend is a .NET 10 solution (`ExtraEfficiency.slnx`) structured in six str
    - The queue worker `AiGradingBackgroundService` resolves `IAiGradingProcessor` directly.
 7. **Exam Sitting Lifecycle & Score Scaling Seam (`AttemptEngine`)**:
    - `IAttemptEngine` is the sole owner of exam attempt sitting mechanics: countdown timer expiration, auto-submission, answer option validation, two-step score scaling (`ScoreScales`), and CEFR band matching (`ScoreBands`).
-   - `MockExamService` and `PlacementService` act as thin domain adapters over `IAttemptEngine`, maintaining domain-specific rules (e.g., mock exam credit deduction via `ICreditLedger` vs free diagnostic placement tests, and placement target band tracking) without duplicating sitting state machines.
+   - `MockExamService` and `PlacementService` act as thin domain adapters over `IAttemptEngine`, maintaining domain-specific rules (e.g., mock exam credit deduction and `placement_retake` credit deduction on placement retakes via `ICreditLedger` while first placement per certificate stays free, and placement target band tracking) without duplicating sitting state machines.
 8. **One Writer Per Derived Fact (`docs/adr/0012-single-writer-derived-facts.md`)**:
    - Seven derived facts are registered in `DerivedFactOwners` with their owning service. Three are enforced today (placement result, attempt score and band, step closure); three await a table (#210, #212, #232); one (credit movement) is exempt because the ledger already carries the guarantee and SRS D-09 refuses a second guard.
    - Every covered derived-fact table carries `WrittenByService` and `ProjectionVersion`. A trigger refuses a write that declares a writer other than the fact's owner, or a projection version that is not newer than the stored one.

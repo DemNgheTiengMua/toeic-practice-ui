@@ -35,7 +35,7 @@ public sealed partial class AttemptEngine
     /// </summary>
     internal async Task<List<SittingQuestion>> LoadSittingQuestionsAsync(
         int examId, CancellationToken cancellationToken) =>
-        await LoadSittingQuestionsAsync(examId, attemptId: null, cancellationToken);
+        await LoadSittingQuestionsAsync(examId, attemptId: null, placementScope: null, cancellationToken);
 
     /// <summary>
     /// #274: the same seam, resolved attempt-first. <paramref name="attemptId"/> names the sitting whose
@@ -45,13 +45,33 @@ public sealed partial class AttemptEngine
     internal async Task<List<SittingQuestion>> LoadSittingQuestionsAsync(
         int examId, int? attemptId, CancellationToken cancellationToken)
     {
+        PlacementScope? scope = null;
+        if (attemptId is int id)
+        {
+            var rawScope = await db.ExamAttempts
+                .AsNoTracking()
+                .Where(a => a.AttemptId == id)
+                .Select(a => a.PlacementScope)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (EnumCodes.TryParse<PlacementScope>(rawScope, out var parsed))
+            {
+                scope = parsed;
+            }
+        }
+
+        return await LoadSittingQuestionsAsync(examId, attemptId, scope, cancellationToken);
+    }
+
+    internal async Task<List<SittingQuestion>> LoadSittingQuestionsAsync(
+        int examId, int? attemptId, PlacementScope? placementScope, CancellationToken cancellationToken)
+    {
         // #274: the served positions, ordered as the learner meets them. Empty for every attempt that
         // reads the shared roster - which is all of them, until an attempt-scoped paper is written.
         var servedPositionIds = attemptId is int id
             ? await LoadServedPositionIdsAsync(id, cancellationToken)
             : [];
 
-        return await ProjectPaperAsync(examId, servedPositionIds, cancellationToken);
+        return await ProjectPaperAsync(examId, servedPositionIds, placementScope, cancellationToken);
     }
 
     /// <summary>
@@ -71,10 +91,14 @@ public sealed partial class AttemptEngine
     /// attempt was served) and by attempt creation (which passes the draw it is about to write), so one
     /// projection serves both and the second cannot drift from the first.
     /// </summary>
+    internal Task<List<SittingQuestion>> ProjectPaperAsync(
+        int examId, IReadOnlyList<int> servedPositionIds, CancellationToken cancellationToken) =>
+        ProjectPaperAsync(examId, servedPositionIds, placementScope: null, cancellationToken);
+
     internal async Task<List<SittingQuestion>> ProjectPaperAsync(
-        int examId, IReadOnlyList<int> servedPositionIds, CancellationToken cancellationToken)
+        int examId, IReadOnlyList<int> servedPositionIds, PlacementScope? placementScope, CancellationToken cancellationToken)
     {
-        var rows = await RosterRowsAsync(examId, servedPositionIds, cancellationToken);
+        var rows = await RosterRowsAsync(examId, servedPositionIds, placementScope, cancellationToken);
 
         if (rows.Count == 0)
         {
@@ -208,7 +232,7 @@ public sealed partial class AttemptEngine
     /// </para>
     /// </summary>
     private async Task<List<RosterRow>> RosterRowsAsync(
-        int examId, IReadOnlyList<int> servedPositionIds, CancellationToken cancellationToken)
+        int examId, IReadOnlyList<int> servedPositionIds, PlacementScope? placementScope, CancellationToken cancellationToken)
     {
         var query =
             from i in db.ExamItems.AsNoTracking()
@@ -218,6 +242,13 @@ public sealed partial class AttemptEngine
             join item in db.Items.AsNoTracking() on i.ItemId equals item.ItemId
             where i.ExamId == examId
             select new { Binding = i, Section = s, Skill = k, Version = v, Item = item };
+
+        if (placementScope == PlacementScope.ListeningAndReading)
+        {
+            var listening = Modality.Listening.ToCode();
+            var reading = Modality.Reading.ToCode();
+            query = query.Where(r => r.Section.Modality == listening || r.Section.Modality == reading);
+        }
 
         if (servedPositionIds.Count == 0)
         {

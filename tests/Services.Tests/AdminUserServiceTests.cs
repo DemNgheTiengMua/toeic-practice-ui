@@ -213,4 +213,50 @@ public sealed class AdminUserServiceTests(DatabaseFixture database)
         Assert.True(activeResult.LockedCount >= 1);
         Assert.True(activeResult.NotActivatedCount >= 1);
     }
+
+    [Fact]
+    public async Task GetUserDetailAsync_returns_placement_scope_and_billing_history()
+    {
+        var adminId = await SeedAdminAsync();
+        var learner = await RegisterLearnerAsync($"plhist-{Guid.NewGuid():N}@test.local");
+        var code = $"ADPL{Guid.NewGuid():N}"[..10].ToUpperInvariant();
+        var userService = CreateUserService();
+        await userService.AdjustCreditsAsync(adminId, learner.UserId, 10, "Seed credits");
+        int txnId;
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var receipt = await new Services.Credits.CreditLedger(db, _clock)
+                .ChargePlacementRetakeAsync(learner.UserId, PlacementScope.ListeningAndReading, 3);
+            txnId = receipt.TxnId;
+        }
+
+        await database.SqlAsync($"""
+            INSERT INTO Certificates (Code, Name, IsActive)
+            VALUES ('{code}', N'Admin Placement Cert', 1);
+            DECLARE @certId INT = SCOPE_IDENTITY();
+            INSERT INTO Exams (CertId, Name, Purpose, Status, DurationMinutes, QuestionCount)
+            VALUES (@certId, N'Admin Placement Exam', 'placement', 'published', 30, 10);
+            DECLARE @examId INT = SCOPE_IDENTITY();
+
+            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ExamPurpose, Scope, CreditTxnId, TakenAt)
+            VALUES
+                ({learner.UserId}, @certId, @examId, 'abandoned', 'placement', 'all_skills', NULL, DATEADD(DAY, -2, SYSDATETIMEOFFSET())),
+                ({learner.UserId}, @certId, @examId, 'in_progress', 'placement', 'listening_and_reading', {txnId}, SYSDATETIMEOFFSET());
+            """);
+
+        var detail = await userService.GetUserDetailAsync(learner.UserId);
+
+        Assert.Equal(learner.UserId, detail.User.UserId);
+        Assert.Equal(2, detail.Placements.Count);
+
+        var paid = detail.Placements[0];
+        Assert.Equal(PlacementScopeDto.ListeningAndReading, paid.Scope);
+        Assert.True(paid.Paid);
+        Assert.Equal(3, paid.CreditsCharged);
+
+        var free = detail.Placements[1];
+        Assert.Equal(PlacementScopeDto.AllSkills, free.Scope);
+        Assert.False(free.Paid);
+        Assert.Equal(0, free.CreditsCharged);
+    }
 }

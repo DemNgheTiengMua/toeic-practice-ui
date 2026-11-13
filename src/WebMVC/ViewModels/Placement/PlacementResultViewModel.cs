@@ -32,6 +32,9 @@ public sealed record PlacementResultViewModel(
     public IReadOnlyList<PlacementBandColumnViewModel> Bands { get; init; } = [];
 
     /// <summary>#218: one row per examined skill, on that shared axis.</summary>
+    public bool IsTwoSkillScope => Result.Scope == PlacementScopeDto.ListeningAndReading;
+    public string? ScopeNotice { get; init; }
+
     public IReadOnlyList<PlacementSkillRowViewModel> Rows { get; init; } = [];
 
     /// <summary>The measured rows only, for the provenance strip. Prepared here so the view filters nothing.</summary>

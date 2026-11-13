@@ -49,6 +49,10 @@ public partial class CreditTransaction
     [InverseProperty("CreditTransaction")]
     public virtual ICollection<Refund> Refunds { get; set; } = new List<Refund>();
 
+    /// <summary>#289: the placement retake sitting that spent this ledger row.</summary>
+    [InverseProperty("CreditTransaction")]
+    public virtual ICollection<PlacementTest> PlacementTests { get; set; } = new List<PlacementTest>();
+
     [ForeignKey("AttemptId, UserId")]
     [InverseProperty("CreditTransactions")]
     public virtual ExamAttempt? ExamAttempt { get; set; }

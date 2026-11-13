@@ -119,5 +119,11 @@ internal static class LearnerLabels
             ("reviewing", "Coming back to"),
             ("mastered", "Mastered"),
         ]);
+
+        // #289: the skill scope a learner chooses for a placement sitting.
+        LabelFamily.Add<PlacementScopeDto>(families, "Scope not reported", [
+            ("all_skills", "All 4 skills"),
+            ("listening_and_reading", "Listening & Reading"),
+        ]);
     }
 }

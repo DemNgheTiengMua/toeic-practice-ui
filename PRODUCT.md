@@ -82,7 +82,7 @@ There is no teacher, class, or cohort concept.
 
 ## Product Purpose
 
-A learner picks a certificate, takes a **free placement test**, gets a band
+A learner picks a certificate, takes a **free first placement test** (retakes charge credits by scope), gets a band
 and a level-matched **learning path**, practises sections for free, and spends
 credits only on the things that move them toward their target band: full
 **mock exams**, **AI grading** of their speaking/writing with concrete
@@ -96,14 +96,16 @@ can quote?* (raw → scaled → band).
 
 ## Positioning
 
-The diagnostic loop is free and stays free — practice by section, weakness
-analysis, and the placement test carry no paywall, no purchase prompt, and no
-credit cost. **Free is a data fact, not a policy:** those flows never write a
-ledger row. Weakness analysis draws on **both** free practice sessions and
+Practice by section, weakness analysis, and the **first placement test per
+certificate per learner** are free and carry no paywall or purchase prompt —
+those flows never write a ledger row. Subsequent placement retakes charge
+configured credits by scope (`placement_retake`: 5 for all 4 skills, 3 for
+Listening & Reading). Weakness analysis draws on **both** free practice sessions and
 graded paid attempts, so it is already useful to a learner who has never paid.
 
-Exactly four things cost credits, each a distinct ledger reason: starting a
-mock exam (`mock_exam_start`), AI-grading an attempt's free responses
+Exactly five things cost credits, each a distinct ledger reason: starting a
+mock exam (`mock_exam_start`), retaking a placement test (`placement_retake`,
+priced by scope), AI-grading an attempt's free responses
 (`ai_grading`, one charge per attempt, not per answer — this is what a
 speaking-practice session costs, 1 credit), booking a mentor (`mentor_booking`,
 charged at the mentor's `PriceCredits`), and upgrading to a premium learning
@@ -118,7 +120,7 @@ were removed rather than softened.
 
 **Learner path:** register → pick a certificate (placement selects the
 certificate **first**, so the test matches the skills that certificate
-actually has) → free placement test → band + target band → generated learning
+actually has) → free first placement test (paid retakes) → band + target band → generated learning
 path → practise free → buy credits through a redirect gateway (payOS) →
 spend them on mock exams / AI grading / mentor bookings / premium path →
 review answers with explanations → history per certificate.
@@ -357,9 +359,10 @@ research, no deployment or compliance claims, no chosen AI grading provider.
 
 ## Product Principles
 
-1. **The diagnostic loop is free, forever.** Practice, weakness analysis, and
-   placement never carry a paywall or a purchase prompt — and never write a
-   ledger row, so free is a data fact. They are the reason a learner buys
+1. **Practice, weakness analysis, and first placement stay free.** Practice,
+   weakness analysis, and the first placement per certificate per learner never
+   carry a paywall and never write a ledger row. Placement retakes charge
+   configured credits by scope (`placement_retake`). They are the reason a learner buys
    anything, so anything that monetises them defeats the funnel.
 2. **Block before you charge.** Every precondition is checked *before* a
    credit is deducted, and every blocking screen states plainly that nothing

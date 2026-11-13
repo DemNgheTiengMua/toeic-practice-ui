@@ -23,6 +23,22 @@ public static partial class AdminEndpoints
             return Results.Ok(summary);
         });
 
+        admin.MapGet("/users/{userId:int}", async (
+            int userId,
+            IAdminUserService users,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var detail = await users.GetUserDetailAsync(userId, cancellationToken);
+                return Results.Ok(detail);
+            }
+            catch (AdminUserException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code);
+            }
+        });
+
         admin.MapPost("/users/{userId:int}/lock", async (
             int userId,
             HttpContext http,

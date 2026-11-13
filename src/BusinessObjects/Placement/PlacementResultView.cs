@@ -28,4 +28,5 @@ public sealed record PlacementResultView(
     bool IsGraded = true,
     // #213 / story 55: the per-skill rows, so the result screen can badge a carried-over number and
     // print the date it was actually measured. Defaulted so existing construction sites compile.
-    IReadOnlyList<PlacementSkillResultInfo>? SkillResults = null);
+    IReadOnlyList<PlacementSkillResultInfo>? SkillResults = null,
+    PlacementScope Scope = PlacementScope.AllSkills);

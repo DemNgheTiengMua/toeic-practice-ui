@@ -26,7 +26,11 @@ public sealed record PlacementPreflightViewDto(
     bool HasReusableSkills,
     bool IsStartable,
     bool RequiresMicrophone,
-    bool RequiresAudio);
+    bool RequiresAudio,
+    bool IsRetake = false,
+    int AllSkillsRetakeCredits = 5,
+    int ListeningAndReadingRetakeCredits = 3,
+    int? CreditBalance = null);
 
 /// <summary>
 /// #213: one skill the placement will handle. <paramref name="CanReuse"/> is the only field the choice

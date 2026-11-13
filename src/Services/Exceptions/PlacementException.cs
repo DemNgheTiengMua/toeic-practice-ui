@@ -38,6 +38,7 @@ public class PlacementException(string code, string message) : Exception(message
 
     /// <summary>#153: the exam date has already passed, so the goal has no runway to compute.</summary>
     public const string TargetDateInvalid = "target_date_invalid";
+    public const string InsufficientCredits = "insufficient_credits";
 
     public string Code { get; } = code;
 }

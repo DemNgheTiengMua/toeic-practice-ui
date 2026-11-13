@@ -208,4 +208,59 @@ public sealed class AdminUserService(
 
         await authService.ResendActivationAsync(targetUserId, cancellationToken);
     }
+
+    public async Task<AdminUserDetailDto> GetUserDetailAsync(
+        int targetUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await db.Users
+            .AsNoTracking()
+            .Where(u => u.UserId == targetUserId && !u.IsDeleted)
+            .Select(u => new AdminUserDto(
+                u.UserId,
+                u.Email,
+                u.FullName,
+                u.Phone,
+                db.vw_UserCreditBalances.Where(b => b.UserId == u.UserId).Select(b => b.Balance).FirstOrDefault() ?? 0,
+                db.ExamAttempts.Count(a => a.UserId == u.UserId),
+                db.ExamAttempts.Where(a => a.UserId == u.UserId && a.TotalScore != null).Max(a => (int?)a.TotalScore),
+                u.LastLoginAt,
+                u.IsLocked,
+                u.EmailVerifiedAt,
+                u.CreatedAt))
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new UserNotFoundException(targetUserId);
+
+        var rawPlacements = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.UserId == targetUserId)
+            .OrderByDescending(p => p.TakenAt)
+            .Select(p => new
+            {
+                p.PlacementId,
+                CertCode = p.Cert != null ? p.Cert.Code : "",
+                ExamName = p.Exam != null ? p.Exam.Name : "Placement Test",
+                p.Status,
+                p.Scope,
+                CreditsCharged = p.CreditTransaction != null ? Math.Abs(p.CreditTransaction.Delta) : 0,
+                p.TotalScore,
+                p.ResultBandCode,
+                p.TakenAt,
+            })
+            .ToListAsync(cancellationToken);
+
+        var placements = rawPlacements.Select(p => new AdminUserPlacementDto(
+            p.PlacementId,
+            p.CertCode,
+            p.ExamName,
+            EnumCodes.Parse<PlacementStatus>(p.Status).MapTo<PlacementStatusDto>(),
+            EnumCodes.Parse<PlacementScope>(p.Scope).MapTo<PlacementScopeDto>(),
+            Paid: p.CreditsCharged > 0,
+            p.CreditsCharged,
+            p.TotalScore,
+            p.ResultBandCode,
+            p.TakenAt)).ToList();
+
+        return new AdminUserDetailDto(user, placements);
+    }
 }

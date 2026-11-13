@@ -47,6 +47,21 @@ public sealed class AdminUsersController(
         }
     }
 
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> Detail(int id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var detail = await api.GetAdminUserDetailAsync(id, cancellationToken);
+            return View("~/Views/Admin/UserDetail.cshtml", new AdminUserDetailViewModel(detail).WithDates(Dates));
+        }
+        catch (ApiException ex) when (ex.Status == 404)
+        {
+            TempData["Error"] = ex.Detail ?? "Student not found.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
     [HttpPost("{id:int}/lock")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Lock(int id, CancellationToken cancellationToken)

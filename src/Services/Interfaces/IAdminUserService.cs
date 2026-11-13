@@ -30,6 +30,10 @@ public interface IAdminUserService
         string reason,
         CancellationToken cancellationToken = default);
 
+    Task<AdminUserDetailDto> GetUserDetailAsync(
+        int targetUserId,
+        CancellationToken cancellationToken = default);
+
     Task ResendActivationAsync(
         int targetUserId,
         CancellationToken cancellationToken = default);

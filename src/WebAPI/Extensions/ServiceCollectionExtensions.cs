@@ -162,6 +162,8 @@ public static class ServiceCollectionExtensions
         // and so the ceiling config is read at container build rather than per request.
         services.AddSingleton(
             configuration.GetSection(RefundOptions.SectionName).Get<RefundOptions>() ?? new RefundOptions());
+        services.AddSingleton(
+            configuration.GetSection(PlacementOptions.SectionName).Get<PlacementOptions>() ?? new PlacementOptions());
         services.AddScoped<IRefundService, RefundService>();
 
         // AI and background worker configuration

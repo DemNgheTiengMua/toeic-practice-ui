@@ -27,4 +27,5 @@ public sealed record PlacementResultViewDto(
     int ScoreDisplayFactor = 1,
     bool IsGraded = true,
     // #213 / story 55: the per-skill rows, carrying ReusedFromPrior and the original MeasuredAt.
-    List<PlacementSkillResultInfoDto>? SkillResults = null);
+    List<PlacementSkillResultInfoDto>? SkillResults = null,
+    PlacementScopeDto Scope = PlacementScopeDto.AllSkills);

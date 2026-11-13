@@ -70,4 +70,10 @@ public sealed partial class CompanionApiClient
 
     public Task<AdminUsersSummaryDto> GetAdminUsersAsync(string? q, string? status, int page, int pageSize, CancellationToken cancellationToken = default) =>
         GetAdminUsersAsync(q, status, page, pageSize, string.Empty, cancellationToken);
+
+    public Task<AdminUserDetailDto> GetAdminUserDetailAsync(int userId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<AdminUserDetailDto>($"api/admin/users/{userId}", bearerToken, cancellationToken);
+
+    public Task<AdminUserDetailDto> GetAdminUserDetailAsync(int userId, CancellationToken cancellationToken = default) =>
+        GetAdminUserDetailAsync(userId, string.Empty, cancellationToken);
 }

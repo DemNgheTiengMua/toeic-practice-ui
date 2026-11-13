@@ -41,7 +41,11 @@ public sealed record PlacementPreflightView(
     IReadOnlyList<PlacementSkillOffer> Offers,
     DateTimeOffset? CooldownUntil,
     bool CooldownWaived,
-    bool HasReusableSkills)
+    bool HasReusableSkills,
+    bool IsRetake = false,
+    int AllSkillsRetakeCredits = 5,
+    int ListeningAndReadingRetakeCredits = 3,
+    int? CreditBalance = null)
 {
     /// <summary>The single gate the start endpoint re-checks; the screen is not trusted to honour it.</summary>
     public bool IsStartable => CooldownUntil is null && ExamId is not null;

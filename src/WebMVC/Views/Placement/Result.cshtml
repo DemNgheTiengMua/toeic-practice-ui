@@ -35,7 +35,10 @@
         Taken @Model.TakenAtDisplay · @result.TotalQuestions questions · <span class="font-mono">@result.DurationMinutes</span> minutes
       </p>
     </div>
-    <span class="badge badge--success">Free</span>
+    @if (Model.IsTwoSkillScope)
+    {
+      <span class="badge badge--info">2 skills covered</span>
+    }
   </div>
 
   @if (result.IsAutoSubmitted)
@@ -63,6 +66,11 @@
 
   @* #218 / LRN-16: one signboard, not four cards. The floor placard, the shared-axis horizon, the
      provenance strip and the single primary action all live inside this partial. *@
+  @if (!string.IsNullOrEmpty(Model.ScopeNotice))
+  {
+    <div class="alert alert--info" role="status">@Model.ScopeNotice</div>
+  }
+
   <partial name="_Signboard" model="Model" />
 
   @* #217 / PLC-19: a partial result names what is missing rather than presenting a whole one. The

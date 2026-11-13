@@ -13,4 +13,6 @@ public interface IAdminUsersClient
     Task ResendUserActivationAsync(int userId, string bearerToken, CancellationToken cancellationToken = default) => ResendUserActivationAsync(userId, cancellationToken);
     Task<AdjustCreditsResultDto> AdjustUserCreditsAsync(int userId, AdjustCreditsRequest request, CancellationToken cancellationToken = default);
     Task<AdjustCreditsResultDto> AdjustUserCreditsAsync(int userId, AdjustCreditsRequest request, string bearerToken, CancellationToken cancellationToken = default) => AdjustUserCreditsAsync(userId, request, cancellationToken);
+    Task<AdminUserDetailDto> GetAdminUserDetailAsync(int userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    Task<AdminUserDetailDto> GetAdminUserDetailAsync(int userId, string bearerToken, CancellationToken cancellationToken = default) => GetAdminUserDetailAsync(userId, cancellationToken);
 }

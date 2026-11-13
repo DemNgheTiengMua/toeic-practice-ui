@@ -41,9 +41,16 @@ public sealed partial class PlacementService
     /// The paper this sitting is served by stage one, or null when the draw cannot land on this exam's
     /// roster and the exam's own paper is the honest answer.
     /// </summary>
+    private Task<AttemptPaperDraw?> BuildStageOnePaperAsync(
+        int certId,
+        Exam exam,
+        CancellationToken cancellationToken) =>
+        BuildStageOnePaperAsync(certId, exam, PlacementScope.AllSkills, cancellationToken);
+
     private async Task<AttemptPaperDraw?> BuildStageOnePaperAsync(
         int certId,
         Exam exam,
+        PlacementScope scope,
         CancellationToken cancellationToken)
     {
         var draw = await _stageOneDraw.DrawAsync(certId, exam.ContentTier, cancellationToken);
@@ -56,7 +63,19 @@ public sealed partial class PlacementService
             return null;
         }
 
-        var drawn = draw.Skills.SelectMany(skill => skill.Items).ToList();
+        var drawnSkills = scope == PlacementScope.ListeningAndReading
+            ? draw.Skills.Where(s =>
+                    string.Equals(s.Modality, Modality.Listening.ToCode(), StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(s.Modality, Modality.Reading.ToCode(), StringComparison.OrdinalIgnoreCase))
+                .ToList()
+            : draw.Skills;
+
+        var drawn = drawnSkills.SelectMany(skill => skill.Items).ToList();
+        if (drawn.Count == 0)
+        {
+            return null;
+        }
+
         var itemIds = drawn.Select(item => item.ItemId).Distinct().ToList();
 
         // The served positions must be positions of THIS exam: AttemptItemResponses.ExamItemId is a
@@ -77,15 +96,44 @@ public sealed partial class PlacementService
             return null;
         }
 
+        var servedExamItemIds = drawn.Select(item => firstPositionOf[item.ItemId]).ToList();
+
+        // #289: on an AllSkills sitting, keep any authored Speaking/Writing tasks bound on the
+        // exam alongside the stage-one objective items; on ListeningAndReading, leave them out.
+        if (scope == PlacementScope.AllSkills)
+        {
+            var speaking = Modality.Speaking.ToCode();
+            var writing = Modality.Writing.ToCode();
+            var productivePositionIds = await db.ExamItems
+                .AsNoTracking()
+                .Where(i => i.ExamId == exam.ExamId)
+                .Join(db.Sections.AsNoTracking(), i => i.SectionId, s => s.SectionId, (i, s) => new { i, s })
+                .Join(db.Skills.AsNoTracking(), x => x.s.SkillId, k => k.SkillId, (x, k) => new { x.i, x.s, k })
+                .Where(x => x.s.Modality == speaking || x.s.Modality == writing)
+                .OrderBy(x => x.k.DisplayOrder)
+                .ThenBy(x => x.s.DisplayOrder)
+                .ThenBy(x => x.i.DisplayOrder)
+                .Select(x => x.i.ExamItemId)
+                .ToListAsync(cancellationToken);
+
+            foreach (var posId in productivePositionIds)
+            {
+                if (!servedExamItemIds.Contains(posId))
+                {
+                    servedExamItemIds.Add(posId);
+                }
+            }
+        }
+
         // The draw's own order: skills by display order, bands ascending inside each skill. Position
         // numbers are 1-based and contiguous, because a gap leaves the navigator a hole to fall into.
-        var positions = drawn
-            .Select((item, index) => new AttemptPaperPosition(index + 1, firstPositionOf[item.ItemId]))
+        var positions = servedExamItemIds
+            .Select((examItemId, index) => new AttemptPaperPosition(index + 1, examItemId))
             .ToList();
 
         // One bundle per objective skill, stage 1: the draw spans every band, so the pair it covers is
         // the whole authored ladder. The routed pair is stage 2 and is written at the boundary.
-        var bundles = draw.Skills
+        var bundles = drawnSkills
             .Select(skill => new AttemptPaperBundle(
                 skill.SkillId, StageNumber: 1, CefrLevel.A1, CefrLevel.C2))
             .ToList();

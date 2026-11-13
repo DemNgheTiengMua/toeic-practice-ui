@@ -19,10 +19,17 @@ public interface IPlacementService
     /// </summary>
     Task<PlacementTestInfo> StartPlacementTestAsync(
         int userId, int examId, PlacementReuseChoice reuse, CancellationToken cancellationToken = default);
+    Task<PlacementTestInfo> StartPlacementTestAsync(
+        int userId,
+        int examId,
+        PlacementReuseChoice reuse,
+        PlacementScope scope,
+        string? idempotencyKey = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// #213 / SCR-PL-01: what the placement will measure, what may be carried over, and whether a
-    /// retake is allowed yet. Reads no credit balance — placement is free.
+    /// #213 / SCR-PL-01, #289: what the placement will measure, what may be carried over, retake prices,
+    /// and whether a retake is allowed yet. First placement is free and reads no credit balance.
     /// </summary>
     Task<PlacementPreflightView> GetPreflightAsync(int userId, CancellationToken cancellationToken = default);
 

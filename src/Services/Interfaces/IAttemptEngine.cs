@@ -29,6 +29,20 @@ public interface IAttemptEngine
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #289: the same creation, additionally pinning a <see cref="PlacementScope"/> so a
+    /// Listening &amp; Reading placement sitting omits Speaking and Writing from both drawn and
+    /// static-fallback papers and skips microphone preflight checks.
+    /// </summary>
+    Task<ExamAttempt> CreateAttemptAsync(
+        int userId,
+        int certId,
+        int examId,
+        int durationMinutes,
+        AttemptPaperDraw? drawnPaper,
+        PlacementScope? placementScope,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// #276: record the band pair stage one routed one skill to. The sole writer of
     /// <c>AttemptStageBundles</c> (ADR-0012); returns false when there is nothing to write.
     /// </summary>

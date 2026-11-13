@@ -23,7 +23,11 @@ public static partial class PlacementEndpoints
                 e.IsRecommended,
                 e.ActivePlacementId)).ToList(),
             view.ActivePlacementId,
-            view.ActiveAttemptId);
+            view.ActiveAttemptId,
+            view.IsRetake,
+            view.AllSkillsRetakeCredits,
+            view.ListeningAndReadingRetakeCredits,
+            view.CreditBalance);
 
     private static PlacementTestInfoDto ToPlacementTestInfoDto(PlacementTestInfo info) =>
         new PlacementTestInfoDto(
@@ -34,7 +38,9 @@ public static partial class PlacementEndpoints
             info.StartedAt,
             info.ExpiresAt,
             info.RemainingSeconds,
-            info.IsAutoSubmitted);
+            info.IsAutoSubmitted,
+            info.Scope.MapTo<PlacementScopeDto>(),
+            info.CreditsCharged);
 
     private static PlacementPreflightViewDto ToPlacementPreflightViewDto(PlacementPreflightView view) =>
         new(
@@ -61,7 +67,11 @@ public static partial class PlacementEndpoints
             view.HasReusableSkills,
             view.IsStartable,
             view.RequiresMicrophone,
-            view.RequiresAudio);
+            view.RequiresAudio,
+            view.IsRetake,
+            view.AllSkillsRetakeCredits,
+            view.ListeningAndReadingRetakeCredits,
+            view.CreditBalance);
 
     private static PlacementTakeViewDto ToPlacementTakeViewDto(PlacementTakeView take)
     {
@@ -294,5 +304,6 @@ public static partial class PlacementEndpoints
                     r.MeasuredAt,
                     r.ReusedFromPrior,
                     r.FailureReason))
-                .ToList() ?? []);
+                .ToList() ?? [],
+            result.Scope.MapTo<PlacementScopeDto>());
 }

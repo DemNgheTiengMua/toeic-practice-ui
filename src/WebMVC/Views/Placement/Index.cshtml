@@ -7,8 +7,8 @@
 
 @* #250 audit: the certificate bar is the LAYOUT's, rendered once above the breadcrumb. This page
    used to draw a second one here, so /placement showed two stacked context bars and the page's own
-   heading sat below both. The facts the second one carried are already on the page: the Free badge
-   under the heading, and the "Current level" sentence in the alert below it. *@
+   heading sat below both. The facts the second one carried are already on the page: the state badge
+   beside the heading, and the "Current level" sentence in the alert below it. *@
 
 <div class="container stack">
   <nav class="breadcrumbs" aria-label="Breadcrumb">
@@ -25,12 +25,32 @@
   <div class="row row--between">
     <div>
       <h1 class="m-0 mb-1">Pick a placement test</h1>
-      <p class="text-muted no-margin">
-        One test sets your starting level and builds your learning path.
-        <strong>Free, no credit deducted.</strong>
-      </p>
+      @if (Model.IsRetake)
+      {
+        <p class="text-muted no-margin">
+          Your first placement was free. Retaking updates your starting level and archives your existing learning path.
+        </p>
+      }
+      else
+      {
+        <p class="text-muted no-margin">
+          One test sets your starting level and builds your learning path.
+          <strong>Free, no credit deducted.</strong>
+        </p>
+      }
     </div>
-    <span class="badge badge--success">Free</span>
+    @if (Model.HasInProgress)
+    {
+      <span class="badge badge--info">In progress</span>
+    }
+    else if (Model.IsRetake)
+    {
+      <span class="badge badge--warning">Retake</span>
+    }
+    else
+    {
+      <span class="badge badge--success">Free</span>
+    }
   </div>
 
   @if (catalog.CurrentBandCode == null)
@@ -89,11 +109,16 @@
                 {
                   <a href="/placement/take/@exam.ActivePlacementId.Value" class="btn btn--primary btn--full text-center">Resume in-progress test</a>
                 }
+                else if (Model.IsRetake)
+                {
+                  <a href="/placement/preflight?examId=@exam.ExamId" class="btn btn--primary btn--full text-center">Retake placement test</a>
+                }
                 else
                 {
                   <form method="post" action="/placement/start" class="no-margin">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="examId" value="@exam.ExamId" />
+                    <input type="hidden" name="idempotencyKey" value="@Model.IdempotencyKey" />
                     <button type="submit" class="btn btn--primary btn--full">Start placement test</button>
                   </form>
                 }

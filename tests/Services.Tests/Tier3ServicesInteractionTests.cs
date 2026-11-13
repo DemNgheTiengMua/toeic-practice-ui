@@ -118,7 +118,7 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var ledger = new CreditLedger(db, TimeProvider.System);
 
-        // Balance remains unchanged (5 credits)
+        // First placement sitting per certificate is free; balance remains unchanged (5 credits). Paid retakes are covered in PlacementScopeAndRetakeTests.
         var balance = await ledger.GetBalanceAsync(learnerId);
         Assert.Equal(5, balance);
 

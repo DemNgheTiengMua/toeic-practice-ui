@@ -18,15 +18,15 @@ internal static class AttemptViewModelMapper
         return new(result, error, insight)
         {
             SubmittedAtDisplay = dates.Format(result.SubmittedAt),
-            // #152: the stored total is in the certificate's own units — tenths on IELTS, so 65 is
+            // #152: the stored total is in the certificate's own units â€” tenths on IELTS, so 65 is
             // 6.5. Dividing at the edge is what stops the learner reading "65 out of 9".
             TotalScoreDisplay = result.Status == AttemptStatusDto.Graded
                 ? ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor)
-                : "—",
+                : "â€”",
             // #222 / PRN-03: this label says "certificate score" and never "level". The projection is a
             // separate placard with its own label, because TOEIC 785-940 is not CEFR B2.
             TotalScoreLabel = result.Status == AttemptStatusDto.Graded
-                ? $"Certificate score · {result.CertCode}"
+                ? $"Certificate score Â· {result.CertCode}"
                 : "Composite score pending AI grading",
             ScoreDeltaDisplay = result.ScoreDelta is int delta
                 ? (delta >= 0 ? "+" : "") + ScoreDisplay.Format(delta, result.ScoreDisplayFactor)
@@ -69,14 +69,15 @@ internal static class AttemptViewModelMapper
                 o.IsCorrect ? "option--correct" : o.OptionId == q.SelectedOptionId ? "option--wrong" : "")).ToList())).ToList(),
         Navigator = review.Navigator.Select(n => new ExamReviewNavigatorViewModel(n,
             (n.IsAnswered ? "is-answered" : "is-unanswered") + (n.IsFlagged ? " is-marked" : ""),
-            $"Question {n.DisplayOrder}" + (n.IsAnswered ? " · Answered" : " · Unanswered") + (n.IsFlagged ? " · Flagged" : "")
-                + (n.IsCorrect == true ? " · Correct" : n.IsCorrect == false ? " · Incorrect" : ""))).ToList()
+            $"Question {n.DisplayOrder}" + (n.IsAnswered ? " Â· Answered" : " Â· Unanswered") + (n.IsFlagged ? " Â· Flagged" : "")
+                + (n.IsCorrect == true ? " Â· Correct" : n.IsCorrect == false ? " Â· Incorrect" : ""))).ToList()
     };
 
     public static PlacementResultViewModel PlacementResult(PlacementResultViewDto result, DisplayDates dates,
         string? error, AiInsightDto? insight, ILogger? logger = null)
     {
         var log = logger ?? NullLogger.Instance;
+        var isTwoSkill = result.Scope == PlacementScopeDto.ListeningAndReading;
         var bands = result.CefrBands
             .OrderBy(b => b.MinTotal)
             .Select(b => new PlacementBandColumnViewModel(b.Code, b.Name, b.MinTotal, b.MaxTotal))
@@ -87,16 +88,19 @@ internal static class AttemptViewModelMapper
         {
             TakenAtDisplay = dates.FormatCustom(result.TakenAt, "d MMMM yyyy"),
             IsAwaitingGrading = !result.IsGraded,
-            // #152: same rule as the mock result — stored tenths are divided at the edge.
-            TotalScoreDisplay = result.IsGraded ? ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor) : "—",
+            // #152: same rule as the mock result â€” stored tenths are divided at the edge.
+            TotalScoreDisplay = result.IsGraded ? ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor) : "â€”",
             ScoreSummary = result.IsGraded
-                ? $"{ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor)} points · {result.ResultBandName} level"
+                ? $"{ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor)} points Â· {result.ResultBandName} level"
                 : "Composite score pending AI grading",
             MaximumScore = result.CefrBands.Count > 0
                 ? ScoreDisplay.Format(result.CefrBands.Max(b => b.MaxTotal), result.ScoreDisplayFactor)
                 // #161: no bands means no declared ceiling. The page says so; inventing 990 made every
                 // certificate without band data look like a TOEIC paper scored out of 990.
                 : "",
+            ScopeNotice = isTwoSkill
+                ? "This sitting covered 2 skills (Listening and Reading). Speaking and Writing were not attempted; any previous measurements for those skills survive untouched."
+                : null,
             Skills = result.SkillScores,
             SkillResults = result.SkillResults ?? [],
             Bands = bands,
@@ -109,7 +113,7 @@ internal static class AttemptViewModelMapper
     }
 
     /// <summary>
-    /// #218 / LRN-17: the overall is the weakest MEASURED skill, and the placard says so in words —
+    /// #218 / LRN-17: the overall is the weakest MEASURED skill, and the placard says so in words â€”
     /// naming the skill that holds it down and the one that reached highest. An unmeasured skill is
     /// excluded and named as excluded, never treated as a zero (that zero was the #217 defect).
     /// </summary>
@@ -153,7 +157,7 @@ internal static class AttemptViewModelMapper
             ExcludedText = excluded.Count == 0
                 ? string.Empty
                 : $"{string.Join(" and ", excluded)} {(excluded.Count == 1 ? "was" : "were")} not measured, so "
-                  + $"{(excluded.Count == 1 ? "it is" : "they are")} excluded from this floor — not counted as zero.",
+                  + $"{(excluded.Count == 1 ? "it is" : "they are")} excluded from this floor â€” not counted as zero.",
         };
     }
 
@@ -176,5 +180,5 @@ internal static class AttemptViewModelMapper
         "cefr__band" + (showState && band.IsCurrent ? " is-current" : showState && band.IsReached ? " is-reached" : ""));
 
     private static int Percent(int raw, int count) => count > 0 ? (int)Math.Round((double)raw / count * 100) : 0;
-    private static string SkillScores(IReadOnlyList<AttemptSkillScoreDto> scores) => string.Join(" · ", scores.Select(s => $"{s.SkillCode} {s.ScaledScore}"));
+    private static string SkillScores(IReadOnlyList<AttemptSkillScoreDto> scores) => string.Join(" Â· ", scores.Select(s => $"{s.SkillCode} {s.ScaledScore}"));
 }
