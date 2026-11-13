@@ -80,6 +80,60 @@ public sealed class TokenValidationCancellationTests
         Assert.Equal(ApiError.Codes.Locked, context.HttpContext.Items["auth-failure"]);
     }
 
+    [Fact]
+    public async Task OnMessageReceived_reads_the_HttpOnly_cookie_when_no_Authorization_header_is_present()
+    {
+        var (handler, context) = BuildMessageReceived(
+            cookieToken: "cookie-jwt-token",
+            authorizationHeader: null);
+
+        await handler(context);
+
+        Assert.Equal("cookie-jwt-token", context.Token);
+    }
+
+    [Fact]
+    public async Task OnMessageReceived_leaves_Authorization_header_precedence_intact()
+    {
+        var (handler, context) = BuildMessageReceived(
+            cookieToken: "cookie-jwt-token",
+            authorizationHeader: "Bearer header-jwt-token");
+
+        await handler(context);
+
+        Assert.Null(context.Token);
+    }
+
+    private static (Func<MessageReceivedContext, Task> Handler, MessageReceivedContext Context) BuildMessageReceived(
+        string? cookieToken, string? authorizationHeader)
+    {
+        var configuration = BuildConfiguration();
+        var services = new ServiceCollection();
+        services.AddSingleton(Auth.Returning(SessionStatus.Active));
+        services.AddSingleton(_ => configuration);
+        services.AddApiAuthentication(configuration);
+
+        var provider = services.BuildServiceProvider();
+        var httpContext = new DefaultHttpContext { RequestServices = provider };
+        if (cookieToken is not null)
+        {
+            httpContext.Request.Headers.Cookie = $"{AuthenticationExtensions.AuthCookieName}={cookieToken}";
+        }
+        if (authorizationHeader is not null)
+        {
+            httpContext.Request.Headers.Authorization = authorizationHeader;
+        }
+
+        var options = provider
+            .GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
+            .Get(JwtBearerDefaults.AuthenticationScheme);
+        var scheme = new AuthenticationScheme(
+            JwtBearerDefaults.AuthenticationScheme, null, typeof(JwtBearerHandler));
+        var context = new MessageReceivedContext(httpContext, scheme, options);
+
+        return (options.Events.OnMessageReceived, context);
+    }
+
     /// <summary>Runs AddApiAuthentication against real configuration, so the event under test is
     /// the one the app registers rather than a copy that could drift from it.</summary>
     private static (Func<TokenValidatedContext, Task> Handler, TokenValidatedContext Context) Build(

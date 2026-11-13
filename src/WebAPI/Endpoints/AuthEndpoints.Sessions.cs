@@ -12,6 +12,7 @@ public static partial class AuthEndpoints
     {
 
         app.MapPost("/api/auth/sign-in", async Task<IResult> (
+            HttpContext http,
             SignInRequest request,
             IAuthService auth,
             IAccessTokenFactory tokens,
@@ -35,8 +36,14 @@ public static partial class AuthEndpoints
                 return Problem(StatusCodes.Status401Unauthorized, "Account locked", ApiError.Codes.Locked, ex.Message);
             }
 
-            return ToTokenResponse(user, tokens);
+            return ToTokenResponse(user, tokens, http);
         }).RequireRateLimiting("auth");
+
+        app.MapPost("/api/auth/sign-out", (HttpContext http) =>
+        {
+            ClearAuthCookie(http);
+            return Results.NoContent();
+        });
 
         // Returns the live database row, not the token's claims: the MVC site's cookie revalidation
         // compares against this to catch server-side changes (role, name) since sign-in.

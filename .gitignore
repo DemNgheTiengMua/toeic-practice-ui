@@ -73,3 +73,9 @@ __pycache__/
 test-results/
 *.trx
 TestResults/
+# heroui-agents-md
+.heroui-docs/
+
+# React SPA build & dependencies
+node_modules/
+src/web/dist/

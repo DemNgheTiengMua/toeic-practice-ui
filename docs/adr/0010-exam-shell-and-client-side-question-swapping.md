@@ -1,7 +1,7 @@
 # Exam Shell Architecture and Zero-Reload Question Swapping
 
 ## Status
-Accepted
+Accepted — Updated by [ADR-0015](0015-react-heroui-spa-and-cookie-jwt-api.md) (2026-11-13): unified into the React `<SittingWorkspace />` across Placement, Mock Exam, Speaking, and Writing sittings; hostile fake-proctoring listeners (`F12`, `contextmenu`, `Ctrl+C`, `window.blur` warnings) removed while preserving in-memory question swapping, single-play audio group continuity, offline queueing, and server-calibrated timers.
 
 ## Context
 During simulated mock exams (`/exams/take/{attemptId}`), candidate interaction was previously driven by server-side HTML links (`<a href="?q=N">`) on Previous, Next, and Question Navigator grid cells. This introduced critical defects:

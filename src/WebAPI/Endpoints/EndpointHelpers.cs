@@ -75,12 +75,33 @@ public static class EndpointHelpers
     public static IResult ValidationProblem(ValidationException ex) =>
         Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, ex.Message);
 
-    public static IResult ToTokenResponse(AuthUser user, IAccessTokenFactory tokens)
+    public static IResult ToTokenResponse(AuthUser user, IAccessTokenFactory tokens, HttpContext? http = null)
     {
         var token = tokens.Create(
             user.UserId, user.Email, user.Role, user.FullName, user.SessionStamp, user.Permissions);
+
+        if (http is not null)
+        {
+            http.Response.Cookies.Append(
+                WebAPI.Extensions.AuthenticationExtensions.AuthCookieName,
+                token.Token,
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    SameSite = SameSiteMode.Lax,
+                    Secure = http.Request.IsHttps,
+                    Expires = token.ExpiresAt,
+                    Path = "/",
+                });
+        }
+
         return Results.Ok(new AuthTokenResponse(token.Token, token.ExpiresAt, ToDto(user)));
     }
+
+    public static void ClearAuthCookie(HttpContext http) =>
+        http.Response.Cookies.Delete(
+            WebAPI.Extensions.AuthenticationExtensions.AuthCookieName,
+            new CookieOptions { Path = "/" });
 
     public static ScorePreviewRequest ToScorePreviewRequest(ScorePreviewRequestDto dto) =>
         new(

@@ -9,6 +9,9 @@ namespace WebAPI.Extensions;
 
 public static class AuthenticationExtensions
 {
+    /// <summary>ADR-0015: HttpOnly cookie carrying the JWT for same-origin SPA and media requests.</summary>
+    public const string AuthCookieName = "ee_access_token";
+
     public static IServiceCollection AddApiAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
         var jwtOptions = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
@@ -75,6 +78,18 @@ public static class AuthenticationExtensions
 
                 options.Events = new JwtBearerEvents
                 {
+                    OnMessageReceived = context =>
+                    {
+                        if (string.IsNullOrEmpty(context.Token)
+                            && !context.Request.Headers.ContainsKey("Authorization")
+                            && context.Request.Cookies.TryGetValue(AuthCookieName, out var cookieToken)
+                            && !string.IsNullOrWhiteSpace(cookieToken))
+                        {
+                            context.Token = cookieToken;
+                        }
+
+                        return Task.CompletedTask;
+                    },
                     OnTokenValidated = async context =>
                     {
                         var auth = context.HttpContext.RequestServices.GetRequiredService<IAuthService>();
