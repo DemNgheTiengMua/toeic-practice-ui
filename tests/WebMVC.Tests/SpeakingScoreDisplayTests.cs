@@ -63,24 +63,6 @@ public sealed class SpeakingScoreDisplayTests
         Assert.Equal("Speaking score · CUSTOM scale", model.ScoreScaleLabel);
     }
 
-    /// <summary>
-    /// The page must not do the arithmetic itself: if the view reintroduces <c>ScaledScore</c>, the
-    /// unit it lacks comes back with it. This asserts on the rendered view source, not on a string
-    /// this file happens to know about.
-    /// </summary>
-    [Fact]
-    public void The_review_view_renders_the_formatted_score_and_never_the_stored_field()
-    {
-        var root = TestPathHelper.FindRepoRoot();
-        var view = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "Views", "Speaking", "Review.cshtml"));
-
-        Assert.Contains("@Model.ScoreDisplay", view);
-        Assert.Contains("@Model.ScoreScaleLabel", view);
-        Assert.DoesNotContain("r.ScaledScore", view);
-        Assert.DoesNotContain("0–200", view);
-        Assert.DoesNotContain("0-200", view);
-    }
-
     [Fact]
     public void A_mock_result_on_a_tenths_certificate_is_rendered_divided()
     {

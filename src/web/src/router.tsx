@@ -8,6 +8,12 @@ import {
 } from '@tanstack/react-router';
 import { Button, Card } from '@heroui/react';
 import { AppShell } from './components/shell/AppShell';
+import { SpeakingStudioPage } from './features/productive/speaking/SpeakingStudioPage';
+import { SpeakingPracticePage } from './features/productive/speaking/SpeakingPracticePage';
+import { SpeakingResultPage } from './features/productive/speaking/SpeakingResultPage';
+import { WritingStudioPage } from './features/productive/writing/WritingStudioPage';
+import { WritingPracticePage } from './features/productive/writing/WritingPracticePage';
+import { WritingResultPage } from './features/productive/writing/WritingResultPage';
 
 function PlaceholderView({ title, ticket }: { title: string; ticket: string }) {
   return (
@@ -60,6 +66,54 @@ function stubRoute<TPath extends string>(path: TPath, title: string, ticket: str
   });
 }
 
+const speakingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/speaking',
+  component: SpeakingStudioPage,
+});
+
+const speakingPracticeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/speaking/practice/$questionId',
+  component: function SpeakingPracticeRouteView() {
+    const { questionId } = speakingPracticeRoute.useParams();
+    return <SpeakingPracticePage attemptId={Number(questionId)} />;
+  },
+});
+
+const speakingResultRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/speaking/result/$attemptId',
+  component: function SpeakingResultRouteView() {
+    const { attemptId } = speakingResultRoute.useParams();
+    return <SpeakingResultPage attemptId={Number(attemptId)} />;
+  },
+});
+
+const writingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/writing',
+  component: WritingStudioPage,
+});
+
+const writingPracticeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/writing/practice/$questionId',
+  component: function WritingPracticeRouteView() {
+    const { questionId } = writingPracticeRoute.useParams();
+    return <WritingPracticePage attemptId={Number(questionId)} />;
+  },
+});
+
+const writingResultRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/writing/result/$attemptId',
+  component: function WritingResultRouteView() {
+    const { attemptId } = writingResultRoute.useParams();
+    return <WritingResultPage attemptId={Number(attemptId)} />;
+  },
+});
+
 const routeTree = rootRoute.addChildren([
   stubRoute('/', 'Extra Efficiency', '295'),
   stubRoute('/certificates', 'Certificates', '295'),
@@ -73,8 +127,12 @@ const routeTree = rootRoute.addChildren([
   stubRoute('/exams', 'Mock exams', '297'),
   stubRoute('/practice', 'Practice session', '298'),
   stubRoute('/saved-questions', 'Saved questions', '298'),
-  stubRoute('/speaking', 'Speaking practice', '299'),
-  stubRoute('/writing', 'Writing practice', '299'),
+  speakingRoute,
+  speakingPracticeRoute,
+  speakingResultRoute,
+  writingRoute,
+  writingPracticeRoute,
+  writingResultRoute,
   stubRoute('/dashboard', 'Dashboard', '300'),
   stubRoute('/learning-path', 'Learning path', '300'),
   stubRoute('/weakness', 'Weakness analysis', '300'),

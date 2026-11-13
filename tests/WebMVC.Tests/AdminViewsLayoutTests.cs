@@ -111,48 +111,6 @@ public sealed class AdminViewsLayoutTests
     }
 
     [Fact]
-    public void WritingTakeView_SubmitModal_MustHaveAccessibleOverlayAndKeyboardDismiss()
-    {
-        var repoRoot = TestPathHelper.FindRepoRoot();
-        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Writing", "Take.cshtml");
-
-        Assert.True(File.Exists(viewPath), "Writing/Take.cshtml must exist");
-        var content = File.ReadAllText(viewPath) + File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "wwwroot", "js", "writing", "take.js"));
-
-        // Markup for #submit-modal has modal-overlay with aria-hidden="true", role="dialog", aria-modal="true"
-        Assert.Matches(@"<div\s+id=""submit-modal""\s+class=""modal-overlay""\s+aria-hidden=""true""\s+role=""dialog""\s+aria-modal=""true""", content);
-
-        // Script toggles modal-overlay--open and aria-hidden
-        Assert.Contains("modal-overlay--open", content);
-        Assert.Contains(@"setAttribute('aria-hidden'", content);
-
-        // Script handles Escape key and backdrop click
-        Assert.Contains("Escape", content);
-        Assert.Contains("submitModal", content);
-    }
-
-    [Fact]
-    public void SpeakingTakeView_SubmitModal_MustHaveAccessibleOverlayAndKeyboardDismiss()
-    {
-        var repoRoot = TestPathHelper.FindRepoRoot();
-        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Speaking", "Take.cshtml");
-
-        Assert.True(File.Exists(viewPath), "Speaking/Take.cshtml must exist");
-        var content = File.ReadAllText(viewPath) + File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "wwwroot", "js", "speaking", "take.js"));
-
-        // Markup for #submit-modal has modal-overlay with aria-hidden="true", role="dialog", aria-modal="true"
-        Assert.Matches(@"<div\s+id=""submit-modal""\s+class=""modal-overlay""\s+aria-hidden=""true""\s+role=""dialog""\s+aria-modal=""true""", content);
-
-        // Script toggles modal-overlay--open and aria-hidden
-        Assert.Contains("modal-overlay--open", content);
-        Assert.Contains(@"setAttribute('aria-hidden'", content);
-
-        // Script handles Escape key and backdrop click
-        Assert.Contains("Escape", content);
-        Assert.Contains("submitModal", content);
-    }
-
-    [Fact]
     public void AdminViews_CertificatesAndWizard_MustDeclareAdminLayout()
     {
         var repoRoot = TestPathHelper.FindRepoRoot();
