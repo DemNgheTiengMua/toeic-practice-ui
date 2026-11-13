@@ -28,9 +28,9 @@ public sealed class StaffRouteCapabilityEndToEndTests : IClassFixture<StaffRoute
     [Fact]
     public async Task An_account_holding_the_capability_reaches_the_route()
     {
-        using var client = site.ClientFor([Permissions.ContentAuthor]);
+        using var client = site.ClientFor([Permissions.SystemAdmin]);
 
-        var response = await client.GetAsync("/admin/exams");
+        var response = await client.GetAsync("/admin/users");
 
         Assert.NotEqual(HttpStatusCode.Redirect, response.StatusCode);
         Assert.DoesNotContain("/auth/denied", response.Headers.Location?.ToString() ?? "");
@@ -41,7 +41,7 @@ public sealed class StaffRouteCapabilityEndToEndTests : IClassFixture<StaffRoute
     {
         using var client = site.ClientFor([Permissions.ContentReview]);
 
-        var response = await client.GetAsync("/admin/exams");
+        var response = await client.GetAsync("/admin/users");
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Contains("/auth/denied", response.Headers.Location?.ToString() ?? "");
@@ -117,8 +117,6 @@ public sealed class StaffRouteCapabilityEndToEndTests : IClassFixture<StaffRoute
                     new AuthUserDto(1, "staff@test.local", "Staff", Roles.Admin, true, Permissions)),
                 nameof(IProfileClient.GetProfileAsync) => Task.FromResult(
                     new ProfileDto("Staff", null, "Asia/Ho_Chi_Minh")),
-                nameof(IAdminExamsClient.GetAdminExamsAsync) => Task.FromResult(
-                    new AdminExamListSummaryDto([], 0, 1, 20, [])),
                 nameof(IAdminUsersClient.GetAdminUsersAsync) => Task.FromResult(
                     new AdminUsersSummaryDto([], 0, 1, 20, 0, 0, 0)),
                 _ => throw new InvalidOperationException($"Unexpected upstream call: {targetMethod?.Name}"),

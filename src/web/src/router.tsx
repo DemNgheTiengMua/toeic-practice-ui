@@ -21,6 +21,9 @@ import { PricingPage } from './features/public/PricingPage';
 import { TermsPage } from './features/public/TermsPage';
 import { PrivacyPage } from './features/public/PrivacyPage';
 import { AccessDeniedPage } from './features/public/AccessDeniedPage';
+import { CertificatesStudioPage } from './features/admin/studio/CertificatesStudioPage';
+import { ExamsStudioPage } from './features/admin/studio/ExamsStudioPage';
+import { QuestionBankStudioPage } from './features/admin/studio/QuestionBankStudioPage';
 
 function PlaceholderView({ title, ticket }: { title: string; ticket: string }) {
   return (
@@ -180,9 +183,21 @@ const routeTree = rootRoute.addChildren([
   stubRoute('/instructor/sessions', 'Instructor sessions', '301'),
   stubRoute('/admin', 'Admin overview', '302'),
   stubRoute('/admin/users', 'People & audit', '302'),
-  stubRoute('/admin/certificates', 'Certificates studio', '303'),
-  stubRoute('/admin/exams', 'Exams studio', '303'),
-  stubRoute('/admin/question-bank', 'Question bank studio', '303'),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/admin/certificates',
+    component: CertificatesStudioPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/admin/exams',
+    component: ExamsStudioPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/admin/question-bank',
+    component: QuestionBankStudioPage,
+  }),
   stubRoute('/admin/finance', 'Finance & refunds', '304'),
   stubRoute('/admin/operations', 'Operations desk', '304'),
 ]);

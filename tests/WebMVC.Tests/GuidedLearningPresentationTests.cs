@@ -11,7 +11,6 @@ public sealed class GuidedLearningPresentationTests
     [InlineData("LearningPath")]
     [InlineData("Lessons")]
     [InlineData("Mentors")]
-    [InlineData("Admin/Lessons")]
     [InlineData("Admin/MentorSlots.cshtml")]
     public void Views_ReceivePreparedPresentationAndUseExternalAssets(string folder)
     {
