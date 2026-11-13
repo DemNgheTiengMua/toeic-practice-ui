@@ -13,7 +13,15 @@ public sealed record PlacementTakeViewModel(
     public bool HasPassage { get; } = !string.IsNullOrEmpty(Take.CurrentQuestion.Passage);
     public bool HasImage { get; } = !string.IsNullOrEmpty(Take.CurrentQuestion.ImagePath);
     public string ImageAlt { get; } = Take.CurrentQuestion.ImageAlt ?? "Question illustration";
-    public bool IsWriting { get; } = Take.CurrentQuestion.QuestionType is "free_response" or "writing";
+    public bool IsSpeaking { get; } = Take.CurrentQuestion.QuestionType is "free_response"
+        && Take.CurrentQuestion.Modality == ModalityDto.Speaking;
+    public bool IsWriting { get; } = Take.CurrentQuestion.QuestionType is "free_response" or "writing"
+        && Take.CurrentQuestion.Modality != ModalityDto.Speaking;
+    public bool HasSpeakingAudio { get; } = !string.IsNullOrEmpty(Take.CurrentQuestion.ResponseAudioPath);
+    public string SpeakingAudioUrl { get; } = $"/speaking/audio/{Take.AttemptId}/{Take.CurrentQuestion.QuestionId}";
+    public int PrepSeconds { get; } = Take.CurrentQuestion.PrepSeconds is > 0 ? Take.CurrentQuestion.PrepSeconds.Value : 15;
+    public int ResponseSeconds { get; } = Take.CurrentQuestion.ResponseSeconds is > 0 ? Take.CurrentQuestion.ResponseSeconds.Value : 30;
+    public string ResponseTimerText { get; } = FormatTimer(Take.CurrentQuestion.ResponseSeconds is > 0 ? Take.CurrentQuestion.ResponseSeconds.Value : 30);
     public string FlagButtonClass { get; } = Take.CurrentQuestion.IsFlagged ? "btn--primary" : "";
     public string FlagPressed { get; } = Take.CurrentQuestion.IsFlagged ? "true" : "false";
     public string FlagLabel { get; } = Take.CurrentQuestion.IsFlagged ? "Flagged for review" : "Flag for review";
@@ -194,6 +202,9 @@ public sealed record PlacementTakeViewModel(
             .ToArray();
     }
 
+    private static string FormatTimer(int seconds) =>
+        $"{seconds / 60:D2}:{seconds % 60:D2}";
+
     private static string BuildPageData(PlacementTakeViewDto take)
     {
         var question = take.CurrentQuestion;
@@ -205,13 +216,18 @@ public sealed record PlacementTakeViewModel(
         return JsonSerializer.Serialize(new
         {
             placementId = take.PlacementId,
+            attemptId = take.AttemptId,
             questionId = question.QuestionId,
             displayOrder = question.DisplayOrder,
             isFlagged = question.IsFlagged,
             totalQuestions = take.TotalQuestions,
             answeredCount = take.AnsweredCount,
             progressPercent = GetProgressPercent(take),
-            audioKey
+            audioKey,
+            isSpeaking = question.QuestionType == "free_response" && question.Modality == ModalityDto.Speaking,
+            prepSeconds = question.PrepSeconds is > 0 ? question.PrepSeconds.Value : 15,
+            responseSeconds = question.ResponseSeconds is > 0 ? question.ResponseSeconds.Value : 30,
+            hasSpeakingAudio = !string.IsNullOrEmpty(question.ResponseAudioPath)
         });
     }
 

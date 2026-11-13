@@ -9,6 +9,13 @@
   let draftDirty = false;
   let draftSaveTimeout = null;
   let draftRequest = null;
+  let speakingRecorder = null;
+  let speakingStream = null;
+  let speakingChunks = [];
+  let speakingStartedAt = 0;
+  let speakingRemaining = 0;
+  let speakingTimerTimeout = null;
+  let speakingUploadRequest = null;
   // Answer saves still in flight; leaving a locked part waits for them (see leaveLockedPart).
   const pendingAnswers = new Set();
   // #216 / PLC-17: answers written while offline live here, per placement, and are flushed on the
@@ -200,6 +207,161 @@
     return draftRequest;
   }
 
+  function formatClock(sec) {
+    const safe = Math.max(0, Math.floor(Number(sec) || 0));
+    const m = Math.floor(safe / 60);
+    const s = safe % 60;
+    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  function setSpeakingViewState(state) {
+    const idle = q("#speaking-state-idle");
+    const rec = q("#speaking-state-recording");
+    const up = q("#speaking-state-uploading");
+    const done = q("#speaking-state-recorded");
+    const btnStart = q("#btn-start-speaking-record");
+    const btnStop = q("#btn-stop-speaking-record");
+    const btnAgain = q("#btn-record-speaking-again");
+    if (idle) idle.hidden = state !== "idle";
+    if (rec) rec.hidden = state !== "recording";
+    if (up) up.hidden = state !== "uploading";
+    if (done) done.hidden = state !== "recorded";
+    if (btnStart) btnStart.hidden = state !== "idle";
+    if (btnStop) btnStop.hidden = state !== "recording";
+    if (btnAgain) btnAgain.hidden = state !== "recorded";
+  }
+
+  function stopSpeakingStream() {
+    if (speakingTimerTimeout) {
+      clearTimeout(speakingTimerTimeout);
+      speakingTimerTimeout = null;
+    }
+    if (speakingStream) {
+      try { speakingStream.getTracks().forEach(track => track.stop()); } catch (_) { }
+      speakingStream = null;
+    }
+  }
+
+  async function startSpeakingRecording() {
+    const banner = q("#permission-blocked-banner");
+    const detail = q("#permission-blocked-detail");
+    if (banner) banner.hidden = true;
+    const capture = (window.EeAudioGate && typeof window.EeAudioGate.acquire === "function")
+      ? await window.EeAudioGate.acquire(true)
+      : { ok: false, reason: "unsupported" };
+    if (!capture.ok) {
+      if (banner) banner.hidden = false;
+      if (detail) {
+        detail.textContent = capture.reason === "unsupported"
+          ? "This browser cannot record audio. Use a current version of Chrome, Edge, Firefox or Safari."
+          : "The microphone was not allowed before this sitting started. Enable it on the equipment check page and reopen the sitting.";
+      }
+      setStatus("Microphone blocked", "save-status save-status--error");
+      return;
+    }
+
+    stopSpeakingStream();
+    speakingStream = capture.stream;
+    speakingChunks = [];
+    const totalSeconds = Number(config.responseSeconds) > 0 ? Number(config.responseSeconds) : 30;
+    speakingRemaining = totalSeconds;
+    const timerEl = q("#speaking-record-timer");
+    const progressEl = q("#speaking-record-progress");
+    if (timerEl) timerEl.textContent = formatClock(speakingRemaining);
+    if (progressEl) progressEl.style.width = "0%";
+
+    setSpeakingViewState("recording");
+    setStatus("Recording…", "save-status save-status--pending");
+
+    const targetQuestionId = config.questionId;
+    speakingRecorder = new MediaRecorder(speakingStream);
+    speakingRecorder.addEventListener("dataavailable", evt => {
+      if (evt.data && evt.data.size > 0) speakingChunks.push(evt.data);
+    });
+    speakingRecorder.addEventListener("stop", () => {
+      const limitMs = totalSeconds * 1000;
+      const elapsedMs = Math.min(limitMs, Math.max(1000, Date.now() - speakingStartedAt));
+      const blob = new Blob(speakingChunks, { type: speakingChunks[0]?.type || "audio/webm" });
+      stopSpeakingStream();
+      speakingRecorder = null;
+      uploadSpeakingRecording(targetQuestionId, blob, elapsedMs);
+    }, { once: true });
+
+    speakingStartedAt = Date.now();
+    speakingRecorder.start();
+
+    function tickRecording() {
+      speakingRemaining--;
+      if (timerEl) timerEl.textContent = formatClock(speakingRemaining);
+      if (progressEl) {
+        const pct = Math.min(100, Math.round(((totalSeconds - speakingRemaining) / totalSeconds) * 100));
+        progressEl.style.width = pct + "%";
+      }
+      if (speakingRemaining <= 0) {
+        stopSpeakingRecording();
+      } else {
+        speakingTimerTimeout = setTimeout(tickRecording, 1000);
+      }
+    }
+    speakingTimerTimeout = setTimeout(tickRecording, 1000);
+  }
+
+  function stopSpeakingRecording() {
+    if (speakingTimerTimeout) {
+      clearTimeout(speakingTimerTimeout);
+      speakingTimerTimeout = null;
+    }
+    if (speakingRecorder && speakingRecorder.state === "recording") {
+      speakingRecorder.stop();
+    } else {
+      stopSpeakingStream();
+    }
+  }
+
+  function uploadSpeakingRecording(questionId, blob, durationMs) {
+    setSpeakingViewState("uploading");
+    setStatus("Saving recording…", "save-status save-status--pending");
+    const formData = new FormData();
+    formData.append("attemptId", String(config.attemptId));
+    formData.append("questionId", String(questionId));
+    formData.append("audioFile", blob, "speaking-q" + questionId + ".webm");
+    formData.append("durationMs", String(Math.round(durationMs)));
+    formData.append("__RequestVerificationToken", token);
+
+    const player = q("#speaking-audio-player");
+    const previewUrl = URL.createObjectURL(blob);
+    if (player) player.src = previewUrl;
+
+    speakingUploadRequest = fetch("/speaking/upload-audio", {
+      method: "POST",
+      body: formData
+    }).then(async response => {
+      if (!response.ok) throw new Error("Speaking audio upload failed with status " + response.status);
+      const cell = q("#nav-cell-" + questionId);
+      if (cell && !cell.classList.contains("is-answered")) {
+        answeredCount++;
+        cell.classList.add("is-answered");
+        cell.classList.remove("is-unanswered");
+        updateProgress();
+      }
+      const titleEl = q("#speaking-recorded-title");
+      if (titleEl) titleEl.textContent = "Recorded (" + Math.round(durationMs / 1000) + "s)";
+      setSpeakingViewState("recorded");
+      paintSyncStatus("Recording saved");
+      return true;
+    }).catch(error => {
+      console.error(error);
+      const titleEl = q("#speaking-recorded-title");
+      if (titleEl) titleEl.textContent = "Recording not saved — record again to retry";
+      setSpeakingViewState("recorded");
+      setStatus("Recording upload failed", "save-status save-status--error");
+      return false;
+    }).finally(() => {
+      speakingUploadRequest = null;
+    });
+    return speakingUploadRequest;
+  }
+
   function restorePlacementAudio() {
     const player = q('.exam-audio[data-mode="exam"]');
     if (!player) return;
@@ -253,6 +415,10 @@
     // A move that does not happen leaves the question on screen. On Back/forward the browser has
     // already changed the address bar, so put it back on that question.
     const stay = () => syncUrl(config.displayOrder, true);
+    if (speakingRecorder && speakingRecorder.state === "recording") {
+      stopSpeakingRecording();
+    }
+    if (speakingUploadRequest && !(await speakingUploadRequest)) { stay(); return; }
     if (draftDirty && !(await saveDraftNow())) { stay(); return; }
     // #216 / PLC-17: a move between questions is not a server-dependent boundary, but the queue is
     // flushed first so the next question's header count is real. A failed flush does not block the
@@ -287,6 +453,7 @@
       syncUrl(config.displayOrder, true);
       return;
     }
+    stopSpeakingStream();
     dynamic.replaceChildren(fragment.content);
     config = confirmed;
     isFlagged = config.isFlagged;
@@ -327,6 +494,14 @@
       postAnswer(q(".js-option-radio:checked")?.value || null, isFlagged);
       return;
     }
+    if (event.target.closest("#btn-start-speaking-record") || event.target.closest("#btn-record-speaking-again")) {
+      startSpeakingRecording();
+      return;
+    }
+    if (event.target.closest("#btn-stop-speaking-record")) {
+      stopSpeakingRecording();
+      return;
+    }
     const saveDraft = event.target.closest("#btn-save-writing-draft");
     if (saveDraft) saveDraftNow();
     const openModal = event.target.closest(".js-open-submit-modal");
@@ -355,8 +530,12 @@
 
   // Capped, so a hung save never traps the candidate on the last question of a locked part.
   function settlePendingAnswers() {
+    if (speakingRecorder && speakingRecorder.state === "recording") {
+      stopSpeakingRecording();
+    }
     const inFlight = Array.from(pendingAnswers);
     if (draftRequest) inFlight.push(draftRequest);
+    if (speakingUploadRequest) inFlight.push(speakingUploadRequest);
     if (localQueue.length > 0) inFlight.push(flushQueue());
     if (inFlight.length === 0) return Promise.resolve();
     return Promise.race([

@@ -502,5 +502,57 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
         Assert.Equal(2, blockedRewindToQ1.CurrentQuestion.DisplayOrder);
     }
 
+    [Fact]
+    public async Task GetAttemptTake_Allows_StepByStep_Forward_Advance_In_SystemPacedAuto_While_Blocking_Skips_And_Rewinds()
+    {
+        var certCode = Unique("SSM9");
+        var (certId, examId, _, _, q1Id, q2Id) = await SeedTwoSkillExamAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+
+        await using (var seedDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            var sectionId = await seedDb.ExamItems.AsNoTracking()
+                .Where(i => i.ExamItemId == q1Id)
+                .Select(i => i.SectionId)
+                .SingleAsync();
+
+            await seedDb.Database.ExecuteSqlAsync(
+                $"UPDATE Sections SET NavigationMode = 'SYSTEM_PACED_AUTO' WHERE SectionId = {sectionId}");
+
+            var secondSkillItem = await seedDb.ExamItems
+                .Where(i => i.ExamItemId == q2Id)
+                .SingleAsync();
+            secondSkillItem.DisplayOrder = 4;
+            await seedDb.SaveChangesAsync();
+
+            await PoolFixture.AddMcqAsync(
+                seedDb, examId, certId, sectionId, "listening", "System Paced Q2", displayOrder: 2);
+            await PoolFixture.AddMcqAsync(
+                seedDb, examId, certId, sectionId, "listening", "System Paced Q3", displayOrder: 3);
+        }
+
+        var engine = CreateEngine();
+        var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 75);
+
+        // Jumping ahead past Q2 directly to Q3 is blocked in SYSTEM_PACED_AUTO
+        var blockedSkipToQ3 = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, questionDisplayOrder: 3);
+        Assert.Equal(1, blockedSkipToQ3.CurrentQuestion.DisplayOrder);
+
+        // Advancing one question forward (Q1 -> Q2) succeeds and persists position
+        var advancedToQ2 = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, questionDisplayOrder: 2);
+        Assert.Equal(2, advancedToQ2.CurrentQuestion.DisplayOrder);
+
+        var reloadedAtQ2 = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, questionDisplayOrder: null);
+        Assert.Equal(2, reloadedAtQ2.CurrentQuestion.DisplayOrder);
+
+        // Rewinding from Q2 back to Q1 is blocked
+        var blockedRewindToQ1 = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, questionDisplayOrder: 1);
+        Assert.Equal(2, blockedRewindToQ1.CurrentQuestion.DisplayOrder);
+
+        // Advancing one question forward (Q2 -> Q3) succeeds
+        var advancedToQ3 = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, questionDisplayOrder: 3);
+        Assert.Equal(3, advancedToQ3.CurrentQuestion.DisplayOrder);
+    }
+
     private CompanionDbContext db() => DbContextFactory.Create(database.ConnectionString);
 }

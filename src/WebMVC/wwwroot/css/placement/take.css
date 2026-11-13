@@ -39,3 +39,11 @@
 .resume-facts__row dd { margin: 0; }
 .resume-skill--done th { color: #0a6b3c; }
 .resume-skill--active th { color: #0b4ea2; }
+
+/* Suppress the arrival fill-in animation on the sidebar progress bar so switching questions never
+   replays the 0->current sweep. */
+#progress-bar, #speaking-record-progress { animation: none; }
+#speaking-record-progress { width: 0%; }
+#placement-take-dynamic [hidden] { display: none !important; }
+.speaking-playback { margin-top: var(--space-3); }
+.speaking-audio-element { width: 100%; border: 1px solid #14181d; border-radius: 0; background: #fff; }

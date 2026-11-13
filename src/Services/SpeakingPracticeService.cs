@@ -30,6 +30,9 @@ public sealed class SpeakingPracticeService(
     private async Task<List<SittingQuestion>> LoadPaperPositionsAsync(int examId, CancellationToken cancellationToken) =>
         await new AttemptEngine(db, fileStore).LoadSittingQuestionsAsync(examId, cancellationToken);
 
+    private async Task<List<SittingQuestion>> LoadPaperPositionsAsync(int examId, int? attemptId, CancellationToken cancellationToken) =>
+        await new AttemptEngine(db, fileStore).LoadSittingQuestionsAsync(examId, attemptId, cancellationToken);
+
     public async Task<SpeakingPracticeInstructionsView> GetInstructionsAsync(int userId, int examId, CancellationToken cancellationToken = default)
     {
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
@@ -345,7 +348,7 @@ public sealed class SpeakingPracticeService(
         // so this query found nothing and every audio upload was refused with "question 36 not found in
         // this exam" - the whole speaking flow was unusable on the pool. The same roster read the take
         // page uses answers it.
-        var positions = await LoadPaperPositionsAsync(attempt.ExamId, cancellationToken);
+        var positions = await LoadPaperPositionsAsync(attempt.ExamId, attempt.AttemptId, cancellationToken);
         var position = positions
             .FirstOrDefault(p => p.Id == questionId
                 && p.RenderFormat == QuestionType.FreeResponse.ToCode()
@@ -415,6 +418,17 @@ public sealed class SpeakingPracticeService(
             {
                 await fileStore.DeleteAudioAsync(oldAudioPath, cancellationToken);
             }
+        }
+
+        attempt.CurrentExamItemId = position.ExamItemId;
+        var purpose = await db.Exams.AsNoTracking()
+            .Where(e => e.ExamId == attempt.ExamId)
+            .Select(e => e.Purpose)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (purpose is not null && !PlacementSitting.HasCountdown(purpose))
+        {
+            attempt.LastActivityAt = now;
+            attempt.ExpiresAt = PlacementSitting.ExpiresAt(attempt.StartedAt, now);
         }
 
         await db.SaveChangesAsync(cancellationToken);

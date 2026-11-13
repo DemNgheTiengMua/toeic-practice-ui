@@ -39,7 +39,72 @@
     @Model.Question.Stem
   </p>
 
-  @if (Model.IsWriting)
+  @if (Model.IsSpeaking)
+  {
+    <div id="speaking-response-pane" class="card mt-3" data-question-id="@Model.Question.QuestionId">
+      <div class="card__header">
+        <div class="row row--between">
+          <strong>Your spoken response</strong>
+          <span class="badge badge--muted font-mono">Prep @(Model.PrepSeconds)s · Speak @(Model.ResponseSeconds)s</span>
+        </div>
+      </div>
+      <div class="card__body stack">
+        <div id="permission-blocked-banner" class="alert alert--danger" role="alert" hidden>
+          <strong>Microphone blocked — this screen cannot ask.</strong>
+          <span id="permission-blocked-detail"></span>
+        </div>
+
+        <div class="state-block" id="speaking-state-idle" @(Model.HasSpeakingAudio ? "hidden" : null)>
+          <div class="state-block__icon" aria-hidden="true">READY</div>
+          <div class="state-block__title">Record your spoken response</div>
+          <p class="state-block__desc">Read the prompt above. When you are ready, start recording and speak clearly into your microphone.</p>
+          <span class="timer" role="timer" aria-label="Speaking time limit">
+            <span class="text-sm text-muted">Response window</span>
+            <span class="timer__value" id="speaking-limit-timer">@Model.ResponseTimerText</span>
+          </span>
+        </div>
+
+        <div class="state-block" id="speaking-state-recording" hidden>
+          <div class="state-block__icon state-block__icon--danger" role="status">RECORDING</div>
+          <div class="state-block__title">Speak now</div>
+          <p class="state-block__desc">Speak into your microphone clearly. Recording stops automatically when speaking time ends.</p>
+          <span class="timer timer--critical" role="timer" aria-label="Speaking time left">
+            <span class="text-sm">Time left</span>
+            <span class="timer__value" id="speaking-record-timer">@Model.ResponseTimerText</span>
+          </span>
+          <div class="progress mt-4">
+            <div class="progress__bar progress__bar--danger" id="speaking-record-progress"></div>
+          </div>
+        </div>
+
+        <div class="state-block" id="speaking-state-uploading" hidden>
+          <div class="state-block__icon" aria-hidden="true">UPLOADING</div>
+          <div class="state-block__title">Saving your recording…</div>
+          <p class="state-block__desc">Uploading your audio file to storage. Do not close the window.</p>
+        </div>
+
+        <div class="state-block" id="speaking-state-recorded" @(Model.HasSpeakingAudio ? null : "hidden")>
+          <div class="state-block__icon state-block__icon--success" aria-hidden="true">RECORDED</div>
+          <div class="state-block__title" id="speaking-recorded-title">Answer recorded</div>
+          <p class="state-block__desc" id="speaking-recorded-desc">Your spoken response is saved. Listen to your recording below, record again to replace it, or move to the next question.</p>
+          <div class="speaking-playback">
+            <audio id="speaking-audio-player" controls preload="metadata" src="@(Model.HasSpeakingAudio ? Model.SpeakingAudioUrl : null)" class="speaking-audio-element"></audio>
+          </div>
+        </div>
+      </div>
+      <div class="card__footer">
+        <div class="row row--between row--middle">
+          <div class="row take-gap-2">
+            <button type="button" class="btn btn--primary" id="btn-start-speaking-record" @(Model.HasSpeakingAudio ? "hidden" : null)>Start recording</button>
+            <button type="button" class="btn btn--danger" id="btn-stop-speaking-record" hidden>Stop recording</button>
+            <button type="button" class="btn" id="btn-record-speaking-again" @(Model.HasSpeakingAudio ? null : "hidden")>Record again</button>
+          </div>
+          <span class="text-xs text-muted" id="speaking-record-hint">Recording again replaces your previous take.</span>
+        </div>
+      </div>
+    </div>
+  }
+  else if (Model.IsWriting)
   {
     <div id="writing-response-pane" class="stack mt-3">
       <label for="writing-editor"><strong>Your response</strong></label>

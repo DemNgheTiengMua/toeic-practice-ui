@@ -321,7 +321,7 @@ public sealed partial class AttemptEngine
             bool phaseOrGroupLocked = !unlockNavigation && IsPhaseOrUnitOrGroupLocked(attempt, requestedQuestion);
             bool blockedBySystemPaced = !unlockNavigation
                 && string.Equals(currentSavedQuestion.Section.NavigationMode, "SYSTEM_PACED_AUTO", StringComparison.OrdinalIgnoreCase)
-                && requestedIndex != savedIndex;
+                && (requestedIndex < savedIndex || requestedIndex > savedIndex + 1);
             bool blockedByOneWayAudio = !unlockNavigation
                 && string.Equals(currentSavedQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase)
                 && requestedIndex < minAllowedAudioIndex;
@@ -332,7 +332,9 @@ public sealed partial class AttemptEngine
                 if (persistPosition
                     && attempt.Status == AttemptStatus.InProgress.ToCode()
                     && targetIndex > savedIndex
-                    && string.Equals(requestedQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase))
+                    && (string.Equals(requestedQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(requestedQuestion.Section.NavigationMode, "SYSTEM_PACED_AUTO", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(currentSavedQuestion.Section.NavigationMode, "SYSTEM_PACED_AUTO", StringComparison.OrdinalIgnoreCase)))
                 {
                     RecordLastPosition(attempt, requestedQuestion);
                     await db.SaveChangesAsync(cancellationToken);

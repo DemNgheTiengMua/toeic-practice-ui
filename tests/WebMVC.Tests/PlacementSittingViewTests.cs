@@ -281,13 +281,25 @@ public sealed class PlacementSittingViewTests
     }
 
     [Theory]
-    [InlineData("writing", true)]
-    [InlineData("free_response", true)]
-    [InlineData("mcq", false)]
-    public void Model_keeps_writing_and_optional_content_visibility(string questionType, bool writing)
+    [InlineData("writing", ModalityDto.Writing, true, false)]
+    [InlineData("free_response", ModalityDto.Writing, true, false)]
+    [InlineData("free_response", ModalityDto.Speaking, false, true)]
+    [InlineData("mcq", ModalityDto.Listening, false, false)]
+    public void Model_distinguishes_speaking_and_writing_free_response_questions(
+        string questionType, ModalityDto modality, bool writing, bool speaking)
     {
-        var model = new PlacementTakeViewModel(Take(Question() with { QuestionType = questionType }));
+        var model = new PlacementTakeViewModel(Take(Question() with
+        {
+            QuestionType = questionType,
+            Modality = modality,
+            PrepSeconds = 30,
+            ResponseSeconds = 45
+        }));
         Assert.Equal(writing, model.IsWriting);
+        Assert.Equal(speaking, model.IsSpeaking);
+        Assert.Equal(30, model.PrepSeconds);
+        Assert.Equal(45, model.ResponseSeconds);
+        Assert.Equal("00:45", model.ResponseTimerText);
         Assert.False(model.HasPassage);
         Assert.False(model.HasImage);
         Assert.Equal("Question illustration", model.ImageAlt);
@@ -295,6 +307,26 @@ public sealed class PlacementSittingViewTests
         Assert.Empty(model.Phases);
         Assert.False(model.ShowPhases);
         Assert.Empty(model.NavigatorGroups);
+    }
+
+    [Fact]
+    public void Speaking_question_markup_script_and_styles_provide_recorder_and_suppress_progress_replay()
+    {
+        var root = TestPathHelper.FindRepoRoot();
+        var questionPartial = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "Views", "Placement", "_TakeQuestion.cshtml"));
+        Assert.Contains("Model.IsSpeaking", questionPartial);
+        Assert.Contains("id=\"speaking-response-pane\"", questionPartial);
+        Assert.Contains("id=\"btn-start-speaking-record\"", questionPartial);
+        Assert.Contains("id=\"btn-stop-speaking-record\"", questionPartial);
+        Assert.Contains("id=\"speaking-audio-player\"", questionPartial);
+
+        var script = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "js", "placement", "take.js"));
+        Assert.Contains("/speaking/upload-audio", script);
+        Assert.Contains("EeAudioGate", script);
+
+        var css = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "css", "placement", "take.css"));
+        Assert.Contains("#progress-bar", css);
+        Assert.Contains("animation: none", css);
     }
 
     [Fact]
