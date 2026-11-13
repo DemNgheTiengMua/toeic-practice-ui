@@ -43,13 +43,32 @@ public sealed class PlacementController(
     [HttpPost("/placement/start")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Start(
-        [FromForm] int examId, CancellationToken cancellationToken, [FromForm] bool reuseValidSkills = false)
+        [FromForm] int examId,
+        CancellationToken cancellationToken,
+        [FromForm] bool reuseValidSkills = false,
+        [FromForm] PlacementScopeDto? scope = null,
+        [FromForm] string? idempotencyKey = null,
+        [FromForm] bool fromPreflight = false)
     {
+        if (fromPreflight && scope is null)
+        {
+            TempData["ErrorMessage"] = "Choose which skills to measure before confirming.";
+            return RedirectToAction(nameof(Preflight), new { examId });
+        }
+
         try
         {
+            var effectiveScope = scope ?? PlacementScopeDto.AllSkills;
             var response = await api.StartPlacementTestAsync(
-                new StartPlacementTestRequest(examId, reuseValidSkills), cancellationToken);
+                new StartPlacementTestRequest(examId, reuseValidSkills, effectiveScope, idempotencyKey),
+                cancellationToken);
             return RedirectToAction(nameof(Take), new { placementId = response.PlacementId });
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.InsufficientCredits || ex.Status == 402)
+        {
+            logger.LogInformation(ex, "Placement retake refused due to insufficient credits for exam {ExamId}", examId);
+            TempData["ErrorMessage"] = ex.Detail ?? "You do not have enough credits for that placement scope. Buy more credits or choose Listening and Reading only.";
+            return RedirectToAction(nameof(Preflight), new { examId });
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.PlacementCooldown)
         {
@@ -72,16 +91,17 @@ public sealed class PlacementController(
     }
 
     /// <summary>
-    /// #213 / SCR-PL-01: the preflight. It is a read — it does not start a sitting — so a learner can
-    /// look at what will be measured and what would be carried over before committing to either.
+    /// #213 / SCR-PL-01, #290: the confirmation &amp; preflight screen. It is a read — it does not
+    /// start a sitting — so a learner can compare scopes, prices, left-out skills, and credit balance
+    /// before committing.
     /// </summary>
     [HttpGet("/placement/preflight")]
-    public async Task<IActionResult> Preflight(CancellationToken cancellationToken)
+    public async Task<IActionResult> Preflight(CancellationToken cancellationToken, [FromQuery] int? examId = null)
     {
         try
         {
             var gate = await api.GetPlacementGateAsync(cancellationToken);
-            return View(new PlacementPreflightPageViewModel(gate, TempData["ErrorMessage"] as string));
+            return View(new PlacementPreflightPageViewModel(gate, TempData["ErrorMessage"] as string, examId));
         }
         catch (ApiException ex)
         {

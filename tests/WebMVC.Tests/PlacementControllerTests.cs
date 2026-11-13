@@ -856,6 +856,131 @@ public sealed class PlacementControllerTests
         Assert.NotNull(model.Gate.CooldownUntil);
     }
 
+    [Fact]
+    public async Task Index_distinguishes_retake_and_in_progress_states()
+    {
+        var api = new TestApiClient
+        {
+            PlacementCatalog = new PlacementCatalogViewDto(
+                new CertificateOptionDto("TOEIC", "TOEIC"),
+                "B1",
+                "Intermediate",
+                650,
+                [new PlacementCatalogItemDto(1, 1, "TOEIC", "TOEIC Placement", "Diagnostic", 45, 20, true, null)],
+                ActivePlacementId: 77,
+                ActiveAttemptId: 101,
+                IsRetake: true)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Index(CancellationToken.None);
+
+        var model = Assert.IsType<PlacementSelectViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.True(model.IsRetake);
+        Assert.True(model.HasInProgress);
+        Assert.False(string.IsNullOrWhiteSpace(model.IdempotencyKey));
+    }
+
+    [Fact]
+    public async Task Start_forwards_scope_and_idempotency_key()
+    {
+        var api = new TestApiClient
+        {
+            StartPlacementResponse = new PlacementTestInfoDto(
+                55, 100, 1, PlacementStatusDto.InProgress, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(30), 1800, false)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Start(
+            examId: 2,
+            CancellationToken.None,
+            reuseValidSkills: true,
+            scope: PlacementScopeDto.ListeningAndReading,
+            idempotencyKey: "key-abc-123",
+            fromPreflight: true);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(PlacementController.Take), redirect.ActionName);
+        Assert.NotNull(api.LastStartRequest);
+        Assert.Equal(2, api.LastStartRequest!.ExamId);
+        Assert.True(api.LastStartRequest.ReuseValidSkills);
+        Assert.Equal(PlacementScopeDto.ListeningAndReading, api.LastStartRequest.Scope);
+        Assert.Equal("key-abc-123", api.LastStartRequest.IdempotencyKey);
+    }
+
+    [Fact]
+    public async Task Start_from_preflight_without_scope_redirects_back_to_preflight()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Start(
+            examId: 3,
+            CancellationToken.None,
+            reuseValidSkills: false,
+            scope: null,
+            idempotencyKey: "key-missing-scope",
+            fromPreflight: true);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(PlacementController.Preflight), redirect.ActionName);
+        Assert.Equal(3, redirect.RouteValues?["examId"]);
+        Assert.Null(api.LastStartRequest);
+        Assert.NotNull(controller.TempData["ErrorMessage"]);
+    }
+
+    [Fact]
+    public async Task Start_when_insufficient_credits_redirects_to_preflight_preserving_examId()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.InsufficientCredits, "Not enough credits", 402, "Short on credits")
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Start(
+            examId: 4,
+            CancellationToken.None,
+            reuseValidSkills: false,
+            scope: PlacementScopeDto.AllSkills,
+            idempotencyKey: "key-402",
+            fromPreflight: true);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(PlacementController.Preflight), redirect.ActionName);
+        Assert.Equal(4, redirect.RouteValues?["examId"]);
+        Assert.Equal("Short on credits", controller.TempData["ErrorMessage"]);
+    }
+
+    [Fact]
+    public async Task Preflight_exposes_effective_examId_and_scope_affordability_flags()
+    {
+        var api = new TestApiClient
+        {
+            PlacementGate = Gate(startable: true, offers: []) with
+            {
+                ExamId = 10,
+                IsRetake = true,
+                AllSkillsRetakeCredits = 5,
+                ListeningAndReadingRetakeCredits = 3,
+                CreditBalance = 4
+            }
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Preflight(CancellationToken.None, examId: 12);
+
+        var model = Assert.IsType<PlacementPreflightPageViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal(12, model.EffectiveExamId);
+        Assert.True(model.IsRetake);
+        Assert.True(model.CanConfirmAnyScope);
+        Assert.False(model.IsShortForAllScopes);
+        Assert.True(model.IsShortForSomeScope);
+        Assert.False(model.CanConfirmScope(PlacementScopeDto.AllSkills));
+        Assert.True(model.CanConfirmScope(PlacementScopeDto.ListeningAndReading));
+        Assert.Equal(2, model.ScopeChoices.Count);
+    }
+
     private static PlacementPreflightViewDto Gate(bool startable, List<PlacementSkillOfferDto> offers) =>
         new(1, "TOEIC", 10, offers, null, false, offers.Any(o => o.CanReuse), startable, false, offers.Any(o => o.RequiresAudio));
 
@@ -932,6 +1057,7 @@ public sealed class PlacementControllerTests
         public TargetBandViewDto? TargetBandView { get; set; }
         public SetTargetBandResultDto? SetTargetBandResult { get; set; }
         public SubmitPlacementTestRequest? LastSubmitRequest { get; set; }
+        public StartPlacementTestRequest? LastStartRequest { get; private set; }
 
         public Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PlacementCatalogViewDto>(ExceptionToThrow) : Task.FromResult(PlacementCatalog!);
@@ -944,8 +1070,11 @@ public sealed class PlacementControllerTests
                 ? Task.FromException<PlacementPreflightViewDto>(ExceptionToThrow)
                 : Task.FromResult(PlacementGate!);
 
-        public Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<PlacementTestInfoDto>(ExceptionToThrow) : Task.FromResult(StartPlacementResponse!);
+        public Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, CancellationToken cancellationToken = default)
+        {
+            LastStartRequest = request;
+            return ExceptionToThrow != null ? Task.FromException<PlacementTestInfoDto>(ExceptionToThrow) : Task.FromResult(StartPlacementResponse!);
+        }
 
         public Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder = null, CancellationToken cancellationToken = default)
         {

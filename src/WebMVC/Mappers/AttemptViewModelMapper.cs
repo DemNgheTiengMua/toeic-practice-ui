@@ -77,34 +77,49 @@ internal static class AttemptViewModelMapper
         string? error, AiInsightDto? insight, ILogger? logger = null)
     {
         var log = logger ?? NullLogger.Instance;
-        var bands = result.CefrBands
+        var isTwoSkill = result.Scope == PlacementScopeDto.ListeningAndReading;
+        var scopedResult = isTwoSkill
+            ? result with
+            {
+                SkillScores = result.SkillScores
+                    .Where(s => s.SkillName is "Listening" or "Reading")
+                    .ToList(),
+                SkillResults = result.SkillResults?
+                    .Where(s => s.SkillName is "Listening" or "Reading")
+                    .ToList()
+            }
+            : result;
+        var bands = scopedResult.CefrBands
             .OrderBy(b => b.MinTotal)
             .Select(b => new PlacementBandColumnViewModel(b.Code, b.Name, b.MinTotal, b.MaxTotal))
             .ToList();
-        var rows = PlacementHorizon.Build(result, bands, dates, log);
+        var rows = PlacementHorizon.Build(scopedResult, bands, dates, log);
 
-        return new(result, error, insight)
+        return new(scopedResult, error, insight)
         {
-            TakenAtDisplay = dates.FormatCustom(result.TakenAt, "d MMMM yyyy"),
-            IsAwaitingGrading = !result.IsGraded,
+            TakenAtDisplay = dates.FormatCustom(scopedResult.TakenAt, "d MMMM yyyy"),
+            IsAwaitingGrading = !scopedResult.IsGraded,
             // #152: same rule as the mock result — stored tenths are divided at the edge.
-            TotalScoreDisplay = result.IsGraded ? ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor) : "—",
-            ScoreSummary = result.IsGraded
-                ? $"{ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor)} points · {result.ResultBandName} level"
+            TotalScoreDisplay = scopedResult.IsGraded ? ScoreDisplay.Format(scopedResult.TotalScore, scopedResult.ScoreDisplayFactor) : "—",
+            ScoreSummary = scopedResult.IsGraded
+                ? $"{ScoreDisplay.Format(scopedResult.TotalScore, scopedResult.ScoreDisplayFactor)} points · {scopedResult.ResultBandName} level"
                 : "Composite score pending AI grading",
-            MaximumScore = result.CefrBands.Count > 0
-                ? ScoreDisplay.Format(result.CefrBands.Max(b => b.MaxTotal), result.ScoreDisplayFactor)
+            MaximumScore = scopedResult.CefrBands.Count > 0
+                ? ScoreDisplay.Format(scopedResult.CefrBands.Max(b => b.MaxTotal), scopedResult.ScoreDisplayFactor)
                 // #161: no bands means no declared ceiling. The page says so; inventing 990 made every
                 // certificate without band data look like a TOEIC paper scored out of 990.
                 : "",
-            Skills = result.SkillScores,
-            SkillResults = result.SkillResults ?? [],
+            ScopeNotice = isTwoSkill
+                ? "This sitting covered 2 skills (Listening and Reading). Speaking and Writing were not attempted; any previous measurements for those skills survive untouched."
+                : null,
+            Skills = scopedResult.SkillScores,
+            SkillResults = scopedResult.SkillResults ?? [],
             Bands = bands,
             Rows = rows,
             MeasuredRows = rows.Where(r => r.IsMeasured).ToList(),
             Floor = Floor(rows, bands, rows.Any(r => r.State == "grading")),
             Dates = dates,
-            RetryUrl = $"/placement/result/{result.PlacementId}/retry"
+            RetryUrl = $"/placement/result/{scopedResult.PlacementId}/retry"
         };
     }
 
