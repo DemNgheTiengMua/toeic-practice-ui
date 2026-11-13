@@ -412,6 +412,331 @@ export interface PlacementPreflightViewDto {
 }
 
 // ============================================================================
+// Admin Finance & Operations DTOs (#304)
+// ============================================================================
+
+export type OrderStatusDto = 'pending' | 'reconciling' | 'paid' | 'failed' | 'expired';
+export type PaymentGatewayDto = 'payos' | 'mock';
+export type PaymentEventSourceDto = 'webhook' | 'status_query' | 'return_redirect' | 'cancel';
+export type GatewayStatusDto = 'pending' | 'paid' | 'failed' | 'expired' | 'cancelled';
+
+export interface AdminOrderDto {
+  orderId: number;
+  orderCode: string;
+  paymentNo: number;
+  userId: number;
+  userEmail: string;
+  userFullName?: string | null;
+  packageId: number;
+  packageName: string;
+  credits: number;
+  amount: number;
+  status: OrderStatusDto;
+  gateway: PaymentGatewayDto;
+  gatewayTxnRef?: string | null;
+  gatewayErrorCode?: string | null;
+  createdAt: string;
+  paidAt?: string | null;
+}
+
+export interface AdminPaymentEventDto {
+  eventId: number;
+  orderId: number;
+  source: PaymentEventSourceDto;
+  reportedStatus?: GatewayStatusDto | null;
+  signatureValid: boolean;
+  wasApplied: boolean;
+  note?: string | null;
+  payload?: string | null;
+  createdAt: string;
+}
+
+export interface AdminOrderDetailDto {
+  order: AdminOrderDto;
+  events: AdminPaymentEventDto[];
+}
+
+export interface AdminOrdersSummaryDto {
+  orders: AdminOrderDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  paidThisMonthCount: number;
+  paidThisMonthAmount: number;
+  reconcilingCount: number;
+  failedOrExpiredCount: number;
+}
+
+export type RefundMethodDto = 'money' | 'credit';
+export type RefundStatusDto = 'requested' | 'approved' | 'settled' | 'rejected';
+
+export interface AdminRefundListItemDto {
+  refundId: number;
+  userId: number;
+  learnerName: string;
+  learnerEmail: string;
+  method: RefundMethodDto;
+  status: RefundStatusDto;
+  creditCount: number;
+  reason: string;
+  orderId?: number | null;
+  orderCode?: string | null;
+  createdAt: string;
+  decidedAt?: string | null;
+  amount: number;
+  settledAt?: string | null;
+}
+
+export interface AdminRefundDetailDto {
+  refundId: number;
+  userId: number;
+  learnerName: string;
+  learnerEmail: string;
+  method: RefundMethodDto;
+  status: RefundStatusDto;
+  creditCount: number;
+  reason: string;
+  orderId?: number | null;
+  orderCode?: string | null;
+  complaintId?: number | null;
+  createdAt: string;
+  requestedByUserId: number;
+  requestedByUserName?: string | null;
+  decidedByUserId?: number | null;
+  decidedByUserName?: string | null;
+  decidedAt?: string | null;
+  creditTxnId?: number | null;
+  grantedCredits?: number | null;
+  amount: number;
+  orderPaidAmount?: number | null;
+  settledByUserId?: number | null;
+  settledByUserName?: string | null;
+  settledAt?: string | null;
+}
+
+export interface AdminRefundsSummaryDto {
+  refunds: AdminRefundListItemDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  requestedCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  creditsRefundedTotal: number;
+}
+
+export interface RequestRefundRequest {
+  userId: number;
+  method: RefundMethodDto;
+  creditCount: number;
+  reason: string;
+  orderId?: number | null;
+  complaintId?: number | null;
+  amount?: number | null;
+}
+
+export interface RejectRefundRequest {
+  reason: string;
+}
+
+export interface AdminPackagesSummaryDto {
+  packages: PackageDto[];
+  packagesOnSale: number;
+  featuredCount: number;
+  totalOrdersSold: number;
+  totalRevenue: number;
+}
+
+export interface CreatePackageRequest {
+  name: string;
+  credits: number;
+  price: number;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  features?: string | null;
+  displayOrder?: number;
+}
+
+export interface UpdatePackageRequest {
+  name: string;
+  credits: number;
+  price: number;
+  isActive: boolean;
+  isFeatured: boolean;
+  features?: string | null;
+  displayOrder?: number;
+}
+
+export type ComplaintTypeDto =
+  | 'mentor_no_show'
+  | 'mentor_quality'
+  | 'grading_issue'
+  | 'technical_error'
+  | 'payment_issue';
+
+export type ComplaintStatusDto = 'open' | 'reviewing' | 'resolved';
+
+export interface AdminComplaintListItemDto {
+  complaintId: number;
+  userId: number;
+  learnerName: string;
+  learnerEmail: string;
+  type: ComplaintTypeDto;
+  subjectType: string;
+  subjectId: number;
+  subjectSummary: string;
+  status: ComplaintStatusDto;
+  createdAt: string;
+  resolvedAt?: string | null;
+}
+
+export interface AdminComplaintDetailDto {
+  complaintId: number;
+  userId: number;
+  learnerName: string;
+  learnerEmail: string;
+  type: ComplaintTypeDto;
+  reason: string;
+  status: ComplaintStatusDto;
+  subjectType: string;
+  subjectId: number;
+  subjectSummary: string;
+  subjectDetails?: string | null;
+  createdAt: string;
+  resolution?: string | null;
+  internalNotes?: string | null;
+  resolvedByUserId?: number | null;
+  resolvedByUserName?: string | null;
+  resolvedAt?: string | null;
+  resolvedByGrantTxnId?: number | null;
+  grantedCredits?: number | null;
+}
+
+export interface AdminComplaintsSummaryDto {
+  complaints: AdminComplaintListItemDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  pendingCount: number;
+  resolvedCount: number;
+  oldestPendingCreatedAt?: string | null;
+  oldestPendingId?: number | null;
+  oldestPendingType?: ComplaintTypeDto | null;
+}
+
+export interface ResolveComplaintRequest {
+  resolution: string;
+  internalNotes: string;
+  grantCredits?: number;
+}
+
+export interface UpdateComplaintStatusRequest {
+  status: ComplaintStatusDto;
+}
+
+export type MentorTypeDto = 'human' | 'ai';
+export type SlotStatusDto = 'open' | 'booked' | 'closed';
+
+export interface AdminMentorListItemDto {
+  mentorId: number;
+  userId?: number | null;
+  displayName: string;
+  type: MentorTypeDto;
+  certId: number;
+  certCode: string;
+  skillId?: number | null;
+  skillName?: string | null;
+  pricePerSlot: number;
+  priceCredits: number;
+  sessionMinutes: number;
+  avgRating?: number | null;
+  reviewCount: number;
+  totalSlotsCount: number;
+  openSlotsCount: number;
+  isActive: boolean;
+}
+
+export interface MentorSummaryDto {
+  mentorId: number;
+  userId?: number | null;
+  displayName: string;
+  bio?: string | null;
+  certId: number;
+  certCode: string;
+  certName: string;
+  skillId?: number | null;
+  skillCode?: string | null;
+  skillName?: string | null;
+  modality?: string | null;
+  type: string;
+  pricePerSlot: number;
+  priceCredits: number;
+  headline?: string | null;
+  expertise?: string | null;
+  sessionMinutes: number;
+  isActive: boolean;
+  avgRating?: number | null;
+  reviewCount: number;
+}
+
+export interface AdminMentorSlotDto {
+  slotId: number;
+  mentorId: number;
+  startAt: string;
+  endAt: string;
+  status: SlotStatusDto;
+}
+
+export interface CreateMentorProfileRequest {
+  userId?: number | null;
+  displayName: string;
+  bio?: string | null;
+  certId: number;
+  skillId?: number | null;
+  type: MentorTypeDto;
+  pricePerSlot: number;
+  priceCredits: number;
+  headline?: string | null;
+  expertise?: string | null;
+  sessionMinutes: number;
+  isActive: boolean;
+}
+
+export interface UpdateMentorProfileRequest {
+  userId?: number | null;
+  displayName: string;
+  bio?: string | null;
+  certId: number;
+  skillId?: number | null;
+  pricePerSlot: number;
+  priceCredits: number;
+  headline?: string | null;
+  expertise?: string | null;
+  sessionMinutes: number;
+  isActive: boolean;
+}
+
+export interface CreateMentorSlotRequest {
+  localStartAt: string;
+  localEndAt?: string | null;
+  timeZoneId?: string | null;
+}
+
+export interface MentorSkillOptionDto {
+  skillId: number;
+  code: string;
+  name: string;
+  modality: string;
+}
+
+export interface MentorCertificateOptionDto {
+  certId: number;
+  code: string;
+  name: string;
+  skills: MentorSkillOptionDto[];
+}
+
+// ============================================================================
 // Domain API Surface
 // ============================================================================
 
@@ -962,14 +1287,14 @@ export const api = {
     certificates: () => apiFetch<any[]>('/api/admin/certificates'),
     certificateBlueprint: (certId: number) =>
       apiFetch<any>(`/api/admin/certificates/${certId}/blueprint`),
-    packages: () => apiFetch<any>('/api/admin/packages'),
-    createPackage: (body: any) =>
-      apiFetch<any>('/api/admin/packages', {
+    packages: () => apiFetch<AdminPackagesSummaryDto>('/api/admin/packages'),
+    createPackage: (body: CreatePackageRequest) =>
+      apiFetch<PackageDto>('/api/admin/packages', {
         method: 'POST',
         body: JSON.stringify(body),
       }),
-    updatePackage: (packageId: number, body: any) =>
-      apiFetch<any>(`/api/admin/packages/${packageId}`, {
+    updatePackage: (packageId: number, body: UpdatePackageRequest) =>
+      apiFetch<PackageDto>(`/api/admin/packages/${packageId}`, {
         method: 'PUT',
         body: JSON.stringify(body),
       }),
@@ -991,10 +1316,13 @@ export const api = {
       apiFetch<any>(`/api/admin/users/${userId}/lock`, { method: 'POST' }),
     unlockUser: (userId: number) =>
       apiFetch<any>(`/api/admin/users/${userId}/unlock`, { method: 'POST' }),
-    adjustCredits: (userId: number, body: { amount: number; reason: string }) =>
+    adjustCredits: (userId: number, body: { amount?: number; delta?: number; reason: string }) =>
       apiFetch<any>(`/api/admin/users/${userId}/adjust-credits`, {
         method: 'POST',
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          delta: body.delta ?? body.amount,
+          reason: body.reason,
+        }),
       }),
     orders: (params?: { q?: string; status?: string; gateway?: string; page?: number; pageSize?: number }) => {
       const sp = new URLSearchParams();
@@ -1003,45 +1331,126 @@ export const api = {
       if (params?.q) sp.set('q', params.q);
       if (params?.status) sp.set('status', params.status);
       if (params?.gateway) sp.set('gateway', params.gateway);
-      return apiFetch<any>(`/api/admin/orders?${sp.toString()}`);
+      return apiFetch<AdminOrdersSummaryDto>(`/api/admin/orders?${sp.toString()}`);
     },
+    orderDetail: (orderId: number) =>
+      apiFetch<AdminOrderDetailDto>(`/api/admin/orders/${orderId}`),
     reconcileOrder: (orderId: number) =>
-      apiFetch<any>(`/api/admin/orders/${orderId}/reconcile`, { method: 'POST' }),
+      apiFetch<AdminOrderDto>(`/api/admin/orders/${orderId}/reconcile`, { method: 'POST' }),
     refunds: (params?: { q?: string; status?: string; page?: number; pageSize?: number }) => {
       const sp = new URLSearchParams();
       sp.set('page', String(params?.page ?? 1));
       sp.set('pageSize', String(params?.pageSize ?? 25));
       if (params?.q) sp.set('q', params.q);
       if (params?.status) sp.set('status', params.status);
-      return apiFetch<any>(`/api/admin/refunds?${sp.toString()}`);
+      return apiFetch<AdminRefundsSummaryDto>(`/api/admin/refunds?${sp.toString()}`);
     },
-    requestRefund: (body: any) =>
-      apiFetch<any>('/api/admin/refunds', {
+    refundDetail: (refundId: number) =>
+      apiFetch<AdminRefundDetailDto>(`/api/admin/refunds/${refundId}`),
+    requestRefund: (body: RequestRefundRequest) =>
+      apiFetch<AdminRefundDetailDto>('/api/admin/refunds', {
         method: 'POST',
         body: JSON.stringify(body),
       }),
     approveRefund: (refundId: number) =>
-      apiFetch<any>(`/api/admin/refunds/${refundId}/approve`, { method: 'POST' }),
+      apiFetch<AdminRefundDetailDto>(`/api/admin/refunds/${refundId}/approve`, { method: 'POST' }),
     rejectRefund: (refundId: number, reason: string) =>
-      apiFetch<any>(`/api/admin/refunds/${refundId}/reject`, {
+      apiFetch<AdminRefundDetailDto>(`/api/admin/refunds/${refundId}/reject`, {
         method: 'POST',
         body: JSON.stringify({ reason }),
       }),
     settleRefund: (refundId: number) =>
-      apiFetch<any>(`/api/admin/refunds/${refundId}/settle`, { method: 'POST' }),
+      apiFetch<AdminRefundDetailDto>(`/api/admin/refunds/${refundId}/settle`, { method: 'POST' }),
+    exportRefundsCsv: async (from?: string, to?: string): Promise<{ blob: Blob; filename: string }> => {
+      const sp = new URLSearchParams();
+      if (from) sp.set('from', from);
+      if (to) sp.set('to', to);
+      const query = sp.toString() ? `?${sp.toString()}` : '';
+      const response = await fetch(`/api/admin/refunds/export${query}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        let code = 'unexpected_error';
+        let title = response.statusText || 'Export failed';
+        let detail: string | undefined;
+        try {
+          const problem = await response.json();
+          if (problem && typeof problem === 'object') {
+            code = problem.code || problem.error || code;
+            title = problem.title || problem.message || title;
+            detail = problem.detail || problem.message;
+          }
+        } catch {}
+        throw new ApiClientError(response.status, code, title, detail);
+      }
+      const disposition = response.headers.get('content-disposition');
+      let filename = `refunds-${from || 'today'}-to-${to || 'today'}.csv`;
+      if (disposition) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          filename = match[1].replace(/['"]/g, '').trim();
+        }
+      }
+      const blob = await response.blob();
+      return { blob, filename };
+    },
     complaints: (params?: { q?: string; status?: string; page?: number; pageSize?: number }) => {
       const sp = new URLSearchParams();
       sp.set('page', String(params?.page ?? 1));
       sp.set('pageSize', String(params?.pageSize ?? 25));
       if (params?.q) sp.set('q', params.q);
       if (params?.status) sp.set('status', params.status);
-      return apiFetch<any>(`/api/admin/complaints?${sp.toString()}`);
+      return apiFetch<AdminComplaintsSummaryDto>(`/api/admin/complaints?${sp.toString()}`);
     },
-    resolveComplaint: (complaintId: number, body: { resolution: string; adminNotes: string }) =>
-      apiFetch<any>(`/api/admin/complaints/${complaintId}/resolve`, {
+    complaintDetail: (complaintId: number) =>
+      apiFetch<AdminComplaintDetailDto>(`/api/admin/complaints/${complaintId}`),
+    updateComplaintStatus: (complaintId: number, status: ComplaintStatusDto) =>
+      apiFetch<AdminComplaintDetailDto>(`/api/admin/complaints/${complaintId}/status`, {
+        method: 'POST',
+        body: JSON.stringify({ status }),
+      }),
+    resolveComplaint: (
+      complaintId: number,
+      body: ResolveComplaintRequest | { resolution: string; adminNotes?: string; internalNotes?: string; grantCredits?: number },
+    ) => {
+      const internalNotes =
+        'internalNotes' in body && body.internalNotes
+          ? body.internalNotes
+          : 'adminNotes' in body && body.adminNotes
+            ? body.adminNotes
+            : '';
+      return apiFetch<AdminComplaintDetailDto>(`/api/admin/complaints/${complaintId}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify({
+          resolution: body.resolution,
+          internalNotes,
+          grantCredits: body.grantCredits ?? 0,
+        }),
+      });
+    },
+    mentors: () => apiFetch<AdminMentorListItemDto[]>('/api/admin/mentors'),
+    mentorOptions: () => apiFetch<MentorCertificateOptionDto[]>('/api/admin/mentors/options'),
+    mentorDetail: (mentorId: number) => apiFetch<MentorSummaryDto>(`/api/admin/mentors/${mentorId}`),
+    createMentor: (body: CreateMentorProfileRequest) =>
+      apiFetch<MentorSummaryDto>('/api/admin/mentors', {
         method: 'POST',
         body: JSON.stringify(body),
       }),
-    mentors: () => apiFetch<any[]>('/api/admin/mentors'),
+    updateMentor: (mentorId: number, body: UpdateMentorProfileRequest) =>
+      apiFetch<MentorSummaryDto>(`/api/admin/mentors/${mentorId}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      }),
+    mentorSlots: (mentorId: number) =>
+      apiFetch<AdminMentorSlotDto[]>(`/api/admin/mentors/${mentorId}/slots`),
+    createMentorSlot: (mentorId: number, body: CreateMentorSlotRequest) =>
+      apiFetch<AdminMentorSlotDto>(`/api/admin/mentors/${mentorId}/slots`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    closeMentorSlot: (mentorId: number, slotId: number) =>
+      apiFetch<void>(`/api/admin/mentors/${mentorId}/slots/${slotId}/close`, {
+        method: 'POST',
+      }),
   },
 };
