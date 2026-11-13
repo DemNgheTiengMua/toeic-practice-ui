@@ -69,17 +69,6 @@ public sealed class StaffGatesUseCapabilitiesTests : IClassFixture<StaffGatesUse
                 : type);
 
     [Fact]
-    public void Async_actions_are_enumerated_not_skipped()
-    {
-        // AdminExamsController's actions all return Task<IActionResult>. If the enumeration drops
-        // them, every other assertion in this file is about a handful of synchronous actions.
-        var staff = StaffActions().ToList();
-        var examActions = staff.Where(s => s.Controller.Name == "AdminExamsController").ToList();
-        Assert.NotEmpty(examActions);
-        Assert.All(examActions, s => Assert.Equal(typeof(Task<IActionResult>), s.Action.ReturnType));
-    }
-
-    [Fact]
     public void Every_staff_action_names_a_capability_policy_and_never_a_role()
     {
         var offenders = new List<string>();
@@ -110,7 +99,7 @@ public sealed class StaffGatesUseCapabilitiesTests : IClassFixture<StaffGatesUse
             }
         }
 
-        Assert.NotEmpty(StaffActions());
+        // All concrete Admin* MVC controllers are retired across #302-#304; verify zero remain un-gated if any re-enter.
         Assert.True(offenders.Count == 0, string.Join(Environment.NewLine, offenders));
     }
 

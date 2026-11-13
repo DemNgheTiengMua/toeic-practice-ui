@@ -44,6 +44,9 @@ import { AdminOperationsPage } from './features/admin/ops/AdminOperationsPage';
 import { AdminOverviewPage } from './features/admin/AdminOverviewPage';
 import { AdminUsersPage } from './features/admin/AdminUsersPage';
 import { AdminAuditBatchPage } from './features/admin/AdminAuditBatchPage';
+import { CertificatesStudioPage } from './features/admin/studio/CertificatesStudioPage';
+import { ExamsStudioPage } from './features/admin/studio/ExamsStudioPage';
+import { QuestionBankStudioPage } from './features/admin/studio/QuestionBankStudioPage';
 
 function PlaceholderView({ title, ticket }: { title: string; ticket: string }) {
   return (
@@ -323,9 +326,21 @@ const routeTree = rootRoute.addChildren([
     path: '/admin/audit/$batchId',
     component: AdminAuditBatchPage,
   }),
-  stubRoute('/admin/certificates', 'Certificates studio', '303'),
-  stubRoute('/admin/exams', 'Exams studio', '303'),
-  stubRoute('/admin/question-bank', 'Question bank studio', '303'),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/admin/certificates',
+    component: CertificatesStudioPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/admin/exams',
+    component: ExamsStudioPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/admin/question-bank',
+    component: QuestionBankStudioPage,
+  }),
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/admin/finance',

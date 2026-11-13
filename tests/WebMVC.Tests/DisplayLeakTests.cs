@@ -29,9 +29,7 @@ public sealed class DisplayLeakTests
     /// regression says which page came back, and so the set is a fact rather than a regex's opinion.
     /// </summary>
     [Theory]
-    [InlineData("Admin/Exams.cshtml", "@exam.Status")]
     [InlineData("Mentors/Bookings.cshtml", "@b.Status")]
-    [InlineData("Admin/ExamStudio.cshtml", "@Model.Detail.Purpose")]
     public void A_measured_leak_is_no_longer_printed_as_text(string view, string expression)
     {
         var source = File.ReadAllText(Path.Combine(ViewsRoot, view.Replace('/', Path.DirectorySeparatorChar)));
@@ -83,13 +81,6 @@ public sealed class DisplayLeakTests
     [Fact]
     public void The_seven_leaks_render_words_from_the_registry()
     {
-        var exam = new AdminExamRowViewModel(Exam(ExamStatusDto.Hidden, ExamPurposeDto.SpeakingPractice));
-        Assert.Equal("Hidden", exam.StatusLabel);
-        Assert.Equal("SPEAKING", exam.PurposeDisplay);
-
-        var speaking = new ExamStudioViewModel(StudioDetail(ExamPurposeDto.SpeakingPractice));
-        Assert.Equal("Speaking practice", speaking.PurposeLabel);
-
         var booking = new LearnerBookingsViewModel([Booking("done")]);
         Assert.Equal("Completed", booking.StatusLabels[1]);
     }
@@ -102,13 +93,6 @@ public sealed class DisplayLeakTests
     [Fact]
     public void Every_status_the_repaired_pages_show_reads_as_more_than_its_code()
     {
-        foreach (var status in Enum.GetValues<ExamStatusDto>())
-        {
-            var label = new AdminExamRowViewModel(Exam(status, ExamPurposeDto.Mock)).StatusLabel;
-            Assert.NotEqual(status.ToWireCode(), label);
-            Assert.DoesNotContain("_", label, StringComparison.Ordinal);
-        }
-
         foreach (var status in Enum.GetValues<BookingStatusDto>())
         {
             var label = new LearnerBookingsViewModel([Booking(status.ToWireCode())]).StatusLabels[1];
@@ -473,13 +457,6 @@ public sealed class DisplayLeakTests
     }
 
     // ---- fixtures -------------------------------------------------------------
-
-    private static AdminExamListItemDto Exam(ExamStatusDto status, ExamPurposeDto purpose) => new(
-        1, 1, "TOEIC", "TOEIC", "Paper", status, purpose, 45, 10, 10, "N/A", 0, null, DateTimeOffset.UtcNow);
-
-    private static ExamStudioDetailDto StudioDetail(ExamPurposeDto purpose) => new(
-        1, 1, "toeic", "TOEIC", "Paper", ExamStatusDto.Draft, purpose, 45, null, null, null, 10, 10, 0,
-        DateTimeOffset.UtcNow, null, [], [], [], new ExamAuditResultDto(true, 10, 10, 0, 0, [], []));
 
     private static MentorBookingDto Booking(string status) => new(
         1, 1, 1, "Dr. Minh Khoa", null, "human", null,

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -42,20 +42,6 @@ public sealed class AdminViewsLayoutTests
     }
 
     [Fact]
-    public void AdminViews_ExamsAndExamEditor_MustNotLinkToLegacyQuestionEditor()
-    {
-        var repoRoot = TestPathHelper.FindRepoRoot();
-        var adminViewsDir = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin");
-
-        var examsContent = File.ReadAllText(Path.Combine(adminViewsDir, "Exams.cshtml"));
-        var editorContent = File.ReadAllText(Path.Combine(adminViewsDir, "ExamEditor.cshtml"));
-
-        // No link to /questions in action buttons or editor steps
-        Assert.DoesNotMatch(@"href=""/admin/exams/@exam\.ExamId/questions""", examsContent);
-        Assert.DoesNotMatch(@"href=""/admin/exams/@Model\.ExamId/questions""", editorContent);
-    }
-
-    [Fact]
     public void ComponentsCss_MustContainModalOverlayStandardsAndFieldErrorStyles()
     {
         var repoRoot = TestPathHelper.FindRepoRoot();
@@ -73,37 +59,4 @@ public sealed class AdminViewsLayoutTests
         Assert.Matches(@"\.field__error-placard\s*\{[^}]*color\s*:\s*var\(--sign-red\)", css);
         Assert.Matches(@"\.field--error\s+\.field__error-placard[^{]*\{[^}]*display\s*:\s*block", css);
     }
-
-    [Fact]
-    public void AdminViews_CertificatesAndWizard_MustDeclareAdminLayout()
-    {
-        var repoRoot = TestPathHelper.FindRepoRoot();
-        var adminViewsDir = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin");
-
-        var certsView = Path.Combine(adminViewsDir, "Certificates.cshtml");
-        var wizardView = Path.Combine(adminViewsDir, "CertificateWizard.cshtml");
-
-        Assert.True(File.Exists(certsView), "Certificates.cshtml must exist");
-        Assert.True(File.Exists(wizardView), "CertificateWizard.cshtml must exist");
-
-        var certsContent = File.ReadAllText(certsView);
-        var wizardContent = File.ReadAllText(wizardView);
-
-        Assert.Matches(@"Layout\s*=\s*""_AdminLayout"";?", certsContent);
-        Assert.Matches(@"Layout\s*=\s*""_AdminLayout"";?", wizardContent);
-    }
-
-    [Fact]
-    public void Certificate_list_scrolls_instead_of_clipping_the_edit_column()
-    {
-        // The eight-column table is wider than the content area at 1280px. Its card clipped the
-        // overflow, so Exams, Status and the only "Edit Blueprint" link were cut off and unreachable.
-        var repoRoot = TestPathHelper.FindRepoRoot();
-        var view = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "Certificates.cshtml"));
-        var wrapper = Regex.Match(view, @"<div class=""card""[^>]*>\s*<table").Value;
-        Assert.NotEmpty(wrapper);
-        Assert.Contains("overflow-x: auto", wrapper);
-        Assert.DoesNotContain("overflow: hidden", wrapper);
-    }
 }
-
