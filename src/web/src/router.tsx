@@ -39,6 +39,8 @@ import { PlacementRetakePage } from './features/placement/PlacementRetakePage';
 import { PlacementResumePage } from './features/placement/PlacementResumePage';
 import { PlacementTakePage } from './features/placement/PlacementTakePage';
 import { PlacementResultPage } from './features/placement/PlacementResultPage';
+import { AdminFinancePage } from './features/admin/ops/AdminFinancePage';
+import { AdminOperationsPage } from './features/admin/ops/AdminOperationsPage';
 
 function PlaceholderView({ title, ticket }: { title: string; ticket: string }) {
   return (
@@ -308,8 +310,16 @@ const routeTree = rootRoute.addChildren([
   stubRoute('/admin/certificates', 'Certificates studio', '303'),
   stubRoute('/admin/exams', 'Exams studio', '303'),
   stubRoute('/admin/question-bank', 'Question bank studio', '303'),
-  stubRoute('/admin/finance', 'Finance & refunds', '304'),
-  stubRoute('/admin/operations', 'Operations desk', '304'),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/admin/finance',
+    component: AdminFinancePage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/admin/operations',
+    component: AdminOperationsPage,
+  }),
 ]);
 
 export function createAppRouter(history?: RouterHistory) {

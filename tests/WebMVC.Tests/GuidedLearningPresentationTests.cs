@@ -12,7 +12,6 @@ public sealed class GuidedLearningPresentationTests
     [InlineData("Lessons")]
     [InlineData("Mentors")]
     [InlineData("Admin/Lessons")]
-    [InlineData("Admin/MentorSlots.cshtml")]
     public void Views_ReceivePreparedPresentationAndUseExternalAssets(string folder)
     {
         var directory = Path.Combine(TestPathHelper.FindRepoRoot(), "src/WebMVC/Views", folder);

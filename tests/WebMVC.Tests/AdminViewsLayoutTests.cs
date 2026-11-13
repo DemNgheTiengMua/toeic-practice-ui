@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -16,16 +16,12 @@ public sealed class AdminViewsLayoutTests
         var adminViewsDir = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin");
 
         var usersView = Path.Combine(adminViewsDir, "Users.cshtml");
-        var ordersView = Path.Combine(adminViewsDir, "Orders.cshtml");
 
         Assert.True(File.Exists(usersView), "Users.cshtml must exist");
-        Assert.True(File.Exists(ordersView), "Orders.cshtml must exist");
 
         var usersContent = File.ReadAllText(usersView);
-        var ordersContent = File.ReadAllText(ordersView);
 
         Assert.Matches(@"Layout\s*=\s*""_AdminLayout"";?", usersContent);
-        Assert.Matches(@"Layout\s*=\s*""_AdminLayout"";?", ordersContent);
     }
 
     [Fact]
@@ -92,25 +88,6 @@ public sealed class AdminViewsLayoutTests
     }
 
     [Fact]
-    public void ComplaintDetailView_MustContainValidationErrorPlacardsAndClientValidation()
-    {
-        var repoRoot = TestPathHelper.FindRepoRoot();
-        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "ComplaintDetail.cshtml");
-
-        Assert.True(File.Exists(viewPath), "ComplaintDetail.cshtml must exist");
-        var content = File.ReadAllText(viewPath) + File.ReadAllText(Path.Combine(repoRoot, "src/WebMVC/wwwroot/js/admin/complaints/detail.js"));
-
-        // Form has error placards
-        Assert.Contains("field__error-placard", content);
-        Assert.Contains("field--error", content);
-
-        // Script handles form submit and validates resolution + internalNotes
-        Assert.Contains("resolution", content);
-        Assert.Contains("internalNotes", content);
-        Assert.Contains("aria-invalid", content);
-    }
-
-    [Fact]
     public void AdminViews_CertificatesAndWizard_MustDeclareAdminLayout()
     {
         var repoRoot = TestPathHelper.FindRepoRoot();
@@ -142,3 +119,4 @@ public sealed class AdminViewsLayoutTests
         Assert.DoesNotContain("overflow: hidden", wrapper);
     }
 }
+

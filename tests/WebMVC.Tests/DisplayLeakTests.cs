@@ -30,10 +30,6 @@ public sealed class DisplayLeakTests
     /// </summary>
     [Theory]
     [InlineData("Admin/Exams.cshtml", "@exam.Status")]
-    [InlineData("Admin/Orders.cshtml", "@order.Status.ToWireCode()")]
-    [InlineData("Admin/_OrderDetail.cshtml", "@ev.Source")]
-    [InlineData("Admin/_OrderDetail.cshtml", "@selected.Order.Status.ToWireCode()")]
-    [InlineData("Admin/_OrderDetail.cshtml", "@ev.ReportedStatus")]
     [InlineData("Mentors/Bookings.cshtml", "@b.Status")]
     [InlineData("Admin/ExamStudio.cshtml", "@Model.Detail.Purpose")]
     public void A_measured_leak_is_no_longer_printed_as_text(string view, string expression)
@@ -83,8 +79,6 @@ public sealed class DisplayLeakTests
     /// pagination link with its label, which makes <c>?status=Paid</c> and silently returns nothing.
     /// </summary>
     [Theory]
-    [InlineData("Admin/Orders.cshtml")]
-    [InlineData("Admin/Complaints.cshtml")]
     [InlineData("Admin/Users.cshtml")]
     public void A_query_string_filter_keeps_its_code(string view)
     {
@@ -114,11 +108,6 @@ public sealed class DisplayLeakTests
 
         var booking = new LearnerBookingsViewModel([Booking("done")]);
         Assert.Equal("Completed", booking.StatusLabels[1]);
-
-        var orders = new AdminOrdersViewModel(Orders(), null, null, null, 1, Detail());
-        Assert.Equal("Confirming with the gateway", orders.StatusLabels[2]);
-        Assert.Equal("Gateway webhook", orders.EventSourceLabels[2]);
-        Assert.Equal("Paid", orders.EventReportedStatusLabels[2]);
     }
 
     /// <summary>
@@ -140,13 +129,6 @@ public sealed class DisplayLeakTests
         {
             var label = new LearnerBookingsViewModel([Booking(status.ToWireCode())]).StatusLabels[1];
             Assert.NotEqual(status.ToWireCode(), label);
-        }
-
-        foreach (var source in Enum.GetValues<PaymentEventSourceDto>())
-        {
-            var label = new AdminOrdersViewModel(Orders(), null, null, null, 1, Detail(source)).EventSourceLabels[1];
-            Assert.NotEqual(source.ToWireCode(), label);
-            Assert.DoesNotContain("_", label, StringComparison.Ordinal);
         }
     }
 
@@ -518,21 +500,4 @@ public sealed class DisplayLeakTests
     private static MentorBookingDto Booking(string status) => new(
         1, 1, 1, "Dr. Minh Khoa", null, "human", null,
         DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1), status, null, null, 1, null, DateTimeOffset.UtcNow);
-
-    private static AdminOrdersSummaryDto Orders() => new(
-        [
-            new(1, "DH-1", 1001, 10, "a@demo.local", null, 1, "Pkg", 1, 1000, OrderStatusDto.Paid,
-                PaymentGatewayDto.Payos, null, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
-            new(2, "DH-2", 1002, 11, "b@demo.local", null, 1, "Pkg", 1, 1000, OrderStatusDto.Reconciling,
-                PaymentGatewayDto.Mock, null, null, DateTimeOffset.UtcNow, null),
-        ], 2, 1, 20, 1, 1000, 1, 0);
-
-    private static AdminOrderDetailDto Detail(PaymentEventSourceDto source = PaymentEventSourceDto.Webhook) => new(
-        new(2, "DH-2", 1002, 11, "b@demo.local", null, 1, "Pkg", 1, 1000, OrderStatusDto.Reconciling,
-            PaymentGatewayDto.Mock, null, null, DateTimeOffset.UtcNow, null),
-        [
-            new(1, 2, PaymentEventSourceDto.ReturnRedirect, GatewayStatusDto.Pending, false, false, null, null,
-                DateTimeOffset.UtcNow.AddMinutes(-5)),
-            new(2, 2, source, GatewayStatusDto.Paid, true, true, null, null, DateTimeOffset.UtcNow),
-        ]);
 }

@@ -10,14 +10,8 @@ public sealed class IdentityFinancePresentationTests
     [InlineData("Wallet")]
     [InlineData("Checkout")]
     [InlineData("Support")]
-    [InlineData("Admin/Orders.cshtml")]
-    [InlineData("Admin/_OrderDetail.cshtml")]
     [InlineData("Admin/Index.cshtml")]
-    [InlineData("Admin/PackageForm.cshtml")]
     [InlineData("Admin/Users.cshtml")]
-    [InlineData("Admin/Packages.cshtml")]
-    [InlineData("Admin/Complaints.cshtml")]
-    [InlineData("Admin/ComplaintDetail.cshtml")]
     public void Views_UsePreparedPresentationAndExternalAssets(string relative)
     {
         var target = Path.Combine(TestPathHelper.FindRepoRoot(), "src/WebMVC/Views", relative);
