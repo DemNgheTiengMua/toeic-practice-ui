@@ -895,7 +895,7 @@ public sealed class PlacementControllerTests
             examId: 2,
             CancellationToken.None,
             reuseValidSkills: true,
-            scope: PlacementScopeDto.ListeningAndReading,
+            scope: PlacementScopeDto.ListeningAndReading.ToWireCode(),
             idempotencyKey: "key-abc-123",
             fromPreflight: true);
 
@@ -942,7 +942,7 @@ public sealed class PlacementControllerTests
             examId: 4,
             CancellationToken.None,
             reuseValidSkills: false,
-            scope: PlacementScopeDto.AllSkills,
+            scope: PlacementScopeDto.AllSkills.ToWireCode(),
             idempotencyKey: "key-402",
             fromPreflight: true);
 

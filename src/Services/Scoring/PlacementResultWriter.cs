@@ -72,9 +72,9 @@ public sealed class PlacementResultWriter(
 
         // The certificate's examined skills, in its own order. A placement reports on the skills the
         // certificate has, never on a fixed four (D4): TOEIC CAT examines two.
-        var scope = EnumCodes.TryParse<PlacementScope>(placement.Scope, out var parsedScope)
-            ? parsedScope
-            : PlacementScope.AllSkills;
+        var scope = EnumCodes.Parse<PlacementScope>(placement.Scope);
+
+
 
         var skillsQuery = db.Skills
             .AsNoTracking()

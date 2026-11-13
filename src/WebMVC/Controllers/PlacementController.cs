@@ -46,11 +46,14 @@ public sealed class PlacementController(
         [FromForm] int examId,
         CancellationToken cancellationToken,
         [FromForm] bool reuseValidSkills = false,
-        [FromForm] PlacementScopeDto? scope = null,
+        [FromForm] string? scope = null,
         [FromForm] string? idempotencyKey = null,
         [FromForm] bool fromPreflight = false)
     {
-        if (fromPreflight && scope is null)
+        PlacementScopeDto? parsedScope = EnumMapping.TryParseWireCode<PlacementScopeDto>(scope ?? "", out var wireScope)
+            ? wireScope
+            : null;
+        if (fromPreflight && parsedScope is null)
         {
             TempData["ErrorMessage"] = "Choose which skills to measure before confirming.";
             return RedirectToAction(nameof(Preflight), new { examId });
@@ -58,7 +61,7 @@ public sealed class PlacementController(
 
         try
         {
-            var effectiveScope = scope ?? PlacementScopeDto.AllSkills;
+            var effectiveScope = parsedScope ?? PlacementScopeDto.AllSkills;
             var response = await api.StartPlacementTestAsync(
                 new StartPlacementTestRequest(examId, reuseValidSkills, effectiveScope, idempotencyKey),
                 cancellationToken);

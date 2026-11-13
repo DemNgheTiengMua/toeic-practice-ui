@@ -106,6 +106,7 @@ else
               </td>
               <td>
                 <div class="row">
+                  <a class="btn btn--sm btn--ghost" href="/admin/users/@user.UserId">Details</a>
                   <a class="btn btn--sm" href="/admin/users?@(string.IsNullOrEmpty(Model.Query) ? "" : $"q={Uri.EscapeDataString(Model.Query)}&")@(string.IsNullOrEmpty(Model.Status) ? "" : $"status={Uri.EscapeDataString(Model.Status)}&")adjustUserId=@user.UserId">Edit credits</a>
                   
                   @if (user.IsLocked)

@@ -477,7 +477,7 @@ public sealed class PlacementScopeAndRetakeTests : IAsyncLifetime
             secondExamId = e2.ExamId;
         }
 
-        var userId = await SeedLearnerAsync(f.CertCode, credits: 2);
+        var userId = await SeedLearnerAsync(f.CertCode, credits: 7);
         var clock = new MutableClock(DateTimeOffset.UtcNow);
 
         int activePlacementId;
@@ -485,7 +485,16 @@ public sealed class PlacementScopeAndRetakeTests : IAsyncLifetime
         {
             var svc = Service(db, clock);
             var first = await svc.StartPlacementTestAsync(userId, f.ExamId, PlacementReuseChoice.Remeasure, PlacementScope.AllSkills);
-            activePlacementId = first.PlacementId;
+            await SitAndFinishAsync(db, svc, f, userId, first.PlacementId, first.AttemptId);
+        }
+
+        clock.Advance(TimeSpan.FromHours(25));
+
+        await using (var db = Db())
+        {
+            var svc = Service(db, clock);
+            var retake = await svc.StartPlacementTestAsync(userId, f.ExamId, PlacementReuseChoice.Remeasure, PlacementScope.AllSkills);
+            activePlacementId = retake.PlacementId;
         }
 
         await using (var db = Db())
@@ -497,11 +506,11 @@ public sealed class PlacementScopeAndRetakeTests : IAsyncLifetime
             Assert.Equal(PlacementException.InsufficientCredits, ex.Code);
 
             // Original active sitting must NOT be abandoned, and no new sitting or ledger row was created.
-            var placements = await db.PlacementTests.AsNoTracking().Where(p => p.UserId == userId).ToListAsync();
+            var placements = await db.PlacementTests.AsNoTracking().Where(p => p.UserId == userId && p.Status == PlacementStatus.InProgress.ToCode()).ToListAsync();
             Assert.Single(placements);
             Assert.Equal(activePlacementId, placements[0].PlacementId);
             Assert.Equal(PlacementStatus.InProgress.ToCode(), placements[0].Status);
-            Assert.Equal(1, await db.ExamAttempts.CountAsync(a => a.UserId == userId));
+            Assert.Equal(2, await db.ExamAttempts.CountAsync(a => a.UserId == userId));
             Assert.Equal(2, await new CreditLedger(db).GetBalanceAsync(userId));
         }
     }
@@ -597,7 +606,7 @@ public sealed class PlacementScopeAndRetakeTests : IAsyncLifetime
         var replay = await Service(db3, clock).StartPlacementTestAsync(
             userId, f.ExamId, PlacementReuseChoice.Remeasure, PlacementScope.AllSkills, key);
         Assert.Equal(results[0].PlacementId, replay.PlacementId);
-        Assert.Equal(0, replay.CreditsCharged);
+        Assert.Equal(5, replay.CreditsCharged);
 
         Assert.Equal(1, await db3.CreditTransactions.CountAsync(
             t => t.UserId == userId && t.Reason == CreditReason.PlacementRetake.ToCode()));
@@ -711,6 +720,37 @@ public sealed class PlacementScopeAndRetakeTests : IAsyncLifetime
         var status = await svc.GetPlacementPreflightStatusAsync(userId, started.PlacementId);
         Assert.False(status.RequiresMicrophone);
         Assert.True(status.RequiresAudio);
+    }
+
+    [Fact]
+    public async Task First_placement_is_free_even_when_an_earlier_in_progress_sitting_exists_for_another_exam()
+    {
+        var f = await SeedFourSkillCertAsync(Unique("IPFREE"));
+        var userId = await SeedLearnerAsync(f.CertCode, credits: 10);
+
+        await using var db = Db();
+        var firstExam = await db.Exams.SingleAsync(e => e.ExamId == f.ExamId);
+        var secondExam = new Exam
+        {
+            CertId = firstExam.CertId,
+            Name = $"{firstExam.Name} B",
+            Purpose = ExamPurpose.Placement.ToCode(),
+            Status = ExamStatus.Published.ToCode(),
+            DurationMinutes = firstExam.DurationMinutes,
+            QuestionCount = firstExam.QuestionCount,
+        };
+        db.Exams.Add(secondExam);
+        await db.SaveChangesAsync();
+
+        var svc = Service(db);
+        var first = await svc.StartPlacementTestAsync(userId, f.ExamId, PlacementReuseChoice.Remeasure, PlacementScope.AllSkills);
+        Assert.Equal(0, first.CreditsCharged);
+
+        var second = await svc.StartPlacementTestAsync(userId, secondExam.ExamId, PlacementReuseChoice.Remeasure, PlacementScope.AllSkills);
+        Assert.Equal(0, second.CreditsCharged);
+        Assert.Equal(0, await db.CreditTransactions.CountAsync(
+            t => t.UserId == userId && t.Reason == CreditReason.PlacementRetake.ToCode()));
+        Assert.Equal(10, await new CreditLedger(db).GetBalanceAsync(userId));
     }
 
     private sealed class FixedClock(DateTimeOffset utcNow) : TimeProvider

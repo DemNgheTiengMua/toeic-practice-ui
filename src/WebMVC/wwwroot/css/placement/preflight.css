@@ -72,8 +72,8 @@
   font-family: var(--font-sign);
   font-size: var(--text-lg);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-sign);
+
+
   color: var(--ink);
 }
 
@@ -131,8 +131,9 @@
   font-family: var(--font-sign);
   font-size: var(--text-xs);
   font-weight: 700;
-  text-transform: uppercase;
+
   letter-spacing: var(--tracking-caps-sm);
+  text-transform: uppercase;
   color: var(--color-text-muted);
 }
 
@@ -145,7 +146,7 @@
   padding-top: var(--space-2);
   border-top: 1px solid var(--color-border);
   font-size: var(--text-sm);
-  color: #8c0e12;
+  color: var(--sign-red);
 }
 
 .preflight-terms {
@@ -163,7 +164,12 @@
   gap: var(--space-3);
 }
 
-@media (max-width: 720px) {
+.preflight-reuse-toggle {
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
   .scope-grid {
     grid-template-columns: 1fr;
   }

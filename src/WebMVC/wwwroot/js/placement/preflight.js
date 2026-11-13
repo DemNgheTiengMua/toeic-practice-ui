@@ -35,8 +35,8 @@
 
     function syncAudioPanel(scope) {
       if (!equipmentPanel) return;
-      var needsMic = scope === "ListeningAndReading" ? lrRequiresMic : allRequiresMic;
-      var needsAudio = scope === "ListeningAndReading" ? lrRequiresAudio : allRequiresAudio;
+      var needsMic = scope === "listening_and_reading" ? lrRequiresMic : allRequiresMic;
+      var needsAudio = scope === "listening_and_reading" ? lrRequiresAudio : allRequiresAudio;
       equipmentPanel.hidden = !needsMic && !needsAudio;
       if (inputPanel) {
         inputPanel.hidden = !needsMic;

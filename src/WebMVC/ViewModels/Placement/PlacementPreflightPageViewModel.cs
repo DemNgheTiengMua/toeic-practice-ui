@@ -86,8 +86,10 @@ public sealed record PlacementPreflightPageViewModel(
         credits == 0 ? "Free" : credits == 1 ? "1 credit" : $"{credits} credits";
 
     private static bool IsObjectiveModality(string? modality) =>
-        string.Equals(modality, "listening", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(modality, "reading", StringComparison.OrdinalIgnoreCase);
+        EnumMapping.TryParseWireCode<ModalityDto>(modality ?? "", out var parsed)
+        && parsed is ModalityDto.Listening or ModalityDto.Reading;
+
+
 
     private static IReadOnlyList<PlacementScopeChoiceViewModel> BuildScopeChoices(PlacementPreflightViewDto gate)
     {
@@ -118,7 +120,7 @@ public sealed record PlacementPreflightPageViewModel(
         [
             new PlacementScopeChoiceViewModel(
                 Scope: PlacementScopeDto.AllSkills,
-                Value: nameof(PlacementScopeDto.AllSkills),
+                Value: PlacementScopeDto.AllSkills.ToWireCode(),
                 RadioId: "scope-all-skills",
                 Title: "All four skills",
                 PriceCredits: allPrice,
@@ -131,7 +133,7 @@ public sealed record PlacementPreflightPageViewModel(
                 ShortBy: gate.IsRetake ? Math.Max(0, allPrice - balance) : 0),
             new PlacementScopeChoiceViewModel(
                 Scope: PlacementScopeDto.ListeningAndReading,
-                Value: nameof(PlacementScopeDto.ListeningAndReading),
+                Value: PlacementScopeDto.ListeningAndReading.ToWireCode(),
                 RadioId: "scope-listening-reading",
                 Title: "Listening and Reading only",
                 PriceCredits: lrPrice,

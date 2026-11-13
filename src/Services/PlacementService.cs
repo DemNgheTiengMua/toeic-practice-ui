@@ -154,9 +154,9 @@ public sealed partial class PlacementService(
         var remaining = placement.ExamAttempt is not null
             ? Math.Max(0, (int)(placement.ExamAttempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds)
             : 0;
-        var parsedScope = EnumCodes.TryParse<PlacementScope>(placement.Scope, out var ps)
-            ? ps
-            : PlacementScope.AllSkills;
+        var parsedScope = EnumCodes.Parse<PlacementScope>(placement.Scope);
+
+
 
         return new PlacementTestInfo(
             placement.PlacementId,
@@ -209,11 +209,16 @@ public sealed partial class PlacementService(
                 {
                     var existingByKey = await db.PlacementTests
                         .Include(p => p.ExamAttempt)
+                        .Include(p => p.ExamAttempt)
+                        .Include(p => p.CreditTransaction)
                         .FirstOrDefaultAsync(p => p.UserId == userId && p.IdempotencyKey == normalizedKey, cancellationToken);
                     if (existingByKey is not null)
                     {
                         await tx.CommitAsync(cancellationToken);
-                        return ToPlacementTestInfo(existingByKey, examId, creditsCharged: 0);
+                        var creditsCharged = existingByKey.CreditTransaction is not null
+                            ? Math.Abs(existingByKey.CreditTransaction.Delta)
+                            : 0;
+                        return ToPlacementTestInfo(existingByKey, examId, creditsCharged);
                     }
                 }
 
@@ -246,7 +251,7 @@ public sealed partial class PlacementService(
                 // every subsequent placement charges the configured price for the chosen scope inside this serializable
                 // transaction before abandoning any prior sitting or creating the attempt.
                 var isRetake = await db.PlacementTests
-                    .AnyAsync(p => p.UserId == userId && p.CertId == certId, cancellationToken);
+                    .AnyAsync(p => p.UserId == userId && p.CertId == certId && p.Status != PlacementStatus.InProgress.ToCode(), cancellationToken);
 
                 CreditReceipt? chargeTxn = null;
                 if (isRetake)
@@ -1300,9 +1305,9 @@ public sealed partial class PlacementService(
         var (freeResponseCount, gradedFreeResponseCount, failedFreeResponseCount, isGraded) =
             await GetAttemptGradingCountsAsync(attempt.AttemptId, attempt.Status, cancellationToken);
 
-        var resultScope = EnumCodes.TryParse<PlacementScope>(placement.Scope, out var parsedResultScope)
-            ? parsedResultScope
-            : PlacementScope.AllSkills;
+        var resultScope = EnumCodes.Parse<PlacementScope>(placement.Scope);
+
+
 
         return new PlacementResultView(
             placement.PlacementId,

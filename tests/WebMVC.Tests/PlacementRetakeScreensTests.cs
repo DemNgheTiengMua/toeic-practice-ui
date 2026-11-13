@@ -127,8 +127,8 @@ public sealed class PlacementRetakeScreensTests
         Assert.Contains("href=\"/pricing\"", html, StringComparison.Ordinal);
         Assert.Contains("action=\"/placement/start\"", html, StringComparison.Ordinal);
 
-        var allSkillsInput = Regex.Match(html, @"<input\b[^>]*value=""AllSkills""[^>]*>").Value;
-        var lrInput = Regex.Match(html, @"<input\b[^>]*value=""ListeningAndReading""[^>]*>").Value;
+        var allSkillsInput = Regex.Match(html, @"<input\b[^>]*value=""all_skills""[^>]*>").Value;
+        var lrInput = Regex.Match(html, @"<input\b[^>]*value=""listening_and_reading""[^>]*>").Value;
         Assert.Contains("disabled", allSkillsInput, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("disabled", lrInput, StringComparison.OrdinalIgnoreCase);
     }
@@ -155,6 +155,37 @@ public sealed class PlacementRetakeScreensTests
         Assert.DoesNotContain("Writing", table, StringComparison.Ordinal);
         Assert.DoesNotContain("Not measured", table, StringComparison.Ordinal);
         Assert.DoesNotContain("(0/100)", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Result_does_not_filter_in_scope_skills_by_english_name()
+    {
+        var baseDto = ScopedResult(PlacementScopeDto.ListeningAndReading, includeProductive: false);
+        var localized = baseDto with
+        {
+            SkillScores =
+            [
+                baseDto.SkillScores[0] with { SkillName = "Nghe hiểu" },
+                baseDto.SkillScores[1] with { SkillName = "Đọc hiểu" },
+            ],
+            SkillResults =
+            [
+                baseDto.SkillResults![0] with { SkillName = "Nghe hiểu" },
+                baseDto.SkillResults[1] with { SkillName = "Đọc hiểu" },
+            ],
+        };
+
+        await using var site = new Site(result: () => localized);
+        using var client = site.CreateClientWithLearner();
+
+        var html = await client.GetStringAsync("/placement/result/1");
+
+        var rows = Regex.Matches(html, @"data-skill-state=""[^""]+""");
+        Assert.Equal(2, rows.Count);
+        var decoded = System.Net.WebUtility.HtmlDecode(html);
+        Assert.Contains("Nghe hiểu", decoded, StringComparison.Ordinal);
+        Assert.Contains("Đọc hiểu", decoded, StringComparison.Ordinal);
+
     }
 
     [Fact]
