@@ -1,1 +1,0 @@
-{"root":["./src/main.tsx","./src/router.tsx","./src/components/shell/appshell.tsx","./src/context/authcontext.tsx","./src/lib/api.ts","./src/lib/security.ts","./src/lib/sitting-queue.ts","./src/lib/__tests__/edge-cases.test.ts"],"version":"5.8.3"}
