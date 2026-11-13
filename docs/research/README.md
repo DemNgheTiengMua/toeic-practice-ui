@@ -12,6 +12,15 @@ the **file contents**, never a path — the agent cannot read your filesystem.
 | 5 | `admin-brief.md` | Admin & authoring |
 | 6 | `transition-brief.md` | Transition (surviving readers + sequence) |
 
+## Two work products that are not briefs
+
+- **`placement-pool-manifest-prompt.md`** — the prompt to hand an external agent so it returns a
+  placement pool as an importable `.json`. Self-contained: it carries the manifest schema, the fourteen
+  item types, the flag that makes an item drawable, and the volumes the draw needs.
+- **`placement-question-count.md`** — how many questions a placement sitting asks, and which of those
+  numbers are fixed and which are routed. Read this before quoting a total; the answer is a range, and
+  the reason is the routing table.
+
 ---
 
 ## When the SRS documents come back
