@@ -131,6 +131,8 @@ describe('WritingResultPage (/writing/result/$attemptId)', () => {
     const { container } = render(<WritingResultPage attemptId={505} pollIntervalMs={20} />);
 
     expect(await screen.findByText(/AI grading in progress/i)).toBeTruthy();
+    expect(screen.getByText('Queued')).toBeTruthy();
+    expect(screen.getByText('Processing')).toBeTruthy();
 
     await waitFor(() => {
       expect(api.writing.review).toHaveBeenCalledWith(505);

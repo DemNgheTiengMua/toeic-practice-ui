@@ -5,7 +5,12 @@ import { ArrowRight, Clock, Coins, History, Mic, Play } from 'lucide-react';
 import { api } from '@/lib/api';
 import { SpeakingMicrophoneCard } from './SpeakingMicrophoneCard';
 import { useMicrophoneCheck } from './useMicrophoneCheck';
-import type { SpeakingCatalog, SpeakingInstructions, SpeakingPriorAttempt } from './types';
+import {
+  formatSpeakingAttemptStatusLabel,
+  type SpeakingCatalog,
+  type SpeakingInstructions,
+  type SpeakingPriorAttempt,
+} from './types';
 
 function isReviewAttempt(attempt: SpeakingPriorAttempt): boolean {
   return attempt.canReview || attempt.status === 'graded' || attempt.status === 'submitted';
@@ -322,7 +327,7 @@ export function SpeakingStudioPage() {
                           >
                             <div className="flex items-center gap-2">
                               <Chip size="sm" variant="soft" color={attempt.status === 'graded' ? 'success' : 'default'}>
-                                {attempt.status}
+                                {formatSpeakingAttemptStatusLabel(attempt.status)}
                               </Chip>
                               <span className="font-mono-tabular text-xs text-muted">
                                 Attempt #{attempt.attemptId}

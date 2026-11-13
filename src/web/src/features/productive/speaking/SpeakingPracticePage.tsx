@@ -274,7 +274,7 @@ export function SpeakingPracticePage({ attemptId, initialQuestionId }: SpeakingP
   const savedAudioUrl = formatSpeakingAudioUrl(attemptId, q.questionId, q.audioPath);
   const imageUrl = toBrowserMediaUrl(q.groupImagePath);
   const groupAudioUrl = toBrowserMediaUrl(q.groupAudioPath);
-  const unansweredCount = take.questions.filter((item) => !item.hasAudio).length;
+  const unansweredCount = take.questions.filter((item) => !item.isAnswered).length;
   const micUnavailable = mic.status === 'denied' || mic.status === 'unavailable' || mic.status === 'error';
 
   return (
@@ -497,16 +497,16 @@ export function SpeakingPracticePage({ attemptId, initialQuestionId }: SpeakingP
               </Card.Header>
               <Card.Content className="flex flex-wrap gap-2">
                 {take.questions.map((nav) => {
-                  const isCurrent = nav.questionId === take.currentQuestionId;
+                  const isCurrent = nav.isCurrent || nav.questionId === take.currentQuestionId;
                   return (
                     <Button
                       key={nav.questionId}
                       size="sm"
-                      variant={isCurrent ? 'primary' : nav.hasAudio ? 'secondary' : 'outline'}
+                      variant={isCurrent ? 'primary' : nav.isAnswered ? 'secondary' : 'outline'}
                       isDisabled={phase === 'recording' || phase === 'uploading'}
                       onPress={() => void loadQuestion(nav.questionId)}
                     >
-                      #{nav.displayOrder} {nav.hasAudio ? 'Recorded' : 'Open'}
+                      #{nav.displayOrder} {nav.isAnswered ? 'Recorded' : 'Open'}
                     </Button>
                   );
                 })}

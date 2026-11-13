@@ -60,9 +60,10 @@ export interface SpeakingInstructions {
 export interface SpeakingQuestionNav {
   questionId: number;
   displayOrder: number;
+  sectionCode: string;
   sectionName: string;
-  hasAudio: boolean;
-  status: FreeResponseStatus;
+  isAnswered: boolean;
+  isCurrent: boolean;
 }
 
 export interface SpeakingQuestion {
@@ -187,4 +188,42 @@ export function formatSpeakingAudioUrl(attemptId: number, questionId: number, fa
     return `/api/learner/speaking/attempts/${attemptId}/questions/${questionId}/audio`;
   }
   return null;
+}
+
+const SPEAKING_ATTEMPT_STATUS_LABELS: Record<string, string> = {
+  in_progress: 'In progress',
+  submitted: 'Submitted',
+  graded: 'Graded',
+  abandoned: 'Abandoned',
+  queued: 'Queued',
+  processing: 'Processing',
+  failed: 'Failed',
+};
+
+const SPEAKING_GRADING_STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  queued: 'Queued',
+  processing: 'Processing',
+  done: 'Done',
+  failed: 'Failed',
+};
+
+export function formatSpeakingAttemptStatusLabel(status?: string | null): string {
+  if (!status) return 'Unknown';
+  const normalized = status.trim().toLowerCase();
+  if (SPEAKING_ATTEMPT_STATUS_LABELS[normalized]) {
+    return SPEAKING_ATTEMPT_STATUS_LABELS[normalized];
+  }
+  const spaced = normalized.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+export function formatSpeakingGradingStatusLabel(status?: string | null): string {
+  if (!status) return 'Unknown';
+  const normalized = status.trim().toLowerCase();
+  if (SPEAKING_GRADING_STATUS_LABELS[normalized]) {
+    return SPEAKING_GRADING_STATUS_LABELS[normalized];
+  }
+  const spaced = normalized.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }

@@ -3,7 +3,12 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { Alert, Button, Card, Chip, Spinner } from '@heroui/react';
 import { ArrowRight, Clock, Coins, FileEdit, History, Play } from 'lucide-react';
 import { api } from '@/lib/api';
-import type { WritingCatalog, WritingInstructions, WritingPriorAttempt } from './types';
+import {
+  formatWritingAttemptStatusLabel,
+  type WritingCatalog,
+  type WritingInstructions,
+  type WritingPriorAttempt,
+} from './types';
 
 function isReviewAttempt(attempt: WritingPriorAttempt): boolean {
   return attempt.canReview || attempt.status === 'graded' || attempt.status === 'submitted';
@@ -315,7 +320,7 @@ export function WritingStudioPage() {
                           >
                             <div className="flex items-center gap-2">
                               <Chip size="sm" variant="soft" color={attempt.status === 'graded' ? 'success' : 'default'}>
-                                {attempt.status}
+                                {formatWritingAttemptStatusLabel(attempt.status)}
                               </Chip>
                               <span className="font-mono-tabular text-xs text-muted">
                                 Attempt #{attempt.attemptId}

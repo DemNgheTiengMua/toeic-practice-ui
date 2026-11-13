@@ -59,10 +59,10 @@ export interface WritingInstructions {
 export interface WritingQuestionNav {
   questionId: number;
   displayOrder: number;
+  sectionCode: string;
   sectionName: string;
-  hasDraft: boolean;
-  wordCount: number;
-  status: WritingFreeResponseStatus;
+  isAnswered: boolean;
+  isCurrent: boolean;
 }
 
 export interface WritingQuestion {
@@ -186,4 +186,42 @@ export function resolveWritingErrorCategoryLabel(category?: string | null): stri
   if (!category) return 'Error not classified';
   const normalized = category.trim().toLowerCase();
   return WRITING_ERROR_CATEGORY_LABELS[normalized] ?? 'Error not classified';
+}
+
+const WRITING_ATTEMPT_STATUS_LABELS: Record<string, string> = {
+  in_progress: 'In progress',
+  submitted: 'Submitted',
+  graded: 'Graded',
+  abandoned: 'Abandoned',
+  queued: 'Queued',
+  processing: 'Processing',
+  failed: 'Failed',
+};
+
+const WRITING_GRADING_STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  queued: 'Queued',
+  processing: 'Processing',
+  done: 'Done',
+  failed: 'Failed',
+};
+
+export function formatWritingAttemptStatusLabel(status?: string | null): string {
+  if (!status) return 'Unknown';
+  const normalized = status.trim().toLowerCase();
+  if (WRITING_ATTEMPT_STATUS_LABELS[normalized]) {
+    return WRITING_ATTEMPT_STATUS_LABELS[normalized];
+  }
+  const spaced = normalized.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+export function formatWritingGradingStatusLabel(status?: string | null): string {
+  if (!status) return 'Unknown';
+  const normalized = status.trim().toLowerCase();
+  if (WRITING_GRADING_STATUS_LABELS[normalized]) {
+    return WRITING_GRADING_STATUS_LABELS[normalized];
+  }
+  const spaced = normalized.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }

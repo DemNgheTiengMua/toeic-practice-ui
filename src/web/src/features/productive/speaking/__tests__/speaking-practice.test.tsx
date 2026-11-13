@@ -59,8 +59,22 @@ function makeTakeData(audioPath: string | null = null) {
       readAloudText: null,
     },
     questions: [
-      { questionId: 901, displayOrder: 1, sectionName: 'Part 2', hasAudio: Boolean(audioPath), status: 'draft' as const },
-      { questionId: 902, displayOrder: 2, sectionName: 'Part 3', hasAudio: false, status: 'draft' as const },
+      {
+        questionId: 901,
+        displayOrder: 1,
+        sectionCode: 'P2',
+        sectionName: 'Part 2',
+        isAnswered: Boolean(audioPath),
+        isCurrent: true,
+      },
+      {
+        questionId: 902,
+        displayOrder: 2,
+        sectionCode: 'P3',
+        sectionName: 'Part 3',
+        isAnswered: false,
+        isCurrent: false,
+      },
     ],
   };
 }
@@ -160,11 +174,14 @@ describe('SpeakingPracticePage (/speaking/practice/$questionId)', () => {
 
     await waitFor(() => {
       expect(api.speaking.uploadAudio).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('button', { name: /#1 Recorded/i })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /#2 Open/i })).toBeTruthy();
     });
 
     const submitTrigger = screen.getByRole('button', { name: /Submit attempt/i });
     fireEvent.click(submitTrigger);
 
+    expect(await screen.findByText(/Unrecorded tasks remain/i)).toBeTruthy();
     const confirmBtn = await screen.findByRole('button', { name: /Confirm submit/i });
     fireEvent.click(confirmBtn);
 

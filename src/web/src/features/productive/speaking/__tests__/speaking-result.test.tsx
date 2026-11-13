@@ -133,6 +133,9 @@ describe('SpeakingResultPage (/speaking/result/$attemptId)', () => {
     render(<SpeakingResultPage attemptId={404} pollIntervalMs={20} />);
 
     expect(await screen.findByText(/AI grading in progress/i)).toBeTruthy();
+    expect(screen.getByText('Queued')).toBeTruthy();
+    expect(screen.getByText('Done')).toBeTruthy();
+    expect(screen.getByText('Processing')).toBeTruthy();
 
     await waitFor(() => {
       expect(api.speaking.review).toHaveBeenCalledWith(404);

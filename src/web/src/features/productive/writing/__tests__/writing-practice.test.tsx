@@ -73,18 +73,18 @@ function makeWritingTake(responseText = '') {
       {
         questionId: 1001,
         displayOrder: 1,
+        sectionCode: 'T1',
         sectionName: 'Task 1',
-        hasDraft: Boolean(responseText),
-        wordCount: responseText ? 3 : 0,
-        status: 'draft' as const,
+        isAnswered: Boolean(responseText),
+        isCurrent: true,
       },
       {
         questionId: 1002,
         displayOrder: 2,
+        sectionCode: 'T2',
         sectionName: 'Task 2',
-        hasDraft: false,
-        wordCount: 0,
-        status: 'draft' as const,
+        isAnswered: false,
+        isCurrent: false,
       },
     ],
   };
@@ -130,6 +130,8 @@ describe('WritingPracticePage (/writing/practice/$questionId)', () => {
     fireEvent.change(textarea, { target: { value: 'Solar output rose sharply' } });
 
     expect(screen.getByText(/4 words/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /#1 \(4w\)/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /#2 Open/i })).toBeTruthy();
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Save draft/i }));

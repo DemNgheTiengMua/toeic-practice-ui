@@ -4,8 +4,10 @@ import { Alert, Button, Card, Chip, Label, Meter, ProgressBar, Spinner } from '@
 import { ArrowLeft, Award, RefreshCw, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
+  formatSpeakingAttemptStatusLabel,
   formatSpeakingAudioUrl,
   formatSpeakingDisplayScore,
+  formatSpeakingGradingStatusLabel,
   type SpeakingGradingPending,
   type SpeakingReview,
 } from './types';
@@ -156,7 +158,7 @@ export function SpeakingResultPage({ attemptId, pollIntervalMs = 2500 }: Speakin
                 <Card.Title className="text-base">AI grading in progress</Card.Title>
               </div>
               <Chip color="accent" variant="soft" size="sm">
-                {pending.attemptStatus}
+                {formatSpeakingAttemptStatusLabel(pending.attemptStatus)}
               </Chip>
             </Card.Header>
             <Card.Content className="space-y-4">
@@ -179,7 +181,7 @@ export function SpeakingResultPage({ attemptId, pollIntervalMs = 2500 }: Speakin
                       variant="soft"
                       color={item.status === 'done' ? 'success' : item.status === 'failed' ? 'danger' : 'accent'}
                     >
-                      {item.status}
+                      {formatSpeakingGradingStatusLabel(item.status)}
                     </Chip>
                   </div>
                 ))}

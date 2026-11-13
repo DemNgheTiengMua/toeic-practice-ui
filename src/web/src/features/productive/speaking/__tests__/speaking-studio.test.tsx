@@ -99,6 +99,14 @@ function makeInstructions(creditBalance = 5, creditCost = 2) {
         canReview: true,
         reopenPath: '/speaking/review/88',
       },
+      {
+        attemptId: 89,
+        status: 'in_progress',
+        startedAt: '2026-11-12T09:40:00Z',
+        submittedAt: null,
+        canReview: false,
+        reopenPath: '/speaking/take/89',
+      },
     ],
   };
 }
@@ -142,6 +150,9 @@ describe('SpeakingStudioPage (/speaking)', () => {
     expect(await screen.findByText(/Part 1: Introduction/i)).toBeTruthy();
     const resultLink = screen.getByRole('link', { name: /View result/i });
     expect(resultLink.getAttribute('href')).toBe('/speaking/result/88');
+    expect(screen.getByText('Graded')).toBeTruthy();
+    expect(screen.getByText('In progress')).toBeTruthy();
+    expect(screen.queryByText('in_progress')).toBeNull();
 
     const startBtn = screen.getByRole('button', { name: /Start speaking session/i }) as HTMLButtonElement;
     await waitFor(() => expect(startBtn.disabled).toBe(false));

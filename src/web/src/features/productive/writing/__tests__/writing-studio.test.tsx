@@ -97,6 +97,14 @@ function makeInstructions(creditBalance = 6, creditCost = 2) {
         canReview: true,
         reopenPath: '/writing/review/91',
       },
+      {
+        attemptId: 92,
+        status: 'in_progress',
+        startedAt: '2026-11-12T07:00:00Z',
+        submittedAt: null,
+        canReview: false,
+        reopenPath: '/writing/take/92',
+      },
     ],
   };
 }
@@ -122,6 +130,9 @@ describe('WritingStudioPage (/writing)', () => {
     expect(await screen.findByText('IELTS Writing Task 1 & 2')).toBeTruthy();
     expect(await screen.findByText(/Task 1: Chart analysis/i)).toBeTruthy();
     expect(screen.getByRole('link', { name: /View result/i }).getAttribute('href')).toBe('/writing/result/91');
+    expect(screen.getByText('Graded')).toBeTruthy();
+    expect(screen.getByText('In progress')).toBeTruthy();
+    expect(screen.queryByText('in_progress')).toBeNull();
 
     const startBtn = screen.getByRole('button', { name: /Start writing session/i }) as HTMLButtonElement;
     expect(startBtn.disabled).toBe(false);

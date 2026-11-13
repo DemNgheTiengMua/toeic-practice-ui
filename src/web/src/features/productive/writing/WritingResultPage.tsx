@@ -5,6 +5,8 @@ import { ArrowLeft, Award, BookOpenCheck, RefreshCw, Sparkles } from 'lucide-rea
 import { api } from '@/lib/api';
 import { parseSafeInlineSegments } from '@/lib/security';
 import {
+  formatWritingAttemptStatusLabel,
+  formatWritingGradingStatusLabel,
   resolveWritingErrorCategoryLabel,
   type WritingGradingPending,
   type WritingReview,
@@ -173,7 +175,7 @@ export function WritingResultPage({ attemptId, pollIntervalMs = 2500 }: WritingR
                 <Card.Title className="text-base">AI grading in progress</Card.Title>
               </div>
               <Chip color="accent" variant="soft" size="sm">
-                {pending.attemptStatus}
+                {formatWritingAttemptStatusLabel(pending.attemptStatus)}
               </Chip>
             </Card.Header>
             <Card.Content className="space-y-4">
@@ -196,7 +198,7 @@ export function WritingResultPage({ attemptId, pollIntervalMs = 2500 }: WritingR
                       variant="soft"
                       color={item.status === 'done' ? 'success' : item.status === 'failed' ? 'danger' : 'accent'}
                     >
-                      {item.status}
+                      {formatWritingGradingStatusLabel(item.status)}
                     </Chip>
                   </div>
                 ))}

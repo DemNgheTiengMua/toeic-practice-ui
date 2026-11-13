@@ -101,7 +101,7 @@ export function WritingPracticePage({ attemptId, initialQuestionId }: WritingPra
             ...prev,
             questions: prev.questions.map((nav) =>
               nav.questionId === questionId
-                ? { ...nav, hasDraft: res.wordCount > 0, wordCount: res.wordCount }
+                ? { ...nav, isAnswered: res.wordCount > 0 }
                 : nav,
             ),
           };
@@ -204,7 +204,7 @@ export function WritingPracticePage({ attemptId, initialQuestionId }: WritingPra
     if (nav.questionId === q.questionId) {
       return currentWords === 0;
     }
-    return nav.wordCount === 0 && !nav.hasDraft;
+    return !nav.isAnswered;
   }).length;
 
   return (
@@ -339,15 +339,17 @@ export function WritingPracticePage({ attemptId, initialQuestionId }: WritingPra
               </Card.Header>
               <Card.Content className="flex flex-wrap gap-2">
                 {take.questions.map((nav) => {
-                  const isCurrent = nav.questionId === take.currentQuestionId;
+                  const isCurrent = nav.isCurrent || nav.questionId === take.currentQuestionId;
                   return (
                     <Button
                       key={nav.questionId}
                       size="sm"
-                      variant={isCurrent ? 'primary' : nav.hasDraft ? 'secondary' : 'outline'}
+                      variant={isCurrent ? 'primary' : nav.isAnswered ? 'secondary' : 'outline'}
                       onPress={() => void handleSwitchQuestion(nav.questionId)}
                     >
-                      #{nav.displayOrder} ({nav.questionId === q.questionId ? currentWords : nav.wordCount}w)
+                      {nav.questionId === q.questionId
+                        ? `#${nav.displayOrder} (${currentWords}w)`
+                        : `#${nav.displayOrder} ${nav.isAnswered ? 'Saved' : 'Open'}`}
                     </Button>
                   );
                 })}
