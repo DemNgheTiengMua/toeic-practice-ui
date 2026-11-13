@@ -103,7 +103,7 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
     {
         // The group-lock boundary is the benchmark's, not the recommended diagnostic's: the
         // recommended exam is Listening+Reading and has no writing task to carry the candidate between.
-        var (examId, w2Order, w3Order, readingFirst) = await WritingBenchmarkAsync();
+        var (examId, firstWriting, secondWriting, readingFirst) = await WritingBenchmarkAsync();
         var placementId = await StartPlacementAsync(examId);
 
         var sitting = Page.Locator("#placement-take-dynamic");
@@ -115,8 +115,8 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
         // clicking through the Listening and Reading questions.
         await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q={readingFirst}");
         await Expect(number).ToHaveTextAsync(new Regex($@"Question {readingFirst}\b", RegexOptions.IgnoreCase));
-        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q={w2Order}");
-        await Expect(number).ToHaveTextAsync(new Regex($@"Question {w2Order}\b", RegexOptions.IgnoreCase));
+        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q={firstWriting}");
+        await Expect(number).ToHaveTextAsync(new Regex($@"Question {firstWriting}\b", RegexOptions.IgnoreCase));
         await Expect(sitting.Locator("#writing-editor")).ToBeVisibleAsync();
 
         // Write the first task and move on: the sitting confirms leaving the question group, saves
@@ -138,15 +138,15 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
         Page.Dialog += (_, dialog) => dialogs.Add(dialog.Message);
         await sitting.Locator("#writing-editor").FillAsync("An essay for the first writing task.");
         await next.ClickAsync();
-        await Expect(Page).ToHaveURLAsync(new Regex($@"\?q={w3Order}$"));
-        await Expect(number).ToHaveTextAsync(new Regex($@"Question {w3Order}\b", RegexOptions.IgnoreCase));
+        await Expect(Page).ToHaveURLAsync(new Regex($@"\?q={secondWriting}$"));
+        await Expect(number).ToHaveTextAsync(new Regex($@"Question {secondWriting}\b", RegexOptions.IgnoreCase));
         Assert.That(dialogs, Has.Count.EqualTo(1));
         Assert.That(dialogs[0], Does.Contain("question group"));
 
         // The first task is closed: no Previous into it, and a hand-edited rewind is refused.
         await Expect(previous).ToHaveCountAsync(0);
-        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q={w2Order}");
-        await Expect(Page).ToHaveURLAsync(new Regex($@"\?q={w3Order}$"));
+        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q={firstWriting}");
+        await Expect(Page).ToHaveURLAsync(new Regex($@"\?q={secondWriting}$"));
 
         // The essay written before the group closed was saved.
         await using var check = await OpenAppDatabaseAsync();
@@ -220,7 +220,7 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
     /// recommended diagnostic above is Listening+Reading only; the group-lock boundary lives on the
     /// larger benchmark. Same sitting numbering as above (#272).
     /// </summary>
-    private static async Task<(int ExamId, int W2, int W3, int ReadingFirst)> WritingBenchmarkAsync()
+    private static async Task<(int ExamId, int FirstWriting, int SecondWriting, int ReadingFirst)> WritingBenchmarkAsync()
     {
         await using var connection = await OpenAppDatabaseAsync();
         await using var command = connection.CreateCommand();
@@ -229,8 +229,10 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
             FROM ExamItems p
             JOIN Sections s ON s.SectionId = p.SectionId
             JOIN Certificates c ON c.CertId = s.CertId
-            WHERE c.Code = 'TOEIC' AND s.Code = 'W3'
+            JOIN Skills k ON k.SkillId = s.SkillId
+            WHERE c.Code = 'TOEIC' AND k.Code = 'WRIT'
             GROUP BY p.ExamId
+            HAVING COUNT(DISTINCT s.SectionId) >= 2
             ORDER BY p.ExamId;
             """;
         var examId = Convert.ToInt32(await command.ExecuteScalarAsync());
@@ -249,16 +251,17 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
             )
             SELECT SectionCode, MIN(QuestionNumber)
             FROM sitting
-            WHERE SectionCode IN ('W2', 'W3')
-            GROUP BY SectionCode;
+            WHERE SectionCode IN (SELECT Code FROM Sections WHERE SkillId = (SELECT SkillId FROM Skills WHERE CertId = (SELECT CertId FROM Exams WHERE ExamId = @examId) AND Code = 'WRIT'))
+            GROUP BY SectionCode
+            ORDER BY SectionCode;
             """;
         orders.Parameters.AddWithValue("@examId", examId);
-        var byCode = new Dictionary<string, int>();
+        var writingOrder = new List<(string Code, int QuestionNumber)>();
         await using (var reader = await orders.ExecuteReaderAsync())
         {
             while (await reader.ReadAsync())
             {
-                byCode[reader.GetString(0)] = reader.GetInt32(1);
+                writingOrder.Add((reader.GetString(0), reader.GetInt32(1)));
             }
         }
 
@@ -278,9 +281,12 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
         reading.Parameters.AddWithValue("@examId", examId);
         var readingFirst = Convert.ToInt32(await reading.ExecuteScalarAsync());
 
-        Assert.That(byCode, Does.ContainKey("W2").And.ContainKey("W3"),
-            "The seeded diagnostic must carry both writing tasks for the group boundary to exist.");
-        return (examId, byCode["W2"], byCode["W3"], readingFirst);
+        // Two writing tasks are the minimum for a group boundary to exist at all: the sitting confirms
+        // when the candidate leaves one group for another.
+        Assert.That(writingOrder, Has.Count.GreaterThanOrEqualTo(2),
+            "The seeded diagnostic must carry at least two writing sections for the group boundary to exist.");
+        var ordered = writingOrder.OrderBy(w => w.QuestionNumber).ToList();
+        return (examId, ordered[0].QuestionNumber, ordered[1].QuestionNumber, readingFirst);
     }
 
     /// <summary>Seeds a TOEIC learner with no history, signs in, starts the placement exam and

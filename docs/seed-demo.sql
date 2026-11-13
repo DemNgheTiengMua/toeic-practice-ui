@@ -1319,7 +1319,7 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (2, 1, N'TOEIC Placement Test — Diagnostic', N'published', 45, N'placement', N'strict_exam', NULL, N'A 24-question diagnostic across all seven Listening and Reading parts. It sets your starting CEFR band, and your practice answers keep checking that band afterwards.', N'ETS Diagnostic 2024', NULL, 24, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.2670809+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (2, 1, N'TOEIC Placement Test — Diagnostic', N'published', 45, N'placement', N'strict_exam', NULL, N'A 29-question diagnostic across all four skills: Listening, Reading, Speaking and Writing. It sets your starting CEFR band, and your practice answers keep checking that band afterwards.', N'ETS Diagnostic 2024', NULL, 29, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.2670809+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -1380,12 +1380,6 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (12, 3, N'VSTEP Writing Practice Test 1', N'published', 60, N'writing_practice', N'strict_exam', NULL, N'Complete VSTEP Writing practice with Task 1 (informal/formal letter) and Task 2 (essay).', N'VSTEP Center', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.5184920+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (13, 1, N'Diagnostic Benchmark 45M', N'published', 45, N'placement', N'strict_exam', NULL, N'Bài thi chẩn đoán toàn diện 3 kỹ năng (Nghe, Đọc, Viết) được thiết kế để phân tích lỗ hổng kiến thức, đo lường năng lực CEFR ban đầu và tự động kiến tạo lộ trình học tập tối ưu.', N'ETS Benchmark Suite 2026', NULL, 32, N'demo', 1, NULL, 0, '2026-11-11T01:44:02.3611871+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -5091,6 +5085,36 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (117, 2, 8, 1, 36, 36, N'speaking', 1, 1, SYSDATETIMEOFFSET(), 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (118, 2, 9, 1, 37, 37, N'speaking', 1, 1, SYSDATETIMEOFFSET(), 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (119, 2, 10, 1, 38, 38, N'speaking', 1, 1, SYSDATETIMEOFFSET(), 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (120, 2, 13, 1, 39, 39, N'writing', 1, 1, SYSDATETIMEOFFSET(), 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (121, 2, 14, 1, 40, 40, N'writing', 1, 1, SYSDATETIMEOFFSET(), 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
   INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (36, 3, 8, 1, 36, 36, N'speaking', 1, 1, '2026-11-11T01:44:03.1188603+07:00', 1);
 END TRY
 BEGIN CATCH
@@ -5200,198 +5224,6 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (54, 12, 24, 3, 54, 54, N'writing', 1, 1, '2026-11-11T01:44:03.1313813+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (55, 13, 1, 1, 55, 55, N'listening', 1, 1, '2026-11-11T01:44:03.1323818+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (56, 13, 1, 1, 56, 56, N'listening', 2, 1, '2026-11-11T01:44:03.1333816+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (57, 13, 2, 1, 57, 57, N'listening', 1, 1, '2026-11-11T01:44:03.1343816+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (58, 13, 2, 1, 58, 58, N'listening', 2, 1, '2026-11-11T01:44:03.1343816+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (59, 13, 2, 1, 59, 59, N'listening', 3, 1, '2026-11-11T01:44:03.1353815+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (60, 13, 2, 1, 60, 60, N'listening', 4, 1, '2026-11-11T01:44:03.1358864+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (61, 13, 3, 1, 61, 61, N'listening', 1, 1, '2026-11-11T01:44:03.1368924+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (62, 13, 3, 1, 62, 62, N'listening', 2, 1, '2026-11-11T01:44:03.1378978+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (63, 13, 3, 1, 63, 63, N'listening', 3, 1, '2026-11-11T01:44:03.1388980+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (64, 13, 4, 1, 64, 64, N'listening', 1, 1, '2026-11-11T01:44:03.1388980+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (65, 13, 4, 1, 65, 65, N'listening', 2, 1, '2026-11-11T01:44:03.1398978+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (66, 13, 4, 1, 66, 66, N'listening', 3, 1, '2026-11-11T01:44:03.1408973+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (67, 13, 5, 1, 67, 67, N'reading', 1, 1, '2026-11-11T01:44:03.1418972+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (68, 13, 5, 1, 68, 68, N'reading', 2, 1, '2026-11-11T01:44:03.1418972+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (69, 13, 5, 1, 69, 69, N'reading', 3, 1, '2026-11-11T01:44:03.1428977+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (70, 13, 5, 1, 70, 70, N'reading', 4, 1, '2026-11-11T01:44:03.1438977+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (71, 13, 5, 1, 71, 71, N'reading', 5, 1, '2026-11-11T01:44:03.1448973+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (72, 13, 5, 1, 72, 72, N'reading', 6, 1, '2026-11-11T01:44:03.1454026+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (73, 13, 5, 1, 73, 73, N'reading', 7, 1, '2026-11-11T01:44:03.1464088+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (74, 13, 5, 1, 74, 74, N'reading', 8, 1, '2026-11-11T01:44:03.1469138+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (75, 13, 6, 1, 75, 75, N'reading', 1, 1, '2026-11-11T01:44:03.1479187+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (76, 13, 6, 1, 76, 76, N'reading', 2, 1, '2026-11-11T01:44:03.1479187+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (77, 13, 6, 1, 77, 77, N'reading', 3, 1, '2026-11-11T01:44:03.1494661+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (78, 13, 6, 1, 78, 78, N'reading', 4, 1, '2026-11-11T01:44:03.1504726+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (79, 13, 7, 1, 79, 79, N'reading', 1, 1, '2026-11-11T01:44:03.1504726+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (80, 13, 7, 1, 80, 80, N'reading', 2, 1, '2026-11-11T01:44:03.1514729+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (81, 13, 7, 1, 81, 81, N'reading', 3, 1, '2026-11-11T01:44:03.1524730+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (82, 13, 7, 1, 82, 82, N'reading', 4, 1, '2026-11-11T01:44:03.1534728+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (83, 13, 7, 1, 83, 83, N'reading', 5, 1, '2026-11-11T01:44:03.1544730+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (84, 13, 7, 1, 84, 84, N'reading', 6, 1, '2026-11-11T01:44:03.1554736+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (85, 13, 14, 1, 85, 85, N'writing', 1, 1, '2026-11-11T01:44:03.1564819+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (86, 13, 15, 1, 86, 86, N'writing', 1, 1, '2026-11-11T01:44:03.1575543+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;

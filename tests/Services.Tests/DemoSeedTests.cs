@@ -48,12 +48,12 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
                   AND Purpose='placement' AND Status='published' AND QuestionCount >= 20
                 """));
             // #267: the seed's paper content is the pool now. Same assertion, pool source.
-            Assert.Equal(24, await CountAsync("""
+            Assert.Equal(29, await CountAsync("""
                 SELECT COUNT(*) FROM ExamItems ei
                 JOIN Exams e ON e.ExamId=ei.ExamId
                 WHERE e.Name='TOEIC Placement Test — Diagnostic'
                 """));
-            Assert.Equal(7, await CountAsync("""
+            Assert.Equal(12, await CountAsync("""
                 SELECT COUNT(DISTINCT ei.SectionId) FROM ExamItems ei
                 JOIN Exams e ON e.ExamId=ei.ExamId
                 WHERE e.Name='TOEIC Placement Test — Diagnostic'

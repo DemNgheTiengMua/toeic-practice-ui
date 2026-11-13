@@ -465,7 +465,10 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             await database.SqlCmdFileToDatabaseAsync(name, Path.Combine(DatabaseFixture.RepoRootPath, "docs", "seed-demo.sql"));
 
             await using var db = DbContextFactory.Create(connectionString);
-            var exam = await db.Exams.SingleAsync(e => e.Name == "Diagnostic Benchmark 45M");
+            // Exam 2 is the one seeded placement. It used to be "Diagnostic Benchmark 45M", a second
+            // TOEIC placement paper that duplicated this one; the two were merged so a learner sees a
+            // single diagnostic covering all four skills.
+            var exam = await db.Exams.SingleAsync(e => e.Name == "TOEIC Placement Test — Diagnostic");
             var certId = exam.CertId;
             var examId = exam.ExamId;
 
@@ -491,10 +494,10 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             await engine.VerifyPreflightAsync(attempt.AttemptId, userId);
 
             await using var resultDb = DbContextFactory.Create(connectionString);
-            Assert.Equal(30, await resultDb.AttemptAnswers.CountAsync(a => a.AttemptId == attempt.AttemptId));
-            Assert.Equal(2, await resultDb.FreeResponses.CountAsync(r => r.AttemptId == attempt.AttemptId));
+            Assert.Equal(24, await resultDb.AttemptAnswers.CountAsync(a => a.AttemptId == attempt.AttemptId));
+            Assert.Equal(5, await resultDb.FreeResponses.CountAsync(r => r.AttemptId == attempt.AttemptId));
             var take = await new AttemptEngine(resultDb).GetAttemptTakeAsync(attempt.AttemptId, userId, null);
-            Assert.Equal(32, take.TotalQuestions);
+            Assert.Equal(29, take.TotalQuestions);
         }
         finally
         {
