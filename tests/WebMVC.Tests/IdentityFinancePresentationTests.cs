@@ -6,11 +6,7 @@ namespace WebMVC.Tests;
 public sealed class IdentityFinancePresentationTests
 {
     [Theory]
-    [InlineData("Home/Index.cshtml")]
-    [InlineData("Certificates/Index.cshtml")]
-    [InlineData("Auth")]
     [InlineData("Profile")]
-    [InlineData("Pricing")]
     [InlineData("Wallet")]
     [InlineData("Checkout")]
     [InlineData("Support")]

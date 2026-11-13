@@ -113,31 +113,57 @@ export interface CertificateOptionDto {
   sectionNoun?: string;
 }
 
+export interface CertificateSectionDto {
+  code: string;
+  name: string;
+  expectedQuestionCount: number;
+  sectionId?: number;
+  navigationMode?: string;
+  scoreWeight?: number;
+  displayOrder?: number;
+}
+
+export interface CertificateSkillDto {
+  code: string;
+  name: string;
+  modality: 'listening' | 'reading' | 'speaking' | 'writing' | string;
+  durationMinutes?: number | null;
+  sections: CertificateSectionDto[];
+  skillId?: number;
+  displayOrder?: number;
+}
+
+export interface CertificateBandDto {
+  code: string;
+  name: string;
+  minTotal: number;
+  maxTotal: number;
+}
+
 export interface CertificateDto {
-  certId: number;
   code: string;
   name: string;
   description?: string | null;
-  totalMinutes: number;
-  totalQuestions: number;
-  scaleMin: number;
-  scaleMax: number;
-  sectionNoun: string;
-  skills: Array<{
-    skillId: number;
-    code: string;
-    name: string;
-    modality: string;
-    sectionCount: number;
-    questionCount: number;
-  }>;
-  bands: Array<{
-    bandId: number;
-    code: string;
-    name: string;
-    minTotal: number;
-    maxTotal: number;
-  }>;
+  skills: CertificateSkillDto[];
+  bands: CertificateBandDto[];
+  certId?: number;
+  scoreAggregationRule?: string;
+  presetCode?: string | null;
+  isActive?: boolean;
+}
+
+export interface PackageDto {
+  packageId: number;
+  name: string;
+  credits: number;
+  price: number;
+  isActive: boolean;
+  isFeatured: boolean;
+  features?: string | null;
+  displayOrder: number;
+  ordersSold?: number;
+  totalRevenue?: number;
+  featureList?: string[];
 }
 
 export interface LearnerContextDto {
@@ -439,7 +465,7 @@ export const api = {
 
   catalog: {
     certificates: () => apiFetch<CertificateDto[]>('/api/certificates'),
-    packages: () => apiFetch<any[]>('/api/packages'),
+    packages: () => apiFetch<PackageDto[]>('/api/packages'),
   },
 
   learner: {

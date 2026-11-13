@@ -158,6 +158,14 @@ export function formatVnd(amount: number): string {
   return `${new Intl.NumberFormat('vi-VN').format(amount)} ₫`;
 }
 
+export function formatVndUnitPrice(price: number, credits: number): string {
+  if (credits <= 0) {
+    return `${formatVnd(price)}/credit`;
+  }
+  const unitPrice = Math.round(price / credits);
+  return `${formatVnd(unitPrice)}/credit`;
+}
+
 /** Formats net revenue cleanly using a true minus sign for negative figures (ADR-0014). */
 export function formatSignedVnd(amount: number): string {
   const formatted = new Intl.NumberFormat('vi-VN').format(Math.abs(amount));
