@@ -38,22 +38,7 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
 
     public DemoCertificateDisplayTests(Site site) => this.site = site;
 
-    [Theory]
-    [InlineData("/exams/history")]
-    public async Task No_page_names_a_certificate_it_was_not_given(string path)
-    {
-        using var client = site.CreateClientWithLearner();
-        var response = await client.GetAsync(path);
-        Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode} -> {path}");
-
-        var body = await response.Content.ReadAsStringAsync();
-
-        foreach (var name in OtherCertificateNames)
-        {
-            Assert.False(body.Contains(name, StringComparison.Ordinal),
-                $"{path} renders \"{name}\", a certificate this learner is not working on.");
-        }
-    }
+    // All legacy MVC learner pages (/weakness-analysis, /exams/history) have been retired to the React SPA.
 
     [Fact]
     public void A_landing_page_with_no_catalogue_invents_no_certificate()

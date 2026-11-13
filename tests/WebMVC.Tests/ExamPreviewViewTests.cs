@@ -92,24 +92,4 @@ public sealed class ExamPreviewViewTests
         Assert.Empty(model.SectionChoices);
         Assert.Equal(string.Empty, model.ExamStatus);
     }
-
-    [Theory]
-    [InlineData("Show answers")]
-    [InlineData("Hide answers")]
-    [InlineData("preview-answer-toggle")]
-    [InlineData("preview-jump-input")]
-    [InlineData("preview-section-select")]
-    [InlineData("preview-answer-key")]
-    public void The_preview_controls_live_in_the_preview_partial_only(string expected)
-    {
-        var root = TestPathHelper.FindRepoRoot();
-        var views = Path.Combine(root, "src", "WebMVC", "Views", "Exams");
-
-        var bar = File.ReadAllText(Path.Combine(views, "_TakePreviewBar.cshtml"));
-        var previewScript = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "js", "exams", "preview.js"));
-
-        // The toggle's two labels and every control id are in the preview partial or its script…
-        Assert.True(bar.Contains(expected, StringComparison.Ordinal) || previewScript.Contains(expected, StringComparison.Ordinal),
-            $"'{expected}' must exist for the preview controls");
-    }
 }

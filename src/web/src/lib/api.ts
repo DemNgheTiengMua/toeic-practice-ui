@@ -954,6 +954,270 @@ export interface SaveAnswerResultDto {
   isAutoSubmitted: boolean;
 }
 
+export interface MockExamItemDto {
+  examId: number;
+  certId: number;
+  certCode: string;
+  name: string;
+  description?: string | null;
+  durationMinutes: number;
+  questionCount?: number | null;
+  sourceName?: string | null;
+  creditCost: number;
+  activeAttemptId?: number | null;
+  activeAttemptExpiresAt?: string | null;
+  completedAttemptScore?: number | null;
+  completedAttemptBand?: string | null;
+}
+
+export interface MockExamListViewDto {
+  certificate: CertificateOptionDto;
+  creditBalance: number;
+  exams: MockExamItemDto[];
+}
+
+export interface MockExamSectionInfoDto {
+  sectionId: number;
+  skillCode: string;
+  skillName: string;
+  modality: ModalityCode | string;
+  sectionCode: string;
+  sectionName: string;
+  expectedQuestionCount: number;
+  questionCount: number;
+  durationMinutes: number;
+  displayOrder: number;
+}
+
+export interface MockExamInstructionsDto {
+  examId: number;
+  certId: number;
+  certCode: string;
+  examName: string;
+  description?: string | null;
+  durationMinutes: number;
+  questionCount?: number | null;
+  creditCost: number;
+  creditBalance: number;
+  activeAttemptId?: number | null;
+  sections: MockExamSectionInfoDto[];
+}
+
+export interface StartMockExamResponseDto {
+  attemptId: number;
+  examId: number;
+  status: string;
+  startedAt: string;
+  expiresAt: string;
+  remainingSeconds: number;
+  isAutoSubmitted: boolean;
+}
+
+export interface SubmitAttemptResponseDto {
+  attemptId: number;
+  status: string;
+  totalScore: number;
+  bandCode?: string | null;
+  bandName?: string | null;
+  submittedAt: string;
+  isAutoSubmitted: boolean;
+}
+
+export interface AttemptSkillScoreDto {
+  skillId: number;
+  skillCode: string;
+  skillName: string;
+  modality: ModalityCode | string;
+  rawScore: number;
+  scaledScore: number;
+  totalQuestions: number;
+}
+
+export interface AttemptResultDto {
+  attemptId: number;
+  examId: number;
+  examName: string;
+  certId: number;
+  certCode: string;
+  certName: string;
+  status: string;
+  startedAt: string;
+  submittedAt: string;
+  durationSeconds: number;
+  isAutoSubmitted: boolean;
+  totalScore: number;
+  bandCode?: string | null;
+  bandName?: string | null;
+  skillScores: AttemptSkillScoreDto[];
+  previousAttemptScore?: number | null;
+  scoreDelta?: number | null;
+  freeResponseCount?: number;
+  gradedFreeResponseCount?: number;
+  failedFreeResponseCount?: number;
+  scoreDisplayFactor?: number;
+}
+
+export interface AttemptReviewOptionDto {
+  optionId: number;
+  label: string;
+  text: string;
+  isCorrect: boolean;
+  rationale?: string | null;
+}
+
+export interface AttemptReviewRubricScoreDto {
+  criterionCode: string;
+  criterionName: string;
+  score: number;
+  maxScore: number;
+  feedback?: string | null;
+}
+
+export interface AttemptReviewQuestionDto {
+  questionId: number;
+  displayOrder: number;
+  totalQuestions: number;
+  sectionId: number;
+  sectionCode: string;
+  sectionName: string;
+  skillCode: string;
+  skillName: string;
+  modality: ModalityCode | string;
+  stem: string;
+  imagePath?: string | null;
+  imageAlt?: string | null;
+  audioPath?: string | null;
+  audioStartMs?: number | null;
+  audioEndMs?: number | null;
+  transcript?: string | null;
+  passage?: string | null;
+  explanation?: string | null;
+  options: AttemptReviewOptionDto[];
+  selectedOptionId?: number | null;
+  isCorrect?: boolean | null;
+  isFlagged: boolean;
+  responseText?: string | null;
+  responseAudioPath?: string | null;
+  aiScore?: number | null;
+  aiFeedback?: string | null;
+  rubricScores?: AttemptReviewRubricScoreDto[] | null;
+}
+
+export interface ReviewNavigatorItemDto {
+  questionId: number;
+  displayOrder: number;
+  sectionId: number;
+  sectionCode: string;
+  modality: ModalityCode | string;
+  isAnswered: boolean;
+  isFlagged: boolean;
+  isCorrect?: boolean | null;
+}
+
+export interface AttemptReviewDto {
+  attemptId: number;
+  examId: number;
+  examName: string;
+  certId: number;
+  certCode: string;
+  certName: string;
+  status: string;
+  startedAt: string;
+  submittedAt: string;
+  durationSeconds: number;
+  totalScore: number;
+  bandCode?: string | null;
+  bandName?: string | null;
+  skillScores: AttemptSkillScoreDto[];
+  totalQuestions: number;
+  answeredCount: number;
+  correctCount: number;
+  incorrectCount: number;
+  blankCount: number;
+  flaggedCount: number;
+  questions: AttemptReviewQuestionDto[];
+  navigator: ReviewNavigatorItemDto[];
+}
+
+export interface ScoreBandItemDto {
+  code: string;
+  name: string;
+  minTotal: number;
+  maxTotal: number;
+  displayOrder: number;
+}
+
+export interface ExamHistoryItemDto {
+  attemptId: number;
+  examId: number;
+  examName: string;
+  certId: number;
+  certCode: string;
+  startedAt: string;
+  submittedAt: string;
+  totalScore: number;
+  bandCode?: string | null;
+  bandName?: string | null;
+  skillScores: AttemptSkillScoreDto[];
+  status: string;
+}
+
+export interface MockSkillProjectionDto {
+  skillId: number;
+  scaledScore: number;
+  awardedLevelCode?: string | null;
+  positionInBand?: number | null;
+  outcome: 'projected' | 'uncertified' | 'display_ceiling' | 'cannot_judge' | string;
+  cannotJudgeReason?: string | null;
+}
+
+export interface MockResultProjectionDto {
+  attemptId: number;
+  certId: number;
+  certificateScore: number;
+  bandCode?: string | null;
+  bandName?: string | null;
+  scoreDisplayFactor: number;
+  skills: MockSkillProjectionDto[];
+  weakestProjectedLevelCode?: string | null;
+  weakestProjectedSkillId?: number | null;
+  storedOverallLevelCode?: string | null;
+  storedLimitingSkillCode?: string | null;
+  hasNoStoredMeasurement: boolean;
+  differingSkillIds: number[];
+  syncOffered: boolean;
+  historical: boolean;
+  cannotJudgeReason?: string | null;
+  cutScoreTableVersion?: number | null;
+}
+
+export interface MockSyncSkillDto {
+  skillId: number;
+  skillCode: string;
+  levelCode: string;
+  positionInBand: number;
+  source: string;
+}
+
+export interface MockSyncResultDto {
+  certId: number;
+  overallLevelCode?: string | null;
+  limitingSkillId?: number | null;
+  limitingSkillCode?: string | null;
+  skills: MockSyncSkillDto[];
+}
+
+export interface ExamHistoryDto {
+  certificate: CertificateOptionDto;
+  totalAttempts: number;
+  bestScore?: number | null;
+  averageScore?: number | null;
+  bestScoreBandCode?: string | null;
+  bestScoreBandName?: string | null;
+  cefrBands: ScoreBandItemDto[];
+  attempts: ExamHistoryItemDto[];
+}
+
 export interface PlacementResumeSkillDto {
   skillId: number;
   code: string;
@@ -2168,11 +2432,11 @@ export const api = {
   },
 
   exams: {
-    list: () => apiFetch<any>('/api/learner/exams'),
+    list: () => apiFetch<MockExamListViewDto>('/api/learner/exams'),
     instructions: (examId: number) =>
-      apiFetch<any>(`/api/learner/exams/${examId}/instructions`),
+      apiFetch<MockExamInstructionsDto>(`/api/learner/exams/${examId}/instructions`),
     start: (examId: number) =>
-      apiFetch<any>(`/api/learner/exams/${examId}/start`, { method: 'POST' }),
+      apiFetch<StartMockExamResponseDto>(`/api/learner/exams/${examId}/start`, { method: 'POST' }),
     preflightStatus: (attemptId: number) =>
       apiFetch<PreflightStatusDto>(`/api/learner/attempts/${attemptId}/preflight`),
     verifyPreflight: (attemptId: number) =>
@@ -2193,10 +2457,13 @@ export const api = {
         body: JSON.stringify(body),
       }),
     saveDraft: (attemptId: number, body: { questionId: number; responseText: string }) =>
-      apiFetch<any>(`/api/learner/attempts/${attemptId}/draft`, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
+      apiFetch<{ freeResponseId?: number; questionId?: number; savedAt?: string; wordCount?: number }>(
+        `/api/learner/attempts/${attemptId}/draft`,
+        {
+          method: 'POST',
+          body: JSON.stringify(body),
+        },
+      ),
     sync: (attemptId: number, body: any) =>
       apiFetch<any>(`/api/learner/attempts/${attemptId}/sync`, {
         method: 'POST',
@@ -2217,7 +2484,7 @@ export const api = {
         body: JSON.stringify({ targetGroupId }),
       }),
     submit: (attemptId: number) =>
-      apiFetch<any>(`/api/learner/attempts/${attemptId}/submit`, { method: 'POST' }),
+      apiFetch<SubmitAttemptResponseDto>(`/api/learner/attempts/${attemptId}/submit`, { method: 'POST' }),
     cancel: (attemptId: number) =>
       apiFetch<void>(`/api/learner/attempts/${attemptId}/cancel`, { method: 'POST' }),
     resumeByCode: (authorizationCode: string) =>
@@ -2226,16 +2493,16 @@ export const api = {
         body: JSON.stringify({ authorizationCode }),
       }),
     result: (attemptId: number) =>
-      apiFetch<any>(`/api/learner/attempts/${attemptId}/result`),
+      apiFetch<AttemptResultDto>(`/api/learner/attempts/${attemptId}/result`),
     projection: (attemptId: number) =>
-      apiFetch<any>(`/api/learner/attempts/${attemptId}/projection`),
+      apiFetch<MockResultProjectionDto>(`/api/learner/attempts/${attemptId}/projection`),
     syncProjection: (attemptId: number) =>
-      apiFetch<any>(`/api/learner/attempts/${attemptId}/projection/sync`, {
+      apiFetch<MockSyncResultDto>(`/api/learner/attempts/${attemptId}/projection/sync`, {
         method: 'POST',
       }),
     review: (attemptId: number) =>
-      apiFetch<any>(`/api/learner/attempts/${attemptId}/review`),
-    history: () => apiFetch<any>('/api/learner/exams/history'),
+      apiFetch<AttemptReviewDto>(`/api/learner/attempts/${attemptId}/review`),
+    history: () => apiFetch<ExamHistoryDto>('/api/learner/exams/history'),
     insight: (attemptId: number) =>
       apiFetch<any>(`/api/learner/insights/exam/${attemptId}`),
     retryInsight: (attemptId: number) =>

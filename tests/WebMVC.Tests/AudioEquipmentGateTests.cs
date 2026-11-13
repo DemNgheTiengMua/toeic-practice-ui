@@ -59,42 +59,6 @@ public sealed class AudioEquipmentGateTests
 
     // --------------------------------------------------- no prompt inside a sitting
 
-    /// <summary>
-    /// Reading the copy is not enough: a take page that calls getUserMedia passes every string
-    /// assertion and still breaks the learner's attempt with a system dialog over the clock.
-    /// <para>
-    /// This asserts the call site is unreachable from the take-page scripts. `acquire` is the
-    /// non-prompting path (it returns "blocked" without calling getUserMedia unless the permission is
-    /// already granted); `ask` is the prompting path and may only appear in a settings or pre-sitting
-    /// script. `exams/preflight.js` is listed because it is the same shell a candidate reaches from a
-    /// sitting; it is a pre-sitting screen and prompts through the gate, never directly.
-    /// </para>
-    /// </summary>
-    [Theory]
-    [InlineData("exams/speaking.js")]
-    public void No_take_page_script_calls_the_prompting_path(string script)
-    {
-        var source = Script(script);
-
-        Assert.DoesNotContain("EeAudioGate.ask(", source);
-        Assert.DoesNotContain(".ask(", source);
-        // The one prompting call is inside the gate module, which a take page cannot reach directly.
-        Assert.DoesNotContain("mediaDevices.getUserMedia(", source);
-    }
-
-    /// <summary>
-    /// `exams/preflight.js` is a pre-sitting screen, so it MAY prompt - but only through the gate, so
-    /// the state it renders is the browser's answer rather than an error name.
-    /// </summary>
-    [Fact]
-    public void The_preflight_screen_prompts_only_through_the_gate()
-    {
-        var source = Script("exams/preflight.js");
-
-        Assert.DoesNotContain("mediaDevices.getUserMedia(", source);
-        Assert.Contains("EeAudioGate", source);
-    }
-
     [Fact]
     public void The_gate_module_is_the_only_place_that_can_prompt()
     {
@@ -109,17 +73,6 @@ public sealed class AudioEquipmentGateTests
         Assert.Contains("current.state !== GRANTED", acquire.Groups["body"].Value);
     }
 
-    /// <summary>
-    /// The engine's per-item speaking capture is the other take-page prompt site. It used to call
-    /// getUserMedia directly; it now goes through the gate.
-    /// </summary>
-    [Fact]
-    public void The_exam_shell_speaking_capture_goes_through_the_gate()
-    {
-        var source = Script("exams/speaking.js");
-        Assert.DoesNotContain("await navigator.mediaDevices.getUserMedia", source);
-        Assert.Contains("window.EeAudioGate.acquire(", source);
-    }
 
     [Fact]
     public void The_sitting_surfaces_mark_their_equipment_panel_as_a_sitting()
@@ -155,18 +108,6 @@ public sealed class AudioEquipmentGateTests
             @"@if \(Model\)\s*\{\s*<button[^>]*data-audio-action=""request-permission""", states);
         Assert.Matches(
             @"@if \(Model\)\s*\{\s*<button[^>]*data-audio-action=""retry-permission""", states);
-    }
-
-    /// <summary>
-    /// The pre-sitting screen is one of the two surfaces allowed to prompt, so it passes `true`; a
-    /// screen that passed `false` would show the states with no way to fix any of them.
-    /// </summary>
-    [Fact]
-    public void The_pre_sitting_screens_pass_true_to_the_state_panel()
-    {
-        var preflight = View("Exams/_PreflightMicrophone.cshtml");
-        Assert.Contains("<partial name=\"_AudioPermissionStates\" model=\"true\" />", preflight);
-        Assert.Contains("data-permission-promptable=\"true\"", preflight);
     }
 
     // -------------------------------------------------------- three distinct states
@@ -458,32 +399,6 @@ public sealed class AudioEquipmentGateTests
 
     // ------------------------------------------------------- the settings control
 
-    /// <summary>
-    /// One labelled settings control carries type size and contrast alongside audio on every sitting
-    /// surface, and the audio portion is suppressed on a section that uses none.
-    /// </summary>
-    /// <summary>
-    /// One labelled settings control carries type size and contrast alongside audio on every sitting
-    /// surface. The control's own button carries the word "Audio" - an icon alone would fail the
-    /// criterion - and the audio portion is suppressed by the model on a paper that uses none.
-    /// </summary>
-    [Fact]
-    public void Every_sitting_topbar_carries_one_labelled_settings_control()
-    {
-        foreach (var topbar in new[]
-        {
-            "Exams/_TakeTopbar.cshtml",
-        })
-        {
-            var view = View(topbar);
-            Assert.Contains("_AudioEmergencySwitcher", view);
-        }
-
-        var switcher = View("Shared/_AudioEmergencySwitcher.cshtml");
-        Assert.Matches(@">\s*Audio\s*<", switcher);
-        Assert.Contains("aria-haspopup=\"dialog\"", switcher);
-    }
-
     [Fact]
     public void The_audio_portion_is_suppressed_on_a_section_that_uses_no_audio()
     {
@@ -531,8 +446,6 @@ public sealed class AudioEquipmentGateTests
     [Theory]
     [InlineData("ee-audio.js", "fillSelect", "deviceLabel", "supportSetSinkId", "syncControls", "measureSignal")]
     [InlineData("audio-gate.js", "readCached", "writeCached", "setBlock", "setBrowser", "acquire")]
-    [InlineData("exams/preflight.js", "enumerateMics", "runSampleRecording", "showSilentGate", "refreshMicPermission")]
-    [InlineData("exams/speaking.js", "playBeepCue", "cleanupSpeakingPacer", "startMockSpeakingCapture", "startSpeakingPacerRecording")]
     public void Every_function_a_script_calls_is_defined_in_it(string script, params string[] mustExist)
     {
         var source = Script(script);

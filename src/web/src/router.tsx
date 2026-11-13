@@ -63,6 +63,12 @@ import { MentorBookingDetailPage } from './features/mentors/MentorBookingDetailP
 import { InstructorSessionsPage } from './features/instructor/InstructorSessionsPage';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { SupportPage } from './features/support/SupportPage';
+import { MockExamCatalogPage } from './features/exams/MockExamCatalogPage';
+import { MockExamConfirmPage } from './features/exams/MockExamConfirmPage';
+import { MockExamTakePage } from './features/exams/MockExamTakePage';
+import { MockExamResultPage } from './features/exams/MockExamResultPage';
+import { MockExamReviewPage } from './features/exams/MockExamReviewPage';
+import { MockExamHistoryPage } from './features/exams/MockExamHistoryPage';
 
 function PlaceholderView({ title, ticket }: { title: string; ticket: string }) {
   return (
@@ -287,7 +293,39 @@ const routeTree = rootRoute.addChildren([
     path: '/placement/result/$attemptId',
     component: PlacementResultPage,
   }),
-  stubRoute('/exams', 'Mock exams', '297'),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/exams',
+    component: MockExamCatalogPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/exams/$examId',
+    component: MockExamConfirmPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/exams/take/$attemptId',
+    validateSearch: (search: Record<string, unknown>) => ({
+      q: typeof search.q === 'number' || typeof search.q === 'string' ? Number(search.q) : undefined,
+    }),
+    component: MockExamTakePage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/exams/result/$attemptId',
+    component: MockExamResultPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/exams/review/$attemptId',
+    component: MockExamReviewPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/exams/history',
+    component: MockExamHistoryPage,
+  }),
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/practice',
