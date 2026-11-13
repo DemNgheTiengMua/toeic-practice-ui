@@ -82,25 +82,6 @@ public sealed class SpeakingScoreDisplayTests
         Assert.Equal("6.5", new ExamSkillScoreViewModel(dto.SkillScores[0], 75, dto.ScoreDisplayFactor).ScaledScoreDisplay);
     }
 
-    [Fact]
-    public void A_placement_result_on_a_tenths_certificate_is_rendered_divided()
-    {
-        var dto = new PlacementResultViewDto(
-            PlacementId: 1, AttemptId: 2, CertId: 3, CertCode: "IELTS", ExamName: "Placement",
-            TakenAt: DateTimeOffset.UnixEpoch, DurationMinutes: 60, TotalQuestions: 40,
-            TotalScore: 65, ResultBandCode: "B2", ResultBandName: "Upper intermediate",
-            CefrBands: [new CefrBandInfoDto("B2", "B2", 55, 65, true, true, false)],
-            SkillScores: [new PlacementSkillScoreInfoDto(1, "LIST", "Listening", 30, 40, 65, "B2")],
-            WeakerSkillName: null, BandNote: null,
-            ScoreDisplayFactor: 10);
-
-        var model = new PlacementResultViewModel(dto);
-
-        Assert.Equal("6.5", model.SkillScoreDisplay(dto.SkillScores[0]));
-        Assert.Equal("6.5", ScoreDisplay.Format(dto.TotalScore, dto.ScoreDisplayFactor));
-        Assert.Equal("6.5", ScoreDisplay.Format(dto.CefrBands.Max(b => b.MaxTotal), dto.ScoreDisplayFactor));
-    }
-
     /// <summary>
     /// #152 finding 3: the service's reported score and the band the grading worker stored are one
     /// placement, and that placement lives beside the engine's other scale rules rather than inside a

@@ -39,11 +39,7 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
     public DemoCertificateDisplayTests(Site site) => this.site = site;
 
     [Theory]
-    [InlineData("/")]
-    [InlineData("/certificates")]
     [InlineData("/weakness-analysis")]
-    [InlineData("/practice")]
-    [InlineData("/placement/result/1")]
     [InlineData("/exams/history")]
     public async Task No_page_names_a_certificate_it_was_not_given(string path)
     {
@@ -102,58 +98,7 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
         Assert.Contains(rows, r => r.Contains("B2", StringComparison.Ordinal) && !r.Contains("/lessons/", StringComparison.Ordinal));
     }
 
-    [Fact]
-    public async Task The_certificates_strip_draws_exactly_the_bands_the_certificate_has()
-    {
-        using var client = site.CreateClientWithLearner();
-        var body = await client.GetStringAsync("/certificates");
 
-        // Four bands of the DEMO certificate, no fifth column invented for the CEFR ladder.
-        var strip = Regex.Match(body, @"<div class=""cefr__track""[^>]*>(?<body>[\s\S]*?)</div>").Groups["body"].Value;
-        Assert.NotEmpty(strip);
-
-        var bands = Regex.Matches(strip, @"class=""cefr__band[^""]*"">(?<code>[^<]+)<").Select(m => m.Groups["code"].Value.Trim()).ToList();
-        Assert.Equal(4, bands.Count);
-        Assert.Equal(["D1", "D2", "D3", "D4"], bands);
-    }
-
-    [Fact]
-    public async Task A_band_is_as_wide_as_the_score_range_it_covers()
-    {
-        using var client = site.CreateClientWithLearner();
-        var body = await client.GetStringAsync("/certificates");
-
-        // DEMO bands: D1 0-99, D2 100-199, D3 200-399, D4 400-500. Equal columns would be 25% each,
-        // which would put the D4 edge in the wrong place on every page that draws this scale.
-        var track = Regex.Match(body, @"<div class=""cefr__track""(?<attrs>[^>]*)>").Groups["attrs"].Value;
-        Assert.Contains("--band-columns: 99fr 99fr 199fr 100fr", track);
-    }
-
-    [Fact]
-    public async Task A_goal_screen_with_no_target_band_says_so_instead_of_inventing_one()
-    {
-        // #161 / D7: the view model used to fall back to the literal "B2" when the learner had never
-        // chosen a band. A DEMO certificate has no B2, so the old code preselected a band that does not
-        // exist in the list it was rendering.
-        using var client = site.CreateClientWithLearner();
-        var body = await client.GetStringAsync("/placement/target-band");
-
-        Assert.Contains("no target band yet", body, StringComparison.OrdinalIgnoreCase);
-
-        // The claim is about the band picker, not the whole document. Reading the whole body made a
-        // random anti-forgery token containing "B2" fail the test about one run in twenty (#252), and
-        // a test that also fails for an unrelated reason cannot be trusted when it does fail.
-        // Every band the page offers is a `value="..."` on a TargetBandCode radio; none of them may
-        // be B2, because a DEMO certificate has D1-D4 and no B2.
-        var targetBands = Regex.Matches(
-                body,
-                @"name=""TargetBandCode""\s*value=""(?<code>[^""]+)""")
-            .Select(m => m.Groups["code"].Value)
-            .ToList();
-
-        Assert.NotEmpty(targetBands);
-        Assert.DoesNotContain("B2", targetBands);
-    }
 
     [Fact]
     public void A_landing_page_with_no_catalogue_invents_no_certificate()

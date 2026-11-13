@@ -51,18 +51,6 @@ public sealed class SourceEncodingTests
             $"{problems.Count} source file(s) are not clean UTF-8:{Environment.NewLine}{string.Join(Environment.NewLine, problems)}");
     }
 
-    /// <summary>Placement draft status labels were the regression that motivated this guard, so
-    /// pin the exact typography the browser must receive.</summary>
-    [Fact]
-    public void Placement_take_script_uses_a_real_ellipsis_in_its_save_labels()
-    {
-        var path = Path.Combine(TestPathHelper.FindRepoRoot(), "src", "WebMVC", "wwwroot", "js", "placement", "take.js");
-        var text = File.ReadAllText(path, Encoding.UTF8);
-
-        Assert.Contains("\"Saving draft…\"", text, StringComparison.Ordinal);
-        Assert.Contains("\"Saving…\"", text, StringComparison.Ordinal);
-    }
-
     private static IEnumerable<string> SourceFiles(string root)
     {
         var extensions = SourceExtensions.ToHashSet(StringComparer.OrdinalIgnoreCase);

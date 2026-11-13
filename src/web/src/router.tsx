@@ -34,6 +34,11 @@ import { SpeakingResultPage } from './features/productive/speaking/SpeakingResul
 import { WritingStudioPage } from './features/productive/writing/WritingStudioPage';
 import { WritingPracticePage } from './features/productive/writing/WritingPracticePage';
 import { WritingResultPage } from './features/productive/writing/WritingResultPage';
+import { PlacementCatalogPage } from './features/placement/PlacementCatalogPage';
+import { PlacementRetakePage } from './features/placement/PlacementRetakePage';
+import { PlacementResumePage } from './features/placement/PlacementResumePage';
+import { PlacementTakePage } from './features/placement/PlacementTakePage';
+import { PlacementResultPage } from './features/placement/PlacementResultPage';
 
 function PlaceholderView({ title, ticket }: { title: string; ticket: string }) {
   return (
@@ -225,7 +230,39 @@ const routeTree = rootRoute.addChildren([
     path: '/auth/verify-email',
     component: VerifyEmailPage,
   }),
-  stubRoute('/placement', 'Placement', '296'),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/placement',
+    component: PlacementCatalogPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/placement/retake/$certId',
+    component: PlacementRetakePage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/placement/preflight',
+    component: PlacementRetakePage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/placement/resume/$attemptId',
+    component: PlacementResumePage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/placement/take/$attemptId',
+    validateSearch: (search: Record<string, unknown>) => ({
+      q: typeof search.q === 'number' || typeof search.q === 'string' ? Number(search.q) : undefined,
+    }),
+    component: PlacementTakePage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/placement/result/$attemptId',
+    component: PlacementResultPage,
+  }),
   stubRoute('/exams', 'Mock exams', '297'),
   createRoute({
     getParentRoute: () => rootRoute,
@@ -289,3 +326,4 @@ declare module '@tanstack/react-router' {
     router: typeof router;
   }
 }
+

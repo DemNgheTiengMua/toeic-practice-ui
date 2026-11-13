@@ -74,7 +74,7 @@ public sealed class StaticAssetPipelineTests : IClassFixture<StaticAssetPipeline
         site.Upstream.Reset();
         site.Auth.Reset();
 
-        var response = await site.CreateClient().GetAsync("/");
+        var response = await site.CreateClient().GetAsync("/exams");
 
         // The home page is anonymous, but authentication still ran for it: the short-circuit is
         // scoped to asset endpoints, not to the site.

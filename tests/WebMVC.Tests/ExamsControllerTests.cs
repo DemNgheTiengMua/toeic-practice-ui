@@ -919,10 +919,8 @@ public sealed class ExamsControllerTests
         var result = await controller.VerifyPreflight(null, 100, null, CancellationToken.None, placementId: 42);
 
         Assert.True(api.VerifyPreflightCalled);
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(nameof(PlacementController.Take), redirect.ActionName);
-        Assert.Equal("Placement", redirect.ControllerName);
-        Assert.Equal(42, redirect.RouteValues?["placementId"]);
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.Equal("/placement/take/42", redirect.Url);
     }
 
     [Fact]

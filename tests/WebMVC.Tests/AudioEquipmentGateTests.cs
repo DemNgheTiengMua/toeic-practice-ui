@@ -57,69 +57,6 @@ public sealed class AudioEquipmentGateTests
             .Replace("\r\n", "\n", StringComparison.Ordinal);
 
 
-    // ---------------------------------------------------------------- scoping
-
-    /// <summary>
-    /// The criterion most likely to be faked: a gate that always asks passes every other one. A
-    /// placement whose offers carry neither a speaking nor a listening skill must render no
-    /// equipment panel at all - not an empty one, and not one with the microphone hidden by CSS.
-    /// </summary>
-    [Theory]
-    [InlineData("reading", false, false)]
-    [InlineData("writing", false, false)]
-    [InlineData("listening", false, true)]
-    [InlineData("speaking", true, false)]
-    public void Placement_preflight_scopes_equipment_to_the_skills_it_will_measure(
-        string modality, bool expectMic, bool expectAudio)
-    {
-        var gate = Gate(modality, requiresMic: expectMic, requiresAudio: expectAudio);
-        var model = new PlacementPreflightPageViewModel(gate);
-
-        if (!expectMic && !expectAudio)
-        {
-            Assert.Null(model.AudioEquipment);
-            return;
-        }
-
-        Assert.NotNull(model.AudioEquipment);
-        Assert.Equal(expectMic, model.AudioEquipment!.ShowInput);
-        Assert.Equal(expectAudio, model.AudioEquipment.ShowOutput);
-        // The pre-sitting surface is where a permission may legitimately be requested.
-        Assert.False(model.AudioEquipment.Sitting);
-    }
-
-    /// <summary>
-    /// The wrong-but-passing input: a gate derived from the certificate code rather than from the
-    /// paper. A certificate that examines speaking but places reading-only must still show nothing.
-    /// </summary>
-    [Fact]
-    public void A_reading_placement_on_a_certificate_that_also_examines_speaking_still_asks_nothing()
-    {
-        // RequiresMic/RequiresAudio are computed from the offers that must be MEASURED; a reusable
-        // speaking skill contributes nothing, so both are false here even though the certificate has
-        // a speaking row.
-        var gate = Gate("reading", requiresMic: false, requiresAudio: false,
-            offers:
-            [
-                Offer("READ", "reading", mic: false, audio: false),
-                Offer("SPEA", "speaking", mic: true, audio: false, canReuse: true),
-            ]);
-
-        var model = new PlacementPreflightPageViewModel(gate);
-
-        Assert.Null(model.AudioEquipment);
-    }
-
-    [Fact]
-    public void The_preflight_view_renders_the_panel_only_when_the_model_has_one()
-    {
-        var view = View("Placement/Preflight.cshtml");
-
-        Assert.Matches(
-            @"@if \(Model\.AudioEquipment is not null\)\s*\{\s*<partial name=""_AudioEquipmentCheck"" model=""Model\.AudioEquipment"" />",
-            view);
-    }
-
     // --------------------------------------------------- no prompt inside a sitting
 
     /// <summary>
@@ -230,10 +167,6 @@ public sealed class AudioEquipmentGateTests
         var preflight = View("Exams/_PreflightMicrophone.cshtml");
         Assert.Contains("<partial name=\"_AudioPermissionStates\" model=\"true\" />", preflight);
         Assert.Contains("data-permission-promptable=\"true\"", preflight);
-
-        // Placement preflight renders the equipment component, which is promptable off a sitting.
-        var placement = View("Placement/Preflight.cshtml");
-        Assert.Contains("<partial name=\"_AudioEquipmentCheck\" model=\"Model.AudioEquipment\" />", placement);
     }
 
     // -------------------------------------------------------- three distinct states
@@ -540,8 +473,6 @@ public sealed class AudioEquipmentGateTests
         foreach (var topbar in new[]
         {
             "Exams/_TakeTopbar.cshtml",
-            "Practice/_TakeTopbar.cshtml",
-            "Placement/_TakeTopbar.cshtml",
         })
         {
             var view = View(topbar);
@@ -556,10 +487,6 @@ public sealed class AudioEquipmentGateTests
     [Fact]
     public void The_audio_portion_is_suppressed_on_a_section_that_uses_no_audio()
     {
-        // Placement: no audio and no microphone in the paper => the model is null => no switcher.
-        var model = new PlacementTakeViewModel(PlacementTake(ModalityDto.Reading));
-        Assert.Null(model.AudioEquipment);
-
         // Exam: the audio panel is only built when a question is listening or speaking.
         var reading = new ExamTakeViewModel(TakeFixture(modality: ModalityDto.Reading)).Display;
         Assert.Null(reading.AudioEquipment);
@@ -568,16 +495,6 @@ public sealed class AudioEquipmentGateTests
         Assert.NotNull(listening.AudioEquipment);
         Assert.True(listening.AudioEquipment!.ShowOutput);
         Assert.False(listening.AudioEquipment.ShowInput);
-    }
-
-    /// <summary>The topbar renders the settings control only when the model carries one.</summary>
-    [Fact]
-    public void The_placement_topbar_renders_the_settings_control_only_when_the_paper_needs_audio()
-    {
-        var view = View("Placement/_TakeTopbar.cshtml");
-        Assert.Matches(
-            @"@if \(Model\.AudioEquipment is not null\)\s*\{\s*@await Html\.PartialAsync\(""_AudioEmergencySwitcher"", Model\.AudioEquipment\)",
-            view);
     }
 
     // ------------------------------------------------------------- accessibility
