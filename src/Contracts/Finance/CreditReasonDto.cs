@@ -16,4 +16,5 @@ public enum CreditReasonDto
     [JsonStringEnumMemberName("admin_revoke")] AdminRevoke,
     [JsonStringEnumMemberName("booking_cancel")] BookingCancel,
     [JsonStringEnumMemberName("refund_credit")] RefundCredit,
+    [JsonStringEnumMemberName("placement_retake")] PlacementRetake,
 }

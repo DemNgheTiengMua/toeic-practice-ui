@@ -4036,7 +4036,8 @@ CREATE TABLE CreditTransactions (
     CONSTRAINT CK_CreditTxn_Reason CHECK (Reason IN
       ('purchase','admin_grant','mock_exam_start','ai_grading','mentor_booking','admin_revoke',
        'booking_cancel',   -- UI-31 (gap 8): refund of a cancelled booking
-       'refund_credit')),  -- #280: the credits a credit refund granted
+       'refund_credit',      -- #280: the credits a credit refund granted
+       'placement_retake')), -- #288: paid placement retake charge (16 chars, fits VARCHAR(16))
   Delta    INT NOT NULL CONSTRAINT CK_CreditTxn_NonZero CHECK (Delta <> 0),
   OrderId       INT NULL,
   AttemptId     INT NULL,
@@ -4047,7 +4048,8 @@ CREATE TABLE CreditTransactions (
   CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   CONSTRAINT CK_CreditTxn_AdminActor CHECK (
        (Reason IN ('admin_grant','admin_revoke','refund_credit') AND AdminUserId IS NOT NULL AND Note IS NOT NULL)
-    OR (Reason NOT IN ('admin_grant','admin_revoke','refund_credit') AND AdminUserId IS NULL)),
+    OR (Reason = 'placement_retake' AND AdminUserId IS NULL AND Note IS NOT NULL)
+    OR (Reason NOT IN ('admin_grant','admin_revoke','refund_credit','placement_retake') AND AdminUserId IS NULL)),
   -- M-16: lets Complaints prove the linked grant belongs to the complainant
   CONSTRAINT UQ_CreditTxn_Id_User UNIQUE (TxnId, UserId),
   -- H-1: composite FKs carry UserId so the source row's owner must match the charged wallet.
@@ -4068,7 +4070,7 @@ CREATE TABLE CreditTransactions (
   -- with a flipped sign.
   CONSTRAINT CK_CreditTxn_DeltaSign CHECK (
        (Reason IN ('purchase','admin_grant','booking_cancel','refund_credit') AND Delta > 0)
-    OR (Reason IN ('mock_exam_start','ai_grading','mentor_booking','admin_revoke') AND Delta < 0)
+    OR (Reason IN ('mock_exam_start','ai_grading','mentor_booking','admin_revoke','placement_retake') AND Delta < 0)
   ),
   -- exactly the source column matching the reason is set (admin_* carry none)
   -- #280: refund_credit carries NO source column either, for a reason the ledger cannot express: the
@@ -4081,7 +4083,7 @@ CREATE TABLE CreditTransactions (
     OR (Reason='ai_grading'      AND AttemptId IS NOT NULL AND OrderId IS NULL AND BookingId IS NULL)
     OR (Reason IN ('mentor_booking','booking_cancel')
                                  AND BookingId IS NOT NULL AND OrderId IS NULL AND AttemptId IS NULL)
-    OR (Reason IN ('admin_grant','admin_revoke','refund_credit') AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL)
+    OR (Reason IN ('admin_grant','admin_revoke','refund_credit','placement_retake') AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL)
   )
 );
 GO

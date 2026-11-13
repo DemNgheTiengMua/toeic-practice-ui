@@ -15,4 +15,5 @@ public enum CreditReason
     AdminRevoke,
     BookingCancel,
     RefundCredit,
+    PlacementRetake,
 }
