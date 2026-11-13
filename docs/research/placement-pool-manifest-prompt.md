@@ -18,7 +18,6 @@ One JSON file. Contact sheet:
   "version": "1.0",
   "exam": {
     "title": "TOEIC Placement Pool — <your batch name>",
-    "purpose": "placement",
     "deliveryMode": "practice",
     "durationMinutes": 60,
     "sourceName": "<where the content comes from>",
@@ -149,17 +148,32 @@ A reading item typed `short_exchange` is refused. Derive it from the shape: a pa
 
 ### `placementEligible` — the field this whole file exists for
 
-Set `true`. An item with this flag absent or false is **never drawn by a placement test**. It still works
-as practice and exam stock, so it is not wasted — but a batch meant to enrich placement that leaves the
-flag off enriches nothing.
+Set `true` on **every question**. Written explicitly, not omitted.
+
+The importer reads `source.PlacementEligible ?? false`, so a missing field becomes `false` and the item is
+**never drawn by a placement test**. It still works as practice and exam stock, so nothing fails and
+nothing complains — the batch simply enriches a pool that placement cannot use. This is the single
+easiest way to deliver a large, valid, useless file.
 
 Placement-eligible stock is about a third of a healthy pool.
 
-### `topicCode`
+Placement-eligible stock is about a third of a healthy pool.
 
-A canonical topic code. Common ones: `R-DET` (detail), `R-INF` (inference), `R-VOC` (vocabulary),
-`R-GRM` (grammar), `L-GIST` (gist), `L-DET` (detail). **An invented code is refused, not clamped** — if
-you are unsure, omit the field; the item type's own topic is used instead.
+### `topicCode` — a closed set of twenty
+
+**An invented code is refused, not clamped**, and the refusal lists every valid alternative. Use only
+these:
+
+| Skill | Codes |
+|---|---|
+| Listening | `L-ATT` speaker stance, attitude, prosody · `L-DET` factual detail · `L-FUNC` communicative function · `L-GIST` global gist · `L-INF` pragmatic inference · `L-ORG` discourse structure |
+| Reading | `R-ATT` authorial stance, tone · `R-COH` cohesion, reference, text insertion · `R-DET` factual retrieval · `R-GIST` global thesis, main idea · `R-GRAM` morphosyntax, lexical precision · `R-INF` bridging inference |
+
+Speaking and Writing have their own four each (`S-ARG`, `S-DESC`, `S-INT`, `S-SYN`; `W-ARG`,
+`W-CORR`, `W-DATA`, `W-DISC`), but this file carries no productive sections.
+
+If you cannot place an item confidently in one of the six, **omit the field** — the item type's own
+topic is used instead. That is a correct file. Guessing a code is a refused file.
 
 ### `explanation`, `hint`, `rationale`
 
