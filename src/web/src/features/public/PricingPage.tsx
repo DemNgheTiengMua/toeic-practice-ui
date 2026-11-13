@@ -69,7 +69,11 @@ export function PricingPage() {
   return (
     <div className="space-y-8">
       <Breadcrumbs>
-        <Breadcrumbs.Item href="/">Home</Breadcrumbs.Item>
+        <Breadcrumbs.Item>
+          <Link to="/" className="no-underline text-inherit">
+            Home
+          </Link>
+        </Breadcrumbs.Item>
         <Breadcrumbs.Item>Pricing</Breadcrumbs.Item>
       </Breadcrumbs>
 

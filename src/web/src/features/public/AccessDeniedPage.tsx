@@ -1,13 +1,14 @@
 import React from 'react';
-import { Link } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { Button, Card } from '@heroui/react';
 import { ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export function AccessDeniedPage() {
   const { isAuthenticated, isStaff } = useAuth();
+  const navigate = useNavigate();
 
-  const homeHref = isStaff ? '/staff' : isAuthenticated ? '/dashboard' : '/';
+  const homeHref = isStaff ? '/admin' : isAuthenticated ? '/dashboard' : '/';
   const homeLabel = isAuthenticated ? 'Go back to my workspace' : 'Back to home';
 
   return (
@@ -29,13 +30,13 @@ export function AccessDeniedPage() {
         </Card.Content>
 
         <Card.Footer className="flex flex-wrap justify-center gap-3 pt-2">
-          <Link to={homeHref as never}>
-            <Button variant="primary">{homeLabel}</Button>
-          </Link>
+          <Button variant="primary" onPress={() => void navigate({ to: homeHref })}>
+            {homeLabel}
+          </Button>
           {!isAuthenticated && (
-            <Link to="/sign-in">
-              <Button variant="secondary">Sign in</Button>
-            </Link>
+            <Button variant="secondary" onPress={() => void navigate({ to: '/sign-in' })}>
+              Sign in
+            </Button>
           )}
         </Card.Footer>
       </Card>

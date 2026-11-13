@@ -299,4 +299,65 @@ describe('Public catalog, pricing & legal pages (#295)', () => {
     expect(screen.getByText(/not available to your account/i)).toBeInTheDocument();
     expect(document.body.textContent ?? '').not.toMatch(/requires administrator privileges/i);
   });
+
+  it('routes staff on /access-denied back to /admin workspace rather than /staff', async () => {
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          userId: 1,
+          email: 'admin@demo.local',
+          fullName: 'Staff User',
+          role: 'staff',
+          emailVerified: true,
+          permissions: ['finance.read'],
+        });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    const { router } = renderRoute('/access-denied');
+    const backBtn = await screen.findByRole('button', { name: /go back to my workspace/i });
+    fireEvent.click(backBtn);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/admin');
+    });
+  });
+
+  it('surfaces an error Alert on /certificates/$slug when switching certificate fails', async () => {
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          userId: 10,
+          email: 'learner@demo.local',
+          fullName: 'Demo Learner',
+          role: 'learner',
+          emailVerified: true,
+          permissions: [],
+        });
+      }
+      if (url === '/api/learner/context') {
+        return jsonResponse({
+          active: { code: 'DEMO', name: 'DEMO - Custom Assessment', sectionNoun: 'Unit' },
+          available: [
+            { code: 'DEMO', name: 'DEMO - Custom Assessment', sectionNoun: 'Unit' },
+            { code: 'ALT', name: 'Alternate Certificate', sectionNoun: 'Section' },
+          ],
+          creditBalance: 5,
+        });
+      }
+      if (url === '/api/certificates') return jsonResponse(DEMO_CERTIFICATES);
+      if (url === '/api/learner/active-certificate' && init?.method === 'PUT') {
+        return jsonResponse({ detail: 'Switch unavailable' }, 500);
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/certificates/alt');
+
+    const switchBtn = await screen.findByRole('button', { name: /switch to ALT/i });
+    fireEvent.click(switchBtn);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/could not switch active certificate to ALT/i);
+  });
 });

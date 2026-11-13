@@ -18,6 +18,7 @@ export function CertificateDetailPage() {
   const { isAuthenticated, isStaff, learnerContext, switchCertificate } = useAuth();
   const navigate = useNavigate();
   const [isSwitching, setIsSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
 
   const certificatesQuery = useQuery({
     queryKey: ['catalog', 'certificates'],
@@ -75,10 +76,13 @@ export function CertificateDetailPage() {
   const totalMinutes = cert.skills.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0);
 
   const handleSwitch = async () => {
+    setSwitchError(null);
     setIsSwitching(true);
     try {
       await switchCertificate(cert.code);
       await navigate({ to: '/dashboard' });
+    } catch {
+      setSwitchError(`Could not switch active certificate to ${cert.code}. Please try again.`);
     } finally {
       setIsSwitching(false);
     }
@@ -99,6 +103,18 @@ export function CertificateDetailPage() {
         </Breadcrumbs.Item>
         <Breadcrumbs.Item>{cert.code}</Breadcrumbs.Item>
       </Breadcrumbs>
+
+      {switchError && (
+        <Alert status="danger" role="alert">
+          <Alert.Indicator>
+            <ShieldAlert className="w-4 h-4" />
+          </Alert.Indicator>
+          <Alert.Content>
+            <Alert.Title>Switch failed</Alert.Title>
+            <Alert.Description>{switchError}</Alert.Description>
+          </Alert.Content>
+        </Alert>
+      )}
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-2xl">

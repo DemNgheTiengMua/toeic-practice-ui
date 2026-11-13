@@ -1,11 +1,16 @@
 import React from 'react';
+import { Link } from '@tanstack/react-router';
 import { Breadcrumbs, Card } from '@heroui/react';
 
 export function TermsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <Breadcrumbs>
-        <Breadcrumbs.Item href="/">Home</Breadcrumbs.Item>
+        <Breadcrumbs.Item>
+          <Link to="/" className="no-underline text-inherit">
+            Home
+          </Link>
+        </Breadcrumbs.Item>
         <Breadcrumbs.Item>Terms of Use</Breadcrumbs.Item>
       </Breadcrumbs>
 
