@@ -7,9 +7,6 @@ namespace WebMVC.Tests;
 public sealed class GuidedLearningPresentationTests
 {
     [Theory]
-    [InlineData("Dashboard")]
-    [InlineData("LearningPath")]
-    [InlineData("Lessons")]
     [InlineData("Mentors")]
     public void Views_ReceivePreparedPresentationAndUseExternalAssets(string folder)
     {

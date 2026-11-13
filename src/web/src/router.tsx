@@ -47,6 +47,12 @@ import { AdminAuditBatchPage } from './features/admin/AdminAuditBatchPage';
 import { CertificatesStudioPage } from './features/admin/studio/CertificatesStudioPage';
 import { ExamsStudioPage } from './features/admin/studio/ExamsStudioPage';
 import { QuestionBankStudioPage } from './features/admin/studio/QuestionBankStudioPage';
+import { DashboardPage } from './features/learner/DashboardPage';
+import { OnboardingPage } from './features/learner/OnboardingPage';
+import { LearningPathPage } from './features/learner/LearningPathPage';
+import { LearningPathStepPage } from './features/learner/LearningPathStepPage';
+import { LessonReaderPage } from './features/learner/LessonReaderPage';
+import { WeaknessAnalysisPage } from './features/learner/WeaknessAnalysisPage';
 
 function PlaceholderView({ title, ticket }: { title: string; ticket: string }) {
   return (
@@ -303,9 +309,46 @@ const routeTree = rootRoute.addChildren([
   writingRoute,
   writingPracticeRoute,
   writingResultRoute,
-  stubRoute('/dashboard', 'Dashboard', '300'),
-  stubRoute('/learning-path', 'Learning path', '300'),
-  stubRoute('/weakness', 'Weakness analysis', '300'),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/dashboard',
+    component: DashboardPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/onboarding',
+    component: OnboardingPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/placement/target-band',
+    component: OnboardingPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/learning-path',
+    component: LearningPathPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/learning-path/steps/$stepId',
+    component: LearningPathStepPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/lessons/$lessonId',
+    component: LessonReaderPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/weakness',
+    component: WeaknessAnalysisPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/weakness-analysis',
+    component: WeaknessAnalysisPage,
+  }),
   stubRoute('/wallet', 'Wallet & billing', '301'),
   stubRoute('/mentors', 'Mentors', '301'),
   stubRoute('/profile', 'Profile', '301'),

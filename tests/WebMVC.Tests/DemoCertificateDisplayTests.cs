@@ -39,7 +39,6 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
     public DemoCertificateDisplayTests(Site site) => this.site = site;
 
     [Theory]
-    [InlineData("/weakness-analysis")]
     [InlineData("/exams/history")]
     public async Task No_page_names_a_certificate_it_was_not_given(string path)
     {
@@ -55,50 +54,6 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
                 $"{path} renders \"{name}\", a certificate this learner is not working on.");
         }
     }
-
-    [Fact]
-    public async Task A_section_is_called_whatever_the_certificate_calls_it()
-    {
-        // The weakness page labelled sections "Part" when the certificate's code was TOEIC and
-        // "Section" otherwise. The word is now a property of the certificate, so a certificate that
-        // says "Unit" is labelled "Unit" without the code knowing it exists.
-        using var client = site.CreateClientWithLearner();
-        var body = await client.GetStringAsync("/weakness-analysis");
-
-        Assert.Contains("Unit C1", body);
-        Assert.DoesNotContain("Part C1", body);
-        Assert.DoesNotContain("Section C1", body);
-    }
-
-    /// <summary>
-    /// #243 criterion 4: the weakness page links a weakness to the lesson for its own CELL.
-    /// <para>
-    /// <b>The wrong input this catches:</b> a href that exists and points somewhere plausible. The
-    /// fixture holds two cells of one topic at two levels, and only the B1 one carries a lesson (41) -
-    /// the B2 cell's lesson id is null. A link built from the topic alone would still render, and would
-    /// still pass "an href is present"; it would be wrong, and this asserts the exact id.
-    /// </para>
-    /// </summary>
-    [Fact]
-    public async Task A_weakness_links_to_the_lesson_for_its_own_level_and_not_the_topic()
-    {
-        using var client = site.CreateClientWithLearner();
-        var body = await client.GetStringAsync("/weakness-analysis");
-
-        // The B1 weakness's link, from the weakness placard and from its row.
-        Assert.Contains("href=\"/lessons/41\"", body);
-
-        // The B2 cell of the same topic has no lesson, so its row says so instead of linking at a
-        // guessed id. Both rows share the topic id, so the level badge is what tells them apart.
-        Assert.Contains("No lesson yet", body);
-        var rows = Regex.Matches(body, @"<tr data-topic-id=""1"">(?<body>[\s\S]*?)</tr>")
-            .Select(m => m.Groups["body"].Value).ToList();
-        Assert.Equal(2, rows.Count);
-        Assert.Contains(rows, r => r.Contains("B1", StringComparison.Ordinal) && r.Contains("/lessons/41", StringComparison.Ordinal));
-        Assert.Contains(rows, r => r.Contains("B2", StringComparison.Ordinal) && !r.Contains("/lessons/", StringComparison.Ordinal));
-    }
-
-
 
     [Fact]
     public void A_landing_page_with_no_catalogue_invents_no_certificate()

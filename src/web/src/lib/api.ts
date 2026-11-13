@@ -175,6 +175,411 @@ export interface LearnerContextDto {
   examDate?: string | null;
 }
 
+export interface NextActionDto {
+  eyebrow: string;
+  title: string;
+  description: string;
+  actionLabel: string;
+  actionUrl: string;
+  severity: 'info' | 'warning' | 'danger' | 'success' | string;
+  cascadeStep: string;
+  metaLabel?: string | null;
+}
+
+export interface GoalStandingDto {
+  currentBandCode?: string | null;
+  currentBandName?: string | null;
+  currentScore?: number | null;
+  currentSource?: string | null;
+  targetBandCode?: string | null;
+  targetBandName?: string | null;
+  targetMinScore?: number | null;
+  targetDate?: string | null;
+  weeklyStudyHours?: number | null;
+  status?: 'feasible' | 'stretch' | 'unrealistic' | string | null;
+  completedPathSteps: number;
+  totalPathSteps: number;
+  currentWeekNumber?: number | null;
+  weekPlannedMinutes: number;
+  weekCompletedMinutes: number;
+  scoreDisplayFactor: number;
+  requiredTotalHours?: number | null;
+  overallLevelCode?: string | null;
+  limitingSkillCode?: string | null;
+  limitingSkillName?: string | null;
+  hasNoMeasurement: boolean;
+}
+
+export interface SkillCategoryDto {
+  code: string;
+  name: string;
+  accuracyPercent: number;
+  answered: number;
+  levelCode: string;
+}
+
+export interface SkillCardDto {
+  skillId: number;
+  code: string;
+  name: string;
+  modality: string;
+  latestScaledScore?: number | null;
+  maxScaledScore?: number | null;
+  weakestTopics: SkillCategoryDto[];
+  scoreDisplayFactor: number;
+  levelCode?: string | null;
+  positionInBand?: number | null;
+  measuredAt?: string | null;
+  isStale: boolean;
+}
+
+export interface RecentAttemptDto {
+  attemptId: number;
+  examTitle: string;
+  status: string;
+  startedAt: string;
+  submittedAt?: string | null;
+  totalScaledScore?: number | null;
+  bandCode?: string | null;
+  bandName?: string | null;
+}
+
+export interface RecentPracticeDto {
+  sessionId: number;
+  skillName: string;
+  status: string;
+  questionCount: number;
+  correctCount: number;
+  startedAt: string;
+  completedAt?: string | null;
+}
+
+export interface LearnerDashboardDto {
+  certificate: CertificateOptionDto;
+  nextAction: NextActionDto;
+  goal: GoalStandingDto;
+  skills: SkillCardDto[];
+  attemptCount: number;
+  practiceCount: number;
+  unfinishedAttempt?: RecentAttemptDto | null;
+  unfinishedPractice?: RecentPracticeDto | null;
+}
+
+export interface CefrBandInfoDto {
+  code: string;
+  name: string;
+  minTotal: number;
+  maxTotal: number;
+  isReached: boolean;
+  isCurrent: boolean;
+  isTarget?: boolean;
+}
+
+export interface TargetBandOptionDto {
+  code: string;
+  name: string;
+  minTotal: number;
+  maxTotal: number;
+  description?: string | null;
+  isCurrent: boolean;
+  isTarget: boolean;
+}
+
+export interface GoalStatusDto {
+  currentBandCode?: string | null;
+  targetBandCode: string;
+  targetDate?: string | null;
+  weeklyStudyHours?: number | null;
+  requiredHours?: number | null;
+  availableHours?: number | null;
+  status?: 'feasible' | 'stretch' | 'unrealistic' | string | null;
+  suggestedWeeklyHours?: number | null;
+  earliestFeasibleDate?: string | null;
+}
+
+export interface TargetBandViewDto {
+  activeCert: CertificateOptionDto;
+  currentBandCode?: string | null;
+  currentTotalScore?: number | null;
+  currentBandName?: string | null;
+  targetBandCode?: string | null;
+  cefrBands: CefrBandInfoDto[];
+  availableBands: TargetBandOptionDto[];
+  goal?: GoalStatusDto | null;
+}
+
+export interface SetTargetBandResultDto {
+  userId: number;
+  certId: number;
+  targetBandCode: string;
+  setAt: string;
+}
+
+export interface SetGoalRequest {
+  currentBandCode?: string | null;
+  targetBandCode: string;
+  targetDate?: string | null;
+  weeklyStudyHours?: number | null;
+}
+
+export interface SetGoalResultDto {
+  userId: number;
+  certId: number;
+  targetBandCode: string;
+  setAt: string;
+  goal: GoalStatusDto;
+}
+
+export interface CalibrationProposalDto {
+  proposedBandCode: string;
+  proposedBandName: string;
+  observedAccuracyPct: number;
+  validAnswerCount: number;
+  requiredAccuracyPct: number;
+  evidence: string;
+}
+
+export interface CalibrationViewDto {
+  placedBandCode: string;
+  placedBandName?: string | null;
+  validAnswerCount: number;
+  requiredValidAnswerCount: number;
+  excludedRushedCount: number;
+  observedAccuracyPct?: number | null;
+  reason: string;
+  proposal?: CalibrationProposalDto | null;
+}
+
+export interface CalibrationDecisionResultDto {
+  decision: string;
+  placedBandCode: string;
+  proposedBandCode: string;
+  pathAdjusted: boolean;
+}
+
+export interface PathStepDto {
+  stepId: number;
+  weekNumber: number;
+  weekSequence: number;
+  stepType: 'lesson' | 'practice' | 'mock_exam' | string;
+  route: 'item_selector' | 'lesson_reader' | 'attempt_engine' | string;
+  title: string;
+  status: 'locked' | 'available' | 'in_progress' | 'done' | string;
+  skillCode: string;
+  skillName: string;
+  modality: string;
+  topicCode: string;
+  topicName: string;
+  targetCefr: string;
+  sizingTier: 'mastered' | 'developing' | 'low' | string;
+  plannedItemCount?: number | null;
+  estimatedMinutes?: number | null;
+  score?: number | null;
+  actualAccuracyPct?: number | null;
+  targetAccuracyPct: number;
+  canStart: boolean;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  refLessonId?: number | null;
+  refExamId?: number | null;
+}
+
+export interface LearningPathWeekSummaryDto {
+  weekNumber: number;
+  plannedSteps: number;
+  completedSteps: number;
+  plannedMinutes: number;
+  completedMinutes: number;
+  isOnTrack: boolean;
+  targetAccuracyPct: number;
+  actualAccuracyPct?: number | null;
+  steps: PathStepDto[];
+}
+
+export interface LearningPathSummaryDto {
+  hasActivePath: boolean;
+  activeCert: CertificateOptionDto;
+  learnerPathId?: number | null;
+  fromBandCode?: string | null;
+  toBandCode?: string | null;
+  fromBandName?: string | null;
+  toBandName?: string | null;
+  currentBandCode?: string | null;
+  currentScore?: number | null;
+  targetBandCode?: string | null;
+  targetScore?: number | null;
+  status?: 'active' | 'completed' | 'reset' | string | null;
+  startedAt?: string | null;
+  totalSteps: number;
+  completedSteps: number;
+  totalEstimatedMinutes: number;
+  remainingMinutes: number;
+  cefrBands: CefrBandInfoDto[];
+  openSteps: PathStepDto[];
+  nextStepId?: number | null;
+  weeks?: LearningPathWeekSummaryDto[] | null;
+  skillLevels?: Record<string, string> | null;
+}
+
+export interface StartStepResultDto {
+  stepId: number;
+  stepType: string;
+  route: 'item_selector' | 'lesson_reader' | 'attempt_engine' | string;
+  redirectUrl: string;
+  sessionId?: number | null;
+  attemptId?: number | null;
+  substitutedFromTopicId?: number | null;
+}
+
+export interface ResetLearningPathResultDto {
+  resetCount: number;
+  newPathId?: number | null;
+  summary?: LearningPathSummaryDto | null;
+}
+
+export interface LessonCardDto {
+  cardId: number;
+  cardType: 'rule' | 'pitfall' | 'example' | 'micro_check' | string;
+  title: string;
+  contentMarkdown: string;
+  questionPrompt?: string | null;
+  optionA?: string | null;
+  optionB?: string | null;
+  optionC?: string | null;
+  optionD?: string | null;
+  correctOption?: string | null;
+  explanation?: string | null;
+  displayOrder: number;
+  rationale?: string | null;
+  module: 'primary' | 'remedial' | string;
+}
+
+export interface LessonDetailDto {
+  lessonId: number;
+  title: string;
+  summary?: string | null;
+  skillId: number;
+  categoryId?: number | null;
+  estimatedMinutes: number;
+  cards: LessonCardDto[];
+  topicId: number;
+  topicCode: string;
+  topicName: string;
+  cefrLevel: string;
+  module: 'primary' | 'remedial' | string;
+  hasRemedialModule: boolean;
+}
+
+export interface LessonProgressDto {
+  cardsCompleted: number;
+  totalCards: number;
+  isCompleted: boolean;
+  lastViewedCardId?: number | null;
+  firstOpenedAt?: string | null;
+  completedAt?: string | null;
+  updatedAt?: string | null;
+  resumeCardIndex: number;
+  module: 'primary' | 'remedial' | string;
+}
+
+export interface MicroCheckResultDto {
+  isCorrect: boolean;
+  correctOption: string;
+  explanation?: string | null;
+  categoryId?: number | null;
+}
+
+export interface SectionAccuracyDto {
+  sectionId: number;
+  sectionCode: string;
+  sectionName: string;
+  skillCode: string;
+  skillName: string;
+  answeredCount: number;
+  correctCount: number;
+  accuracyPercentage: number;
+}
+
+export interface TopicAccuracyDto {
+  categoryId: number;
+  topicCode: string;
+  topicName: string;
+  skillCode: string;
+  skillName: string;
+  answeredCount: number;
+  correctCount: number;
+  accuracyPercentage: number;
+  levelCode?: string | null;
+  meetsFloor: boolean;
+  isWeakest: boolean;
+}
+
+export interface RecommendationItemDto {
+  recId: number;
+  text: string;
+  severity: 'major' | 'minor' | 'info' | string;
+  targetBandCode?: string | null;
+  skillName?: string | null;
+  createdAt: string;
+  isResolved: boolean;
+}
+
+export interface ResolveRecommendationResultDto {
+  recId: number;
+  isResolved: boolean;
+}
+
+export interface WeaknessAnalysisDto {
+  certificate: CertificateOptionDto;
+  hasData: boolean;
+  gradedExamCount: number;
+  completedPracticeCount: number;
+  totalAnswered: number;
+  totalCorrect: number;
+  overallAccuracyPercentage: number;
+  sections: SectionAccuracyDto[];
+  frequentlyMissedTopics: TopicAccuracyDto[];
+  recommendations: RecommendationItemDto[];
+  priorityPracticeSection?: SectionAccuracyDto | null;
+  topics: TopicAccuracyDto[];
+  weakestTopic?: TopicAccuracyDto | null;
+}
+
+export interface RecommendationDto {
+  recId: number;
+  insightId?: number | null;
+  practiceSessionId?: number | null;
+  attemptId?: number | null;
+  text: string;
+  severity: 'major' | 'minor' | 'info' | string;
+  targetBandCode?: string | null;
+  skillName?: string | null;
+  isResolved: boolean;
+  createdAt: string;
+}
+
+export interface AiInsightDto {
+  insightId: number;
+  userId: number;
+  certId: number;
+  scope: 'dashboard' | 'path' | 'practice' | 'attempt' | string;
+  practiceSessionId?: number | null;
+  attemptId?: number | null;
+  narrative?: string | null;
+  trend?: 'improving' | 'flat' | 'declining' | string | null;
+  status: 'pending' | 'done' | 'failed' | string;
+  failureReason?: string | null;
+  model?: string | null;
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  sourceFingerprint: string;
+  createdAt: string;
+  completedAt?: string | null;
+  recommendations: RecommendationDto[];
+  learnerPathId?: number | null;
+  formattedNarrative?: string | null;
+}
+
 export interface AttemptOptionDto {
   optionId: number;
   label: string;
@@ -886,27 +1291,6 @@ export interface PlacementTestInfoDto {
   creditsCharged?: number;
 }
 
-export interface TargetBandViewDto {
-  activeCert: CertificateOptionDto;
-  currentBandCode?: string | null;
-  currentTotalScore?: number | null;
-  currentBandName?: string | null;
-  targetBandCode?: string | null;
-  cefrBands: CefrBandInfoDto[];
-  availableBands: Array<{
-    code: string;
-    name: string;
-    minTotal: number;
-    maxTotal: number;
-  }>;
-  goal?: {
-    targetBandCode: string;
-    weeklyHours?: number | null;
-    examDate?: string | null;
-    feasibility?: string | null;
-  } | null;
-}
-
 // ============================================================================
 // Admin Finance & Operations DTOs (#304)
 // ============================================================================
@@ -1454,7 +1838,7 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify({ code }),
       }),
-    dashboard: () => apiFetch<any>('/api/learner/dashboard'),
+    dashboard: () => apiFetch<LearnerDashboardDto>('/api/learner/dashboard'),
     profile: () => apiFetch<any>('/api/profile'),
     updateProfile: (body: { fullName: string; phone?: string | null; timeZoneId: string }) =>
       apiFetch<any>('/api/profile', {
@@ -1552,19 +1936,20 @@ export const api = {
       ),
     targetBand: () => apiFetch<TargetBandViewDto>('/api/learner/target-band'),
     setTargetBand: (targetBandCode: string) =>
-      apiFetch<any>('/api/learner/target-band', {
+      apiFetch<SetTargetBandResultDto>('/api/learner/target-band', {
         method: 'POST',
         body: JSON.stringify({ targetBandCode }),
       }),
-    setGoal: (body: {
-      targetBandCode: string;
-      weeklyHours?: number | null;
-      examDate?: string | null;
-      focusSkillCode?: string | null;
-    }) =>
-      apiFetch<any>('/api/learner/goal', {
+    setGoal: (body: SetGoalRequest) =>
+      apiFetch<SetGoalResultDto>('/api/learner/goal', {
         method: 'POST',
         body: JSON.stringify(body),
+      }),
+    calibration: () => apiFetch<CalibrationViewDto>('/api/learner/placement/calibration'),
+    decideCalibration: (adjust: boolean) =>
+      apiFetch<CalibrationDecisionResultDto>('/api/learner/placement/calibration/decision', {
+        method: 'POST',
+        body: JSON.stringify({ adjust }),
       }),
   },
 
@@ -1815,10 +2200,10 @@ export const api = {
   },
 
   learningPath: {
-    get: () => apiFetch<any>('/api/learner/learning-path'),
+    get: () => apiFetch<LearningPathSummaryDto>('/api/learner/learning-path'),
     step: (stepId: number) => apiFetch<PathStepDto>(`/api/learner/learning-path/steps/${stepId}`),
     generate: (body?: { targetBandCode?: string; archiveExisting?: boolean }) =>
-      apiFetch<any>('/api/learner/learning-path/generate', {
+      apiFetch<LearningPathSummaryDto>('/api/learner/learning-path/generate', {
         method: 'POST',
         body: JSON.stringify(body ?? {}),
       }),
@@ -1828,14 +2213,32 @@ export const api = {
         body: JSON.stringify({}),
       }),
     reset: () =>
-      apiFetch<any>('/api/learner/learning-path/reset', {
+      apiFetch<ResetLearningPathResultDto>('/api/learner/learning-path/reset', {
         method: 'POST',
         body: JSON.stringify({}),
       }),
-    lesson: (lessonId: number, module = 'PRIMARY') =>
-      apiFetch<any>(`/api/learner/lessons/${lessonId}?module=${encodeURIComponent(module)}`),
-    lessonProgress: (lessonId: number, module = 'PRIMARY') =>
-      apiFetch<any>(
+    lesson: (lessonId: number, module = 'primary') =>
+      apiFetch<LessonDetailDto>(`/api/learner/lessons/${lessonId}?module=${encodeURIComponent(module)}`),
+    lessonByCategory: (categoryId: number, module = 'primary') =>
+      apiFetch<LessonDetailDto>(
+        `/api/learner/lessons/by-category/${categoryId}?module=${encodeURIComponent(module)}`,
+      ),
+    lessonForCell: (params: {
+      skillId: number;
+      topicId: number;
+      level: string;
+      module?: string;
+    }) => {
+      const sp = new URLSearchParams({
+        skillId: String(params.skillId),
+        topicId: String(params.topicId),
+        level: params.level,
+        module: params.module ?? 'primary',
+      });
+      return apiFetch<LessonDetailDto>(`/api/learner/lessons/cell?${sp.toString()}`);
+    },
+    lessonProgress: (lessonId: number, module = 'primary') =>
+      apiFetch<LessonProgressDto>(
         `/api/learner/lessons/${lessonId}/progress?module=${encodeURIComponent(module)}`,
       ),
     recordCardView: (lessonId: number, cardId: number) =>
@@ -1843,13 +2246,36 @@ export const api = {
         method: 'POST',
       }),
     submitMicroCheck: (lessonId: number, cardId: number, selectedOption: string) =>
-      apiFetch<any>(`/api/learner/lessons/${lessonId}/cards/${cardId}/micro-check`, {
+      apiFetch<MicroCheckResultDto>(`/api/learner/lessons/${lessonId}/cards/${cardId}/micro-check`, {
         method: 'POST',
         body: JSON.stringify({ selectedOption }),
       }),
-    weaknessAnalysis: () => apiFetch<any>('/api/learner/weakness-analysis'),
+    weaknessAnalysis: () => apiFetch<WeaknessAnalysisDto>('/api/learner/weakness-analysis'),
     resolveRecommendation: (recId: number) =>
-      apiFetch<any>(`/api/learner/recommendations/${recId}/resolve`, {
+      apiFetch<ResolveRecommendationResultDto>(`/api/learner/recommendations/${recId}/resolve`, {
+        method: 'POST',
+      }),
+  },
+
+  insights: {
+    dashboard: (certId?: number) =>
+      apiFetch<AiInsightDto>(
+        certId != null ? `/api/learner/insights/dashboard?certId=${certId}` : '/api/learner/insights/dashboard',
+      ),
+    retryDashboard: (certId?: number) =>
+      apiFetch<void>(
+        certId != null
+          ? `/api/learner/insights/dashboard/retry?certId=${certId}`
+          : '/api/learner/insights/dashboard/retry',
+        { method: 'POST' },
+      ),
+    path: () => apiFetch<AiInsightDto>('/api/learner/insights/path'),
+    retryPath: () =>
+      apiFetch<void>('/api/learner/insights/path/retry', {
+        method: 'POST',
+      }),
+    retryById: (insightId: number) =>
+      apiFetch<void>(`/api/learner/insights/${insightId}/retry`, {
         method: 'POST',
       }),
   },
