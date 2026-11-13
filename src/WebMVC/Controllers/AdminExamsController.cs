@@ -508,7 +508,7 @@ public sealed class AdminExamsController(
         try
         {
             var preview = await api.GetAdminExamPreviewAsync(id, q, cancellationToken);
-            return View("~/Views/Exams/Take.cshtml", new ExamTakeViewModel(preview.Take, Preview: preview));
+            return View("~/Views/Admin/ExamPreview.cshtml", new ExamTakeViewModel(preview.Take, Preview: preview));
         }
         catch (ApiException ex)
         {

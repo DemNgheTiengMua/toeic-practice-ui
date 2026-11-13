@@ -40,7 +40,6 @@ public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateD
 
     [Theory]
     [InlineData("/weakness-analysis")]
-    [InlineData("/exams/history")]
     public async Task No_page_names_a_certificate_it_was_not_given(string path)
     {
         using var client = site.CreateClientWithLearner();

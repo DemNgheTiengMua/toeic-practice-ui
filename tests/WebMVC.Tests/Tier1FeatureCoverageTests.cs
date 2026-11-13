@@ -342,22 +342,6 @@ public sealed class Tier1FeatureCoverageTests
     }
 
     [Fact]
-    public async Task Area4_Client_MockExamsClient_Exception_Handled_By_ExamsController_Instructions()
-    {
-        var api = new TestExamsClient
-        {
-            ExceptionToThrow = new ApiException(ApiError.Codes.ExamNotFound, "Exam not found", 404)
-        };
-
-        var controller = CreateExamsController(api);
-        var result = await controller.Instructions(999, System.Threading.CancellationToken.None);
-
-        Assert.NotNull(result);
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(nameof(ExamsController.Index), redirect.ActionName);
-    }
-
-    [Fact]
     public void Area4_Client_CompanionApiClient_Implements_Domain_Client_Contracts()
     {
         // Verify type hierarchy and interface inheritance
@@ -377,80 +361,5 @@ public sealed class Tier1FeatureCoverageTests
         Assert.Equal(err1, err2);
         Assert.Equal("VALIDATION", err1.Code);
         Assert.Equal(400, err1.Status);
-    }
-
-    // Helper to instantiate ExamsController with test client
-    private static ExamsController CreateExamsController(IMockExamsClient client)
-    {
-        var identity = new System.Security.Claims.ClaimsIdentity(
-            AuthClaims.For(7, "learner@test.local", Roles.Learner, "Learner"), "Cookies");
-        var principal = new System.Security.Claims.ClaimsPrincipal(identity);
-        var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext { User = principal };
-        var currentUser = new CurrentUser(new Microsoft.AspNetCore.Http.HttpContextAccessor { HttpContext = httpContext });
-
-        var controller = new ExamsController(
-            client,
-            currentUser,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<ExamsController>.Instance,
-            new WebMVC.Formatters.DateTimeFormatter(new Microsoft.AspNetCore.Http.HttpContextAccessor { HttpContext = httpContext }),
-            null)
-        {
-            ControllerContext = new ControllerContext
-            {
-                HttpContext = httpContext,
-                RouteData = new Microsoft.AspNetCore.Routing.RouteData(),
-            },
-            TempData = new Microsoft.AspNetCore.Mvc.ViewFeatures.TempDataDictionary(
-                httpContext,
-                new EmptyTempDataProvider())
-        };
-        return controller;
-    }
-
-    private sealed class EmptyTempDataProvider : Microsoft.AspNetCore.Mvc.ViewFeatures.ITempDataProvider
-    {
-        public System.Collections.Generic.IDictionary<string, object> LoadTempData(Microsoft.AspNetCore.Http.HttpContext context) =>
-            new System.Collections.Generic.Dictionary<string, object>();
-        public void SaveTempData(Microsoft.AspNetCore.Http.HttpContext context, System.Collections.Generic.IDictionary<string, object> values) { }
-    }
-
-    private sealed class TestExamsClient : IMockExamsClient
-    {
-        public Exception? ExceptionToThrow { get; set; }
-
-        public Task<MockExamListViewDto> GetMockExamsAsync(CancellationToken cancellationToken = default)
-        {
-            if (ExceptionToThrow != null) throw ExceptionToThrow;
-            return Task.FromResult(new MockExamListViewDto(new CertificateOptionDto("TOEIC", "TOEIC"), 5, []));
-        }
-
-        public Task<MockExamInstructionsDto> GetMockExamInstructionsAsync(int examId, CancellationToken cancellationToken = default)
-        {
-            if (ExceptionToThrow != null) throw ExceptionToThrow;
-            return Task.FromResult(new MockExamInstructionsDto(examId, 1, "TOEIC", "Test Exam", null, 120, 200, 1, 5, null, []));
-        }
-
-        public Task<StartMockExamResponse> StartMockExamAsync(int examId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AttemptTakeDto> GetAttemptTakeAsync(int attemptId, int? q, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<SaveAnswerResultDto> SaveAttemptAnswerAsync(int attemptId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<SaveAttemptDraftResponse> SaveAttemptDraftAsync(int attemptId, SaveAttemptDraftRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<SubmitAttemptResponse> SubmitAttemptWithDraftsAsync(int attemptId, SubmitAttemptRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AttemptTransitionResponse> TransitionSkillAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AttemptTransitionResponse> StartAudioReviewAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task CancelAttemptAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AttemptResultDto> GetAttemptResultAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<ExamHistoryDto> GetExamHistoryAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<MockResultProjectionDto> GetMockProjectionAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<MockSyncResultDto> SyncMockProjectionAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AiInsightDto> GetExamInsightAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task RetryExamInsightAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 }

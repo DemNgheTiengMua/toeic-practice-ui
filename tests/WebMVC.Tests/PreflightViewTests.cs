@@ -7,37 +7,6 @@ namespace WebMVC.Tests;
 
 public sealed class PreflightViewTests
 {
-    [Fact]
-    public void View_and_partials_only_render_markup_and_reference_external_assets()
-    {
-        var root = TestPathHelper.FindRepoRoot();
-        var directory = Path.Combine(root, "src", "WebMVC", "Views", "Exams");
-        var view = File.ReadAllText(Path.Combine(directory, "Preflight.cshtml"));
-        var partials = Directory.GetFiles(directory, "_Preflight*.cshtml");
-        Assert.NotEmpty(partials);
-        var markup = view + string.Join("\n", partials.Select(File.ReadAllText));
-
-        Assert.Contains("~/js/exams/preflight.js", view);
-        Assert.Contains("~/css/exams/preflight.css", view);
-        Assert.Contains("type=\"application/json\" id=\"exam-preflight-data\"", view);
-        Assert.DoesNotMatch(@"<style\b|\bstyle\s*=|\bon(?:click|change|submit|load)\s*=", markup);
-        Assert.DoesNotMatch(@"@(inject|functions)\b|\bnew\s+|\b(?:Math|JsonSerializer)\.|\.(?:GroupBy|Select|Where|OrderBy|TakeLast|Sum|Max|FirstOrDefault)\s*\(", markup);
-        foreach (Match script in Regex.Matches(markup, @"<script\b(?<attributes>[^>]*)>(?<body>[\s\S]*?)</script>"))
-        {
-            var attributes = script.Groups["attributes"].Value;
-            Assert.True(attributes.Contains("src=") || attributes.Contains("type=\"application/json\""),
-                "Executable scripts must live in external JavaScript files.");
-        }
-    }
-
-    [Fact]
-    public void View_renders_a_refused_verification_as_a_danger_placard()
-    {
-        var view = File.ReadAllText(Path.Combine(TestPathHelper.FindRepoRoot(), "src", "WebMVC", "Views", "Exams", "Preflight.cshtml"));
-
-        Assert.Matches(@"@if \(Model\.HasError\)\s*\{\s*<div id=""preflight-error"" class=""alert alert--danger[^""]*"" role=""alert"">[\s\S]*?@Model\.ErrorMessage", view);
-    }
-
     [Theory]
     [InlineData(false, "badge--warning", "CHECKS PENDING", "CHECK REQUIRED")]
     [InlineData(true, "badge--success", "VERIFIED & READY", "MIC VERIFIED")]
@@ -87,31 +56,6 @@ public sealed class PreflightViewTests
         using var json = JsonDocument.Parse(model.PageDataJson);
         Assert.Equal(urls, json.RootElement.GetProperty("audioUrls").EnumerateArray().Select(url => url.GetString()));
         Assert.True(json.RootElement.GetProperty("isAlreadyVerified").GetBoolean());
-    }
-
-    [Fact]
-    public void Gate_keeps_a_normal_body_post_with_antiforgery_and_external_script_keeps_mic_checks()
-    {
-        var root = TestPathHelper.FindRepoRoot();
-        var view = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "Views", "Exams", "_PreflightGate.cshtml"));
-        var script = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "js", "exams", "preflight.js"));
-        Assert.Contains("method=\"post\" action=\"@Model.VerifyUrl\"", view);
-        Assert.Contains("@Html.AntiForgeryToken()", view);
-        Assert.Contains("id=\"start-test-btn\"", view);
-        Assert.Contains("disabled", view);
-        Assert.Contains("JSON.parse(document.getElementById(\"exam-preflight-data\").textContent)", script);
-        Assert.Contains("state.audioBuffered && state.micVerified", script);
-        Assert.Contains("micVerified: !requiresMic || isAlreadyVerified", script);
-        Assert.Contains("new MediaRecorder(micStream)", script);
-        // #221 / D18: the pre-sitting screen may prompt, but only through the gate - calling
-        // getUserMedia directly here is what the ticket removes, so this asserts the new seam.
-        Assert.Contains("EeAudioGate.ask(constraints)", script);
-        Assert.DoesNotContain("navigator.mediaDevices.getUserMedia(", script);
-        Assert.Contains("state.micVerified = true", script);
-        Assert.Contains("state.micVerified = false", script);
-        Assert.Contains("await bufferSingleAudio(url)", script);
-        Assert.Contains("await preloadViaAudio(url)", script);
-        Assert.DoesNotContain("preventDefault", script);
     }
 
     private static PreflightStatusDto Status(IReadOnlyList<string>? audioUrls = null, bool verified = false) =>

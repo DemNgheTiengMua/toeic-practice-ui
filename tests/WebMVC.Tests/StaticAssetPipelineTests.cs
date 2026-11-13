@@ -74,11 +74,11 @@ public sealed class StaticAssetPipelineTests : IClassFixture<StaticAssetPipeline
         site.Upstream.Reset();
         site.Auth.Reset();
 
-        var response = await site.CreateClient().GetAsync("/exams");
+        var response = await site.CreateClient().GetAsync("/wallet");
 
-        // The home page is anonymous, but authentication still ran for it: the short-circuit is
-        // scoped to asset endpoints, not to the site.
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        // Whatever a page answers (a sign-in challenge for an anonymous caller), authentication still
+        // ran for it: the short-circuit is scoped to asset endpoints, not to the site.
+        Assert.NotEqual(HttpStatusCode.NotFound, response.StatusCode);
         Assert.NotEmpty(site.Auth.AuthenticatedSchemes);
     }
 

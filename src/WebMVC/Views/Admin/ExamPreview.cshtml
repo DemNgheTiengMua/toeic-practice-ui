@@ -1,0 +1,77 @@
+@model ExamTakeViewModel
+@{
+    Layout = null;
+    var take = Model.Display;
+    var q = take.Question;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@take.ExamName — Preview — extra efficient</title>
+  <link rel="icon" href="~/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="~/css/tokens.css">
+  <link rel="stylesheet" href="~/css/base.css">
+  <link rel="stylesheet" href="~/css/components.css">
+</head>
+<body class="exam-body-protected exam-sitting">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="container" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem;">
+        <div>
+          <strong>@take.ExamName</strong>
+          <span class="badge badge--neutral">Preview</span>
+        </div>
+        <a href="/admin/exams" class="btn btn--outline btn--sm">Exit preview</a>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <div class="container exam-sitting-container" style="max-width: 1200px; padding: 1.5rem 1rem;">
+        <div class="alert alert--neutral mb-4" id="preview-bar" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <strong>Preview mode (@Model.ExamStatus):</strong>
+            <span>Viewing questions with answer keys revealed.</span>
+          </div>
+          <div>
+            <button type="button" class="btn btn--secondary btn--sm" id="preview-answer-toggle">Hide answers</button>
+          </div>
+        </div>
+
+        @if (Model.Preview != null)
+        {
+          <div id="preview-answer-key" class="card p-4 mb-4">
+            <h3>Answer Key</h3>
+            <ul class="list-unstyled">
+              @foreach (var ans in Model.Preview.Answers)
+              {
+                <li class="mb-2">
+                  <strong>Question @ans.QuestionId:</strong>
+                  <span>Options: @string.Join(", ", ans.CorrectOptionIds)</span>
+                  <p class="text-muted mb-0">@ans.Explanation</p>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+
+        <div class="card p-4">
+          @if (q != null)
+          {
+            <h4>Question @q.DisplayOrder: @q.Stem</h4>
+            <div class="options-list mt-3">
+              @foreach (var opt in q.Options)
+              {
+                <div class="option-item mb-2 p-2 border">
+                  <strong>@opt.Label:</strong> @opt.Text
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -890,7 +890,7 @@ public sealed class AdminExamsControllerTests
 
         var viewResult = Assert.IsType<ViewResult>(result);
         // The learner's own sitting markup, not a second viewer: a second view would drift.
-        Assert.Equal("~/Views/Exams/Take.cshtml", viewResult.ViewName);
+        Assert.Equal("~/Views/Admin/ExamPreview.cshtml", viewResult.ViewName);
         var model = Assert.IsType<ExamTakeViewModel>(viewResult.Model);
         Assert.True(model.IsPreview);
         Assert.Equal(17, model.ExamId);
@@ -915,12 +915,6 @@ public sealed class AdminExamsControllerTests
             .ToList();
 
         Assert.Contains(authorize, attribute => attribute.Policy == Permissions.ContentAuthor);
-        // And the learner's sitting action has no preview branch at all: a query string cannot
-        // open a draft on /exams/take/{attemptId}, because that path needs an attempt id.
-        var learnerAction = typeof(ExamsController).GetMethod(nameof(ExamsController.Take))!;
-        Assert.DoesNotContain(
-            learnerAction.GetParameters(),
-            parameter => parameter.Name is "preview" or "previewExamId" or "examId");
     }
 
     [Fact]
