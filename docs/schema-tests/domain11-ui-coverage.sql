@@ -114,11 +114,11 @@ PRINT 'accepted placement linked to its attempt';
 -- AiGradings.BandCode and the app leaves ExamAttempts.BandCode NULL, but the schema does not police
 -- which of the two a future caller writes. TotalScore stays forbidden - one rubric is not "out of 990".
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal) VALUES (@c,'A1',N'A1',120,224);
-INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt,BandCode,WrittenByService,ProjectionVersion)
-  VALUES (@u,@spx,@c,SYSDATETIMEOFFSET(),'A1','AttemptEngine',1); DECLARE @spa INT=SCOPE_IDENTITY();
+INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt,BandCode)
+  VALUES (@u,@spx,@c,SYSDATETIMEOFFSET(),'A1'); DECLARE @spa INT=SCOPE_IDENTITY();
 PRINT 'accepted a band on a speaking-practice attempt: the ban was dropped in #148';
 BEGIN TRY
-  UPDATE ExamAttempts SET TotalScore=180, WrittenByService='AttemptEngine', ProjectionVersion=2 WHERE AttemptId=@spa;
+  UPDATE ExamAttempts SET TotalScore=180 WHERE AttemptId=@spa;
   THROW 50000,'EXPECT_REJECT FAILED: total score on speaking practice accepted',1;
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   -- #191: this table now has a single-writer guard as well, so the refusal must be the total-score
@@ -222,9 +222,9 @@ BEGIN TRY
   THROW 50000,'EXPECT_REJECT FAILED: anonymous admin grant accepted',1;
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected admin grant without actor/note'; END CATCH
 
-INSERT INTO MentorProfiles (UserId,DisplayName,CertId,Type,PricePerSlot,PriceCredits) VALUES (@adm,N'Dr. Khoa',@c,'human',50000,2); DECLARE @m INT=SCOPE_IDENTITY();
+INSERT INTO MentorProfiles (DisplayName,CertId,MeetLink,PriceCredits) VALUES (N'Dr. Khoa',@c,N'https://meet.google.com/abc-defg-hij',2); DECLARE @m INT=SCOPE_IDENTITY();
 INSERT INTO MentorSlots (MentorId,StartAt,EndAt) VALUES (@m,'2026-09-30T09:00:00+07:00','2026-09-30T10:00:00+07:00'); DECLARE @slot INT=SCOPE_IDENTITY();
-INSERT INTO Bookings (UserId,MentorId,SlotId,MentorType,Status,FocusArea) VALUES (@u,@m,@slot,'human','pending',N'Listening'); DECLARE @bk INT=SCOPE_IDENTITY();
+INSERT INTO Bookings (UserId,MentorId,SlotId,PriceCredits,Status,FocusArea) VALUES (@u,@m,@slot,2,'pending',N'Listening'); DECLARE @bk INT=SCOPE_IDENTITY();
 BEGIN TRY
   INSERT INTO CreditTransactions (UserId,Reason,Delta,BookingId) VALUES (@u,'mentor_booking',-1,@bk);
   THROW 50000,'EXPECT_REJECT FAILED: booking charge below price accepted',1;

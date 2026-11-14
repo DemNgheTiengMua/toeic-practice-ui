@@ -155,7 +155,7 @@ IF (SELECT Answered FROM vw_UserTopicAccuracy WHERE UserId = @user AND TopicId =
 PRINT 'an in-progress attempt contributes no observation';
 
 UPDATE ExamAttempts
-SET Status = 'graded', WrittenByService = 'AttemptEngine', ProjectionVersion = 1
+SET Status = 'graded'
 WHERE AttemptId = @attempt;
 
 -- B1 now holds 2 answers: the practice one and the attempt one. NOT 3, which is what a second branch

@@ -40,7 +40,11 @@ public static partial class LearningPathEndpoints
                 w.TargetAccuracyPct,
                 w.ActualAccuracyPct,
                 w.Steps.Select(ToStepDto).ToList())).ToList(),
-            view.SkillLevels.ToDictionary(kv => kv.Key, kv => kv.Value.Code));
+            view.SkillLevels.ToDictionary(kv => kv.Key, kv => kv.Value.Code),
+            view.IsSprintCompleted,
+            view.NextMilestoneBandCode,
+            view.NextMilestoneBandName,
+            view.CanStartNextSprint);
 
     private static PathStepDto ToStepDto(PathStepInfo step) =>
         new(
@@ -67,5 +71,8 @@ public static partial class LearningPathEndpoints
             step.StartedAt,
             step.CompletedAt,
             step.RefLessonId,
-            step.RefExamId);
+            step.RefExamId,
+            step.GuideText,
+            step.RubricCriteria,
+            step.IsZeroCreditAiGrading);
 }

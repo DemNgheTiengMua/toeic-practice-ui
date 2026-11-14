@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Contracts;
-using Microsoft.AspNetCore.Mvc;
 using Services;
 using static WebAPI.Endpoints.EndpointHelpers;
 
@@ -8,14 +8,18 @@ namespace WebAPI.Endpoints;
 
 public static partial class MentorEndpoints
 {
+    private static readonly JsonSerializerOptions WebJsonOptions = new(JsonSerializerDefaults.Web);
+
     private static void MapSlots(RouteGroupBuilder admin)
     {
-
-        admin.MapGet("/{mentorId:int}/slots", async (int mentorId, IMentorService mentorService, CancellationToken cancellationToken) =>
+        admin.MapGet("/{mentorId:int}/weekly-slots", async (
+            int mentorId,
+            IMentorService mentorService,
+            CancellationToken cancellationToken) =>
         {
             try
             {
-                var slots = await mentorService.GetAdminMentorSlotsAsync(mentorId, cancellationToken);
+                var slots = await mentorService.GetAdminMentorWeeklySlotsAsync(mentorId, cancellationToken);
                 return Results.Ok(slots);
             }
             catch (KeyNotFoundException)
@@ -24,18 +28,31 @@ public static partial class MentorEndpoints
             }
         });
 
-        admin.MapPost("/{mentorId:int}/slots", async (
+        admin.MapPut("/{mentorId:int}/weekly-slots", async (
             int mentorId,
-            CreateMentorSlotRequest request,
-            HttpContext http,
+            JsonElement body,
             IMentorService mentorService,
             CancellationToken cancellationToken) =>
         {
             try
             {
-                var adminUserId = CurrentUserId(http);
-                var slot = await mentorService.CreateMentorSlotAsync(mentorId, adminUserId, request, cancellationToken);
-                return Results.Created($"/api/admin/mentors/{mentorId}/slots", slot);
+                IReadOnlyList<MentorWeeklySlotInputDto> weeklySlots;
+                if (body.ValueKind == JsonValueKind.Array)
+                {
+                    weeklySlots = body.Deserialize<List<MentorWeeklySlotInputDto>>(WebJsonOptions) ?? [];
+                }
+                else if (body.ValueKind == JsonValueKind.Object)
+                {
+                    var wrapper = body.Deserialize<ReplaceMentorWeeklySlotsRequest>(WebJsonOptions);
+                    weeklySlots = wrapper?.WeeklySlots ?? [];
+                }
+                else
+                {
+                    weeklySlots = [];
+                }
+
+                var updated = await mentorService.ReplaceMentorWeeklySlotsAsync(mentorId, weeklySlots, cancellationToken);
+                return Results.Ok(updated);
             }
             catch (KeyNotFoundException)
             {
@@ -51,20 +68,50 @@ public static partial class MentorEndpoints
             }
         });
 
-        admin.MapPost("/{mentorId:int}/slots/{slotId:int}/close", async (
-            int mentorId,
-            int slotId,
+        admin.MapGet("/payouts", async (
+            DateOnly? from,
+            DateOnly? to,
             IMentorService mentorService,
+            TimeProvider clock,
             CancellationToken cancellationToken) =>
         {
             try
             {
-                await mentorService.CloseMentorSlotAsync(mentorId, slotId, cancellationToken);
-                return Results.Ok();
+                var now = ReportingPeriod.LocalInstant(clock.GetUtcNow());
+                var today = DateOnly.FromDateTime(now.DateTime);
+                var toDay = to ?? today;
+                var fromDay = from ?? new DateOnly(toDay.Year, toDay.Month, 1);
+
+                var report = await mentorService.GetAdminMentorPayoutsAsync(fromDay, toDay, cancellationToken);
+                return Results.Ok(report);
             }
-            catch (KeyNotFoundException)
+            catch (ValidationException ex)
             {
-                return Results.NotFound();
+                return ValidationProblem(ex);
+            }
+        });
+
+        admin.MapGet("/payouts/export", async (
+            DateOnly? from,
+            DateOnly? to,
+            IMentorService mentorService,
+            TimeProvider clock,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var now = ReportingPeriod.LocalInstant(clock.GetUtcNow());
+                var today = DateOnly.FromDateTime(now.DateTime);
+                var toDay = to ?? today;
+                var fromDay = from ?? new DateOnly(toDay.Year, toDay.Month, 1);
+
+                var rows = await mentorService.GetMentorPayoutExportRowsAsync(fromDay, toDay, cancellationToken);
+                var bytes = MentorPayoutExportCsv.Format(rows, now);
+
+                return Results.File(
+                    bytes,
+                    MentorPayoutExportCsv.ContentType,
+                    $"mentor-payouts-{fromDay:yyyy-MM-dd}-to-{toDay:yyyy-MM-dd}.csv");
             }
             catch (ValidationException ex)
             {

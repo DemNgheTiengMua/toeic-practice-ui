@@ -200,11 +200,12 @@ public sealed partial class AdminExamService
             throw new ExamNotFoundException(examId);
         }
 
-        exam.Status = ExamStatus.Hidden.ToCode();
+        exam.Status = ExamStatus.Draft.ToCode();
         exam.UpdatedAt = clock.GetUtcNow();
+        db.Entry(exam).Property(e => e.Status).IsModified = true;
         await db.SaveChangesAsync(cancellationToken);
 
-        return new AdminPublishExamResultDto(true, "Exam withdrawn from the catalog.", Array.Empty<string>());
+        return new AdminPublishExamResultDto(true, "Exam returned to draft.", Array.Empty<string>());
     }
 
     public async Task<AdminPublishExamResultDto> PublishExamAsync(int examId, CancellationToken cancellationToken = default)
@@ -236,38 +237,10 @@ public sealed partial class AdminExamService
             throw new AdminExamException(ApiError.Codes.ExamIncomplete, string.Join("; ", errs), 400);
         }
 
-        // #226 / ADM-11: the pass is recorded BEFORE the status moves, in one transaction, so
-        // trg_Exams_PublishRequiresAudit sees it on the same statement that publishes. Relying on
-        // SaveChanges' internal command order would make the trigger's verdict depend on how EF
-        // happened to batch two statements - and the failure mode would be a 50101 on a paper that
-        // passed every invariant.
         var now = clock.GetUtcNow();
-
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-
-        var pass = await db.ExamPublishAudits.FirstOrDefaultAsync(a => a.ExamId == examId, cancellationToken);
-        if (pass is null)
-        {
-            db.ExamPublishAudits.Add(new ExamPublishAudit
-            {
-                ExamId = examId,
-                PassedAt = now,
-                WrittenByService = ExamPublishAudit.Writer,
-            });
-        }
-        else
-        {
-            pass.PassedAt = now;
-            pass.WrittenByService = ExamPublishAudit.Writer;
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
-
         exam.Status = ExamStatus.Published.ToCode();
         exam.UpdatedAt = now;
         await db.SaveChangesAsync(cancellationToken);
-
-        await transaction.CommitAsync(cancellationToken);
 
         return new AdminPublishExamResultDto(true, "Exam published successfully.", Array.Empty<string>());
     }

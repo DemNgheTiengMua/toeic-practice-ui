@@ -138,55 +138,18 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // #280: two more, 68 -> 70 - trg_Refunds_AppendOnly (a refund is a record, never edited away) and
         // trg_Refunds_CreditTxnIsRefundCredit (a refund may only point at a refund_credit row of its own
         // size, so a credit refund cannot quietly cite an unrelated ledger entry).
-        Assert.Equal(70, triggerCount);
+        // #314: retired-table triggers removed along with their tables: 65 -> 42.
+        Assert.Equal(42, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
                  {
-                     "trg_GradingCriteria_FrozenWhenLocked",
-                     "trg_GradingCriterionDescriptors_FrozenWhenLocked",
-                     "trg_GradingCriterionAnchors_FrozenWhenLocked",
-                     "trg_CefrCutScores_NoOverlap",
-                     "trg_GradingRubricLocks_CompleteCanonicalRubric",
-                     "trg_GradingRubricLocks_IrreversibleOnceGraded",
-                     "trg_Attempts_SingleWriter",
-                     "trg_PlacementTests_SingleWriter",
-                     "trg_LearnerPathSteps_SingleWriter",
-                     "trg_LearnerSkillStates_SingleWriter",
-                     // #212: the fifth covered derived fact, and the completion rule it takes two
-                     // triggers to express (the placement side and the skill-row side).
-                     "trg_PlacementSkillResults_SingleWriter",
-                     "trg_PlacementTests_CompletionIsEarned",
-                     "trg_PlacementSkillResults_CompletionIsEarned",
-                     // #201: the two invariants, by name. A rename must not pass as a count.
-                     "trg_ReviewSampleDecisions_NoSelfApproval",
                      "trg_ItemVersions_TriageCannotWrite",
                      "trg_ExamItems_TriageCannotWrite",
                      "trg_Sections_TriageCannotWrite",
                      "trg_GradingCriteria_TriageCannotWrite",
-                     "trg_GradingCriterionDescriptors_TriageCannotWrite",
-                     // Review finding: the two that were missing. Triage could publish an exam and
-                     // activate an item before these existed.
                      "trg_Exams_TriageCannotWrite",
                      "trg_Items_TriageCannotWrite",
-                     // #206: the three the stratified audit adds. The first is the sixth covered
-                     // derived fact; the other two close the blind-solve order and the batch scope at
-                     // the database, for writes the service does not make.
-                     "trg_ReviewStrata_SingleWriter",
-                     "trg_ReviewSampleItems_SolveIsBlind",
-                     "trg_ReviewSampleItems_ItemIsInItsBatch",
-                     // #226: ADM-11's pass has one writer, and the door itself.
-                     "trg_ExamPublishAudits_SingleWriter",
-                     "trg_Exams_PublishRequiresAudit",
-                     // #233: the seventh covered derived fact, and the archive's immutability guard.
-                     "trg_LearnerPathWeeks_SingleWriter",
-                     // #237: the ninth covered derived fact, and the four-state transition table.
-                     "trg_UserCellMasteries_SingleWriter",
-                     "trg_UserCellMasteries_StateIsEarned",
-                     // #274: the tenth covered derived fact - the paper a sitting was served.
-                     "trg_AttemptStageBundles_SingleWriter",
-                     // #269 audit: a finished practice session is terminal.
-                     "trg_PracticeSessions_StatusTransitions",
                  })
         {
             var present = await db.Database
@@ -199,12 +162,7 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         var viewCount = await db.Database
             .SqlQuery<int>($"SELECT COUNT(*) AS Value FROM sys.views")
             .SingleAsync();
-        // #162: vw_LearnerPathIsPremium went with the premium-path feature, leaving eight views.
-        // #202: vw_CoverageMatrix is the ninth - one row per coverage cell, always all 120 of them.
-        // #235: vw_DailyPracticeVolume is the tenth - the daily ceiling, derived from answers (D12).
-        // #243: vw_UserTopicAccuracy is the eleventh - accuracy per (topic, level), the axis D3
-        // replaces the flat category aggregation with.
-        // #271: and it is the tenth view now, because the category aggregation it replaces is gone.
-        Assert.Equal(10, viewCount);
+        // #314: vw_CoverageMatrix removed with ContentQuotas: 9 -> 8.
+        Assert.Equal(8, viewCount);
     }
 }

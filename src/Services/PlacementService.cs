@@ -18,18 +18,10 @@ public sealed partial class PlacementService(
     ILearnerService learners,
     IAttemptEngine? attemptEngine = null,
     TimeProvider? clock = null,
-    IPlacementStageOneDrawService? stageOneDraw = null,
-    IPlacementStageTwoDrawService? stageTwoDraw = null,
     ICreditLedger? creditLedger = null,
     PlacementOptions? options = null) : IPlacementService
 {
     private readonly IAttemptEngine _attemptEngine = attemptEngine ?? new AttemptEngine(db);
-
-    // #276: the two draws, constructed over the same DbContext when no caller supplies them - so a
-    // test that does `new PlacementService(db, learners)` still exercises the real draw rather than a
-    // branch nobody runs in production.
-    private readonly IPlacementStageOneDrawService _stageOneDraw = stageOneDraw ?? new PlacementStageOneDrawService(db);
-    private readonly IPlacementStageTwoDrawService _stageTwoDraw = stageTwoDraw ?? new PlacementStageTwoDrawService(db);
 
     /// <summary>#213: the cooldown is a wall-clock rule, so the clock is injected rather than assumed.</summary>
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
@@ -56,7 +48,7 @@ public sealed partial class PlacementService(
 
         // Auto-submit any expired in-progress placement tests
         var expiredPlacements = await db.PlacementTests
-            .Where(p => p.UserId == userId && p.CertId == certId && p.Status == PlacementStatus.InProgress.ToCode() && p.ExamAttempt != null && DateTimeOffset.UtcNow >= p.ExamAttempt.ExpiresAt)
+            .Where(p => p.UserId == userId && p.Status == PlacementStatus.InProgress.ToCode() && p.ExamAttempt != null && DateTimeOffset.UtcNow >= p.ExamAttempt.ExpiresAt)
             .Select(p => p.PlacementId)
             .ToListAsync(cancellationToken);
 
@@ -67,36 +59,51 @@ public sealed partial class PlacementService(
 
         var activePlacement = await db.PlacementTests
             .AsNoTracking()
-            .Where(p => p.UserId == userId && p.CertId == certId && p.Status == PlacementStatus.InProgress.ToCode())
+            .Where(p => p.UserId == userId && p.Status == PlacementStatus.InProgress.ToCode())
+            .OrderByDescending(p => p.TakenAt)
             .FirstOrDefaultAsync(cancellationToken);
 
         var latestDone = await db.PlacementTests
             .AsNoTracking()
-            .Where(p => p.UserId == userId && p.CertId == certId && p.Status == PlacementStatus.Done.ToCode())
+            .Where(p => p.UserId == userId && p.Status == PlacementStatus.Done.ToCode())
             .OrderByDescending(p => p.TakenAt)
             .FirstOrDefaultAsync(cancellationToken);
 
         string? currentBandName = null;
         if (!string.IsNullOrEmpty(latestDone?.ResultBandCode))
         {
+            var bandCertId = latestDone.CertId ?? certId;
             currentBandName = await db.ScoreBands
                 .AsNoTracking()
-                .Where(b => b.CertId == certId && b.Code == latestDone.ResultBandCode)
+                .Where(b => b.CertId == bandCertId && b.Code == latestDone.ResultBandCode)
                 .Select(b => b.Name)
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        var exams = await db.Exams
+        // #311: Single Universal Placement Exam across the platform (preferred for active cert if present, otherwise universal).
+        var certExams = await db.Exams
             .AsNoTracking()
             .Where(e => e.CertId == certId && e.Purpose == ExamPurpose.Placement.ToCode() && e.Status == ExamStatus.Published.ToCode() && !e.IsDeleted)
             .OrderBy(e => e.ExamId)
             .ToListAsync(cancellationToken);
 
+        var exams = certExams.Count > 0
+            ? certExams
+            : await db.Exams
+                .AsNoTracking()
+                .Where(e => e.Purpose == ExamPurpose.Placement.ToCode() && e.Status == ExamStatus.Published.ToCode() && !e.IsDeleted)
+                .OrderByDescending(e => e.Name.Contains("Universal"))
+                .ThenByDescending(e => e.ExamId)
+                .Take(1)
+                .ToListAsync(cancellationToken);
+
         var items = new List<PlacementCatalogItem>();
         for (int i = 0; i < exams.Count; i++)
         {
             var exam = exams[i];
-            bool isRecommended = exam.Name.Contains("Standard", StringComparison.OrdinalIgnoreCase) || i == 0;
+            bool isRecommended = exam.Name.Contains("Universal", StringComparison.OrdinalIgnoreCase)
+                || exam.Name.Contains("Standard", StringComparison.OrdinalIgnoreCase)
+                || i == 0;
             int? activePlacementId = (activePlacement?.ExamId == exam.ExamId) ? activePlacement.PlacementId : null;
 
             items.Add(new PlacementCatalogItem(
@@ -113,7 +120,7 @@ public sealed partial class PlacementService(
 
         var isRetake = await db.PlacementTests
             .AsNoTracking()
-            .AnyAsync(p => p.UserId == userId && p.CertId == certId && p.Status != PlacementStatus.InProgress.ToCode(), cancellationToken);
+            .AnyAsync(p => p.UserId == userId && p.Status != PlacementStatus.InProgress.ToCode(), cancellationToken);
 
         int? creditBalance = isRetake
             ? await _creditLedger.GetBalanceAsync(userId, cancellationToken)
@@ -194,7 +201,7 @@ public sealed partial class PlacementService(
     {
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
         var exam = await db.Exams
-            .Where(e => e.ExamId == examId && e.CertId == certId && e.Purpose == ExamPurpose.Placement.ToCode() && e.Status == ExamStatus.Published.ToCode() && !e.IsDeleted)
+            .Where(e => e.ExamId == examId && e.Purpose == ExamPurpose.Placement.ToCode() && e.Status == ExamStatus.Published.ToCode() && !e.IsDeleted)
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PlacementException(PlacementException.ExamNotFound, $"Placement exam {examId} not found.");
 
@@ -245,13 +252,13 @@ public sealed partial class PlacementService(
                 // so there is no lifetime cap anywhere in this rule. A resume of the sitting already in progress
                 // returned above and is never refused by it - a cooldown that blocked a resume would strand a
                 // learner halfway through a paper.
-                await EnsureCooldownElapsedAsync(userId, certId, cancellationToken);
+                await EnsureCooldownElapsedAsync(userId, exam.CertId, cancellationToken);
 
-                // #289: the first placement per certificate per learner is free and never touches the credit ledger;
+                // #289 / #311: the first placement per learner is free and never touches the credit ledger;
                 // every subsequent placement charges the configured price for the chosen scope inside this serializable
                 // transaction before abandoning any prior sitting or creating the attempt.
                 var isRetake = await db.PlacementTests
-                    .AnyAsync(p => p.UserId == userId && p.CertId == certId && p.Status != PlacementStatus.InProgress.ToCode(), cancellationToken);
+                    .AnyAsync(p => p.UserId == userId && p.Status != PlacementStatus.InProgress.ToCode(), cancellationToken);
 
                 CreditReceipt? chargeTxn = null;
                 if (isRetake)
@@ -267,10 +274,10 @@ public sealed partial class PlacementService(
                     }
                 }
 
-                // Abandon any other in-progress placement test for this certificate and its linked attempt
+                // Abandon any other in-progress placement test for this learner and its linked attempt
                 var otherPlacements = await db.PlacementTests
                     .Include(p => p.ExamAttempt)
-                    .Where(p => p.UserId == userId && p.CertId == certId && p.Status == PlacementStatus.InProgress.ToCode())
+                    .Where(p => p.UserId == userId && p.Status == PlacementStatus.InProgress.ToCode())
                     .ToListAsync(cancellationToken);
                 foreach (var other in otherPlacements)
                 {
@@ -282,15 +289,14 @@ public sealed partial class PlacementService(
                 }
 
                 var attempt = await _attemptEngine.CreateAttemptAsync(
-                    userId, certId, examId, exam.DurationMinutes,
-                    await BuildStageOnePaperAsync(certId, exam, scope, cancellationToken),
+                    userId, exam.CertId, examId, exam.DurationMinutes,
                     scope,
                     cancellationToken);
 
                 var placement = new PlacementTest
                 {
                     UserId = userId,
-                    CertId = certId,
+                    CertId = exam.CertId,
                     ExamId = examId,
                     AttemptId = attempt.AttemptId,
                     Status = PlacementStatus.InProgress.ToCode(),
@@ -391,7 +397,7 @@ public sealed partial class PlacementService(
             take.AttemptId,
             take.ExamId,
             take.ExamName,
-            placement.Cert.Code,
+            placement.Cert?.Code ?? string.Empty,
             EnumCodes.Parse<PlacementStatus>(placement.Status),
             take.StartedAt,
             take.ExpiresAt,
@@ -483,11 +489,6 @@ public sealed partial class PlacementService(
         // Before the transition, because the transition may submit the attempt on the last skill and
         // RecordStageTwoRouteAsync refuses a sitting that is no longer open. A repeated boundary click
         // re-records nothing: the engine returns false when the row already exists.
-        await RecordStageTwoRoutingAsync(take.AttemptId, activeSkillId, cancellationToken);
-
-        // Safe under a duplicate request: the engine derives the next skill from the attempt's
-        // active one, so a racing second advance repeats this one instead of skipping a skill, and
-        // it is never reached with the last skill active, so it never submits the attempt.
         await _attemptEngine.TransitionToNextSkillAsync(take.AttemptId, userId, cancellationToken);
         return true;
     }
@@ -1068,6 +1069,27 @@ public sealed partial class PlacementService(
             return placementBand;
         }
 
+        // #311: Cross-certificate mapping from the learner's Universal Placement Exam OverallPct
+        var latestUniversalPct = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.UserId == userId && p.Status == PlacementStatus.Done.ToCode() && p.OverallPct != null)
+            .OrderByDescending(p => p.TakenAt)
+            .Select(p => p.OverallPct)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (latestUniversalPct is { } pct)
+        {
+            var certBands = await db.ScoreBands
+                .AsNoTracking()
+                .Where(b => b.CertId == certId)
+                .OrderBy(b => b.MinTotal)
+                .ToListAsync(cancellationToken);
+            if (certBands.Count > 0)
+            {
+                return MapOverallPctToBand(pct, certBands).Band.Code;
+            }
+        }
+
         return await db.ExamAttempts
             .AsNoTracking()
             .Where(a => a.UserId == userId && a.CertId == certId
@@ -1235,33 +1257,134 @@ public sealed partial class PlacementService(
                 resultBandCode));
         }
 
-        // #213 / story 55: the per-skill rows are READ, not derived here. They are the one writer's
-        // product, and they are the only place a carried-over result exists: its skill has no
-        // AttemptSkillScore (it was never sat), so a page built only from the scores above would omit
-        // the very number the learner is being shown.
-        var skillResults = await db.PlacementSkillResults
+
+
+        var (freeResponseCount, gradedFreeResponseCount, failedFreeResponseCount, isGraded) =
+            await GetAttemptGradingCountsAsync(attempt.AttemptId, attempt.Status, cancellationToken);
+
+        var certId = placement.CertId ?? attempt.CertId;
+        var allCertSkills = await db.Skills
             .AsNoTracking()
-            .Where(r => r.PlacementId == placement.PlacementId)
-            .Join(db.Skills.AsNoTracking(), r => r.SkillId, s => s.SkillId, (r, s) => new { r, s })
-            .OrderBy(x => x.s.DisplayOrder).ThenBy(x => x.s.SkillId)
-            .Select(x => new PlacementSkillResultInfo(
-                x.r.SkillId,
-                x.s.Code,
-                x.s.Name,
-                x.r.ResultStatus,
-                x.r.CefrLevel,
-                x.r.PositionInBand,
-                x.r.MeasuredAt,
-                x.r.ReusedFromPrior,
-                x.r.FailureReason))
+            .Where(s => s.CertId == certId)
+            .OrderBy(s => s.DisplayOrder)
+            .ThenBy(s => s.SkillId)
             .ToListAsync(cancellationToken);
 
-        // Weaker section analysis: compare percentage of raw scores
-        string? weakerSkillName = null;
-        if (skillInfos.Count >= 2)
+
+
+        var pendingAiSkillIds = await db.FreeResponses
+            .AsNoTracking()
+            .Where(fr => fr.AttemptId == attempt.AttemptId
+                && db.AiGradings.Any(g => g.FreeResponseId == fr.FreeResponseId && g.Status == AiGradingStatus.Pending.ToCode()))
+            .Select(fr => fr.SkillId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var freeResponseSkillIds = await db.FreeResponses
+            .AsNoTracking()
+            .Where(fr => fr.AttemptId == attempt.AttemptId)
+            .Select(fr => fr.SkillId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var answeredAnswerIds = await db.AttemptAnswers
+            .AsNoTracking()
+            .Where(a => a.AttemptId == attempt.AttemptId && (a.SelectedOptionId != null || a.SelectedLabel != null || a.ResponseText != null || a.SelectedOptionIdsJson != null))
+            .Select(a => a.AnswerId)
+            .ToListAsync(cancellationToken);
+
+        var answeredSkillIds = answeredAnswerIds
+            .Select(id => skillByAnswer.GetValueOrDefault(id))
+            .Where(id => id > 0)
+            .Distinct()
+            .ToList();
+
+        var allAttemptAnsweredSkillIds = answeredSkillIds.Union(freeResponseSkillIds).ToHashSet();
+
+        var priorPlacement = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.UserId == placement.UserId
+                && p.PlacementId != placement.PlacementId
+                && p.Status == PlacementStatus.Done.ToCode()
+                && (p.CertId == certId || p.CertId == null))
+            .OrderByDescending(p => p.TakenAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var standing = await LearnerStandingReader.ReadAsync(db, placement.UserId, certId, _clock, cancellationToken);
+        var standingBySkill = standing?.Skills.ToDictionary(s => s.SkillId) ?? new Dictionary<int, SkillStanding>();
+        var scoreBySkillId = skillScores.ToDictionary(s => s.SkillId);
+
+        var skillResults = new List<PlacementSkillResultInfo>();
+        foreach (var skill in allCertSkills)
         {
-            var lowest = skillInfos
-                .OrderBy(s => s.TotalQuestions > 0 ? (double)s.RawScore / s.TotalQuestions : 0)
+            standingBySkill.TryGetValue(skill.SkillId, out var st);
+            var hasScore = scoreBySkillId.TryGetValue(skill.SkillId, out var sc);
+            var isAnsweredInAttempt = allAttemptAnsweredSkillIds.Contains(skill.SkillId);
+            var isPendingAi = pendingAiSkillIds.Contains(skill.SkillId) || (!isGraded && freeResponseSkillIds.Contains(skill.SkillId));
+
+            if (isPendingAi)
+            {
+                skillResults.Add(new PlacementSkillResultInfo(
+                    skill.SkillId,
+                    skill.Code,
+                    skill.Name,
+                    PlacementResultStatus.Grading,
+                    null,
+                    null,
+                    null,
+                    false,
+                    null));
+            }
+            else if (hasScore && isAnsweredInAttempt)
+            {
+                skillResults.Add(new PlacementSkillResultInfo(
+                    skill.SkillId,
+                    skill.Code,
+                    skill.Name,
+                    PlacementResultStatus.Measured,
+                    st?.Level,
+                    st?.PositionInBand,
+                    attempt.SubmittedAt ?? placement.TakenAt,
+                    false,
+                    null));
+            }
+            else if (placement.ReusesPriorResults && st != null && !st.IsStale)
+            {
+                skillResults.Add(new PlacementSkillResultInfo(
+                    skill.SkillId,
+                    skill.Code,
+                    skill.Name,
+                    PlacementResultStatus.Measured,
+                    st.Level,
+                    st.PositionInBand,
+                    priorPlacement?.TakenAt ?? st.MeasuredAt,
+                    true,
+                    null));
+            }
+            else
+            {
+                skillResults.Add(new PlacementSkillResultInfo(
+                    skill.SkillId,
+                    skill.Code,
+                    skill.Name,
+                    PlacementResultStatus.NotMeasured,
+                    null,
+                    null,
+                    null,
+                    false,
+                    PlacementFailureReason.CandidateSkipped));
+            }
+        }
+
+        // Weaker section analysis: compare percentage of raw scores among sat skills
+        string? weakerSkillName = null;
+        var satSkillInfos = skillInfos
+            .Where(si => allAttemptAnsweredSkillIds.Contains(si.SkillId) && si.TotalQuestions > 0)
+            .ToList();
+        if (satSkillInfos.Count >= 2)
+        {
+            var lowest = satSkillInfos
+                .OrderBy(s => (double)s.RawScore / s.TotalQuestions)
                 .First();
             weakerSkillName = lowest.SkillName;
         }
@@ -1302,12 +1425,61 @@ public sealed partial class PlacementService(
             ? Math.Max(1, (int)(attempt.SubmittedAt.Value - attempt.StartedAt).TotalMinutes)
             : attempt.Exam.DurationMinutes;
 
-        var (freeResponseCount, gradedFreeResponseCount, failedFreeResponseCount, isGraded) =
-            await GetAttemptGradingCountsAsync(attempt.AttemptId, attempt.Status, cancellationToken);
+
 
         var resultScope = EnumCodes.Parse<PlacementScope>(placement.Scope);
 
+        // #311: Re-read diagnostic percentages written by PlacementResultWriter
+        var pctSnapshot = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.PlacementId == placement.PlacementId)
+            .Select(p => new { p.ListeningPct, p.ReadingPct, p.SpeakingPct, p.WritingPct, p.OverallPct })
+            .SingleAsync(cancellationToken);
 
+        List<CertificateBandPreview>? certificatePreviews = null;
+        if (pctSnapshot.OverallPct is { } overallPct)
+        {
+            var activeCerts = await db.Certificates
+                .AsNoTracking()
+                .Where(c => c.IsActive)
+                .OrderBy(c => c.CertId)
+                .Select(c => new
+                {
+                    c.CertId,
+                    c.Code,
+                    c.Name,
+                    c.ScoreAggregationRule,
+                    SkillCount = db.Skills.Count(s => s.CertId == c.CertId),
+                })
+                .ToListAsync(cancellationToken);
+
+            var allBands = await db.ScoreBands
+                .AsNoTracking()
+                .OrderBy(b => b.CertId)
+                .ThenBy(b => b.MinTotal)
+                .ToListAsync(cancellationToken);
+            var bandsByCert = allBands.GroupBy(b => b.CertId).ToDictionary(g => g.Key, g => g.ToList());
+
+            certificatePreviews = new List<CertificateBandPreview>(activeCerts.Count);
+            foreach (var cert in activeCerts)
+            {
+                if (!bandsByCert.TryGetValue(cert.CertId, out var certBands) || certBands.Count == 0)
+                {
+                    continue;
+                }
+
+                var (mappedScore, mappedBand) = MapOverallPctToBand(overallPct, certBands);
+                certificatePreviews.Add(new CertificateBandPreview(
+                    cert.CertId,
+                    cert.Code,
+                    cert.Name,
+                    cert.SkillCount,
+                    mappedScore,
+                    mappedBand.Code,
+                    mappedBand.Name,
+                    AttemptEngine.DisplayFactor(cert.ScoreAggregationRule)));
+            }
+        }
 
         return new PlacementResultView(
             placement.PlacementId,
@@ -1334,7 +1506,31 @@ public sealed partial class PlacementService(
         {
             SkillResults = skillResults,
             Scope = resultScope,
+            ListeningPct = pctSnapshot.ListeningPct,
+            ReadingPct = pctSnapshot.ReadingPct,
+            SpeakingPct = pctSnapshot.SpeakingPct,
+            WritingPct = pctSnapshot.WritingPct,
+            OverallPct = pctSnapshot.OverallPct,
+            CertificatePreviews = certificatePreviews,
         };
+    }
+
+    private static (int MappedScore, ScoreBand Band) MapOverallPctToBand(
+        decimal overallPct,
+        IReadOnlyList<ScoreBand> orderedBands)
+    {
+        var minScale = orderedBands.Min(b => b.MinTotal);
+        var maxScale = orderedBands.Max(b => b.MaxTotal);
+        var clampedPct = Math.Clamp(overallPct, 0m, 100m);
+        var mappedScore = (int)Math.Round(minScale + (clampedPct / 100m) * (maxScale - minScale));
+        mappedScore = Math.Clamp(mappedScore, minScale, maxScale);
+
+        var matched = orderedBands.FirstOrDefault(b => mappedScore >= b.MinTotal && mappedScore <= b.MaxTotal)
+            ?? orderedBands
+                .OrderBy(b => Math.Abs(((b.MinTotal + b.MaxTotal) / 2.0) - mappedScore))
+                .First();
+
+        return (mappedScore, matched);
     }
     private async Task<(int Total, int Graded, int Failed, bool IsGraded)> GetAttemptGradingCountsAsync(
         int attemptId,

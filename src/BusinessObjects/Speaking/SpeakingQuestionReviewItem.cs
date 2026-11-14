@@ -13,5 +13,8 @@ public record SpeakingQuestionReviewItem(
     string? Transcript,
     decimal TotalScore,
     decimal MaxScore,
-    IReadOnlyList<SpeakingCriterionScoreItem> Criteria
+    IReadOnlyList<SpeakingCriterionScoreItem> Criteria,
+    IReadOnlyList<AiErrorSpan>? ErrorSpans = null,
+    string? PriorityFix = null,
+    string? ModelRewrite = null
 );

@@ -1,17 +1,11 @@
-using System.ComponentModel.DataAnnotations;
-using BusinessObjects;
-using Contracts;
-using DataAccess;
 using BusinessObjects.Entities;
-using BusinessObjects.Views;
+using Contracts;
 using Microsoft.EntityFrameworkCore;
-using Services.Credits;
 
 namespace Services;
 
 public sealed partial class MentorService
 {
-
     public async Task<MentorBookingDto> GetBookingDetailAsync(int bookingId, int userId, CancellationToken cancellationToken = default)
     {
         var booking = await db.Bookings
@@ -70,25 +64,27 @@ public sealed partial class MentorService
         }).ToList();
     }
 
-    private static MentorBookingDto ToBookingDto(Booking b, MentorProfile mentor, MentorSlot? slot, int? attemptId = null, string? redirectUrl = null, MentorReviewDto? review = null, MentorLearnerStandingDto? standing = null) =>
+    private static MentorBookingDto ToBookingDto(
+        Booking b,
+        MentorProfile mentor,
+        MentorSlot slot,
+        MentorReviewDto? review = null,
+        MentorLearnerStandingDto? standing = null) =>
         new(
             b.BookingId,
             b.UserId,
             b.MentorId,
             mentor.DisplayName,
             mentor.Headline,
-            b.MentorType,
             b.SlotId,
-            slot?.StartAt,
-            slot?.EndAt,
+            slot.StartAt,
+            slot.EndAt,
             b.Status,
-            b.MeetLink,
+            b.MeetLink ?? mentor.MeetLink,
             b.FocusArea,
-            mentor.PriceCredits,
+            b.PriceCredits,
             b.CancelledAt,
             b.CreatedAt,
-            attemptId,
-            redirectUrl,
             review,
             standing);
 }

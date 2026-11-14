@@ -178,6 +178,4 @@ public partial class ItemVersion
     public virtual ICollection<SavedQuestion> SavedQuestions { get; set; } = new List<SavedQuestion>();
 
     /// <summary>#206: the audit samples that pinned this version.</summary>
-    [InverseProperty("ItemVersion")]
-    public virtual ICollection<ReviewSampleItem> ReviewSampleItems { get; set; } = new List<ReviewSampleItem>();
 }

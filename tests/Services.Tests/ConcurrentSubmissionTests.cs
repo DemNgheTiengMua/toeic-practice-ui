@@ -65,7 +65,6 @@ public sealed class ConcurrentSubmissionTests(DatabaseFixture database)
 
             Assert.Equal(1, skillRows.Count);
             Assert.NotNull(attempt.TotalScore);
-            Assert.Equal(1, attempt.ProjectionVersion);
 
             // Both callers reported the same score, because the second read the first's result rather
             // than computing its own.
@@ -94,13 +93,11 @@ public sealed class ConcurrentSubmissionTests(DatabaseFixture database)
 
             await SubmitAsync(connectionString, fixture.AttemptId, fixture.UserId);
 
-            int versionAfterFirst;
             int? scoreAfterFirst;
             await using (var db = DbContextFactory.Create(connectionString))
             {
                 var attempt = await db.ExamAttempts.AsNoTracking()
                     .SingleAsync(a => a.AttemptId == fixture.AttemptId);
-                versionAfterFirst = attempt.ProjectionVersion;
                 scoreAfterFirst = attempt.TotalScore;
             }
 
@@ -110,7 +107,6 @@ public sealed class ConcurrentSubmissionTests(DatabaseFixture database)
             {
                 var attempt = await verify.ExamAttempts.AsNoTracking()
                     .SingleAsync(a => a.AttemptId == fixture.AttemptId);
-                Assert.Equal(versionAfterFirst, attempt.ProjectionVersion);
                 Assert.Equal(scoreAfterFirst, attempt.TotalScore);
                 Assert.Equal(1, await verify.AttemptSkillScores.CountAsync(s => s.AttemptId == fixture.AttemptId));
             }

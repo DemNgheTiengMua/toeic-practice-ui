@@ -85,7 +85,7 @@ public sealed partial class AdminExamService
 
         // #254: "newest" is the authored order, stated once in GateContext. A candidate list that
         // offered the highest ItemVersionId would offer a different row than the sitting serves.
-        var newestByItem = GateContext.NewestPerItem(versions, v => v.ItemId, v => v.VersionNumber)
+        var newestByItem = ItemVersionQuery.NewestPerItem(versions, v => v.ItemId, v => v.VersionNumber)
             .ToDictionary(v => v.ItemId);
 
         var bindings = await (

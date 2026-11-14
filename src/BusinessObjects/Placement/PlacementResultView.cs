@@ -29,4 +29,20 @@ public sealed record PlacementResultView(
     // #213 / story 55: the per-skill rows, so the result screen can badge a carried-over number and
     // print the date it was actually measured. Defaulted so existing construction sites compile.
     IReadOnlyList<PlacementSkillResultInfo>? SkillResults = null,
-    PlacementScope Scope = PlacementScope.AllSkills);
+    PlacementScope Scope = PlacementScope.AllSkills,
+    decimal? ListeningPct = null,
+    decimal? ReadingPct = null,
+    decimal? SpeakingPct = null,
+    decimal? WritingPct = null,
+    decimal? OverallPct = null,
+    IReadOnlyList<CertificateBandPreview>? CertificatePreviews = null);
+
+public sealed record CertificateBandPreview(
+    int CertId,
+    string CertCode,
+    string CertName,
+    int SkillCount,
+    int MappedScaledScore,
+    string MappedBandCode,
+    string MappedBandName,
+    int ScoreDisplayFactor = 1);

@@ -1,5 +1,16 @@
 namespace BusinessObjects;
 
+public sealed record UpcomingMentorBooking(
+    int BookingId,
+    int MentorId,
+    string MentorName,
+    string CertCode,
+    string? SkillName,
+    DateTimeOffset StartAt,
+    DateTimeOffset EndAt,
+    string MeetLink,
+    string? FocusArea);
+
 /// <summary>#159: the learner's dashboard is exactly three blocks - the next action, where they stand
 /// against their goal, and one card per skill of the certificate. Eleven blocks of guidance became
 /// three because the learner needs one thing to do, not a page of commentary.
@@ -16,7 +27,8 @@ public sealed record LearnerDashboard(
     int PracticeCount,
     RecentAttempt? UnfinishedAttempt = null,
     RecentPractice? UnfinishedPractice = null,
-    StandingSummary? Standing = null)
+    StandingSummary? Standing = null,
+    IReadOnlyList<UpcomingMentorBooking>? UpcomingBookings = null)
 {
     /// <summary>No attempt and no practice yet for this certificate: the hero says "start here"
     /// rather than inventing a weakness the learner has no history for.</summary>

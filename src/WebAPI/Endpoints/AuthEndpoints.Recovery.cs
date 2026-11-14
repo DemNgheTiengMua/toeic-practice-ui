@@ -29,7 +29,7 @@ public static partial class AuthEndpoints
         });
 
         app.MapPost("/api/auth/reset-password", async Task<IResult> (
-            ResetPasswordRequest request, IAuthService auth, CancellationToken cancellationToken) =>
+            HttpContext http, ResetPasswordRequest request, IAuthService auth, CancellationToken cancellationToken) =>
         {
             try
             {
@@ -44,6 +44,7 @@ public static partial class AuthEndpoints
                 return Problem(StatusCodes.Status400BadRequest, "Link not valid", ApiError.Codes.TokenInvalid, ex.Message);
             }
 
+            ClearAuthCookie(http);
             return Results.NoContent();
         });
     }

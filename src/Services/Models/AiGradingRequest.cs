@@ -26,5 +26,9 @@ public record AiGradingRequest(
     // E2.1 (#151): the binary checklist the writing task already knows how to compute. It runs
     // before any score is chosen, so a text that ignores the prompt or misses every keyword is
     // judged on that fact rather than on how fluent it looks.
-    string? RequiredKeywords = null
+    string? RequiredKeywords = null,
+    string? CertName = null,
+    string? CurrentBandCode = null,
+    string? TargetBandCode = null,
+    string? Guide = null
 );

@@ -61,17 +61,6 @@ public sealed partial class AttemptEngine
     /// </summary>
     private async Task<string> LoadAggregationRuleAsync(int examId, int certId, CancellationToken cancellationToken)
     {
-        var frozen = await db.ExamEditions
-            .AsNoTracking()
-            .Where(e => e.ExamId == examId)
-            .Select(e => e.ScoreAggregationRule)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (!string.IsNullOrWhiteSpace(frozen))
-        {
-            return frozen;
-        }
-
         return await db.Certificates
             .AsNoTracking()
             .Where(c => c.CertId == certId)
@@ -85,39 +74,6 @@ public sealed partial class AttemptEngine
             .AsNoTracking()
             .Where(a => a.ExamId == examId)
             .ToDictionaryAsync(a => a.SectionId, a => a.AudioPath, cancellationToken);
-
-    /// <summary>
-    /// #227: the frozen configuration an attempt sits on, read from <c>ExamEditions</c>. NULL for a
-    /// paper with no edition row - a draft, which no learner can sit
-    /// (<c>trg_ExamAttempts_PublishedExamOnly</c>), or a catalog loaded before the column existed.
-    /// <para>
-    /// This is the whole point of the ticket: the phase bar is allocated from THESE weights, not from
-    /// <c>Skills.DurationMinutes</c> as it stands today, so editing a skill cannot move the clock on a
-    /// sitting that is already underway, and re-reading a finished attempt's phase split gives the
-    /// numbers it was actually scored against.
-    /// </para>
-    /// </summary>
-    private Task<ExamEdition?> LoadEditionAsync(int examId, CancellationToken cancellationToken) =>
-        db.ExamEditions
-            .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.ExamId == examId, cancellationToken);
-
-    /// <summary>
-    /// #227: the frozen phase weights, or NULL when the paper has no edition. Deserialised rather
-    /// than recomputed: a fallback that consulted the live <c>Skills</c> rows would be the
-    /// re-derivation this ticket forbids, so a missing edition simply leaves the caller on its
-    /// legacy path.
-    /// </summary>
-    private static IReadOnlyList<FrozenPhaseWeight>? ParseFrozenPhases(ExamEdition? edition)
-    {
-        if (edition is null || string.IsNullOrWhiteSpace(edition.PhasePlanJson))
-        {
-            return null;
-        }
-
-        var weights = System.Text.Json.JsonSerializer.Deserialize<List<FrozenPhaseWeight>>(edition.PhasePlanJson);
-        return weights is { Count: > 0 } ? weights : null;
-    }
 
     /// <summary>
     /// One row of <see cref="ExamEdition.PhasePlanJson"/>. Property names match the trigger's
@@ -179,22 +135,6 @@ public sealed partial class AttemptEngine
     }
 
     private sealed record FrozenBand(string Code, string Name, int MinTotal, int MaxTotal);
-
-    /// <summary>
-    /// #227: the band name the edition froze, or NULL when the paper has no edition or the frozen
-    /// grid has no row for this code. NULL is what sends the caller to the live grid, so a code that
-    /// was genuinely never in the frozen table is not renamed into something it never was.
-    /// </summary>
-    private static string? MatchFrozenBandName(ExamEdition? edition, string? bandCode)
-    {
-        if (edition is null || bandCode is null || string.IsNullOrWhiteSpace(edition.BandsJson))
-        {
-            return null;
-        }
-
-        var bands = System.Text.Json.JsonSerializer.Deserialize<List<FrozenBand>>(edition.BandsJson);
-        return bands?.FirstOrDefault(b => string.Equals(b.Code, bandCode, StringComparison.Ordinal))?.Name;
-    }
 
     /// <summary>
     /// #158: an exam as a learner would sit it, with no attempt behind it. Nothing here writes: no
@@ -321,7 +261,7 @@ public sealed partial class AttemptEngine
             bool phaseOrGroupLocked = !unlockNavigation && IsPhaseOrUnitOrGroupLocked(attempt, requestedQuestion);
             bool blockedBySystemPaced = !unlockNavigation
                 && string.Equals(currentSavedQuestion.Section.NavigationMode, "SYSTEM_PACED_AUTO", StringComparison.OrdinalIgnoreCase)
-                && requestedIndex != savedIndex;
+                && (requestedIndex < savedIndex || requestedIndex > savedIndex + 1);
             bool blockedByOneWayAudio = !unlockNavigation
                 && string.Equals(currentSavedQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase)
                 && requestedIndex < minAllowedAudioIndex;
@@ -332,7 +272,9 @@ public sealed partial class AttemptEngine
                 if (persistPosition
                     && attempt.Status == AttemptStatus.InProgress.ToCode()
                     && targetIndex > savedIndex
-                    && string.Equals(requestedQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase))
+                    && (string.Equals(requestedQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(requestedQuestion.Section.NavigationMode, "SYSTEM_PACED_AUTO", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(currentSavedQuestion.Section.NavigationMode, "SYSTEM_PACED_AUTO", StringComparison.OrdinalIgnoreCase)))
                 {
                     RecordLastPosition(attempt, requestedQuestion);
                     await db.SaveChangesAsync(cancellationToken);
@@ -457,7 +399,7 @@ public sealed partial class AttemptEngine
         // rows. The fallback below is the legacy path for a paper with no edition, and it is chosen
         // by the edition's absence rather than by trying the live rows first - a paper that HAS an
         // edition must never fall back, or the pin would only hold until someone edited a skill.
-        var frozenPhases = ParseFrozenPhases(await LoadEditionAsync(attempt.ExamId, cancellationToken));
+        IReadOnlyList<FrozenPhaseWeight>? frozenPhases = null;
         var phases = frozenPhases is null
             ? BuildAttemptPhases(
                 phaseGroups,

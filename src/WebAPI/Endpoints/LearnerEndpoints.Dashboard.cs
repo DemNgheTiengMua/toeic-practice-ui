@@ -71,7 +71,17 @@ public static partial class LearnerEndpoints
                     : null,
                 dashboard.UnfinishedPractice is { } up
                     ? new RecentPracticeDto(up.SessionId, up.SectionName, up.Status.MapTo<PracticeStatusDto>(), up.CorrectCount, up.QuestionCount, up.StartedAt)
-                    : null));
+                    : null,
+                dashboard.UpcomingBookings?.Select(b => new UpcomingMentorBookingDto(
+                    b.BookingId,
+                    b.MentorId,
+                    b.MentorName,
+                    b.CertCode,
+                    b.SkillName,
+                    b.StartAt,
+                    b.EndAt,
+                    b.MeetLink,
+                    b.FocusArea)).ToList()));
         });
     }
 }

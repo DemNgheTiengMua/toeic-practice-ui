@@ -23,7 +23,7 @@ public sealed class CefrLevelCodesTests
     public void The_authored_ladder_matches_the_level_check_constraint_on_every_levelled_column()
     {
         var schema = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "database-schema.sql"));
-        var constraints = new[] { "CK_Stimuli_Level", "CK_Items_Level", "CK_Practice_Level", "CK_ContentQuotas_Level" };
+        var constraints = new[] { "CK_Stimuli_Level", "CK_Items_Level", "CK_Practice_Level" };
 
         var ladder = CefrLevel.AuthoredLevels.Select(level => level.Code).Order(StringComparer.Ordinal);
 

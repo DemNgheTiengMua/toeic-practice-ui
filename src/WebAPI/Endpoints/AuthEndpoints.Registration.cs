@@ -13,6 +13,7 @@ public static partial class AuthEndpoints
         // ---- Auth ----
 
         app.MapPost("/api/auth/register", async Task<IResult> (
+            HttpContext http,
             RegisterRequest request,
             IAuthService auth,
             IAccessTokenFactory tokens,
@@ -34,7 +35,7 @@ public static partial class AuthEndpoints
                 return Problem(StatusCodes.Status409Conflict, "Email already registered", ApiError.Codes.EmailTaken, ex.Message);
             }
 
-            return ToTokenResponse(user, tokens);
+            return ToTokenResponse(user, tokens, http);
         });
     }
 }

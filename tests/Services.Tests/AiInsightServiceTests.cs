@@ -167,10 +167,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
             StartedAt = DateTimeOffset.UtcNow.AddMinutes(-30),
             SubmittedAt = DateTimeOffset.UtcNow,
             TotalScore = 750,
-            BandCode = "B2",
-            // #191: a derived attempt score declares its writer, even in a fixture
-            WrittenByService = DerivedFactWriters.AttemptScoreAndBand,
-            ProjectionVersion = 1
+            BandCode = "B2"
         };
         db.ExamAttempts.Add(attempt);
         await db.SaveChangesAsync();
@@ -345,8 +342,6 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
                 SubmittedAt = DateTimeOffset.UtcNow,
                 TotalScore = 750,
                 BandCode = "B2",
-                WrittenByService = DerivedFactWriters.AttemptScoreAndBand,
-                ProjectionVersion = 1,
             };
             db.ExamAttempts.Add(attempt);
             await db.SaveChangesAsync();
@@ -1025,9 +1020,6 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
             step!.Status = "done";
             step.CompletedAt = DateTimeOffset.UtcNow;
             step.Score = 85m;
-            // #191: a closed step declares its writer; the schema refuses a closure that does not
-            step.WrittenByService = DerivedFactWriters.StepClosure;
-            step.ProjectionVersion = 1;
             await db.SaveChangesAsync();
         }
 
@@ -1192,5 +1184,80 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         // The cell-less answer is kept, ranked after the one that has a cell.
         Assert.Equal(string.Empty, fingerprints[1].Stem);
         Assert.Null(fingerprints[1].TopicName);
+    }
+
+    private sealed class StubClaudeClient(string responseJson) : IClaudeClient
+    {
+        public string? LastUserPrompt { get; private set; }
+
+        public Task<string> CreateMessageAsync(string userPrompt, string? systemPrompt = null, int maxTokens = 4000, string? model = null, CancellationToken cancellationToken = default)
+        {
+            LastUserPrompt = userPrompt;
+            return Task.FromResult(responseJson);
+        }
+    }
+
+    [Fact]
+    public async Task ClaudeAiInsightGenerator_feeds_band_goal_topics_and_top5_fingerprints_and_parses_strengths_weaknesses()
+    {
+        const string json = """
+        {
+          "narrative": "Bạn đang ở band 5.5 và hướng tới 7.0. Điểm mạnh là Reading (85%), cần cải thiện Listening Part 3 (40%).",
+          "trend": "Improving",
+          "strengths": ["Reading comprehension (85%)"],
+          "weaknesses": ["Listening Part 3 inference (40%)"],
+          "recommendations": [
+            { "text": "Luyện tập Listening Part 3 hàng ngày", "severity": "High" },
+            { "text": "Ôn lại từ vựng học thuật", "severity": "Medium" }
+          ]
+        }
+        """;
+        var client = new StubClaudeClient(json);
+        var generator = new ClaudeAiInsightGenerator(client);
+
+        var fingerprints = Enumerable.Range(1, 6)
+            .Select(i => new ErrorFingerprint($"Stem {i}", $"Wrong {i}", $"Right {i}", $"Trap {i}", false, $"Topic {i}"))
+            .ToList();
+
+        var request = new AiInsightGenerationRequest(
+            UserId: 1,
+            CertId: 2,
+            CertName: "IELTS Academic",
+            Scope: AiInsightScope.Attempt,
+            PracticeSessionId: null,
+            AttemptId: 1,
+            ActivityTitle: "Mock Exam 1",
+            TotalQuestions: 40,
+            AnsweredCount: 40,
+            CorrectCount: 28,
+            HintUsedCount: null,
+            CorrectWithHintCount: null,
+            TargetBandCode: "7.0",
+            TargetBandName: "Band 7.0",
+            ScaledScore: 6,
+            CurrentBandCode: "5.5",
+            Questions: [],
+            SectionAccuracies: [],
+            TopicAccuracies:
+            [
+                new(1, "L3", "Listening Part 3", "B1", 10, 4, 40),
+                new(2, "R1", "Reading Detail", "B2", 20, 17, 85)
+            ],
+            ErrorFingerprints: fingerprints);
+
+        var result = await generator.GenerateInsightAsync(request);
+
+        Assert.True(result.Success);
+        Assert.NotNull(client.LastUserPrompt);
+        Assert.Contains("5.5", client.LastUserPrompt);
+        Assert.Contains("7.0", client.LastUserPrompt);
+        Assert.Contains("Stem 5", client.LastUserPrompt);
+        Assert.DoesNotContain("Stem 6", client.LastUserPrompt); // top 5 wrong-answer fingerprints
+        Assert.Equal(AiInsightTrend.Improving, result.Trend);
+        Assert.NotNull(result.Strengths);
+        Assert.Single(result.Strengths!);
+        Assert.NotNull(result.Weaknesses);
+        Assert.Single(result.Weaknesses!);
+        Assert.Equal(2, result.Recommendations.Count);
     }
 }

@@ -205,9 +205,6 @@ public sealed partial class AttemptEngine
             var band = await FindBandCodeAsync(attempt.CertId, total, cancellationToken);
 
             attempt.TotalScore = null;
-            attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
-            attempt.ProjectionVersion++;
-            db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
             await db.SaveChangesAsync(cancellationToken);
 
             // Deleted and saved before the replacements are added: the primary key is (attempt, skill),
@@ -223,9 +220,6 @@ public sealed partial class AttemptEngine
 
             attempt.TotalScore = total;
             attempt.BandCode = band;
-            attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
-            attempt.ProjectionVersion++;
-            db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
             await db.SaveChangesAsync(cancellationToken);
 
             if (tx is not null) await tx.CommitAsync(cancellationToken);

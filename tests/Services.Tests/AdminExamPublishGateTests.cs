@@ -351,13 +351,11 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         var examId = await SeedCompleteExamAsync(service, certId, sectionId, $"Withdrawn {Guid.NewGuid():N}"[..30]);
         await RecordFinishedAttemptAsync(examId, certId);
 
-        // #157 removed the only writer of 'hidden', which left a retired exam with no state to
-        // reach: it cannot be deleted once it has been sat. Withdraw is that deliberate route,
-        // and it is not a publish door - it only ever removes the exam from the catalog.
+        // #310: 2-state Exam Studio (draft / published) — withdrawing returns the exam to draft.
         await service.WithdrawExamAsync(examId);
 
         var detail = await service.GetExamByIdAsync(examId);
-        Assert.Equal(ExamStatusDto.Hidden, detail.Status);
+        Assert.Equal(ExamStatusDto.Draft, detail.Status);
 
         // Every learner-facing catalog filters on 'published', and the attempt trigger admits only
         // published exams, so hidden really is out of reach for a learner.
@@ -437,5 +435,44 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         // "incomplete".
         Assert.Contains("EXAM_EMPTY", ex.Message, StringComparison.Ordinal);
         Assert.Contains("SEC_QUESTION_COUNT_LOW", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PublishExamAsync_Publishes_In_One_Step_With_Active_Items_And_Withdraws_To_Draft()
+    {
+        var (certId, sectionId) = await SeedCertificateAsync();
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        await db.Skills.Where(s => s.CertId == certId).ExecuteUpdateAsync(s => s.SetProperty(x => x.DurationMinutes, 60));
+
+        var topic = await db.Topics.FirstOrDefaultAsync(t => t.Modality == "reading");
+        if (topic is null)
+        {
+            topic = new BusinessObjects.Entities.Topic { Modality = "reading", Code = "R-DET", Name = "Reading Detail" };
+            db.Topics.Add(topic);
+            await db.SaveChangesAsync();
+        }
+
+        var itemService = new AdminItemService(db, TimeProvider.System);
+        var item1 = await itemService.CreateAsync(ReadableItem(topic.TopicId));
+        var item2 = await itemService.CreateAsync(ReadableItem(topic.TopicId));
+
+        var examService = CreateService();
+        var exam = await examService.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"TwoState {Guid.NewGuid():N}"[..28], 60, ExamPurposeDto.Mock));
+
+        await examService.BindItemAsync(exam.ExamId, new BindPoolItemRequest(sectionId, item1.ItemVersionId, 1));
+        await examService.BindItemAsync(exam.ExamId, new BindPoolItemRequest(sectionId, item2.ItemVersionId, 2));
+
+        var published = await examService.PublishExamAsync(exam.ExamId);
+        Assert.True(published.Success);
+
+        var detailAfterPublish = await examService.GetExamByIdAsync(exam.ExamId);
+        Assert.Equal(ExamStatusDto.Published, detailAfterPublish.Status);
+
+        var withdrawn = await examService.WithdrawExamAsync(exam.ExamId);
+        Assert.True(withdrawn.Success);
+
+        var detailAfterWithdraw = await examService.GetExamByIdAsync(exam.ExamId);
+        Assert.Equal(ExamStatusDto.Draft, detailAfterWithdraw.Status);
     }
 }

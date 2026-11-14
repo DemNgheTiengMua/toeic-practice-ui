@@ -21,5 +21,7 @@ public sealed record AiInsightView(
     DateTimeOffset CreatedAt,
     DateTimeOffset? CompletedAt,
     IReadOnlyList<RecommendationItem> Recommendations,
-    int? LearnerPathId = null
+    int? LearnerPathId = null,
+    IReadOnlyList<string>? Strengths = null,
+    IReadOnlyList<string>? Weaknesses = null
 );

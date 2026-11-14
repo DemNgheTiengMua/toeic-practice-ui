@@ -33,6 +33,9 @@ public static partial class InsightEndpoints
             r.SkillName,
             r.IsResolved,
             r.CreatedAt)).ToList(),
-        view.LearnerPathId
+        view.LearnerPathId,
+        null,
+        view.Strengths,
+        view.Weaknesses
     );
 }

@@ -32,18 +32,15 @@ public partial class CompanionDbContext : DbContext
     /// #274: the paper a sitting was served - its stage plan and routed band pair per skill. Empty
     /// means the attempt reads the exam's shared roster.
     /// </summary>
-    public virtual DbSet<AttemptStageBundle> AttemptStageBundles { get; set; }
 
 
     /// <summary>#274: the positions that paper served, in sitting order.</summary>
-    public virtual DbSet<AttemptItemResponse> AttemptItemResponses { get; set; }
 
 
     public virtual DbSet<Booking> Bookings { get; set; }
 
 
     /// <summary>#156: the learner's answers to a calibration proposal.</summary>
-    public virtual DbSet<CalibrationDecision> CalibrationDecisions { get; set; }
 
 
     public virtual DbSet<Certificate> Certificates { get; set; }
@@ -74,14 +71,11 @@ public partial class CompanionDbContext : DbContext
 
 
     // #192: the seven-band grid and the rubric lock.
-    public virtual DbSet<GradingCriterionDescriptor> GradingCriterionDescriptors { get; set; }
 
 
     // #193: the calibrated benchmark responses injected into every grading call.
-    public virtual DbSet<GradingCriterionAnchor> GradingCriterionAnchors { get; set; }
 
 
-    public virtual DbSet<GradingRubricLock> GradingRubricLocks { get; set; }
 
 
     public virtual DbSet<ImportBatch> ImportBatches { get; set; }
@@ -102,7 +96,6 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<LearnerPathStep> LearnerPathSteps { get; set; }
 
     /// <summary>#233: the frozen history of closed weeks.</summary>
-    public virtual DbSet<LearnerPathWeek> LearnerPathWeeks { get; set; }
 
 
     public virtual DbSet<Lesson> Lessons { get; set; }
@@ -111,16 +104,13 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<LessonCard> LessonCards { get; set; }
 
 
-    public virtual DbSet<MentorPayout> MentorPayouts { get; set; }
-
-
-    public virtual DbSet<MentorPayoutItem> MentorPayoutItems { get; set; }
-
-
     public virtual DbSet<MentorProfile> MentorProfiles { get; set; }
 
 
     public virtual DbSet<MentorSlot> MentorSlots { get; set; }
+
+
+    public virtual DbSet<MentorWeeklySlot> MentorWeeklySlots { get; set; }
 
 
     public virtual DbSet<Order> Orders { get; set; }
@@ -167,7 +157,6 @@ public partial class CompanionDbContext : DbContext
 
 
     /// <summary>#202 / D0.5: the per-cell content budget, one row per (skill, level).</summary>
-    public virtual DbSet<ContentQuota> ContentQuotas { get; set; }
 
 
     /// <summary>#185: the assembly binding - which pinned version each exam puts on its paper.</summary>
@@ -178,18 +167,15 @@ public partial class CompanionDbContext : DbContext
     /// #226 / ADM-11: the recorded verdict that a paper's six publish invariants all held, and when.
     /// The Exams trigger refuses a publish with no pass at least as new as the paper's last edit.
     /// </summary>
-    public virtual DbSet<ExamPublishAudit> ExamPublishAudits { get; set; }
 
 
     /// <summary>
     /// #227: the frozen edition - timers, phase weights, aggregation rule, band grid and cut-score
     /// version as they stood when the paper went live. Written by the publish trigger alone.
     /// </summary>
-    public virtual DbSet<ExamEdition> ExamEditions { get; set; }
 
 
     /// <summary>#199 / D0.7: one item's stored-answer verdict at one administration checkpoint.</summary>
-    public virtual DbSet<ItemTelemetryEvaluation> ItemTelemetryEvaluations { get; set; }
 
 
     public virtual DbSet<Recommendation> Recommendations { get; set; }
@@ -216,15 +202,11 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<ScoreScale> ScoreScales { get; set; }
 
     /// <summary>#210: the versioned per-skill CEFR cut-score table and its version headers.</summary>
-    public virtual DbSet<CefrCutScore> CefrCutScores { get; set; }
 
-    public virtual DbSet<CefrCutScoreVersion> CefrCutScoreVersions { get; set; }
 
     /// <summary>#211: one row per learner per skill — the answer every "what is my level" screen reads.</summary>
-    public virtual DbSet<LearnerSkillState> LearnerSkillStates { get; set; }
 
     /// <summary>#212: one row per skill per placement — which of five outcomes the skill had, and the level.</summary>
-    public virtual DbSet<PlacementSkillResult> PlacementSkillResults { get; set; }
 
 
     public virtual DbSet<Section> Sections { get; set; }
@@ -246,13 +228,9 @@ public partial class CompanionDbContext : DbContext
 
 
     /// <summary>#237: one row per learner per cell — the unit of mastery (D4).</summary>
-    public virtual DbSet<UserCellMastery> UserCellMasteries { get; set; }
 
 
     public virtual DbSet<vw_MentorAvgRating> vw_MentorAvgRatings { get; set; }
-
-
-    public virtual DbSet<vw_MentorPayoutTotal> vw_MentorPayoutTotals { get; set; }
 
 
     public virtual DbSet<vw_UserCreditBalance> vw_UserCreditBalances { get; set; }
@@ -271,7 +249,6 @@ public partial class CompanionDbContext : DbContext
 
 
     /// <summary>#202: one row per coverage cell, always all 120 of them.</summary>
-    public virtual DbSet<vw_CoverageMatrix> vw_CoverageMatrices { get; set; }
 
     /// <summary>#235: the daily ceiling, derived from answers (D12).</summary>
     public virtual DbSet<vw_DailyPracticeVolume> vw_DailyPracticeVolumes { get; set; }
@@ -280,24 +257,17 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<vw_UserTopicAccuracy> vw_UserTopicAccuracies { get; set; }
 
     /// <summary>#201 / ADM-02: who decided what about a review sample, which the trigger reads.</summary>
-    public virtual DbSet<ReviewSampleDecision> ReviewSampleDecisions { get; set; }
 
     /// <summary>#206: the cells one batch's staged stock is audited in.</summary>
-    public virtual DbSet<ReviewStratum> ReviewStrata { get; set; }
 
     /// <summary>#206: the drawn items of a stratum, their blind solve and their verdict.</summary>
-    public virtual DbSet<ReviewSampleItem> ReviewSampleItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ConfigureAuth(modelBuilder);
         ConfigureAuthoring(modelBuilder);
         ConfigureAttempts(modelBuilder);
-        ConfigureCalibration(modelBuilder);
         ConfigurePractice(modelBuilder);
-        ConfigureSkillState(modelBuilder);
-        ConfigureCellMastery(modelBuilder);
-        ConfigurePlacementSkillResults(modelBuilder);
         ConfigureFreeResponse(modelBuilder);
         ConfigureGuidedLearning(modelBuilder);
         ConfigureFinance(modelBuilder);

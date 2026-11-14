@@ -67,9 +67,6 @@ INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, LastWrittenBy
 DECLARE @paper1 INT = (SELECT ExamId FROM Exams WHERE CertId = @cert AND Name = N'Paper one');
 DECLARE @paper2 INT = (SELECT ExamId FROM Exams WHERE CertId = @cert AND Name = N'Paper two');
 
-INSERT INTO ExamPublishAudits (ExamId, PassedAt, WrittenByService)
-VALUES (@paper1, DATEADD(SECOND, 1, SYSDATETIMEOFFSET()), 'AdminExamService'),
-       (@paper2, DATEADD(SECOND, 1, SYSDATETIMEOFFSET()), 'AdminExamService');
 UPDATE Exams SET Status = 'published', LastWrittenBy = @user WHERE ExamId IN (@paper1, @paper2);
 
 INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Local factual retrieval and paraphrase matching');

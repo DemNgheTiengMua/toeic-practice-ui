@@ -18,4 +18,5 @@ public sealed record AdminLessonDetailDto(
     string Modality = "reading",
     int TopicId = 0,
     string TopicCode = "",
-    string CefrLevel = "");
+    string CefrLevel = "",
+    string TargetBands = "ALL");

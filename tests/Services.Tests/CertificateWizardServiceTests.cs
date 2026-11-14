@@ -10,72 +10,31 @@ namespace Services.Tests;
 public sealed class CertificateWizardServiceTests(DatabaseFixture database)
 {
     [Fact]
-    public void GetOfficialPresets_Returns_All_Six_Presets_With_Full_Rules()
+    public void GetOfficialPresets_Returns_TwoSkill_And_FourSkill_Templates()
     {
         using var db = DbContextFactory.Create(database.ConnectionString);
         var service = new CertificateService(db);
 
         var presets = service.GetOfficialPresets();
 
-        Assert.Equal(6, presets.Count);
+        Assert.Equal(2, presets.Count);
         var codes = presets.Select(p => p.PresetCode).ToList();
-        Assert.Contains("ielts_academic", codes);
-        Assert.Contains("toeic_lr_std", codes);
-        Assert.Contains("toeic_lr_cat", codes);
-        Assert.Contains("toeic_sw", codes);
-        Assert.Contains("vstep", codes);
-        Assert.Contains("custom", codes);
+        Assert.Contains("two_skill", codes);
+        Assert.Contains("four_skill", codes);
 
-        // Verify IELTS Academic preset
-        var ielts = presets.Single(p => p.PresetCode == "ielts_academic");
-        Assert.Equal("avg_half_step", ielts.ScoreAggregationRule);
-        Assert.Equal(4, ielts.Skills.Count);
-        var ieltsListening = ielts.Skills.Single(s => s.Code == "LIST");
-        Assert.Equal(NavigationModeDto.AudioDriven, ieltsListening.Sections[0].NavigationMode);
-        Assert.Equal(LayoutTypeDto.SplitHorizontal, ieltsListening.Sections[0].LayoutType);
-        Assert.Contains("AUDIO_PLUS_CHECK", ieltsListening.Sections[0].TimerPolicyJson!);
-        Assert.Contains("highlighter", ieltsListening.Sections[0].ToolsConfigJson!);
+        var twoSkill = presets.Single(p => p.PresetCode == "two_skill");
+        Assert.Equal("sum", twoSkill.ScoreAggregationRule);
+        Assert.Equal(2, twoSkill.Skills.Count);
+        Assert.Contains(twoSkill.Skills, s => s.Modality == ModalityDto.Listening);
+        Assert.Contains(twoSkill.Skills, s => s.Modality == ModalityDto.Reading);
 
-        var ieltsWriting = ielts.Skills.Single(s => s.Code == "WRIT");
-        Assert.Equal(2, ieltsWriting.Sections.Count);
-        Assert.Equal(1.0m, ieltsWriting.Sections[0].ScoreWeight);
-        Assert.Equal(2.0m, ieltsWriting.Sections[1].ScoreWeight);
-        Assert.Contains("wordCount", ieltsWriting.Sections[0].ToolsConfigJson!);
-        Assert.Contains("disableSpellcheck", ieltsWriting.Sections[0].ToolsConfigJson!);
-
-        var ieltsSpeaking = ielts.Skills.Single(s => s.Code == "SPEA");
-        Assert.Equal(NavigationModeDto.SystemPacedAuto, ieltsSpeaking.Sections[0].NavigationMode);
-
-        // Verify TOEIC Standard CBT preset
-        var toeicStd = presets.Single(p => p.PresetCode == "toeic_lr_std");
-        Assert.Equal("sum", toeicStd.ScoreAggregationRule);
-        var toeicList = toeicStd.Skills.Single(s => s.Code == "LIST");
-        var p1 = toeicList.Sections.Single(s => s.Code == "P1");
-        Assert.True(p1.HideOptionText);
-        Assert.True(p1.RequireImage);
-        var p3 = toeicList.Sections.Single(s => s.Code == "P3");
-        Assert.Equal(3, p3.ClusterSize);
-
-        // Verify TOEIC CAT preset
-        var toeicCat = presets.Single(p => p.PresetCode == "toeic_lr_cat");
-        var readCat = toeicCat.Skills.Single(s => s.Code == "READ");
-        Assert.Equal(NavigationModeDto.UnitLockedSandbox, readCat.Sections[0].NavigationMode);
-        Assert.Equal(2, readCat.Sections[0].UnitCount);
-
-        // Verify TOEIC S&W preset
-        var toeicSw = presets.Single(p => p.PresetCode == "toeic_sw");
-        var spea = toeicSw.Skills.Single(s => s.Code == "SPEA");
-        Assert.Equal(11, spea.Sections.Sum(s => s.ExpectedQuestionCount));
-        var writ = toeicSw.Skills.Single(s => s.Code == "WRIT");
-        var w1 = writ.Sections.Single(s => s.Code == "W1");
-        Assert.Equal(NavigationModeDto.HybridGroupLocked, w1.NavigationMode);
-        Assert.Equal(2, w1.RequiredKeywordCount);
-        Assert.Contains("cutPaste", w1.ToolsConfigJson!);
-
-        // Verify VSTEP preset
-        var vstep = presets.Single(p => p.PresetCode == "vstep");
-        Assert.Equal("avg_whole", vstep.ScoreAggregationRule);
-        Assert.Equal(4, vstep.Skills.Count);
+        var fourSkill = presets.Single(p => p.PresetCode == "four_skill");
+        Assert.Equal("avg_half_step", fourSkill.ScoreAggregationRule);
+        Assert.Equal(4, fourSkill.Skills.Count);
+        Assert.Contains(fourSkill.Skills, s => s.Modality == ModalityDto.Listening);
+        Assert.Contains(fourSkill.Skills, s => s.Modality == ModalityDto.Reading);
+        Assert.Contains(fourSkill.Skills, s => s.Modality == ModalityDto.Writing);
+        Assert.Contains(fourSkill.Skills, s => s.Modality == ModalityDto.Speaking);
     }
 
     [Fact]
@@ -353,6 +312,97 @@ public sealed class CertificateWizardServiceTests(DatabaseFixture database)
             // No skills
             await Assert.ThrowsAsync<ArgumentException>(() => service.SaveCertificateWizardAsync(new SaveCertificateWizardRequest(
                 CertId: null, Code: "TEST", Name: "Name", Description: null, ScoreAggregationRule: "sum", PresetCode: null, IsActive: true, Skills: [])));
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(databaseName);
+        }
+    }
+
+    [Fact]
+    public async Task SaveCertificateWizard_Applies_Modality_Defaults_And_Linear_Scales_For_ThreeField_Sections()
+    {
+        var databaseName = $"CertStreamlined_{Guid.NewGuid():N}";
+        var connectionString = await database.CreateFreshDatabaseAsync(databaseName);
+        try
+        {
+            await using var db = DbContextFactory.Create(connectionString);
+            var service = new CertificateService(db);
+
+            var request = new SaveCertificateWizardRequest(
+                CertId: null,
+                Code: "STREAM_4S",
+                Name: "Streamlined 4-Skill",
+                Description: "3-field sections with flat criteria",
+                ScoreAggregationRule: "avg_half_step",
+                PresetCode: "four_skill",
+                IsActive: true,
+                MinScaledScore: 0,
+                MaxScaledScore: 9,
+                ScoreStep: 1,
+                Bands:
+                [
+                    new SaveScoreBandWizardDto(null, "B1", "Intermediate", 0, 5, 1),
+                    new SaveScoreBandWizardDto(null, "B2", "Upper Intermediate", 6, 9, 2),
+                ],
+                Criteria:
+                [
+                    new SaveGradingCriterionWizardDto(null, "WRIT", "TR", "Task Response", 9m, 1.0m, 1, "Addresses all parts of the prompt."),
+                    new SaveGradingCriterionWizardDto(null, "SPEA", "FLU", "Fluency", 9m, 1.0m, 1, "Speaks smoothly without long pauses."),
+                ],
+                Skills:
+                [
+                    new SaveSkillWizardDto(null, "LIST", "Listening", ModalityDto.Listening, 1, 30,
+                    [
+                        new SaveSectionWizardDto(Code: "L1", Name: "Listening Part 1", ExpectedQuestionCount: 10)
+                    ]),
+                    new SaveSkillWizardDto(null, "READ", "Reading", ModalityDto.Reading, 2, 60,
+                    [
+                        new SaveSectionWizardDto(Code: "R1", Name: "Reading Passage 1", ExpectedQuestionCount: 20)
+                    ]),
+                    new SaveSkillWizardDto(null, "WRIT", "Writing", ModalityDto.Writing, 3, 60,
+                    [
+                        new SaveSectionWizardDto(Code: "W1", Name: "Writing Essay", ExpectedQuestionCount: 1)
+                    ]),
+                    new SaveSkillWizardDto(null, "SPEA", "Speaking", ModalityDto.Speaking, 4, 15,
+                    [
+                        new SaveSectionWizardDto(Code: "S1", Name: "Speaking Interview", ExpectedQuestionCount: 3)
+                    ]),
+                ]);
+
+            var result = await service.SaveCertificateWizardAsync(request);
+            Assert.Equal(4, result.SkillsCount);
+            Assert.Equal(4, result.SectionsCount);
+
+            var blueprint = await service.GetCertificateBlueprintAsync(result.CertId);
+            Assert.NotNull(blueprint);
+
+            var listSec = blueprint.Skills.Single(s => s.Code == "LIST").Sections[0];
+            Assert.Equal(NavigationModeDto.AudioDriven, listSec.NavigationMode);
+            Assert.True(listSec.RequireAudio);
+
+            var readSec = blueprint.Skills.Single(s => s.Code == "READ").Sections[0];
+            Assert.Equal(NavigationModeDto.FullSandbox, readSec.NavigationMode);
+            Assert.Equal(LayoutTypeDto.SplitHorizontal, readSec.LayoutType);
+            Assert.True(readSec.RequirePassage);
+
+            var writSec = blueprint.Skills.Single(s => s.Code == "WRIT").Sections[0];
+            Assert.Equal("[\"free_response\"]", writSec.AllowedComponentTypesJson);
+
+            var speaSec = blueprint.Skills.Single(s => s.Code == "SPEA").Sections[0];
+            Assert.Equal(NavigationModeDto.SystemPacedAuto, speaSec.NavigationMode);
+            Assert.Equal("[\"free_response\"]", speaSec.AllowedComponentTypesJson);
+
+            // Linear ScoreScales auto-generated for Listening (0..10 raw -> 0..9 scaled)
+            var listSkillId = blueprint.Skills.Single(s => s.Code == "LIST").SkillId;
+            var scales = await db.ScoreScales.Where(s => s.CertId == result.CertId && s.SkillId == listSkillId).ToListAsync();
+            Assert.Equal(11, scales.Count);
+            Assert.Equal(0, scales.Single(s => s.RawScore == 0).ScaledScore);
+            Assert.Equal(9, scales.Single(s => s.RawScore == 10).ScaledScore);
+
+            // Flat GradingCriteria persisted with no descriptor/anchor/lock rows
+            var criteria = await db.GradingCriteria.Where(c => c.CertId == result.CertId).ToListAsync();
+            Assert.Equal(2, criteria.Count);
         }
         finally
         {

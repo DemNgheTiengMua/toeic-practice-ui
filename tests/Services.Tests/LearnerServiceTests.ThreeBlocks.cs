@@ -30,12 +30,7 @@ public sealed partial class LearnerServiceTests
             -- #259 / PRN-03: a placement is placed by its CUT-SCORE table, not by its band names. A
             -- fixture with bands alone used to pass only because the writer parsed the band code as a
             -- CEFR level, which is the crosswalk the rule forbids.
-            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
-              VALUES (@cert, 1, 0, N'fixture', '2026-01-01');
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
-              SELECT @cert, 1, SkillId, 'A2', 'cut', 0, 249 FROM Skills WHERE CertId = @cert;
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
-              SELECT @cert, 1, SkillId, 'B1', 'cut', 250, 500 FROM Skills WHERE CertId = @cert;
+
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
               VALUES (@cert, N'Mock exam', 'published', 120, 'mock');
             """);
@@ -110,8 +105,8 @@ public sealed partial class LearnerServiceTests
         await database.SqlAsync($"""
             DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{code}');
             DECLARE @exam INT = (SELECT TOP 1 ExamId FROM Exams WHERE CertId = @cert AND Purpose = 'mock');
-            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
-            VALUES ({userId}, @exam, @cert, 'graded', SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), 350, 'HIGH', 'AttemptEngine', 1);
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode)
+            VALUES ({userId}, @exam, @cert, 'graded', SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), 350, 'HIGH');
             DECLARE @attempt INT = SCOPE_IDENTITY();
             INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore)
             VALUES (@attempt, {skillId}, @cert, 30, 350);

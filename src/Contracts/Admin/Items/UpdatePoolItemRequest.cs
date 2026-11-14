@@ -27,4 +27,5 @@ public sealed record UpdatePoolItemRequest(
     string? RationaleA = null,
     string? RationaleB = null,
     string? RationaleC = null,
-    string? RationaleD = null);
+    string? RationaleD = null,
+    string? TargetBands = null);

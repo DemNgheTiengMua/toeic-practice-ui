@@ -8,7 +8,6 @@ namespace BusinessObjects.Entities;
 
 [Index("MentorId", Name = "IX_Bookings_Mentor")]
 [Index("UserId", "CreatedAt", Name = "IX_Bookings_User")]
-[Index("BookingId", "MentorId", Name = "UQ_Bookings_Id_Mentor", IsUnique = true)]
 [Index("BookingId", "UserId", Name = "UQ_Bookings_Id_User", IsUnique = true)]
 public partial class Booking
 {
@@ -19,11 +18,9 @@ public partial class Booking
 
     public int MentorId { get; set; }
 
-    public int? SlotId { get; set; }
+    public int SlotId { get; set; }
 
-    [StringLength(6)]
-    [Unicode(false)]
-    public string MentorType { get; set; } = null!;
+    public int PriceCredits { get; set; }
 
     [StringLength(10)]
     [Unicode(false)]
@@ -49,23 +46,16 @@ public partial class Booking
     [InverseProperty("BookingMentors")]
     public virtual MentorProfile Mentor { get; set; } = null!;
 
-    [InverseProperty("Booking")]
-    public virtual ICollection<MentorPayoutItem> MentorPayoutItems { get; set; } = new List<MentorPayoutItem>();
-
-    [ForeignKey("MentorId, MentorType")]
-    [InverseProperty("BookingMentorProfiles")]
-    public virtual MentorProfile MentorProfile { get; set; } = null!;
-
     [ForeignKey("SlotId, MentorId")]
     [InverseProperty("BookingMentorSlots")]
-    public virtual MentorSlot? MentorSlot { get; set; }
+    public virtual MentorSlot MentorSlot { get; set; } = null!;
 
     [InverseProperty("Booking")]
     public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
 
     [ForeignKey("SlotId")]
     [InverseProperty("BookingSlot")]
-    public virtual MentorSlot? Slot { get; set; }
+    public virtual MentorSlot Slot { get; set; } = null!;
 
     [ForeignKey("UserId")]
     [InverseProperty("Bookings")]

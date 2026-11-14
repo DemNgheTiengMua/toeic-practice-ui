@@ -188,10 +188,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
                 Status = "graded",
                 StartedAt = DateTimeOffset.UtcNow.AddHours(-1),
                 SubmittedAt = DateTimeOffset.UtcNow.AddMinutes(-30),
-                TotalScore = 90,
-                // #191: a derived attempt score declares its writer, even in a fixture
-                WrittenByService = DerivedFactWriters.AttemptScoreAndBand,
-                ProjectionVersion = 1
+                TotalScore = 90
             };
             db.ExamAttempts.Add(attempt);
             await db.SaveChangesAsync();
@@ -560,8 +557,6 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
                 StartedAt = DateTimeOffset.UtcNow.AddHours(-1),
                 SubmittedAt = DateTimeOffset.UtcNow.AddMinutes(-30),
                 TotalScore = 50,
-                WrittenByService = DerivedFactWriters.AttemptScoreAndBand,
-                ProjectionVersion = 1,
             };
             db.ExamAttempts.Add(attempt);
             await db.SaveChangesAsync();

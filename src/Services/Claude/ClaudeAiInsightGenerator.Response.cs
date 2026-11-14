@@ -43,6 +43,9 @@ public sealed partial class ClaudeAiInsightGenerator
             }
         }
 
+        var strengths = ReadStringArray(root, "strengths");
+        var weaknesses = ReadStringArray(root, "weaknesses");
+
         if (!string.IsNullOrEmpty(narrative))
         {
             return new AiInsightResult(
@@ -51,7 +54,9 @@ public sealed partial class ClaudeAiInsightGenerator
                 Model: "claude-sonnet-3.7",
                 Narrative: narrative,
                 Trend: trend,
-                Recommendations: recommendations);
+                Recommendations: recommendations,
+                Strengths: strengths,
+                Weaknesses: weaknesses);
         }
 
         _logger?.LogWarning("Claude response did not contain expected narrative: {Raw}", rawResult);
@@ -81,5 +86,22 @@ public sealed partial class ClaudeAiInsightGenerator
         var last = trimmed.LastIndexOf('}');
         if (first >= 0 && last > first) return trimmed[first..(last + 1)];
         return trimmed;
+    }
+
+    private static IReadOnlyList<string> ReadStringArray(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var arr) || arr.ValueKind != JsonValueKind.Array)
+            return Array.Empty<string>();
+
+        var list = new List<string>();
+        foreach (var item in arr.EnumerateArray())
+        {
+            if (item.ValueKind == JsonValueKind.String)
+            {
+                var s = item.GetString();
+                if (!string.IsNullOrWhiteSpace(s)) list.Add(s.Trim());
+            }
+        }
+        return list;
     }
 }

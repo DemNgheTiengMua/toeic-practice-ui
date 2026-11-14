@@ -79,6 +79,4 @@ public partial class ExamItem
     public int? LastWrittenBy { get; set; }
 
     /// <summary>#274: the sittings this position was served into, under an attempt-scoped paper.</summary>
-    [InverseProperty("ExamItemExam")]
-    public virtual ICollection<AttemptItemResponse> AttemptItemResponses { get; set; } = new List<AttemptItemResponse>();
 }

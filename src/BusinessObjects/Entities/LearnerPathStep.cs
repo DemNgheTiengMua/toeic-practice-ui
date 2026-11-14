@@ -101,11 +101,9 @@ public partial class LearnerPathStep
     /// closed; NULL while the step moves between open states.</summary>
     [StringLength(64)]
     [Unicode(false)]
-    public string? WrittenByService { get; set; }
 
     /// <summary>#191: monotonic ordering token, so an older out-of-order callback cannot overwrite a
     /// newer result.</summary>
-    public int ProjectionVersion { get; set; }
 
     [ForeignKey("LearnerPathId, CertId")]
     [InverseProperty("LearnerPathSteps")]

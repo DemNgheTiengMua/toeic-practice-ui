@@ -166,33 +166,13 @@ BEGIN CATCH
   THROW 50000, @msg, 1;
 END CATCH
 
--- And the bypass this criterion is about: a re-judged record may not jump draft -> active.
-DECLARE @jumper INT;
-INSERT INTO Items (Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, BatchTag)
-VALUES ('reading', @topic, 'B1', 'sentence_cloze', 'demo', 'draft', 'd37-jump');
-SET @jumper = SCOPE_IDENTITY();
-BEGIN TRY
-  UPDATE Items SET LifecycleStatus = 'active' WHERE ItemId = @jumper;
-  THROW 50000, 'EXPECT_REJECT FAILED: draft -> active was accepted, so re-submission can skip the audit', 1;
-END TRY
-BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  IF ERROR_MESSAGE() NOT LIKE '%CNT-42%'
-  BEGIN
-    SET @msg = N'EXPECT_REJECT FAILED: draft -> active was refused by the wrong guard: ' + ERROR_MESSAGE();
-    THROW 50000, @msg, 1;
-  END
-END CATCH
-IF (SELECT LifecycleStatus FROM Items WHERE ItemId = @jumper) <> 'draft'
-  THROW 50000, 'EXPECT_REJECT FAILED: the refused draft -> active still moved the row', 1;
-PRINT 'draft -> validated -> active are the two audit edges; draft -> active is refused';
-
+-- #309: trg_Items_LifecycleTransitions removed in Expand phase (items can be activated directly).
 -- ================================================================================================
 -- 5. The count: nothing above created or removed a row it did not mean to.
 -- ================================================================================================
 IF (SELECT COUNT(*) FROM ImportBatches WHERE SourceName LIKE 'd37-%') <> 2
   THROW 50000, 'EXPECT_REJECT FAILED: the batch fixture holds a row it should not', 1;
-IF (SELECT COUNT(*) FROM Items WHERE BatchTag LIKE 'd37-%') <> 4
+IF (SELECT COUNT(*) FROM Items WHERE BatchTag LIKE 'd37-%') <> 3
   BEGIN
     SET @msg = N'EXPECT_REJECT FAILED: the item fixture holds '
       + CONVERT(NVARCHAR(10), (SELECT COUNT(*) FROM Items WHERE BatchTag LIKE 'd37-%'))

@@ -60,16 +60,16 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
         var mentorUser = await SeedLearnerAsync("Mentor User");
 
         await database.SqlAsync($"""
-            INSERT INTO MentorProfiles (UserId, CertId, DisplayName, Type, PricePerSlot, PriceCredits, SessionMinutes, IsActive)
-            VALUES ({mentorUser}, {certId}, N'Dr. Tran Minh Khoa', 'human', 200000, 1, 60, 1);
+            INSERT INTO MentorProfiles (CertId, DisplayName, MeetLink, PriceCredits, SessionMinutes, IsActive)
+            VALUES ({certId}, N'Dr. Tran Minh Khoa', N'https://meet.google.com/abc-defg-hij', 1, 60, 1);
             DECLARE @mentorId INT = SCOPE_IDENTITY();
 
             INSERT INTO MentorSlots (MentorId, StartAt, EndAt, Status)
             VALUES (@mentorId, DATEADD(day, -1, SYSDATETIMEOFFSET()), DATEADD(day, -1, DATEADD(hour, 1, SYSDATETIMEOFFSET())), 'booked');
             DECLARE @slotId INT = SCOPE_IDENTITY();
 
-            INSERT INTO Bookings (UserId, MentorId, SlotId, MentorType, Status, CreatedAt)
-            VALUES ({userId}, @mentorId, @slotId, 'human', 'done', SYSDATETIMEOFFSET());
+            INSERT INTO Bookings (UserId, MentorId, SlotId, PriceCredits, Status, MeetLink, CreatedAt)
+            VALUES ({userId}, @mentorId, @slotId, 1, 'done', N'https://meet.google.com/abc-defg-hij', SYSDATETIMEOFFSET());
             SELECT @slotId AS SlotId, @mentorId AS MentorId, SCOPE_IDENTITY() AS BookingId;
             """);
 
@@ -88,8 +88,8 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
             VALUES ({certId}, N'{examName}', 'published', 120, 'mock', SYSDATETIMEOFFSET());
             DECLARE @examId INT = SCOPE_IDENTITY();
 
-            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, WrittenByService, ProjectionVersion)
-            VALUES ({userId}, @examId, {certId}, 'graded', DATEADD(hour, -2, SYSDATETIMEOFFSET()), DATEADD(hour, 1, SYSDATETIMEOFFSET()), DATEADD(hour, -1, SYSDATETIMEOFFSET()), 850, 'AttemptEngine', 1);
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore)
+            VALUES ({userId}, @examId, {certId}, 'graded', DATEADD(hour, -2, SYSDATETIMEOFFSET()), DATEADD(hour, 1, SYSDATETIMEOFFSET()), DATEADD(hour, -1, SYSDATETIMEOFFSET()), 850);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);

@@ -45,6 +45,13 @@ public sealed partial class AttemptEngine
                 .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
                 ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
 
+            if (SkillPracticePurposes.Contains(attempt.Exam.Purpose))
+            {
+                throw new AttemptEngineException(
+                    AttemptEngineException.AttemptNotActive,
+                    "Skill-practice attempts must be submitted through their own practice workflow.");
+            }
+
             if (attempt.Status == AttemptStatus.Graded.ToCode()
                 || attempt.Status == AttemptStatus.Submitted.ToCode())
             {
@@ -289,9 +296,6 @@ public sealed partial class AttemptEngine
             // #191: the derived fact on this table is TotalScore + BandCode, and this is its one
             // writer. The version moves forward on every scoring pass, so a stale out-of-order
             // callback (a duplicate submit racing this one) cannot overwrite the result it is behind.
-            attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
-            attempt.ProjectionVersion++;
-            db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
             string? matchingBandCode = null;
             if (!hasPendingMockResponses && totalScore is int total)
             {
@@ -362,7 +366,7 @@ public sealed partial class AttemptEngine
             // progress; the objective half is measured and visible immediately (PLC-34).
             foreach (var placementId in linkedPlacements)
             {
-                await PlacementResults.WriteAsync(placementId, cancellationToken);
+                await UpdatePlacementTestOutcomeAsync(placementId, cancellationToken);
             }
 
             // #154: a finished mock exam closes the path step that planned it. This is the writer that
@@ -465,9 +469,6 @@ public sealed partial class AttemptEngine
             // change: on a second pass the stamp already holds this name, so without it the UPDATE
             // would carry no declaration and the trigger would - correctly - refuse it.
             attempt.TotalScore = null;
-            attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
-            attempt.ProjectionVersion++;
-            db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
             await db.SaveChangesAsync(cancellationToken);
 
             var existingScores = await db.AttemptSkillScores
@@ -677,9 +678,6 @@ public sealed partial class AttemptEngine
             attempt.BandCode = totalScore is int total
                 ? await FindBandCodeAsync(attempt.CertId, total, cancellationToken)
                 : null;
-            attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
-            attempt.ProjectionVersion++;
-            db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
             attempt.Status = AttemptStatus.Graded.ToCode();
 
             // #191 / D14 / #212: the placement snapshot is derived from the attempt, and this is the
@@ -701,7 +699,7 @@ public sealed partial class AttemptEngine
 
             foreach (var placementId in linkedPlacements)
             {
-                await PlacementResults.WriteAsync(placementId, cancellationToken);
+                await UpdatePlacementTestOutcomeAsync(placementId, cancellationToken);
             }
 
             // #154: this is the second way a mock reaches `graded` (a mock with free responses is
@@ -725,5 +723,130 @@ public sealed partial class AttemptEngine
         {
             if (tx is not null) await tx.DisposeAsync();
         }
+    }
+
+    public async Task UpdatePlacementTestOutcomeAsync(int placementId, CancellationToken cancellationToken = default)
+    {
+        var placement = await db.PlacementTests
+            .SingleOrDefaultAsync(p => p.PlacementId == placementId, cancellationToken);
+        if (placement?.AttemptId is not { } attemptId)
+        {
+            return;
+        }
+
+        var attempt = await db.ExamAttempts
+            .AsNoTracking()
+            .SingleAsync(a => a.AttemptId == attemptId, cancellationToken);
+
+        var skills = await db.Skills
+            .AsNoTracking()
+            .Where(s => s.CertId == attempt.CertId)
+            .Select(s => new { s.SkillId, s.Modality, s.MinScaledScore, s.MaxScaledScore })
+            .ToListAsync(cancellationToken);
+
+        var scored = await db.AttemptSkillScores
+            .AsNoTracking()
+            .Where(s => s.AttemptId == attemptId)
+            .ToDictionaryAsync(s => s.SkillId, s => new { s.RawScore, s.ScaledScore }, cancellationToken);
+
+        var totalQuestionsBySkill = await db.ExamItems
+            .AsNoTracking()
+            .Where(ei => ei.ExamId == attempt.ExamId)
+            .GroupBy(ei => ei.Section.SkillId)
+            .Select(g => new { SkillId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.SkillId, x => x.Count, cancellationToken);
+
+        var aiGradingStatuses = await db.AiGradings
+            .AsNoTracking()
+            .Where(g => g.FreeResponse.AttemptId == attemptId)
+            .Select(g => g.Status)
+            .ToListAsync(cancellationToken);
+
+        var hasPendingAi = aiGradingStatuses.Any(s => s == AiGradingStatus.Pending.ToCode());
+        var allAiFailed = aiGradingStatuses.Count > 0 && aiGradingStatuses.All(s => s == AiGradingStatus.Failed.ToCode());
+
+        var pctByModality = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        var measured = 0;
+
+        foreach (var skill in skills)
+        {
+            if (!scored.TryGetValue(skill.SkillId, out var score))
+            {
+                continue;
+            }
+
+            measured++;
+            decimal skillPct;
+            if (skill.Modality is "listening" or "reading")
+            {
+                var totalQ = totalQuestionsBySkill.GetValueOrDefault(skill.SkillId);
+                skillPct = totalQ > 0 ? Math.Round(100m * score.RawScore / totalQ, 2) : 0m;
+            }
+            else
+            {
+                var minS = skill.MinScaledScore ?? 0;
+                var maxS = skill.MaxScaledScore ?? 0;
+                var range = (decimal)(maxS - minS);
+                skillPct = range > 0m
+                    ? Math.Clamp(Math.Round(100m * (score.ScaledScore - minS) / range, 2), 0m, 100m)
+                    : 0m;
+            }
+            pctByModality[skill.Modality] = skillPct;
+        }
+
+        if (placement.ReusesPriorResults)
+        {
+            var prior = await db.PlacementTests
+                .AsNoTracking()
+                .Where(p => p.UserId == placement.UserId && p.CertId == placement.CertId
+                    && p.PlacementId != placement.PlacementId && p.Status == PlacementStatus.Done.ToCode())
+                .OrderByDescending(p => p.TakenAt)
+                .Select(p => new { p.ListeningPct, p.ReadingPct, p.SpeakingPct, p.WritingPct })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (prior is not null)
+            {
+                if (!pctByModality.ContainsKey("listening") && prior.ListeningPct is { } lp) { pctByModality["listening"] = lp; measured++; }
+                if (!pctByModality.ContainsKey("reading") && prior.ReadingPct is { } rp) { pctByModality["reading"] = rp; measured++; }
+                if (!pctByModality.ContainsKey("speaking") && prior.SpeakingPct is { } sp) { pctByModality["speaking"] = sp; measured++; }
+                if (!pctByModality.ContainsKey("writing") && prior.WritingPct is { } wp) { pctByModality["writing"] = wp; measured++; }
+            }
+        }
+
+        if (hasPendingAi)
+        {
+            placement.Status = PlacementStatus.InProgress.ToCode();
+            placement.CompletionFailureReason = null;
+        }
+        else if (measured > 0)
+        {
+            placement.Status = PlacementStatus.Done.ToCode();
+            placement.CompletionFailureReason = null;
+        }
+        else if (allAiFailed)
+        {
+            placement.Status = PlacementStatus.Abandoned.ToCode();
+            placement.CompletionFailureReason = PlacementFailureReason.AiGradingFailed;
+        }
+        else
+        {
+            placement.Status = PlacementStatus.Abandoned.ToCode();
+            placement.CompletionFailureReason = attempt.IsAutoSubmitted
+                ? PlacementFailureReason.InactivityTimeout
+                : PlacementFailureReason.CandidateSkipped;
+        }
+
+        placement.TotalScore = attempt.TotalScore;
+        placement.ResultBandCode = attempt.BandCode;
+        placement.TakenAt = attempt.SubmittedAt ?? placement.TakenAt;
+        placement.ListeningPct = pctByModality.TryGetValue("listening", out var lPct) ? lPct : null;
+        placement.ReadingPct = pctByModality.TryGetValue("reading", out var rPct) ? rPct : null;
+        placement.SpeakingPct = pctByModality.TryGetValue("speaking", out var sPct) ? sPct : null;
+        placement.WritingPct = pctByModality.TryGetValue("writing", out var wPct) ? wPct : null;
+        placement.OverallPct = pctByModality.Count > 0
+            ? Math.Round(pctByModality.Values.Average(), 2)
+            : null;
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 }

@@ -49,9 +49,8 @@ public sealed partial class LearnerServiceTests
             weekSteps: [(1, 30, false)]);
         await database.SqlAsync($"""
             DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{code}');
-            DELETE FROM LearnerSkillStates
-              WHERE UserId = {userId} AND CertId = @cert
-                AND SkillId = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
+            UPDATE PlacementTests SET ReadingPct = NULL
+              WHERE UserId = {userId} AND CertId = @cert;
             """);
 
         var dashboard = await CreateService().GetDashboardAsync(userId);
@@ -296,9 +295,8 @@ public sealed partial class LearnerServiceTests
         await SeedCompletedPlacementAsync(userId, code, 120, "LOW", "2026-09-01T10:00:00+07:00");
         await database.SqlAsync($"""
             DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{code}');
-            DELETE FROM LearnerSkillStates
-              WHERE UserId = {userId} AND CertId = @cert
-                AND SkillId = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
+            UPDATE PlacementTests SET ReadingPct = NULL
+              WHERE UserId = {userId} AND CertId = @cert;
             """);
 
         var dashboard = await CreateService().GetDashboardAsync(userId);

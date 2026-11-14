@@ -193,7 +193,7 @@ public sealed class ItemSelector(CompanionDbContext db, TimeProvider? clock = nu
             .Select(v => new { v.ItemId, v.VersionNumber, v.ItemVersionId })
             .ToListAsync(cancellationToken);
 
-        var newest = GateContext.NewestPerItem(versions, v => v.ItemId, v => v.VersionNumber)
+        var newest = ItemVersionQuery.NewestPerItem(versions, v => v.ItemId, v => v.VersionNumber)
             .ToDictionary(v => v.ItemId, v => v.ItemVersionId);
 
         return rows

@@ -303,4 +303,125 @@ public sealed class SpeechSuperTests
         Assert.Contains("not found", result.FailureReason);
         Assert.Equal("speechsuper", result.Model);
     }
+
+    private sealed class StubLinguisticGrader(AiGradingResult result) : IAiGrader
+    {
+        public AiGradingRequest? LastRequest { get; private set; }
+
+        public Task<AiGradingResult> GradeAsync(AiGradingRequest request, CancellationToken cancellationToken = default)
+        {
+            LastRequest = request;
+            return Task.FromResult(result);
+        }
+    }
+
+    [Fact]
+    public async Task SpeechSuperAiGrader_combines_acoustic_scores_and_transcription_with_linguistic_grader()
+    {
+        const string mockResponse = """
+        {
+            "result": {
+                "transcription": "I enjoys playing tennis on weekends.",
+                "overall": 78,
+                "pronunciation": 83,
+                "fluency": 78,
+                "grammar": 70,
+                "vocabulary": 80,
+                "relevance": 90
+            }
+        }
+        """;
+
+        var handler = new MockHttpMessageHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(mockResponse, Encoding.UTF8, "application/json")
+        }));
+
+        using var httpClient = new HttpClient(handler);
+        var speechClient = new SpeechSuperClient(httpClient, new SpeechSuperOptions { AppKey = "k", SecretKey = "s" });
+        const string audioRelPath = "speaking/audio-combine.wav";
+        var fileStore = new InMemoryFileStore(new Dictionary<string, byte[]>
+        {
+            [audioRelPath] = new byte[] { 0x52, 0x49, 0x46, 0x46, 0x24, 0x00 }
+        });
+
+        var stubLinguistic = new StubLinguisticGrader(new AiGradingResult(
+            Success: true,
+            FailureReason: null,
+            Model: "claude-sonnet-3.7",
+            Scores:
+            [
+                new AiCriterionScoreResult(101, 4.0m, "Clear pronunciation."),
+                new AiCriterionScoreResult(102, 3.8m, "Smooth pacing."),
+                new AiCriterionScoreResult(103, 3.5m, "Subject-verb agreement slip."),
+                new AiCriterionScoreResult(104, 4.5m, "Directly answers the prompt.")
+            ],
+            ErrorSpans:
+            [
+                new BusinessObjects.AiErrorSpan("I enjoys", "I enjoy", "grammar", "Động từ 'enjoy' đi với chủ ngữ 'I' không chia số ít.")
+            ],
+            PriorityFix: "Fix subject-verb agreement with first-person subjects.",
+            ModelRewrite: "I really enjoy playing tennis on weekends because it keeps me active."));
+
+        var grader = new SpeechSuperAiGrader(speechClient, fileStore, stubLinguistic);
+
+        var criteria = new List<GradingCriterionDetail>
+        {
+            new(101, "PRON", "Pronunciation", 5.0m, 1.0m),
+            new(102, "FLUENCY", "Fluency & Coherence", 5.0m, 1.0m),
+            new(103, "GRAMMAR", "Grammar", 5.0m, 1.0m),
+            new(104, "COMPLETENESS", "Completeness", 5.0m, 1.0m)
+        };
+
+        var request = new AiGradingRequest(
+            FreeResponseId: 22,
+            SkillId: 3,
+            CertId: 1,
+            QuestionStem: "Describe your favorite hobby.",
+            MinWords: null,
+            MaxWords: null,
+            ResponseText: "",
+            Criteria: criteria,
+            AudioPath: audioRelPath);
+
+        var result = await grader.GradeAsync(request);
+
+        Assert.True(result.Success);
+        Assert.NotNull(stubLinguistic.LastRequest);
+        Assert.Equal("I enjoys playing tennis on weekends.", stubLinguistic.LastRequest!.ResponseText);
+        Assert.Null(stubLinguistic.LastRequest.AudioPath);
+        Assert.Contains("Pronunciation: 83", stubLinguistic.LastRequest.Guide);
+        Assert.Equal("Fix subject-verb agreement with first-person subjects.", result.PriorityFix);
+        Assert.Equal("I really enjoy playing tennis on weekends because it keeps me active.", result.ModelRewrite);
+        Assert.NotNull(result.ErrorSpans);
+        Assert.Single(result.ErrorSpans!);
+        Assert.Equal("I enjoys", result.ErrorSpans![0].OriginalSnippet);
+        Assert.Equal(4, result.Scores.Count);
+    }
+
+    [Fact]
+    public async Task FakeAiGrader_produces_priorityFix_modelRewrite_and_errorSpans_referencing_submission()
+    {
+        var grader = new FakeAiGrader();
+        var submission = "In my opinion, remote work is very good for people because they can save time and work from home.";
+        var request = new AiGradingRequest(
+            FreeResponseId: 30,
+            SkillId: 2,
+            CertId: 2,
+            QuestionStem: "Discuss the advantages of remote work.",
+            MinWords: 10,
+            MaxWords: 200,
+            ResponseText: submission,
+            Criteria: [new GradingCriterionDetail(1, "TR", "Task Response", 9m, 1m)],
+            TargetBandCode: "7.0");
+
+        var result = await grader.GradeAsync(request);
+
+        Assert.True(result.Success);
+        Assert.False(string.IsNullOrWhiteSpace(result.PriorityFix));
+        Assert.False(string.IsNullOrWhiteSpace(result.ModelRewrite));
+        Assert.NotNull(result.ErrorSpans);
+        Assert.NotEmpty(result.ErrorSpans!);
+        Assert.Contains(result.ErrorSpans!, span => submission.Contains(span.OriginalSnippet, StringComparison.Ordinal));
+    }
 }

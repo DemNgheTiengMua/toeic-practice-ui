@@ -34,7 +34,8 @@ internal static class PoolImportWriter
         string? Explanation,
         string? ReferenceText,
         string? ReferenceKind,
-        PoolImport.StimulusInput Stimulus);
+        PoolImport.StimulusInput Stimulus,
+        string? TargetBands = null);
 
     internal sealed record Outcome(
         int ItemsWritten,
@@ -101,7 +102,8 @@ internal static class PoolImportWriter
                 request.ReferenceKind,
                 stimulus,
                 batchTag,
-                now);
+                now,
+                targetBands: request.TargetBands);
 
             db.Items.Add(item);
             db.ItemVersions.Add(version);

@@ -10,29 +10,13 @@ public static partial class PracticeEndpoints
 {
     private static void MapCatalog(RouteGroupBuilder practice)
     {
-
-        // #238: the objective practice matrix. A read — it draws nothing, so it is not a second
-        // selection path. The plan's top-three are marked as prioritised here, from the one service
-        // that computes them, rather than by whatever order the matrix rows come back in.
-        practice.MapGet("/matrix", async (
-            HttpContext http, ILearnerService learners, IPracticeService practiceService,
-            PracticeMatrixService matrix, CancellationToken cancellationToken) =>
-        {
-            var userId = CurrentUserId(http);
-            var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
-            var cells = await matrix.GetMatrixAsync(userId, activeCertId, cancellationToken);
-            var priorities = await practiceService.GetPrioritisedCoordinatesAsync(userId, cancellationToken);
-
-            return Results.Ok(MarkPrioritised(cells, priorities));
-        });
-
         practice.MapGet("/catalog", async (HttpContext http, IPracticeService practiceService, CancellationToken cancellationToken) =>
         {
             var view = await practiceService.GetPracticeSectionsAsync(CurrentUserId(http), cancellationToken);
             static PracticeSectionDto ToSectionDto(PracticeSectionItem s) => new(
                 s.SectionId, s.SkillCode, s.SkillName, s.Modality.MapTo<ModalityDto>(), s.Code, s.Name, s.OptionCount,
                 s.ExpectedQuestionCount, s.AvailableQuestionCount, s.AccuracyPercentage, s.AnsweredCount, s.DisplayOrder,
-                s.TotalCategoryCount, s.CategoriesInCooldown, s.NextReviewDueAt);
+                s.TotalCategoryCount, s.CategoriesInCooldown, s.NextReviewDueAt, s.IsUnlocked);
 
             return Results.Ok(new PracticeCatalogDto(
                 ToCertificateDto(view.Certificate),

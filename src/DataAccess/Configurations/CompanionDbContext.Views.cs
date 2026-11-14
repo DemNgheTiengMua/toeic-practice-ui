@@ -15,13 +15,6 @@ public partial class CompanionDbContext
 
 
 
-        modelBuilder.Entity<vw_MentorPayoutTotal>(entity =>
-        {
-            entity.ToView("vw_MentorPayoutTotals");
-        });
-
-
-
         modelBuilder.Entity<vw_UserCreditBalance>(entity =>
         {
             entity.ToView("vw_UserCreditBalance");
@@ -59,10 +52,6 @@ public partial class CompanionDbContext
 
         // #202: S-01's matrix. Keyless and read-only like every other view here; the deficit is the
         // database's arithmetic, never recomputed in C#.
-        modelBuilder.Entity<vw_CoverageMatrix>(entity =>
-        {
-            entity.ToView("vw_CoverageMatrix");
-        });
 
         // #235: the daily ceiling's own arithmetic, so no service recomputes it (D12 / NFI-05).
         modelBuilder.Entity<vw_DailyPracticeVolume>(entity =>

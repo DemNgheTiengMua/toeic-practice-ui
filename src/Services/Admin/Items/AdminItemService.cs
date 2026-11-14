@@ -81,23 +81,11 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
         Stimulus? existingStimulus = null;
         if (request.StimulusId is int existingStimulusId)
         {
-            existingStimulus = await GateContext.FindStimulusAsync(db, existingStimulusId, cancellationToken)
+            existingStimulus = await ItemVersionQuery.FindStimulusAsync(db, existingStimulusId, cancellationToken)
                 ?? throw new AdminItemException(ApiError.Codes.Validation, $"Stimulus {existingStimulusId} not found.");
         }
 
-        // D17: the gates run server-side, so an item cannot be persisted with no explanation, no
-        // rationale or options that give the key away. Gate one is the one that needs no model and no
-        // provider call, and it is the gate the review's example failed; gates two to four need a
-        // profiler, verifiers and a classifier, and run at the ingestion seam (PoolIngestionService)
-        // where those are composed.
-        await RequireGateOneAsync(
-            GateItem(request, GateContext.TextOf(stimulus) ?? GateContext.TextOf(existingStimulus)),
-            request.TopicId,
-            level,
-            exceptItemId: null,
-            "The item was refused by gate one (D17), so nothing was saved: ",
-            cancellationToken);
-
+        // Gates 1-4 and blind audit are retired (#310): items are immediately active with TargetBands.
         var item = new Item
         {
             Stimulus = stimulus,
@@ -112,10 +100,9 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
                 ? PoolImport.DefaultRenderFormat(modality)
                 : request.RenderFormat.Trim(),
             PlacementEligible = request.PlacementEligible,
-            // Demo and draft are the schema defaults on purpose: an unreviewed item must not reach a
-            // paid paper (INV-6), so neither is a request field an author can flip.
             ContentTier = "demo",
-            LifecycleStatus = "draft",
+            LifecycleStatus = "active",
+            TargetBands = TargetBandsNormalizer.Normalize(request.TargetBands),
         };
 
         var version = new ItemVersion
@@ -162,20 +149,10 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
             .FirstOrDefaultAsync(i => i.ItemId == itemId, cancellationToken)
             ?? throw new ItemNotFoundException(itemId);
 
-        // D17: an edit that forks a version is the same door as a create, one save later. A gate that
-        // only guarded creation would let an author write a version with no rationale by editing one
-        // away, which is the bypass #198's review found wearing a different route. The cell excludes
-        // this item, because the balance rule is about the distribution the item makes rather than the
-        // one it found.
-        await RequireGateOneAsync(
-            GateItem(
-                request,
-                GateContext.TextOf(await GateContext.FindStimulusAsync(db, item.StimulusId, cancellationToken))),
-            item.TopicId,
-            item.CefrLevel,
-            exceptItemId: item.ItemId,
-            "The edit was refused by gate one (D17), so nothing was written: ",
-            cancellationToken);
+        if (request.TargetBands is not null)
+        {
+            item.TargetBands = TargetBandsNormalizer.Normalize(request.TargetBands);
+        }
 
         // #254: which version is current is stated once, in GateContext. Picking the newest here with a
         // local ordering was a second definition, so a version inserted out of order would have been
@@ -184,7 +161,7 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
             .Where(v => v.ItemId == itemId)
             .ToListAsync(cancellationToken);
 
-        var current = GateContext.Newest(versions, v => v.VersionNumber)
+        var current = ItemVersionQuery.Newest(versions, v => v.VersionNumber)
             ?? throw new AdminItemException(ApiError.Codes.Validation, $"Item {itemId} has no version to edit.", 409);
 
         // CNT-43: a scored change forks a version; a cosmetic one does not. Comparing the incoming
@@ -243,61 +220,6 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
     /// judge an item differently from a create.
     /// </para>
     /// </summary>
-    private async Task RequireGateOneAsync(
-        GateOneItem gateItem,
-        int topicId,
-        CefrLevel level,
-        int? exceptItemId,
-        string refusalPrefix,
-        CancellationToken cancellationToken)
-    {
-        // excludeItemId is what makes the balance rule answerable at each door: a create has nothing to
-        // exclude yet, and an edit must exclude itself or its own key would vouch for its own balance.
-        var cell = await GateContext.CellAsync(db, topicId, level, exceptItemId, cancellationToken);
-
-        var verdict = GateOne.Review(gateItem, cell);
-        if (verdict.Accepted)
-        {
-            return;
-        }
-
-        throw new AdminItemException(
-            ApiError.Codes.Validation,
-            refusalPrefix + string.Join(" ", verdict.Refusals.Select(r => $"[{r.Rule}] {r.Message}")));
-    }
-
-    /// <summary>
-    /// The create request as the gate sees it. <paramref name="stimulusText"/> is the passage,
-    /// transcript or prompt copy of the stimulus the item is authored with or joins - gate one's lemma
-    /// rule compares the stem and key against the text the learner will read, and a rule that skipped
-    /// it whenever the passage came from a second row would judge nothing on a shared passage.
-    /// </summary>
-    private static GateOneItem GateItem(CreatePoolItemRequest request, string? stimulusText) =>
-        new(
-            request.Stem,
-            stimulusText,
-            Normalize(request.OptionA), Normalize(request.OptionB),
-            Normalize(request.OptionC), Normalize(request.OptionD),
-            NormalizeKey(request.KeyLabel),
-            Normalize(request.Explanation),
-            Normalize(request.RationaleA), Normalize(request.RationaleB),
-            Normalize(request.RationaleC), Normalize(request.RationaleD));
-
-    /// <summary>
-    /// The edit request as the gate sees it. The stimulus is not editable through this request, so its
-    /// text is read from the item rather than from the edit.
-    /// </summary>
-    private static GateOneItem GateItem(UpdatePoolItemRequest request, string? stimulusText) =>
-        new(
-            request.Stem,
-            stimulusText,
-            Normalize(request.OptionA), Normalize(request.OptionB),
-            Normalize(request.OptionC), Normalize(request.OptionD),
-            NormalizeKey(request.KeyLabel),
-            Normalize(request.Explanation),
-            Normalize(request.RationaleA), Normalize(request.RationaleB),
-            Normalize(request.RationaleC), Normalize(request.RationaleD));
-
     private static Stimulus BuildStimulus(CreatePoolStimulusRequest request)
     {
         var level = RequireAuthoredLevel(request.CefrLevelCode);
@@ -470,5 +392,6 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
             version.RationaleA,
             version.RationaleB,
             version.RationaleC,
-            version.RationaleD);
+            version.RationaleD,
+            item.TargetBands);
 }

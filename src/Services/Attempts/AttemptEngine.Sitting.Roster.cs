@@ -79,12 +79,7 @@ public sealed partial class AttemptEngine
     /// shared roster", so a caller can tell the two branches apart without a second query.
     /// </summary>
     internal Task<List<int>> LoadServedPositionIdsAsync(int attemptId, CancellationToken cancellationToken) =>
-        db.AttemptItemResponses
-            .AsNoTracking()
-            .Where(r => r.AttemptId == attemptId)
-            .OrderBy(r => r.PositionNumber)
-            .Select(r => r.ExamItemId)
-            .ToListAsync(cancellationToken);
+        Task.FromResult(new List<int>());
 
     /// <summary>
     /// #274: the paper a list of positions renders. Shared by the sitting reads (which pass what the
@@ -316,33 +311,4 @@ public sealed partial class AttemptEngine
     /// otherwise leave the sitting holding a position it never rendered.
     /// </para>
     /// </summary>
-    private void RecordServedPaper(
-        ExamAttempt attempt, AttemptPaperDraw paper, IReadOnlyList<SittingQuestion> questions)
-    {
-        foreach (var bundle in paper.Bundles)
-        {
-            db.AttemptStageBundles.Add(new AttemptStageBundle
-            {
-                AttemptId = attempt.AttemptId,
-                CertId = attempt.CertId,
-                SkillId = bundle.SkillId,
-                StageNumber = bundle.StageNumber,
-                BandLower = bundle.BandLower,
-                BandUpper = bundle.BandUpper,
-                WrittenByService = DerivedFactWriters.AttemptPaper,
-                ProjectionVersion = 1,
-            });
-        }
-
-        for (var index = 0; index < questions.Count; index++)
-        {
-            db.AttemptItemResponses.Add(new AttemptItemResponse
-            {
-                AttemptId = attempt.AttemptId,
-                ExamId = attempt.ExamId,
-                PositionNumber = index + 1,
-                ExamItemId = questions[index].ExamItemId,
-            });
-        }
-    }
 }

@@ -9,14 +9,15 @@ public static partial class CheckoutEndpoints
     private static void MapOrders(IEndpointRouteBuilder app)
     {
         app.MapGet("/api/checkout/preview", async (
-            int packageId,
+            int? packageId,
+            int? credits,
             HttpContext http,
             IPaymentService payments,
             CancellationToken cancellationToken) =>
         {
             try
             {
-                var preview = await payments.GetCheckoutPreviewAsync(CurrentUserId(http), packageId, cancellationToken);
+                var preview = await payments.GetCheckoutPreviewAsync(CurrentUserId(http), packageId, credits, cancellationToken);
                 return Results.Ok(preview);
             }
             catch (EmailNotVerifiedException ex)
@@ -26,6 +27,10 @@ public static partial class CheckoutEndpoints
             catch (PackageNotFoundException ex)
             {
                 return Problem(StatusCodes.Status404NotFound, "Package not found", ApiError.Codes.PackageNotFound, ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Invalid request", "invalid_request", ex.Message);
             }
         }).RequireAuthorization(Roles.Learner);
 
@@ -41,7 +46,7 @@ public static partial class CheckoutEndpoints
                 var baseUrl = !string.IsNullOrWhiteSpace(authLinks.PublicBaseUrl)
                     ? authLinks.PublicBaseUrl
                     : $"{http.Request.Scheme}://{http.Request.Host}";
-                var response = await payments.CreateOrderAsync(CurrentUserId(http), request.PackageId, baseUrl, cancellationToken);
+                var response = await payments.CreateOrderAsync(CurrentUserId(http), request.PackageId, baseUrl, request.Credits, cancellationToken);
                 return Results.Ok(response);
             }
             catch (EmailNotVerifiedException ex)
@@ -55,6 +60,10 @@ public static partial class CheckoutEndpoints
             catch (PackageNotFoundException ex)
             {
                 return Problem(StatusCodes.Status404NotFound, "Package not found", ApiError.Codes.PackageNotFound, ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Invalid request", "invalid_request", ex.Message);
             }
         }).RequireAuthorization(Roles.Learner);
 

@@ -67,16 +67,6 @@ public partial class ExamAttempt
     [Unicode(false)]
     public string? BandCode { get; set; }
 
-    /// <summary>#191: which service declared this scoring write. Required by the trigger whenever
-    /// TotalScore or BandCode moves; a sitting-state write leaves it NULL.</summary>
-    [StringLength(64)]
-    [Unicode(false)]
-    public string? WrittenByService { get; set; }
-
-    /// <summary>#191: monotonic ordering token, so an older out-of-order callback cannot overwrite a
-    /// newer result.</summary>
-    public int ProjectionVersion { get; set; }
-
     /// <summary>
     /// #246: which generation of the product this sitting was taken under. NULL means "written by the
     /// current code"; a value means the row was PRESERVED across a cutover and is history, not a
@@ -114,12 +104,8 @@ public partial class ExamAttempt
     /// #274: the paper this sitting was served, per skill and stage. Empty for an attempt that reads
     /// the exam's shared roster, which is every attempt created before #274 and every mock sitting.
     /// </summary>
-    [InverseProperty("ExamAttempt")]
-    public virtual ICollection<AttemptStageBundle> AttemptStageBundleExamAttempts { get; set; } = new List<AttemptStageBundle>();
 
     /// <summary>#274: the positions this sitting was served, in sitting order.</summary>
-    [InverseProperty("ExamAttempt")]
-    public virtual ICollection<AttemptItemResponse> AttemptItemResponseExamAttempts { get; set; } = new List<AttemptItemResponse>();
 
     [ForeignKey("CertId")]
     [InverseProperty("ExamAttempts")]

@@ -144,31 +144,14 @@ public static class PathStepCompletion
             return step.StepId;
         }
 
-        // #233 / D10: a week that has closed is history, and history is immutable. A session left open
-        // when its week's boundary passed finishes late - and without this check it would rewrite the
-        // step's status, score and accuracy on a week that is already archived. The answers the learner
-        // gave still count toward capability (they are PracticeAnswers rows, untouched), but the step
-        // can no longer be closed: the week it belonged to has been recorded as it actually ended.
-        //
-        // shortcut: the archived week's *snapshot* is frozen by its own trigger; this covers the step
-        // rows. Upgrade if a ticket makes the archive re-derivable, at which point the two must agree.
-        if (!PathWindow.IsLive(step.WeekNumber, path.ActiveWeek))
-        {
-            return step.StepId;
-        }
-
+        // Pure self-paced step progression: remove artificial calendar gating or day-of-week checks;
+        // progress is purely governed by completing the prerequisite steps.
         var now = DateTimeOffset.UtcNow;
 
         step.Status = "done";
         step.CompletedAt ??= now;
         step.Score = score;
         step.ActualAccuracyPct = accuracyPct;
-        // #191 / D14: this class is the step closure's one writer, and the trigger on
-        // LearnerPathSteps refuses any other declaration. The version moves forward so a late
-        // duplicate closure cannot overwrite a result the learner has already seen.
-        step.WrittenByService = DerivedFactWriters.StepClosure;
-        step.ProjectionVersion++;
-        db.Entry(step).Property(s => s.WrittenByService).IsModified = true;
 
         await db.SaveChangesAsync(cancellationToken);
 
@@ -178,56 +161,88 @@ public static class PathStepCompletion
     }
 
     /// <summary>
-    /// Unlocks the first step still locked, in plan order, and marks the path complete when nothing
-    /// is left. Re-read from the database rather than trusted from a caller's list, because two
-    /// activities can finish close together.
-    /// <para>
-    /// #233: only a step inside the <b>live window</b> can be opened. A week that has closed keeps its
-    /// unfinished steps locked forever — that is what "archived rather than carried forward" means —
-    /// so including them here would hand the learner a step on a week that is already history.
-    /// </para>
+    /// Pure self-paced step progression:
+    /// Unlocks the next sequential step within the current week, or when a learner completes the final step
+    /// of Week N, immediately unlocks Week N+1 (setting all steps of Week N+1 from locked to available).
+    /// When all steps across all weeks are completed, marks the path completed.
     /// </summary>
     public static async Task UnlockNextAsync(
         CompanionDbContext db, int learnerPathId, CancellationToken cancellationToken = default)
     {
-        var activeWeek = await db.LearnerPaths
-            .Where(p => p.LearnerPathId == learnerPathId)
-            .Select(p => p.ActiveWeek)
-            .FirstOrDefaultAsync(cancellationToken);
+        var path = await db.LearnerPaths
+            .FirstOrDefaultAsync(p => p.LearnerPathId == learnerPathId, cancellationToken);
 
-        var locked = await db.LearnerPathSteps
-            .Where(s => s.LearnerPathId == learnerPathId && s.Status == "locked")
+        if (path is null || path.Status != LearnerPathStatus.Active.ToCode())
+        {
+            return;
+        }
+
+        var allSteps = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == learnerPathId)
             .OrderBy(s => s.WeekNumber ?? 0)
             .ThenBy(s => s.WeekSequence)
             .ThenBy(s => s.StepId)
             .ToListAsync(cancellationToken);
 
-        var next = locked.FirstOrDefault(s => PathWindow.IsLive(s.WeekNumber, activeWeek));
-        if (next is not null)
-        {
-            next.Status = "available";
-        }
-
-        // The path is complete when no <b>live</b> step is left undone. Asking this after the unlock,
-        // and asking the database rather than the caller's list, is what makes the last step close the
-        // path. #233: an unfinished step on an archived week is excluded — history that can never be
-        // finished again, so counting it would make completion unreachable after any partial archive.
-        var liveSteps = await db.LearnerPathSteps
-            .Where(s => s.LearnerPathId == learnerPathId)
-            .Select(s => new { s.Status, s.WeekNumber })
-            .ToListAsync(cancellationToken);
-
-        var remaining = liveSteps
-            .Count(s => s.Status != "done" && PathWindow.IsLive(s.WeekNumber, activeWeek));
-
+        var remaining = allSteps.Count(s => s.Status != "done");
         if (remaining == 0)
         {
-            var path = await db.LearnerPaths
-                .FirstOrDefaultAsync(p => p.LearnerPathId == learnerPathId, cancellationToken);
+            path.Status = LearnerPathStatus.Completed.ToCode();
+            await db.SaveChangesAsync(cancellationToken);
+            return;
+        }
 
-            if (path is not null)
+        var weeks = allSteps
+            .Where(s => s.WeekNumber.HasValue)
+            .GroupBy(s => s.WeekNumber!.Value)
+            .OrderBy(g => g.Key)
+            .ToList();
+
+        if (weeks.Count == 0)
+        {
+            var next = allSteps.FirstOrDefault(s => s.Status == "locked");
+            if (next is not null)
             {
-                path.Status = "completed";
+                next.Status = "available";
+            }
+            await db.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        // Find the earliest week that still has incomplete steps
+        var activeWeekGroup = weeks.FirstOrDefault(g => g.Any(s => s.Status != "done"));
+        if (activeWeekGroup is null)
+        {
+            path.Status = LearnerPathStatus.Completed.ToCode();
+            await db.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        var activeWeekNumber = activeWeekGroup.Key;
+        path.ActiveWeek = activeWeekNumber;
+
+        var activeWeekSteps = activeWeekGroup.ToList();
+        var prevWeekGroup = weeks.FirstOrDefault(g => g.Key == activeWeekNumber - 1);
+        bool prevWeekAllDone = prevWeekGroup != null && prevWeekGroup.All(s => s.Status == "done");
+
+        if (prevWeekAllDone)
+        {
+            // "When a learner completes the final step of Week N, immediately unlock Week N+1: set the steps of Week N+1 from locked to available."
+            foreach (var s in activeWeekSteps.Where(s => s.Status == "locked"))
+            {
+                s.Status = "available";
+            }
+        }
+        else
+        {
+            // Within the current active week (e.g. Week 1), unlock the next sequential step if no step is available or in progress
+            if (!activeWeekSteps.Any(s => s.Status is "available" or "in_progress"))
+            {
+                var next = activeWeekSteps.FirstOrDefault(s => s.Status == "locked");
+                if (next is not null)
+                {
+                    next.Status = "available";
+                }
             }
         }
 

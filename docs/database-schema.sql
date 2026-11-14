@@ -4,61 +4,6 @@
 SET QUOTED_IDENTIFIER ON;
 SET ANSI_NULLS ON;
 GO
--- ============ Domain 0: Single-writer registry ============
--- #191 / D14 / TRN-06, TRN-07: eleven derived facts, eleven owners, declared here rather than agreed by
--- convention. Each covered table carries a `WrittenByService` foreign key to this registry and a
--- trigger comparing it against the fact's owner, so an invented or mistyped service name is
--- unstorable and a real second writer is refused at write time.
---
--- This is a table rather than a comment because the coverage is the thing that must not drift. Ten
--- of the eleven have a table today; one is exempt because its table already carries the guarantee and
--- the SRS decision log D-09 forbids a second one. `Coverage` says which, and a CHECK makes "claims
--- coverage but names no table" unrepresentable - a mechanism that silently covers two and claims
--- seven is this ticket's worst failure mode. (#227 moved one fact out of `awaiting_table` and added
--- `exam_edition_snapshot`; #274 added `attempt_paper`.)
---
--- PRN-01: the writer identity is a parameter on the write, never `sp_set_session_context`. Session
--- context survives commit and rollback, so a writer name left in it would be read by the next
--- transaction on that pooled connection and would vouch for code that never declared itself.
-CREATE TABLE DerivedFactOwners (
-  FactCode      VARCHAR(32) NOT NULL PRIMARY KEY,
-  OwningService VARCHAR(64) NOT NULL,
-  Coverage      VARCHAR(16) NOT NULL
-    CONSTRAINT CK_DerivedFactOwners_Coverage CHECK (Coverage IN ('covered','awaiting_table','exempt')),
-  CoveredTable  SYSNAME NULL,
-  Note          NVARCHAR(400) NULL,
-  -- No unique key on OwningService: AttemptEngine owns two of the seven facts, and that is the point
-  -- of naming the fact separately from the service. A mistyped service name is refused by the trigger
-  -- comparing it against this row, so no foreign key is needed to make a typo unstorable.
-  CONSTRAINT CK_DerivedFactOwners_CoveredNamesTable CHECK (
-       (Coverage =  'covered' AND CoveredTable IS NOT NULL)
-    OR (Coverage <> 'covered' AND CoveredTable IS NULL))
-);
-GO
-INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable, Note) VALUES
-  ('placement_result',       'AttemptEngine',      'covered',        'PlacementTests',
-   N'The snapshot is derived from the attempt, never written beside it (the confirmed defect).'),
-  ('learner_skill_state',    'SkillStateWriter',   'covered',        'LearnerSkillStates',
-   N'#211: the one row every screen reads to answer "what is my level". The overall is MIN over measured skills, never a column.'),
-  ('placement_skill_result', 'AttemptEngine',      'covered',        'PlacementSkillResults',
-   N'#212: one row per skill per placement. A registered fact of its own, not a second table under placement_result: CoveredTable names exactly one table, and an unregistered table would be guarded by nothing.'),
-  ('attempt_score_and_band', 'AttemptEngine',      'covered',        'ExamAttempts',
-   N'TotalScore and BandCode, the two values the snapshot is copied from.'),
-  ('topic_capability',       'CapabilityWriter',   'covered',        'UserCellMasteries',
-   N'#237 / D4 / D-19: per-cell mastery (topic, level, no CertId - mastery follows the topic). The estimate and its four states are derived from the learner graded answers; CapabilityWriter is the only writer.'),
-  ('step_closure',           'PathStepCompletion', 'covered',        'LearnerPathSteps',
-   N'One place closes a step, so the unlock rule cannot drift from the closure.'),
-  ('stratum_decision',       'StratifiedAuditService', 'covered',     'ReviewStrata',
-   N'#206: the audit outcome is derived from the sample verdicts, not typed beside them, so one service states it.'),
-  ('window_synthesis',       'PathWindowSynthesizer', 'covered',        'LearnerPathWeeks',
-   N'#233: one row per archived week. The snapshot is derived from the week closed steps and is written by the slide alone, so a late answer cannot restate it.'),
-  ('exam_edition_snapshot',  'ExamEditionFreeze',  'covered',        'ExamEditions',
-   N'#227: what was in force when a paper went live - timers, phase weights, aggregation rule, band grid, cut-score version. Written by the freeze and by nothing else, because a review that re-derived them would print a number nobody was measured against.'),
-  ('attempt_paper',          'AttemptEngine',      'covered',        'AttemptStageBundles',
-   N'#274: the paper THIS sitting was served - the stage plan and the routed band pair per skill. A second draw restating it would show a learner a paper they are not sitting, so AttemptEngine is the only writer.'),
-  ('credit_movement',        'CreditLedger',       'exempt',         NULL,
-   N'CreditTransactions is append-only and immutable already (trg_*_AppendOnly, trg_*_NoRewrite); SRS D-09 refuses a second mutation guard.');
-GO
 -- ============ Domain 2: Catalog ============
 CREATE TABLE Certificates (
   CertId               INT IDENTITY(1,1) PRIMARY KEY,
@@ -270,230 +215,6 @@ CREATE TABLE ScoreScales (
   CONSTRAINT FK_ScoreScales_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId)
 );
 GO
--- ============ Domain 4b: Per-skill CEFR cut scores (#210 / D6 / LVL-13) ============
--- ScoreBands above stays exactly what it is: the certificate's own band rows, keyed by a total.
--- It cannot express "TOEIC Reading >= 385 is B2 while 785 total is not", because a band is one
--- interval on one axis and the claim is per skill. These two tables are the crosswalk Â§4.6 describes,
--- and they are read-only at the presentation layer: projection is a lookup, never arithmetic on a total.
---
--- The version header is a table rather than a column on every row for two reasons. A recorded
--- projection must name the version that produced it (LVL-13), so a version needs an identity and a
--- provenance; and a version carries one property no cut row can carry - whether the certificate
--- reports its skills separately with no combined total, which is TOEIC S&W's rule and is not one of
--- the three attempt aggregation rules (CK_Certificates_ScoreAggregationRule deliberately has no
--- `independent`, #171). Putting that bit on the version keeps a projection reproducible from the
--- version alone, so re-standardising one certificate cannot silently change an old result.
-CREATE TABLE CefrCutScoreVersions (
-  CertId                 INT NOT NULL REFERENCES Certificates(CertId),
-  TableVersion           INT NOT NULL,
-  -- "report each skill on its own, with no combined total". The three aggregation rules stay on
-  -- Certificates and are reused through AttemptEngine.AggregateTotalScore; this bit only says whether
-  -- a total is reported at all.
-  ReportsSkillsSeparately BIT NOT NULL CONSTRAINT DF_CefrCutScoreVersions_Separate DEFAULT 0,
-  -- The published standard-setting study the numbers are taken from. Required: a cut score with no
-  -- source is the arithmetic-on-a-total this table replaces.
-  Source                 NVARCHAR(200) NOT NULL,
-  PublishedAt            DATE NOT NULL,
-  CONSTRAINT PK_CefrCutScoreVersions PRIMARY KEY (CertId, TableVersion),
-  CONSTRAINT CK_CefrCutScoreVersions_Version CHECK (TableVersion > 0)
-);
-GO
--- One row per (certificate, version, skill, level). Â§4.6's table has three row kinds and a single
--- (MinScaled, MaxScaled) pair cannot carry all three, so MinScaled is NULL exactly where the row
--- records no range:
---
---   'cut'             MinScaled..MaxScaled is that level. The only kind a level may be read from.
---   'uncertified'     a range the certificate scores but does not certify (IELTS/VSTEP below A1).
---                     The scaled value is real; the level is never awarded.
---   'display_ceiling' NO range at all. MaxScaled is the highest value the scale can display when the
---                     coordinate sits above the highest level the certificate can express (TOEIC tops
---                     out at C1, VSTEP has no C2). MinScaled NULL is what makes "emit the ceiling as a
---                     level" unrepresentable rather than a branch a caller has to remember.
-CREATE TABLE CefrCutScores (
-  CutScoreId    INT IDENTITY(1,1) PRIMARY KEY,
-  CertId        INT NOT NULL,
-  TableVersion  INT NOT NULL,
-  SkillId       INT NOT NULL,
-  -- Reportable levels only: the Pre-A1 floor is a result, not an authored band.
-  CefrLevel     VARCHAR(10) NOT NULL
-    CONSTRAINT CK_CefrCutScores_Level CHECK (CefrLevel IN ('pre_a1','A1','A2','B1','B2','C1','C2')),
-  RowKind       VARCHAR(20) NOT NULL
-    CONSTRAINT CK_CefrCutScores_RowKind CHECK (RowKind IN ('cut','uncertified','display_ceiling')),
-  MinScaled     INT NULL,
-  MaxScaled     INT NOT NULL,
-  CONSTRAINT CK_CefrCutScores_Scaled CHECK (MaxScaled >= 0 AND (MinScaled IS NULL OR MinScaled >= 0)),
-  -- The shape that carries all three kinds. A ceiling row with a range, or a cut row without one,
-  -- is not a partly-wrong row: it is a lookup that has no answer and would be guessed instead.
-  CONSTRAINT CK_CefrCutScores_KindsHoldTheirShape CHECK (
-       (RowKind =  'display_ceiling' AND MinScaled IS NULL)
-    OR (RowKind <> 'display_ceiling' AND MinScaled IS NOT NULL AND MinScaled <= MaxScaled)),
-  -- One answer per level per version. Two rows for B1 in one version is a lookup with two answers.
-  CONSTRAINT UQ_CefrCutScores_Version_Skill_Level UNIQUE (CertId, TableVersion, SkillId, CefrLevel),
-  CONSTRAINT FK_CefrCutScores_Version FOREIGN KEY (CertId, TableVersion)
-    REFERENCES CefrCutScoreVersions(CertId, TableVersion),
-  -- The skill must belong to this same certificate: one certificate's cut scores cannot describe
-  -- another's skill (the isolation rule that carries CertId down every table).
-  CONSTRAINT FK_CefrCutScores_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId)
-);
-GO
--- INV-5: no two cut ranges for one skill may overlap within one version, or a score has two levels.
--- A CHECK cannot compare across rows, so this is a trigger. Two properties matter and both are
--- tested in domain32:
---   * the predicate is scoped to (CertId, TableVersion, SkillId) - a guard scoped to the certificate
---     alone would refuse the same Reading range beside the Listening one, and a guard that ignored
---     TableVersion would refuse every re-standardisation;
---   * it compares the inserted rows against the whole table, so a single multi-row INSERT that
---     overlaps ITSELF is caught. A version is loaded in one statement, which is exactly the shape a
---     "compare against pre-existing rows only" trigger would let through.
-CREATE TRIGGER trg_CefrCutScores_NoOverlap
-ON CefrCutScores AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  IF EXISTS (
-    SELECT 1
-    FROM CefrCutScores a
-    JOIN CefrCutScores b
-      ON b.CertId = a.CertId
-     AND b.TableVersion = a.TableVersion
-     AND b.SkillId = a.SkillId
-     AND b.CutScoreId <> a.CutScoreId
-    WHERE a.CutScoreId IN (SELECT CutScoreId FROM inserted)
-      -- A display-ceiling row records a single value, not an interval, so it cannot overlap.
-      AND a.MinScaled IS NOT NULL
-      AND b.MinScaled IS NOT NULL
-      AND a.MinScaled <= b.MaxScaled
-      AND a.MaxScaled >= b.MinScaled
-  )
-    THROW 50050, 'CefrCutScores ranges may not overlap within one certificate, skill and table version.', 1;
-END;
-GO
--- ============ Domain 4c: Learner per-skill state (#211 / D15) ============
--- The one row every screen reads to answer "what is my level". Before this, three surfaces answered it
--- from three different places - the placement snapshot, the calibration decision, the latest attempt -
--- and the learner saw three levels on one day (docs/research/output/6.md, Defect 3).
---
--- ONE ROW PER LEARNER PER SKILL. The key is the rule, not a convention: a second row for the same
--- (learner, skill) is two answers to one question, which is the defect the table exists to remove.
---
--- NO OVERALL, ANYWHERE. The overall is MIN over the certificate's MEASURED skills, computed at read
--- and tethered to the skill that produced it (TRN-13 identity 2). A stored column, a computed column
--- and an "overall pseudo-skill" row are three different ways to store the same second fact; a stored
--- overall can disagree with MIN, and then the two screens that read it disagree with the third that
--- computes it. domain34 asserts the absence in the catalog because a C#-only check cannot see two of
--- the three.
---
--- EXPIRY IS STORED, NOT DERIVED, and it is not free: the CHECK pins it to MeasuredAt + 90 days (D18).
--- Storing it means a later change to the window does not silently re-date a measurement that was taken
--- under the old rule - the same reason a projection records its CutScoreTableVersion. Pinning it to the
--- measurement means the two cannot disagree, so there is still exactly one writer of the value.
-CREATE TABLE LearnerSkillStates (
-  UserId               INT NOT NULL,
-  CertId               INT NOT NULL,
-  SkillId              INT NOT NULL,
-  -- A result may report the pre-A1 floor (CefrLevel.Reportable), unlike authored content, which may
-  -- not: "below A1" is an honest answer and inventing A1 for it is not.
-  CefrLevel            VARCHAR(10) NOT NULL
-    CONSTRAINT CK_LSS_Level CHECK (CefrLevel IN ('pre_a1','A1','A2','B1','B2','C1','C2')),
-  -- 0-100 inside the band. Shown as a position, never a percentage: crossing a band resets it downward.
-  PositionInBand       INT NOT NULL
-    CONSTRAINT CK_LSS_Position CHECK (PositionInBand BETWEEN 0 AND 100),
-  -- The measured coordinate the level and position were projected from. 1.00 is A1's floor and 6.99
-  -- is "above C2" - the axis the whole rebuild measures on, stored once so two screens cannot re-derive
-  -- it differently. DECIMAL(3,2) is the precision the scale is defined at, not a guess.
-  ContinuousCoordinate DECIMAL(3,2) NOT NULL
-    CONSTRAINT CK_LSS_Coordinate CHECK (ContinuousCoordinate BETWEEN 1.00 AND 6.99),
-  -- What measured it. Closed: the three events D15's writer is invoked by.
-  Source               VARCHAR(16) NOT NULL
-    CONSTRAINT CK_LSS_Source CHECK (Source IN ('placement','mock_section','calibration')),
-  MeasuredAt           DATETIMEOFFSET NOT NULL,
-  ExpiresAt            DATETIMEOFFSET NOT NULL,
-  -- #191 / D14: nullable because the guarded tables all predate per-write enforcement and the
-  -- trigger, not the column, is what refuses a write that declares nothing. Following the existing
-  -- convention rather than inventing a stricter one: a NOT NULL here would refuse an EF insert that
-  -- sets the property after construction, for a reason unrelated to the rule being guarded.
-  WrittenByService     VARCHAR(64) NULL,
-  ProjectionVersion    INT NOT NULL CONSTRAINT DF_LSS_ProjectionVersion DEFAULT 0,
-  CONSTRAINT PK_LearnerSkillStates PRIMARY KEY (UserId, CertId, SkillId),
-  -- The expiry is the measurement plus D18's 90 calendar days, so the two columns cannot disagree
-  -- about when this result stops being trustworthy. A CHECK that only demanded "later than
-  -- MeasuredAt" would accept 91 days and 365; both are refused in domain34. It is a table-level
-  -- constraint because a column constraint cannot name another column.
-  CONSTRAINT CK_LSS_Expiry CHECK (ExpiresAt = DATEADD(DAY, 90, MeasuredAt)),
-  -- The composite is the isolation rule: one certificate's skill cannot be recorded under another's.
-  -- A single-column key on SkillId accepts exactly that row, which is why it is not one.
-  CONSTRAINT FK_LSS_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
-  -- The composite above already pins CertId to a real certificate (Skills.CertId is a foreign key), so
-  -- a second FK on CertId alone would add nothing enforceable. The learner does need one.
-  CONSTRAINT FK_LSS_User FOREIGN KEY (UserId) REFERENCES Users(UserId)
-);
-GO
--- The "my skills" read of one certificate, in the certificate's own order.
-CREATE INDEX IX_LSS_UserCert ON LearnerSkillStates(UserId, CertId);
-GO
--- #191 / D14: the per-skill state has exactly one writer, SkillStateWriter.
---
--- Unlike ExamAttempts and LearnerPathSteps, this table has no non-derived write at all: the whole row
--- IS the derived fact, so every insert must declare. There is no sitting-state column here to carve
--- out, and no lifecycle act that legitimately touches the row without deriving it.
---
--- The predicate looks at what CHANGED. A write that sets the same level and position derives nothing,
--- and refusing it would be a guard that looks right and refuses the idempotent save EF produces when a
--- tracked row is saved twice.
-CREATE TRIGGER trg_LearnerSkillStates_SingleWriter
-ON LearnerSkillStates AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  DECLARE @owner VARCHAR(64) =
-    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'learner_skill_state');
-
-  DECLARE @touched TABLE (
-    UserId INT NOT NULL, CertId INT NOT NULL, SkillId INT NOT NULL, WasVersion INT NOT NULL,
-    PRIMARY KEY (UserId, CertId, SkillId));
-  INSERT INTO @touched (UserId, CertId, SkillId, WasVersion)
-    SELECT i.UserId, i.CertId, i.SkillId, ISNULL(d.ProjectionVersion, 0)
-    FROM inserted i
-    LEFT JOIN deleted d
-      ON d.UserId = i.UserId AND d.CertId = i.CertId AND d.SkillId = i.SkillId
-    WHERE d.UserId IS NULL
-       OR ISNULL(i.CefrLevel, '') <> ISNULL(d.CefrLevel, '')
-       OR i.PositionInBand <> d.PositionInBand
-       OR i.ContinuousCoordinate <> d.ContinuousCoordinate
-       OR ISNULL(i.Source, '') <> ISNULL(d.Source, '')
-       OR i.MeasuredAt <> d.MeasuredAt
-       OR i.ExpiresAt <> d.ExpiresAt
-       OR i.ProjectionVersion <> d.ProjectionVersion;
-
-  IF NOT EXISTS (SELECT 1 FROM @touched)
-    RETURN;
-
-  -- The declaration must be IN THIS STATEMENT. A column already holding the owner's name vouches for
-  -- nobody: a second writer that changes only PositionInBand leaves that value untouched, so a
-  -- value-only check would pass it. `UPDATE()` is the statement-level "this write assigned the
-  -- column" test, which is the missing half.
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN @touched t
-      ON t.UserId = i.UserId AND t.CertId = i.CertId AND t.SkillId = i.SkillId
-    WHERE ISNULL(i.WrittenByService, '') <> @owner
-       OR (EXISTS (SELECT 1 FROM deleted d
-                   WHERE d.UserId = i.UserId AND d.CertId = i.CertId AND d.SkillId = i.SkillId)
-           AND NOT UPDATE(WrittenByService))
-  )
-    THROW 50077, 'The learner per-skill state has exactly one writer, SkillStateWriter. A write declaring another writer (or none) is refused.', 1;
-
-  -- Monotonic: an older out-of-order callback must not overwrite a newer state. `<=` is the point - an
-  -- equal version is a replay, not progress.
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN @touched t
-      ON t.UserId = i.UserId AND t.CertId = i.CertId AND t.SkillId = i.SkillId
-    WHERE i.ProjectionVersion <= t.WasVersion
-  )
-    THROW 50078, 'The learner per-skill state projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
-END;
-GO
 -- ============ Domain 3: Content ============
 -- (Sections already carries CertId + composite FK from Task 1)
 CREATE TABLE Exams (
@@ -539,134 +260,6 @@ CREATE TABLE Exams (
 GO
 -- UI-4: exam editor rejects "That test name already exists"
 CREATE UNIQUE INDEX UX_Exams_Cert_Name ON Exams(CertId, Name) WHERE IsDeleted = 0;
-GO
--- ============ #227: the edition a learner sat ============
--- One row per edition of a paper, frozen the moment the paper goes live. An attempt names its
--- edition through `ExamAttempts.ExamId`, which is already non-nullable, already foreign-keyed and
--- already pinned to the certificate - so "the edition it sat" is a fact the schema has always been
--- able to hold, and the only thing missing was the half of it that lives ABOVE the exam row.
---
--- #186 pins the ITEMS per attempt (AttemptAnswers.ItemVersionId) and #185 pins which versions a
--- paper binds. Both are per-row facts. But three of the four things a score depends on are shared
--- certificate-wide and would otherwise be re-read at review time:
---
---   * the score aggregation rule (`Certificates.ScoreAggregationRule`)
---   * the band grid, by which a total becomes a band NAME the page prints (`ScoreBands`)
---   * the cut-score table version a level was projected from (`CefrCutScoreVersions`)
---
--- and one is shared across every paper of the certificate: the per-skill timer weights
--- (`Skills.DurationMinutes`, `LockNavigationOneWay`) that `AttemptEngine.BuildAttemptPhases`
--- divides the sitting into phases with.
---
--- Re-reading any of those at review time is the #222 defect this ticket exists to stop: a total
--- shown beside a band name computed from a grid nobody was measured against. So the values are
--- STORED here, once, at the moment they are in force. A read of a frozen edition never consults a
--- live certificate table.
---
--- The row is written by a trigger on the publish transition rather than by a service, because a
--- paper goes live through more than one door (publish, import, seed, fixture) and a service-side
--- freeze is a convention that the next door goes round - the same reasoning as #157's structure
--- lock needing a writer in every service.
-CREATE TABLE ExamEditions (
-  ExamId               INT NOT NULL
-    CONSTRAINT PK_ExamEditions PRIMARY KEY
-    CONSTRAINT FK_ExamEditions_Exam REFERENCES Exams(ExamId),
-  -- Carried down so the cut-score version can be pinned by a composite key: a certificate cannot
-  -- name another certificate's cut-score table.
-  CertId               INT NOT NULL,
-  EditionNumber        INT NOT NULL
-    CONSTRAINT CK_ExamEditions_Number CHECK (EditionNumber > 0),
-  -- The sitting's allotted time, in seconds, as the paper declared it when it went live.
-  TotalDurationSeconds INT NOT NULL
-    CONSTRAINT CK_ExamEditions_Duration CHECK (TotalDurationSeconds > 0),
-  -- The phase weights, frozen: one object per skill the paper examines, in sitting order. This is
-  -- the exact input AttemptEngine.BuildAttemptPhases divides the attempt's own total by, so the
-  -- phase bar a mid-sitting learner sees cannot move when a Skill row is edited underneath them.
-  PhasePlanJson        NVARCHAR(MAX) NOT NULL,
-  -- The certificate's total-score rule in force. `sum`, `avg_half_step` or `avg_whole`; a rule
-  -- added after this paper went live must not silently re-score its attempts.
-  ScoreAggregationRule VARCHAR(20) NOT NULL,
-  -- The cut-score table version a level was projected from, or NULL when the certificate had none
-  -- at freeze time. NULL is a recorded fact ("no table existed"), not a missing value: #222 had to
-  -- infer this at read time and flagged it as a reproducibility risk.
-  CutScoreTableVersion INT NULL,
-  -- The band grid, frozen: [{Code, Name, MinTotal, MaxTotal}]. A review prints a band NAME, and the
-  -- name is what a later re-standardisation rewrites. The code on the attempt is already stored.
-  BandsJson            NVARCHAR(MAX) NOT NULL,
-  FrozenAt             DATETIMEOFFSET NOT NULL,
-  -- #191 / ADR-0012: this snapshot is derived from the exam and certificate configuration, so it
-  -- declares its one writer like every other derived fact.
-  WrittenByService     VARCHAR(64) NOT NULL,
-  ProjectionVersion    INT NOT NULL CONSTRAINT DF_ExamEditions_ProjectionVersion DEFAULT 1
-    CONSTRAINT CK_ExamEditions_ProjectionVersion CHECK (ProjectionVersion > 0),
-  CONSTRAINT FK_ExamEditions_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
-  CONSTRAINT FK_ExamEditions_CutScore FOREIGN KEY (CertId, CutScoreTableVersion)
-    REFERENCES CefrCutScoreVersions(CertId, TableVersion)
-);
-GO
--- The freeze itself. It fires on the transition into 'published' only - a draft has no learners, so
--- it has no edition to protect - and it is idempotent: a paper withdrawn and re-published keeps the
--- edition its learners sat rather than silently re-freezing today's configuration over it.
-CREATE TRIGGER trg_Exams_PublishFreezesEdition
-ON Exams AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-
-  INSERT INTO ExamEditions
-    (ExamId, CertId, EditionNumber, TotalDurationSeconds, PhasePlanJson,
-     ScoreAggregationRule, CutScoreTableVersion, BandsJson, FrozenAt, WrittenByService)
-  SELECT
-    i.ExamId,
-    i.CertId,
-    i.EditionNumber,
-    i.DurationMinutes * 60,
-    ISNULL((
-      -- #269: a paper's phases are the skills it actually EXAMINES, and after the pool migration that
-      -- is a fact about the roster. This read Questions only, so a pool-authored paper froze '[]' -
-      -- and ParseFrozenPhases treats an empty plan as "no edition", which silently fell back to today's
-      -- Skill rows: the pin #227 exists to hold, defeated for every paper built on the pool.
-      SELECT s.SkillId, s.Code, s.Name, s.DisplayOrder, s.DurationMinutes,
-             s.LockNavigationOneWay
-      FROM Skills s
-      WHERE s.CertId = i.CertId
-        AND EXISTS (SELECT 1
-                     FROM ExamItems ei
-                     JOIN Sections esec ON esec.SectionId = ei.SectionId
-                     WHERE ei.ExamId = i.ExamId AND esec.SkillId = s.SkillId)
-      ORDER BY s.DisplayOrder
-      FOR JSON PATH), '[]'),
-    c.ScoreAggregationRule,
-    (SELECT MAX(v.TableVersion) FROM CefrCutScoreVersions v WHERE v.CertId = i.CertId),
-    ISNULL((
-      SELECT b.Code, b.Name, b.MinTotal, b.MaxTotal
-      FROM ScoreBands b
-      WHERE b.CertId = i.CertId
-      ORDER BY b.MinTotal
-      FOR JSON PATH), '[]'),
-    SYSDATETIMEOFFSET(),
-    'ExamEditionFreeze'
-  FROM inserted i
-  JOIN Certificates c ON c.CertId = i.CertId
-  WHERE i.Status = 'published'
-    AND NOT EXISTS (SELECT 1 FROM ExamEditions e WHERE e.ExamId = i.ExamId);
-END;
-GO
--- ADR-0012: one writer per derived fact. The freeze names its own owner; anything else writing this
--- row is a second answer to "what was in force when this paper went live".
-CREATE TRIGGER trg_ExamEditions_SingleWriter
-ON ExamEditions AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  DECLARE @owner VARCHAR(64) =
-    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'exam_edition_snapshot');
-
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    WHERE ISNULL(i.WrittenByService, '') <> @owner
-       OR (EXISTS (SELECT 1 FROM deleted d WHERE d.ExamId = i.ExamId) AND NOT UPDATE(WrittenByService))
-  )
-    THROW 50110, 'An exam edition snapshot has exactly one writer, ExamEditionFreeze. A write declaring another writer (or none) is refused: the edition is what a learner sat, so it is not editable after the fact.', 1;
-END;
 GO
 -- now that Exams exists, pin ScoreScales.ExamId
 -- M-11: composite FK so the exam must belong to the same certificate (replaces the single-column FK)
@@ -801,236 +394,6 @@ GO
 -- Items for that reason.
 ALTER TABLE Topics ADD CONSTRAINT UQ_Topics_Id_Modality UNIQUE (TopicId, Modality);
 GO
--- ============ #237: per-cell mastery, the capability record ============
--- D4 / D-19: mastery follows the TOPIC, not the certificate, so there is no CertId here. A learner who
--- switches certificate keeps one comparable record per cell.
---
--- The cell IS (TopicId, CefrLevel) and the primary key says so. `State` carries the four values of the
--- existing BusinessObjects.MasteryState enum by code; they are not renamed, because PLC-70 itself calls
--- the lapsed state `reviewing` and a second four-state vocabulary would be two answers to one question.
---
--- The stored statistics are PLC-67's sufficient statistic, not a copy of the probability: practice
--- sessions are pruned FIFO (CONTEXT.md), so a cell that re-read its own answers would silently rewind a
--- state the learner already earned. Appending one observation is exactly
---   w_c <- 0.85*w_c + c,  w_n <- 0.85*w_n + 1
--- so the two numbers ARE the sequence for every purpose the estimate has. Storing the probability too
--- would let a row disagree with its own arithmetic.
-CREATE TABLE UserCellMasteries (
-  UserId     INT NOT NULL,
-  TopicId    INT NOT NULL REFERENCES Topics(TopicId),
-  -- Authored levels only: a cell is content, and the pre-A1 floor is reportable but never taught, so a
-  -- mastery row at 'pre_a1' would be mastery of a cell that cannot hold an item.
-  CefrLevel  VARCHAR(10) NOT NULL
-    CONSTRAINT CK_UserCellMasteries_Level
-    CHECK (CefrLevel IN ('A1','A2','B1','B2','C1','C2')),
-
-  State      VARCHAR(12) NOT NULL
-    CONSTRAINT DF_UserCellMasteries_State DEFAULT 'untested'
-    CONSTRAINT CK_UserCellMasteries_State
-    CHECK (State IN ('untested','learning','reviewing','mastered')),
-
-  WeightedCorrect      FLOAT NOT NULL CONSTRAINT DF_UserCellMasteries_WC DEFAULT 0
-    CONSTRAINT CK_UserCellMasteries_WeightedCorrect CHECK (WeightedCorrect >= 0),
-  WeightedObservations FLOAT NOT NULL CONSTRAINT DF_UserCellMasteries_WN DEFAULT 0
-    CONSTRAINT CK_UserCellMasteries_WeightedObservations CHECK (WeightedObservations >= 0),
-  -- The unweighted count, because PLC-68's n_min is a COUNT and a weighted sum is not one. Four answers
-  -- must not be able to look like twelve.
-  ObservationCount     INT NOT NULL CONSTRAINT DF_UserCellMasteries_N DEFAULT 0
-    CONSTRAINT CK_UserCellMasteries_ObservationCount CHECK (ObservationCount >= 0),
-
-  -- A correct answer resets this, which is the half a counter that only increments gets wrong:
-  -- wrong, correct, wrong is NOT a lapse.
-  ConsecutiveWrong     INT NOT NULL CONSTRAINT DF_UserCellMasteries_CW DEFAULT 0
-    CONSTRAINT CK_UserCellMasteries_ConsecutiveWrong CHECK (ConsecutiveWrong >= 0),
-
-  -- A wrong answer while mastered sets now + 24 h; a correct answer spaces by state.
-  NextReviewDueAt      DATETIMEOFFSET NULL,
-  -- The datum the 28-day inactivity clock reads, and the boundary a mock section must postdate to save
-  -- the cell from decay.
-  LastPractisedAt      DATETIMEOFFSET NULL,
-  -- Set when mastered is entered and never cleared by a lapse: "earned once" is a fact about the
-  -- learner, and PLC-71's reversion is not a claim it never happened.
-  MasteredAt           DATETIMEOFFSET NULL,
-
-  UpdatedAt            DATETIMEOFFSET NOT NULL CONSTRAINT DF_UserCellMasteries_Updated DEFAULT SYSDATETIMEOFFSET(),
-
-  -- #191 / ADR-0012. Nullable for the same reason the other covered tables are: the trigger, not the
-  -- column, is what refuses a write that declares nothing.
-  WrittenByService     VARCHAR(64) NULL,
-  ProjectionVersion    INT NOT NULL CONSTRAINT DF_UserCellMasteries_ProjectionVersion DEFAULT 0,
-
-  CONSTRAINT PK_UserCellMasteries PRIMARY KEY (UserId, TopicId, CefrLevel),
-
-  CONSTRAINT FK_UserCellMasteries_User FOREIGN KEY (UserId) REFERENCES Users(UserId),
-  -- Unmeasured is the absence of evidence, so an untested cell has no counts to carry.
-  CONSTRAINT CK_UserCellMasteries_StateHasEvidence CHECK (
-       (State <> 'untested')
-    OR (ObservationCount = 0 AND WeightedObservations = 0)
-  ),
-  -- A correct answer can never be counted more than the answers that carried it.
-  CONSTRAINT CK_UserCellMasteries_CorrectLeObservations CHECK (WeightedCorrect <= WeightedObservations),
-  -- Mastered is a state reached, so it always has a date. One-way on purpose: a lapsed cell keeps the
-  -- date it earned, so the reverse implication would be false.
-  CONSTRAINT CK_UserCellMasteries_MasteredIsDated CHECK (State <> 'mastered' OR MasteredAt IS NOT NULL)
-);
-GO
-CREATE INDEX IX_UserCellMasteries_User_Due ON UserCellMasteries(UserId, NextReviewDueAt);
-GO
--- ADR-0012: one writer per derived fact. The owner is read from the registry, never written into the
--- trigger, because a second source for the name is a second answer to "who owns this".
---
--- The declaration must be IN THE STATEMENT. The trigger checks UPDATE(WrittenByService) as well as the
--- value, because a second writer that changes only State leaves the stored name reading
--- 'CapabilityWriter' and would pass a value-only check (PRN-01's inherited-name case).
-CREATE TRIGGER trg_UserCellMasteries_SingleWriter
-ON UserCellMasteries AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  DECLARE @owner VARCHAR(64) =
-    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'topic_capability');
-
-  DECLARE @touched TABLE (
-    UserId INT NOT NULL, TopicId INT NOT NULL, CefrLevel VARCHAR(10) NOT NULL, WasVersion INT NOT NULL,
-    PRIMARY KEY (UserId, TopicId, CefrLevel));
-  INSERT INTO @touched (UserId, TopicId, CefrLevel, WasVersion)
-    SELECT i.UserId, i.TopicId, i.CefrLevel, ISNULL(d.ProjectionVersion, 0)
-    FROM inserted i
-    LEFT JOIN deleted d
-      ON d.UserId = i.UserId AND d.TopicId = i.TopicId AND d.CefrLevel = i.CefrLevel
-    WHERE d.UserId IS NULL
-       OR i.State <> d.State
-       OR i.WeightedCorrect <> d.WeightedCorrect
-       OR i.WeightedObservations <> d.WeightedObservations
-       OR i.ObservationCount <> d.ObservationCount
-       OR i.ConsecutiveWrong <> d.ConsecutiveWrong
-       OR i.MasteredAt <> d.MasteredAt
-       OR i.ProjectionVersion <> d.ProjectionVersion;
-
-  IF NOT EXISTS (SELECT 1 FROM @touched)
-    RETURN;
-
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN @touched t
-      ON t.UserId = i.UserId AND t.TopicId = i.TopicId AND t.CefrLevel = i.CefrLevel
-    WHERE ISNULL(i.WrittenByService, '') <> @owner
-       OR (EXISTS (SELECT 1 FROM deleted d
-                   WHERE d.UserId = i.UserId AND d.TopicId = i.TopicId AND d.CefrLevel = i.CefrLevel)
-           AND NOT UPDATE(WrittenByService))
-  )
-    THROW 50112, 'The per-cell mastery has exactly one writer, CapabilityWriter. A write declaring another writer (or none) is refused.', 1;
-
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN @touched t
-      ON t.UserId = i.UserId AND t.TopicId = i.TopicId AND t.CefrLevel = i.CefrLevel
-    WHERE i.ProjectionVersion <= t.WasVersion
-  )
-    THROW 50113, 'The per-cell mastery projection version must be newer than the stored one; an older callback cannot overwrite a newer state.', 1;
-END;
-GO
--- PLC-68 + PLC-70 + PLC-71, as a transition table. A setter that accepts any state passes every
--- service-level transition test, so the reachable set is pinned here:
---
---   (no row)/untested -> untested    a row created before its first answer
---   (no row)          -> learning    a row created BY its first answer
---   untested          -> learning    the first answer on a row that already existed
---   learning          -> learning | reviewing | mastered
---   reviewing         -> reviewing | learning | mastered
---   mastered          -> mastered    an answer that does not lapse, or a maintenance pass
---   mastered          -> reviewing   the lapse (two wrong in a row) or the inactivity decay
---
--- Nothing reaches mastered directly from untested or from a new row, and nothing ever returns to
--- untested: evidence cannot be unobserved.
-CREATE TRIGGER trg_UserCellMasteries_StateIsEarned
-ON UserCellMasteries AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  DECLARE @msg NVARCHAR(2048);
-
-  DECLARE @moved TABLE (
-    UserId INT NOT NULL, TopicId INT NOT NULL, CefrLevel VARCHAR(10) NOT NULL,
-    FromState VARCHAR(12) NULL, ToState VARCHAR(12) NOT NULL,
-    Probability FLOAT NOT NULL, ObservationCount INT NOT NULL, MinimumObservations INT NOT NULL,
-    PRIMARY KEY (UserId, TopicId, CefrLevel));
-
-  -- The probability MUST be the same expression the service uses, or this trigger and the writer
-  -- disagree about one row. MasteryEstimate normalises the recency weights to the observation count
-  -- (k = n / SUM(w)), and so does this - see MasteryEstimate for why the un-normalised form cannot
-  -- reach 0.80 and would make n_min unreachable.
-  INSERT INTO @moved (UserId, TopicId, CefrLevel, FromState, ToState, Probability, ObservationCount,
-                      MinimumObservations)
-    SELECT i.UserId, i.TopicId, i.CefrLevel, d.State, i.State,
-           (2.0 + ((CASE WHEN i.WeightedObservations > 0
-                         THEN i.ObservationCount / i.WeightedObservations
-                         ELSE 0 END) * i.WeightedCorrect))
-             / (4.0 + i.ObservationCount),
-           i.ObservationCount,
-           CASE WHEN t.Modality IN ('speaking','writing') THEN 3 ELSE 12 END
-    FROM inserted i
-    JOIN Topics t ON t.TopicId = i.TopicId
-    LEFT JOIN deleted d
-      ON d.UserId = i.UserId AND d.TopicId = i.TopicId AND d.CefrLevel = i.CefrLevel
-    WHERE d.State IS NULL OR i.State <> d.State;
-
-  IF NOT EXISTS (SELECT 1 FROM @moved)
-    RETURN;
-
-  -- 1. the transition itself is one the specification names
-  IF EXISTS (
-    SELECT 1 FROM @moved m
-    WHERE NOT EXISTS (
-      SELECT 1 FROM (VALUES
-        (NULL,        'untested'),
-        (NULL,        'learning'),
-        ('untested',  'untested'),
-        ('untested',  'learning'),
-        ('learning',  'learning'),
-        ('learning',  'reviewing'),
-        ('learning',  'mastered'),
-        ('reviewing', 'reviewing'),
-        ('reviewing', 'learning'),
-        ('reviewing', 'mastered'),
-        ('mastered',  'mastered'),
-        ('mastered',  'reviewing')
-      ) AS allowed(FromState, ToState)
-      WHERE ISNULL(allowed.FromState, '') = ISNULL(m.FromState, '')
-        AND allowed.ToState = m.ToState
-    )
-  )
-  BEGIN
-    SET @msg = N'PLC-68/70/71: that mastery transition is not one the specification names. Named: ' +
-               N'(new|untested)->untested, untested->learning, learning->{learning,reviewing,mastered}, ' +
-               N'reviewing->{reviewing,learning,mastered}, mastered->{mastered,reviewing}. ' +
-               N'Nothing returns to untested, and nothing reaches mastered from untested.';
-    THROW 50114, @msg, 0;
-  END
-
-  -- 2. ENTERING mastered needs the probability AND the observation minimum (PLC-68). Held mastery is
-  --    deliberately exempt: PLC-70 says a single wrong answer does not drag a mastered topic back, so
-  --    the estimate may sit below 0.80 while the state is still mastered. The guard is on the
-  --    transition, not on every row.
-  IF EXISTS (
-    SELECT 1 FROM @moved m
-    WHERE m.ToState = 'mastered'
-      AND (m.FromState IS NULL OR m.FromState <> 'mastered')
-      AND (m.Probability < 0.80 OR m.ObservationCount < m.MinimumObservations)
-  )
-    THROW 50115, 'PLC-68: a cell cannot be declared mastered without p_m >= 0.80 and the observation minimum (12 objective items or 3 tasks). Four answers cannot pronounce a topic learned.', 1;
-
-  -- 3. ENTERING reviewing from below needs the estimate (PLC-68): the band between the cuts is earned
-  --    by p_m, not asserted. Arriving from mastered is exempt - that is the lapse and the decay.
-  IF EXISTS (
-    SELECT 1 FROM @moved m
-    WHERE m.ToState = 'reviewing'
-      AND ISNULL(m.FromState, 'untested') IN ('untested','learning')
-      AND m.Probability < 0.733
-  )
-    THROW 50116, 'PLC-68: a cell enters reviewing only when p_m >= 0.733; below that it is low.', 1;
-END;
-GO
 CREATE TABLE Items (
   ItemId           INT IDENTITY(1,1) PRIMARY KEY,
   -- NULL is "authored before its stimulus is attached". Every one of the fourteen types in D0.4 has a
@@ -1081,6 +444,8 @@ CREATE TABLE Items (
       ('draft','validated','active','quarantined','retired','retired_defective')),
   -- CNT-03: the upload batch this item arrived in. NULL for hand-authored items.
   BatchTag         NVARCHAR(60) NULL,
+  -- #309: comma-separated target band codes (e.g. 'A2,B1,B2') or 'ALL' for general knowledge.
+  TargetBands      VARCHAR(100) NOT NULL CONSTRAINT DF_Items_TargetBands DEFAULT 'ALL',
   CreatedAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   -- the item's skill must be its topic's skill: a listening item on a reading topic is the defect
   CONSTRAINT FK_Items_TopicModality FOREIGN KEY (TopicId, Modality) REFERENCES Topics(TopicId, Modality),
@@ -1136,34 +501,7 @@ GO
 -- A write that leaves the state where it was is not a transition, so CNT-46's bulk demo
 -- decommission (one UPDATE over many rows, re-runnable) is accepted. Every row of a multi-row
 -- update is judged, not the first: a trigger reading one row would part-apply a mixed batch.
-CREATE TRIGGER trg_Items_LifecycleTransitions
-ON Items AFTER UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN deleted d ON d.ItemId = i.ItemId
-    WHERE i.LifecycleStatus <> d.LifecycleStatus
-      AND NOT EXISTS (
-        SELECT 1 FROM (VALUES
-          ('draft',       'validated'),
-          ('draft',       'retired'),
-          ('validated',   'active'),
-          ('validated',   'quarantined'),
-          ('validated',   'retired'),
-          ('active',      'quarantined'),
-          ('active',      'retired'),
-          ('quarantined', 'active'),
-          ('quarantined', 'retired'),
-          ('quarantined', 'retired_defective')
-        ) AS allowed(FromState, ToState)
-        WHERE allowed.FromState = d.LifecycleStatus AND allowed.ToState = i.LifecycleStatus
-      )
-  )
-    THROW 50060, 'CNT-42: that item lifecycle transition is not one the specification names. Named: draft->validated, draft->retired, validated->active, validated->quarantined, validated->retired, active->quarantined, active->retired, quarantined->active, quarantined->retired, quarantined->retired_defective. retired and retired_defective are terminal.', 1;
-END;
-GO
+-- #309: trg_Items_LifecycleTransitions removed (Expand phase).
 -- Everything that can be scored. Copy-on-write (CNT-43): a new row per change, so an attempt that
 -- pinned version 3 renders version 3 forever. Only a cosmetic explanation fix may be edited in place,
 -- and trg_ItemVersions_ScoredFieldsImmutable is what refuses the rest - a convention in a service
@@ -1536,7 +874,6 @@ CREATE TABLE ImportLog (
   LoggedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
 );
 GO
-
 -- UI-36 / UI-38: a speaking_practice exam holds speaking sections only, a writing_practice exam
 -- writing sections only (a one-skill result never mixes skills).
 --
@@ -1641,19 +978,7 @@ GO
 --   in_progress -> finished   (the last question was answered, or the lesson micro-check closed)
 --   in_progress -> abandoned  (a later session superseded it, or the path moved on)
 -- and both are terminal. There is no writer that reopens one, so this refuses none of them.
-CREATE TRIGGER trg_PracticeSessions_StatusTransitions
-ON PracticeSessions AFTER UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN deleted d ON d.SessionId = i.SessionId
-    WHERE d.Status IN ('finished','abandoned') AND i.Status <> d.Status
-  )
-    THROW 50090, 'PracticeSessions.Status is terminal: a finished or abandoned session cannot change state.', 1;
-END;
-GO
+-- #309: trg_PracticeSessions_StatusTransitions removed (Expand phase).
 CREATE TABLE PracticeAnswers (
   AnswerId         INT IDENTITY(1,1) PRIMARY KEY,
   SessionId        INT NOT NULL REFERENCES PracticeSessions(SessionId),
@@ -1728,7 +1053,6 @@ GO
 -- The bank lists and counts a learner's links per certificate.
 CREATE INDEX IX_SavedQuestions_User_Cert ON SavedQuestions(UserId, CertId);
 GO
-
 -- #155: mastery is a fact about a Category, never about a single Question. Spaced repetition over
 -- one question teaches that question's answer, not the grammar behind it, so one row per
 -- (learner, category) is the unit the scheduler moves through the four states.
@@ -1769,7 +1093,6 @@ GO
 -- The scheduler asks "which due-or-unseen categories belong to this certificate" on every start.
 CREATE INDEX IX_UCM_User_Due ON UserCategoryMasteries(UserId, CertId, NextReviewDueAt);
 GO
-
 -- ============ Domain 7: MockExam ============
 CREATE TABLE ExamAttempts (
   AttemptId       INT IDENTITY(1,1) PRIMARY KEY,
@@ -1811,8 +1134,6 @@ CREATE TABLE ExamAttempts (
   BandCode        VARCHAR(20) NULL,                 -- snapshot at grading
   -- #191 / D14: the writer identity and the ordering token. Both are required by the trigger below
   -- whenever TotalScore or BandCode is written; a sitting-state write declares neither.
-  WrittenByService VARCHAR(64) NULL,
-  ProjectionVersion INT NOT NULL CONSTRAINT DF_Attempts_ProjectionVersion DEFAULT 0,
   -- #246: which generation of the product this sitting was taken under. NULL means "written by the
   -- current code", which is every attempt created since the rebuild; a value means the row was
   -- PRESERVED across a cutover and is history rather than a sitting.
@@ -1909,127 +1230,6 @@ CREATE TABLE AttemptAnswers (
   -- Measured without it: an attempt on a TOEIC paper accepted an IELTS position.
   CONSTRAINT FK_AttemptAnswers_ExamItemExam FOREIGN KEY (ExamItemId, ExamId) REFERENCES ExamItems(ExamItemId, ExamId)
 );
-GO
--- ============ Domain 7b: #274 the sitting's own paper ============
--- A paper is served from the exam's shared roster (`ExamItems`), and that roster is per EXAM: one
--- position per (exam, section, position), enforced by UQ_ExamItems_Exam_Section_Order. A placement
--- sitting draws its own paper per learner, so it cannot be stored there - rewriting the roster per
--- learner would collide on that key and would put learner sittings in the admin catalogue.
---
--- These two tables are the attempt-scoped paper instead, and the roster is never mutated:
---   AttemptStageBundles  - WHY this sitting was served what it was (the stage one plan and the routed
---                          stage two pair, per skill). This is the derived fact ADR-0012 guards.
---   AttemptItemResponses - WHAT it was served, as roster positions in sitting order. An attempt's
---                          answers keep naming an ExamItemId, so nothing downstream changes.
---
--- CefrLevel codes, not a "B1_B2" string: the pair is two values, and a packed string would need
--- parsing at every reader - a second definition of the level scale #182 forbids.
-CREATE TABLE AttemptStageBundles (
-  AttemptId      INT NOT NULL,
-  -- H-5: carried down from the attempt, so the bundled skill must be the attempt's own certificate's.
-  -- Without it a bundle could name another certificate's skill - the isolation rule header 4 states.
-  CertId         INT NOT NULL,
-  SkillId        INT NOT NULL,
-  -- 1 = the fixed per-band draw every objective skill gets; 2 = the pair stage one routed to.
-  StageNumber    INT NOT NULL
-    CONSTRAINT CK_ASB_Stage CHECK (StageNumber IN (1, 2)),
-  BandLower      VARCHAR(10) NOT NULL
-    CONSTRAINT CK_ASB_BandLower CHECK (BandLower IN ('A1','A2','B1','B2','C1','C2')),
-  BandUpper      VARCHAR(10) NOT NULL
-    CONSTRAINT CK_ASB_BandUpper CHECK (BandUpper IN ('A1','A2','B1','B2','C1','C2')),
-  -- A pair is an interval, never a point and never inverted. Lexicographic order is the level order
-  -- for these codes ('A1'..'C2') because the ladder is one letter then one digit, which is why the
-  -- routing table's five rows (A1_A2 .. C1_C2) all sort correctly.
-  CONSTRAINT CK_ASB_BandOrder CHECK (BandLower < BandUpper),
-  -- #191 / D14: the writer identity and the ordering token, as every covered table carries them.
-  WrittenByService VARCHAR(64) NULL,
-  ProjectionVersion INT NOT NULL CONSTRAINT DF_ASB_ProjectionVersion DEFAULT 0,
-  CONSTRAINT PK_AttemptStageBundles PRIMARY KEY (AttemptId, SkillId, StageNumber),
-  CONSTRAINT FK_ASB_AttemptCert FOREIGN KEY (AttemptId, CertId) REFERENCES ExamAttempts(AttemptId, CertId),
-  CONSTRAINT FK_ASB_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId)
-);
-GO
--- The positions THIS attempt was served, in the order the learner meets them. `PositionNumber` is the
--- sitting order, which is what the navigator numbers and what a resume returns to; `ExamItemId` is the
--- roster position the answer still names (AttemptAnswers.ExamItemId), so locks, clustering, submission
--- and review read the paper exactly as they did.
-CREATE TABLE AttemptItemResponses (
-  AttemptId      INT NOT NULL,
-  -- H-5: carried down from the attempt so the served position must be of the attempt's own exam.
-  ExamId         INT NOT NULL,
-  PositionNumber INT NOT NULL
-    CONSTRAINT CK_AIR_Position CHECK (PositionNumber > 0),
-  ExamItemId     INT NOT NULL,
-  CONSTRAINT PK_AttemptItemResponses PRIMARY KEY (AttemptId, PositionNumber),
-  -- One position cannot appear twice on one sitting's paper: two rows would make the navigator count
-  -- the same cell twice and the answer column ambiguous.
-  CONSTRAINT UQ_AIR_Attempt_Item UNIQUE (AttemptId, ExamItemId),
-  CONSTRAINT FK_AIR_AttemptExam FOREIGN KEY (AttemptId, ExamId)
-    REFERENCES ExamAttempts(AttemptId, ExamId),
-  -- #269's idiom, reused: the position must belong to the attempt's OWN exam. Measured on
-  -- AttemptAnswers, where the same omission let a TOEIC attempt answer an IELTS position.
-  CONSTRAINT FK_AIR_ExamItemExam FOREIGN KEY (ExamItemId, ExamId)
-    REFERENCES ExamItems(ExamItemId, ExamId)
-);
-GO
--- #274 / D14: the paper a sitting was served has exactly one writer, AttemptEngine.
---
--- Every insert declares, because the whole row IS the fact ("this skill's stage was routed to this
--- band pair"). An update must re-declare AND move the version forward: a second draw landing after a
--- later one would otherwise restate what the learner was already sitting on.
---
--- The served POSITIONS (AttemptItemResponses) deliberately carry no writer column of their own. They
--- are the same fact, written in the same transaction by the same owner, and a second guard over them
--- would be a second mechanism on one fact - the duplication SRS D-09 refuses for the credit ledger.
-CREATE TRIGGER trg_AttemptStageBundles_SingleWriter
-ON AttemptStageBundles AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  DECLARE @owner VARCHAR(64) =
-    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'attempt_paper');
-
-  DECLARE @touched TABLE (AttemptId INT NOT NULL, SkillId INT NOT NULL, StageNumber INT NOT NULL,
-                          WasVersion INT NOT NULL,
-                          PRIMARY KEY (AttemptId, SkillId, StageNumber));
-  INSERT INTO @touched (AttemptId, SkillId, StageNumber, WasVersion)
-    SELECT i.AttemptId, i.SkillId, i.StageNumber, ISNULL(d.ProjectionVersion, 0)
-    FROM inserted i
-    LEFT JOIN deleted d
-      ON d.AttemptId = i.AttemptId AND d.SkillId = i.SkillId AND d.StageNumber = i.StageNumber
-    WHERE d.SkillId IS NULL
-       OR ISNULL(i.BandLower, '') <> ISNULL(d.BandLower, '')
-       OR ISNULL(i.BandUpper, '') <> ISNULL(d.BandUpper, '')
-       OR i.ProjectionVersion <> d.ProjectionVersion;
-
-  IF NOT EXISTS (SELECT 1 FROM @touched)
-    RETURN;
-
-  -- The declaration must be IN THIS STATEMENT. A column already holding the owner's name vouches for
-  -- nobody: a second writer that changes only BandUpper leaves that value untouched, so a value-only
-  -- check passes it. `UPDATE()` is the half that catches it.
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN @touched t
-      ON t.AttemptId = i.AttemptId AND t.SkillId = i.SkillId AND t.StageNumber = i.StageNumber
-    WHERE ISNULL(i.WrittenByService, '') <> @owner
-       OR (EXISTS (SELECT 1 FROM deleted d
-                   WHERE d.AttemptId = i.AttemptId AND d.SkillId = i.SkillId
-                     AND d.StageNumber = i.StageNumber)
-           AND NOT UPDATE(WrittenByService))
-  )
-    THROW 50117, 'The paper a sitting was served has exactly one writer, AttemptEngine. A write declaring another writer (or none) is refused.', 1;
-
-  -- Monotonic: a draw that lands after a later one must not restate the paper the learner is sitting.
-  -- `<=` is the point - an equal version is a replay, not progress.
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN @touched t
-      ON t.AttemptId = i.AttemptId AND t.SkillId = i.SkillId AND t.StageNumber = i.StageNumber
-    WHERE i.ProjectionVersion <= t.WasVersion
-  )
-    THROW 50118, 'The attempt paper projection version must be newer than the stored one; an older draw cannot overwrite a newer paper.', 1;
-END;
 GO
 -- CNT-43: no hard delete. An item that has left draft, or that any learner has answered, is retired
 -- instead; retirement removes it from future assembly and leaves every past attempt renderable.
@@ -2240,7 +1440,6 @@ BEGIN
     SELECT a.AttemptId
     FROM ExamAttempts a
     JOIN Certificates c ON c.CertId = a.CertId
-    LEFT JOIN ExamEditions e ON e.ExamId = a.ExamId
     CROSS APPLY (
       SELECT
         SUM(s.ScaledScore) AS SumScore,
@@ -2250,7 +1449,7 @@ BEGIN
     ) scores
     WHERE a.TotalScore IS NOT NULL
       AND a.AttemptId IN (SELECT AttemptId FROM inserted UNION SELECT AttemptId FROM deleted)
-      AND a.TotalScore <> CASE COALESCE(e.ScoreAggregationRule, c.ScoreAggregationRule)
+      AND a.TotalScore <> CASE c.ScoreAggregationRule
         WHEN 'avg_half_step' THEN CONVERT(INT, FLOOR((COALESCE(scores.AverageScore, 0) + 2.5) / 5.0) * 5)
         WHEN 'avg_whole' THEN CONVERT(INT, ROUND(COALESCE(scores.AverageScore, 0), 0))
         ELSE COALESCE(scores.SumScore, 0)
@@ -2268,7 +1467,6 @@ BEGIN
     SELECT i.AttemptId
     FROM inserted i
     JOIN Certificates c ON c.CertId = i.CertId
-    LEFT JOIN ExamEditions e ON e.ExamId = i.ExamId
     CROSS APPLY (
       SELECT
         SUM(s.ScaledScore) AS SumScore,
@@ -2278,7 +1476,7 @@ BEGIN
     ) scores
     WHERE i.TotalScore IS NOT NULL
       AND EXISTS (SELECT 1 FROM AttemptSkillScores s WHERE s.AttemptId=i.AttemptId)
-      AND i.TotalScore <> CASE COALESCE(e.ScoreAggregationRule, c.ScoreAggregationRule)
+      AND i.TotalScore <> CASE c.ScoreAggregationRule
         WHEN 'avg_half_step' THEN CONVERT(INT, FLOOR((COALESCE(scores.AverageScore, 0) + 2.5) / 5.0) * 5)
         WHEN 'avg_whole' THEN CONVERT(INT, ROUND(COALESCE(scores.AverageScore, 0), 0))
         ELSE COALESCE(scores.SumScore, 0)
@@ -2352,53 +1550,7 @@ GO
 -- The predicate looks at what CHANGED, not at what the row now holds. An attempt that is already
 -- graded has a non-null TotalScore; checking "is it non-null" would make every later status write
 -- look like a scoring write and refuse it.
-CREATE TRIGGER trg_Attempts_SingleWriter
-ON ExamAttempts AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  DECLARE @owner VARCHAR(64) =
-    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'attempt_score_and_band');
-
-  -- One list of "the rows in this write that move the derived fact", built once. Three separate
-  -- copies of this predicate is how one of them ends up subtly different from the others.
-  DECLARE @touched TABLE (AttemptId INT NOT NULL PRIMARY KEY, WasVersion INT NOT NULL);
-  INSERT INTO @touched (AttemptId, WasVersion)
-    SELECT i.AttemptId, ISNULL(d.ProjectionVersion, 0)
-    FROM inserted i
-    LEFT JOIN deleted d ON d.AttemptId = i.AttemptId
-    WHERE (d.AttemptId IS NULL
-             AND (i.TotalScore IS NOT NULL OR i.BandCode IS NOT NULL OR i.ProjectionVersion <> 0))
-       OR (d.AttemptId IS NOT NULL
-             AND (ISNULL(i.TotalScore, -2147483648) <> ISNULL(d.TotalScore, -2147483648)
-               OR ISNULL(i.BandCode, '') <> ISNULL(d.BandCode, '')
-               OR i.ProjectionVersion <> d.ProjectionVersion));
-
-  IF NOT EXISTS (SELECT 1 FROM @touched)
-    RETURN;
-
-  -- The declaration must be IN THIS STATEMENT, not inherited from whatever wrote the row last. A
-  -- column that already holds the owner's name vouches for nobody: a second writer that changes only
-  -- TotalScore leaves that value untouched, so a value-only check would pass it. `UPDATE()` is the
-  -- statement-level "this write assigned the column" test, which is exactly the missing half.
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN @touched t ON t.AttemptId = i.AttemptId
-    WHERE ISNULL(i.WrittenByService, '') <> @owner
-       OR (EXISTS (SELECT 1 FROM deleted d WHERE d.AttemptId = i.AttemptId) AND NOT UPDATE(WrittenByService))
-  )
-    THROW 50070, 'The attempt score and band has exactly one writer, AttemptEngine. A write declaring another writer (or none) is refused.', 1;
-
-  -- Monotonic: an older out-of-order callback must not overwrite a newer result. `<=` is the point -
-  -- an equal version is a replay, not progress, and a lower one is a callback that arrived late.
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN @touched t ON t.AttemptId = i.AttemptId
-    WHERE i.ProjectionVersion <= t.WasVersion
-  )
-    THROW 50071, 'The attempt score and band projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
-END;
-GO
+-- #309: trg_Attempts_SingleWriter removed (Expand phase).
 
 -- ============ Domain 8: AI Grading ============
 CREATE TABLE GradingCriteria (
@@ -2434,270 +1586,6 @@ CREATE TABLE SectionCriteria (
   CONSTRAINT FK_SectionCriteria_CriterionSkill FOREIGN KEY (CriterionId, SkillId) REFERENCES GradingCriteria(CriterionId, SkillId)
 );
 GO
--- #192: the rubric's shape is four criteria per productive skill, seven bands each, and a descriptor
--- at every band that states an observable threshold. The grid is a table rather than one long column
--- so "a descriptor at every band" is countable, and so a missing band is a missing row that the lock
--- can refuse - a paragraph with seven numbered lines cannot be checked for a hole in the middle.
---
--- What the CHECKs below can prove is that a cell holds text and that the band number is in range.
--- They cannot prove the text states a threshold: "Band 4: writes clearly" passes every check here
--- and still grades nothing. That is the calibration ladder's job (#193); no constraint can read.
-CREATE TABLE GradingCriterionDescriptors (
-  CriterionId INT NOT NULL,
-  -- the integer IS the CEFR band: 0 = Pre-A1/non-scorable, 1 = A1 ... 6 = C2 (D0.6)
-  Band        TINYINT NOT NULL CONSTRAINT CK_GCD_Band CHECK (Band BETWEEN 0 AND 6),
-  -- WHEREFORE the band looks like this, in observable terms - wpm, pause length, error-free T-unit
-  -- share, subordination variety, repetition. Not adjectives (D0.6).
-  Descriptor  NVARCHAR(MAX) NOT NULL CONSTRAINT CK_GCD_Descriptor CHECK (LEN(LTRIM(RTRIM(Descriptor))) > 0),
-  -- WHAT must be true before the band is reached at all. Every band transition is a set of binary
-  -- gate conditions, not a scalar impression (D0.6 mechanism 1).
-  BinaryGates NVARCHAR(MAX) NOT NULL CONSTRAINT CK_GCD_BinaryGates CHECK (LEN(LTRIM(RTRIM(BinaryGates))) > 0),
-  CONSTRAINT PK_GradingCriterionDescriptors PRIMARY KEY (CriterionId, Band),
-  CONSTRAINT FK_GCD_Criterion FOREIGN KEY (CriterionId) REFERENCES GradingCriteria(CriterionId)
-);
-GO
--- #192: a rubric is locked once it is calibrated, and a locked rubric is what a grading call is
--- allowed to score against. The row's existence IS the lock; there is no IsLocked flag to forget to
--- flip, and no third state to reason about.
---
--- The canonical four criteria, per D0.6 and CNT-29. Keyed by modality, not by skill code, because a
--- certificate names its skills freely (SPEA, WRIT, SPK, LIST...) and the rubric belongs to the skill's
--- modality. That is what reconciles "one canonical four" with certificate-scoped Skills: the FK keeps
--- each criterion inside its own certificate, and the lock compares that certificate's own four codes
--- against the set its modality prescribes. No certificate can borrow another's criteria.
---
--- #208: the ladder's verdict travels on the lock row, because "this rubric was calibrated" is a fact
--- about this lock and nothing else - the lock is one row per skill, so three columns are the whole
--- relationship and a second table would be a join to fetch one word.
---
--- Why the verdict is STORED rather than checked in the trigger: the ladder grades seven responses
--- through a model, and a trigger cannot call one. What the trigger can do is refuse to believe a claim
--- nobody made - `LadderOutcome IS NULL` is "the ladder did not run", which is exactly the state a
--- rubric with all 28 cells was in before this ticket.
---
--- The four outcome codes are the ladder's own outcomes (Services.RubricCalibrationOutcome), not a
--- second vocabulary: 'accepted', 'not_monotonic', 'separation', 'trap_ceiling', 'not_plotted'.
-CREATE TABLE GradingRubricLocks (
-  SkillId     INT NOT NULL,
-  CertId      INT NOT NULL,
-  LockedAt    DATETIMEOFFSET NOT NULL CONSTRAINT DF_GradingRubricLocks_LockedAt DEFAULT SYSDATETIMEOFFSET(),
-  -- NULL = not run. Never a pass: the trigger below refuses it by name.
-  LadderOutcome VARCHAR(20) NULL
-    CONSTRAINT CK_GRL_LadderOutcome CHECK (LadderOutcome IS NULL OR LadderOutcome IN
-      ('accepted','not_monotonic','separation','trap_ceiling','not_plotted')),
-  -- The runner's own sentence, which names the criterion a flat segment stalled on. Stored rather
-  -- than rebuilt so the trigger cannot invent a different diagnosis from the one the author saw.
-  LadderReason  NVARCHAR(400) NULL,
-  LadderRunAt   DATETIMEOFFSET NULL,
-  -- A verdict and the moment it was reached travel together or not at all.
-  CONSTRAINT CK_GRL_LadderRunIsDated
-    CHECK ((LadderOutcome IS NULL AND LadderRunAt IS NULL) OR (LadderOutcome IS NOT NULL AND LadderRunAt IS NOT NULL)),
-  CONSTRAINT PK_GradingRubricLocks PRIMARY KEY (SkillId),
-  CONSTRAINT FK_GradingRubricLocks_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId)
-);
-GO
--- A locked rubric must be exactly the canonical four criteria, all present, all at bands 0..6, and
--- every one of them carrying seven non-blank descriptors with gates. An AFTER INSERT trigger with no
--- WHEN clause is the only shape that can check a set - a row trigger on the criteria table could
--- never see the sixth row arriving, because a row cannot know about its siblings.
-CREATE TRIGGER trg_GradingRubricLocks_CompleteCanonicalRubric
-ON GradingRubricLocks AFTER INSERT AS
-BEGIN
-  SET NOCOUNT ON;
-  -- the codes each modality's rubric is made of. A skill whose modality is not productive
-  -- (listening, reading) has no analytic rubric at all, so it has no canonical set and cannot lock.
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN Skills s ON s.SkillId = i.SkillId
-    WHERE s.Modality NOT IN ('speaking','writing')
-  )
-    THROW 50044, 'Only a speaking or writing rubric can be locked; an objective skill is scored by its key, not by descriptors.', 1;
-
-  -- exactly four criteria, and the SET of their codes is exactly the canonical four for this
-  -- modality. Both directions are checked: a rubric with four rows named PRON, INT, GRAM, REL is the
-  -- legacy TOEIC rubric and passes the count alone, so a count is not the rule.
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN Skills s ON s.SkillId = i.SkillId
-    WHERE (SELECT COUNT(*) FROM GradingCriteria c WHERE c.SkillId = i.SkillId) <> 4
-       OR EXISTS (
-            SELECT c.Code FROM GradingCriteria c WHERE c.SkillId = i.SkillId
-            EXCEPT
-            SELECT e.Code FROM (VALUES
-              ('speaking','S_FC'),('speaking','S_PR'),('speaking','S_LR'),('speaking','S_GR'),
-              ('writing','W_TR'),('writing','W_CC'),('writing','W_LR'),('writing','W_GR')
-            ) AS e(Modality, Code) WHERE e.Modality = s.Modality)
-       OR EXISTS (
-            SELECT e.Code FROM (VALUES
-              ('speaking','S_FC'),('speaking','S_PR'),('speaking','S_LR'),('speaking','S_GR'),
-              ('writing','W_TR'),('writing','W_CC'),('writing','W_LR'),('writing','W_GR')
-            ) AS e(Modality, Code) WHERE e.Modality = s.Modality
-            EXCEPT
-            SELECT c.Code FROM GradingCriteria c WHERE c.SkillId = i.SkillId)
-  )
-    THROW 50045, 'A locked rubric is exactly the canonical four criteria for its skill''s modality: S_FC, S_PR, S_LR, S_GR for speaking, W_TR, W_CC, W_LR, W_GR for writing.', 1;
-
-  -- 28 cells, and every one of them carries text. The count is per criterion so the message can name
-  -- the criterion and the bands it is missing, which is the difference between a refusal an author
-  -- can act on and one they cannot.
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN GradingCriteria c ON c.SkillId = i.SkillId
-    WHERE (SELECT COUNT(*) FROM GradingCriterionDescriptors d WHERE d.CriterionId = c.CriterionId) <> 7
-       OR EXISTS (
-            SELECT b.Band FROM (VALUES (0),(1),(2),(3),(4),(5),(6)) AS b(Band)
-            EXCEPT
-            SELECT d.Band FROM GradingCriterionDescriptors d WHERE d.CriterionId = c.CriterionId)
-  )
-  BEGIN
-    DECLARE @code VARCHAR(20), @missing NVARCHAR(100);
-    SELECT TOP 1
-           @code = c.Code,
-           @missing = ISNULL((
-             SELECT STRING_AGG(CAST(b.Band AS NVARCHAR(2)), N',')
-               FROM (VALUES (0),(1),(2),(3),(4),(5),(6)) AS b(Band)
-              WHERE NOT EXISTS (SELECT 1 FROM GradingCriterionDescriptors d
-                                 WHERE d.CriterionId = c.CriterionId AND d.Band = b.Band)), N'none')
-      FROM inserted i
-      JOIN GradingCriteria c ON c.SkillId = i.SkillId
-     WHERE (SELECT COUNT(*) FROM GradingCriterionDescriptors d WHERE d.CriterionId = c.CriterionId) <> 7
-        OR EXISTS (
-             SELECT b.Band FROM (VALUES (0),(1),(2),(3),(4),(5),(6)) AS b(Band)
-             EXCEPT
-             SELECT d.Band FROM GradingCriterionDescriptors d WHERE d.CriterionId = c.CriterionId)
-     ORDER BY c.DisplayOrder;
-    DECLARE @msg NVARCHAR(400) = N'A rubric cannot be locked while criterion ' + @code
-      + N' is missing a descriptor. Missing bands (0-6): ' + @missing + N'.';
-    THROW 50046, @msg, 1;
-  END
-
-  -- #208: the 28 cells are the rubric's SHAPE; the ladder is the proof that the cells describe
-  -- something that separates. Before this clause a complete grid could lock while the ladder had
-  -- never run - `LadderNotPlotted` exists precisely to name that state, and it was the state of
-  -- every lock in the schema. A lock claims the rubric is calibrated, so the claim has to carry its
-  -- evidence.
-  --
-  -- FOUR messages, not one: the three failures are three different rewrites (move a band's
-  -- descriptors, widen them, cap the length-rewarding criterion) and "the rubric was not calibrated"
-  -- sends the author nowhere. The sentence is the runner's own, so the criterion it names is the one
-  -- the author will see again when they re-run.
-  IF EXISTS (SELECT 1 FROM inserted i
-              WHERE i.LadderOutcome IS NULL OR i.LadderOutcome <> 'accepted')
-  BEGIN
-    DECLARE @outcome VARCHAR(20) = (SELECT TOP 1 LadderOutcome FROM inserted
-                                     WHERE LadderOutcome IS NULL OR LadderOutcome <> 'accepted');
-    DECLARE @reason NVARCHAR(400) = (SELECT TOP 1 LadderReason FROM inserted
-                                      WHERE LadderOutcome IS NULL OR LadderOutcome <> 'accepted');
-
-    IF @outcome IS NULL OR @outcome = 'not_plotted'
-      THROW 50091, N'A rubric cannot be locked until its seven-response ladder has been run and passed. The ladder was not plotted: no verdict is recorded for this lock, and a rubric nobody calibrated is a cell grid with no evidence that its bands separate.', 1;
-
-    IF @outcome = 'not_monotonic'
-      THROW 50092, N'A rubric cannot be locked: the ladder is not strictly monotonic, so a higher band scored no better than the one below it (gate4.ladder.monotonic). The runner named the criterion that stalled; rewrite that criterion''s descriptors between the two bands it names.', 1;
-
-    IF @outcome = 'separation'
-      THROW 50093, N'A rubric cannot be locked: adjacent bands are closer than the ladder''s minimum separation (gate4.ladder.separation). The runner named the criterion that moved least across the step; widen that criterion''s descriptors before locking.', 1;
-
-    IF @outcome = 'trap_ceiling'
-      THROW 50094, N'A rubric cannot be locked: the verbose trap scored above the ladder''s ceiling (gate4.ladder.trap). The rubric rewards length. Cap the criterion the trap climbed on, or require evidence the padding does not contain, then re-run the ladder.', 1;
-  END
-END;
-GO
--- A descriptor belongs to a rubric that is still being written. Once the rubric is locked the grid is
--- frozen from every side: an UPDATE after a learner's work was scored would move the standard under a
--- mark that already exists, which is the defect the whole table is here to prevent.
-CREATE TRIGGER trg_GradingCriterionDescriptors_FrozenWhenLocked
-ON GradingCriterionDescriptors AFTER INSERT, UPDATE, DELETE AS
-BEGIN
-  SET NOCOUNT ON;
-  -- `deleted` is what makes the DELETE arm reachable: a guard written only against `inserted` would
-  -- be silent on removal, and removal is the quietest way to shrink a band grid.
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN GradingCriteria c ON c.CriterionId = i.CriterionId
-    JOIN GradingRubricLocks l ON l.SkillId = c.SkillId
-  ) OR EXISTS (
-    SELECT 1 FROM deleted d
-    JOIN GradingCriteria c ON c.CriterionId = d.CriterionId
-    JOIN GradingRubricLocks l ON l.SkillId = c.SkillId
-  )
-    THROW 50047, 'This rubric is locked, so its descriptors cannot be changed. Unlock it first.', 1;
-END;
-GO
--- #193: the three calibrated benchmark responses at bands 2, 3 and 4 (D0.6 mechanism 5). They are a
--- table rather than three columns on GradingCriteria because "three anchors at 2, 3 and 4" is then a
--- count the lock can refuse, and because a fourth anchor is a row the PK refuses rather than a column
--- nobody reads.
---
--- The response text is a whole written answer, so it is NVARCHAR(MAX): a 280-word benchmark does not
--- fit anything shorter, and a truncated anchor is a different band from the one it was calibrated at.
-CREATE TABLE GradingCriterionAnchors (
-  CriterionId  INT NOT NULL,
-  -- Only the three calibrated bands carry an anchor. Band 0 has no benchmark worth writing and bands
-  -- 5-6 are the ladder's job, not a per-call prompt's.
-  Band         TINYINT NOT NULL CONSTRAINT CK_GCA_Band CHECK (Band IN (2, 3, 4)),
-  ResponseText NVARCHAR(MAX) NOT NULL CONSTRAINT CK_GCA_ResponseText CHECK (LEN(LTRIM(RTRIM(ResponseText))) > 0),
-  CONSTRAINT PK_GradingCriterionAnchors PRIMARY KEY (CriterionId, Band),
-  CONSTRAINT FK_GCA_Criterion FOREIGN KEY (CriterionId) REFERENCES GradingCriteria(CriterionId)
-);
-GO
--- An anchor is part of the standard, so a locked rubric's anchors are frozen from every side, for the
--- same reason its descriptors are: editing one after a learner was scored moves the benchmark the mark
--- was measured against. Authoring happens before the lock, which is the only window there is.
-CREATE TRIGGER trg_GradingCriterionAnchors_FrozenWhenLocked
-ON GradingCriterionAnchors AFTER INSERT, UPDATE, DELETE AS
-BEGIN
-  SET NOCOUNT ON;
-  -- The DELETE arm needs `deleted`: a guard against `inserted` alone is silent on removal, and removing
-  -- one anchor is the quietest way to leave a rubric with two.
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN GradingCriteria c ON c.CriterionId = i.CriterionId
-    JOIN GradingRubricLocks l ON l.SkillId = c.SkillId
-  ) OR EXISTS (
-    SELECT 1 FROM deleted d
-    JOIN GradingCriteria c ON c.CriterionId = d.CriterionId
-    JOIN GradingRubricLocks l ON l.SkillId = c.SkillId
-  )
-    THROW 50065, 'This rubric is locked, so its anchor responses cannot be changed. Author them before the lock.', 1;
-END;
-GO
--- A locked rubric's criterion list is frozen too, and for the same reason: adding a fifth criterion,
--- renaming one, or removing one changes which standard a stored score was measured against.
-CREATE TRIGGER trg_GradingCriteria_FrozenWhenLocked
-ON GradingCriteria AFTER INSERT, UPDATE, DELETE AS
-BEGIN
-  SET NOCOUNT ON;
-  -- On INSERT the lock already exists for a *different* criterion set; the rubric trigger above is
-  -- the one that refuses the fifth at lock time. Here the three statement kinds are all covered so a
-  -- locked rubric cannot grow (insert), be renamed (update) or shrink (delete) afterwards.
-  IF EXISTS (
-    SELECT 1 FROM inserted i JOIN GradingRubricLocks l ON l.SkillId = i.SkillId
-  ) OR EXISTS (
-    SELECT 1 FROM deleted d JOIN GradingRubricLocks l ON l.SkillId = d.SkillId
-  )
-    THROW 50063, 'This rubric is locked, so its criteria cannot be added, renamed or removed.', 1;
-END;
-GO
--- A rubric that has already scored something never unlocks: its scores were measured against those
--- descriptors, and a later edit would reinterpret them. A rubric that has graded nothing may be
--- unlocked, because nothing was measured yet.
-CREATE TRIGGER trg_GradingRubricLocks_IrreversibleOnceGraded
-ON GradingRubricLocks AFTER DELETE AS
-BEGIN
-  SET NOCOUNT ON;
-  IF EXISTS (
-    SELECT 1
-    FROM deleted d
-    JOIN GradingCriteria c ON c.SkillId = d.SkillId
-    JOIN AiGradingScores s ON s.CriterionId = c.CriterionId
-  )
-    THROW 50064, 'This rubric has already graded a response, so it cannot be unlocked. Author a new rubric instead.', 1;
-END;
-GO
 CREATE TABLE AiGradings (
   GradingId      INT IDENTITY(1,1) PRIMARY KEY,
   FreeResponseId INT NOT NULL REFERENCES FreeResponses(FreeResponseId),
@@ -2714,7 +1602,7 @@ CREATE TABLE AiGradings (
   -- E2.1 (#151): the feedback a learner can act on. An error span quotes the candidate's own text,
   -- so the page can show original -> corrected; all three stay NULL when the grader has nothing to
   -- fix, and a failed grading never carries any (Status = 'failed' means "not scored", not "bad").
-  PriorityFix    NVARCHAR(400) NULL,
+  PriorityFix    NVARCHAR(1000) NULL,
   ModelRewrite   NVARCHAR(MAX) NULL,
   ErrorSpansJson NVARCHAR(MAX) NULL,          -- <=5 {originalSnippet, correctedSnippet, category, explanationVi}
   AttemptCount   INT NOT NULL CONSTRAINT DF_AiGradings_AttemptCount DEFAULT 1
@@ -2933,7 +1821,8 @@ GO
 CREATE TABLE PlacementTests (
   PlacementId    INT IDENTITY(1,1) PRIMARY KEY,
   UserId         INT NOT NULL REFERENCES Users(UserId),
-  CertId         INT NOT NULL REFERENCES Certificates(CertId),
+  -- #309: NULL allows universal placement before certificate selection in OOBE Step 3.
+  CertId         INT NULL REFERENCES Certificates(CertId),
   ExamId         INT NULL,
   Status         VARCHAR(12) NOT NULL DEFAULT 'in_progress'
     CONSTRAINT CK_Placement_Status CHECK (Status IN ('in_progress','done','abandoned')),
@@ -2947,8 +1836,6 @@ CREATE TABLE PlacementTests (
   TakenAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   -- #191 / D14: required by trg_PlacementTests_SingleWriter on any write of the snapshot. An
   -- in-progress placement derives nothing yet and declares neither.
-  WrittenByService VARCHAR(64) NULL,
-  ProjectionVersion INT NOT NULL CONSTRAINT DF_Placement_ProjectionVersion DEFAULT 0,
   -- UI-46, replaced in #212: a finished placement names its result band and its total **where it has
   -- one**. `done â‡’ band AND total` was the constraint that turned the confirmed defect
   -- (docs/research/placement-free-response-defect.md) into a live crash: a placement carrying a free
@@ -2972,6 +1859,12 @@ CREATE TABLE PlacementTests (
   -- #289: learner's chosen scope ('all_skills' or 'listening_and_reading') and optional retake charge/idempotence links.
   Scope VARCHAR(24) NOT NULL CONSTRAINT DF_Placement_Scope DEFAULT 'all_skills'
     CONSTRAINT CK_Placement_Scope CHECK (Scope IN ('all_skills','listening_and_reading')),
+  -- #309: normalized per-skill and overall diagnostic percentages for universal placement band mapping.
+  ListeningPct     DECIMAL(5,2) NULL,
+  ReadingPct       DECIMAL(5,2) NULL,
+  SpeakingPct      DECIMAL(5,2) NULL,
+  WritingPct       DECIMAL(5,2) NULL,
+  OverallPct       DECIMAL(5,2) NULL,
   CreditTxnId INT NULL,
   IdempotencyKey VARCHAR(64) NULL,
   -- M-2: the placement exam must belong to the same certificate (NULL stays legal, MATCH SIMPLE)
@@ -2989,261 +1882,6 @@ CREATE TABLE PlacementTests (
   -- certificate's skill cannot be recorded under another's (the isolation rule carried down every table).
   CONSTRAINT UQ_PlacementTests_Id_Cert UNIQUE (PlacementId, CertId)
 );
-GO
--- ============ Domain 9a: the per-skill placement result (#212) ============
--- One row per skill per placement, and the row is the derived fact: the level, the position inside it,
--- the continuous coordinate they were read from, the certificate projection computed from that
--- coordinate, and â€” the part that is new â€” WHICH of five outcomes this skill actually had.
---
--- **Why a status and not a nullable level.** Before #212 a null CefrLevel meant three different things
--- at once: the learner skipped this skill, the sitting timed out before it, and its free response is
--- still in the AI queue. No screen can tell those apart from a null, and the one that tried said
--- "not measured" to a learner whose writing was simply still being graded. Each of the five outcomes
--- now has its own status, and the CHECK below ties the measurement columns to it, so "measured with no
--- level" and "grading with a level" are both unstorable rather than merely unhandled.
---
--- **The cut-score version is STORED, and that is the point.** #222 had to resolve a version at read
--- time because ExamAttempts carries none, and recorded that as a reproducibility risk. A recorded
--- projection must name the table it was computed from (LVL-13), so ProjectedScore without
--- CutScoreTableVersion is refused here: a row that says "version 3" and a number computed from version
--- 4 is the defect this column exists to prevent.
---
--- **WrittenByService / ProjectionVersion: registered as its own fact.** It could arguably be "part of
--- placement_result", but CoveredTable names exactly one table, so folding it in would leave this table
--- guarded by nothing while the registry claimed coverage of the placement snapshot. It is registered
--- as `placement_skill_result`, owned by AttemptEngine, with the same trigger idiom.
---
--- Deliberately absent: an overall (MIN over the measured rows, computed at read - a stored one is a
--- second writer, D15) and IsPartialResult (derived from the rows). A column that restates what the
--- rows say is a second copy that can disagree with them.
-CREATE TABLE PlacementSkillResults (
-  PlacementId          INT NOT NULL,
-  SkillId              INT NOT NULL,
-  -- Carried down from the placement so the skill must belong to that same certificate.
-  CertId               INT NOT NULL,
-  -- The five outcomes the SRS distinguishes on screen (PLC-19, PLC-33, PLC-35, LRN-55). `measured`
-  -- and `estimated_from_one_task` are the two that count as a measured skill for completion;
-  -- `exempt_accommodated` is deliberately NOT one (LRN-55 excludes it from the overall).
-  ResultStatus         VARCHAR(24) NOT NULL
-    CONSTRAINT CK_PSR_Status CHECK (ResultStatus IN
-      ('measured','estimated_from_one_task','grading','not_measured','exempt_accommodated')),
-  -- Reportable levels only, the same set LearnerSkillStates allows: a result may say "below A1".
-  CefrLevel            VARCHAR(10) NULL
-    CONSTRAINT CK_PSR_Level CHECK (CefrLevel IS NULL
-      OR CefrLevel IN ('pre_a1','A1','A2','B1','B2','C1','C2')),
-  PositionInBand       INT NULL
-    CONSTRAINT CK_PSR_Position CHECK (PositionInBand IS NULL OR PositionInBand BETWEEN 0 AND 100),
-  ContinuousCoordinate DECIMAL(3,2) NULL
-    CONSTRAINT CK_PSR_Coordinate CHECK (ContinuousCoordinate IS NULL
-      OR ContinuousCoordinate BETWEEN 1.00 AND 6.99),
-  -- The certificate's own scale, read back from the cut-score table (Â§4.5). Read-only lookup, never
-  -- arithmetic: LVL-12/PRN-03 remove the "TOEIC 785 = B2" conversion, not this projection.
-  ProjectedBandCode    VARCHAR(20) NULL,
-  ProjectedScore       INT NULL,
-  CutScoreTableVersion INT NULL,
-  -- PLC-33 asks for this as its own fact, but it IS the status: two columns stating one thing can
-  -- disagree. The CHECK pins it, the same way CK_LSS_Expiry pins expiry to its measurement.
-  IsEstimatedFromOneTask BIT NOT NULL CONSTRAINT DF_PSR_Estimated DEFAULT 0,
-  -- PLC-28/D15: a non-monotonic result truncates to the highest contiguous pass run, and the anomaly is
-  -- recorded rather than silently accepted.
-  IsTruncated          BIT NOT NULL CONSTRAINT DF_PSR_Truncated DEFAULT 0,
-  -- #213 / D18: this result was CARRIED OVER from an earlier sitting rather than measured in this one,
-  -- so the screen badges it and prints the original measurement date. It is a fact about provenance,
-  -- not a restatement of the level: a row that says measured + today's date while claiming reuse is
-  -- the re-stamping defect, and only this column distinguishes the two rows.
-  ReusedFromPrior      BIT NOT NULL CONSTRAINT DF_PSR_Reused DEFAULT 0,
-  -- The four reasons a skill ends up not measured. Null for every other status: "grading" is not a
-  -- failure yet, and saying it failed while the job is queued is the mirror of the defect being fixed.
-  -- #259: 'no_cut_score_row' is the table's failure, not the learner's - the score exists and nothing
-  -- in the certificate's cut table placed it, so the honest answer is "no level", not the band's name.
-  FailureReason        VARCHAR(24) NULL
-    CONSTRAINT CK_PSR_FailureReason CHECK (FailureReason IS NULL
-      OR FailureReason IN ('candidate_skipped','inactivity_timeout','ai_grading_failed','no_cut_score_row')),
-  -- #219 / D5: what the sitting SAW, per topic, as a sequencing hint for the first week - never a
-  -- mastery judgement. Three items cannot prove a topic is learned (mastery needs twelve), so this is
-  -- a separate column on a separate table and NOTHING in the mastery path reads it.
-  --
-  -- Shape: [{topicId, evaluatedBand, itemsSeen, itemsCorrect, routingSignal}] with signal 'weak' or
-  -- 'on_level'. An empty array is refused: it would claim topics were touched while naming none, and
-  -- NULL is the honest "nothing was seen here". `itemsSeen BETWEEN 1 AND 3` is not checkable in a
-  -- CHECK (it needs OPENJSON), so PlacementResultWriter derives it and the service tests assert it.
-  TopicPriorsJson      NVARCHAR(MAX) NULL
-    CONSTRAINT CK_PSR_TopicPriorsIsJson CHECK (
-         TopicPriorsJson IS NULL
-      OR (ISJSON(TopicPriorsJson) = 1 AND LEN(TopicPriorsJson) > 2)),
-  -- #219 / D5: the productive half's rubric profile, so the path has a weakest-criterion starting point
-  -- without recomputing it. Shape: {scores:[{criterionId, code, score, maxScore}], weakestCriterion,
-  -- priorityFix}. A weakest criterion is one of the scores, never an invented code - derived by the
-  -- writer, asserted by the service tests.
-  CriterionProfileJson NVARCHAR(MAX) NULL
-    CONSTRAINT CK_PSR_CriterionProfileIsJson CHECK (CriterionProfileJson IS NULL OR ISJSON(CriterionProfileJson) = 1),
-  MeasuredAt           DATETIMEOFFSET NULL,
-  ExpiresAt            DATETIMEOFFSET NULL,
-  WrittenByService     VARCHAR(64) NULL,
-  ProjectionVersion    INT NOT NULL CONSTRAINT DF_PSR_ProjectionVersion DEFAULT 0,
-  CONSTRAINT PK_PlacementSkillResults PRIMARY KEY (PlacementId, SkillId),
-  -- The placement must be this learner's and this certificate's: the pair comes from the placement's
-  -- own unique key, so CertId cannot be invented here.
-  CONSTRAINT FK_PSR_PlacementCert FOREIGN KEY (PlacementId, CertId)
-    REFERENCES PlacementTests(PlacementId, CertId),
-  -- One certificate's skill cannot be recorded under another's (the composite is the isolation rule).
-  CONSTRAINT FK_PSR_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
-  -- THE SHAPE OF EACH STATUS. This is what makes the null level stop standing for three outcomes:
-  -- every status has exactly one legal combination of the measurement columns, so a row that claims
-  -- `measured` without a level, or `grading` with one, cannot be stored.
-  CONSTRAINT CK_PSR_StatusCarriesItsShape CHECK (
-       (ResultStatus IN ('measured','estimated_from_one_task')
-          AND CefrLevel IS NOT NULL AND PositionInBand IS NOT NULL
-          AND ContinuousCoordinate IS NOT NULL AND MeasuredAt IS NOT NULL AND ExpiresAt IS NOT NULL
-          AND FailureReason IS NULL)
-    OR (ResultStatus IN ('grading','not_measured','exempt_accommodated')
-          AND CefrLevel IS NULL AND PositionInBand IS NULL AND ContinuousCoordinate IS NULL
-          AND MeasuredAt IS NULL AND ExpiresAt IS NULL)),
-  -- A failure reason belongs to `not_measured` alone. `grading` with a reason would read as "failed,
-  -- still retrying"; `measured` with one would read as a result that is also a failure.
-  CONSTRAINT CK_PSR_FailureOnlyWhenNotMeasured CHECK (
-       (ResultStatus = 'not_measured' AND FailureReason IS NOT NULL)
-    OR (ResultStatus <> 'not_measured' AND FailureReason IS NULL)),
-  -- The status IS the single-task flag, in one direction only.
-  CONSTRAINT CK_PSR_EstimatedMatchesStatus CHECK (
-    IsEstimatedFromOneTask = CASE WHEN ResultStatus = 'estimated_from_one_task' THEN 1 ELSE 0 END),
-  -- A projection is a triple or nothing. A score with no version is the unreproducible projection
-  -- LVL-13 forbids; a version with no score is a claim that nothing was projected from it.
-  CONSTRAINT CK_PSR_ProjectionIsATriple CHECK (
-       (ProjectedBandCode IS NULL AND ProjectedScore IS NULL AND CutScoreTableVersion IS NULL)
-    OR (ProjectedBandCode IS NOT NULL AND ProjectedScore IS NOT NULL AND CutScoreTableVersion IS NOT NULL
-        AND ResultStatus IN ('measured','estimated_from_one_task'))),
-  -- #219: the two signals describe measurement, so only a measured row may carry them. A `grading`
-  -- row with priors would state what a task in the queue has not yet been read for, and a
-  -- `not_measured` row with them would be a topic hint from a sitting that measured nothing.
-  CONSTRAINT CK_PSR_SignalsOnlyWhenMeasured CHECK (
-       (TopicPriorsJson IS NULL AND CriterionProfileJson IS NULL)
-    OR ResultStatus IN ('measured','estimated_from_one_task')),
-  -- D18: the same 90-day reuse window as a stored per-skill state, pinned to the measurement so the
-  -- two cannot disagree.
-  CONSTRAINT CK_PSR_Expiry CHECK (
-    (MeasuredAt IS NULL AND ExpiresAt IS NULL)
-    OR (MeasuredAt IS NOT NULL AND ExpiresAt = DATEADD(DAY, 90, MeasuredAt)))
-);
-GO
--- #212 / D14: the per-skill result has exactly one writer, AttemptEngine â€” the same service that owns
--- the certificate-level snapshot, because both are derived from one attempt and a second writer is
--- what the confirmed defect was made of.
---
--- Every insert declares: unlike ExamAttempts there is no sitting-state column to carve out here, and
--- a `grading` placeholder is still derived (it states that a task is in the AI queue). The predicate
--- looks at what CHANGED, so the idempotent save EF produces when a tracked row is written twice is
--- not refused.
-CREATE TRIGGER trg_PlacementSkillResults_SingleWriter
-ON PlacementSkillResults AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  DECLARE @owner VARCHAR(64) =
-    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'placement_skill_result');
-
-  DECLARE @touched TABLE (PlacementId INT NOT NULL, SkillId INT NOT NULL, WasVersion INT NOT NULL,
-                          PRIMARY KEY (PlacementId, SkillId));
-  INSERT INTO @touched (PlacementId, SkillId, WasVersion)
-    SELECT i.PlacementId, i.SkillId, ISNULL(d.ProjectionVersion, 0)
-    FROM inserted i
-    LEFT JOIN deleted d ON d.PlacementId = i.PlacementId AND d.SkillId = i.SkillId
-    WHERE d.SkillId IS NULL
-       OR i.ResultStatus <> d.ResultStatus
-       OR ISNULL(i.CefrLevel, '') <> ISNULL(d.CefrLevel, '')
-       OR ISNULL(i.PositionInBand, -1) <> ISNULL(d.PositionInBand, -1)
-       OR ISNULL(i.ContinuousCoordinate, -1) <> ISNULL(d.ContinuousCoordinate, -1)
-       OR ISNULL(i.ProjectedBandCode, '') <> ISNULL(d.ProjectedBandCode, '')
-       OR ISNULL(i.ProjectedScore, -2147483648) <> ISNULL(d.ProjectedScore, -2147483648)
-       OR ISNULL(i.CutScoreTableVersion, -1) <> ISNULL(d.CutScoreTableVersion, -1)
-       OR i.IsEstimatedFromOneTask <> d.IsEstimatedFromOneTask
-       OR i.IsTruncated <> d.IsTruncated
-       OR ISNULL(i.FailureReason, '') <> ISNULL(d.FailureReason, '')
-       -- #219: the topic and criterion signals are derived from the same attempt, so a write that
-       -- changes only them is still a derived write and must declare its writer.
-       OR ISNULL(i.TopicPriorsJson, '') <> ISNULL(d.TopicPriorsJson, '')
-       OR ISNULL(i.CriterionProfileJson, '') <> ISNULL(d.CriterionProfileJson, '')
-       OR ISNULL(i.MeasuredAt, '0001-01-01') <> ISNULL(d.MeasuredAt, '0001-01-01')
-       OR ISNULL(i.ExpiresAt, '0001-01-01') <> ISNULL(d.ExpiresAt, '0001-01-01')
-       OR i.ProjectionVersion <> d.ProjectionVersion;
-
-  IF NOT EXISTS (SELECT 1 FROM @touched)
-    RETURN;
-
-  -- The declaration must be in THIS statement. A column already holding the owner's name vouches for
-  -- nobody: a second writer that changes only CefrLevel leaves WrittenByService untouched, so a
-  -- value-only check passes it. `UPDATE()` is the half that catches it.
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN @touched t ON t.PlacementId = i.PlacementId AND t.SkillId = i.SkillId
-    WHERE ISNULL(i.WrittenByService, '') <> @owner
-       OR (EXISTS (SELECT 1 FROM deleted d
-                   WHERE d.PlacementId = i.PlacementId AND d.SkillId = i.SkillId)
-           AND NOT UPDATE(WrittenByService))
-  )
-    THROW 50076, 'A placement per-skill result has exactly one writer, AttemptEngine. A write declaring another writer (or none) is refused.', 1;
-
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN @touched t ON t.PlacementId = i.PlacementId AND t.SkillId = i.SkillId
-    WHERE i.ProjectionVersion <= t.WasVersion
-  )
-    THROW 50077, 'The per-skill result projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
-END;
-GO
--- #212 criterion 4: a finished placement requires at least one MEASURED skill, or a recorded
--- completion failure. PLC-36.
---
--- Why a trigger rather than a CHECK: the condition reads PlacementSkillResults, and a CHECK cannot
--- see another table. There is no CHECK that could express it, so "pick one and justify it" resolves
--- to the trigger by the shape of the rule, not by preference.
---
--- The count is over measured statuses SPECIFICALLY, not over rows. A placement whose four skills are
--- all `not_measured` has four rows and zero measurements; a guard counting rows would pass it, which
--- is the input this rule exists to refuse. `exempt_accommodated` is excluded too: LRN-55 excludes an
--- accommodated skill from the overall, so it is not evidence that anything was measured.
---
--- Two triggers, because the fact has two parents: the placement can be marked done before its rows
--- are written, and a measured row can be rewritten to not_measured after. AttemptEngine writes the
--- rows first and marks done second (in one transaction), so the first trigger's view is never stale.
-CREATE TRIGGER trg_PlacementTests_CompletionIsEarned
-ON PlacementTests AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    WHERE i.Status = 'done'
-      AND i.CompletionFailureReason IS NULL
-      AND NOT EXISTS (
-        SELECT 1 FROM PlacementSkillResults r
-        WHERE r.PlacementId = i.PlacementId
-          AND r.ResultStatus IN ('measured','estimated_from_one_task'))
-  )
-    THROW 50078, 'A placement cannot be done without at least one measured skill or a recorded completion failure.', 1;
-END;
-GO
-CREATE TRIGGER trg_PlacementSkillResults_CompletionIsEarned
-ON PlacementSkillResults AFTER INSERT, UPDATE, DELETE AS
-BEGIN
-  SET NOCOUNT ON;
-  -- Only a placement that is ALREADY done can be made dishonest by this write; an in-progress one is
-  -- still assembling. Checking the parent on every skill write keeps the two directions of the rule
-  -- in one place instead of trusting the order the application happens to save in.
-  IF EXISTS (
-    SELECT 1
-    FROM PlacementTests p
-    WHERE p.Status = 'done'
-      AND p.CompletionFailureReason IS NULL
-      AND NOT EXISTS (
-        SELECT 1 FROM PlacementSkillResults r
-        WHERE r.PlacementId = p.PlacementId
-          AND r.ResultStatus IN ('measured','estimated_from_one_task'))
-      AND (EXISTS (SELECT 1 FROM inserted i WHERE i.PlacementId = p.PlacementId)
-        OR EXISTS (SELECT 1 FROM deleted d WHERE d.PlacementId = p.PlacementId))
-  )
-    THROW 50078, 'A placement cannot be done without at least one measured skill or a recorded completion failure.', 1;
-END;
 GO
 -- UI-46: the snapshot is a copy of the attempt's own result, not a free-standing number â€”
 -- a placement-result page ("385 out of 990 Â· L 215 Â· R 170") must trace back to real scores.
@@ -3264,89 +1902,6 @@ GO
 CREATE UNIQUE INDEX UX_PlacementTests_CreditTxn ON PlacementTests(CreditTxnId) WHERE CreditTxnId IS NOT NULL;
 GO
 CREATE UNIQUE INDEX UX_PlacementTests_Idempotency ON PlacementTests(UserId, IdempotencyKey) WHERE IdempotencyKey IS NOT NULL;
-GO
--- #191 / D14: the placement snapshot has exactly one writer, AttemptEngine. This is the confirmed
--- defect's table (docs/research/placement-free-response-defect.md): AttemptEngine wrote the snapshot
--- and PlacementService wrote it again unconditionally, producing a `done` row with a null band. The
--- wrong-writer case below is the real second writer, not an invented name.
---
--- The derived fact is the snapshot (Status/ResultBandCode/TotalScore/TakenAt) - not AttemptId, which
--- is set when the placement starts and derives nothing.
-CREATE TRIGGER trg_PlacementTests_SingleWriter
-ON PlacementTests AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  DECLARE @owner VARCHAR(64) =
-    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'placement_result');
-
-  DECLARE @touched TABLE (PlacementId INT NOT NULL PRIMARY KEY, WasVersion INT NOT NULL);
-  INSERT INTO @touched (PlacementId, WasVersion)
-    SELECT i.PlacementId, ISNULL(d.ProjectionVersion, 0)
-    FROM inserted i
-    LEFT JOIN deleted d ON d.PlacementId = i.PlacementId
-    -- The derived fact is the RESULT: the band, the total, the moment it was taken, and the move to
-    -- 'done'. Abandoning or starting a placement is a lifecycle act that derives nothing, so it needs
-    -- no declaration - refusing it would make the guard look right and break the product.
-    WHERE (d.PlacementId IS NULL
-             AND (i.ResultBandCode IS NOT NULL OR i.TotalScore IS NOT NULL
-                  OR i.Status = 'done' OR i.ProjectionVersion <> 0))
-       OR (d.PlacementId IS NOT NULL
-             AND (ISNULL(i.ResultBandCode, '') <> ISNULL(d.ResultBandCode, '')
-               OR ISNULL(i.TotalScore, -2147483648) <> ISNULL(d.TotalScore, -2147483648)
-               OR i.TakenAt <> d.TakenAt
-               OR (i.Status = 'done' AND d.Status <> 'done')
-               OR i.ProjectionVersion <> d.ProjectionVersion));
-
-  IF NOT EXISTS (SELECT 1 FROM @touched)
-    RETURN;
-
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN @touched t ON t.PlacementId = i.PlacementId
-    WHERE ISNULL(i.WrittenByService, '') <> @owner
-       OR (EXISTS (SELECT 1 FROM deleted d WHERE d.PlacementId = i.PlacementId) AND NOT UPDATE(WrittenByService))
-  )
-    THROW 50072, 'The placement snapshot has exactly one writer, AttemptEngine. A write declaring another writer (or none) is refused.', 1;
-
-  -- A version may only move forward, and a bare bump counts as a projection write: otherwise
-  -- "bump to the stored value, then write the result at that version" is a two-step bypass.
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN @touched t ON t.PlacementId = i.PlacementId
-    WHERE i.ProjectionVersion <= t.WasVersion
-  )
-    THROW 50073, 'The placement snapshot projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
-END;
-GO
--- #156: the learner's answer to a calibration proposal. A row here is a *record of a decision the
--- learner made*, not an automatic correction, so the path is only rewritten by the 'adjusted' branch
--- and a 'deferred' row leaves it exactly as it was. The numbers are stored, not re-derived: after
--- twenty more answers the recomputed figures would differ, and a reason that changes is not a record.
-CREATE TABLE CalibrationDecisions (
-  DecisionId       INT IDENTITY(1,1) PRIMARY KEY,
-  UserId           INT NOT NULL REFERENCES Users(UserId),
-  CertId           INT NOT NULL REFERENCES Certificates(CertId),
-  -- the band the placement (or last graded mock) put the learner in, and the band the evidence supports
-  PlacedBandCode   VARCHAR(20) NOT NULL,
-  ProposedBandCode VARCHAR(20) NOT NULL,
-  -- AC5: never conclude on fewer valid answers than this. The floor is the schema's, so no code path
-  -- can file a decision on thinner evidence than the threshold states.
-  SampleSize       INT NOT NULL CONSTRAINT CK_Calibration_Sample CHECK (SampleSize >= 20),
-  ObservedAccuracyPct DECIMAL(5,2) NOT NULL
-    CONSTRAINT CK_Calibration_Accuracy CHECK (ObservedAccuracyPct BETWEEN 0 AND 100),
-  -- 'deferred' = "later", path untouched. 'adjusted' = the path was lowered to ProposedBandCode.
-  Decision         VARCHAR(10) NOT NULL
-    CONSTRAINT CK_Calibration_Decision CHECK (Decision IN ('deferred','adjusted')),
-  DecidedAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-  -- both bands must be this certificate's own; no cross-certificate leak
-  CONSTRAINT FK_Calibration_PlacedBand FOREIGN KEY (CertId, PlacedBandCode) REFERENCES ScoreBands(CertId, Code),
-  CONSTRAINT FK_Calibration_ProposedBand FOREIGN KEY (CertId, ProposedBandCode) REFERENCES ScoreBands(CertId, Code),
-  -- the proposal is downward: an accuracy shortfall never raises a band
-  CONSTRAINT CK_Calibration_Downward CHECK (ProposedBandCode <> PlacedBandCode)
-);
-GO
-CREATE INDEX IX_Calibration_User ON CalibrationDecisions(UserId, CertId, DecidedAt);
 GO
 CREATE TABLE TargetBands (
   UserId         INT NOT NULL REFERENCES Users(UserId),
@@ -3423,74 +1978,6 @@ CREATE TABLE LearnerPaths (
   -- UI-24: the placement must be this user's own
   CONSTRAINT FK_LearnerPaths_PlacementUser FOREIGN KEY (PlacementId, UserId) REFERENCES PlacementTests(PlacementId, UserId)
 );
-GO
--- #233 / D10: A COMPLETED WEEK IS HISTORY NOBODY CAN REWRITE, and it is a row rather than a flag.
---
--- The ticket's third trap is "immutability asserted by a flag nobody checks". So the archived week is
--- its own row, with the numbers copied into it at the instant it closes, and the trigger below refuses
--- every UPDATE and every DELETE. A late answer arriving for a closed step therefore has nowhere to
--- write its change: the week's row is frozen, and the step's own row is on a week that is no longer
--- live (PathWindow.IsLive is false for it), so the closure writer refuses it too.
---
--- Why one row per week rather than the step rows themselves: the step is the plan, the week is what
--- happened. A week archived on schedule is archived *partially* - carrying its unfinished steps
--- forward would rewrite the plan, and rewriting the plan's steps is exactly what D10 forbids. The
--- snapshot states how the week actually went; the unfinished topics are re-queued in the new week.
-CREATE TABLE LearnerPathWeeks (
-  LearnerPathWeekId      INT IDENTITY(1,1) PRIMARY KEY,
-  LearnerPathId          INT NOT NULL,
-  CertId                 INT NOT NULL,
-  -- the week this history belongs to, in the path's own numbering. A number that slides back out of
-  -- the live window is what makes "which week was that" answerable a year later.
-  WeekNumber             INT NOT NULL CONSTRAINT CK_PathWeeks_Week CHECK (WeekNumber >= 1),
-  -- the calendar span the week was open for. Both are facts about the close, not about today.
-  StartedOn              DATE NOT NULL,
-  ClosedOn               DATE NOT NULL,
-  -- which close condition fired. Both close the week; only one of them says the learner did the work.
-  CloseReason            VARCHAR(16) NOT NULL
-    CONSTRAINT CK_PathWeeks_CloseReason CHECK (CloseReason IN ('all_done','calendar')),
-  PlannedSteps           INT NOT NULL CONSTRAINT CK_PathWeeks_Planned CHECK (PlannedSteps >= 0),
-  CompletedSteps         INT NOT NULL CONSTRAINT CK_PathWeeks_Completed CHECK (CompletedSteps >= 0),
-  PlannedMinutes         INT NOT NULL CONSTRAINT CK_PathWeeks_Minutes CHECK (PlannedMinutes >= 0),
-  -- measured, never guessed: NULL when no step in the week produced a score
-  AverageAccuracyPct     DECIMAL(5,2) NULL
-    CONSTRAINT CK_PathWeeks_Accuracy CHECK (AverageAccuracyPct IS NULL OR AverageAccuracyPct BETWEEN 0 AND 100),
-  -- the topics this week left unmastered, so "re-queued" is checkable against what was archived
-  RequeuedTopicIdsJson   NVARCHAR(400) NULL,
-  ArchivedAt             DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-  -- ADR-0012: the archive is a derived fact with exactly one writer, declared on the write.
-  WrittenByService       VARCHAR(64) NULL,
-  ProjectionVersion      INT NOT NULL CONSTRAINT DF_PathWeeks_ProjectionVersion DEFAULT 0,
-  CONSTRAINT UQ_PathWeeks_Path_Week UNIQUE (LearnerPathId, WeekNumber),
-  CONSTRAINT FK_PathWeeks_PathCert FOREIGN KEY (LearnerPathId, CertId)
-    REFERENCES LearnerPaths(LearnerPathId, CertId)
-);
-GO
--- ADR-0012 / PRN-01: the writer is a column on the write, never sp_set_session_context.
---
--- The `UPDATE(WrittenByService)` half of the idiom exists to catch a second writer that changed only a
--- value and inherited the previous statement's name. Here it is superseded by a stronger rule rather
--- than omitted: an archived week is a history row, so it is written once and never updated at all.
--- `deleted` is non-empty only for an UPDATE or a DELETE, so the first THROW covers both, and a second
--- writer cannot reach the UPDATE half because no UPDATE is legal. What remains is the declaration
--- check on the one INSERT that is allowed.
-CREATE TRIGGER trg_LearnerPathWeeks_SingleWriter
-ON LearnerPathWeeks AFTER INSERT, UPDATE, DELETE AS
-BEGIN
-  SET NOCOUNT ON;
-
-  IF EXISTS (SELECT 1 FROM deleted)
-    THROW 50077, 'An archived week is history: it may be inserted once and never updated or deleted, by any writer.', 1;
-
-  DECLARE @owner VARCHAR(64) =
-    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'window_synthesis');
-
-  IF EXISTS (SELECT 1 FROM inserted i WHERE ISNULL(i.WrittenByService, '') <> @owner)
-    THROW 50078, 'The archived week has exactly one writer, PathWindowSynthesizer, and the write must declare it.', 1;
-
-  IF EXISTS (SELECT 1 FROM inserted i WHERE i.ProjectionVersion <= 0)
-    THROW 50079, 'An archived week declares the projection version that produced it; zero is not a version.', 1;
-END;
 GO
 -- ADR-0004: declared here because AiInsights (Domain 8) is created before LearnerPaths (Domain 9).
 -- Composite so a path insight must be about this same learner's own path.
@@ -3576,8 +2063,6 @@ CREATE TABLE LearnerPathSteps (
     CONSTRAINT CK_Steps_ActualAccuracy CHECK (ActualAccuracyPct IS NULL OR ActualAccuracyPct BETWEEN 0 AND 100),
   -- #191 / D14: required by trg_LearnerPathSteps_SingleWriter when the step is CLOSED. A step moving
   -- between open states (locked -> available -> in_progress) derives nothing and declares nothing.
-  WrittenByService VARCHAR(64) NULL,
-  ProjectionVersion INT NOT NULL CONSTRAINT DF_Steps_ProjectionVersion DEFAULT 0,
   -- M-1: CertId must be the learner path's own
   CONSTRAINT FK_Steps_PathCert FOREIGN KEY (LearnerPathId, CertId) REFERENCES LearnerPaths(LearnerPathId, CertId),
   -- the skill must belong to that same certificate
@@ -3604,7 +2089,6 @@ CREATE TABLE LearnerPathSteps (
   )
 );
 GO
-
 -- UI-12: now that LearnerPathSteps exists, link a practice session to the module step it serves
 ALTER TABLE PracticeSessions ADD CONSTRAINT FK_Practice_PathStep FOREIGN KEY (LearnerPathStepId) REFERENCES LearnerPathSteps(StepId);
 GO
@@ -3617,57 +2101,7 @@ GO
 -- A closed step is also terminal: reopening it would let a second writer reach the same row through
 -- the open-state door. PathStepCompletion is idempotent on an already-done step and the reset-path
 -- case is handled by LearnerPaths.Status, not by reopening the step.
-CREATE TRIGGER trg_LearnerPathSteps_SingleWriter
-ON LearnerPathSteps AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  DECLARE @owner VARCHAR(64) =
-    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'step_closure');
-
-  DECLARE @touched TABLE (StepId INT NOT NULL PRIMARY KEY, WasVersion INT NOT NULL, WasDone BIT NOT NULL);
-  INSERT INTO @touched (StepId, WasVersion, WasDone)
-    SELECT i.StepId, ISNULL(d.ProjectionVersion, 0),
-           CASE WHEN ISNULL(d.Status, '') = 'done' THEN 1 ELSE 0 END
-    FROM inserted i
-    LEFT JOIN deleted d ON d.StepId = i.StepId
-    WHERE (d.StepId IS NULL
-             AND (i.Status = 'done' OR i.Score IS NOT NULL
-                  OR i.ActualAccuracyPct IS NOT NULL OR i.ProjectionVersion <> 0))
-       OR (d.StepId IS NOT NULL
-             AND (i.Status = 'done' OR d.Status = 'done'
-               OR ISNULL(i.Score, -1) <> ISNULL(d.Score, -1)
-               OR ISNULL(i.ActualAccuracyPct, -1) <> ISNULL(d.ActualAccuracyPct, -1)
-               OR i.ProjectionVersion <> d.ProjectionVersion));
-
-  IF NOT EXISTS (SELECT 1 FROM @touched)
-    RETURN;
-
-  -- reopening a closed step is a closure write in reverse, so it is refused before the ownership
-  -- check rather than being counted as an ordinary state move
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN @touched t ON t.StepId = i.StepId
-    WHERE t.WasDone = 1 AND i.Status <> 'done'
-  )
-    THROW 50074, 'A closed step cannot be reopened; the step closure has exactly one writer.', 1;
-
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN @touched t ON t.StepId = i.StepId
-    WHERE ISNULL(i.WrittenByService, '') <> @owner
-       OR (EXISTS (SELECT 1 FROM deleted d WHERE d.StepId = i.StepId) AND NOT UPDATE(WrittenByService))
-  )
-    THROW 50075, 'The step closure has exactly one writer, PathStepCompletion. A write declaring another writer (or none) is refused.', 1;
-
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN @touched t ON t.StepId = i.StepId
-    WHERE i.ProjectionVersion <= t.WasVersion
-  )
-    THROW 50076, 'The step closure projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
-END;
-GO
+-- #309: trg_LearnerPathSteps_SingleWriter removed (Expand phase).
 -- ============ Domain 9.5: Guided Learning (Lessons) ============
 -- Issue #45: Interactive lesson walkthroughs for remediation and guided paths
 CREATE TABLE Lessons (
@@ -3679,6 +2113,8 @@ CREATE TABLE Lessons (
   Summary          NVARCHAR(500) NULL,
   EstimatedMinutes INT NOT NULL DEFAULT 5 CONSTRAINT CK_Lessons_Est CHECK (EstimatedMinutes > 0),
   DisplayOrder     INT NOT NULL DEFAULT 0,
+  -- #309: comma-separated target band codes (e.g. '5.5,6.0,6.5') or 'ALL' for general knowledge.
+  TargetBands      VARCHAR(100) NOT NULL CONSTRAINT DF_Lessons_TargetBands DEFAULT 'ALL',
   CreatedAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   CONSTRAINT FK_Lessons_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
   CONSTRAINT UQ_Lessons_Id_Cert UNIQUE (LessonId, CertId)
@@ -3762,28 +2198,31 @@ END;
 GO
 -- ============ Domain 10: Mentor ============
 CREATE TABLE MentorProfiles (
-  MentorId     INT IDENTITY(1,1) PRIMARY KEY,
-  UserId       INT NULL REFERENCES Users(UserId),   -- NULL for AI mentors
-  DisplayName  NVARCHAR(120) NOT NULL,
-  Bio          NVARCHAR(MAX) NULL,
-  CertId       INT NOT NULL REFERENCES Certificates(CertId),
-  SkillId      INT NULL REFERENCES Skills(SkillId),
-  Type         VARCHAR(6) NOT NULL CONSTRAINT CK_Mentor_Type CHECK (Type IN ('human','ai')),
-  PricePerSlot DECIMAL(10,2) NOT NULL CONSTRAINT CK_Mentor_Price CHECK (PricePerSlot >= 0),  -- payout basis (cash)
-  -- UI-26 (gap 7): what the learner is charged; the mentor_booking ledger Delta must equal -PriceCredits
-  PriceCredits INT NOT NULL CONSTRAINT DF_Mentor_PriceCredits DEFAULT 1
+  MentorId       INT IDENTITY(1,1) PRIMARY KEY,
+  DisplayName    NVARCHAR(120) NOT NULL,
+  Bio            NVARCHAR(MAX) NULL,
+  CertId         INT NOT NULL REFERENCES Certificates(CertId),
+  SkillId        INT NULL REFERENCES Skills(SkillId),
+  MeetLink       NVARCHAR(400) NOT NULL CONSTRAINT DF_Mentor_MeetLink DEFAULT N'https://meet.google.com/new',
+  -- UI-26 (gap 7): what the learner is charged; the mentor_booking ledger Delta must equal -Bookings.PriceCredits
+  PriceCredits   INT NOT NULL CONSTRAINT DF_Mentor_PriceCredits DEFAULT 1
     CONSTRAINT CK_Mentor_PriceCredits CHECK (PriceCredits > 0),
-  Headline     NVARCHAR(200) NULL,   -- UI-26: one-line card copy ("10 years teaching TOEICâ€¦")
-  Expertise    NVARCHAR(400) NULL,   -- UI-26: "Expertise: Listening strategies, pronunciationâ€¦"
+  Headline       NVARCHAR(200) NULL,
+  Expertise      NVARCHAR(400) NULL,
   SessionMinutes INT NOT NULL CONSTRAINT DF_Mentor_SessionMinutes DEFAULT 60
     CONSTRAINT CK_Mentor_SessionMinutes CHECK (SessionMinutes > 0),
-  IsActive     BIT NOT NULL DEFAULT 1,
-  -- M-14: human mentors are people (UserId set), AI mentors are not
-  CONSTRAINT CK_Mentor_TypeUserId CHECK ((Type='human' AND UserId IS NOT NULL) OR (Type='ai' AND UserId IS NULL)),
+  IsActive       BIT NOT NULL DEFAULT 1,
   -- M-14: a mentor's SkillId (if any) must belong to the mentor's own CertId
-  CONSTRAINT FK_Mentor_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
-  -- composite target so Bookings can carry MentorType down (M-14 / PartC-1):
-  CONSTRAINT UQ_MentorProfiles_Id_Type UNIQUE (MentorId, Type)
+  CONSTRAINT FK_Mentor_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId)
+);
+GO
+CREATE TABLE MentorWeeklySlots (
+  WeeklySlotId INT IDENTITY(1,1) PRIMARY KEY,
+  MentorId     INT NOT NULL REFERENCES MentorProfiles(MentorId),
+  DayOfWeek    TINYINT NOT NULL CONSTRAINT CK_MentorWeeklySlots_DayOfWeek CHECK (DayOfWeek BETWEEN 1 AND 7),
+  StartTime    TIME(0) NOT NULL,
+  EndTime      TIME(0) NOT NULL,
+  CONSTRAINT CK_MentorWeeklySlots_Range CHECK (EndTime > StartTime)
 );
 GO
 CREATE TABLE MentorSlots (
@@ -3799,35 +2238,29 @@ CREATE TABLE MentorSlots (
 );
 GO
 CREATE TABLE Bookings (
-  BookingId INT IDENTITY(1,1) PRIMARY KEY,
-  UserId    INT NOT NULL REFERENCES Users(UserId),
-  MentorId  INT NOT NULL REFERENCES MentorProfiles(MentorId),
-  SlotId    INT NULL REFERENCES MentorSlots(SlotId),   -- NULL for AI
-  MentorType VARCHAR(6) NOT NULL
-    CONSTRAINT CK_Bookings_MentorType CHECK (MentorType IN ('human','ai')),
-  Status    VARCHAR(10) NOT NULL DEFAULT 'pending'
+  BookingId    INT IDENTITY(1,1) PRIMARY KEY,
+  UserId       INT NOT NULL REFERENCES Users(UserId),
+  MentorId     INT NOT NULL REFERENCES MentorProfiles(MentorId),
+  SlotId       INT NOT NULL REFERENCES MentorSlots(SlotId),
+  PriceCredits INT NOT NULL CONSTRAINT DF_Bookings_PriceCredits DEFAULT 1
+    CONSTRAINT CK_Bookings_PriceCredits CHECK (PriceCredits > 0),
+  Status       VARCHAR(10) NOT NULL DEFAULT 'pending'
     CONSTRAINT CK_Bookings_Status CHECK (Status IN ('pending','confirmed','done','cancelled')),
-  MeetLink  NVARCHAR(400) NULL,
-  FocusArea NVARCHAR(120) NULL,          -- UI-27: mentor-confirm "Focus area: Listening strategies"
-  CancelledAt DATETIMEOFFSET NULL,       -- UI-27: refund only if cancelled 24h+ before the slot
-  CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  MeetLink     NVARCHAR(400) NULL,
+  FocusArea    NVARCHAR(120) NULL,          -- UI-27: mentor-confirm "Focus area: Listening strategies"
+  CancelledAt  DATETIMEOFFSET NULL,       -- UI-27: refund only if cancelled 24h+ before the slot
+  CreatedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   -- composite target so CreditTransactions can prove the charged user owns the booking (H-1).
   -- Batch 2 (PartC-3) also needs this constraint; reused there, not recreated.
   CONSTRAINT UQ_Bookings_Id_User UNIQUE (BookingId, UserId),
-  -- PartC-2: composite target so a payout item must agree with the booking's mentor
-  CONSTRAINT UQ_Bookings_Id_Mentor UNIQUE (BookingId, MentorId),
-  -- PartC-1: SlotId must belong to the same mentor as MentorId (NULL SlotId stays legal, MATCH SIMPLE)
+  -- PartC-1: SlotId must belong to the same mentor as MentorId
   CONSTRAINT FK_Bookings_SlotMentor FOREIGN KEY (SlotId, MentorId) REFERENCES MentorSlots(SlotId, MentorId),
-  -- M-14: MentorType must be the mentor's actual Type
-  CONSTRAINT FK_Bookings_MentorType FOREIGN KEY (MentorId, MentorType) REFERENCES MentorProfiles(MentorId, Type),
-  -- M-14: only human mentors need a scheduled slot; AI books without one
-  CONSTRAINT CK_Bookings_MentorTypeSlot CHECK ((MentorType='human' AND SlotId IS NOT NULL) OR (MentorType='ai' AND SlotId IS NULL)),
   CONSTRAINT CK_Bookings_CancelledAt CHECK (CancelledAt IS NULL OR Status = 'cancelled')
 );
 GO
 -- Review Focus #5: one live booking per slot (cancelled frees it)
 CREATE UNIQUE INDEX UX_Bookings_OnePerSlot
-  ON Bookings(SlotId) WHERE SlotId IS NOT NULL AND Status <> 'cancelled';
+  ON Bookings(SlotId) WHERE Status <> 'cancelled';
 GO
 CREATE TABLE Reviews (
   ReviewId  INT IDENTITY(1,1) PRIMARY KEY,
@@ -3878,31 +2311,6 @@ CREATE TABLE Complaints (
   CONSTRAINT CK_Complaints_ResolvedAt CHECK (ResolvedAt IS NULL OR Status = 'resolved')
 );
 GO
-CREATE TABLE MentorPayouts (
-  PayoutId     INT IDENTITY(1,1) PRIMARY KEY,
-  MentorId     INT NOT NULL REFERENCES MentorProfiles(MentorId),
-  PeriodStart  DATETIMEOFFSET NOT NULL,
-  PeriodEnd    DATETIMEOFFSET NOT NULL,
-  -- M-17: BookingCount/GrossAmount removed (stored aggregates drift) â€” see vw_MentorPayoutTotals
-  Status       VARCHAR(7) NOT NULL DEFAULT 'pending'
-    CONSTRAINT CK_Payouts_Status CHECK (Status IN ('pending','paid')),
-  PaidAt       DATETIMEOFFSET NULL,
-  CONSTRAINT CK_Payouts_Range CHECK (PeriodEnd > PeriodStart),
-  -- PartC-2: composite target so a payout item must agree with the payout's mentor
-  CONSTRAINT UQ_MentorPayouts_Id_Mentor UNIQUE (PayoutId, MentorId)
-);
-GO
-CREATE TABLE MentorPayoutItems (
-  PayoutId  INT NOT NULL,
-  BookingId INT NOT NULL,
-  MentorId  INT NOT NULL,
-  CONSTRAINT PK_PayoutItems PRIMARY KEY (PayoutId, BookingId),
-  CONSTRAINT UQ_PayoutItems_Booking UNIQUE (BookingId),   -- a booking settles once
-  -- PartC-2: the booking's mentor and the payout's mentor must agree
-  CONSTRAINT FK_PayoutItems_BookingMentor FOREIGN KEY (BookingId, MentorId) REFERENCES Bookings(BookingId, MentorId),
-  CONSTRAINT FK_PayoutItems_PayoutMentor  FOREIGN KEY (PayoutId, MentorId)  REFERENCES MentorPayouts(PayoutId, MentorId)
-);
-GO
 -- M-15: reject bookings placed on a closed slot, and keep MentorSlots.Status in sync
 -- with live (non-cancelled) bookings. Booking-side filtered unique index is the double-book
 -- guard (kept as the accepted deviation from the spec's slot-side wording); this trigger only
@@ -3916,13 +2324,13 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM inserted i
     JOIN MentorSlots ms ON ms.SlotId = i.SlotId
-    WHERE i.SlotId IS NOT NULL AND i.Status <> 'cancelled' AND ms.Status = 'closed'
+    WHERE i.Status <> 'cancelled' AND ms.Status = 'closed'
   )
     THROW 50024, 'Booking cannot be placed on a closed slot.', 1;
 
   ;WITH affected AS (
-    SELECT SlotId FROM inserted WHERE SlotId IS NOT NULL
-    UNION SELECT SlotId FROM deleted WHERE SlotId IS NOT NULL
+    SELECT SlotId FROM inserted
+    UNION SELECT SlotId FROM deleted
   )
   UPDATE ms
     SET Status = CASE WHEN EXISTS (
@@ -3939,18 +2347,6 @@ CREATE VIEW vw_MentorAvgRating AS
   FROM Reviews r JOIN Bookings b ON b.BookingId = r.BookingId
   GROUP BY b.MentorId;
 GO
--- M-17: replaces the dropped MentorPayouts.BookingCount/GrossAmount stored counters
-CREATE VIEW vw_MentorPayoutTotals AS
-  SELECT mp.PayoutId, mp.MentorId,
-         COUNT(*) AS BookingCount,
-         SUM(m.PricePerSlot) AS GrossAmount
-  FROM MentorPayoutItems mpi
-  JOIN MentorPayouts mp ON mp.PayoutId = mpi.PayoutId
-  JOIN Bookings b ON b.BookingId = mpi.BookingId
-  JOIN MentorProfiles m ON m.MentorId = b.MentorId
-  GROUP BY mp.PayoutId, mp.MentorId;
-GO
-
 -- ============ Domain 5: Payment ============
 CREATE TABLE Packages (
   PackageId INT IDENTITY(1,1) PRIMARY KEY,
@@ -3974,7 +2370,9 @@ GO
 CREATE TABLE Orders (
   OrderId   INT IDENTITY(1,1) PRIMARY KEY,
   UserId    INT NOT NULL REFERENCES Users(UserId),
-  PackageId INT NOT NULL REFERENCES Packages(PackageId),
+  PackageId INT NULL REFERENCES Packages(PackageId),
+  Credits   INT NOT NULL CONSTRAINT DF_Orders_Credits DEFAULT 1
+    CONSTRAINT CK_Orders_Credits CHECK (Credits > 0),
   Status    VARCHAR(12) NOT NULL DEFAULT 'pending'
     -- UI-30: 'reconciling' = gateway has not returned a final result ("Reconciling transaction")
     CONSTRAINT CK_Orders_Status CHECK (Status IN ('pending','reconciling','paid','failed','expired')),
@@ -4048,8 +2446,9 @@ CREATE TABLE CreditTransactions (
     CONSTRAINT CK_CreditTxn_Reason CHECK (Reason IN
       ('purchase','admin_grant','mock_exam_start','ai_grading','mentor_booking','admin_revoke',
        'booking_cancel',   -- UI-31 (gap 8): refund of a cancelled booking
-       'refund_credit',      -- #280: the credits a credit refund granted
-       'placement_retake')), -- #288: paid placement retake charge (16 chars, fits VARCHAR(16))
+       'refund_credit',    -- #280: the credits a credit refund granted
+       'placement_retake', -- #288: paid placement retake charge (16 chars, fits VARCHAR(16))
+       'learning_path')),  -- #309: 5-credit 4-week learning path generation charge
   Delta    INT NOT NULL CONSTRAINT CK_CreditTxn_NonZero CHECK (Delta <> 0),
   OrderId       INT NULL,
   AttemptId     INT NULL,
@@ -4082,7 +2481,7 @@ CREATE TABLE CreditTransactions (
   -- with a flipped sign.
   CONSTRAINT CK_CreditTxn_DeltaSign CHECK (
        (Reason IN ('purchase','admin_grant','booking_cancel','refund_credit') AND Delta > 0)
-    OR (Reason IN ('mock_exam_start','ai_grading','mentor_booking','admin_revoke','placement_retake') AND Delta < 0)
+    OR (Reason IN ('mock_exam_start','ai_grading','mentor_booking','admin_revoke','placement_retake','learning_path') AND Delta < 0)
   ),
   -- exactly the source column matching the reason is set (admin_* carry none)
   -- #280: refund_credit carries NO source column either, for a reason the ledger cannot express: the
@@ -4095,7 +2494,7 @@ CREATE TABLE CreditTransactions (
     OR (Reason='ai_grading'      AND AttemptId IS NOT NULL AND OrderId IS NULL AND BookingId IS NULL)
     OR (Reason IN ('mentor_booking','booking_cancel')
                                  AND BookingId IS NOT NULL AND OrderId IS NULL AND AttemptId IS NULL)
-    OR (Reason IN ('admin_grant','admin_revoke','refund_credit','placement_retake') AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL)
+    OR (Reason IN ('admin_grant','admin_revoke','refund_credit','placement_retake','learning_path') AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL)
   )
 );
 GO
@@ -4167,7 +2566,7 @@ CREATE UNIQUE INDEX UX_CreditTxn_Booking ON CreditTransactions(BookingId, Reason
 GO
 CREATE UNIQUE INDEX UX_CreditTxn_Attempt_Reason ON CreditTransactions(AttemptId, Reason) WHERE AttemptId IS NOT NULL;
 GO
--- H-2: a 'purchase' txn must reference a paid order and its Delta must equal that order's package credits.
+-- H-2: a 'purchase' txn must reference a paid order and its Delta must equal that order's credits.
 CREATE TRIGGER trg_CreditTransactions_PurchaseMatchesOrder
 ON CreditTransactions AFTER INSERT, UPDATE AS
 BEGIN
@@ -4176,9 +2575,9 @@ BEGIN
     SELECT 1
     FROM inserted i
     JOIN Orders o ON o.OrderId = i.OrderId
-    JOIN Packages pk ON pk.PackageId = o.PackageId
+    LEFT JOIN Packages pk ON pk.PackageId = o.PackageId
     WHERE i.Reason = 'purchase'
-      AND (o.Status <> 'paid' OR i.Delta <> pk.Credits)
+      AND (o.Status <> 'paid' OR (i.Delta <> o.Credits AND (pk.Credits IS NULL OR i.Delta <> pk.Credits)))
   )
     THROW 50022, 'purchase txn must reference a paid order with Delta equal to the package credits.', 1;
 END;
@@ -4200,7 +2599,7 @@ BEGIN
     THROW 50038, 'This charge does not apply to the attempt''s exam purpose.', 1;
 END;
 GO
--- UI-26/UI-31: a mentor_booking charge must equal the mentor's PriceCredits; a booking_cancel refund
+-- UI-26/UI-31: a mentor_booking charge must equal the booking's PriceCredits; a booking_cancel refund
 -- must exactly reverse a prior charge on a booking that is now cancelled.
 CREATE TRIGGER trg_CreditTransactions_BookingAmounts
 ON CreditTransactions AFTER INSERT, UPDATE AS
@@ -4209,10 +2608,9 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM inserted i
     JOIN Bookings b ON b.BookingId = i.BookingId
-    JOIN MentorProfiles m ON m.MentorId = b.MentorId
-    WHERE i.Reason = 'mentor_booking' AND i.Delta <> -m.PriceCredits
+    WHERE i.Reason = 'mentor_booking' AND i.Delta <> -b.PriceCredits
   )
-    THROW 50035, 'mentor_booking Delta must equal minus the mentor''s PriceCredits.', 1;
+    THROW 50035, 'mentor_booking Delta must equal minus the booking''s PriceCredits.', 1;
   IF EXISTS (
     SELECT 1 FROM inserted i
     JOIN Bookings b ON b.BookingId = i.BookingId
@@ -4487,80 +2885,6 @@ CREATE VIEW vw_UserSectionAccuracy AS
   JOIN Sections s ON s.SectionId = ps.SectionId
   GROUP BY ps.UserId, s.SectionId, s.Name;
 GO
--- ============ #202: Coverage budget and matrix ============
--- D0.5: the pool is sized BY CELL, and the size is content budget, not a rule. The numbers live in
--- rows so a later content ticket re-sizes a cell without a schema edit - a CHECK or a C# constant
--- encoding "30" would be a second, silent copy of the volume tiers that no one can retune.
---
--- One row per (skill, level), not per topic: every topic inside a skill shares the band's depth, and
--- D0.5 gives no figure that varies by topic. That is also why this table is the matrix's level axis:
--- a cell exists because its quota row exists, so there is no second copy of the A1..C2 ladder to keep
--- in step, and a missing quota row fails domain29's 120-cell count rather than vanishing silently.
---
--- A productive skill is sized in tasks, an objective one in items (8/4 vs 30/15 per D0.5), so the
--- column is named for neither: it is the cell's target unit count.
-CREATE TABLE ContentQuotas (
-  Modality        VARCHAR(10) NOT NULL
-    CONSTRAINT CK_ContentQuotas_Modality CHECK (Modality IN ('listening','reading','speaking','writing')),
-  CefrLevel       VARCHAR(10) NOT NULL
-    CONSTRAINT CK_ContentQuotas_Level CHECK (CefrLevel IN ('A1','A2','B1','B2','C1','C2')),
-  -- A zero target would make a cell "satisfied" at empty and a negative one would make the deficit
-  -- arithmetic report a surplus nobody authored. The unit count is a budget, so it starts at one.
-  TargetItemCount INT NOT NULL
-    CONSTRAINT CK_ContentQuotas_Target CHECK (TargetItemCount > 0),
-  CONSTRAINT PK_ContentQuotas PRIMARY KEY (Modality, CefrLevel)
-);
-GO
--- D0.5's volume tiers, as data: core bands (A2, B1, B2, C1) hold 30 objective items / 8 productive
--- tasks per cell, peripheral bands (A1, C2) hold 15 / 4. Summed over the canonical twenty topics that
--- is exactly the published per-skill total (listening 900, reading 900, speaking 160, writing 160 =
--- 2,120), which is how this block was checked rather than by trusting the numbers twice.
-INSERT INTO ContentQuotas (Modality, CefrLevel, TargetItemCount) VALUES
-  ('listening','A1',15), ('listening','A2',30), ('listening','B1',30),
-  ('listening','B2',30), ('listening','C1',30), ('listening','C2',15),
-  ('reading',  'A1',15), ('reading',  'A2',30), ('reading',  'B1',30),
-  ('reading',  'B2',30), ('reading',  'C1',30), ('reading',  'C2',15),
-  ('speaking', 'A1', 4), ('speaking', 'A2', 8), ('speaking', 'B1', 8),
-  ('speaking', 'B2', 8), ('speaking', 'C1', 8), ('speaking', 'C2', 4),
-  ('writing',  'A1', 4), ('writing',  'A2', 8), ('writing',  'B1', 8),
-  ('writing',  'B2', 8), ('writing',  'C1', 8), ('writing',  'C2', 4);
-GO
--- S-01: one row per cell, always 120 of them. The screen's rule is that "which cell is empty" is
--- something you LOOK AT (D8), so an empty cell has to be a row with a deficit - not an absent row.
--- A view grouped over Items alone renders an empty cell as nothing, which reads as "no problem here".
--- The two joins below are what make that impossible: Topics x ContentQuotas is the cell grid and is
--- built without reading Items at all, so authoring an item can only change a count, never the shape.
---
--- Only active stock counts (CNT-42): a retired, quarantined, validated or draft item is not depth the
--- learner can drill. `PlacementEligibleItemCount` carries the same filter, because an eligible retired
--- item is still not stock.
---
--- The deficit floors at zero. An over-supplied cell is not a negative gap; rendering "-2" would ask a
--- reviewer to fix a surplus that does not exist.
-CREATE VIEW vw_CoverageMatrix AS
-  SELECT t.TopicId,
-         t.Modality,
-         t.Code           AS TopicCode,
-         t.Name           AS TopicName,
-         q.CefrLevel,
-         q.TargetItemCount,
-         ISNULL(x.ActiveItemCount, 0)            AS ActiveItemCount,
-         ISNULL(x.PlacementEligibleItemCount, 0) AS PlacementEligibleItemCount,
-         CASE WHEN q.TargetItemCount > ISNULL(x.ActiveItemCount, 0)
-              THEN q.TargetItemCount - ISNULL(x.ActiveItemCount, 0)
-              ELSE 0
-         END AS Deficit
-  FROM Topics t
-  JOIN ContentQuotas q ON q.Modality = t.Modality
-  LEFT JOIN (
-    SELECT TopicId, CefrLevel,
-           COUNT(*) AS ActiveItemCount,
-           SUM(CASE WHEN PlacementEligible = 1 THEN 1 ELSE 0 END) AS PlacementEligibleItemCount
-    FROM Items
-    WHERE LifecycleStatus = 'active'
-    GROUP BY TopicId, CefrLevel
-  ) x ON x.TopicId = t.TopicId AND x.CefrLevel = q.CefrLevel;
-GO
 -- ============ #235: daily practice volume, derived and never counted ============
 -- D12 / PLC-64 / NFI-05: the daily ceiling is one session per (topic, level) cell per day and 50-60
 -- objective items or 4 productive tasks overall. Both halves are DERIVED here from the answer rows, so
@@ -4601,66 +2925,6 @@ CREATE VIEW vw_DailyPracticeVolume AS
       OR pa.ResponseText IS NOT NULL
       OR pa.SelectedOptionIdsJson IS NOT NULL)
   GROUP BY ps.UserId, CAST(pa.AnsweredAt AS DATE);
-GO
--- ============ #199: telemetry quarantine ============
--- D0.7 / CNT-44: one row per (item, administration checkpoint) where an active item's stored answers
--- were evaluated. Nothing here is a counter the platform maintains: AdministrationCount and every
--- statistic beside it are derived from PracticeAnswers / AttemptAnswers / AiGradings at the moment the
--- row is written, so a recount cannot disagree with the stored number (NFI-05). The row exists for two
--- reasons only:
---
---   * idempotency. The primary key is (ItemId, CheckpointSize), so a schedule that runs twice at the
---     same administration count cannot record the evaluation twice; the second run reads the row and
---     stops.
---   * evidence. A reviewer opening a quarantined item sees which condition fired and the four numbers
---     behind it, rather than a state with no explanation.
---
--- CheckpointSize is the sample size the evaluation answers, not the count at the time of writing: D0.7
--- names 30, 50, 100 and 250, and the CHECK is what makes a fifth checkpoint impossible to invent
--- silently.
-CREATE TABLE ItemTelemetryEvaluations (
-  ItemId            INT NOT NULL REFERENCES Items(ItemId),
-  CheckpointSize    INT NOT NULL
-    CONSTRAINT CK_ItemTelemetry_Checkpoint CHECK (CheckpointSize IN (30, 50, 100, 250)),
-  -- the sample the row was computed over. It can exceed the checkpoint (an item that jumped from 40
-  -- to 120 administrations is first evaluated at 100); the checkpoint is what the row answers.
-  AdministrationCount INT NOT NULL
-    CONSTRAINT CK_ItemTelemetry_Administrations CHECK (AdministrationCount >= 30),
-  TargetBandCount   INT NOT NULL
-    CONSTRAINT CK_ItemTelemetry_TargetBandCount CHECK (TargetBandCount >= 0),
-  -- point-biserial r. NULL is "undefined", never zero: an item every learner answered correctly has no
-  -- variance in the item score, and a stored 0 would fire the r < 0.10 gate on a healthy item.
-  Discrimination    DECIMAL(9,6) NULL
-    CONSTRAINT CK_ItemTelemetry_Discrimination CHECK (Discrimination IS NULL OR Discrimination BETWEEN -1 AND 1),
-  -- target-band facility (p-value), and the mean rubric band of a productive task's AI gradings.
-  TargetFacility    DECIMAL(9,6) NULL
-    CONSTRAINT CK_ItemTelemetry_Facility CHECK (TargetFacility IS NULL OR TargetFacility BETWEEN 0 AND 1),
-  MeanResponseBand  DECIMAL(9,6) NULL
-    CONSTRAINT CK_ItemTelemetry_ResponseBand CHECK (MeanResponseBand IS NULL OR MeanResponseBand BETWEEN 0 AND 6),
-  -- D0.7's four conditions, one bit each, so "how many items breached facility this week" is a query
-  -- and not a string parse. A column rather than a breach-code row because the specification fixes the
-  -- count at four; a fifth condition ships with a schema change, which is what it should cost.
-  BreachDiscrimination       BIT NOT NULL CONSTRAINT DF_ItemTelemetry_BreachDiscrimination DEFAULT 0,
-  BreachFacility             BIT NOT NULL CONSTRAINT DF_ItemTelemetry_BreachFacility DEFAULT 0,
-  BreachDistractorDominance  BIT NOT NULL CONSTRAINT DF_ItemTelemetry_BreachDistractorDominance DEFAULT 0,
-  BreachProductiveDrift      BIT NOT NULL CONSTRAINT DF_ItemTelemetry_BreachProductiveDrift DEFAULT 0,
-  -- the verdict the service acted on. Redundant with the four bits by design: the row must not be able
-  -- to say "clean" while carrying a breach, and the CHECK below is what makes that impossible rather
-  -- than a service convention the next caller forgets.
-  Quarantined       BIT NOT NULL,
-  EvaluatedAt       DATETIMEOFFSET NOT NULL CONSTRAINT DF_ItemTelemetry_EvaluatedAt DEFAULT SYSDATETIMEOFFSET(),
-  CONSTRAINT PK_ItemTelemetryEvaluations PRIMARY KEY (ItemId, CheckpointSize),
-  CONSTRAINT CK_ItemTelemetry_Verdict CHECK (
-       Quarantined = CASE
-         WHEN BreachDiscrimination = 1 OR BreachFacility = 1
-           OR BreachDistractorDominance = 1 OR BreachProductiveDrift = 1 THEN 1
-         ELSE 0
-       END)
-);
-GO
--- The console asks "which items are quarantined on telemetry, most recent first" (S-10). The
--- primary key already serves the item's own history, so this covers only the other direction.
-CREATE INDEX IX_ItemTelemetry_Quarantined ON ItemTelemetryEvaluations(EvaluatedAt) WHERE Quarantined = 1;
 GO
 -- ============ Query indexes ============
 -- SQL Server does not index foreign keys. These cover the joins the triggers run on every write
@@ -4710,12 +2974,12 @@ CREATE INDEX IX_Steps_LearnerPath_Sequence ON LearnerPathSteps(LearnerPathId, We
 CREATE INDEX IX_Steps_Coordinate         ON LearnerPathSteps(TopicId, TargetCefr, StepType);
 -- Mentor
 CREATE INDEX IX_Mentors_Cert             ON MentorProfiles(CertId) WHERE IsActive = 1;
+CREATE INDEX IX_MentorWeeklySlots_Mentor ON MentorWeeklySlots(MentorId, DayOfWeek);
 CREATE INDEX IX_MentorSlots_Mentor       ON MentorSlots(MentorId, StartAt);
 CREATE INDEX IX_Bookings_User            ON Bookings(UserId, CreatedAt);
 CREATE INDEX IX_Bookings_Mentor          ON Bookings(MentorId);
 CREATE INDEX IX_Complaints_Status        ON Complaints(Status, CreatedAt);
 CREATE INDEX IX_Complaints_User          ON Complaints(UserId);
-CREATE INDEX IX_MentorPayouts_Mentor     ON MentorPayouts(MentorId);
 -- Payment (wallet history, balance view, admin orders)
 CREATE INDEX IX_Orders_User              ON Orders(UserId, CreatedAt);
 CREATE INDEX IX_Orders_Open              ON Orders(CreatedAt) WHERE Status IN ('pending','reconciling');
@@ -4765,8 +3029,6 @@ ALTER TABLE Sections                  ADD LastWrittenBy INT NULL CONSTRAINT FK_S
 GO
 ALTER TABLE GradingCriteria           ADD LastWrittenBy INT NULL CONSTRAINT FK_GradingCriteria_LastWrittenBy REFERENCES Users(UserId);
 GO
-ALTER TABLE GradingCriterionDescriptors ADD LastWrittenBy INT NULL CONSTRAINT FK_GCD_LastWrittenBy REFERENCES Users(UserId);
-GO
 -- ADM-03 names "a write to item text, a key, a rubric or exam structure". The last two guards were
 -- missing: a triage-only account could publish an exam (`Exams.Status`) or flip an item to
 -- `active` (`Items.LifecycleStatus`), both of which are exactly the authority triage may not have.
@@ -4775,7 +3037,6 @@ ALTER TABLE Exams                     ADD LastWrittenBy INT NULL CONSTRAINT FK_E
 GO
 ALTER TABLE Items                     ADD LastWrittenBy INT NULL CONSTRAINT FK_Items_LastWrittenBy REFERENCES Users(UserId);
 GO
-
 -- ---- is this account triage, and nothing that may author? ----
 --
 -- `can_override` is empty: holding more namespaces does not WAIVE either invariant, and this function
@@ -4803,7 +3064,6 @@ BEGIN
   ) THEN 1 ELSE 0 END;
 END;
 GO
-
 -- ---- the fixture-catalog flag, and why it exists ----
 --
 -- A raw fixture INSERT and a raw triage INSERT are INDISTINGUISHABLE: both are SQL that declares no
@@ -4833,7 +3093,6 @@ BEGIN
   RETURN ISNULL((SELECT IsFixtureCatalog FROM CatalogMode WHERE ModeId = 1), 0);
 END;
 GO
-
 -- ---- invariant 2: triage cannot write ----
 --
 -- THE GUARD'S QUESTION IS "WHO IS WRITING". The first draft got this wrong in a way the review
@@ -4948,25 +3207,6 @@ BEGIN
     THROW 50081, 'ADM-03: support triage cannot write a rubric. A write to GradingCriteria must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
 END;
 GO
-CREATE TRIGGER trg_GradingCriterionDescriptors_TriageCannotWrite
-ON GradingCriterionDescriptors AFTER INSERT, UPDATE, DELETE AS
-BEGIN
-  SET NOCOUNT ON;
-  -- A DELETE carries no `inserted` row, so the account to judge is the one recorded on the
-  -- row being removed. The invariant is about triage, not about denying deletion to an
-  -- author: a triage-only account may retire nothing, because retiring is a write.
-  IF EXISTS (SELECT 1 FROM deleted dd WHERE dbo.fn_IsTriageOnly(dd.LastWrittenBy) = 1)
-    THROW 50082, 'ADM-03: support triage cannot delete from GradingCriterionDescriptors; the account that wrote it cannot be a triage-only account.', 1;
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    LEFT JOIN deleted d ON d.CriterionId = i.CriterionId AND d.Band = i.Band
-    WHERE (dbo.fn_IsFixtureCatalog() = 0
-             AND (i.LastWrittenBy IS NULL
-                  OR (d.CriterionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
-       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
-    THROW 50081, 'ADM-03: support triage cannot write a rubric descriptor. A write to GradingCriterionDescriptors must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
-END;
-GO
 CREATE TRIGGER trg_Exams_TriageCannotWrite
 ON Exams AFTER INSERT, UPDATE, DELETE AS
 BEGIN
@@ -5005,60 +3245,6 @@ BEGIN
     THROW 50081, 'ADM-03: support triage cannot set an item''s lifecycle or topic. A write to Items must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
 END;
 GO
-
--- ---- invariant 1: no self-approval ----
---
--- The record the invariant lives on. #206 builds the stratified sample, the blind solve and the
--- quarantine; this table is only the decision and WHO made it, because that is the fact the rule
--- reads. The three verbs are ADM-02's own: claim, adjudicate, clear.
-CREATE TABLE ReviewSampleDecisions (
-  DecisionId    INT IDENTITY(1,1) PRIMARY KEY,
-  -- The batch the sample came from. No composite target: a decision is about a batch and the item in
-  -- it, and both foreign keys already prove each id is real.
-  BatchId       INT NOT NULL CONSTRAINT FK_RSD_Batch REFERENCES ImportBatches(BatchId),
-  ItemId        INT NOT NULL CONSTRAINT FK_RSD_Item REFERENCES Items(ItemId),
-  ActorUserId   INT NOT NULL CONSTRAINT FK_RSD_Actor REFERENCES Users(UserId),
-  Decision      VARCHAR(12) NOT NULL
-    CONSTRAINT CK_RSD_Decision CHECK (Decision IN ('claim','adjudicate','clear')),
-  DecidedAt     DATETIMEOFFSET NOT NULL CONSTRAINT DF_RSD_DecidedAt DEFAULT SYSDATETIMEOFFSET()
-);
-GO
-CREATE INDEX IX_RSD_Batch_Item ON ReviewSampleDecisions(BatchId, ItemId);
-GO
--- ADM-02, once, for all three verbs, on INSERT and UPDATE and DELETE:
---
---   * the batch's uploader (ImportBatches.UploadedBy);
---   * the batch's last modifier (ImportBatches.LastModifiedBy) - the "re-upload then approve" door;
---   * the item's author-or-last-modifier, read from the NEWEST version (ItemVersions.LastWrittenBy) -
---     the "have a colleague revise it, then approve it" door.
---
--- DELETE is refused outright rather than checked: a decision is the record that an approval happened,
--- and the cheapest way to clear your own work is to delete the record and re-insert one made by
--- nobody. An append-only decision table closes the delete-and-reinsert bypass instead of testing for
--- it, and there is no legitimate edit of a decision that was already made.
-CREATE TRIGGER trg_ReviewSampleDecisions_NoSelfApproval
-ON ReviewSampleDecisions AFTER INSERT, UPDATE, DELETE AS
-BEGIN
-  SET NOCOUNT ON;
-  IF EXISTS (SELECT 1 FROM deleted)
-    THROW 50080, 'ADM-02: a review decision is a record of an approval that happened and cannot be deleted; deleting it would allow the decision to be re-made by another hand.', 1;
-
-  IF EXISTS (
-    SELECT 1
-    FROM inserted n
-    JOIN ImportBatches b ON b.BatchId = n.BatchId
-    WHERE n.ActorUserId = b.UploadedBy
-       OR n.ActorUserId = b.LastModifiedBy
-       OR n.ActorUserId = (
-            SELECT TOP 1 v.LastWrittenBy
-            FROM ItemVersions v
-            WHERE v.ItemId = n.ItemId
-            ORDER BY v.VersionNumber DESC)
-  )
-    THROW 50080, 'ADM-02: an account cannot claim, adjudicate or clear a review sample for a batch or item it uploaded or last modified. This refusal does not read permissions, so it holds for an account that holds all five namespaces.', 1;
-END;
-GO
-
 -- ============ #205: the ingestion and staging workbench ============
 --
 -- Two changes. Neither adds a table: ImportBatches already carries the batch, the uploader and the
@@ -5110,198 +3296,6 @@ ALTER TABLE ImportLog ADD Attempt INT NOT NULL CONSTRAINT DF_ImportLog_Attempt D
 GO
 ALTER TABLE ImportLog ADD ItemId INT NULL
   CONSTRAINT FK_ImportLog_Item REFERENCES Items(ItemId) ON DELETE SET NULL;
-GO
-
--- ============ #206: the stratified audit and quarantine queue ============
---
--- CNT-42's `validated -> active` edge and `validated -> quarantined` edge already exist. What did not
--- exist is the thing that decides between them, and decides it over a SAMPLE rather than item by item.
--- #205 cleared one item at a time, deliberately: it promoted nothing the reviewer did not name. That is
--- the wrong shape for a batch, because a batch is 90% unreviewed by construction (story 29) and a
--- per-item clearance leaves the pool stalled at 10% of target volume (D17 "Promotion scope").
---
--- A STRATUM IS A CELL OF ONE BATCH: (BatchId, TopicId, CefrLevel).
---
---   * Scoped to the batch, not to the cell globally. A cell spans every upload that ever filled it, and
---     a decision taken over stock from another author's file is a decision nobody made. It also makes
---     "a stratum must not straddle two certificate banks" structural rather than a rule: a batch names
---     at most one certificate (ImportBatches.CertId, NULL for pool stock), so one stratum cannot hold
---     items from two papers' banks.
---   * The batch is carried on the sample row as well (BatchId, below) so the composite foreign key
---     pins a sample item to the stratum's OWN batch. Without that column the FK would prove the stratum
---     exists and say nothing about which batch the item came in.
-CREATE TABLE ReviewStrata (
-  StratumId         INT IDENTITY(1,1) PRIMARY KEY,
-  BatchId           INT NOT NULL CONSTRAINT FK_ReviewStrata_Batch REFERENCES ImportBatches(BatchId),
-  TopicId           INT NOT NULL CONSTRAINT FK_ReviewStrata_Topic REFERENCES Topics(TopicId),
-  CefrLevel         VARCHAR(10) NOT NULL
-    CONSTRAINT CK_ReviewStrata_Level CHECK (CefrLevel IN ('A1','A2','B1','B2','C1','C2')),
-  -- How many staged items the cell held when the sample was drawn, and how many of them were drawn.
-  -- Frozen at draw time: a re-submitted record that lands later does not silently enlarge the sample
-  -- its decision was taken from.
-  ItemCount         INT NOT NULL CONSTRAINT CK_ReviewStrata_ItemCount CHECK (ItemCount > 0),
-  -- At least one item, always. A 10% floor rounded DOWN to zero is how a C1 or C2 cell with one item
-  -- disappears from the audit entirely - the failure story 29 names.
-  SampleSize        INT NOT NULL,
-  Status            VARCHAR(12) NOT NULL CONSTRAINT DF_ReviewStrata_Status DEFAULT 'pending'
-    CONSTRAINT CK_ReviewStrata_Status CHECK (Status IN ('pending','approved','quarantined')),
-  -- Why it was refused. A quarantined stratum that cannot say which rule it broke sends the author
-  -- back to re-review 100 items to find one key error.
-  QuarantineReason  VARCHAR(24) NULL
-    CONSTRAINT CK_ReviewStrata_Reason CHECK
-      (QuarantineReason IN ('key_error','non_key_defect_rate')),
-  DecidedAt         DATETIMEOFFSET NULL,
-  -- ADR-0012: the outcome is derived from the sample verdicts, never typed beside them. No foreign key,
-  -- for the reason the registry gives: OwnedService is not unique (AttemptEngine owns two facts), and a
-  -- mistyped name is refused by the trigger comparing it against the registry row anyway.
-  WrittenByService  VARCHAR(64) NULL,
-  ProjectionVersion INT NOT NULL CONSTRAINT DF_ReviewStrata_Version DEFAULT 0,
-  CONSTRAINT UQ_ReviewStrata_Batch_Cell UNIQUE (BatchId, TopicId, CefrLevel),
-  -- Composite target for the sample rows: (StratumId, BatchId) is the pair a sample item pins.
-  CONSTRAINT UQ_ReviewStrata_Id_Batch UNIQUE (StratumId, BatchId),
-  -- The sample is a sample of this stratum, never more than it holds. Table-level because a column
-  -- CHECK may not name a second column.
-  CONSTRAINT CK_ReviewStrata_SampleSize CHECK (SampleSize >= 1 AND SampleSize <= ItemCount),
-  -- The two ways a decision can contradict itself.
-  CONSTRAINT CK_ReviewStrata_QuarantineNamesItsReason CHECK
-      ((Status =  'quarantined' AND QuarantineReason IS NOT NULL)
-    OR (Status <> 'quarantined' AND QuarantineReason IS NULL)),
-  CONSTRAINT CK_ReviewStrata_DecisionIsStamped CHECK
-      ((Status =  'pending' AND DecidedAt IS NULL)
-    OR (Status <> 'pending' AND DecidedAt IS NOT NULL))
-);
-GO
-CREATE INDEX IX_ReviewStrata_Batch ON ReviewStrata(BatchId);
-GO
--- One row per drawn item. The blind solve and the verdict live here because they are per item; the
--- sample's size lives on the stratum because it is one number for the whole cell.
-CREATE TABLE ReviewSampleItems (
-  SampleItemId   INT IDENTITY(1,1) PRIMARY KEY,
-  StratumId      INT NOT NULL,
-  BatchId        INT NOT NULL,
-  ItemId         INT NOT NULL CONSTRAINT FK_ReviewSampleItems_Item REFERENCES Items(ItemId),
-  -- The version whose key was solved. Pinned, because a new version is a new key and a verdict about
-  -- version 1 says nothing about version 2.
-  ItemVersionId  INT NOT NULL,
-  -- W-01 / story 30: the reviewer's own answer, recorded before the key is read.
-  SolvedLabel    VARCHAR(1) NULL
-    CONSTRAINT CK_ReviewSampleItems_SolvedLabel CHECK (SolvedLabel IN ('A','B','C','D')),
-  SolvedAt       DATETIMEOFFSET NULL,
-  SolvedBy       INT NULL CONSTRAINT FK_ReviewSampleItems_Solver REFERENCES Users(UserId),
-  -- Set by the ONE read that returns the authored key. Kept so "the key was visible when they solved"
-  -- is answerable after the fact rather than asserted by whoever wrote the screen.
-  KeyRevealedAt  DATETIMEOFFSET NULL,
-  Verdict        VARCHAR(20) NULL
-    CONSTRAINT CK_ReviewSampleItems_Verdict CHECK (Verdict IN ('correct','key_error','non_key_defect')),
-  VerdictAt      DATETIMEOFFSET NULL,
-  VerdictBy      INT NULL CONSTRAINT FK_ReviewSampleItems_VerdictBy REFERENCES Users(UserId),
-  CONSTRAINT UQ_ReviewSampleItems_Stratum_Item UNIQUE (StratumId, ItemId),
-  CONSTRAINT FK_ReviewSampleItems_Stratum FOREIGN KEY (StratumId, BatchId)
-    REFERENCES ReviewStrata(StratumId, BatchId),
-  -- The version must belong to the item: (version, item) is the pair ExamItems pins, and the same
-  -- composite target UQ_ItemVersions_Id_Item exists for exactly this.
-  CONSTRAINT FK_ReviewSampleItems_VersionItem FOREIGN KEY (ItemVersionId, ItemId)
-    REFERENCES ItemVersions(ItemVersionId, ItemId),
-  -- A half-filled solve or verdict is not a fact, it is a form posted halfway.
-  CONSTRAINT CK_ReviewSampleItems_SolveIsWhole CHECK
-      ((SolvedLabel IS NULL AND SolvedAt IS NULL AND SolvedBy IS NULL)
-    OR (SolvedLabel IS NOT NULL AND SolvedAt IS NOT NULL AND SolvedBy IS NOT NULL)),
-  CONSTRAINT CK_ReviewSampleItems_VerdictIsWhole CHECK
-      ((Verdict IS NULL AND VerdictAt IS NULL AND VerdictBy IS NULL)
-    OR (Verdict IS NOT NULL AND VerdictAt IS NOT NULL AND VerdictBy IS NOT NULL)),
-  -- A verdict judges a solve. Adjudicating an item nobody solved is the self-review the whole ticket
-  -- exists to prevent, and saying so in a CHECK makes it unstorable rather than merely unsent.
-  CONSTRAINT CK_ReviewSampleItems_VerdictFollowsSolve CHECK (Verdict IS NULL OR SolvedLabel IS NOT NULL)
-);
-GO
-CREATE INDEX IX_ReviewSampleItems_Stratum ON ReviewSampleItems(StratumId);
-GO
--- ADR-0012 / D14: the stratum's OUTCOME is the derived fact - status, reason and decision time - and
--- it is a column set rather than a row, exactly as ExamAttempts' score is. A `pending` row derives
--- nothing (it states that no verdict exists yet), so drawing the sample needs no declaration and the
--- guard cannot become a blanket refusal on the table the queue reads.
---
--- PRN-01: the writer is a column on this write, never sp_set_session_context.
-CREATE TRIGGER trg_ReviewStrata_SingleWriter
-ON ReviewStrata AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  DECLARE @owner VARCHAR(64) =
-    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'stratum_decision');
-
-  DECLARE @touched TABLE (StratumId INT NOT NULL PRIMARY KEY, WasVersion INT NOT NULL);
-  INSERT INTO @touched (StratumId, WasVersion)
-    SELECT i.StratumId, ISNULL(d.ProjectionVersion, 0)
-    FROM inserted i
-    LEFT JOIN deleted d ON d.StratumId = i.StratumId
-    WHERE i.Status <> 'pending'
-      AND (d.StratumId IS NULL
-        OR i.Status <> d.Status
-        OR ISNULL(i.QuarantineReason, '') <> ISNULL(d.QuarantineReason, '')
-        OR ISNULL(i.DecidedAt, '0001-01-01') <> ISNULL(d.DecidedAt, '0001-01-01')
-        OR i.ProjectionVersion <> d.ProjectionVersion);
-
-  IF NOT EXISTS (SELECT 1 FROM @touched) RETURN;
-
-  -- The declaration must be in THIS statement: a second writer that changes only Status leaves the
-  -- previous owner's name in the column, so a value-only check passes it. UPDATE() is that half.
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN @touched t ON t.StratumId = i.StratumId
-    WHERE ISNULL(i.WrittenByService, '') <> @owner
-       OR (EXISTS (SELECT 1 FROM deleted d WHERE d.StratumId = i.StratumId)
-           AND NOT UPDATE(WrittenByService))
-  )
-    THROW 50090, 'A stratum decision has exactly one writer, StratifiedAuditService. A write declaring another writer (or none) is refused.', 1;
-
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN @touched t ON t.StratumId = i.StratumId
-    WHERE i.ProjectionVersion <= t.WasVersion
-  )
-    THROW 50091, 'The stratum decision projection version must be newer than the stored one; a re-run cannot rewrite a decision that was already taken.', 1;
-END;
-GO
--- W-01 / story 30, at the boundary where it can actually be violated. The service refuses a solve
--- posted after the key was read, and this refuses a solve RECORDED after a key was read - which is what
--- a second writer, a raw fixture or a future endpoint would produce. Both orders are therefore closed:
--- read-then-solve, and solve-then-read-then-re-solve.
---
--- Reachability, stated honestly: with StratifiedAuditService.RevealKeyAsync requiring a solve first,
--- the service cannot produce a row this refuses. That is the point of a database guard - it holds for
--- writes the service does not make.
-CREATE TRIGGER trg_ReviewSampleItems_SolveIsBlind
-ON ReviewSampleItems AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    LEFT JOIN deleted d ON d.SampleItemId = i.SampleItemId
-    WHERE i.SolvedLabel IS NOT NULL
-      AND i.KeyRevealedAt IS NOT NULL
-      AND (d.SampleItemId IS NULL OR ISNULL(d.SolvedLabel, '') <> i.SolvedLabel)
-  )
-    THROW 50092, 'W-01: a blind solve must be recorded before the authored key is revealed. This row records a solve against a sample whose key had already been read.', 1;
-END;
-GO
--- A stratum holds items that arrived in ITS batch, and nothing else. ImportLog is the only record of
--- which item a record became (#205 added ItemId for exactly that), so it is the only join available.
--- This is what stops a sample being pointed at stock from another author's file, and - through the
--- batch's own CertId - at another certificate bank.
-CREATE TRIGGER trg_ReviewSampleItems_ItemIsInItsBatch
-ON ReviewSampleItems AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    WHERE NOT EXISTS (
-      SELECT 1 FROM ImportLog l
-      WHERE l.BatchId = i.BatchId AND l.ItemId = i.ItemId)
-  )
-    THROW 50093, 'A stratum may only sample items that arrived in its own batch; an item with no verdict in this batch is not this audit''s to decide.', 1;
-END;
 GO
 -- ============ Domain 40: #240 The leveled lesson ============
 -- A lesson is addressed by (skill, topic, level), and it carries the level itself. Before this block a
@@ -5386,98 +3380,3 @@ GO
 CREATE UNIQUE INDEX UQ_PracticeAnswers_Card ON PracticeAnswers(SessionId, CardId)
   WHERE CardId IS NOT NULL;
 GO
-
--- ============ Domain 41: #226 the publish door ============
--- ADM-11: "publishing is one door. A single action after an audit, never a status field." Before this
--- block that was true of `AdminExamService` and false of the database: `Exams.Status` was a plain
--- column, so a migration, a seed, an admin script or a future endpoint could set `published` without
--- running a single one of the six invariants. The demo seed does exactly that, for all seventeen of its
--- papers, and every one of them predates the audit - ETS 2024 declares 219 questions across its
--- sections and holds 9. The service door was never the constraint; the comment beside
--- `CreateExamAsync` was a convention, and ADR-0012 records what conventions are worth here.
---
--- THE VERDICT IS PERSISTED, NOT RECOMPUTED, for the reason #208 recorded about the rubric ladder: the
--- six invariants are C# - gate four's envelope, span and audio rules are pure functions that must not
--- be re-implemented in T-SQL - so a trigger cannot run them. What a trigger can do is refuse to believe
--- a claim nobody recorded. `ExamPublishAudits` is that record: one row per paper, written by the only
--- service allowed to write it, and the Exams trigger refuses a transition into `published` when no pass
--- exists that is at least as new as the paper's last edit.
---
--- WHY THE PASS MUST BE NEWER THAN THE LAST EDIT. Without that clause a publish followed by an edit
--- that breaks an invariant, followed by a raw UPDATE, would sail through on the first publish's row -
--- which is the same "stale snapshot" defect the audit exists to prevent. Every structural write already
--- bumps `Exams.UpdatedAt`, so the comparison is against a value the database maintains rather than one
--- this trigger has to trust.
---
--- NOT IN `DerivedFactOwners`, deliberately, and #208 set the precedent. That registry's `covered` set
--- is audited by domain27 for a `ProjectionVersion` column as well as `WrittenByService`, because its
--- facts are projections that a stale callback could overwrite. A publish pass has neither a callback
--- nor a race: `PassedAt` against `Exams.UpdatedAt` is the currency test, and a second monotonic counter
--- beside it would be a second answer to one question. `trg_ExamPublishAudits_SingleWriter` states the
--- owner instead, which is the half the registry would have supplied.
---
--- A FIXTURE CATALOG IS EXEMPT, on the same rule and for the same reason as the five #201 write guards:
--- a catalog that holds only disposable test data has no production paper to protect, and every
--- `UPDATE Exams SET Status='published'` in the suite depends on writing one directly. `fn_IsFixtureCatalog`
--- is a boolean about the CATALOG, never an identity, so it cannot impersonate anyone; a strict catalog
--- (production-like, or a manual-test run) gets both refusals, and domain41 proves both halves by
--- flipping the flag.
-CREATE TABLE ExamPublishAudits (
-  ExamId           INT NOT NULL
-    CONSTRAINT PK_ExamPublishAudits PRIMARY KEY
-    CONSTRAINT FK_ExamPublishAudits_Exam REFERENCES Exams(ExamId),
-  -- When the six invariants last all held. Compared against Exams.UpdatedAt, so a pass that predates
-  -- the paper's newest edit does not unlock the door.
-  PassedAt         DATETIMEOFFSET NOT NULL,
-  -- ADR-0012: the verdict is derived from the six checks, never typed beside them. No foreign key, for
-  -- the registry's own reason: OwningService is not unique, and a mistyped name is refused by the
-  -- trigger comparing it against the registry row anyway.
-  WrittenByService VARCHAR(64) NOT NULL
-);
-GO
-CREATE TRIGGER trg_ExamPublishAudits_SingleWriter
-ON ExamPublishAudits AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  -- #208's precedent for the rubric lock, for the same reason: the verdict is derived from a
-  -- computation the database cannot run, so the owner is a constant here and the registry keeps its
-  -- nine facts. Registering it would have demanded a ProjectionVersion on a row that is already
-  -- one-per-exam, which is a second answer to "is this pass current" beside the PassedAt/UpdatedAt
-  -- comparison the publish trigger actually makes.
-  IF EXISTS (SELECT 1 FROM inserted i WHERE ISNULL(i.WrittenByService, '') <> 'AdminExamService')
-    THROW 50102, 'A publish pass has exactly one writer, AdminExamService. A write declaring another writer (or none) is refused: a pass nobody can attribute is a pass nobody took.', 1;
-END;
-GO
--- The door itself, on both halves: a paper is never CREATED published, and a paper may only MOVE into
--- published with a pass at least as new as its last edit. Both arms are needed - the first closes
--- `INSERT ... 'published'`, the second closes `UPDATE ... SET Status='published'`.
-CREATE TRIGGER trg_Exams_PublishRequiresAudit
-ON Exams AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  -- Fixture catalogs hold disposable data (see the block comment above).
-  IF dbo.fn_IsFixtureCatalog() = 1 RETURN;
-
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    LEFT JOIN deleted d ON d.ExamId = i.ExamId
-    WHERE d.ExamId IS NULL AND i.Status = 'published'
-  )
-    THROW 50100, 'ADM-11: an exam is created as a draft. Publishing is one door - POST /{id}/publish runs the six readiness invariants - so a paper cannot be inserted already published.', 1;
-
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN deleted d ON d.ExamId = i.ExamId
-    WHERE i.Status = 'published'
-      AND d.Status <> 'published'
-      AND NOT EXISTS (
-        SELECT 1 FROM ExamPublishAudits a
-         WHERE a.ExamId = i.ExamId
-           AND a.PassedAt >= ISNULL(d.UpdatedAt, d.CreatedAt))
-  )
-    THROW 50101, 'ADM-11: publishing is one door. This exam has no recorded readiness pass newer than its last edit, so the status is being set without the six invariants. Publish through POST /{id}/publish, which runs the audit and records the pass.', 1;
-END;
-GO
-

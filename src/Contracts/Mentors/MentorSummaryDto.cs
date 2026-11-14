@@ -1,10 +1,7 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace Contracts;
 
 public sealed record MentorSummaryDto(
     int MentorId,
-    int? UserId,
     string DisplayName,
     string? Bio,
     int CertId,
@@ -14,12 +11,12 @@ public sealed record MentorSummaryDto(
     string? SkillCode,
     string? SkillName,
     string? Modality,
-    string Type,
-    decimal PricePerSlot,
+    string MeetLink,
     int PriceCredits,
     string? Headline,
     string? Expertise,
     int SessionMinutes,
     bool IsActive,
     decimal? AvgRating,
-    int ReviewCount);
+    int ReviewCount,
+    IReadOnlyList<MentorWeeklySlotDto>? WeeklySlots = null);

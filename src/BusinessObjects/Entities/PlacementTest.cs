@@ -15,7 +15,8 @@ public partial class PlacementTest
 
     public int UserId { get; set; }
 
-    public int CertId { get; set; }
+    /// <summary>#309: nullable to allow universal placement before certificate selection in OOBE Step 3.</summary>
+    public int? CertId { get; set; }
 
     public int? ExamId { get; set; }
 
@@ -39,11 +40,9 @@ public partial class PlacementTest
     /// snapshot; NULL while the placement is still in progress.</summary>
     [StringLength(64)]
     [Unicode(false)]
-    public string? WrittenByService { get; set; }
 
     /// <summary>#191: monotonic ordering token, so an older out-of-order callback cannot overwrite a
     /// newer result.</summary>
-    public int ProjectionVersion { get; set; }
 
     public DateTimeOffset TakenAt { get; set; }
 
@@ -69,6 +68,21 @@ public partial class PlacementTest
     [Unicode(false)]
     public string Scope { get; set; } = "all_skills";
 
+    [Column(TypeName = "decimal(5, 2)")]
+    public decimal? ListeningPct { get; set; }
+
+    [Column(TypeName = "decimal(5, 2)")]
+    public decimal? ReadingPct { get; set; }
+
+    [Column(TypeName = "decimal(5, 2)")]
+    public decimal? SpeakingPct { get; set; }
+
+    [Column(TypeName = "decimal(5, 2)")]
+    public decimal? WritingPct { get; set; }
+
+    [Column(TypeName = "decimal(5, 2)")]
+    public decimal? OverallPct { get; set; }
+
     /// <summary>#289: the ledger debit written when starting a paid retake; NULL for a free first placement.</summary>
     public int? CreditTxnId { get; set; }
 
@@ -83,12 +97,10 @@ public partial class PlacementTest
     /// <see cref="PlacementResultStatus.EstimatedFromOneTask"/>, or when
     /// <see cref="CompletionFailureReason"/> is set.
     /// </summary>
-    [InverseProperty("Placement")]
-    public virtual ICollection<PlacementSkillResult> SkillResults { get; set; } = new List<PlacementSkillResult>();
 
     [ForeignKey("CertId")]
     [InverseProperty("PlacementTests")]
-    public virtual Certificate Cert { get; set; } = null!;
+    public virtual Certificate? Cert { get; set; }
 
     [ForeignKey("ExamId, CertId")]
     [InverseProperty("PlacementTestExams")]

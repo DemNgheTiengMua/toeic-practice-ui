@@ -46,12 +46,8 @@ public partial class GradingCriterion
     public virtual ICollection<SectionCriterion> SectionCriteria { get; set; } = new List<SectionCriterion>();
 
     /// <summary>#192: the seven-band grid. Seven rows is the authored shape; the lock refuses fewer.</summary>
-    [InverseProperty("Criterion")]
-    public virtual ICollection<GradingCriterionDescriptor> Descriptors { get; set; } = new List<GradingCriterionDescriptor>();
 
     /// <summary>#193: the calibrated benchmark responses at bands 2, 3 and 4.</summary>
-    [InverseProperty("Criterion")]
-    public virtual ICollection<GradingCriterionAnchor> Anchors { get; set; } = new List<GradingCriterionAnchor>();
 
 
     [ForeignKey("SkillId, CertId")]

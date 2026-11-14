@@ -6,6 +6,48 @@ next session must not re-litigate.**
 
 ---
 
+## ACTIVE REBUILD: ADR-0017 — Simplify Exams, Universal Placement, OOBE, Learning Path & AI Grading (Spec #308, Tickets #309–#314)
+
+| Ticket | Title | Blocked By | State |
+|---|---|---|---|
+| **#309** | Expand schema & lean 2-certificate seed (`TOEIC`, `IELTS`, Universal Placement, `TargetBands`, `learning_path` ledger, `AiGradings`) | None | **open** |
+| **#310** | Streamlined Certificate Wizard, 2-State Exam Studio & Flat `TargetBands` Question/Lesson Bank | #309 | **open** |
+| **#311** | Single Universal Placement Exam (2/4-Skill Scope) & Guided Learner OOBE with Soft-Lock | #309 | **open** |
+| **#312** | Direct Rubric-Grounded LLM Grading & Fact-Grounded AI Insight with HeroUI v3 Visualizations | #309 | **open** |
+| **#313** | Paid 4-Week Deterministic Learning Path (5 Credits) & Stateless Free Practice Unlocked by Path Completion | #309 | **open** |
+| **#314** | Contract & Eradicate All Legacy Pool, Gate, Audit, Two-Stage Draw, CEFR Cell-Mastery, Sliding-Window & Single-Writer Artifacts | #310, #311, #312, #313 | **open** |
+
+See [docs/specs/2026-11-14-simplify-exams-placement-learning-path-oobe-and-ai-rebuild.md](file:///D:/Study/PRN3/Project/extra_efficiency_ui/docs/specs/2026-11-14-simplify-exams-placement-learning-path-oobe-and-ai-rebuild.md), [docs/adr/0017-simplify-exams-placement-and-learning-path.md](file:///D:/Study/PRN3/Project/extra_efficiency_ui/docs/adr/0017-simplify-exams-placement-and-learning-path.md), and [GLOSSARY.md](file:///D:/Study/PRN3/Project/extra_efficiency_ui/GLOSSARY.md).
+**Locked Decisions (DO NOT RE-LITIGATE):**
+1. **Scope**: Only `D:\Study\PRN3\Project\extra_efficiency_ui` (SQL + .NET 10 + React 19 / HeroUI v3 SPA). Ignore mobile (`D:\Study\PRM_Android`). Eradicate ("xóa TẬN GỐC") all legacy pool/gate/audit/2-stage-draw/CEFR-projection/sliding-window/`DerivedFactOwners` tables, triggers, services, and UI pages.
+2. **Lean 2-Certificate Seed + 1 Universal Placement Exam**:
+   - Trim `docs/seed-demo.sql` to keep ONLY **1 two-skill certificate (`TOEIC` Listening & Reading)**, **1 four-skill certificate (`IELTS` 4 skills)**, and **1 single Universal Placement Exam** (`purpose = placement`). Purge `VSTEP`, `TOEIC_CAT`, `TOEIC_SW` and all their clutter from the seed.
+3. **Single Universal Placement (2-Skill vs. 4-Skill Scope) & Post-Placement Certificate Choice in OOBE**:
+   - Placement uses **1 universal diagnostic exam** across the platform.
+   - **OOBE Flow (`/onboarding`)**:
+     - **Step 1**: Learner chooses **2 skills (`listening_and_reading`, instant objective grading)** or **4 skills (`all_skills`, including AI-graded Speaking & Writing)** and sits the single Placement Exam (no certificate selection required prior to Placement).
+     - **Step 2**: Wait for AI Grading (if 4 skills) & view Diagnostic Result.
+     - **Step 3**: Choose **Certificate Track to study (`TOEIC` 2-skill or `IELTS` 4-skill)**, **Target Band**, **Exam Date & Weekly Study Hours** (`GoalFeasibilityCalculator`: `Feasible` / `Stretch` / `Unrealistic`).
+     - **Step 4**: Pay **5 Credits (`Reason = 'learning_path'`)** to generate the 4-week Learning Path.
+   - **OOBE Soft-Lock & Temporary Skip**: Normal study nav hidden during OOBE unless learner clicks session-only `Explore for now` (`sessionStorage`) to browse Mentors/Wallet; shows persistent top return banner and HeroUI v3 Soft-Lock Empty States on `/learning-path`, `/practice`, `/weakness`, `/speaking`, `/writing`, `/dashboard`. Once OOBE is done, `/onboarding` redirects to `/dashboard`.
+4. **Multi-Target Band Tagging (`TargetBands`)**:
+   - `Items` (Questions) and `Lessons` carry `TargetBands VARCHAR(100) NOT NULL DEFAULT 'ALL'` (e.g., `'ALL'` for general foundational knowledge, or comma-separated bands like `'A2,B1,B2'`).
+5. **Paid 4-Week Deterministic Learning Path (5 Credits)**:
+   - Charges 5 credits (`learning_path` ledger reason, Block-Before-Charge).
+   - Generates a fixed 4-week sequential plan (`Week 1..4`) matching `[CurrentBand .. TargetBand]` + `'ALL'` general knowledge (with nearest-level fallback), prioritizing weakest skills/topics from Placement.
+   - Steps unlock sequentially (`ConceptLesson` -> `FocusPractice`/`ReviewSpaced` -> `MockSection` at weeks 2 & 4). Writing & Speaking steps in the path include Lesson/Guide + Rubric + **free AI grading** (covered by the 5-credit path fee).
+6. **Stateless Free Practice Unlocked strictly by Path Completion (Option A)**:
+   - Free Practice is only unlocked for topics/sections completed (`done`) in the learner's Learning Path.
+   - Preserves all 6 objective render formats (`mcq`, `mcq_3`, `multi_select`, `inline_completion`, `dropdown`, `drag_drop`) + AI-graded `free_response` with Guide/Rubric.
+   - **No session resume (`in_progress`/`abandoned`) for Practice** — only Mock Exam and Placement Exam (`ExamAttempts`) support session resume.
+7. **Optimized LLM Input & HeroUI v3 Output UI (`ClaudeAiGrader`, `SpeechSuperAiGrader`, `ClaudeAiInsightGenerator`)**:
+   - Remove the 7-row `GradingCriterionDescriptors` & `GradingCriterionAnchors` requirement and the brittle `InsightNarrativeGuard` CEFR cell filter.
+   - Grade directly against flat `GradingCriteria` + Task Prompt/Guide + Certificate `CurrentBand -> TargetBand` context (combining SpeechSuper acoustic scores + Claude transcript evaluation for Speaking), returning `criterionScores`, `overallFeedback`, `priorityFix`, `modelRewrite`, and inline `errorSpans` (`originalSnippet`, `correctedSnippet`, `explanationVi`, `category`).
+   - Feed `ClaudeAiInsightGenerator` deterministic accuracy facts + top 5 wrong-answer fingerprints, returning structured Vietnamese narrative, `trend` (`Improving` | `Steady` | `Declining`), `strengths`, `weaknesses`, and prioritized `recommendations` (`High` | `Medium` | `Low`).
+
+---
+
+
 ## The 12 tickets
 
 | # | State | Evidence / note |

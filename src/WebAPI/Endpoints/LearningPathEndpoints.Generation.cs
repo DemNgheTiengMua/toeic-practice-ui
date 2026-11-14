@@ -35,6 +35,10 @@ public static partial class LearningPathEndpoints
             {
                 return Problem(StatusCodes.Status422UnprocessableEntity, "Goal does not fit the time available", ApiError.Codes.LearningPathGoalUnrealistic, ex.Message);
             }
+            catch (Services.Credits.CreditLedgerException ex) when (ex.Code == Services.Credits.CreditLedgerException.InsufficientCredits)
+            {
+                return Problem(StatusCodes.Status402PaymentRequired, "Insufficient credits", ApiError.Codes.InsufficientCredits, ex.Message);
+            }
             catch (LearningPathException ex) when (ex.Code is LearningPathException.StartingBandUnknown or LearningPathException.TargetBandMissing)
             {
                 return Problem(StatusCodes.Status422UnprocessableEntity, "No goal to build a path from", ApiError.Codes.LearningPathBandUnknown, ex.Message);

@@ -51,9 +51,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILearnerService, LearnerService>();
         services.AddScoped<ICreditLedger, CreditLedger>();
         services.AddScoped<IPracticeService, PracticeService>();
-        // #238: the read-only objective practice matrix. A read, so it draws nothing and is not a
-        // second selection path.
-        services.AddScoped<PracticeMatrixService>();
         services.AddScoped<ISavedQuestionService, SavedQuestionService>();
         services.AddScoped<IWeaknessAnalysisService, WeaknessAnalysisService>();
         services.AddScoped<IPackageService, PackageService>();
@@ -62,18 +59,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAdminOrderService, AdminOrderService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddScoped<IScoreConversionService, ScoreConversionService>();
-        services.AddScoped<ICefrProjectionService, CefrProjectionService>();
-        services.AddScoped<ISkillStateWriter, SkillStateWriter>();
-        // #222: the mock result read and the explicit sync are one service with two methods, so the
-        // read path and the write path are visible in one place and the read cannot reach the writer.
-        services.AddScoped<IMockResultSyncService, MockResultSyncService>();
         services.AddScoped<IAdminExamService, AdminExamService>();
         services.AddScoped<IAdminItemService, AdminItemService>();
-        services.AddScoped<IStimulusStudioService, StimulusStudioService>();
-        services.AddScoped<IProductiveStudioService, ProductiveStudioService>();
-        // #208: the rubric and calibration studio. It needs the grading seam to run the ladder, which is
-        // why the ladder is not a pure function: seven responses are graded by a model.
-        services.AddScoped<IRubricStudioService, RubricStudioService>();
         services.AddScoped<IAdminCoverageService, AdminCoverageService>();
         // #247 / #248: the automated cutover-readiness pass. It reports; the cutover script decides.
         services.AddScoped<ICutoverReadinessService, CutoverReadinessService>();
@@ -83,76 +70,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILedgerTransferService, LedgerTransferService>();
         services.AddScoped<IExamQuickIngestService, ExamQuickIngestService>();
         services.AddScoped<IQuestionImportService, QuestionImportService>();
-
-        // #198: the ingestion seam and its four gates. The gates need models, and the container is
-        // where a deployment opts into real ones; unconfigured, they refuse rather than pass (see
-        // PoolIngestionGates). The seam itself is always registered, because its own rules - version,
-        // skill, tier prefix, record shape - need no model at all.
-        //
-        // #258: the models are opt-in by CONFIGURATION, not by a code change that nobody made. Gate
-        // three needs TWO verifiers from DISTINCT families - two instances of one family agree with
-        // each other and the agreement means nothing while every count looks right - so the family
-        // list is a config array and one entry is deliberately NOT enough.
-        var gateModels = GateModelConfiguration.Resolve(configuration);
-
-        services.AddScoped<PoolIngestionGates>(sp =>
-        {
-            var client = sp.GetRequiredService<IClaudeClient>();
-            var logger = sp.GetRequiredService<ILogger<PoolIngestionGates>>();
-
-            var verifiers = gateModels.IsGateThreeEnabled
-                ? new IVerifierModel[]
-                  {
-                      new ClaudeVerifierModel(client, gateModels.VerifierFamilies[0]),
-                      new ClaudeVerifierModel(client, gateModels.VerifierFamilies[1]),
-                      // The ablation solver is the first family by design: gate four asks whether the
-                      // stimulus alone decides the key, which is a different question from agreement.
-                      new ClaudeVerifierModel(client, gateModels.VerifierFamilies[0], "ablation"),
-                  }
-                : [];
-
-            ILevelClassifier? classifier = gateModels.ClassifierFamily is { } classifierFamily
-                ? new ClaudeLevelClassifier(client, classifierFamily)
-                : null;
-
-            if (!gateModels.IsFullyConfigured)
-            {
-                logger.LogWarning(
-                    "The content gates are not fully configured: {Verifiers} distinct verifier family(ies) "
-                    + "and {Classifier} classifier. Gate three and gate four will report their checks as "
-                    + "not run rather than pass. {Reason}",
-                    gateModels.VerifierFamilies.Count,
-                    classifier is null ? "no" : "a",
-                    GateModelConfiguration.Remedy);
-            }
-
-            return new PoolIngestionGates(
-                sp.GetRequiredService<CompanionDbContext>(),
-                verifiers.Length > 0 ? verifiers[0] : null,
-                verifiers.Length > 1 ? verifiers[1] : null,
-                verifiers.Length > 2 ? verifiers[2] : null,
-                classifier);
-        });
-        services.AddScoped<PoolIngestionService>();
-        // #205: the staging workbench - the batch, its verdicts, one re-submitted record, and the
-        // audit's clearance. A thin adapter so the endpoints speak DTOs.
-        services.AddScoped<IngestionWorkbenchService>();
-        services.AddScoped<IAdminIngestionService, AdminIngestionService>();
-        // #206: the stratified audit. The service owns the sample, the blind-solve order and the
-        // stratum decision; the adapter speaks DTOs and keeps the key out of every list.
-        services.AddScoped<StratifiedAuditService>();
-        services.AddScoped<IAdminAuditService, AdminAuditService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         // #286: the live revision. Registered here so the dead-service guard sees it wired, and scoped so
         // it shares the request's DbContext rather than taking a second connection per poll.
         services.AddScoped<IDashboardRevisionService, DashboardRevisionService>();
         services.AddScoped<IPlacementService, PlacementService>();
-        // #276: the two-stage draw. Registered so the interface a caller resolves is the same one the
-        // dead-service guard checks for - before this, both classes were complete, tested, and reachable
-        // from nothing.
-        services.AddScoped<IPlacementStageOneDrawService, PlacementStageOneDrawService>();
-        services.AddScoped<IPlacementStageTwoDrawService, PlacementStageTwoDrawService>();
-        services.AddScoped<ICalibrationService, CalibrationService>();
         services.AddScoped<ILearningPathService, LearningPathService>();
         services.AddScoped<ILessonService, LessonService>();
         services.AddScoped<IAdminLessonService, AdminLessonService>();
@@ -225,13 +147,6 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IAiInsightService, AiInsightService>();
         services.AddHostedService<AiInsightBackgroundService>();
-
-        // #199 / D0.7: the telemetry schedule. Scoped like every other service (it owns a DbContext) and
-        // hosted so an item crossing 30, 50, 100 or 250 administrations quarantines itself without
-        // waiting for someone to notice. The service is idempotent by its primary key, so a second run
-        // at the same counts writes nothing.
-        services.AddScoped<ItemTelemetryService>();
-        services.AddHostedService<ItemTelemetryBackgroundService>();
 
         return services;
     }

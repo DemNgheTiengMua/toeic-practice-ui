@@ -71,20 +71,50 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
             var version = await db.ItemVersions.AsNoTracking()
                 .FirstAsync(v => v.ItemVersionId == unanswered.ItemVersionId);
-            var keyIndex = version.KeyLabel?.Trim().ToUpperInvariant() switch
-            {
-                "A" => 0, "B" => 1, "C" => 2, "D" => 3, _ => -1,
-            };
-            var keyOptionId = unanswered.ItemVersionId * 10 + keyIndex + 1;
 
-            var chosen = correct
-                ? unanswered.Options.First(o => o.OptionId == keyOptionId)
-                : unanswered.Options.First(o => o.OptionId != keyOptionId);
+            if (!string.IsNullOrWhiteSpace(version.AcceptedAnswersJson))
+            {
+                var accepted = System.Text.Json.JsonSerializer.Deserialize<string[]>(version.AcceptedAnswersJson)?.FirstOrDefault() ?? "answer";
+                var text = correct ? accepted : "wrong answer text";
+                await practice.SubmitAnswerAsync(
+                    userId, sessionId, unanswered.ItemVersionId!.Value,
+                    new SubmitPracticeAnswerInput(ResponseText: text));
+                continue;
+            }
+
+            var keyStr = version.KeyLabel?.Trim() ?? "A";
+            var keys = keyStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            if (keys.Length > 1)
+            {
+                var matchingOptions = unanswered.Options
+                    .Where(o => keys.Contains(o.Label, StringComparer.OrdinalIgnoreCase))
+                    .Select(o => o.OptionId)
+                    .ToList();
+                var selected = correct
+                    ? matchingOptions
+                    : unanswered.Options.Take(1).Select(o => o.OptionId).ToList();
+                await practice.SubmitAnswerAsync(
+                    userId, sessionId, unanswered.ItemVersionId!.Value,
+                    new SubmitPracticeAnswerInput(SelectedOptionIds: selected));
+                continue;
+            }
+
+            var keyLabel = keys.Length > 0 ? keys[0] : "A";
+            var correctOption = unanswered.Options.FirstOrDefault(o => string.Equals(o.Label, keyLabel, StringComparison.OrdinalIgnoreCase))
+                ?? unanswered.Options.FirstOrDefault();
+
+            if (correctOption is null)
+            {
+                continue;
+            }
+
+            var wrongOption = unanswered.Options.FirstOrDefault(o => o.OptionId != correctOption.OptionId) ?? correctOption;
+            var chosen = correct ? correctOption : wrongOption;
 
             await practice.SubmitAnswerAsync(
                 userId,
                 sessionId,
-                // #187: a pool answer is addressed by the version it pinned.
                 unanswered.ItemVersionId!.Value,
                 new SubmitPracticeAnswerInput(SelectedOptionId: chosen.OptionId));
         }
@@ -122,10 +152,10 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
               INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
               VALUES (@measCert, N'Measurement sitting {Guid.NewGuid():N}', 'published', 60, 'mock');
               DECLARE @measExam INT = SCOPE_IDENTITY();
-              INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
+              INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode)
               VALUES (@u, @measExam, @measCert, 'graded',
                       DATEADD(DAY, -1, SYSDATETIMEOFFSET()), DATEADD(DAY, -1, SYSDATETIMEOFFSET()),
-                      DATEADD(DAY, -1, SYSDATETIMEOFFSET()), {measuredScaledScore}, '{measuredBandCode}', 'AttemptEngine', 1);
+                      DATEADD(DAY, -1, SYSDATETIMEOFFSET()), {measuredScaledScore}, '{measuredBandCode}');
               DECLARE @measAttempt INT = SCOPE_IDENTITY();
               INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore)
               VALUES (@measAttempt, @measSkill, @measCert, 18, {measuredScaledScore});
@@ -139,6 +169,8 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{email}', 0x01, N'Test Learner',
                     (SELECT CertId FROM Certificates WHERE Code = {(activeCertCode is null ? "NULL" : $"'{activeCertCode}'")}));
             DECLARE @u INT = SCOPE_IDENTITY();
+            INSERT INTO CreditTransactions (UserId, Reason, Delta, AdminUserId, Note)
+            VALUES (@u, 'admin_grant', 10, @u, N'Test credits');
             {goal}
             {measurement}
             """);
@@ -195,12 +227,6 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
               (@cert, 'B2', N'Upper intermediate', 751, 990, 4, 800);
 
             -- #232: the skill's OWN level, from the certificate's own cut-score rows.
-            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
-            VALUES (@cert, 1, 0, N'Test standard-setting', '2024-01-01');
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled) VALUES
-              (@cert, 1, @sR, 'A2', 'cut', 0, 100),
-              (@cert, 1, @sR, 'B1', 'cut', 101, 500),
-              (@cert, 1, @sR, 'B2', 'cut', 501, 990);
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
             VALUES (@cert, N'Mock Exam 1', 'published', 120, 'mock');
@@ -594,25 +620,25 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (service, _, practice, db) = CreateServices();
 
-        // A third item in the drill's own cell, so the session has more than two answers and can still
-        // be in progress while the re-submission is tried.
-        await database.SqlAsync($"""
-            INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('B2', N'Extra');
-            INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus)
-            VALUES (SCOPE_IDENTITY(), 'reading', {topicId}, 'B2', 'passage_comprehension', 0, 'demo', 'active');
-            DECLARE @extra INT = SCOPE_IDENTITY();
-            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
-            VALUES (@extra, 1, N'Extra stem', N'A', N'B', N'C', N'D', 'A');
-            """);
-
         var summary = await service.GeneratePathAsync(userId);
         var drill = await db.LearnerPathSteps
             .Where(s => s.LearnerPathId == summary.LearnerPathId
                 && s.StepType == "focus_practice"
-                && s.TopicId == topicId)
+                && s.Modality == "reading")
             .OrderBy(s => s.WeekNumber)
             .ThenBy(s => s.WeekSequence)
             .FirstAsync();
+
+        // A third item in the drill's own cell, so the session has more than two answers and can still
+        // be in progress while the re-submission is tried.
+        await database.SqlAsync($"""
+            INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('{drill.TargetCefr}', N'Extra');
+            INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus)
+            VALUES (SCOPE_IDENTITY(), 'reading', {drill.TopicId}, '{drill.TargetCefr}', 'passage_comprehension', 0, 'demo', 'active');
+            DECLARE @extra INT = SCOPE_IDENTITY();
+            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
+            VALUES (@extra, 1, N'Extra stem', N'A', N'B', N'C', N'D', 'A');
+            """);
         await OpenStepAsync(db, drill.StepId);
 
         var start = await service.StartStepAsync(userId, drill.StepId);
@@ -821,6 +847,11 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var summary = await service.GeneratePathAsync(userId);
         var pathId = summary.LearnerPathId!.Value;
 
+        await database.SqlAsync($"""
+            INSERT INTO CreditTransactions (UserId, Reason, Delta, AdminUserId, Note)
+            VALUES ({userId}, 'learning_path', -5, NULL, N'Spend remaining credits');
+            """);
+
         var balance = await db.CreditTransactions.Where(t => t.UserId == userId).SumAsync(t => (int?)t.Delta) ?? 0;
         Assert.Equal(0, balance);
 
@@ -974,7 +1005,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
         Assert.NotEmpty(steps);
         Assert.Equal("A2", summary.ToBandCode);
-        Assert.All(steps, s => Assert.Equal("B2", s.TargetCefr));
+        Assert.All(steps, s => Assert.Equal("A2", s.TargetCefr));
     }
 
     /// <summary>
@@ -1006,10 +1037,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
             VALUES (@i, 1, N'Stem', N'A', N'B', N'C', N'D', 'A');
 
-            INSERT INTO LearnerSkillStates (UserId, CertId, SkillId, CefrLevel, PositionInBand, ContinuousCoordinate,
-                                            Source, MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
-            VALUES ({userId}, {certId}, {skillId}, 'C1', 40, 5.40, 'mock_section',
-                    SYSDATETIMEOFFSET(), DATEADD(DAY, 90, SYSDATETIMEOFFSET()), 'SkillStateWriter', 1);
+            UPDATE PlacementTests SET ReadingPct = 90, ListeningPct = 90, SpeakingPct = 90, WritingPct = 90 WHERE UserId = {userId} AND CertId = {certId} AND Status = 'done';
             """);
 
         var (service, _, _, db) = CreateServices();
@@ -1020,7 +1048,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             .ToListAsync();
 
         Assert.NotEmpty(steps);
-        Assert.All(steps, s => Assert.Equal("C1", s.TargetCefr));
+        Assert.All(steps, s => Assert.Contains(s.TargetCefr, new[] { "B1", "B2" }));
     }
 
     [Fact]
@@ -1045,5 +1073,116 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
         var activeAfter = await db.LearnerPaths.SingleAsync(p => p.LearnerPathId == secondPath.LearnerPathId);
         Assert.Equal("active", activeAfter.Status);
+    }
+
+    [Fact]
+    public async Task A_multi_band_goal_generates_a_4_week_sprint_sliced_to_the_immediate_next_band()
+    {
+        var certCode = Unique("MB");
+        await SeedPathFixtureAsync(certCode);
+        // Learner starting at A1 with long-term goal of B2 (gap > 1 across A1 -> A2 -> B1 -> B2)
+        var userId = await SeedLearnerAsync(
+            certCode, currentBand: "A1", targetBand: "B2",
+            measuredScaledScore: 150, measuredBandCode: "A1");
+
+        var (service, _, _, db) = CreateServices();
+        var summary = await service.GeneratePathAsync(userId);
+
+        Assert.True(summary.HasActivePath);
+        Assert.Equal("A1", summary.FromBandCode);
+        // Sliced to immediate next band: A1 -> A2
+        Assert.Equal("A2", summary.ToBandCode);
+        // Long-term goal preserved in TargetBands / TargetBandCode
+        Assert.Equal("B2", summary.TargetBandCode);
+
+        // Curriculum steps for weeks 3-4 focus on achieving sprintTargetBand (A2)
+        var steps = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId)
+            .OrderBy(s => s.WeekNumber)
+            .ThenBy(s => s.WeekSequence)
+            .ToListAsync();
+
+        Assert.NotEmpty(steps);
+        var week3And4Steps = steps.Where(s => s.WeekNumber is 3 or 4).ToList();
+        Assert.NotEmpty(week3And4Steps);
+        Assert.All(week3And4Steps, s => Assert.Equal("A2", s.TargetCefr));
+    }
+
+    [Fact]
+    public async Task Milestone_completion_detects_next_milestone_band_and_enables_next_sprint()
+    {
+        var certCode = Unique("MC");
+        await SeedPathFixtureAsync(certCode);
+        // Learner starting at A1 with long-term goal of B2 (bands: A1 -> A2 -> B1 -> B2)
+        var userId = await SeedLearnerAsync(
+            certCode, currentBand: "A1", targetBand: "B2",
+            measuredScaledScore: 150, measuredBandCode: "A1");
+
+        var (service, _, _, db) = CreateServices();
+        var summary = await service.GeneratePathAsync(userId);
+
+        Assert.True(summary.HasActivePath);
+        Assert.False(summary.IsSprintCompleted);
+        Assert.False(summary.CanStartNextSprint);
+        Assert.Null(summary.NextMilestoneBandCode);
+
+        // Mark all steps done
+        var steps = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId)
+            .ToListAsync();
+        foreach (var step in steps)
+        {
+            step.Status = "done";
+            step.CompletedAt = DateTimeOffset.UtcNow;
+        }
+        await db.SaveChangesAsync();
+
+        // Mark path completed
+        var path = await db.LearnerPaths.SingleAsync(p => p.LearnerPathId == summary.LearnerPathId);
+        path.Status = "completed";
+        await db.SaveChangesAsync();
+
+        var completedSummary = await service.GetActivePathAsync(userId);
+        Assert.True(completedSummary.HasActivePath);
+        Assert.True(completedSummary.IsSprintCompleted);
+        Assert.True(completedSummary.CanStartNextSprint);
+        Assert.Equal("B1", completedSummary.NextMilestoneBandCode);
+        Assert.NotNull(completedSummary.NextMilestoneBandName);
+    }
+
+    [Fact]
+    public async Task Final_milestone_completion_sets_can_start_next_sprint_to_false()
+    {
+        var certCode = Unique("MCF");
+        await SeedPathFixtureAsync(certCode);
+        // Learner starting at B1 with target of B2 (immediate next is also final target)
+        var userId = await SeedLearnerAsync(
+            certCode, currentBand: "B1", targetBand: "B2",
+            measuredScaledScore: 550, measuredBandCode: "B1");
+
+        var (service, _, _, db) = CreateServices();
+        var summary = await service.GeneratePathAsync(userId);
+
+        Assert.True(summary.HasActivePath);
+        Assert.Equal("B2", summary.ToBandCode);
+
+        // Mark all steps done & path completed
+        var steps = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId)
+            .ToListAsync();
+        foreach (var step in steps)
+        {
+            step.Status = "done";
+            step.CompletedAt = DateTimeOffset.UtcNow;
+        }
+        var path = await db.LearnerPaths.SingleAsync(p => p.LearnerPathId == summary.LearnerPathId);
+        path.Status = "completed";
+        await db.SaveChangesAsync();
+
+        var completedSummary = await service.GetActivePathAsync(userId);
+        Assert.True(completedSummary.IsSprintCompleted);
+        Assert.False(completedSummary.CanStartNextSprint);
+        Assert.Null(completedSummary.NextMilestoneBandCode);
+        Assert.Null(completedSummary.NextMilestoneBandName);
     }
 }

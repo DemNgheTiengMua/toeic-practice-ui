@@ -48,11 +48,14 @@ INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, ExpiresAt)
 VALUES (@u, @exam, @c, 'in_progress', DATEADD(hour, 72, SYSDATETIMEOFFSET()));
 DECLARE @attempt INT = SCOPE_IDENTITY();
 
-INSERT INTO MentorProfiles (DisplayName, CertId, Type, PricePerSlot, IsActive)
-VALUES (N'Coach', @c, 'ai', 0, 1);
+INSERT INTO MentorProfiles (DisplayName, CertId, MeetLink, PriceCredits, IsActive)
+VALUES (N'Coach', @c, N'https://meet.google.com/abc-defg-hij', 1, 1);
 DECLARE @mentor INT = SCOPE_IDENTITY();
-INSERT INTO Bookings (UserId, MentorId, MentorType, Status)
-VALUES (@u, @mentor, 'ai', 'done');
+INSERT INTO MentorSlots (MentorId, StartAt, EndAt, Status)
+VALUES (@mentor, '2026-10-01T09:00:00+07:00', '2026-10-01T10:00:00+07:00', 'booked');
+DECLARE @mslot INT = SCOPE_IDENTITY();
+INSERT INTO Bookings (UserId, MentorId, SlotId, PriceCredits, Status)
+VALUES (@u, @mentor, @mslot, 1, 'done');
 DECLARE @booking INT = SCOPE_IDENTITY();
 
 -- Seed 10 credits so a -5 placement_retake leaves balance = 5.

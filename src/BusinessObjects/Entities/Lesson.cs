@@ -42,6 +42,11 @@ public partial class Lesson
 
     public int DisplayOrder { get; set; }
 
+    /// <summary>#309: comma-separated target band codes (e.g. '5.5,6.0,6.5') or 'ALL' for general knowledge.</summary>
+    [StringLength(100)]
+    [Unicode(false)]
+    public string TargetBands { get; set; } = "ALL";
+
     public DateTimeOffset CreatedAt { get; set; }
 
     [ForeignKey("CategoryId")]

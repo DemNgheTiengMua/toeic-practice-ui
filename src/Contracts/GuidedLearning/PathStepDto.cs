@@ -31,7 +31,10 @@ public sealed record PathStepDto(
     DateTimeOffset? StartedAt,
     DateTimeOffset? CompletedAt,
     int? RefLessonId,
-    int? RefExamId);
+    int? RefExamId,
+    string? GuideText = null,
+    IReadOnlyList<string>? RubricCriteria = null,
+    bool IsZeroCreditAiGrading = false);
 
 /// <summary>#232: a planning week and its On Track verdict.</summary>
 public sealed record LearningPathWeekSummaryDto(

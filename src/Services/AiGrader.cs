@@ -78,12 +78,16 @@ public sealed class FakeAiGrader : IAiGrader
                 speakingScores.Add(new AiCriterionScoreResult(criterion.CriterionId, boundedScore, comment));
             }
 
+            var speakingFeedback = BuildDeterministicFeedback(transcript, request.TargetBandCode, isSpeaking: true);
             return Task.FromResult(new AiGradingResult(
                 Success: true,
                 FailureReason: null,
                 Model: DefaultModel,
                 Scores: speakingScores,
-                Transcript: transcript));
+                Transcript: transcript,
+                ErrorSpans: speakingFeedback.ErrorSpans,
+                PriorityFix: speakingFeedback.PriorityFix,
+                ModelRewrite: speakingFeedback.ModelRewrite));
         }
 
         var isBlank = string.IsNullOrWhiteSpace(request.ResponseText);
@@ -149,10 +153,63 @@ public sealed class FakeAiGrader : IAiGrader
                 comment));
         }
 
+        var feedback = BuildDeterministicFeedback(request.ResponseText!, request.TargetBandCode, isSpeaking: false);
         return Task.FromResult(new AiGradingResult(
             Success: true,
             FailureReason: null,
             Model: DefaultModel,
-            Scores: scores));
+            Scores: scores,
+            ErrorSpans: feedback.ErrorSpans,
+            PriorityFix: feedback.PriorityFix,
+            ModelRewrite: feedback.ModelRewrite));
+    }
+
+    private static (IReadOnlyList<BusinessObjects.AiErrorSpan> ErrorSpans, string PriorityFix, string ModelRewrite) BuildDeterministicFeedback(
+        string text,
+        string? targetBandCode,
+        bool isSpeaking)
+    {
+        var words = text.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        var spans = new List<BusinessObjects.AiErrorSpan>();
+
+        if (words.Length >= 4)
+        {
+            var snippet = string.Join(' ', words.Take(Math.Min(4, words.Length)));
+            if (text.Contains(snippet, StringComparison.Ordinal))
+            {
+                spans.Add(new BusinessObjects.AiErrorSpan(
+                    OriginalSnippet: snippet,
+                    CorrectedSnippet: $"{snippet} (refined)",
+                    Category: isSpeaking ? "pronunciation" : "vocabulary",
+                    ExplanationVi: isSpeaking
+                        ? "Nên nhấn trọng âm rõ hơn và nối âm tự nhiên ở cụm mở đầu này."
+                        : "Có thể dùng cấu trúc trang trọng và chính xác hơn để tăng điểm tiêu chí từ vựng."));
+            }
+        }
+
+        if (words.Length >= 8)
+        {
+            var secondSnippet = string.Join(' ', words.Skip(4).Take(Math.Min(4, words.Length - 4)));
+            if (text.Contains(secondSnippet, StringComparison.Ordinal))
+            {
+                spans.Add(new BusinessObjects.AiErrorSpan(
+                    OriginalSnippet: secondSnippet,
+                    CorrectedSnippet: $"{secondSnippet}, which",
+                    Category: "cohesion",
+                    ExplanationVi: "Thêm từ nối hoặc mệnh đề quan hệ để tăng tính mạch lạc giữa các ý."));
+            }
+        }
+
+        var bandSuffix = string.IsNullOrWhiteSpace(targetBandCode) ? "" : $" to reach {targetBandCode}";
+        var priorityFix = isSpeaking
+            ? $"Expand your supporting reasons with concrete examples and clearer clause linking{bandSuffix}."
+            : $"Strengthen topic sentences with precise academic vocabulary and explicit cohesive devices{bandSuffix}.";
+
+        var firstSentence = text.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? text.Trim();
+        var modelRewrite = isSpeaking
+            ? $"Overall, {firstSentence.ToLowerInvariant()}, which clearly illustrates why this topic matters in everyday life."
+            : $"Furthermore, {firstSentence.ToLowerInvariant()}, thereby demonstrating a clear and well-supported argument.";
+
+        return (spans, priorityFix, modelRewrite);
     }
 }

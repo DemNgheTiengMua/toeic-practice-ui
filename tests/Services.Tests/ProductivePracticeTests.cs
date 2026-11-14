@@ -462,6 +462,9 @@ public sealed class ProductivePracticeTests(DatabaseFixture database)
         public Task<CreditReceipt> ChargePlacementRetakeAsync(int userId, PlacementScope scope, int amount, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("Writing practice never charges for placement retakes.");
 
+        public Task<CreditReceipt> ChargeLearningPathAsync(int userId, int amount = 5, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Writing practice never charges for learning paths.");
+
         public Task<IReadOnlyList<CreditLedgerEntryDto>> GetLedgerHistoryAsync(int userId, CancellationToken cancellationToken = default) =>
             _inner.GetLedgerHistoryAsync(userId, cancellationToken);
     }

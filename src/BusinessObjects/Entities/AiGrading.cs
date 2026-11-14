@@ -35,7 +35,7 @@ public partial class AiGrading
     public string? FailureReason { get; set; }
 
     /// <summary>E2.1 (#151): the one change that would improve this text most, in the grader's own words.</summary>
-    [StringLength(400)]
+    [StringLength(1000)]
     public string? PriorityFix { get; set; }
 
     /// <summary>E2.1 (#151): the grader's rewrite of the weakest part of the answer.</summary>

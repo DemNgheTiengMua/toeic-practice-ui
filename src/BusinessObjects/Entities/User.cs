@@ -91,11 +91,6 @@ public partial class User
     public virtual ICollection<LearnerPath> LearnerPaths { get; set; } = new List<LearnerPath>();
 
     /// <summary>#211: one stored state per skill the learner has been measured in.</summary>
-    [InverseProperty("User")]
-    public virtual ICollection<LearnerSkillState> LearnerSkillStates { get; set; } = new List<LearnerSkillState>();
-
-    [InverseProperty("User")]
-    public virtual ICollection<MentorProfile> MentorProfiles { get; set; } = new List<MentorProfile>();
 
     [InverseProperty("User")]
     public virtual Order? Order { get; set; }
@@ -130,12 +125,8 @@ public partial class User
     public virtual ICollection<UserCategoryMastery> UserCategoryMasteries { get; set; } = new List<UserCategoryMastery>();
 
     /// <summary>#237: one row per cell this learner has ever answered.</summary>
-    [InverseProperty("User")]
-    public virtual ICollection<UserCellMastery> UserCellMasteries { get; set; } = new List<UserCellMastery>();
 
     /// <summary>#156: the learner's answers to calibration proposals.</summary>
-    [InverseProperty("User")]
-    public virtual ICollection<CalibrationDecision> CalibrationDecisions { get; set; } = new List<CalibrationDecision>();
 
     /// <summary>#159 review: micro-checks this learner has already had graded.</summary>
     [InverseProperty("User")]

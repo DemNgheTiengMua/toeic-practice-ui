@@ -55,7 +55,7 @@ public sealed class DataDispositionTests
 
         // The scan must have read the schema: a wrong path or a changed DDL shape would find nothing and
         // pass every assertion below without touching anything.
-        Assert.True(tables.Count > 60, $"the disposition scan found {tables.Count} table(s); it read the wrong file");
+        Assert.True(tables.Count > 40, $"the disposition scan found {tables.Count} table(s); it read the wrong file");
 
         var unclassified = tables
             .Where(t => DataDisposition.For(t) is null)
@@ -95,7 +95,7 @@ public sealed class DataDispositionTests
                  {
                      "Users", "Roles", "Permissions", "RolePermissions", "CreditTransactions",
                      "Orders", "PaymentEvents", "Certificates", "Skills", "ScoreBands", "ScoreScales",
-                     "MentorProfiles", "MentorSlots", "Bookings",
+                     "MentorProfiles", "MentorWeeklySlots", "MentorSlots", "Bookings",
                  })
         {
             Assert.Equal(Disposition.Preserve, DataDisposition.For(table)!.Disposition);
@@ -115,20 +115,30 @@ public sealed class DataDispositionTests
         // lessons and rubrics are dropped rather than migrated."
         foreach (var table in new[]
                  {
-                     "PlacementTests", "PlacementSkillResults", "UserCellMasteries",
-                     "UserCategoryMasteries", "LearnerPaths", "LearnerPathSteps", "LearnerPathWeeks",
+                     "PlacementTests",
+                     "UserCategoryMasteries", "LearnerPaths", "LearnerPathSteps",
                      "AiInsights", "Recommendations", "Items", "ItemVersions", "Stimuli", "Topics",
                      "Lessons", "LessonCards", "GradingCriteria", "SectionCriteria",
-                     "GradingCriterionDescriptors", "GradingCriterionAnchors", "GradingRubricLocks",
                  })
         {
             Assert.Equal(Disposition.Drop, DataDisposition.For(table)!.Disposition);
         }
 
-        // #269: the four tables that carried the legacy content model are GONE from the schema, so the
-        // list must not classify them any more - a disposition describes a table that exists. Asserted
-        // rather than merely deleted, so re-adding one is a failure instead of a silent resurrection.
-        foreach (var gone in new[] { "Questions", "QuestionGroups", "QuestionOptions", "UserQuestionHistories" })
+        // #269, #307 & #314: tables that carried the legacy content model, retired mentor payouts,
+        // or retired pool/gate/audit/two-stage/cell-mastery/sliding-window/single-writer artifacts are GONE
+        // from the schema, so the list must not classify them any more - a disposition describes a table
+        // that exists. Asserted rather than merely deleted, so re-adding one is a failure instead of a
+        // silent resurrection.
+        foreach (var gone in new[]
+                 {
+                     "Questions", "QuestionGroups", "QuestionOptions", "UserQuestionHistories",
+                     "MentorPayouts", "MentorPayoutItems",
+                     "DerivedFactOwners", "ReviewStrata", "ReviewSampleItems", "ReviewSampleDecisions",
+                     "ItemTelemetryEvaluations", "ContentQuotas", "AttemptStageBundles", "AttemptItemResponses",
+                     "CefrCutScores", "CefrCutScoreVersions", "LearnerSkillStates", "PlacementSkillResults",
+                     "UserCellMasteries", "CalibrationDecisions", "LearnerPathWeeks", "ExamEditions",
+                     "ExamPublishAudits", "GradingRubricLocks", "GradingCriterionDescriptors", "GradingCriterionAnchors",
+                 })
         {
             Assert.Null(DataDisposition.For(gone));
         }

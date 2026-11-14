@@ -12,20 +12,46 @@ namespace Services;
 
 public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gateway, ICreditLedger? creditLedger = null) : IPaymentService
 {
+    public const decimal PricePerCreditVnd = 20000m;
+
     private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db);
 
     public async Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(
         int userId,
-        int packageId,
+        int? packageId,
+        int? credits = null,
         CancellationToken cancellationToken = default)
     {
         await AssertUserEmailVerifiedAsync(userId, cancellationToken);
         await ExpireStaleOrdersAsync(olderThanMinutes: 15, cancellationToken);
 
-        var package = await db.Packages
-            .Where(p => p.PackageId == packageId && p.IsActive)
-            .SingleOrDefaultAsync(cancellationToken)
-            ?? throw new PackageNotFoundException(packageId);
+        int creditCount;
+        decimal price;
+        int? resolvedPackageId;
+        string? packageName;
+
+        if (packageId.HasValue)
+        {
+            var package = await db.Packages
+                .Where(p => p.PackageId == packageId.Value && p.IsActive)
+                .SingleOrDefaultAsync(cancellationToken)
+                ?? throw new PackageNotFoundException(packageId.Value);
+            creditCount = package.Credits;
+            price = package.Price;
+            resolvedPackageId = package.PackageId;
+            packageName = package.Name;
+        }
+        else if (credits.HasValue && credits.Value > 0)
+        {
+            creditCount = credits.Value;
+            price = creditCount * PricePerCreditVnd;
+            resolvedPackageId = null;
+            packageName = "Custom Credits";
+        }
+        else
+        {
+            throw new ArgumentException("Either packageId or credits must be supplied.");
+        }
 
         var currentBalance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
 
@@ -40,19 +66,20 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         OrderDto? openOrderDto = openOrder is null ? null : ToOrderDto(openOrder);
 
         return new CheckoutPreviewDto(
-            PackageId: package.PackageId,
-            PackageName: package.Name,
-            Credits: package.Credits,
-            Price: package.Price,
+            PackageId: resolvedPackageId,
+            PackageName: packageName,
+            Credits: creditCount,
+            Price: price,
             CurrentBalance: currentBalance,
-            BalanceAfter: currentBalance + package.Credits,
+            BalanceAfter: currentBalance + creditCount,
             OpenOrder: openOrderDto);
     }
 
     public async Task<CreateOrderResponse> CreateOrderAsync(
         int userId,
-        int packageId,
+        int? packageId,
         string baseUrl,
+        int? credits = null,
         CancellationToken cancellationToken = default)
     {
         await AssertUserEmailVerifiedAsync(userId, cancellationToken);
@@ -63,20 +90,71 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             .Where(o => o.UserId == userId && (o.Status == OrderStatus.Pending.ToCode() || o.Status == OrderStatus.Reconciling.ToCode()))
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (openOrder is not null)
+        // Determine new order parameters
+        Package? package = null;
+        int creditCount;
+        decimal price;
+
+        if (packageId.HasValue)
         {
-            throw new OrderAlreadyOpenException(
-                openOrder.OrderCode,
-                openOrder.Package?.Name ?? "Credit Package",
-                openOrder.Amount,
-                openOrder.CreatedAt,
-                EnumCodes.Parse<OrderStatus>(openOrder.Status));
+            package = await db.Packages
+                .Where(p => p.PackageId == packageId.Value && p.IsActive)
+                .SingleOrDefaultAsync(cancellationToken)
+                ?? throw new PackageNotFoundException(packageId.Value);
+            creditCount = package.Credits;
+            price = package.Price;
+        }
+        else if (credits.HasValue && credits.Value > 0)
+        {
+            creditCount = credits.Value;
+            price = creditCount * PricePerCreditVnd;
+        }
+        else
+        {
+            throw new ArgumentException("Either packageId or credits must be supplied.");
         }
 
-        var package = await db.Packages
-            .Where(p => p.PackageId == packageId && p.IsActive)
-            .SingleOrDefaultAsync(cancellationToken)
-            ?? throw new PackageNotFoundException(packageId);
+        if (openOrder is not null)
+        {
+            // Auto-supersede: check if the new request differs from the open order
+            var openOrderCreditCount = openOrder.Credits > 0 ? openOrder.Credits : (openOrder.Package?.Credits ?? 0);
+            bool isSamePackage = openOrder.PackageId == packageId;
+            bool isSameCredits = openOrderCreditCount == creditCount;
+
+            if (isSamePackage && isSameCredits)
+            {
+                throw new OrderAlreadyOpenException(
+                    openOrder.OrderCode,
+                    openOrder.Package?.Name ?? "Custom Credits",
+                    openOrder.Amount,
+                    openOrder.CreatedAt,
+                    EnumCodes.Parse<OrderStatus>(openOrder.Status));
+            }
+
+            // Different parameters: supersede the open order
+            try
+            {
+                await gateway.CancelPaymentLinkAsync(openOrder.PaymentNo, openOrder.GatewayTxnRef, "Superseded by new order", cancellationToken);
+            }
+            catch
+            {
+                // best-effort: gateway cancel may fail, we proceed anyway
+            }
+
+            openOrder.Status = OrderStatus.Expired.ToCode();
+            openOrder.GatewayErrorCode = "superseded";
+            db.PaymentEvents.Add(new PaymentEvent
+            {
+                OrderId = openOrder.OrderId,
+                Source = PaymentEventSource.Cancel.ToCode(),
+                ReportedStatus = GatewayStatus.Cancelled.ToCode(),
+                SignatureValid = false,
+                WasApplied = true,
+                Note = "Superseded by new order with different parameters",
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+            await db.SaveChangesAsync(cancellationToken);
+        }
 
         // Get next unique merchant payment number from SQL sequence without subquery wrapping
         var connection = db.Database.GetDbConnection();
@@ -96,22 +174,24 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         var now = DateTimeOffset.UtcNow;
         var orderCode = $"DH-{now:yyyyMMdd}-{paymentNo:D4}";
 
+        var cancelUrlPart = package is not null ? $"packageId={package.PackageId}" : $"credits={creditCount}";
         var returnUrl = $"{baseUrl.TrimEnd('/')}/payment/result?orderCode={Uri.EscapeDataString(orderCode)}";
-        var cancelUrl = $"{baseUrl.TrimEnd('/')}/checkout?packageId={package.PackageId}";
+        var cancelUrl = $"{baseUrl.TrimEnd('/')}/checkout?{cancelUrlPart}";
 
         var linkResult = await gateway.CreatePaymentLinkAsync(new PaymentGatewayOrderInfo(
             PaymentNo: paymentNo,
             OrderCode: orderCode,
-            Amount: package.Price,
-            Description: $"Credits {package.Credits}",
+            Amount: price,
+            Description: $"Credits {creditCount}",
             ReturnUrl: returnUrl,
             CancelUrl: cancelUrl), cancellationToken);
 
         var order = new Order
         {
             UserId = userId,
-            PackageId = package.PackageId,
-            Amount = package.Price,
+            PackageId = package?.PackageId,
+            Credits = creditCount,
+            Amount = price,
             Status = OrderStatus.Pending.ToCode(),
             OrderCode = orderCode,
             PaymentNo = paymentNo,
@@ -129,7 +209,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         {
             throw new OrderAlreadyOpenException(
                 order.OrderCode,
-                package.Name,
+                package?.Name ?? "Custom Credits",
                 order.Amount,
                 order.CreatedAt,
                 OrderStatus.Pending);
@@ -365,8 +445,8 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             OrderId: order.OrderId,
             OrderCode: order.OrderCode,
             Status: ParseWireCode<OrderStatusDto>(order.Status),
-            PackageName: order.Package?.Name ?? "Credit Package",
-            Credits: order.Package?.Credits ?? 0,
+            PackageName: order.Package?.Name ?? "Custom Credits",
+            Credits: order.Credits > 0 ? order.Credits : (order.Package?.Credits ?? 0),
             Amount: order.Amount,
             Gateway: ParseWireCode<PaymentGatewayDto>(order.Gateway),
             CreatedAt: order.CreatedAt,
@@ -432,7 +512,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         order.PaidAt = now;
         await db.SaveChangesAsync(cancellationToken);
 
-        await _creditLedger.GrantPurchaseAsync(order.UserId, order.OrderId, order.Package.Credits, cancellationToken);
+        await _creditLedger.GrantPurchaseAsync(order.UserId, order.OrderId, order.Credits > 0 ? order.Credits : (order.Package?.Credits ?? 0), cancellationToken);
 
         var paymentEvent = new PaymentEvent
         {
@@ -683,8 +763,8 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             OrderCode: o.OrderCode,
             PaymentNo: o.PaymentNo,
             PackageId: o.PackageId,
-            PackageName: o.Package?.Name ?? "Credit Package",
-            Credits: o.Package?.Credits ?? 0,
+            PackageName: o.Package?.Name ?? "Custom Credits",
+            Credits: o.Credits > 0 ? o.Credits : (o.Package?.Credits ?? 0),
             Amount: o.Amount,
             Status: ParseWireCode<OrderStatusDto>(o.Status),
             Gateway: ParseWireCode<PaymentGatewayDto>(o.Gateway),

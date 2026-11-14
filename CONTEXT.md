@@ -134,3 +134,18 @@ One swipeable screen in a lesson flow. Four types: rule (teach one grammar princ
 
 **Lesson progress**:
 Per-learner state for a lesson: how many cards viewed, which was last, when started/updated, how many completed. Drives "3 of 8" UI and resume-from-last behavior.
+
+### Mentors
+
+**Mentor**:
+An admin-managed human educator profile for a certificate (and optionally a specific skill) carrying a fixed meeting link, a session cost in credits, and a weekly availability schedule.
+_Avoid_: AI mentor, autonomous coach, instructor user account, tutor
+
+**Weekly availability window**:
+A recurring time range on a specific day of the week (UTC+7) when a mentor is available to teach, from which the next upcoming session occurrence is derived.
+_Avoid_: Manual one-off slot, ad-hoc calendar entry
+
+**Mentor payout**:
+The compensation owed to a mentor for completed, non-cancelled sessions within a reporting period, denominated in the booking's credit price and converted to VND at the platform's fixed credit-to-VND rate (`1 Credit = 20,000 VND`).
+_Avoid_: Separate cash slot price, ad-hoc mentor fee
+

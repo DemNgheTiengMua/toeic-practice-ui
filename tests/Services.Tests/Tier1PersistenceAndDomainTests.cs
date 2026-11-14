@@ -45,16 +45,6 @@ public sealed class Tier1PersistenceAndDomainTests(DatabaseFixture database)
             // #185: the binding's INV-6 guard, exercised through a real save in ExamItemBindingTests
             // for the same reason. Exams is already in this list; #185 added a second trigger to it.
             "ExamItems",
-            // #211: the per-skill state's single-writer guard. Also exercised through a real save in
-            // SkillStateWriterTests for the same reason, and through a raw INSERT in domain34.
-            "LearnerSkillStates",
-            // #206: the stratum's single-writer guard, and the sample's blind-solve and batch-scope
-            // guards. Exercised through real saves in StratifiedAuditTests for the same reason.
-            "ReviewStrata",
-            "ReviewSampleItems",
-            // #274: the paper a sitting was served. Its writer guard fires on the insert creation makes,
-            // so a missing declaration here would fail the very first attempt created.
-            "AttemptStageBundles",
         ];
 
         foreach (var tableName in auditedTables)

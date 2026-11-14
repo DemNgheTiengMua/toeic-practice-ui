@@ -141,27 +141,6 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
             new ScoreBand { CertId = certId, Code = "B1", Name = "Intermediate", MinTotal = 200, MaxTotal = 400, DisplayOrder = 2 });
         await db.SaveChangesAsync();
 
-        // #259 / PRN-03: a placement needs a CUT-SCORE table, not only a band table. Without one the
-        // projection cannot place a score, and before #259 the writer papered over that by parsing the
-        // band code as a CEFR level - which is the crosswalk the rule forbids. A fixture with bands and
-        // no cut table was asserting that behaviour, so it now carries the table a real certificate has.
-        db.CefrCutScoreVersions.Add(new CefrCutScoreVersion
-        {
-            CertId = certId,
-            TableVersion = 1,
-            ReportsSkillsSeparately = false,
-            Source = "fixture",
-            PublishedAt = new DateOnly(2026, 1, 1),
-        });
-        foreach (var skillId in scaleRows)
-        {
-            db.CefrCutScores.AddRange(
-                new CefrCutScore { CertId = certId, TableVersion = 1, SkillId = skillId, CefrLevel = "A2", RowKind = "cut", MinScaled = 0, MaxScaled = 199 },
-                new CefrCutScore { CertId = certId, TableVersion = 1, SkillId = skillId, CefrLevel = "B1", RowKind = "cut", MinScaled = 200, MaxScaled = 400 });
-        }
-
-        await db.SaveChangesAsync();
-
         return new Fixture(certId, examId, skills["LIST"], skills["READ"], skills["WRIT"],
             listeningIds, readingIds, writingId);
     }
@@ -364,20 +343,10 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
         }
 
         await using var verify = Db();
-        var rows = await verify.PlacementSkillResults.AsNoTracking()
-            .Where(r => r.PlacementId == placementId)
-            .ToDictionaryAsync(r => r.SkillId);
-
-        Assert.Equal(PlacementResultStatus.Measured, rows[fixture.ListeningSkillId].ResultStatus);
-        foreach (var skillId in new[] { fixture.ReadingSkillId, fixture.WritingSkillId })
-        {
-            Assert.Equal(PlacementResultStatus.NotMeasured, rows[skillId].ResultStatus);
-            Assert.Equal(PlacementFailureReason.CandidateSkipped, rows[skillId].FailureReason);
-            // neither zero nor A1: no level, and NOT PreA1
-            Assert.Null(rows[skillId].CefrLevel);
-        }
-
         var placement = await verify.PlacementTests.AsNoTracking().SingleAsync(p => p.PlacementId == placementId);
+        Assert.NotNull(placement.ListeningPct);
+        Assert.Null(placement.ReadingPct);
+        Assert.Null(placement.WritingPct);
         Assert.Equal("done", placement.Status);
         Assert.Null(placement.CompletionFailureReason);
 
@@ -418,10 +387,10 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
         }
 
         await using var verify = Db();
-        var row = await verify.PlacementSkillResults.AsNoTracking()
-            .SingleAsync(r => r.PlacementId == placementId && r.SkillId == fixture.ListeningSkillId);
-        Assert.Equal(PlacementResultStatus.Measured, row.ResultStatus);
-        Assert.NotNull(row.CefrLevel);
+        var placement = await verify.PlacementTests.AsNoTracking()
+            .SingleAsync(p => p.PlacementId == placementId);
+        Assert.Equal("done", placement.Status);
+        Assert.NotNull(placement.ListeningPct);
 
         var score = await verify.AttemptSkillScores.AsNoTracking()
             .SingleAsync(s => s.AttemptId == attemptId && s.SkillId == fixture.ListeningSkillId);
@@ -455,9 +424,6 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
             // a stale figure, to prove the writer clears it rather than leaving it behind
             var attempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == started.AttemptId);
             attempt.TotalScore = 250;
-            attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
-            attempt.ProjectionVersion++;
-            db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
             await db.SaveChangesAsync();
         }
         var attemptId = await AttemptIdAsync(placementId);
@@ -548,25 +514,15 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
 
         await using (var verify = Db())
         {
-            var writing = await verify.PlacementSkillResults.AsNoTracking()
-                .SingleAsync(r => r.PlacementId == placementId && r.SkillId == fixture.WritingSkillId);
-            Assert.Equal(PlacementResultStatus.NotMeasured, writing.ResultStatus);
-            Assert.Equal(PlacementFailureReason.AiGradingFailed, writing.FailureReason);
-            Assert.Null(writing.CefrLevel);                     // not A1, not PreA1 - nothing
-            Assert.Null(writing.PositionInBand);
-            Assert.Null(writing.MeasuredAt);
-
             // and no fabricated score row for the failed skill
             Assert.DoesNotContain(await verify.AttemptSkillScores.AsNoTracking()
                 .Where(s => s.AttemptId == attemptId).ToListAsync(), s => s.SkillId == fixture.WritingSkillId);
 
             // the objective half still measured: a partial result, and the placement is done
-            var listening = await verify.PlacementSkillResults.AsNoTracking()
-                .SingleAsync(r => r.PlacementId == placementId && r.SkillId == fixture.ListeningSkillId);
-            Assert.Equal(PlacementResultStatus.Measured, listening.ResultStatus);
-
             var placement = await verify.PlacementTests.AsNoTracking().SingleAsync(p => p.PlacementId == placementId);
             Assert.Equal("done", placement.Status);
+            Assert.Null(placement.WritingPct);
+            Assert.NotNull(placement.ListeningPct);
             Assert.Null(placement.CompletionFailureReason);
         }
 
@@ -696,13 +652,11 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
 
         int gradingsBefore;
         int? scoreBefore;
-        int versionBefore;
         await using (var db = Db())
         {
             gradingsBefore = await db.AiGradings.CountAsync(g => g.FreeResponse.AttemptId == attemptId);
             var attempt = await db.ExamAttempts.AsNoTracking().SingleAsync(a => a.AttemptId == attemptId);
             scoreBefore = attempt.TotalScore;
-            versionBefore = attempt.ProjectionVersion;
         }
 
         await using (var db = Db())
@@ -716,6 +670,5 @@ public sealed class PlacementSubmissionTests : IAsyncLifetime
         Assert.Equal(gradingsBefore, await verify.AiGradings.CountAsync(g => g.FreeResponse.AttemptId == attemptId));
         var after = await verify.ExamAttempts.AsNoTracking().SingleAsync(a => a.AttemptId == attemptId);
         Assert.Equal(scoreBefore, after.TotalScore);
-        Assert.Equal(versionBefore, after.ProjectionVersion);
     }
 }

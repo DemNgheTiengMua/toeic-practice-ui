@@ -1,6 +1,6 @@
 # Running the whole product in containers
 
-One command brings up SQL Server, the schema, the demo data, `WebAPI` and `WebMVC` on a machine that
+One command brings up SQL Server, the schema, the demo data, `WebAPI` and the React + HeroUI v3 SPA (`web`) on a machine that
 has never had SQL Server installed. This is for a developer's machine and for review; it is not a
 production deployment (`docs/specs/2026-11-12-refunds-realtime-dashboard-swagger-docker.md`,
 "Out of Scope").
@@ -39,7 +39,7 @@ Then:
 
 ```sh
 docker compose up -d --build
-docker compose ps                          # wait until api is healthy and mvc is running
+docker compose ps                          # wait until api is healthy and web is running
 ```
 
 The first run takes a few minutes: it pulls the SQL Server image and loads a 330 KB schema plus a
@@ -57,11 +57,10 @@ db        SQL Server 2022 — the database (volume: mssql-data)
   ├── api     WebAPI on :5001 — waits for db-init to exit 0 (volume: api-audio)
   │             healthcheck: curl http://localhost:5001/healthz
   │
-  └── mvc     WebMVC on :5000 — waits for db-init to exit 0 and for api to be healthy
+  └── web     React + HeroUI v3 SPA (nginx) on :5000 — waits for db-init to exit 0 and for api to be healthy
 ```
 
-`WebMVC` calls `WebAPI` over the compose network at `http://api:5001`. The browser never talks to the
-API directly (ADR-0002), which is why only `5000` needs to be reachable by a human.
+The browser talks to `web` on port `5000`, and nginx reverse-proxies same-origin `/api/*` and `/media/*` requests to `http://api:5001` over the compose network (ADR-0015).
 
 ### Stop, keep data
 

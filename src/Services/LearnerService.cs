@@ -16,16 +16,11 @@ namespace Services;
 public sealed partial class LearnerService(
     CompanionDbContext db,
     ICreditLedger? creditLedger = null,
-    ISkillStateWriter? skillStates = null) : ILearnerService
+    TimeProvider? clock = null) : ILearnerService
 {
     private const int RecentCount = 5;
-    private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db);
-
-    // #241 / #211: the ONE reader of a learner's per-skill state. Defaulted rather than required,
-    // following this file's own `creditLedger ?? new CreditLedger(db)` convention: every existing
-    // caller passes a context and nothing else, and the container's registration is what a host that
-    // wants its own clock substitutes.
-    private readonly ISkillStateWriter _skillStates = skillStates ?? new SkillStateWriter(db);
+    private readonly TimeProvider _clock = clock ?? TimeProvider.System;
+    private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db, clock ?? TimeProvider.System);
 
     public async Task<LearnerContext> GetContextAsync(int userId, CancellationToken cancellationToken = default)
     {
@@ -108,7 +103,7 @@ public sealed partial class LearnerService(
         // #241 / #211: the per-skill vector is read ONCE, from its one reader, and every block that
         // prints a level reads this. A second read is how the hero and the skill rows come to
         // disagree about one learner's band in the same page load.
-        var standing = await _skillStates.ReadAsync(userId, certId, cancellationToken);
+        var standing = await LearnerStandingReader.ReadAsync(db, userId, certId, _clock, cancellationToken);
 
         // #159: each number the three blocks print is measured once here. The blocks never derive a
         // second opinion - a hero that guesses its own "next" is how the page grew two of them.
@@ -118,7 +113,8 @@ public sealed partial class LearnerService(
         // #235 / D12: the ceiling is derived from the answer rows, so one read here is what lets the
         // cascade see it without either recomputing or reading the view a second time. The view's day
         // is the UTC day (PracticeAnswers.AnsweredAt is UTC), which is why today is read the same way.
-        var utcToday = DateTime.UtcNow.Date;
+        var nowUtc = _clock.GetUtcNow();
+        var utcToday = nowUtc.UtcDateTime.Date;
         var today = await db.vw_DailyPracticeVolumes
             .AsNoTracking()
             .Where(v => v.UserId == userId && v.PractisedOn == utcToday)
@@ -130,6 +126,23 @@ public sealed partial class LearnerService(
             userId, certId, certificates.Single(c => c.CertId == certId).Option,
             attemptCount + practiceCount == 0, skills, goal, standing, ceilingReached,
             unfinishedAttempt, unfinishedPractice, cancellationToken);
+
+        var confirmedStatus = BookingStatus.Confirmed.ToCode();
+        var upcomingBookings = await db.Bookings
+            .AsNoTracking()
+            .Where(b => b.UserId == userId && b.Status == confirmedStatus && b.Slot.EndAt > nowUtc)
+            .OrderBy(b => b.Slot.StartAt)
+            .Select(b => new UpcomingMentorBooking(
+                b.BookingId,
+                b.MentorId,
+                b.Mentor.DisplayName,
+                b.Mentor.Cert.Code,
+                b.Mentor.Skill != null ? b.Mentor.Skill.Name : null,
+                b.Slot.StartAt,
+                b.Slot.EndAt,
+                b.MeetLink ?? b.Mentor.MeetLink,
+                b.FocusArea))
+            .ToListAsync(cancellationToken);
 
         return new LearnerDashboard(
             certificates.Single(c => c.CertId == certId).Option,
@@ -144,7 +157,8 @@ public sealed partial class LearnerService(
                 standing?.Overall,
                 standing?.LimitingSkillCode,
                 skills.FirstOrDefault(s => s.SkillId == standing?.LimitingSkillId)?.Name,
-                standing is null || standing.HasNoMeasurement));
+                standing is null || standing.HasNoMeasurement),
+            upcomingBookings);
     }
 
     public async Task<int> GetActiveCertIdAsync(int userId, CancellationToken cancellationToken = default) =>
@@ -201,6 +215,43 @@ public sealed partial class LearnerService(
         {
             throw UserMissing(userId);
         }
+    }
+
+    public async Task<OnboardingState> GetOnboardingStateAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var donePlacementId = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.UserId == userId && p.Status == PlacementStatus.Done.ToCode())
+            .OrderByDescending(p => p.TakenAt)
+            .Select(p => (int?)p.PlacementId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var activePlacement = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.UserId == userId && p.Status == PlacementStatus.InProgress.ToCode())
+            .OrderByDescending(p => p.TakenAt)
+            .Select(p => new { p.PlacementId, p.AttemptId })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var hasTargetGoal = await db.TargetBands
+            .AsNoTracking()
+            .AnyAsync(t => t.UserId == userId, cancellationToken);
+
+        var hasActiveLearningPath = await db.LearnerPaths
+            .AsNoTracking()
+            .AnyAsync(p => p.UserId == userId && p.Status == LearnerPathStatus.Active.ToCode(), cancellationToken);
+
+        var hasCompletedPlacement = donePlacementId.HasValue;
+        var isOobeComplete = hasCompletedPlacement && hasTargetGoal && hasActiveLearningPath;
+
+        return new OnboardingState(
+            HasCompletedPlacement: hasCompletedPlacement,
+            ActivePlacementAttemptId: activePlacement?.AttemptId,
+            ActivePlacementId: activePlacement?.PlacementId,
+            LatestPlacementId: donePlacementId,
+            HasTargetGoal: hasTargetGoal,
+            HasActiveLearningPath: hasActiveLearningPath,
+            IsOobeComplete: isOobeComplete);
     }
 
     private IQueryable<User> LiveUser(int userId) => db.Users.Where(u => u.UserId == userId && !u.IsDeleted);

@@ -1,11 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
-using Contracts;
-using DataAccess;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
+using Contracts;
 using Microsoft.EntityFrameworkCore;
-using Services.Credits;
 
 namespace Services;
 
@@ -17,6 +14,7 @@ public sealed partial class MentorService
             .AsNoTracking()
             .Include(m => m.Cert)
             .Include(m => m.Skill)
+            .Include(m => m.MentorWeeklySlots)
             .Where(m => m.IsActive);
 
         if (!string.IsNullOrWhiteSpace(certCode))
@@ -54,17 +52,21 @@ public sealed partial class MentorService
             .AsNoTracking()
             .Include(m => m.Cert)
             .Include(m => m.Skill)
+            .Include(m => m.MentorWeeklySlots)
             .FirstOrDefaultAsync(m => m.MentorId == mentorId && m.IsActive, cancellationToken)
             ?? throw new KeyNotFoundException($"Active mentor with id {mentorId} was not found.");
+
+        await EnsureUpcomingWeeklySlotsAsync(mentorId, cancellationToken);
 
         var rating = await db.vw_MentorAvgRatings
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.MentorId == mentorId, cancellationToken);
 
         var nowUtc = clock.GetUtcNow();
+        var closedCode = SlotStatus.Closed.ToCode();
         var slots = await db.MentorSlots
             .AsNoTracking()
-            .Where(s => s.MentorId == mentorId && s.Status == SlotStatus.Open.ToCode() && s.StartAt > nowUtc)
+            .Where(s => s.MentorId == mentorId && s.Status != closedCode && s.StartAt > nowUtc)
             .OrderBy(s => s.StartAt)
             .Select(s => new MentorSlotDto(s.SlotId, s.MentorId, s.StartAt, s.EndAt, s.Status))
             .ToListAsync(cancellationToken);
@@ -83,7 +85,9 @@ public sealed partial class MentorService
                 r.CreatedAt))
             .ToListAsync(cancellationToken);
 
-        return new MentorDetailDto(ToSummaryDto(mentor, rating), slots, reviews);
+        var weeklyDtos = ToWeeklySlotDtos(mentor.MentorWeeklySlots);
+
+        return new MentorDetailDto(ToSummaryDto(mentor, rating), weeklyDtos, slots, reviews);
     }
 
     public async Task<IReadOnlyList<MentorCertificateOptionDto>> GetCertificateOptionsAsync(CancellationToken cancellationToken = default)
@@ -114,7 +118,6 @@ public sealed partial class MentorService
     private static MentorSummaryDto ToSummaryDto(MentorProfile m, vw_MentorAvgRating? r) =>
         new(
             m.MentorId,
-            m.UserId,
             m.DisplayName,
             m.Bio,
             m.CertId,
@@ -124,13 +127,13 @@ public sealed partial class MentorService
             m.Skill?.Code,
             m.Skill?.Name,
             m.Skill?.Modality,
-            m.Type,
-            m.PricePerSlot,
+            m.MeetLink,
             m.PriceCredits,
             m.Headline,
             m.Expertise,
             m.SessionMinutes,
             m.IsActive,
             r?.AvgRating,
-            r?.ReviewCount ?? 0);
+            r?.ReviewCount ?? 0,
+            ToWeeklySlotDtos(m.MentorWeeklySlots));
 }

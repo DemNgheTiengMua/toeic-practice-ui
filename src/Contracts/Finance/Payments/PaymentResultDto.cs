@@ -15,4 +15,4 @@ public sealed record PaymentResultDto(
     string? GatewayErrorCode = null,
     string? Message = null,
     string? CheckoutUrl = null,
-    int PackageId = 0);
+    int? PackageId = null);

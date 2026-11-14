@@ -65,95 +65,9 @@ public sealed partial class LearningPathService
             return [];
         }
 
-        var measured = await db.LearnerSkillStates
-            .AsNoTracking()
-            .Where(s => s.UserId == userId && s.CertId == certId)
-            .Select(s => new { s.SkillId, s.CefrLevel })
-            .ToListAsync(cancellationToken);
-
-        var levels = measured.ToDictionary(s => s.SkillId, s => ClampToAuthored(s.CefrLevel));
-
-        var version = await db.CefrCutScoreVersions
-            .AsNoTracking()
-            .Where(v => v.CertId == certId)
-            .OrderByDescending(v => v.TableVersion)
-            .Select(v => (int?)v.TableVersion)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (version is null)
-        {
-            return levels;
-        }
-
-        var cuts = await db.CefrCutScores
-            .AsNoTracking()
-            .Where(r => r.CertId == certId && r.TableVersion == version.Value && r.RowKind == "cut")
-            .Select(r => new { r.SkillId, r.CefrLevel, r.MinScaled, r.MaxScaled })
-            .ToListAsync(cancellationToken);
-
-        var latestScores = (await db.AttemptSkillScores
-                .AsNoTracking()
-                .Where(s => s.CertId == certId
-                    && s.Attempt.UserId == userId
-                    && s.Attempt.Status == AttemptStatus.Graded.ToCode())
-                .OrderByDescending(s => s.Attempt.SubmittedAt ?? s.Attempt.StartedAt)
-                .ThenByDescending(s => s.AttemptId)
-                .Select(s => new { s.SkillId, s.ScaledScore })
-                .ToListAsync(cancellationToken))
-            .GroupBy(s => s.SkillId)
-            .ToDictionary(g => g.Key, g => g.First().ScaledScore);
-
-        var stockedLevels = (await db.Items
-                .AsNoTracking()
-                .Where(i => i.LifecycleStatus == ActiveItemLifecycle
-                    && i.PlacementEligible == DrillPlacementEligible)
-                .Select(i => new { i.Modality, i.CefrLevel })
-                .Distinct()
-                .ToListAsync(cancellationToken))
-            .ToLookup(i => i.Modality, i => i.CefrLevel);
-
-        foreach (var skill in skills)
-        {
-            if (levels.ContainsKey(skill.SkillId))
-            {
-                continue;
-            }
-
-            var rows = cuts.Where(c => c.SkillId == skill.SkillId).ToList();
-            if (rows.Count == 0)
-            {
-                continue;
-            }
-
-            var row = latestScores.TryGetValue(skill.SkillId, out var score)
-                ? rows
-                    .Where(r => r.MinScaled is { } min && score >= min && score <= r.MaxScaled)
-                    .OrderByDescending(r => r.MinScaled)
-                    .FirstOrDefault()
-                : null;
-
-            if (row is null)
-            {
-                // No measurement (or no row covered the score): the lowest level this skill has stock
-                // at, so the step has items to serve.
-                var stocked = stockedLevels[skill.Modality].ToList();
-                row = rows
-                    .Select(r => (Row: r, Level: CefrLevel.TryParseAuthored(r.CefrLevel, out var lvl) ? lvl : CefrLevel.PreA1))
-                    .Where(x => !x.Level.IsReportableFloor && stocked.Contains(x.Level))
-                    .OrderBy(x => x.Level)
-                    .Select(x => x.Row)
-                    .FirstOrDefault()
-                    // Nothing stocked at any level: the certificate's own bottom row still states a level.
-                    ?? rows.OrderBy(r => r.MaxScaled).First();
-            }
-
-            if (CefrLevel.TryParseAuthored(row.CefrLevel, out var level))
-            {
-                levels[skill.SkillId] = level;
-            }
-        }
-
-        return levels;
+        var standing = await LearnerStandingReader.ReadAsync(db, userId, certId, TimeProvider.System, cancellationToken);
+        return standing?.Skills.ToDictionary(s => s.SkillId, s => ClampToAuthored(s.Level))
+               ?? new Dictionary<int, CefrLevel>();
     }
 
     /// <summary>
@@ -265,79 +179,13 @@ public sealed partial class LearningPathService
     /// never <c>Learning</c> because a caller happened to count zero answers.
     /// </para>
     /// </summary>
-    private async Task<MasteryState> LoadCellMasteryAsync(
-        int userId, int topicId, CefrLevel level, CancellationToken cancellationToken)
-    {
-        var state = await db.UserCellMasteries
-            .AsNoTracking()
-            .Where(m => m.UserId == userId && m.TopicId == topicId && m.CefrLevel == level)
-            .Select(m => m.State)
-            .FirstOrDefaultAsync(cancellationToken);
+    private Task<MasteryState> LoadCellMasteryAsync(
+        int userId, int topicId, CefrLevel level, CancellationToken cancellationToken) =>
+        Task.FromResult(MasteryState.Untested);
 
-        // #237 wins this conflict. #238's side recomputed the four-state estimate from the answer
-        // counts, which after #237 is a second mastery rule beside `UserCellMasteries` - exactly the
-        // "two answers to one question" that TRN-13 identity 5 forbids. The row is the source of
-        // truth; this returns it verbatim and computes nothing.
-        return state is null ? MasteryState.Untested : EnumCodes.Parse<MasteryState>(state);
-    }
-
-    /// <summary>
-    /// #219 / D5: the topics the latest placement saw go badly, keyed by (skill, level). <b>A hint,
-    /// not mastery.</b>
-    /// <para>
-    /// Only the latest <c>done</c> placement for this learner and certificate is read, and only its
-    /// <see cref="PlacementResultStatus.Measured"/> / <see cref="PlacementResultStatus.EstimatedFromOneTask"/>
-    /// rows. A carried row is skipped: its hint belongs to an earlier sitting (the writer clears it on
-    /// a carried row for that reason), and a re-used result is not evidence this paper saw anything.
-    /// </para>
-    /// <para>
-    /// The band is compared as the row's own <c>CefrLevel</c>, because a hint about A2 is not a hint
-    /// about the B1 cell the block plans at.
-    /// </para>
-    /// </summary>
-    private async Task<Dictionary<(int SkillId, CefrLevel Level), IReadOnlyList<int>>> LoadPlacementTopicHintsAsync(
-        int userId, int certId, CancellationToken cancellationToken)
-    {
-        var latest = await db.PlacementTests
-            .AsNoTracking()
-            .Where(p => p.UserId == userId && p.CertId == certId && p.Status == PlacementStatus.Done.ToCode())
-            .OrderByDescending(p => p.TakenAt)
-            .ThenByDescending(p => p.PlacementId)
-            .Select(p => (int?)p.PlacementId)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (latest is null)
-        {
-            return [];
-        }
-
-        var rows = await db.PlacementSkillResults
-            .AsNoTracking()
-            .Where(r => r.PlacementId == latest.Value
-                && !r.ReusedFromPrior
-                && r.CefrLevel != null
-                && (r.ResultStatus == PlacementResultStatus.Measured
-                    || r.ResultStatus == PlacementResultStatus.EstimatedFromOneTask))
-            .Select(r => new { r.SkillId, r.CefrLevel, r.TopicPriorsJson })
-            .ToListAsync(cancellationToken);
-
-        var hints = new Dictionary<(int, CefrLevel), IReadOnlyList<int>>();
-        foreach (var row in rows)
-        {
-            var weak = PlacementTopicPrior.Deserialize(row.TopicPriorsJson)
-                .Where(p => p.RoutingSignal == PlacementTopicPrior.Weak)
-                .Select(p => p.TopicId)
-                .Distinct()
-                .ToList();
-
-            if (weak.Count > 0 && row.CefrLevel is { } level)
-            {
-                hints[(row.SkillId, level)] = weak;
-            }
-        }
-
-        return hints;
-    }
+    private Task<Dictionary<(int SkillId, CefrLevel Level), IReadOnlyList<int>>> LoadPlacementTopicHintsAsync(
+        int userId, int certId, CancellationToken cancellationToken) =>
+        Task.FromResult(new Dictionary<(int SkillId, CefrLevel Level), IReadOnlyList<int>>());
 
     /// <summary>The lesson of this skill at this level, lowest display order first, or null when the
     /// certificate has none.
@@ -380,57 +228,9 @@ public sealed partial class LearningPathService
     /// which is what a week planned on no evidence should do.
     /// </para>
     /// </summary>
-    private async Task<Dictionary<int, decimal?>> LoadDistancesToTargetAsync(
-        int userId, int certId, string targetBandCode, CancellationToken cancellationToken)
-    {
-        var distances = new Dictionary<int, decimal?>();
-
-        var current = await db.LearnerSkillStates
-            .AsNoTracking()
-            .Where(s => s.UserId == userId && s.CertId == certId)
-            .Select(s => new { s.SkillId, s.ContinuousCoordinate })
-            .ToListAsync(cancellationToken);
-
-        if (current.Count == 0)
-        {
-            return distances;
-        }
-
-        var targetBand = await db.ScoreBands
-            .AsNoTracking()
-            .Where(b => b.CertId == certId && b.Code == targetBandCode)
-            .Select(b => new { b.MinTotal, b.MaxTotal })
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var version = await db.CefrCutScoreVersions
-            .AsNoTracking()
-            .Where(v => v.CertId == certId)
-            .OrderByDescending(v => v.TableVersion)
-            .Select(v => (int?)v.TableVersion)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var cuts = version is null
-            ? new List<(int SkillId, string CefrLevel, int? MinScaled, int MaxScaled)>()
-            : (await db.CefrCutScores
-                .AsNoTracking()
-                .Where(r => r.CertId == certId && r.TableVersion == version.Value && r.RowKind == "cut")
-                .Select(r => new { r.SkillId, r.CefrLevel, r.MinScaled, r.MaxScaled })
-                .ToListAsync(cancellationToken))
-                .Select(r => (r.SkillId, r.CefrLevel, r.MinScaled, r.MaxScaled))
-                .ToList();
-
-        foreach (var state in current)
-        {
-            var target = targetBand is null
-                ? null
-                : TargetCoordinateFor(
-                    cuts.Where(c => c.SkillId == state.SkillId).ToList(), targetBand.MinTotal, targetBand.MaxTotal);
-
-            distances[state.SkillId] = target is null ? null : target.Value - state.ContinuousCoordinate;
-        }
-
-        return distances;
-    }
+    private Task<Dictionary<int, decimal?>> LoadDistancesToTargetAsync(
+        int userId, int certId, string targetBandCode, CancellationToken cancellationToken) =>
+        Task.FromResult(new Dictionary<int, decimal?>());
 
     /// <summary>
     /// The coordinate a target band asks one skill for, read from the certificate's own cut rows.

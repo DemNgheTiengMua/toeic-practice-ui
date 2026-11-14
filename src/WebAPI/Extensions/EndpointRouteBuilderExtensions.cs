@@ -9,8 +9,6 @@ public static class EndpointRouteBuilderExtensions
         app.MapAuthEndpoints();
         app.MapAdminEndpoints();
         app.MapAdminImportEndpoints();
-        app.MapAdminIngestionEndpoints();
-        app.MapAdminAuditEndpoints();
         app.MapAdminLessonEndpoints();
         app.MapLearnerEndpoints();
         app.MapExamEndpoints();

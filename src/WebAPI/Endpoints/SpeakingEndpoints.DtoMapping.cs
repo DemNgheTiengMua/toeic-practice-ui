@@ -120,7 +120,14 @@ public static partial class SpeakingEndpoints
                     c.Name,
                     c.Score,
                     c.MaxScore,
-                    c.Comment)).ToList());
+                    c.Comment)).ToList(),
+                l.ErrorSpans?.Select(s => new WritingErrorSpanDto(
+                    s.OriginalSnippet,
+                    s.CorrectedSnippet,
+                    s.Category,
+                    s.ExplanationVi)).ToList(),
+                l.PriorityFix,
+                l.ModelRewrite);
         }
 
         return new SpeakingReviewDto(
@@ -150,7 +157,14 @@ public static partial class SpeakingEndpoints
                     c.Name,
                     c.Score,
                     c.MaxScore,
-                    c.Comment)).ToList())).ToList(),
+                    c.Comment)).ToList(),
+                q.ErrorSpans?.Select(s => new WritingErrorSpanDto(
+                    s.OriginalSnippet,
+                    s.CorrectedSnippet,
+                    s.Category,
+                    s.ExplanationVi)).ToList(),
+                q.PriorityFix,
+                q.ModelRewrite)).ToList(),
             lowestDto,
             review.EstimatedBandCode,
             review.EstimatedBandName,

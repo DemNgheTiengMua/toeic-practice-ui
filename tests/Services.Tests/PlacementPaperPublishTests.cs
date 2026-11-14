@@ -158,11 +158,6 @@ public sealed class PlacementPaperPublishTests(DatabaseFixture database)
                 BatchId = batch.BatchId, ItemId = itemId, Level = "info",
                 Message = "accepted by the placement publish test",
             });
-            db.ReviewSampleDecisions.Add(new ReviewSampleDecision
-            {
-                BatchId = batch.BatchId, ItemId = itemId, ActorUserId = reviewer.UserId,
-                Decision = "clear", DecidedAt = DateTimeOffset.UtcNow,
-            });
         }
 
         await db.SaveChangesAsync();

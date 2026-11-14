@@ -40,10 +40,11 @@ specs
 prototype
 scripts
 node_modules
+src/web/dist
+src/web/*.tsbuildinfo
 
 # Repository-root documents and stray drop-ins. Anchored with / so this cannot swallow a file the
-# apps serve: src/WebMVC/wwwroot/img/*.svg and wwwroot/audio/*.mp3 are assets the web app serves,
-# and an unanchored *.mp3 rule silently removed six exam audio tracks from the image.
+# apps serve: src/web/public assets (img/*.svg, audio/*.mp3) are served by the SPA container.
 /*.md
 /*.diff
 /*.mp3

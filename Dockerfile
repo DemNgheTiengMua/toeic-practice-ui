@@ -1,25 +1,14 @@
 # syntax=docker/dockerfile:1
 #
-# #287: two images, one file. `api` is WebAPI (port 5001), `mvc` is WebMVC (port 5000).
-#
-# Why one Dockerfile and not two: the two apps share four of the six projects, so they share a
-# restore, a compiler and a runtime version. Two Dockerfiles would let one of them gain a step the
-# other never gets — a stage, a package or a base-image bump — and the drift would be invisible
-# until a container failed. One file makes the shared part shared by construction.
-#
-# Why the runtime stages are separate: each image must contain exactly one app, its own entrypoint
-# and its own port, and neither may drag the other's dependencies in.
+# #305: two images, one file. `api` is WebAPI (port 5001), `web` is the React + HeroUI v3 SPA (port 5000).
 #
 # Bring the stack up with `docker compose up -d --build`. Operator instructions, including how to
 # apply a schema change and how to switch the OpenAPI surface off, live in docs/DOCKER.md.
 #
 #   docker build --target api -t extra-efficiency-api .
-#   docker build --target mvc -t extra-efficiency-mvc .
+#   docker build --target web -t extra-efficiency-web .
 
-# --- restore ---------------------------------------------------------------------------------
-# Project files only, no source: package restore is the slow, source-independent layer, so an
-# edit to a .cs file reuses it. The .slnx and the test projects are deliberately absent — the
-# images carry neither.
+# --- api restore & publish -------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS restore
 WORKDIR /src
 COPY src/BusinessObjects/BusinessObjects.csproj src/BusinessObjects/
@@ -27,16 +16,15 @@ COPY src/Contracts/Contracts.csproj src/Contracts/
 COPY src/DataAccess/DataAccess.csproj src/DataAccess/
 COPY src/Services/Services.csproj src/Services/
 COPY src/WebAPI/WebAPI.csproj src/WebAPI/
-COPY src/WebMVC/WebMVC.csproj src/WebMVC/
-RUN dotnet restore src/WebAPI/WebAPI.csproj && dotnet restore src/WebMVC/WebMVC.csproj
+RUN dotnet restore src/WebAPI/WebAPI.csproj
 
-# --- publish ---------------------------------------------------------------------------------
-# Both apps in one layer, so the two runtime stages below copy from the same build rather than
-# compiling the shared projects twice in two unrelated caches.
 FROM restore AS publish
-COPY src/ src/
-RUN dotnet publish src/WebAPI/WebAPI.csproj -c Release -o /out/api --no-restore \
- && dotnet publish src/WebMVC/WebMVC.csproj -c Release -o /out/mvc --no-restore
+COPY src/BusinessObjects/ src/BusinessObjects/
+COPY src/Contracts/ src/Contracts/
+COPY src/DataAccess/ src/DataAccess/
+COPY src/Services/ src/Services/
+COPY src/WebAPI/ src/WebAPI/
+RUN dotnet publish src/WebAPI/WebAPI.csproj -c Release -o /out/api --no-restore
 
 # --- api -------------------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS api
@@ -49,6 +37,8 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY --from=publish /out/api ./
+COPY src/web/public/audio/ ./wwwroot/audio/
+COPY src/web/public/img/ ./wwwroot/img/
 
 # The audio store is the only path this app writes that must survive a redeploy (compose mounts a
 # named volume here). Creating it and handing it to the app user is what makes a fresh volume
@@ -65,17 +55,16 @@ USER $APP_UID
 EXPOSE 5001
 ENTRYPOINT ["dotnet", "WebAPI.dll"]
 
-# --- mvc -------------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS mvc
+# --- web build & runtime ---------------------------------------------------------------------
+FROM node:22-alpine AS web-build
+WORKDIR /web
+COPY src/web/package.json src/web/package-lock.json* ./
+RUN npm ci
+COPY src/web/ ./
+RUN npm run build
 
-WORKDIR /app
-COPY --from=publish /out/mvc ./
-
-# No volume and no writable directory: the web app serves committed assets from wwwroot through
-# MapStaticAssets and writes nothing. Only the API's audio store is writable, so only it persists.
-RUN chown -R $APP_UID:$APP_UID /app
-ENV ASPNETCORE_URLS=http://+:5000
-
-USER $APP_UID
+FROM nginx:1.27-alpine AS web
+COPY --from=web-build /web/dist /usr/share/nginx/html
+COPY src/web/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 5000
-ENTRYPOINT ["dotnet", "WebMVC.dll"]
+CMD ["nginx", "-g", "daemon off;"]

@@ -109,6 +109,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
     public async Task DropDatabaseAsync(string databaseName)
     {
+        Microsoft.Data.SqlClient.SqlConnection.ClearAllPools();
         await SqlAsync("master",
             $"IF DB_ID('{databaseName}') IS NOT NULL BEGIN " +
             $"ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{databaseName}]; END;");

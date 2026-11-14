@@ -23,9 +23,6 @@ public partial class CompanionDbContext
                     tb.HasTrigger("trg_ExamAttempts_PublishedExamOnly");
                     // #227: an attempt's ExamId is the edition it sat and never moves. Declared here or
                     // every EF save on this table fails on the OUTPUT clause (ADR-0001).
-                    tb.HasTrigger("trg_ExamAttempts_EditionIsFixed");
-                    // #191: the single-writer guard, which reads WrittenByService and ProjectionVersion
-                    tb.HasTrigger("trg_Attempts_SingleWriter");
                     // #246: a preserved attempt is read-only. Declared here or every EF save on this
                     // table fails on the OUTPUT clause (ADR-0001).
                     tb.HasTrigger("trg_Attempts_EpochIsReadOnly");
@@ -150,62 +147,7 @@ public partial class CompanionDbContext
 
         // #274: the paper a sitting was served. Two tables, one fact: the bundles record WHY (the
         // stage plan and the routed pair) and the responses record WHAT (the positions, in order).
-        modelBuilder.Entity<AttemptStageBundle>(entity =>
-        {
-            entity.HasKey(e => new { e.AttemptId, e.SkillId, e.StageNumber })
-                .HasName("PK_AttemptStageBundles");
 
-            // The single-writer guard, declared or every save fails on the OUTPUT clause (ADR-0001).
-            entity.ToTable(tb => tb.HasTrigger("trg_AttemptStageBundles_SingleWriter"));
-
-            // A level is stored by its code, never as an integer: an integer scale beside the codes is
-            // the second scale #182 exists to prevent.
-            entity.Property(e => e.BandLower)
-                .HasConversion(v => v.Code, v => ParseAuthoredLevel(v))
-                .HasMaxLength(10)
-                .IsUnicode(false);
-
-            entity.Property(e => e.BandUpper)
-                .HasConversion(v => v.Code, v => ParseAuthoredLevel(v))
-                .HasMaxLength(10)
-                .IsUnicode(false);
-
-            entity.Property(e => e.WrittenByService).HasMaxLength(64).IsUnicode(false);
-            entity.Property(e => e.ProjectionVersion)
-                .HasDefaultValue(0, "DF_ASB_ProjectionVersion");
-
-            entity.HasOne(d => d.ExamAttempt).WithMany(p => p.AttemptStageBundleExamAttempts)
-                .HasPrincipalKey(p => new { p.AttemptId, p.CertId })
-                .HasForeignKey(d => new { d.AttemptId, d.CertId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ASB_AttemptCert");
-
-            entity.HasOne(d => d.SkillNavigation).WithMany(p => p.AttemptStageBundleSkillNavigations)
-                .HasPrincipalKey(p => new { p.SkillId, p.CertId })
-                .HasForeignKey(d => new { d.SkillId, d.CertId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ASB_SkillCert");
-        });
-
-        modelBuilder.Entity<AttemptItemResponse>(entity =>
-        {
-            entity.HasKey(e => new { e.AttemptId, e.PositionNumber })
-                .HasName("PK_AttemptItemResponses");
-
-            entity.HasIndex(e => new { e.AttemptId, e.ExamItemId }, "UQ_AIR_Attempt_Item").IsUnique();
-
-            entity.HasOne(d => d.ExamAttempt).WithMany(p => p.AttemptItemResponseExamAttempts)
-                .HasPrincipalKey(p => new { p.AttemptId, p.ExamId })
-                .HasForeignKey(d => new { d.AttemptId, d.ExamId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_AIR_AttemptExam");
-
-            entity.HasOne(d => d.ExamItemExam).WithMany(p => p.AttemptItemResponses)
-                .HasPrincipalKey(p => new { p.ExamItemId, p.ExamId })
-                .HasForeignKey(d => new { d.ExamItemId, d.ExamId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_AIR_ExamItemExam");
-        });
 
 
 
@@ -217,9 +159,6 @@ public partial class CompanionDbContext
 
             // #212: a placement cannot be marked done without a measured row or a recorded failure.
             // Declared or every EF save on this table fails on the OUTPUT clause (ADR-0001).
-            entity.ToTable(tb => tb.HasTrigger("trg_PlacementTests_CompletionIsEarned"));
-
-            entity.ToTable(tb => tb.HasTrigger("trg_PlacementTests_SingleWriter"));
 
             entity.HasIndex(e => e.AttemptId, "UX_PlacementTests_Attempt")
                 .IsUnique()

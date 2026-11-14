@@ -63,7 +63,7 @@ services:
         # leaves an empty catalog behind, and treating that as "loaded" would serve an app with no
         # tables until someone ran `down -v` and could not explain why.
         if [ "$$(count -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name = N'$$DB_NAME'")" != "0" ] \
-           && [ "$$(count -d "$$DB_NAME" -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.tables WHERE name = N'DerivedFactOwners'")" = "1" ]; then
+           && [ "$$(count -d "$$DB_NAME" -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.tables WHERE name = N'Certificates'")" = "1" ]; then
           echo "db-init: $$DB_NAME is already loaded - not touching it."
           echo "db-init: to apply a schema change, discard the volume: docker compose down -v"
           exit 0
@@ -119,25 +119,16 @@ services:
       retries: 10
       start_period: 20s
 
-  mvc:
+  web:
     build:
       context: .
-      target: mvc
+      target: web
     restart: unless-stopped
     depends_on:
       db-init:
         condition: service_completed_successfully
-      # Not required to boot, but the site calls the API on the first page load and on every cookie
-      # re-validation, so starting it before the API is up only produces a red error page.
       api:
         condition: service_healthy
-    # No env_file: this app has no connection string, no DbContext and no gateway. It needs one
-    # setting, and it gets it below. Nothing else from .env.docker belongs in this container.
-    environment:
-      ASPNETCORE_URLS: http://+:5000
-      # The API is reached on the compose network, never from the browser (ADR-0002).
-      ApiBaseUrl: http://api:5001
-      Https__RedirectHttps: "false"
     ports:
       - "5000:5000"
 
