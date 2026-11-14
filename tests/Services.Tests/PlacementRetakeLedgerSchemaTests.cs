@@ -253,11 +253,8 @@ public sealed class PlacementRetakeLedgerSchemaTests(DatabaseFixture database)
         var orderCode = $"DH-PR-{suffix}";
         var certCode = $"PR_{suffix}";
         await database.SqlAsync($"""
-            INSERT INTO Packages (Name, Credits, Price, IsActive)
-            VALUES (N'PR Package {suffix}', 10, 100000, 1);
-            DECLARE @pk INT = SCOPE_IDENTITY();
-            INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway)
-            VALUES ({learnerId}, @pk, 'paid', 100000, '{orderCode}', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
+            INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway)
+            VALUES ({learnerId}, 10, 'paid', 100000, '{orderCode}', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
 
             INSERT INTO Certificates (Code, Name, IsActive)
             VALUES ('{certCode}', N'Cert {certCode}', 1);

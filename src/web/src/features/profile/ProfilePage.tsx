@@ -174,10 +174,10 @@ export function ProfilePage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link to="/wallet" className="no-underline">
+          <Link to="/checkout" className="no-underline">
             <Button variant="secondary" size="sm">
               <Wallet className="w-4 h-4 mr-1.5" />
-              Wallet & credits
+              Top up credits
             </Button>
           </Link>
         </div>

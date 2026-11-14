@@ -245,7 +245,6 @@ public sealed class CreditLedger : ICreditLedger
 
         var order = await _db.Orders
             .AsNoTracking()
-            .Include(o => o.Package)
             .FirstOrDefaultAsync(o => o.OrderId == orderId, cancellationToken);
 
         if (order is null || order.UserId != userId)
@@ -258,9 +257,9 @@ public sealed class CreditLedger : ICreditLedger
             throw new CreditLedgerException(CreditLedgerException.InvalidCharge, "Only paid orders may be credited to the wallet.");
         }
 
-        if (order.Credits != amount && (order.Package?.Credits ?? 0) != amount)
+        if (order.Credits != amount)
         {
-            throw new CreditLedgerException(CreditLedgerException.InvalidCharge, $"Purchase delta {amount} must equal order credits {(order.Credits > 0 ? order.Credits : (order.Package?.Credits ?? 0))}.");
+            throw new CreditLedgerException(CreditLedgerException.InvalidCharge, $"Purchase delta {amount} must equal order credits {order.Credits}.");
         }
 
         var reason = CreditReason.Purchase;
@@ -495,7 +494,7 @@ public sealed class CreditLedger : ICreditLedger
                         throw new CreditLedgerException(CreditLedgerException.NegativeBalanceBlocked, "CreditTransactions is append-only; rows cannot be deleted.", 400, ex);
 
                     case 50022:
-                        throw new CreditLedgerException(CreditLedgerException.InvalidCharge, "Purchase transaction must reference a paid order with Delta equal to package credits.", 400, ex);
+                        throw new CreditLedgerException(CreditLedgerException.InvalidCharge, "Purchase transaction must reference a paid order with Delta equal to order credits.", 400, ex);
 
                     case 50028:
                         throw new CreditLedgerException(CreditLedgerException.InvalidCharge, "CreditTransactions is append-only; a posted transaction cannot be rewritten.", 400, ex);

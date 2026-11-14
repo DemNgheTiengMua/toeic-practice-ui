@@ -11,15 +11,14 @@ IF (SELECT TimeZoneId FROM Users WHERE UserId=@u) <> 'Asia/Ho_Chi_Minh'
 PRINT 'TimeZoneId defaults to Asia/Ho_Chi_Minh as expected';
 
 -- ============ ADR-0003: PaymentNo + PaymentEvents ============
-INSERT INTO Packages (Name,Credits,Price,IsActive) VALUES (N'10 credits',10,100000,1); DECLARE @pk INT=SCOPE_IDENTITY();
 DECLARE @pn BIGINT = NEXT VALUE FOR SEQ_PaymentNo;
-INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,PaymentNo,Gateway)
-  VALUES (@u,@pk,'pending',100000,'DH-AI-0001',@pn,'payos'); DECLARE @o INT=SCOPE_IDENTITY();
+INSERT INTO Orders (UserId,Credits,Status,Amount,OrderCode,PaymentNo,Gateway)
+  VALUES (@u,10,'pending',100000,'DH-AI-0001',@pn,'payos'); DECLARE @o INT=SCOPE_IDENTITY();
 
 -- reject: a gateway the app has no implementation for
 BEGIN TRY
-  INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,PaymentNo,Gateway)
-    VALUES (@u2,@pk,'pending',100000,'DH-AI-0002',NEXT VALUE FOR SEQ_PaymentNo,'vnpay');
+  INSERT INTO Orders (UserId,Credits,Status,Amount,OrderCode,PaymentNo,Gateway)
+    VALUES (@u2,10,'pending',100000,'DH-AI-0002',NEXT VALUE FOR SEQ_PaymentNo,'vnpay');
   THROW 50000,'EXPECT_REJECT FAILED: unknown gateway accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
@@ -28,8 +27,8 @@ END CATCH
 
 -- reject: two orders sharing one merchant payment number
 BEGIN TRY
-  INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,PaymentNo,Gateway)
-    VALUES (@u2,@pk,'pending',100000,'DH-AI-0003',@pn,'payos');
+  INSERT INTO Orders (UserId,Credits,Status,Amount,OrderCode,PaymentNo,Gateway)
+    VALUES (@u2,10,'pending',100000,'DH-AI-0003',@pn,'payos');
   THROW 50000,'EXPECT_REJECT FAILED: duplicate PaymentNo accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;

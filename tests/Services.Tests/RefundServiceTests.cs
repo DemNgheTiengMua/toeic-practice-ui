@@ -49,21 +49,16 @@ public sealed class RefundServiceTests(DatabaseFixture database)
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
 
-    /// <summary>A paid order whose package granted <paramref name="credits"/> credits, for
+    /// <summary>A paid order granting <paramref name="credits"/> credits, for
     /// <paramref name="amount"/> dong. The two ceilings read different columns: a credit refund is
     /// capped by what the order granted, a money refund by what it was paid.</summary>
     private async Task<int> SeedPaidOrderAsync(int userId, int credits, decimal amount = 199000m)
     {
         var orderCode = $"DH-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
-        var packageName = $"refund-pkg-{Guid.NewGuid():N}"[..20];
         var paymentNo = Random.Shared.NextInt64(1000000, 999999999);
         await database.SqlAsync($"""
-            INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
-            VALUES (N'{packageName}', {credits}, 199000, 1, 0, N'Features', 1);
-            DECLARE @pkgId INT = (SELECT TOP 1 PackageId FROM Packages WHERE Name = N'{packageName}');
-
-            INSERT INTO Orders (OrderCode, PaymentNo, UserId, PackageId, Amount, Status, Gateway, CreatedAt, PaidAt)
-            VALUES ('{orderCode}', {paymentNo}, {userId}, @pkgId, {amount}, 'paid', 'mock',
+            INSERT INTO Orders (OrderCode, PaymentNo, UserId, Credits, Amount, Status, Gateway, CreatedAt, PaidAt)
+            VALUES ('{orderCode}', {paymentNo}, {userId}, {credits}, {amount}, 'paid', 'mock',
                     DATEADD(day, -1, SYSDATETIMEOFFSET()), DATEADD(day, -1, SYSDATETIMEOFFSET()));
             """);
 

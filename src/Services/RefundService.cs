@@ -429,7 +429,6 @@ public sealed class RefundService : IRefundService
 
         var order = await _db.Orders
             .AsNoTracking()
-            .Include(o => o.Package)
             .SingleOrDefaultAsync(o => o.OrderId == orderId.Value, cancellationToken);
 
         if (order is null || order.UserId != userId)
@@ -441,11 +440,11 @@ public sealed class RefundService : IRefundService
         }
 
         // GrantPurchaseAsync only credits a paid order and only a paid order moved money, so an unpaid
-        // order's ceiling is zero in both units rather than the package's sticker value.
+        // order's ceiling is zero in both units rather than the order's credits.
         var paid = order.Status == OrderStatus.Paid.ToCode();
         var cap = method == RefundMethodDto.Money
             ? (paid ? order.Amount : 0m)
-            : (paid ? order.Package.Credits : 0m);
+            : (paid ? order.Credits : 0m);
 
         var alreadyRefunded = await AlreadyRefundedAsync(_db, orderId.Value, method, cancellationToken);
 

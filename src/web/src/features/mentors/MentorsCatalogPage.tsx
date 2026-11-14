@@ -68,7 +68,11 @@ export function MentorsCatalogPage() {
               My bookings
             </Button>
           </Link>
-          <Link to="/wallet" className="no-underline">
+          <Link
+            to="/checkout"
+            search={{ returnUrl: '/mentors' } as any}
+            className="no-underline"
+          >
             <Button variant="ghost" size="sm">
               <Sparkles className="w-4 h-4 mr-1.5 text-warning" />
               Wallet: {learnerContext ? `${learnerContext.creditBalance} credits` : 'Credits'}

@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import { Breadcrumbs, Tabs } from '@heroui/react';
-import { Coins, FileText, Package, Receipt } from 'lucide-react';
+import { FileText, Receipt } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { canManageBilling, canManageUsers, canTriageSupport } from '../../../lib/security';
 import { AccessDeniedPage } from '../../public/AccessDeniedPage';
 import { OrdersTab } from './OrdersTab';
 import { RefundsTab } from './RefundsTab';
-import { PackagesTab } from './PackagesTab';
 
 export interface AdminFinancePageProps {
-  initialTab?: 'orders' | 'refunds' | 'packages';
+  initialTab?: 'orders' | 'refunds';
 }
 
 export function AdminFinancePage({ initialTab }: AdminFinancePageProps) {
@@ -25,8 +24,8 @@ export function AdminFinancePage({ initialTab }: AdminFinancePageProps) {
   }
 
   // Determine allowed tabs based on permissions
-  // SystemAdmin gets orders, refunds, and packages. SupportTriage gets refunds.
-  const allowedTabs: Array<{ id: 'orders' | 'refunds' | 'packages'; label: string; icon: React.ComponentType<{ className?: string }> }> = [];
+  // SystemAdmin gets orders and refunds. SupportTriage gets refunds.
+  const allowedTabs: Array<{ id: 'orders' | 'refunds'; label: string; icon: React.ComponentType<{ className?: string }> }> = [];
 
   if (isSystemAdmin) {
     allowedTabs.push({ id: 'orders', label: 'Orders', icon: FileText });
@@ -34,10 +33,6 @@ export function AdminFinancePage({ initialTab }: AdminFinancePageProps) {
 
   if (isSupportTriage || isSystemAdmin) {
     allowedTabs.push({ id: 'refunds', label: 'Refunds desk', icon: Receipt });
-  }
-
-  if (isSystemAdmin) {
-    allowedTabs.push({ id: 'packages', label: 'Credit packages', icon: Package });
   }
 
   const activeTab =
@@ -57,7 +52,7 @@ export function AdminFinancePage({ initialTab }: AdminFinancePageProps) {
           Finance & refunds
         </h1>
         <p className="text-sm text-muted">
-          Manage learner payments, order reconciliation, refund processing, and credit package catalog.
+          Manage learner payments, order reconciliation, and refund processing.
         </p>
       </div>
 
@@ -93,12 +88,6 @@ export function AdminFinancePage({ initialTab }: AdminFinancePageProps) {
         {(isSupportTriage || isSystemAdmin) && (
           <Tabs.Panel id="refunds" className="pt-6">
             <RefundsTab />
-          </Tabs.Panel>
-        )}
-
-        {isSystemAdmin && (
-          <Tabs.Panel id="packages" className="pt-6">
-            <PackagesTab />
           </Tabs.Panel>
         )}
       </Tabs>

@@ -2348,20 +2348,6 @@ CREATE VIEW vw_MentorAvgRating AS
   GROUP BY b.MentorId;
 GO
 -- ============ Domain 5: Payment ============
-CREATE TABLE Packages (
-  PackageId INT IDENTITY(1,1) PRIMARY KEY,
-  Name      NVARCHAR(120) NOT NULL,
-  Credits   INT NOT NULL CONSTRAINT CK_Packages_Credits CHECK (Credits > 0),
-  Price     DECIMAL(12,2) NOT NULL CONSTRAINT CK_Packages_Price CHECK (Price >= 0),
-  IsActive  BIT NOT NULL DEFAULT 1,
-  IsFeatured   BIT NOT NULL CONSTRAINT DF_Packages_IsFeatured DEFAULT 0,  -- UI-29: "Featured" / "Popular"
-  Features     NVARCHAR(1000) NULL,  -- UI-29: pricing card bullet list, one per line
-  DisplayOrder INT NOT NULL CONSTRAINT DF_Packages_DisplayOrder DEFAULT 0
-);
-GO
--- UI-29: "1 featured" on the packages page; pricing highlights a single card
-CREATE UNIQUE INDEX UX_Packages_OneFeatured ON Packages(IsFeatured) WHERE IsFeatured = 1;
-GO
 -- ADR-0003: numeric merchant order number sent to the gateway. A SEQUENCE (not IDENTITY) because the
 -- value is needed to build the checkout request before the Orders row is written, and because every
 -- gateway must see a number it has never seen before â€” including across retries of a failed insert.
@@ -2370,7 +2356,6 @@ GO
 CREATE TABLE Orders (
   OrderId   INT IDENTITY(1,1) PRIMARY KEY,
   UserId    INT NOT NULL REFERENCES Users(UserId),
-  PackageId INT NULL REFERENCES Packages(PackageId),
   Credits   INT NOT NULL CONSTRAINT DF_Orders_Credits DEFAULT 1
     CONSTRAINT CK_Orders_Credits CHECK (Credits > 0),
   Status    VARCHAR(12) NOT NULL DEFAULT 'pending'
@@ -2575,11 +2560,10 @@ BEGIN
     SELECT 1
     FROM inserted i
     JOIN Orders o ON o.OrderId = i.OrderId
-    LEFT JOIN Packages pk ON pk.PackageId = o.PackageId
     WHERE i.Reason = 'purchase'
-      AND (o.Status <> 'paid' OR (i.Delta <> o.Credits AND (pk.Credits IS NULL OR i.Delta <> pk.Credits)))
+      AND (o.Status <> 'paid' OR i.Delta <> o.Credits)
   )
-    THROW 50022, 'purchase txn must reference a paid order with Delta equal to the package credits.', 1;
+    THROW 50022, 'purchase txn must reference a paid order with Delta equal to the order credits.', 1;
 END;
 GO
 -- UI-37: what an attempt may be charged depends on its exam's purpose:

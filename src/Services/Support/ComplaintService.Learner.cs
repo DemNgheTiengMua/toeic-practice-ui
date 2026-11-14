@@ -23,7 +23,7 @@ public sealed partial class ComplaintService
             .Include(c => c.Booking).ThenInclude(b => b!.Mentor)
             .Include(c => c.Booking).ThenInclude(b => b!.Slot)
             .Include(c => c.ExamAttempt).ThenInclude(a => a!.Exam)
-            .Include(c => c.Order).ThenInclude(o => o!.Package)
+            .Include(c => c.Order)
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync(cancellationToken);
 
@@ -65,13 +65,12 @@ public sealed partial class ComplaintService
         var orders = await db.Orders
             .AsNoTracking()
             .Where(o => o.UserId == userId)
-            .Include(o => o.Package)
             .OrderByDescending(o => o.CreatedAt)
             .Take(20)
             .Select(o => new ComplaintEligibleOrderDto(
                 o.OrderId,
                 o.OrderCode,
-                o.Package.Name,
+                o.Credits,
                 o.Amount,
                 o.CreatedAt,
                 o.Status))

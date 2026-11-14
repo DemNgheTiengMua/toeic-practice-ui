@@ -23,7 +23,6 @@ public static partial class AdminEndpoints
         // pool.content.review has no endpoint yet: the review queue and its two invariants are #201.
         MapSummary(Capability(app, Permissions.SystemAdmin));
         MapDashboard(Capability(app, Permissions.SystemAdmin));
-        MapPackages(Capability(app, Permissions.SystemAdmin));
         MapOrders(Capability(app, Permissions.SystemAdmin));
         MapUsers(Capability(app, Permissions.SystemAdmin));
         MapScoreConversion(Capability(app, Permissions.BlueprintDesign));

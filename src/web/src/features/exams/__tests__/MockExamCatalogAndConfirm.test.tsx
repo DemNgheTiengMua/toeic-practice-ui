@@ -190,7 +190,13 @@ describe('MockExamCatalogPage & MockExamConfirmPage', () => {
     });
 
     expect(screen.getByText('0')).toBeInTheDocument();
-    expect(screen.getByText(/Top up wallet/i)).toBeInTheDocument();
+    const topUpBtn = screen.getByRole('button', { name: /top up wallet/i });
+    expect(topUpBtn).toBeInTheDocument();
+    fireEvent.click(topUpBtn);
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/checkout',
+      search: { credits: 1, returnUrl: '/exams' },
+    });
     expect(screen.getByText(/Practice free/i)).toBeInTheDocument();
   });
 

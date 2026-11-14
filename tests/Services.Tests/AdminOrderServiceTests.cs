@@ -29,26 +29,15 @@ public sealed class AdminOrderServiceTests(DatabaseFixture database)
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
 
-    private async Task<int> SeedPackageAsync(string name, int credits, decimal price)
-    {
-        await database.SqlAsync($"""
-            INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
-            VALUES (N'{name}', {credits}, {price}, 1, 0, N'Feature', 1);
-            """);
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-        return await db.Packages.Where(p => p.Name == name).Select(p => p.PackageId).OrderByDescending(p => p).FirstAsync();
-    }
-
     [Fact]
     public async Task GetOrdersAsync_filters_by_query_status_gateway_and_computes_stats()
     {
         var user1 = await SeedUserAsync($"{Guid.NewGuid():N}@filter.local", "Nguyen Van A");
         var user2 = await SeedUserAsync($"{Guid.NewGuid():N}@other.local", "Tran Thi B");
-        var pkg = await SeedPackageAsync("OrderPack", 5, 199000);
 
         var paymentService = new PaymentService(DbContextFactory.Create(database.ConnectionString), new MockPaymentGateway());
-        var order1 = await paymentService.CreateOrderAsync(user1, pkg, "http://localhost:5000");
-        var order2 = await paymentService.CreateOrderAsync(user2, pkg, "http://localhost:5000");
+        var order1 = await paymentService.CreateOrderAsync(user1, 5, "http://localhost:5000");
+        var order2 = await paymentService.CreateOrderAsync(user2, 5, "http://localhost:5000");
 
         // Settle order1 as paid
         await paymentService.ApplyMockGatewayActionAsync(user1, order1.OrderCode, "success");
@@ -75,17 +64,16 @@ public sealed class AdminOrderServiceTests(DatabaseFixture database)
 
         // Stats reflect paid orders
         Assert.True(paidResult.PaidThisMonthCount >= 1);
-        Assert.True(paidResult.PaidThisMonthAmount >= 199000);
+        Assert.True(paidResult.PaidThisMonthAmount >= 100000);
     }
 
     [Fact]
     public async Task GetOrderDetailAsync_shows_every_payment_event_in_chronological_order()
     {
         var user = await SeedUserAsync($"{Guid.NewGuid():N}@events.local", "Event Learner");
-        var pkg = await SeedPackageAsync("EventPack", 5, 199000);
 
         var paymentService = new PaymentService(DbContextFactory.Create(database.ConnectionString), new MockPaymentGateway());
-        var order = await paymentService.CreateOrderAsync(user, pkg, "http://localhost:5000");
+        var order = await paymentService.CreateOrderAsync(user, 5, "http://localhost:5000");
 
         // Seed 3 distinct payment events with sequential timestamps
         await database.SqlAsync($"""
@@ -167,25 +155,21 @@ public sealed class AdminOrderServiceTests(DatabaseFixture database)
                     VALUES ((SELECT RoleId FROM Roles WHERE Code='admin'), 'agreeadmin@test.local', 0x01, N'Agree Admin', 0, '2026-10-01 00:00:00 +00:00');
                     DECLARE @AdminId INT = SCOPE_IDENTITY();
 
-                    INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
-                    VALUES (N'AgreePack', 5, 199000, 1, 0, N'Features', 1);
-                    DECLARE @PkgId INT = SCOPE_IDENTITY();
-
                     -- Paid 23:30 on 31 October Vietnam time: the last half hour of the month. October.
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
-                    VALUES (@UserId, @PkgId, 'paid', 199000, 'DH-AGREE-0001', 30001, 'payos', '2026-10-31 16:20:00 +00:00', '2026-10-31 16:30:00 +00:00');
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, 5, 'paid', 199000, 'DH-AGREE-0001', 30001, 'payos', '2026-10-31 16:20:00 +00:00', '2026-10-31 16:30:00 +00:00');
 
                     -- Paid 00:30 on 1 November Vietnam time = 17:30Z on 31 October. November, not October.
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
-                    VALUES (@UserId, @PkgId, 'paid', 499000, 'DH-AGREE-0002', 30002, 'payos', '2026-10-31 17:25:00 +00:00', '2026-10-31 17:30:00 +00:00');
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, 5, 'paid', 499000, 'DH-AGREE-0002', 30002, 'payos', '2026-10-31 17:25:00 +00:00', '2026-10-31 17:30:00 +00:00');
 
                     -- Paid with no payment timestamp, created 5 October: counted once, by its creation day.
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
-                    VALUES (@UserId, @PkgId, 'paid', 99000, 'DH-AGREE-0003', 30003, 'mock', '2026-10-05 10:00:00 +00:00', NULL);
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, 5, 'paid', 99000, 'DH-AGREE-0003', 30003, 'mock', '2026-10-05 10:00:00 +00:00', NULL);
 
                     -- Paid in September: in neither screen's October.
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
-                    VALUES (@UserId, @PkgId, 'paid', 299000, 'DH-AGREE-0004', 30004, 'payos', '2026-09-20 10:00:00 +00:00', '2026-09-20 10:05:00 +00:00');
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, 5, 'paid', 299000, 'DH-AGREE-0004', 30004, 'payos', '2026-09-20 10:00:00 +00:00', '2026-09-20 10:05:00 +00:00');
 
                     -- One money refund settled in October. It is the whole difference between the screens.
                     INSERT INTO Refunds (UserId, Method, Reason, Status, Amount, RequestedByUserId, DecidedByUserId, DecidedAt, SettledByUserId, SettledAt, CreatedAt)

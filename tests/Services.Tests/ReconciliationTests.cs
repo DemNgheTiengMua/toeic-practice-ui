@@ -261,20 +261,10 @@ public sealed class ReconciliationTests(DatabaseFixture database)
     /// <summary>A paid order, because CK_CreditTxn_Source requires a purchase to name one.</summary>
     private static async Task<int> SeedPaidOrderAsync(CompanionDbContext db, int userId)
     {
-        var package = new BusinessObjects.Entities.Package
-        {
-            Name = $"Rec package {Guid.NewGuid():N}"[..30],
-            Price = 100_000,
-            Credits = 6,
-            IsActive = true,
-        };
-        db.Packages.Add(package);
-        await db.SaveChangesAsync();
-
         var order = new BusinessObjects.Entities.Order
         {
             UserId = userId,
-            PackageId = package.PackageId,
+            Credits = 6,
             OrderCode = $"REC{Guid.NewGuid():N}"[..16],
             Status = "paid",
             Amount = 100_000,

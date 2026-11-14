@@ -25,35 +25,25 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
 
-    private async Task<int> SeedPackageAsync(string name, int credits, decimal price)
-    {
-        await database.SqlAsync($"""
-            INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
-            VALUES (N'{name}', {credits}, {price}, 1, 0, N'Feature 1', 1);
-            """);
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-        return await db.Packages.Where(p => p.Name == name).Select(p => p.PackageId).OrderByDescending(p => p).FirstAsync();
-    }
-
     [Fact]
     public async Task Unverified_learners_are_blocked_from_checkout_preview_and_creation()
     {
         var userId = await SeedUserAsync(isVerified: false);
-        var pkgId = await SeedPackageAsync("Starter 1", 5, 100000);
+        var credits = 5;
         var service = CreateService();
 
         await Assert.ThrowsAsync<EmailNotVerifiedException>(() =>
-            service.GetCheckoutPreviewAsync(userId, pkgId));
+            service.GetCheckoutPreviewAsync(userId, credits));
 
         await Assert.ThrowsAsync<EmailNotVerifiedException>(() =>
-            service.CreateOrderAsync(userId, pkgId, "http://localhost:5000"));
+            service.CreateOrderAsync(userId, credits, "http://localhost:5000"));
     }
 
     [Fact]
     public async Task Verified_learner_can_preview_checkout_with_balance_and_balance_after()
     {
         var userId = await SeedUserAsync(isVerified: true);
-        var pkgId = await SeedPackageAsync("Prep Pack", 5, 199000);
+        var credits = 5;
         var service = CreateService();
 
         // Give initial credits via admin grant
@@ -67,12 +57,10 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
             VALUES ({userId}, 'admin_grant', 8, @adminId, N'Initial grant');
             """);
 
-        var preview = await service.GetCheckoutPreviewAsync(userId, pkgId);
+        var preview = await service.GetCheckoutPreviewAsync(userId, credits);
 
-        Assert.Equal(pkgId, preview.PackageId);
-        Assert.Equal("Prep Pack", preview.PackageName);
         Assert.Equal(5, preview.Credits);
-        Assert.Equal(199000, preview.Price);
+        Assert.Equal(100000m, preview.Price);
         Assert.Equal(8, preview.CurrentBalance);
         Assert.Equal(13, preview.BalanceAfter);
         Assert.Null(preview.OpenOrder);
@@ -82,15 +70,15 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     public async Task Creating_order_assigns_sequence_payment_no_and_order_code()
     {
         var userId = await SeedUserAsync(isVerified: true);
-        var pkgId = await SeedPackageAsync("Intensive", 10, 349000);
+        var credits = 10;
         var service = CreateService();
 
-        var res = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var res = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         Assert.True(res.OrderId > 0);
         Assert.StartsWith("DH-", res.OrderCode);
         Assert.True(res.PaymentNo > 0);
-        Assert.Equal(349000, res.Amount);
+        Assert.Equal(200000m, res.Amount);
         Assert.Equal(PaymentGatewayDto.Mock, res.Gateway);
         Assert.Equal(OrderStatusDto.Pending, res.Status);
         Assert.Contains(res.OrderCode, res.CheckoutUrl);
@@ -105,20 +93,20 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     public async Task Only_one_open_order_per_learner_blocks_second_order()
     {
         var userId = await SeedUserAsync(isVerified: true);
-        var pkgId = await SeedPackageAsync("Single", 1, 49000);
+        var credits = 1;
         var service = CreateService();
 
-        var first = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var first = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         var ex = await Assert.ThrowsAsync<OrderAlreadyOpenException>(() =>
-            service.CreateOrderAsync(userId, pkgId, "http://localhost:5000"));
+            service.CreateOrderAsync(userId, credits, "http://localhost:5000"));
 
         Assert.Equal(first.OrderCode, ex.OrderCode);
-        Assert.Equal("Single", ex.PackageName);
+        Assert.Equal(1, ex.Credits);
         Assert.Equal(OrderStatus.Pending, ex.Status);
 
         // Preview also exposes the open order
-        var preview = await service.GetCheckoutPreviewAsync(userId, pkgId);
+        var preview = await service.GetCheckoutPreviewAsync(userId, credits);
         Assert.NotNull(preview.OpenOrder);
         Assert.Equal(first.OrderCode, preview.OpenOrder.OrderCode);
     }
@@ -127,10 +115,10 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     public async Task Orders_unpaid_after_15_minutes_become_expired()
     {
         var userId = await SeedUserAsync(isVerified: true);
-        var pkgId = await SeedPackageAsync("StaleTest", 2, 80000);
+        var credits = 2;
         var service = CreateService();
 
-        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var order = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         // Backdate order to 16 minutes ago
         await database.SqlAsync($"""
@@ -145,7 +133,7 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         Assert.Equal("expired", updated.Status);
 
         // Learner can now create a new order without error
-        var second = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var second = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
         Assert.NotNull(second);
         Assert.NotEqual(order.OrderId, second.OrderId);
     }
@@ -154,11 +142,11 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     public async Task Return_redirect_never_grants_credit_and_logs_return_redirect_event()
     {
         var userId = await SeedUserAsync(isVerified: true);
-        var pkgId = await SeedPackageAsync("TrustTest", 5, 199000);
+        var credits = 5;
         var mockGateway = new MockPaymentGateway();
         var service = CreateService(mockGateway);
 
-        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var order = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         // Learner returns via browser redirect (gateway unconfirmed)
         var result = await service.HandleReturnRedirectAsync(userId, order.OrderCode);
@@ -181,11 +169,11 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     public async Task Returning_learner_with_unconfirmed_payment_sees_order_as_reconciling()
     {
         var userId = await SeedUserAsync(isVerified: true);
-        var pkgId = await SeedPackageAsync("ReconcileTest", 5, 199000);
+        var credits = 5;
         var mockGateway = new MockPaymentGateway();
         var service = CreateService(mockGateway);
 
-        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var order = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         var result = await service.HandleReturnRedirectAsync(userId, order.OrderCode);
 
@@ -199,10 +187,10 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     public async Task Settle_is_idempotent_and_repeating_confirmation_never_credits_twice()
     {
         var userId = await SeedUserAsync(isVerified: true);
-        var pkgId = await SeedPackageAsync("IdempotentTest", 5, 199000);
+        var credits = 5;
         var service = CreateService();
 
-        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var order = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         // First settle via trusted source
         var settled1 = await service.SettleOrderAsync(
@@ -250,10 +238,10 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     public async Task Credit_is_granted_only_on_trusted_source()
     {
         var userId = await SeedUserAsync(isVerified: true);
-        var pkgId = await SeedPackageAsync("SourceSecurity", 5, 199000);
+        var credits = 5;
         var service = CreateService();
 
-        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var order = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         // Untrusted source 1: return_redirect
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -272,16 +260,16 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     public async Task Wallet_balance_and_summary_are_read_from_ledger_views()
     {
         var userId = await SeedUserAsync(isVerified: true);
-        var pkg1 = await SeedPackageAsync("WPkg1", 5, 199000);
-        var pkg2 = await SeedPackageAsync("WPkg2", 10, 349000);
+        var c1 = 5;
+        var c2 = 10;
         var service = CreateService();
 
         // Order 1: paid
-        var o1 = await service.CreateOrderAsync(userId, pkg1, "http://localhost:5000");
+        var o1 = await service.CreateOrderAsync(userId, c1, "http://localhost:5000");
         await service.SettleOrderAsync(o1.PaymentNo, PaymentEventSource.StatusQuery, false);
 
         // Order 2: paid
-        var o2 = await service.CreateOrderAsync(userId, pkg2, "http://localhost:5000");
+        var o2 = await service.CreateOrderAsync(userId, c2, "http://localhost:5000");
         await service.SettleOrderAsync(o2.PaymentNo, PaymentEventSource.StatusQuery, false);
 
         // Seed a mock exam spend (-1 credit)
@@ -303,7 +291,7 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         Assert.Equal(14, wallet.Balance); // 15 - 1
         Assert.Equal(15, wallet.CreditsPurchased);
         Assert.Equal(1, wallet.CreditsUsed);
-        Assert.Equal(548000, wallet.AmountPurchased);
+        Assert.Equal(300000m, wallet.AmountPurchased); // (5 + 10) * 20000
         Assert.Equal(2, wallet.PaidOrderCount);
         Assert.Equal(2, wallet.Orders.Count);
         Assert.Equal(3, wallet.Ledger.Count); // 2 purchases + 1 mock exam start
@@ -312,33 +300,33 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     [Fact]
     public async Task Mock_gateway_actions_simulate_success_failed_pending_and_expired()
     {
-        var pkgId = await SeedPackageAsync("ActionTest", 5, 199000);
+        var credits = 5;
         var mockGateway = new MockPaymentGateway();
         var service = CreateService(mockGateway);
 
         // 1. Success action
         var u1 = await SeedUserAsync(isVerified: true);
-        var oSuccess = await service.CreateOrderAsync(u1, pkgId, "http://localhost:5000");
+        var oSuccess = await service.CreateOrderAsync(u1, credits, "http://localhost:5000");
         var resSuccess = await service.ApplyMockGatewayActionAsync(u1, oSuccess.OrderCode, "success");
         Assert.Equal(OrderStatusDto.Paid, resSuccess.Status);
         Assert.Equal(5, resSuccess.Credits);
 
         // 2. Failed action
         var u2 = await SeedUserAsync(isVerified: true);
-        var oFailed = await service.CreateOrderAsync(u2, pkgId, "http://localhost:5000");
+        var oFailed = await service.CreateOrderAsync(u2, credits, "http://localhost:5000");
         var resFailed = await service.ApplyMockGatewayActionAsync(u2, oFailed.OrderCode, "failed", errorCode: "24");
         Assert.Equal(OrderStatusDto.Failed, resFailed.Status);
         Assert.Equal("24", resFailed.GatewayErrorCode);
 
         // 3. Pending/slow gateway action
         var u3 = await SeedUserAsync(isVerified: true);
-        var oPending = await service.CreateOrderAsync(u3, pkgId, "http://localhost:5000");
+        var oPending = await service.CreateOrderAsync(u3, credits, "http://localhost:5000");
         var resPending = await service.ApplyMockGatewayActionAsync(u3, oPending.OrderCode, "pending");
         Assert.Equal(OrderStatusDto.Reconciling, resPending.Status);
 
         // 4. Expired action
         var u4 = await SeedUserAsync(isVerified: true);
-        var oExpired = await service.CreateOrderAsync(u4, pkgId, "http://localhost:5000");
+        var oExpired = await service.CreateOrderAsync(u4, credits, "http://localhost:5000");
         var resExpired = await service.ApplyMockGatewayActionAsync(u4, oExpired.OrderCode, "expired");
         Assert.Equal(OrderStatusDto.Expired, resExpired.Status);
     }
@@ -346,12 +334,12 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     [Fact]
     public async Task Reconciling_order_refresh_logs_event_and_does_not_violate_status_constraint()
     {
-        var pkgId = await SeedPackageAsync("ReconcileEventTest", 5, 199000);
+        var credits = 5;
         var mockGateway = new MockPaymentGateway();
         var service = CreateService(mockGateway);
 
         var userId = await SeedUserAsync(isVerified: true);
-        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var order = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         // Mark as reconciling
         await service.ApplyMockGatewayActionAsync(userId, order.OrderCode, "pending");
@@ -378,12 +366,12 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     [Fact]
     public async Task ExpireStaleOrdersAsync_cancels_payment_link_at_gateway_and_logs_cancel_event()
     {
-        var pkgId = await SeedPackageAsync("ExpireCancelTest", 5, 199000);
+        var credits = 5;
         var mockGateway = new MockPaymentGateway();
         var service = CreateService(mockGateway);
 
         var userId = await SeedUserAsync(isVerified: true);
-        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var order = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         // Backdate order to 20 minutes ago
         await database.SqlAsync($"""
@@ -414,12 +402,12 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     [Fact]
     public async Task HandleReturnRedirectAsync_with_expired_order_cancels_at_gateway()
     {
-        var pkgId = await SeedPackageAsync("ReturnExpireCancelTest", 5, 199000);
+        var credits = 5;
         var mockGateway = new MockPaymentGateway();
         var service = CreateService(mockGateway);
 
         var userId = await SeedUserAsync(isVerified: true);
-        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var order = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         // Backdate order to 20 minutes ago
         await database.SqlAsync($"""
@@ -445,12 +433,12 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     [Fact]
     public async Task GetPaymentResultAsync_with_timed_out_reconciling_order_cancels_at_gateway()
     {
-        var pkgId = await SeedPackageAsync("ReconcileTimeoutCancelTest", 5, 199000);
+        var credits = 5;
         var mockGateway = new MockPaymentGateway();
         var service = CreateService(mockGateway);
 
         var userId = await SeedUserAsync(isVerified: true);
-        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var order = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         // Mark as reconciling and backdate
         await service.ApplyMockGatewayActionAsync(userId, order.OrderCode, "pending");
@@ -477,12 +465,12 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     [Fact]
     public async Task GetCheckoutPreviewAsync_auto_expires_stale_orders_allowing_new_checkout()
     {
-        var pkgId = await SeedPackageAsync("AutoExpirePreviewTest", 5, 199000);
+        var credits = 5;
         var mockGateway = new MockPaymentGateway();
         var service = CreateService(mockGateway);
 
         var userId = await SeedUserAsync(isVerified: true);
-        var staleOrder = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var staleOrder = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         // Backdate order to 20 minutes ago
         await database.SqlAsync($"""
@@ -493,7 +481,7 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
 
         // Learner visits checkout preview
         var previewService = CreateService(mockGateway);
-        var preview = await previewService.GetCheckoutPreviewAsync(userId, pkgId);
+        var preview = await previewService.GetCheckoutPreviewAsync(userId, credits);
 
         // Preview should have cleared the open order by expiring it
         Assert.Null(preview.OpenOrder);
@@ -503,12 +491,12 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     [Fact]
     public async Task CancelOrderAsync_when_order_is_pending_cancels_at_gateway_and_marks_failed()
     {
-        var pkgId = await SeedPackageAsync("UserCancelTest", 5, 199000);
+        var credits = 5;
         var mockGateway = new MockPaymentGateway();
         var service = CreateService(mockGateway);
 
         var userId = await SeedUserAsync(isVerified: true);
-        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var order = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         // Learner actively cancels order
         await service.CancelOrderAsync(userId, order.OrderCode);
@@ -523,19 +511,19 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         Assert.Equal("user_cancelled", updatedOrder.GatewayErrorCode);
 
         // Verify user can immediately create a new order without UX_Orders_OnePendingPerUser error
-        var newOrder = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var newOrder = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
         Assert.NotNull(newOrder);
     }
 
     [Fact]
     public async Task HandleWebhookAsync_with_valid_signature_settles_order_and_deposits_credits()
     {
-        var pkgId = await SeedPackageAsync("WebhookSettlementTest", 10, 190000);
+        var credits = 10;
         var mockGateway = new MockPaymentGateway();
         var service = CreateService(mockGateway);
 
         var userId = await SeedUserAsync(isVerified: true);
-        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var order = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         var payload = $$"""
             {
@@ -573,12 +561,12 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     [Fact]
     public async Task HandleWebhookAsync_with_invalid_signature_rejects_and_does_not_settle()
     {
-        var pkgId = await SeedPackageAsync("WebhookInvalidSigTest", 10, 190000);
+        var credits = 10;
         var mockGateway = new MockPaymentGateway();
         var service = CreateService(mockGateway);
 
         var userId = await SeedUserAsync(isVerified: true);
-        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var order = await service.CreateOrderAsync(userId, credits, "http://localhost:5000");
 
         var payload = $$"""
             {
@@ -609,7 +597,7 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         var userId = await SeedUserAsync(isVerified: true);
         var service = CreateService();
 
-        var res = await service.CreateOrderAsync(userId, packageId: null, "http://localhost:5000", credits: 7);
+        var res = await service.CreateOrderAsync(userId, 7, "http://localhost:5000");
 
         Assert.True(res.OrderId > 0);
         Assert.StartsWith("DH-", res.OrderCode);
@@ -619,7 +607,6 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var order = await db.Orders.SingleAsync(o => o.OrderId == res.OrderId);
         Assert.Equal("pending", order.Status);
-        Assert.Null(order.PackageId);
         Assert.Equal(7, order.Credits);
     }
 
@@ -631,7 +618,7 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         var mockGateway = new MockPaymentGateway();
         var service = CreateService(mockGateway);
 
-        var res = await service.CreateOrderAsync(userId, packageId: null, "http://localhost:5000", credits: 7);
+        var res = await service.CreateOrderAsync(userId, 7, "http://localhost:5000");
         mockGateway.SetOutcome(res.PaymentNo, GatewayStatus.Paid);
         await service.SettleOrderAsync(res.PaymentNo, PaymentEventSource.StatusQuery, signatureValid: false, note: "Test settlement");
 
@@ -643,17 +630,16 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     [Fact]
     public async Task CreateOrderAsync_supersedes_open_order_when_parameters_differ()
     {
-        // Open order with package, then try with different credits -> should supersede
+        // Open order with 5 credits, then try with 7 credits -> should supersede
         var userId = await SeedUserAsync(isVerified: true);
-        var pkgId = await SeedPackageAsync("Supersede Test Pack", 5, 100000);
         var service = CreateService();
 
-        // Create first order (package-based, 5 credits)
-        var first = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        // Create first order (5 credits)
+        var first = await service.CreateOrderAsync(userId, 5, "http://localhost:5000");
         Assert.Equal(OrderStatusDto.Pending, first.Status);
 
         // Create second order with different credit count -> should supersede first
-        var second = await service.CreateOrderAsync(userId, packageId: null, "http://localhost:5000", credits: 7);
+        var second = await service.CreateOrderAsync(userId, 7, "http://localhost:5000");
 
         Assert.NotEqual(first.OrderId, second.OrderId);
         Assert.Equal(140000m, second.Amount);
@@ -667,15 +653,14 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
     [Fact]
     public async Task CreateOrderAsync_throws_when_identical_open_order_exists()
     {
-        // Same package second time should throw OrderAlreadyOpenException (not supersede)
+        // Same credits second time should throw OrderAlreadyOpenException (not supersede)
         var userId = await SeedUserAsync(isVerified: true);
-        var pkgId = await SeedPackageAsync("Identical Test Pack", 5, 100000);
         var service = CreateService();
 
-        var first = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        var first = await service.CreateOrderAsync(userId, 5, "http://localhost:5000");
 
         var ex = await Assert.ThrowsAsync<OrderAlreadyOpenException>(() =>
-            service.CreateOrderAsync(userId, pkgId, "http://localhost:5000"));
+            service.CreateOrderAsync(userId, 5, "http://localhost:5000"));
 
         Assert.Equal(first.OrderCode, ex.OrderCode);
     }

@@ -5,14 +5,14 @@ namespace Services;
 public sealed class OrderAlreadyOpenException : Exception
 {
     public string OrderCode { get; }
-    public string PackageName { get; }
+    public int Credits { get; }
     public decimal Amount { get; }
     public DateTimeOffset CreatedAt { get; }
     public OrderStatus Status { get; }
 
     public OrderAlreadyOpenException(
         string orderCode,
-        string packageName,
+        int credits,
         decimal amount,
         DateTimeOffset createdAt,
         OrderStatus status,
@@ -20,7 +20,7 @@ public sealed class OrderAlreadyOpenException : Exception
         : base(message)
     {
         OrderCode = orderCode;
-        PackageName = packageName;
+        Credits = credits;
         Amount = amount;
         CreatedAt = createdAt;
         Status = status;

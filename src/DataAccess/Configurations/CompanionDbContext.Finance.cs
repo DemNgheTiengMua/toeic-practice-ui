@@ -8,21 +8,6 @@ public partial class CompanionDbContext
 {
     private static void ConfigureFinance(ModelBuilder modelBuilder)
     {
-
-
-        modelBuilder.Entity<Package>(entity =>
-        {
-            entity.HasKey(e => e.PackageId).HasName("PK__Packages__322035CCF93142FE");
-
-            entity.HasIndex(e => e.IsFeatured, "UX_Packages_OneFeatured")
-                .IsUnique()
-                .HasFilter("([IsFeatured]=(1))");
-
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
-        });
-
-
-
         modelBuilder.Entity<Order>(entity =>
         {
             entity.HasKey(e => e.OrderId).HasName("PK__Orders__C3905BCFA292CBC6");
@@ -42,11 +27,6 @@ public partial class CompanionDbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.Status).HasDefaultValue("pending");
             entity.Property(e => e.Credits).HasDefaultValue(1);
-
-            entity.HasOne(d => d.Package).WithMany(p => p.Orders)
-                .IsRequired(false)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Orders__PackageI__25A691D2");
 
             entity.HasOne(d => d.User).WithOne(p => p.Order)
                 .OnDelete(DeleteBehavior.ClientSetNull)

@@ -7,15 +7,13 @@ public interface IPaymentService
 {
     Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(
         int userId,
-        int? packageId,
-        int? credits = null,
+        int credits,
         CancellationToken cancellationToken = default);
 
     Task<CreateOrderResponse> CreateOrderAsync(
         int userId,
-        int? packageId,
+        int credits,
         string baseUrl,
-        int? credits = null,
         CancellationToken cancellationToken = default);
 
     Task<PaymentResultDto> HandleReturnRedirectAsync(

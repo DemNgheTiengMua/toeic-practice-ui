@@ -1,24 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import {
   Accordion,
-  Alert,
   Breadcrumbs,
   Button,
   Card,
   Chip,
-  Spinner,
+  Label,
+  NumberField,
+  Slider,
 } from '@heroui/react';
 import {
-  Check,
+  ArrowRight,
   ChevronDown,
   Coins,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { api, type PackageDto } from '../../lib/api';
-import { formatVnd, formatVndUnitPrice } from '../../lib/security';
+import { formatVnd } from '../../lib/security';
 import { useAuth } from '../../context/AuthContext';
 
 const FAQ_ITEMS = [
@@ -48,22 +47,25 @@ const FAQ_ITEMS = [
   },
 ];
 
+const PRICE_PER_CREDIT_VND = 20_000;
+const PRESET_CREDITS = [5, 10, 20];
+
 export function PricingPage() {
   const { isAuthenticated, isStaff, learnerContext } = useAuth();
+  const [credits, setCredits] = useState<number>(5);
 
-  const packagesQuery = useQuery({
-    queryKey: ['catalog', 'packages'],
-    queryFn: () => api.catalog.packages(),
-  });
+  const handleCreditsChange = (val: number) => {
+    if (Number.isNaN(val)) return;
+    const clamped = Math.max(1, Math.min(100, Math.floor(val)));
+    setCredits(clamped);
+  };
 
-  const packages: PackageDto[] = React.useMemo(() => {
-    const raw = packagesQuery.data ?? [];
-    return raw
-      .filter((pkg) => pkg.isActive)
-      .slice()
-      .sort((a, b) => a.displayOrder - b.displayOrder || a.price - b.price);
-  }, [packagesQuery.data]);
+  const handleSliderChange = (v: number | number[]) => {
+    const val = Array.isArray(v) ? v[0] : v;
+    handleCreditsChange(val ?? 1);
+  };
 
+  const totalPrice = credits * PRICE_PER_CREDIT_VND;
   const showBalance = isAuthenticated && !isStaff && learnerContext != null;
 
   return (
@@ -81,7 +83,7 @@ export function PricingPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-2 max-w-2xl">
             <p className="text-xs font-medium uppercase tracking-wider text-muted">
-              Credit packages
+              Flat-rate pricing
             </p>
             <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
               Pay for what you test, never a monthly lock-in
@@ -109,140 +111,129 @@ export function PricingPage() {
         </div>
       </header>
 
-      {packagesQuery.isLoading ? (
-        <div className="flex items-center gap-3 py-12 text-sm text-muted">
-          <Spinner size="sm" />
-          <span>Loading credit packages…</span>
-        </div>
-      ) : packagesQuery.isError ? (
-        <Alert status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>Credit packages are temporarily unavailable</Alert.Title>
-            <Alert.Description>
-              We could not reach the catalog service right now. Please try again in a moment.
-            </Alert.Description>
-          </Alert.Content>
-        </Alert>
-      ) : packages.length === 0 ? (
-        <Alert status="warning">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>No active credit packages</Alert.Title>
-            <Alert.Description>
-              No packages are currently available for purchase. Free diagnostics and practice remain open.
-            </Alert.Description>
-          </Alert.Content>
-        </Alert>
-      ) : (
-        <section
-          aria-label="Available credit packages"
-          className="grid gap-5 md:grid-cols-2 lg:grid-cols-3"
-        >
-          {packages.map((pkg) => {
-            const unitPrice = formatVndUnitPrice(pkg.price, pkg.credits);
-            const features =
-              pkg.featureList && pkg.featureList.length > 0
-                ? pkg.featureList
-                : (pkg.features ?? '')
-                    .split(/\r?\n/)
-                    .map((line) => line.trim())
-                    .filter(Boolean);
+      {/* Credit Calculator Card */}
+      <section aria-label="Interactive Credit Calculator" className="max-w-2xl mx-auto w-full">
+        <Card className="border border-border shadow-surface">
+          <Card.Header className="pb-4">
+            <div className="flex items-center justify-between gap-2">
+              <Card.Title className="font-display text-2xl font-bold text-foreground">
+                Credit Calculator
+              </Card.Title>
+              <Chip size="sm" color="accent" variant="soft">
+                Pay-as-you-go
+              </Chip>
+            </div>
+            <Card.Description className="text-sm font-semibold text-accent mt-1">
+              Flat-rate pricing: 1 Credit = 20,000 VND
+            </Card.Description>
+          </Card.Header>
 
-            return (
-              <Card
-                key={pkg.packageId}
-                className={
-                  pkg.isFeatured
-                    ? 'flex h-full flex-col border-2 border-accent'
-                    : 'flex h-full flex-col border border-border'
-                }
+          <Card.Content className="space-y-6">
+            <div className="p-4 rounded-lg bg-surface-secondary border border-border space-y-4">
+              <NumberField
+                minValue={1}
+                maxValue={100}
+                step={1}
+                value={credits}
+                onChange={handleCreditsChange}
+                className="flex items-center justify-between"
               >
-                <Card.Header className="flex flex-col gap-2 pb-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Card.Title className="font-display text-xl font-semibold text-foreground">
-                      {pkg.name}
-                    </Card.Title>
-                    {pkg.isFeatured && (
-                      <Chip size="sm" color="accent" variant="soft">
-                        Popular
-                      </Chip>
-                    )}
-                  </div>
-                  <div className="flex items-baseline gap-2 pt-1">
-                    <span className="font-mono-tabular text-3xl font-semibold tracking-tight text-foreground">
-                      {formatVnd(pkg.price)}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
-                    <span className="font-mono-tabular font-medium text-foreground">
-                      {pkg.credits} {pkg.credits === 1 ? 'credit' : 'credits'}
-                    </span>
-                    {unitPrice && (
-                      <>
-                        <span aria-hidden="true">·</span>
-                        <span className="font-mono-tabular">{unitPrice}</span>
-                      </>
-                    )}
-                  </div>
-                </Card.Header>
+                <Label className="text-sm font-semibold text-foreground">
+                  Credits to purchase
+                </Label>
+                <div className="flex items-center gap-2">
+                  <NumberField.Group className="w-28 h-8">
+                    <NumberField.DecrementButton />
+                    <NumberField.Input
+                      id="pricing-credits-input"
+                      aria-label="Credits count"
+                      className="w-12 text-center font-mono font-bold text-sm"
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!Number.isNaN(val)) {
+                          handleCreditsChange(val);
+                        }
+                      }}
+                    />
+                    <NumberField.IncrementButton />
+                  </NumberField.Group>
+                  <span className="text-xs text-muted">credits</span>
+                </div>
+              </NumberField>
 
-                <Card.Content className="flex-1 pt-2">
-                  {features.length > 0 && (
-                    <ul className="space-y-2 text-sm text-foreground">
-                      {features.map((feat, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <Check
-                            className="mt-0.5 h-4 w-4 shrink-0 text-success"
-                            aria-hidden="true"
-                          />
-                          <span>{feat}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </Card.Content>
+              {/* HeroUI v3 Compound Slider */}
+              <div className="pt-2">
+                <Slider
+                  aria-label="Credit slider"
+                  minValue={1}
+                  maxValue={100}
+                  step={1}
+                  value={credits}
+                  onChange={handleSliderChange}
+                >
+                  <div className="flex items-center justify-between text-xs text-muted mb-1">
+                    <span>1 credit</span>
+                    <Slider.Output className="font-mono-tabular font-semibold text-foreground" />
+                    <span>100 credits</span>
+                  </div>
+                  <Slider.Track>
+                    <Slider.Fill />
+                    <Slider.Thumb />
+                  </Slider.Track>
+                </Slider>
+              </div>
 
-                <Card.Footer className="pt-4">
-                  {isStaff ? (
-                    <Link to="/admin/finance" className="w-full">
-                      <Button variant="secondary" fullWidth>
-                        Manage packages
-                      </Button>
-                    </Link>
-                  ) : isAuthenticated ? (
-                    <Link
-                      to="/wallet"
-                      search={{ packageId: pkg.packageId } as never}
-                      className="w-full"
-                    >
-                      <Button
-                        variant={pkg.isFeatured ? 'primary' : 'secondary'}
-                        fullWidth
-                      >
-                        Choose this package
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Link
-                      to="/sign-in"
-                      search={{ returnUrl: '/wallet' } as never}
-                      className="w-full"
-                    >
-                      <Button
-                        variant={pkg.isFeatured ? 'primary' : 'secondary'}
-                        fullWidth
-                      >
-                        Choose this package
-                      </Button>
-                    </Link>
-                  )}
-                </Card.Footer>
-              </Card>
-            );
-          })}
-        </section>
-      )}
+              {/* Quick preset chips */}
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-xs text-muted mr-1">Presets:</span>
+                {PRESET_CREDITS.map((preset) => (
+                  <Button
+                    key={preset}
+                    size="sm"
+                    variant={credits === preset ? 'primary' : 'secondary'}
+                    onPress={() => setCredits(preset)}
+                    className="font-mono text-xs px-2.5 h-7 min-w-0"
+                  >
+                    {preset} credits
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Live total price calculation */}
+            <div className="p-4 rounded-lg bg-surface-secondary border border-border flex items-baseline justify-between">
+              <div>
+                <div className="text-xs text-muted">Total price</div>
+                <div className="font-mono-tabular text-3xl font-extrabold text-foreground">
+                  {formatVnd(totalPrice)}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-muted font-mono-tabular">
+                  {credits} {credits === 1 ? 'credit' : 'credits'} × 20,000 VND
+                </div>
+                <div className="text-xs text-success font-medium mt-0.5">
+                  Credits never expire
+                </div>
+              </div>
+            </div>
+          </Card.Content>
+
+          <Card.Footer className="pt-2">
+            <Link
+              to="/checkout"
+              search={{ credits } as never}
+              className="no-underline w-full block"
+            >
+              <Button variant="primary" size="lg" className="w-full justify-center">
+                <Sparkles className="w-4 h-4 mr-2" />
+                Proceed to Top-up
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </Card.Footer>
+        </Card>
+      </section>
 
       <section aria-label="Free versus credit actions" className="grid gap-4 md:grid-cols-2">
         <Card variant="secondary" className="border border-border">

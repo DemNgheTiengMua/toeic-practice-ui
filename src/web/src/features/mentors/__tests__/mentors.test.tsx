@@ -342,7 +342,11 @@ describe('Mentor bookings & standing feature (#301)', () => {
 
     // Booking card indicates insufficient credits
     expect(screen.getByText(/insufficient credits/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /buy credits|top up/i })).toBeInTheDocument();
+    const topUpLink = screen.getByRole('link', { name: /buy credits|top up/i });
+    expect(topUpLink).toBeInTheDocument();
+    expect(topUpLink).toHaveAttribute('href', expect.stringContaining('/checkout'));
+    expect(topUpLink).toHaveAttribute('href', expect.stringContaining('credits=5'));
+    expect(topUpLink).toHaveAttribute('href', expect.stringContaining('returnUrl=%2Fmentors%2F1'));
   });
 
   it('safely renders https meet link as clickable external link and sanitizes javascript: meetLink into inert text', async () => {

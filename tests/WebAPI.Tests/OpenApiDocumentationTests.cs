@@ -93,6 +93,55 @@ public sealed class OpenApiDocumentationTests
         Assert.Equal(HttpStatusCode.MethodNotAllowed, wrongVerb.StatusCode);
     }
 
+    [Fact]
+    public async Task Every_operation_is_categorized_into_a_clean_restful_domain_tag_and_never_defaults_to_WebAPI()
+    {
+        using var api = new On();
+        using var client = api.CreateClient();
+
+        using var document = JsonDocument.Parse(await client.GetStringAsync(DocumentRoute));
+        var root = document.RootElement;
+        var paths = root.GetProperty("paths");
+
+        var allTags = new HashSet<string>(StringComparer.Ordinal);
+        var verbs = new[] { "get", "post", "put", "delete", "patch" };
+
+        foreach (var pathProperty in paths.EnumerateObject())
+        {
+            foreach (var verb in verbs)
+            {
+                if (pathProperty.Value.TryGetProperty(verb, out var operation) &&
+                    operation.TryGetProperty("tags", out var tagsElement))
+                {
+                    foreach (var tag in tagsElement.EnumerateArray())
+                    {
+                        var tagStr = tag.GetString();
+                        if (!string.IsNullOrEmpty(tagStr))
+                        {
+                            allTags.Add(tagStr);
+                        }
+                    }
+                }
+            }
+        }
+
+        // None of the messy default tags should ever leak into the OpenAPI document
+        Assert.DoesNotContain("WebAPI", allTags);
+        Assert.DoesNotContain("AdminEndpoints", allTags);
+        Assert.DoesNotContain("AdminImportEndpoints", allTags);
+        Assert.DoesNotContain("LessonEndpoints", allTags);
+
+        // Core RESTful domain tags must all be present and populated
+        Assert.Contains("Authentication & Profile", allTags);
+        Assert.Contains("Mock Exams & Attempts", allTags);
+        Assert.Contains("Practice Drilling", allTags);
+        Assert.Contains("Universal Placement", allTags);
+        Assert.Contains("Learning Path & Sprints", allTags);
+        Assert.Contains("Mentors & Bookings", allTags);
+        Assert.Contains("Wallet & Orders", allTags);
+        Assert.Contains("Admin - Operations & Governance", allTags);
+    }
+
     private class Site : WebApplicationFactory<Program>
     {
         private readonly string enabled;

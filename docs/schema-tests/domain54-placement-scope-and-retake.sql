@@ -28,13 +28,11 @@ INSERT INTO Exams (CertId, Purpose, Name, Status, DurationMinutes)
 VALUES (@c, 'placement', N'Placement Exam 289', 'published', 45);
 DECLARE @exam INT = SCOPE_IDENTITY();
 
-INSERT INTO Packages (Name, Credits, Price, IsActive) VALUES (N'10 credits', 10, 100000, 1);
-DECLARE @pk INT = SCOPE_IDENTITY();
-INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway)
-VALUES (@u1, @pk, 'paid', 100000, 'DH-289-001', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
+INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway)
+VALUES (@u1, 10, 'paid', 100000, 'DH-289-001', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
 DECLARE @o1 INT = SCOPE_IDENTITY();
-INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway)
-VALUES (@u2, @pk, 'paid', 100000, 'DH-289-002', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
+INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway)
+VALUES (@u2, 10, 'paid', 100000, 'DH-289-002', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
 DECLARE @o2 INT = SCOPE_IDENTITY();
 
 INSERT INTO CreditTransactions (UserId, Reason, Delta, OrderId)

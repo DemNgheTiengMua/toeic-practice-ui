@@ -258,13 +258,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </Select.Popover>
                 </Select>
 
-                <Link
-                  to="/wallet"
-                  className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-md bg-surface-secondary border border-border text-foreground font-mono-tabular text-[11px] sm:text-xs font-semibold no-underline hover:bg-surface-tertiary transition-colors whitespace-nowrap"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-warning" />
-                  <span>{learnerContext.creditBalance} credits</span>
-                </Link>
+                <div className="inline-flex items-center rounded-md bg-surface-secondary border border-border text-foreground font-mono-tabular text-[11px] sm:text-xs font-semibold overflow-hidden whitespace-nowrap">
+                  <Link
+                    to="/wallet"
+                    className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-foreground no-underline hover:bg-surface-tertiary transition-colors whitespace-nowrap"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-warning" />
+                    <span>{learnerContext.creditBalance} credits</span>
+                  </Link>
+                  <Link
+                    to="/checkout"
+                    className="inline-flex items-center px-1.5 sm:px-2 py-1 text-accent font-sans hover:bg-surface-tertiary transition-colors border-l border-border no-underline whitespace-nowrap"
+                  >
+                    + Top up
+                  </Link>
+                </div>
               </div>
             )}
 

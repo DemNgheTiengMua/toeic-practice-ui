@@ -74,13 +74,11 @@ IF (SELECT TargetBands FROM Lessons WHERE LessonId = @lessonTagged) <> '5.5,6.0,
   THROW 50000, 'EXPECT_REJECT FAILED: Lessons.TargetBands did not store 5.5,6.0,6.5', 1;
 
 -- 2. CreditTransactions 'learning_path'
-INSERT INTO Packages (Name, Credits, Price, IsActive) VALUES (N'10 credits', 10, 100000, 1);
-DECLARE @pk INT = SCOPE_IDENTITY();
-INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway)
-VALUES (@u, @pk, 'paid', 100000, 'DH-309-001', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
+INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway)
+VALUES (@u, 10, 'paid', 100000, 'DH-309-001', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
 DECLARE @o INT = SCOPE_IDENTITY();
-INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway)
-VALUES (@u, @pk, 'paid', 100000, 'DH-309-002', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
+INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway)
+VALUES (@u, 10, 'paid', 100000, 'DH-309-002', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
 DECLARE @oUnused INT = SCOPE_IDENTITY();
 
 INSERT INTO CreditTransactions (UserId, Reason, Delta, OrderId)

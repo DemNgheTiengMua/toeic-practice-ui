@@ -10,17 +10,27 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({
     to,
     params,
+    search,
     children,
     ...props
   }: {
     to: string;
     params?: Record<string, string>;
+    search?: Record<string, unknown>;
     children: React.ReactNode;
     [k: string]: unknown;
   }) => {
-    const resolved = params
+    let resolved = params
       ? Object.entries(params).reduce((acc, [k, v]) => acc.replace(`$${k}`, v), to)
       : to;
+    if (search) {
+      const q = new URLSearchParams();
+      for (const [k, v] of Object.entries(search)) {
+        if (v !== undefined) q.set(k, String(v));
+      }
+      const qs = q.toString();
+      if (qs) resolved += `?${qs}`;
+    }
     return (
       <a href={resolved} {...props}>
         {children}
@@ -147,14 +157,16 @@ describe('WritingStudioPage (/writing)', () => {
     });
   });
 
-  it('blocks start with wallet and pricing links when credits are insufficient', async () => {
+  it('blocks start with checkout and pricing links when credits are insufficient', async () => {
     vi.mocked(api.writing.catalog).mockResolvedValue(makeCatalog(0));
     vi.mocked(api.writing.instructions).mockResolvedValue(makeInstructions(0, 2));
 
     render(<WritingStudioPage />);
 
     expect(await screen.findByText(/Not enough credits to start/i)).toBeTruthy();
-    expect(screen.getByRole('link', { name: /Top up wallet/i }).getAttribute('href')).toBe('/wallet');
+    expect(screen.getByRole('link', { name: /Top up wallet/i }).getAttribute('href')).toBe(
+      '/checkout?credits=1&returnUrl=%2Fwriting',
+    );
     expect(screen.getByRole('link', { name: /View credit pricing/i }).getAttribute('href')).toBe('/pricing');
     const startBtn = screen.getByRole('button', { name: /Start writing session/i }) as HTMLButtonElement;
     expect(startBtn.disabled).toBe(true);

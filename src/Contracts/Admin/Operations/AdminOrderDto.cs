@@ -1,4 +1,3 @@
-
 namespace Contracts;
 
 public sealed record AdminOrderDto(
@@ -8,8 +7,6 @@ public sealed record AdminOrderDto(
     int UserId,
     string UserEmail,
     string? UserFullName,
-    int? PackageId,
-    string? PackageName,
     int Credits,
     decimal Amount,
     OrderStatusDto Status,

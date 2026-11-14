@@ -42,7 +42,6 @@ public static class DataDisposition
             "The ledger is append-only and its balance IS its sum. #246's export/import carries every row and every reason string verbatim."),
         new("Orders", Disposition.Preserve, "A purchase happened; it is not derived from a level model."),
         new("PaymentEvents", Disposition.Preserve, "The gateway's own record of what it told us."),
-        new("Packages", Disposition.Preserve, "The catalogue a learner bought from."),
         new("Certificates", Disposition.Preserve,
             "The catalogue survives and is augmented: it gains examined-skill vectors and per-skill cut scores."),
         new("Skills", Disposition.Preserve, "A certificate's examined modalities; the anchor the new level model reads."),

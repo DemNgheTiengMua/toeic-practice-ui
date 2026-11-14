@@ -78,8 +78,7 @@ public sealed partial class ComplaintService
 
         if (c.Order != null)
         {
-            var pkg = c.Order.Package?.Name ?? $"{c.Order.Amount:N0} ₫";
-            return $"Order {c.Order.OrderCode} — {pkg} ({c.Order.Status}, created {c.Order.CreatedAt:dd MMM yyyy})";
+            return $"Order {c.Order.OrderCode} — {c.Order.Credits} credits ({c.Order.Amount:N0} ₫) ({c.Order.Status}, created {c.Order.CreatedAt:dd MMM yyyy})";
         }
 
         return null;

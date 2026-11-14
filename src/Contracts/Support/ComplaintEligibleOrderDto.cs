@@ -1,10 +1,9 @@
-
 namespace Contracts;
 
 public sealed record ComplaintEligibleOrderDto(
     int OrderId,
     string OrderCode,
-    string PackageName,
+    int Credits,
     decimal Amount,
     DateTimeOffset CreatedAt,
     string Status);

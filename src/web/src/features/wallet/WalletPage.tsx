@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Alert,
   Button,
   Card,
   Chip,
@@ -11,9 +10,6 @@ import {
   Tabs,
 } from '@heroui/react';
 import {
-  AlertCircle,
-  ArrowRight,
-  Check,
   CreditCard,
   History,
   Package,
@@ -22,7 +18,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { api } from '../../lib/api';
-import { formatVnd, formatSignedVnd, formatVndUnitPrice } from '../../lib/security';
+import { formatVnd } from '../../lib/security';
 import {
   formatCreditReason,
   formatDateTime,
@@ -31,19 +27,12 @@ import {
 } from '../../lib/domain-labels';
 
 export function WalletPage() {
-  const [activeTab, setActiveTab] = useState<'packages' | 'ledger' | 'orders'>('packages');
+  const [activeTab, setActiveTab] = useState<'ledger' | 'orders'>('ledger');
 
   const walletQuery = useQuery({
     queryKey: ['finance', 'wallet'],
     queryFn: () => api.finance.wallet(),
     staleTime: 15_000,
-    retry: false,
-  });
-
-  const packagesQuery = useQuery({
-    queryKey: ['catalog', 'packages'],
-    queryFn: () => api.catalog.packages(),
-    staleTime: 60_000,
     retry: false,
   });
 
@@ -88,14 +77,12 @@ export function WalletPage() {
               Pricing plans
             </Button>
           </Link>
-          <Button
-            variant="primary"
-            size="sm"
-            onPress={() => setActiveTab('packages')}
-          >
-            <Sparkles className="w-4 h-4 mr-1.5" />
-            Buy credits
-          </Button>
+          <Link to="/checkout" className="no-underline">
+            <Button variant="primary" size="sm">
+              <Sparkles className="w-4 h-4 mr-1.5" />
+              Buy credits
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -164,15 +151,11 @@ export function WalletPage() {
       {/* Main Tabs Workspace */}
       <Tabs
         selectedKey={activeTab}
-        onSelectionChange={(key) => setActiveTab(key as 'packages' | 'ledger' | 'orders')}
+        onSelectionChange={(key) => setActiveTab(key as 'ledger' | 'orders')}
         className="w-full"
       >
         <Tabs.ListContainer>
           <Tabs.List aria-label="Wallet workspace tabs">
-            <Tabs.Tab id="packages">
-              Credit packages
-              <Tabs.Indicator />
-            </Tabs.Tab>
             <Tabs.Tab id="ledger">
               Credit history
               <Tabs.Indicator />
@@ -184,94 +167,7 @@ export function WalletPage() {
           </Tabs.List>
         </Tabs.ListContainer>
 
-        {/* Tab 1: Credit packages */}
-        <Tabs.Panel id="packages" className="pt-6">
-          {packagesQuery.isLoading ? (
-            <div className="flex items-center justify-center py-12 gap-3 text-muted text-sm">
-              <Spinner size="sm" />
-              <span>Loading packages...</span>
-            </div>
-          ) : packagesQuery.isError ? (
-            <Alert status="danger">
-              <Alert.Indicator>
-                <AlertCircle className="w-4 h-4" />
-              </Alert.Indicator>
-              <Alert.Content>
-                <Alert.Title>Unable to load packages</Alert.Title>
-                <Alert.Description>
-                  Failed to fetch active credit packages. Please refresh the page to retry.
-                </Alert.Description>
-              </Alert.Content>
-            </Alert>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(packagesQuery.data ?? []).map((pkg) => (
-                <Card
-                  key={pkg.packageId}
-                  className={`flex flex-col justify-between shadow-surface ${
-                    pkg.isFeatured ? 'border-2 border-accent relative' : ''
-                  }`}
-                >
-                  {pkg.isFeatured && (
-                    <div className="absolute -top-3 right-4">
-                      <Chip size="sm" color="accent" variant="primary">
-                        Popular choice
-                      </Chip>
-                    </div>
-                  )}
-                  <Card.Header className="pb-2">
-                    <Card.Title className="text-xl font-bold">{pkg.name || pkg.packageName}</Card.Title>
-                    <div className="mt-3 flex items-baseline gap-2">
-                      <span className="font-mono-tabular text-3xl font-extrabold text-foreground">
-                        {formatVnd(pkg.price)}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2">
-                      <Chip size="sm" variant="soft" color="accent" className="font-mono-tabular">
-                        {pkg.credits} credits
-                      </Chip>
-                      <span className="text-xs font-mono-tabular text-muted">
-                        ({formatVndUnitPrice(pkg.price, pkg.credits)})
-                      </span>
-                    </div>
-                  </Card.Header>
-
-                  <Card.Content className="pt-2 flex-1 flex flex-col justify-between gap-6">
-                    <ul className="space-y-2.5 text-sm text-foreground list-none p-0 m-0">
-                      {(pkg.featureList && pkg.featureList.length > 0
-                        ? pkg.featureList
-                        : ['Platform mock exams', 'AI speaking & writing grading', 'Mentor bookings']
-                      ).map((feat, idx) => (
-                        <li key={idx} className="flex items-center gap-2.5 text-muted">
-                          <Check className="w-4 h-4 text-success flex-shrink-0" />
-                          <span>{feat}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <div className="pt-4 border-t border-separator">
-                      <Link
-                        to="/checkout"
-                        search={{ packageId: pkg.packageId }}
-                        className="no-underline w-full block"
-                      >
-                        <Button
-                          variant={pkg.isFeatured ? 'primary' : 'secondary'}
-                          className="w-full justify-center"
-                        >
-                          Buy {pkg.credits} credits
-                          <ArrowRight className="w-4 h-4 ml-1.5" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </Card.Content>
-                </Card>
-              ))}
-            </div>
-          )}
-        </Tabs.Panel>
-
-        {/* Tab 2: Append-only Credit Ledger */}
+        {/* Tab 1: Append-only Credit Ledger */}
         <Tabs.Panel id="ledger" className="pt-6">
           <Card>
             <Card.Header>
@@ -341,7 +237,7 @@ export function WalletPage() {
           </Card>
         </Tabs.Panel>
 
-        {/* Tab 3: Orders & Receipts */}
+        {/* Tab 2: Orders & Receipts */}
         <Tabs.Panel id="orders" className="pt-6">
           <Card>
             <Card.Header>
@@ -382,7 +278,7 @@ export function WalletPage() {
                                   {order.orderCode}
                                 </Link>
                               </Table.Cell>
-                              <Table.Cell>{order.packageName}</Table.Cell>
+                              <Table.Cell>{`${order.credits} credits`}</Table.Cell>
                               <Table.Cell className="font-mono-tabular">
                                 {order.credits}
                               </Table.Cell>

@@ -235,10 +235,9 @@ export function OrdersTab() {
                         </div>
                       </Table.Cell>
                       <Table.Cell>
-                        <div>
-                          <p className="text-sm text-foreground">{order.packageName}</p>
-                          <p className="text-xs text-muted font-mono-tabular">{order.credits} credits</p>
-                        </div>
+                        <p className="text-sm font-semibold font-mono-tabular text-foreground">
+                          {order.credits} credits
+                        </p>
                       </Table.Cell>
                       <Table.Cell>
                         <span className="font-mono-tabular font-medium text-foreground">
@@ -366,8 +365,8 @@ export function OrdersTab() {
                         <p className="text-sm font-semibold font-mono-tabular text-foreground">
                           {formatVnd(orderDetail.order.amount)}
                         </p>
-                        <p className="text-xs text-muted">
-                          {orderDetail.order.packageName} ({orderDetail.order.credits} credits)
+                        <p className="text-xs text-muted font-mono-tabular">
+                          {orderDetail.order.credits} credits
                         </p>
                       </div>
 

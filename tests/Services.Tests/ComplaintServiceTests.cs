@@ -102,13 +102,8 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
         var orderCode = $"DH-{Guid.NewGuid():N}"[..18].ToUpper();
         var paymentNo = Random.Shared.NextInt64(1000000, 999999999);
         await database.SqlAsync($"""
-            IF NOT EXISTS (SELECT 1 FROM Packages WHERE Name = N'5-credit package')
-              INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
-              VALUES (N'5-credit package', 5, 199000, 1, 0, N'Features', 1);
-            DECLARE @pkgId INT = (SELECT TOP 1 PackageId FROM Packages WHERE Name = N'5-credit package');
-
-            INSERT INTO Orders (OrderCode, PaymentNo, UserId, PackageId, Amount, Status, Gateway, CreatedAt, PaidAt)
-            VALUES ('{orderCode}', {paymentNo}, {userId}, @pkgId, 199000, 'paid', 'mock', DATEADD(day, -1, SYSDATETIMEOFFSET()), DATEADD(day, -1, SYSDATETIMEOFFSET()));
+            INSERT INTO Orders (OrderCode, PaymentNo, UserId, Credits, Amount, Status, Gateway, CreatedAt, PaidAt)
+            VALUES ('{orderCode}', {paymentNo}, {userId}, 5, 199000, 'paid', 'mock', DATEADD(day, -1, SYSDATETIMEOFFSET()), DATEADD(day, -1, SYSDATETIMEOFFSET()));
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);

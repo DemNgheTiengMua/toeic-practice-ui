@@ -238,7 +238,7 @@ export function MockExamConfirmPage() {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => void navigate({ to: '/wallet' as any })}
+                onClick={() => void navigate({ to: '/checkout', search: { credits: 1, returnUrl: '/exams' } as any })}
               >
                 <Wallet className="size-4 mr-1.5" />
                 Top up wallet
@@ -463,7 +463,7 @@ export function MockExamConfirmPage() {
             <Button
               variant="primary"
               size="lg"
-              onClick={() => void navigate({ to: '/wallet' as any })}
+              onClick={() => void navigate({ to: '/checkout', search: { credits: 1, returnUrl: '/exams' } as any })}
               className="w-full sm:w-auto"
             >
               <Wallet className="size-4 mr-1.5" />

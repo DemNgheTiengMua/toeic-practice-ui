@@ -190,14 +190,9 @@ END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT
 INSERT INTO Recommendations (UserId,CertId,AttemptId,Text) VALUES (@u,@c,@a,N'Expand business vocabulary');
 
 -- ===== payment / mentor / complaints =====
-INSERT INTO Packages (Name,Credits,Price,IsFeatured) VALUES (N'Exam Prep',5,199000,1); DECLARE @pk INT=SCOPE_IDENTITY();
+INSERT INTO Orders (UserId,Credits,Status,Amount,OrderCode,PaymentNo,Gateway) VALUES (@u,5,'reconciling',199000,'DH-1',NEXT VALUE FOR SEQ_PaymentNo,'payos'); DECLARE @o1 INT=SCOPE_IDENTITY();
 BEGIN TRY
-  INSERT INTO Packages (Name,Credits,Price,IsFeatured) VALUES (N'Intensive',10,349000,1);
-  THROW 50000,'EXPECT_REJECT FAILED: second featured package accepted',1;
-END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected second featured package'; END CATCH
-INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,PaymentNo,Gateway) VALUES (@u,@pk,'reconciling',199000,'DH-1',NEXT VALUE FOR SEQ_PaymentNo,'payos'); DECLARE @o1 INT=SCOPE_IDENTITY();
-BEGIN TRY
-  INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,PaymentNo,Gateway) VALUES (@u,@pk,'pending',199000,'DH-2',NEXT VALUE FOR SEQ_PaymentNo,'payos');
+  INSERT INTO Orders (UserId,Credits,Status,Amount,OrderCode,PaymentNo,Gateway) VALUES (@u,5,'pending',199000,'DH-2',NEXT VALUE FOR SEQ_PaymentNo,'payos');
   THROW 50000,'EXPECT_REJECT FAILED: new order while reconciling accepted',1;
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected new order while one is reconciling'; END CATCH
 UPDATE Orders SET Status='paid', PaidAt=SYSDATETIMEOFFSET(), GatewayTxnRef='14320988' WHERE OrderId=@o1;
