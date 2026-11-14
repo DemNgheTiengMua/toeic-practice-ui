@@ -258,9 +258,9 @@ public sealed class CreditLedger : ICreditLedger
             throw new CreditLedgerException(CreditLedgerException.InvalidCharge, "Only paid orders may be credited to the wallet.");
         }
 
-        if (order.Package.Credits != amount)
+        if (order.Credits != amount && (order.Package?.Credits ?? 0) != amount)
         {
-            throw new CreditLedgerException(CreditLedgerException.InvalidCharge, $"Purchase delta {amount} must equal package credits {order.Package.Credits}.");
+            throw new CreditLedgerException(CreditLedgerException.InvalidCharge, $"Purchase delta {amount} must equal order credits {(order.Credits > 0 ? order.Credits : (order.Package?.Credits ?? 0))}.");
         }
 
         var reason = CreditReason.Purchase;

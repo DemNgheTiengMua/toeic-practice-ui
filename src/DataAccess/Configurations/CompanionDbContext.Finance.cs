@@ -41,8 +41,10 @@ public partial class CompanionDbContext
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.Status).HasDefaultValue("pending");
+            entity.Property(e => e.Credits).HasDefaultValue(1);
 
             entity.HasOne(d => d.Package).WithMany(p => p.Orders)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Orders__PackageI__25A691D2");
 

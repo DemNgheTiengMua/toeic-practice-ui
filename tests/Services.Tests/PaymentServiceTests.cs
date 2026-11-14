@@ -601,4 +601,82 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         Assert.Equal(0, wallet.Balance);
         Assert.Equal(0, wallet.PaidOrderCount);
     }
+
+    [Fact]
+    public async Task Custom_credit_order_uses_flat_rate_20k_per_credit()
+    {
+        // 7 credits * 20,000 VND = 140,000 VND
+        var userId = await SeedUserAsync(isVerified: true);
+        var service = CreateService();
+
+        var res = await service.CreateOrderAsync(userId, packageId: null, "http://localhost:5000", credits: 7);
+
+        Assert.True(res.OrderId > 0);
+        Assert.StartsWith("DH-", res.OrderCode);
+        Assert.Equal(140000m, res.Amount);
+        Assert.Equal(OrderStatusDto.Pending, res.Status);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var order = await db.Orders.SingleAsync(o => o.OrderId == res.OrderId);
+        Assert.Equal("pending", order.Status);
+        Assert.Null(order.PackageId);
+        Assert.Equal(7, order.Credits);
+    }
+
+    [Fact]
+    public async Task Custom_credit_order_settles_and_grants_exact_credits()
+    {
+        // 7 credits settlement should grant exactly 7 credits
+        var userId = await SeedUserAsync(isVerified: true);
+        var mockGateway = new MockPaymentGateway();
+        var service = CreateService(mockGateway);
+
+        var res = await service.CreateOrderAsync(userId, packageId: null, "http://localhost:5000", credits: 7);
+        mockGateway.SetOutcome(res.PaymentNo, GatewayStatus.Paid);
+        await service.SettleOrderAsync(res.PaymentNo, PaymentEventSource.StatusQuery, signatureValid: false, note: "Test settlement");
+
+        var wallet = await service.GetWalletAsync(userId);
+        Assert.Equal(7, wallet.Balance);
+        Assert.Equal(1, wallet.PaidOrderCount);
+    }
+
+    [Fact]
+    public async Task CreateOrderAsync_supersedes_open_order_when_parameters_differ()
+    {
+        // Open order with package, then try with different credits -> should supersede
+        var userId = await SeedUserAsync(isVerified: true);
+        var pkgId = await SeedPackageAsync("Supersede Test Pack", 5, 100000);
+        var service = CreateService();
+
+        // Create first order (package-based, 5 credits)
+        var first = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        Assert.Equal(OrderStatusDto.Pending, first.Status);
+
+        // Create second order with different credit count -> should supersede first
+        var second = await service.CreateOrderAsync(userId, packageId: null, "http://localhost:5000", credits: 7);
+
+        Assert.NotEqual(first.OrderId, second.OrderId);
+        Assert.Equal(140000m, second.Amount);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var firstOrder = await db.Orders.SingleAsync(o => o.OrderId == first.OrderId);
+        Assert.Equal("expired", firstOrder.Status);
+        Assert.Equal("superseded", firstOrder.GatewayErrorCode);
+    }
+
+    [Fact]
+    public async Task CreateOrderAsync_throws_when_identical_open_order_exists()
+    {
+        // Same package second time should throw OrderAlreadyOpenException (not supersede)
+        var userId = await SeedUserAsync(isVerified: true);
+        var pkgId = await SeedPackageAsync("Identical Test Pack", 5, 100000);
+        var service = CreateService();
+
+        var first = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+
+        var ex = await Assert.ThrowsAsync<OrderAlreadyOpenException>(() =>
+            service.CreateOrderAsync(userId, pkgId, "http://localhost:5000"));
+
+        Assert.Equal(first.OrderCode, ex.OrderCode);
+    }
 }

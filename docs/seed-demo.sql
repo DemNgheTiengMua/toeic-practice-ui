@@ -2966,13 +2966,13 @@ SET IDENTITY_INSERT [MentorSlots] OFF;
 -- ---- Orders (2 rows)
 SET IDENTITY_INSERT [Orders] ON;
 BEGIN TRY
-  INSERT INTO [Orders] ([OrderId], [UserId], [PackageId], [Status], [Amount], [OrderCode], [PaymentNo], [Gateway], [GatewayTxnRef], [GatewayErrorCode], [CreatedAt], [PaidAt]) VALUES (1, 2, 1, N'paid', 190000.00, N'DH-20261014-0001', 1, N'mock', N'plink-demo-10', NULL, '2026-10-17T01:44:00.6939290+07:00', '2026-10-17T01:44:00.6939290+07:00');
+  INSERT INTO [Orders] ([OrderId], [UserId], [PackageId], [Credits], [Status], [Amount], [OrderCode], [PaymentNo], [Gateway], [GatewayTxnRef], [GatewayErrorCode], [CreatedAt], [PaidAt]) VALUES (1, 2, 1, 10, N'paid', 190000.00, N'DH-20261014-0001', 1, N'mock', N'plink-demo-10', NULL, '2026-10-17T01:44:00.6939290+07:00', '2026-10-17T01:44:00.6939290+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Orders] ([OrderId], [UserId], [PackageId], [Status], [Amount], [OrderCode], [PaymentNo], [Gateway], [GatewayTxnRef], [GatewayErrorCode], [CreatedAt], [PaidAt]) VALUES (2, 2, 2, N'paid', 100000.00, N'DH-20261014-0002', 2, N'mock', N'plink-demo-5', NULL, '2026-10-24T01:44:00.7236021+07:00', '2026-10-24T01:44:00.7236021+07:00');
+  INSERT INTO [Orders] ([OrderId], [UserId], [PackageId], [Credits], [Status], [Amount], [OrderCode], [PaymentNo], [Gateway], [GatewayTxnRef], [GatewayErrorCode], [CreatedAt], [PaidAt]) VALUES (2, 2, 2, 5, N'paid', 100000.00, N'DH-20261014-0002', 2, N'mock', N'plink-demo-5', NULL, '2026-10-24T01:44:00.7236021+07:00', '2026-10-24T01:44:00.7236021+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;

@@ -2370,7 +2370,9 @@ GO
 CREATE TABLE Orders (
   OrderId   INT IDENTITY(1,1) PRIMARY KEY,
   UserId    INT NOT NULL REFERENCES Users(UserId),
-  PackageId INT NOT NULL REFERENCES Packages(PackageId),
+  PackageId INT NULL REFERENCES Packages(PackageId),
+  Credits   INT NOT NULL CONSTRAINT DF_Orders_Credits DEFAULT 1
+    CONSTRAINT CK_Orders_Credits CHECK (Credits > 0),
   Status    VARCHAR(12) NOT NULL DEFAULT 'pending'
     -- UI-30: 'reconciling' = gateway has not returned a final result ("Reconciling transaction")
     CONSTRAINT CK_Orders_Status CHECK (Status IN ('pending','reconciling','paid','failed','expired')),
@@ -2564,7 +2566,7 @@ CREATE UNIQUE INDEX UX_CreditTxn_Booking ON CreditTransactions(BookingId, Reason
 GO
 CREATE UNIQUE INDEX UX_CreditTxn_Attempt_Reason ON CreditTransactions(AttemptId, Reason) WHERE AttemptId IS NOT NULL;
 GO
--- H-2: a 'purchase' txn must reference a paid order and its Delta must equal that order's package credits.
+-- H-2: a 'purchase' txn must reference a paid order and its Delta must equal that order's credits.
 CREATE TRIGGER trg_CreditTransactions_PurchaseMatchesOrder
 ON CreditTransactions AFTER INSERT, UPDATE AS
 BEGIN
@@ -2573,9 +2575,9 @@ BEGIN
     SELECT 1
     FROM inserted i
     JOIN Orders o ON o.OrderId = i.OrderId
-    JOIN Packages pk ON pk.PackageId = o.PackageId
+    LEFT JOIN Packages pk ON pk.PackageId = o.PackageId
     WHERE i.Reason = 'purchase'
-      AND (o.Status <> 'paid' OR i.Delta <> pk.Credits)
+      AND (o.Status <> 'paid' OR (i.Delta <> o.Credits AND (pk.Credits IS NULL OR i.Delta <> pk.Credits)))
   )
     THROW 50022, 'purchase txn must reference a paid order with Delta equal to the package credits.', 1;
 END;
@@ -2624,7 +2626,7 @@ GO
 -- order being reverted to 'pending'/'expired' afterwards, leaving a credit with no paid order
 -- behind it. A credited order is settled and may no longer leave 'paid'.
 CREATE TRIGGER trg_Orders_CreditedStaysPaid
-ON Orders AFTER UPDATE AS
+ON Orders AFTER INSERT, UPDATE AS
 BEGIN
   SET NOCOUNT ON;
   IF EXISTS (
@@ -2636,6 +2638,16 @@ BEGIN
                   WHERE ct.OrderId = i.OrderId AND ct.Reason = 'purchase')
   )
     THROW 50029, 'An order that has already been credited cannot leave the paid status.', 1;
+
+  IF EXISTS (SELECT 1 FROM inserted i JOIN Packages pk ON pk.PackageId = i.PackageId WHERE i.Credits = 1 AND pk.Credits <> 1)
+  BEGIN
+    UPDATE o
+    SET o.Credits = pk.Credits
+    FROM Orders o
+    JOIN inserted i ON o.OrderId = i.OrderId
+    JOIN Packages pk ON pk.PackageId = o.PackageId
+    WHERE i.Credits = 1 AND pk.Credits <> 1;
+  END
 END;
 GO
 -- backfill the complaint make-good FK now that CreditTransactions exists.
