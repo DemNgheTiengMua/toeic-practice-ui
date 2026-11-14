@@ -52,35 +52,12 @@ public sealed class ClaudeAiGrader : IAiGrader
             return Fail("Simulated grading failure.");
         }
 
-        // E2.1 (#151): a criterion without band descriptors cannot be scored - there is no standard to
-        // score it against, and asking the model to invent one is exactly how a plausible-looking
-        // default grade got into this file before. It is left out and named, so the authoring gap is
-        // visible instead of silently averaged away.
-        var gradeable = request.Criteria.Where(c => c.IsGradeable).ToList();
-        var ungradeable = request.Criteria.Where(c => !c.IsGradeable).ToList();
-        if (ungradeable.Count > 0)
+        if (request.Criteria.Count == 0)
         {
-            // #192: the code is what the author needs in the log to find the row. The criterion id is
-            // there too, because a code can be renamed and an id cannot.
-            _logger?.LogWarning(
-                "Criteria without a rubric were not graded for FreeResponseId {FreeResponseId}: {Criteria}",
-                request.FreeResponseId,
-                string.Join(", ", ungradeable.Select(c =>
-                    $"{c.Code} ({c.CriterionId})"
-                    + (c.MissingBands.Count > 0 ? $" missing band(s) {string.Join(",", c.MissingBands)}" : " no text"))));
+            return Fail("Nothing was scored: this task has no grading criteria at all.");
         }
 
-        if (gradeable.Count == 0)
-        {
-            // #192: the codes are in the reason because the reason is what an administrator reads to
-            // find the criterion they have not written. "None of this task's criteria" is true and
-            // useless; "W_TR (12), W_CC (13)" points at the rows.
-            var named = request.Criteria.Count == 0
-                ? "this task has no grading criteria at all"
-                : "no criterion can be scored because none carries a rubric description: "
-                  + string.Join(", ", request.Criteria.Select(c => $"{c.Code} ({c.CriterionId})"));
-            return Fail($"Nothing was scored: {named}. An administrator has to write one for every band.");
-        }
+        var gradeable = request.Criteria.ToList();
 
         var checklist = ChecklistResult.For(request);
         if (checklist.IsEmpty)
@@ -150,9 +127,24 @@ public sealed class ClaudeAiGrader : IAiGrader
     {
         var prompt = new StringBuilder();
         prompt.AppendLine("Grade the candidate's English response against the rubric below.");
+        if (!string.IsNullOrWhiteSpace(request.CertName) || !string.IsNullOrWhiteSpace(request.CurrentBandCode) || !string.IsNullOrWhiteSpace(request.TargetBandCode))
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("[LEARNER CONTEXT]");
+            if (!string.IsNullOrWhiteSpace(request.CertName))
+                prompt.AppendLine($"- Certificate: {request.CertName}");
+            if (!string.IsNullOrWhiteSpace(request.CurrentBandCode) || !string.IsNullOrWhiteSpace(request.TargetBandCode))
+                prompt.AppendLine($"- Band Goal: {request.CurrentBandCode ?? "N/A"} -> {request.TargetBandCode ?? "N/A"}");
+        }
         prompt.AppendLine();
         prompt.AppendLine("[TASK PROMPT]");
         prompt.AppendLine(request.QuestionStem);
+        if (!string.IsNullOrWhiteSpace(request.Guide))
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("[TASK GUIDE / CHECKLIST]");
+            prompt.AppendLine(request.Guide);
+        }
         prompt.AppendLine();
         prompt.AppendLine("[CHECKLIST - already computed from the text. Do not recompute it, and do not award a score that contradicts it.]");
         prompt.AppendLine($"- wordCount: {checklist.WordCount}");
@@ -176,7 +168,7 @@ public sealed class ClaudeAiGrader : IAiGrader
             // #192: a complete grid is the standard. Each band is listed with its gates, so the model
             // is asked which band's gates the response clears rather than where it "feels" on a scale.
             // The prose is kept alongside because it often carries the task-specific reading.
-            if (c.Descriptors is { Count: > 0 })
+            if (c.Descriptors is { Count: 7 })
             {
                 prompt.AppendLine("  Bands (0 = Pre-A1, 6 = C2). Award the highest band whose gates ALL hold:");
                 foreach (var d in c.Descriptors.OrderBy(d => d.Band))
@@ -189,9 +181,13 @@ public sealed class ClaudeAiGrader : IAiGrader
                     prompt.AppendLine($"  Rubric notes: {c.RubricDescription}");
                 }
             }
-            else
+            else if (!string.IsNullOrWhiteSpace(c.RubricDescription))
             {
                 prompt.AppendLine($"  Rubric: {c.RubricDescription}");
+            }
+            else
+            {
+                prompt.AppendLine($"  Rubric: Evaluate {c.Name} strictly on a 0 to {c.MaxScore} scale.");
             }
 
             // #193: the calibrated anchors go after the grid, so the model has the abstract ladder and

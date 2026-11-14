@@ -13,6 +13,9 @@ public record SpeakingQuestionReviewItemDto(
     string? Transcript,
     decimal TotalScore,
     decimal MaxScore,
-    IReadOnlyList<SpeakingCriterionScoreItemDto> Criteria
+    IReadOnlyList<SpeakingCriterionScoreItemDto> Criteria,
+    IReadOnlyList<WritingErrorSpanDto>? ErrorSpans = null,
+    string? PriorityFix = null,
+    string? ModelRewrite = null
 );
 

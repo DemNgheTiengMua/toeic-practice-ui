@@ -146,6 +146,16 @@ describe('WritingResultPage (/writing/result/$attemptId)', () => {
     expect(screen.getByText(/verb tense/i).tagName).toBe('STRONG');
     expect(container.querySelector('script')).toBeNull();
     expect(screen.getByText(/<script>alert\(1\)<\/script>/i)).toBeTruthy();
+
+    // HeroUI v3 ProgressBar for criteria & 3-column correction Table & inline highlighted errorSpan
+    expect(screen.getAllByRole('progressbar').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole('grid', { name: /corrections/i })).toBeTruthy();
+    expect(screen.getByText('Original')).toBeTruthy();
+    expect(screen.getByText('Corrected')).toBeTruthy();
+    expect(screen.getByText('Vietnamese Explanation')).toBeTruthy();
+    const marks = container.querySelectorAll('mark');
+    expect(marks.length).toBeGreaterThanOrEqual(1);
+    expect(marks[0].textContent).toContain('Solar output grow');
   });
 
   it('surfaces failed grading alert and retries cleanly without extra charge', async () => {

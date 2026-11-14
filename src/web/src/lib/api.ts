@@ -592,6 +592,8 @@ export interface AiInsightDto {
   recommendations: RecommendationDto[];
   learnerPathId?: number | null;
   formattedNarrative?: string | null;
+  strengths?: string[] | null;
+  weaknesses?: string[] | null;
 }
 
 export interface ProfileDto {
@@ -1624,6 +1626,8 @@ export interface AiInsightDto {
   recommendations: RecommendationDto[];
   learnerPathId?: number | null;
   formattedNarrative?: string | null;
+  strengths?: string[] | null;
+  weaknesses?: string[] | null;
 }
 
 export interface SavedQuestionOptionDto {

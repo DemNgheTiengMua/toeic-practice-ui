@@ -622,7 +622,7 @@ describe('Learner Hub (#300)', () => {
 
       // Path AI Insight verification
       expect(await screen.findByText(/you are progressing steadily through week 1 connectors/i)).toBeInTheDocument();
-      expect(screen.getByText('Priority')).toBeInTheDocument();
+      expect(screen.getByText('High')).toBeInTheDocument();
       expect(screen.getByText('Focus on contrastive transitions in short dialogs.')).toBeInTheDocument();
 
       // Start available step

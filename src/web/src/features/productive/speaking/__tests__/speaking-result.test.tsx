@@ -100,6 +100,16 @@ function makeReview(scoreDisplayFactor = 10) {
             comment: '',
           },
         ],
+        priorityFix: 'Use more varied past-tense time markers.',
+        modelRewrite: 'Last summer, I traveled to Da Nang with my family, which was unforgettable.',
+        errorSpans: [
+          {
+            originalSnippet: 'visited Da Nang',
+            correctedSnippet: 'traveled to Da Nang',
+            category: 'vocabulary',
+            explanationVi: 'Dùng động từ miêu tả hành trình tự nhiên hơn.',
+          },
+        ],
       },
     ],
   };
@@ -146,7 +156,14 @@ describe('SpeakingResultPage (/speaking/result/$attemptId)', () => {
     expect(screen.getByText(/Pronunciation & intonation/i)).toBeTruthy();
     expect(screen.getByText(/No note was recorded for this criterion on this grading\./i)).toBeTruthy();
     expect(screen.getByText(/Estimated from one task/i)).toBeTruthy();
-    expect(screen.getByText(/Last summer I visited Da Nang with my family\./i)).toBeTruthy();
+    expect(screen.getByText('Priority fix')).toBeTruthy();
+    expect(screen.getByText('Use more varied past-tense time markers.')).toBeTruthy();
+    expect(screen.getByText('Model rewrite')).toBeTruthy();
+    expect(screen.getByRole('grid', { name: /corrections/i })).toBeTruthy();
+    expect(screen.getAllByRole('progressbar').length).toBeGreaterThanOrEqual(2);
+    const marks = document.querySelectorAll('mark');
+    expect(marks.length).toBeGreaterThanOrEqual(1);
+    expect(marks[0].textContent).toContain('visited Da Nang');
   });
 
   it('surfaces retryable failure alert and resumes polling after free retry', async () => {

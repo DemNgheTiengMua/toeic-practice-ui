@@ -45,15 +45,19 @@ export function formatFeasibilityStatus(status?: string | null): string {
 export function formatRecommendationSeverity(severity?: string | null): {
   label: string;
   badgeClass: string;
+  chipColor: 'danger' | 'warning' | 'accent';
 } {
   switch (severity?.toLowerCase()) {
     case 'major':
-      return { label: 'Priority', badgeClass: 'bg-danger text-white' };
+    case 'high':
+      return { label: 'High', badgeClass: 'bg-danger text-white', chipColor: 'danger' };
     case 'minor':
-      return { label: 'Focus', badgeClass: 'bg-warning text-foreground' };
+    case 'medium':
+      return { label: 'Medium', badgeClass: 'bg-warning text-foreground', chipColor: 'warning' };
     case 'info':
+    case 'low':
     default:
-      return { label: 'Tip', badgeClass: 'bg-accent text-white' };
+      return { label: 'Low', badgeClass: 'bg-accent text-white', chipColor: 'accent' };
   }
 }
 
@@ -73,16 +77,18 @@ export function formatAiInsightStatus(status?: string | null): string {
 export function formatAiInsightTrend(trend?: string | null): {
   label: string;
   badgeClass: string;
+  chipColor: 'success' | 'default' | 'danger';
 } {
   switch (trend?.toLowerCase()) {
     case 'improving':
-      return { label: 'Improving', badgeClass: 'bg-success text-white' };
+      return { label: 'Improving', badgeClass: 'bg-success text-white', chipColor: 'success' };
     case 'flat':
-      return { label: 'Holding steady', badgeClass: 'bg-surface-secondary text-foreground' };
+    case 'steady':
+      return { label: 'Steady', badgeClass: 'bg-surface-secondary text-foreground', chipColor: 'default' };
     case 'declining':
-      return { label: 'Declining', badgeClass: 'bg-danger text-white' };
+      return { label: 'Declining', badgeClass: 'bg-danger text-white', chipColor: 'danger' };
     default:
-      return { label: 'Trend not reported', badgeClass: 'bg-surface-secondary text-muted' };
+      return { label: 'Trend not reported', badgeClass: 'bg-surface-secondary text-muted', chipColor: 'default' };
   }
 }
 

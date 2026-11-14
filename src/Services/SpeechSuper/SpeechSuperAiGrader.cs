@@ -33,11 +33,11 @@ public sealed class SpeechSuperAiGrader : IAiGrader
     public SpeechSuperAiGrader(
         ISpeechSuperClient speechSuperClient,
         IFileStore fileStore,
-        ClaudeAiGrader? writtenGrader = null)
+        IAiGrader? writtenGrader = null)
     {
         _speechSuperClient = speechSuperClient;
         _fileStore = fileStore;
-        _writtenGrader = (IAiGrader?)writtenGrader ?? new FakeAiGrader();
+        _writtenGrader = writtenGrader ?? new FakeAiGrader();
     }
 
     public async Task<AiGradingResult> GradeAsync(AiGradingRequest request, CancellationToken cancellationToken = default)
@@ -87,12 +87,33 @@ public sealed class SpeechSuperAiGrader : IAiGrader
             var mapped = MapCriteria(request, assessment, out lastReason);
             if (mapped.Count > 0)
             {
+                var acousticSummary = BuildAcousticSummary(assessment);
+                var linguisticGuide = string.IsNullOrWhiteSpace(request.Guide)
+                    ? acousticSummary
+                    : $"{request.Guide}\n\n{acousticSummary}";
+
+                AiGradingResult? linguistic = null;
+                if (!string.IsNullOrWhiteSpace(assessment.Transcription))
+                {
+                    var transcriptRequest = request with
+                    {
+                        AudioPath = null,
+                        ResponseText = assessment.Transcription,
+                        Guide = linguisticGuide
+                    };
+                    linguistic = await _writtenGrader.GradeAsync(transcriptRequest, cancellationToken);
+                }
+
+                var finalScores = MergeScores(mapped, linguistic);
                 return new AiGradingResult(
                     Success: true,
                     FailureReason: null,
                     Model: "speechsuper-speak.eval.pro",
-                    Scores: mapped,
-                    Transcript: assessment.Transcription);
+                    Scores: finalScores,
+                    Transcript: assessment.Transcription,
+                    ErrorSpans: linguistic?.Success == true ? linguistic.ErrorSpans : null,
+                    PriorityFix: linguistic?.Success == true ? linguistic.PriorityFix : null,
+                    ModelRewrite: linguistic?.Success == true ? linguistic.ModelRewrite : null);
             }
         }
 
@@ -212,4 +233,34 @@ public sealed class SpeechSuperAiGrader : IAiGrader
     private static string Comment(decimal ratio, decimal value, decimal nativeMax) =>
         string.Create(CultureInfo.InvariantCulture,
             $"SpeechSuper measured {value:0.##}/{nativeMax:0.##} ({ratio * 100m:0}%).");
+
+    private static string BuildAcousticSummary(SpeechSuperAssessmentResult a)
+    {
+        var parts = new List<string>();
+        if (a.PronunciationScore.HasValue) parts.Add($"Pronunciation: {a.PronunciationScore.Value:0.#}/100");
+        if (a.FluencyScore.HasValue) parts.Add($"Fluency: {a.FluencyScore.Value:0.#}/100");
+        if (a.RelevanceScore.HasValue) parts.Add($"Completeness: {a.RelevanceScore.Value:0.#}/100");
+        if (a.OverallScore.HasValue) parts.Add($"Overall Acoustic: {a.OverallScore.Value:0.#}/100");
+        return parts.Count == 0
+            ? "SpeechSuper Acoustic Metrics: unavailable."
+            : "SpeechSuper Acoustic Metrics: " + string.Join(", ", parts);
+    }
+
+    private static IReadOnlyList<AiCriterionScoreResult> MergeScores(
+        IReadOnlyList<AiCriterionScoreResult> acousticScores,
+        AiGradingResult? linguistic)
+    {
+        if (linguistic is not { Success: true, Scores.Count: > 0 })
+            return acousticScores;
+
+        var byId = linguistic.Scores.ToDictionary(s => s.CriterionId);
+        return acousticScores.Select(a =>
+        {
+            if (byId.TryGetValue(a.CriterionId, out var ling) && !string.IsNullOrWhiteSpace(ling.Comment))
+            {
+                return a with { Comment = $"{a.Comment} {ling.Comment}".Trim() };
+            }
+            return a;
+        }).ToList();
+    }
 }

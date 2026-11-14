@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Alert, Button, Card, Chip, Label, Meter, ProgressBar, Spinner } from '@heroui/react';
-import { ArrowLeft, Award, BookOpenCheck, RefreshCw, Sparkles } from 'lucide-react';
+import { Alert, Button, Card, Chip, Label, ProgressBar, Spinner } from '@heroui/react';
+import { ArrowLeft, Award, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/api';
-import { parseSafeInlineSegments } from '@/lib/security';
+import { ProductiveAiFeedback, SafeAnnotatedText } from '../ProductiveAiFeedback';
 import {
   formatWritingAttemptStatusLabel,
   formatWritingGradingStatusLabel,
-  resolveWritingErrorCategoryLabel,
   type WritingGradingPending,
   type WritingReview,
 } from './types';
@@ -26,23 +25,6 @@ function isGradingComplete(pending: WritingGradingPending): boolean {
     pending.attemptStatus !== 'queued' &&
     pending.attemptStatus !== 'processing' &&
     pending.attemptStatus !== 'submitted'
-  );
-}
-
-function SafeAnnotatedText({ text }: { text: string }) {
-  const segments = parseSafeInlineSegments(text);
-  return (
-    <>
-      {segments.map((seg, idx) =>
-        seg.type === 'bold' ? (
-          <strong key={idx} className="font-semibold text-foreground">
-            {seg.value}
-          </strong>
-        ) : (
-          <span key={idx}>{seg.value}</span>
-        ),
-      )}
-    </>
   );
 }
 
@@ -299,78 +281,14 @@ export function WritingResultPage({ attemptId, pollIntervalMs = 2500 }: WritingR
             </Card.Header>
 
             <Card.Content className="space-y-5">
-              {question.priorityFix && (
-                <Alert status="accent">
-                  <Sparkles className="size-4" aria-hidden="true" />
-                  <Alert.Content>
-                    <Alert.Title>Priority fix</Alert.Title>
-                    <Alert.Description>
-                      <SafeAnnotatedText text={question.priorityFix} />
-                    </Alert.Description>
-                  </Alert.Content>
-                </Alert>
-              )}
-
-              <div className="space-y-3">
-                <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Rubric criteria
-                </div>
-                {question.criteria.map((criterion) => {
-                  const hasComment = criterion.comment && criterion.comment.trim().length > 0;
-                  return (
-                    <div key={criterion.criterionId} className="space-y-1.5 rounded-lg border border-border p-3">
-                      <Meter
-                        value={criterion.score}
-                        minValue={0}
-                        maxValue={criterion.maxScore > 0 ? criterion.maxScore : 1}
-                        color={criterion.score >= criterion.maxScore * 0.7 ? 'success' : 'accent'}
-                      >
-                        <Label>{criterion.name}</Label>
-                        <Meter.Output>
-                          {criterion.score} / {criterion.maxScore}
-                        </Meter.Output>
-                        <Meter.Track>
-                          <Meter.Fill />
-                        </Meter.Track>
-                      </Meter>
-                      <p className="text-xs text-muted">
-                        {hasComment ? (
-                          <SafeAnnotatedText text={criterion.comment as string} />
-                        ) : (
-                          'No note was recorded for this criterion on this grading.'
-                        )}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {question.errorSpans && question.errorSpans.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                    Annotated error spans
-                  </div>
-                  <div className="divide-y divide-border rounded-lg border border-border">
-                    {question.errorSpans.map((span, idx) => (
-                      <div key={idx} className="space-y-1.5 p-3 text-sm">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Chip size="sm" variant="soft" color="warning">
-                            {resolveWritingErrorCategoryLabel(span.category)}
-                          </Chip>
-                          <span className="line-through text-danger">{span.originalSnippet}</span>
-                          <span className="text-muted">&rarr;</span>
-                          <span className="font-medium text-success">{span.correctedSnippet}</span>
-                        </div>
-                        {(span.explanationVi || span.explanation) && (
-                          <p className="text-xs text-muted">
-                            <SafeAnnotatedText text={(span.explanationVi ?? span.explanation) as string} />
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <ProductiveAiFeedback
+                text={question.responseText}
+                textLabel="Your submitted text"
+                criteria={question.criteria}
+                errorSpans={question.errorSpans}
+                priorityFix={question.priorityFix}
+                modelRewrite={question.modelRewrite}
+              />
 
               {question.annotatedFeedback && (
                 <div className="rounded-lg border border-border bg-surface-secondary p-3 space-y-1">
@@ -380,27 +298,6 @@ export function WritingResultPage({ attemptId, pollIntervalMs = 2500 }: WritingR
                   <p className="text-sm leading-relaxed text-foreground">
                     <SafeAnnotatedText text={question.annotatedFeedback} />
                   </p>
-                </div>
-              )}
-
-              {question.modelRewrite && (
-                <div className="rounded-lg border border-border bg-surface-secondary p-3 space-y-1">
-                  <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
-                    <BookOpenCheck className="size-3.5" aria-hidden="true" />
-                    Model rewrite
-                  </div>
-                  <p className="text-sm leading-relaxed text-foreground whitespace-pre-line">
-                    <SafeAnnotatedText text={question.modelRewrite} />
-                  </p>
-                </div>
-              )}
-
-              {question.responseText && (
-                <div className="rounded-lg border border-border p-3 space-y-1">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                    Your submitted text
-                  </div>
-                  <p className="text-sm leading-relaxed text-muted whitespace-pre-line">{question.responseText}</p>
                 </div>
               )}
             </Card.Content>
