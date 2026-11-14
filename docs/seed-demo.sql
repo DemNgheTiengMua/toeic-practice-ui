@@ -54,28 +54,6 @@ SET IDENTITY_INSERT [Certificates] OFF;
 
 
 
--- ---- Packages (3 rows)
-SET IDENTITY_INSERT [Packages] ON;
-BEGIN TRY
-  INSERT INTO [Packages] ([PackageId], [Name], [Credits], [Price], [IsActive], [IsFeatured], [Features], [DisplayOrder]) VALUES (1, N'Intensive Pack', 10, 190000.00, 1, 1, N'10 full-exam / grading credits' + CHAR(10) + N'Detailed weakness diagnostic' + CHAR(10) + N'Priority AI mentor evaluation' + CHAR(10) + N'Never expires', 2);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Packages] ([PackageId], [Name], [Credits], [Price], [IsActive], [IsFeatured], [Features], [DisplayOrder]) VALUES (2, N'Starter Pack', 5, 100000.00, 1, 0, N'5 full-exam / grading credits' + CHAR(10) + N'Access to AI mentor feedback' + CHAR(10) + N'Never expires', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Packages] ([PackageId], [Name], [Credits], [Price], [IsActive], [IsFeatured], [Features], [DisplayOrder]) VALUES (3, N'Master Pack', 20, 360000.00, 1, 0, N'20 full-exam / grading credits' + CHAR(10) + N'Complete path unlocking' + CHAR(10) + N'1-on-1 human mentor booking' + CHAR(10) + N'Never expires', 3);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-SET IDENTITY_INSERT [Packages] OFF;
-
 -- ---- Permissions (5 rows)
 BEGIN TRY
   INSERT INTO [Permissions] ([Code]) VALUES (N'assessment.blueprint.design');
@@ -2966,13 +2944,13 @@ SET IDENTITY_INSERT [MentorSlots] OFF;
 -- ---- Orders (2 rows)
 SET IDENTITY_INSERT [Orders] ON;
 BEGIN TRY
-  INSERT INTO [Orders] ([OrderId], [UserId], [PackageId], [Credits], [Status], [Amount], [OrderCode], [PaymentNo], [Gateway], [GatewayTxnRef], [GatewayErrorCode], [CreatedAt], [PaidAt]) VALUES (1, 2, 1, 10, N'paid', 190000.00, N'DH-20261014-0001', 1, N'mock', N'plink-demo-10', NULL, '2026-10-17T01:44:00.6939290+07:00', '2026-10-17T01:44:00.6939290+07:00');
+  INSERT INTO [Orders] ([OrderId], [UserId], [Credits], [Status], [Amount], [OrderCode], [PaymentNo], [Gateway], [GatewayTxnRef], [GatewayErrorCode], [CreatedAt], [PaidAt]) VALUES (1, 2, 10, N'paid', 190000.00, N'DH-20261014-0001', 1, N'mock', N'plink-demo-10', NULL, '2026-10-17T01:44:00.6939290+07:00', '2026-10-17T01:44:00.6939290+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Orders] ([OrderId], [UserId], [PackageId], [Credits], [Status], [Amount], [OrderCode], [PaymentNo], [Gateway], [GatewayTxnRef], [GatewayErrorCode], [CreatedAt], [PaidAt]) VALUES (2, 2, 2, 5, N'paid', 100000.00, N'DH-20261014-0002', 2, N'mock', N'plink-demo-5', NULL, '2026-10-24T01:44:00.7236021+07:00', '2026-10-24T01:44:00.7236021+07:00');
+  INSERT INTO [Orders] ([OrderId], [UserId], [Credits], [Status], [Amount], [OrderCode], [PaymentNo], [Gateway], [GatewayTxnRef], [GatewayErrorCode], [CreatedAt], [PaidAt]) VALUES (2, 2, 5, N'paid', 100000.00, N'DH-20261014-0002', 2, N'mock', N'plink-demo-5', NULL, '2026-10-24T01:44:00.7236021+07:00', '2026-10-24T01:44:00.7236021+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;

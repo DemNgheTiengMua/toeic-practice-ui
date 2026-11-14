@@ -17,8 +17,6 @@ public partial class Order
 
     public int UserId { get; set; }
 
-    public int? PackageId { get; set; }
-
     public int Credits { get; set; }
 
     [StringLength(12)]
@@ -55,10 +53,6 @@ public partial class Order
 
     [InverseProperty("Order")]
     public virtual ICollection<CreditTransaction> CreditTransactions { get; set; } = new List<CreditTransaction>();
-
-    [ForeignKey("PackageId")]
-    [InverseProperty("Orders")]
-    public virtual Package? Package { get; set; }
 
     [InverseProperty("Order")]
     public virtual ICollection<PaymentEvent> PaymentEvents { get; set; } = new List<PaymentEvent>();

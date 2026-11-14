@@ -53,7 +53,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPracticeService, PracticeService>();
         services.AddScoped<ISavedQuestionService, SavedQuestionService>();
         services.AddScoped<IWeaknessAnalysisService, WeaknessAnalysisService>();
-        services.AddScoped<IPackageService, PackageService>();
         services.AddScoped<IAttemptEngine, AttemptEngine>();
         services.AddScoped<IMockExamService, MockExamService>();
         services.AddScoped<IAdminOrderService, AdminOrderService>();

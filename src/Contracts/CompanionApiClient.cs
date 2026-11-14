@@ -30,7 +30,6 @@ public interface ICompanionApiClient :
     ISupportClient,
     IAiInsightsClient,
     IMediaClient,
-    IAdminPackagesClient,
     IAdminScoreConversionClient,
     IAdminOrdersClient,
     IAdminUsersClient,

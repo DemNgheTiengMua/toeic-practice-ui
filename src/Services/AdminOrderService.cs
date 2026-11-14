@@ -47,8 +47,7 @@ public sealed class AdminOrderService(
 
         IQueryable<Order> query = db.Orders
             .AsNoTracking()
-            .Include(o => o.User)
-            .Include(o => o.Package);
+            .Include(o => o.User);
 
         if (!string.IsNullOrWhiteSpace(q))
         {
@@ -85,9 +84,7 @@ public sealed class AdminOrderService(
                 o.UserId,
                 o.User.Email,
                 o.User.FullName,
-                o.PackageId,
-                o.Package != null ? o.Package.Name : "Custom Credits",
-                o.Credits > 0 ? o.Credits : (o.Package != null ? o.Package.Credits : 0),
+                o.Credits,
                 o.Amount,
                 ParseWireCode<OrderStatusDto>(o.Status),
                 ParseWireCode<PaymentGatewayDto>(o.Gateway),
@@ -115,7 +112,6 @@ public sealed class AdminOrderService(
         var order = await db.Orders
             .AsNoTracking()
             .Include(o => o.User)
-            .Include(o => o.Package)
             .Include(o => o.PaymentEvents)
             .SingleOrDefaultAsync(o => o.OrderId == orderId, cancellationToken);
 
@@ -131,9 +127,7 @@ public sealed class AdminOrderService(
             order.UserId,
             order.User.Email,
             order.User.FullName,
-            order.PackageId,
-            order.Package?.Name ?? "Custom Credits",
-            order.Credits > 0 ? order.Credits : (order.Package?.Credits ?? 0),
+            order.Credits,
             order.Amount,
             ParseWireCode<OrderStatusDto>(order.Status),
             ParseWireCode<PaymentGatewayDto>(order.Gateway),

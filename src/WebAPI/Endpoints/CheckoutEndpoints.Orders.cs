@@ -9,24 +9,19 @@ public static partial class CheckoutEndpoints
     private static void MapOrders(IEndpointRouteBuilder app)
     {
         app.MapGet("/api/checkout/preview", async (
-            int? packageId,
-            int? credits,
+            int credits,
             HttpContext http,
             IPaymentService payments,
             CancellationToken cancellationToken) =>
         {
             try
             {
-                var preview = await payments.GetCheckoutPreviewAsync(CurrentUserId(http), packageId, credits, cancellationToken);
+                var preview = await payments.GetCheckoutPreviewAsync(CurrentUserId(http), credits, cancellationToken);
                 return Results.Ok(preview);
             }
             catch (EmailNotVerifiedException ex)
             {
                 return Problem(StatusCodes.Status403Forbidden, "Email verification required", ApiError.Codes.EmailNotVerified, ex.Message);
-            }
-            catch (PackageNotFoundException ex)
-            {
-                return Problem(StatusCodes.Status404NotFound, "Package not found", ApiError.Codes.PackageNotFound, ex.Message);
             }
             catch (ArgumentException ex)
             {
@@ -46,7 +41,7 @@ public static partial class CheckoutEndpoints
                 var baseUrl = !string.IsNullOrWhiteSpace(authLinks.PublicBaseUrl)
                     ? authLinks.PublicBaseUrl
                     : $"{http.Request.Scheme}://{http.Request.Host}";
-                var response = await payments.CreateOrderAsync(CurrentUserId(http), request.PackageId, baseUrl, request.Credits, cancellationToken);
+                var response = await payments.CreateOrderAsync(CurrentUserId(http), request.Credits, baseUrl, cancellationToken);
                 return Results.Ok(response);
             }
             catch (EmailNotVerifiedException ex)
@@ -56,10 +51,6 @@ public static partial class CheckoutEndpoints
             catch (OrderAlreadyOpenException ex)
             {
                 return Problem(StatusCodes.Status409Conflict, "Order already open", ApiError.Codes.OrderAlreadyOpen, ex.Message);
-            }
-            catch (PackageNotFoundException ex)
-            {
-                return Problem(StatusCodes.Status404NotFound, "Package not found", ApiError.Codes.PackageNotFound, ex.Message);
             }
             catch (ArgumentException ex)
             {

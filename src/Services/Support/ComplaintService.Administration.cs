@@ -43,7 +43,7 @@ public sealed partial class ComplaintService
             .Include(c => c.User)
             .Include(c => c.Booking).ThenInclude(b => b!.Mentor)
             .Include(c => c.ExamAttempt).ThenInclude(a => a!.Exam)
-            .Include(c => c.Order).ThenInclude(o => o!.Package);
+            .Include(c => c.Order);
 
         if (!string.IsNullOrWhiteSpace(q))
         {
@@ -130,7 +130,7 @@ public sealed partial class ComplaintService
             .Include(c => c.Booking).ThenInclude(b => b!.Mentor)
             .Include(c => c.Booking).ThenInclude(b => b!.Slot)
             .Include(c => c.ExamAttempt).ThenInclude(a => a!.Exam)
-            .Include(c => c.Order).ThenInclude(o => o!.Package)
+            .Include(c => c.Order)
             .SingleOrDefaultAsync(c => c.ComplaintId == complaintId, cancellationToken);
 
         if (complaint is null) return null;

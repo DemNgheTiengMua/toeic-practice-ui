@@ -22,15 +22,13 @@ public sealed class DashboardRevisionServiceTests(DatabaseFixture database)
 {
     private static DashboardRevisionService CreateService(CompanionDbContext db) => new(db);
 
-    /// <summary>A learner, an admin and one package: the minimum a paid order or a refund can hang from.</summary>
+    /// <summary>A learner and an admin: the minimum a paid order or a refund can hang from.</summary>
     private const string BaseFixture = """
         INSERT INTO Roles (Code, Name) VALUES ('learner', 'Learner'), ('admin', 'Admin');
         INSERT INTO Users (RoleId, Email, PasswordHash, FullName, IsLocked, EmailVerifiedAt, IsDeleted, CreatedAt)
         VALUES
           ((SELECT RoleId FROM Roles WHERE Code='learner'), 'rev@test.local', 0x01, N'Rev User', 0, '2026-10-01 00:00:00 +00:00', 0, '2026-10-01 00:00:00 +00:00'),
           ((SELECT RoleId FROM Roles WHERE Code='admin'), 'revadmin@test.local', 0x01, N'Rev Admin', 0, '2026-10-01 00:00:00 +00:00', 0, '2026-10-01 00:00:00 +00:00');
-        INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
-        VALUES (N'RevPack', 5, 100000, 1, 0, N'Features', 1);
         """;
 
     [Fact]
@@ -75,8 +73,8 @@ public sealed class DashboardRevisionServiceTests(DatabaseFixture database)
             {
                 await db.Database.ExecuteSqlRawAsync(BaseFixture + """
 
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt)
-                    VALUES ((SELECT UserId FROM Users WHERE Email='rev@test.local'), (SELECT PackageId FROM Packages WHERE Name=N'RevPack'),
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt)
+                    VALUES ((SELECT UserId FROM Users WHERE Email='rev@test.local'), 5,
                             'pending', 100000, 'DH-REV-0001', 41001, 'payos', '2026-10-05 10:00:00 +00:00');
                     """);
             }
@@ -91,8 +89,8 @@ public sealed class DashboardRevisionServiceTests(DatabaseFixture database)
             await using (var db = DbContextFactory.Create(connStr))
             {
                 await db.Database.ExecuteSqlRawAsync("""
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
-                    VALUES ((SELECT UserId FROM Users WHERE Email='rev@test.local'), (SELECT PackageId FROM Packages WHERE Name=N'RevPack'),
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES ((SELECT UserId FROM Users WHERE Email='rev@test.local'), 5,
                             'paid', 250000, 'DH-REV-0002', 41002, 'payos', '2026-10-06 10:00:00 +00:00', '2026-10-06 10:00:00 +00:00');
                     """);
             }
@@ -131,8 +129,8 @@ public sealed class DashboardRevisionServiceTests(DatabaseFixture database)
                 await db.Database.ExecuteSqlRawAsync(BaseFixture + """
 
                     DECLARE @UserId INT = (SELECT UserId FROM Users WHERE Email='rev@test.local');
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
-                    VALUES (@UserId, (SELECT PackageId FROM Packages WHERE Name=N'RevPack'), 'paid', 100000, 'DH-REV-0003', 41003, 'payos',
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, 5, 'paid', 100000, 'DH-REV-0003', 41003, 'payos',
                             '2026-10-07 08:00:00 +00:00', '2026-10-07 08:00:00 +00:00');
 
                     INSERT INTO Complaints (UserId, OrderId, Type, Reason, Status, CreatedAt)

@@ -8,15 +8,8 @@ namespace Contracts;
 public sealed partial class CompanionApiClient
 {
 
-    public async Task<IReadOnlyList<PackageDto>> GetPublicPackagesAsync(CancellationToken cancellationToken = default)
-    {
-        using var response = await http.GetAsync("api/packages", cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-        return (await response.Content.ReadFromJsonAsync<IReadOnlyList<PackageDto>>(Json, cancellationToken))!;
-    }
-
-    public Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(int packageId, string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<CheckoutPreviewDto>($"api/checkout/preview?packageId={packageId}", bearerToken, cancellationToken);
+    public Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(int credits, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<CheckoutPreviewDto>($"api/checkout/preview?credits={credits}", bearerToken, cancellationToken);
 
     public async Task<CreateOrderResponse> CreateOrderAsync(CreateOrderRequest request, string bearerToken, CancellationToken cancellationToken = default)
     {
@@ -68,8 +61,8 @@ public sealed partial class CompanionApiClient
         return (await response.Content.ReadFromJsonAsync<PaymentResultDto>(Json, cancellationToken))!;
     }
 
-    public Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(int packageId, CancellationToken cancellationToken = default) =>
-        GetCheckoutPreviewAsync(packageId, string.Empty, cancellationToken);
+    public Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(int credits, CancellationToken cancellationToken = default) =>
+        GetCheckoutPreviewAsync(credits, string.Empty, cancellationToken);
 
     public Task<CreateOrderResponse> CreateOrderAsync(CreateOrderRequest request, CancellationToken cancellationToken = default) =>
         CreateOrderAsync(request, string.Empty, cancellationToken);

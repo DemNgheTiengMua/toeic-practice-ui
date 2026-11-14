@@ -193,29 +193,25 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                     VALUES ((SELECT RoleId FROM Roles WHERE Code='learner'), 'rev@test.local', 0x01, N'Rev User', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
                     DECLARE @UserId INT = SCOPE_IDENTITY();
 
-                    INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
-                    VALUES (N'Pkg1', 5, 199000, 1, 0, N'Features', 1);
-                    DECLARE @PkgId INT = SCOPE_IDENTITY();
-
                     -- Order 1: Paid this month
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
-                    VALUES (@UserId, @PkgId, 'paid', 199000, 'DH-20261015-0001', 10001, 'payos', '{now.AddDays(-2):yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now.AddDays(-2):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, 5, 'paid', 199000, 'DH-20261015-0001', 10001, 'payos', '{now.AddDays(-2):yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now.AddDays(-2):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
 
                     -- Order 2: Paid this month
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
-                    VALUES (@UserId, @PkgId, 'paid', 499000, 'DH-20261015-0002', 10002, 'mock', '{now.AddDays(-1):yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now.AddDays(-1):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, 5, 'paid', 499000, 'DH-20261015-0002', 10002, 'mock', '{now.AddDays(-1):yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now.AddDays(-1):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
 
                     -- Order 3: Pending this month (not paid -> excluded)
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
-                    VALUES (@UserId, @PkgId, 'pending', 99000, 'DH-20261015-0003', 10003, 'payos', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL);
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, 5, 'pending', 99000, 'DH-20261015-0003', 10003, 'payos', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL);
 
                     -- Order 4: Paid in PREVIOUS month (September -> excluded)
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
-                    VALUES (@UserId, @PkgId, 'paid', 299000, 'DH-20260920-0001', 9001, 'payos', '2026-09-20 10:00:00 +00:00', '2026-09-20 10:05:00 +00:00');
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, 5, 'paid', 299000, 'DH-20260920-0001', 9001, 'payos', '2026-09-20 10:00:00 +00:00', '2026-09-20 10:05:00 +00:00');
 
                     -- Order 5: Paid today, so the day figure is not the month figure.
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
-                    VALUES (@UserId, @PkgId, 'paid', 99000, 'DH-20261015-0005', 10005, 'payos', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, 5, 'paid', 99000, 'DH-20261015-0005', 10005, 'payos', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
                     """);
             }
 
@@ -266,13 +262,9 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                     DECLARE @UserId INT = (SELECT UserId FROM Users WHERE Email='net@test.local');
                     DECLARE @AdminId INT = (SELECT UserId FROM Users WHERE Email='netadmin@test.local');
 
-                    INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
-                    VALUES (N'NetPack', 5, 100000, 1, 0, N'Features', 1);
-                    DECLARE @PkgId INT = SCOPE_IDENTITY();
-
                     -- 100,000 dong came in on the 5th.
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
-                    VALUES (@UserId, @PkgId, 'paid', 100000, 'DH-NET-0001', 40001, 'payos', '{now.AddDays(-10):yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now.AddDays(-10):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, 5, 'paid', 100000, 'DH-NET-0001', 40001, 'payos', '{now.AddDays(-10):yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now.AddDays(-10):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
 
                     -- And 250,000 went back out, settled today: the day is a 250,000 loss and the month is
                     -- a 150,000 loss, because 100,000 of it came in ten days earlier.
@@ -525,10 +517,6 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                     DECLARE @UserId2 INT = (SELECT UserId FROM Users WHERE Email='learner2@test.local');
                     DECLARE @UserId3 INT = (SELECT UserId FROM Users WHERE Email='learner3@test.local');
 
-                    INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
-                    VALUES (N'Pkg1', 5, 199000, 1, 0, N'Features', 1);
-                    DECLARE @PkgId INT = SCOPE_IDENTITY();
-
                     -- 1. Exams: 2 draft exams, 1 published, 1 draft deleted (deleted must be excluded)
                     INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, QuestionCount, IsDeleted, CreatedAt)
                     VALUES
@@ -539,12 +527,12 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                     DECLARE @ExamId INT = (SELECT ExamId FROM Exams WHERE Name='Published 1');
 
                     -- 2. Orders: 2 stale pending (> 30 min, distinct users for UX_Orders_OnePendingPerUser), 1 fresh pending (< 30 min), 1 paid
-                    INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
                     VALUES
-                      (@UserId1, @PkgId, 'pending', 199000, 'DH-STALE-001', 20001, 'payos', '{now.AddMinutes(-45):yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL),
-                      (@UserId2, @PkgId, 'pending', 199000, 'DH-STALE-002', 20002, 'mock', '{now.AddMinutes(-60):yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL),
-                      (@UserId3, @PkgId, 'pending', 199000, 'DH-FRESH-001', 20003, 'payos', '{now.AddMinutes(-10):yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL),
-                      (@UserId1, @PkgId, 'paid', 199000, 'DH-PAID-001', 20004, 'payos', '{now.AddMinutes(-40):yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now.AddMinutes(-39):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
+                      (@UserId1, 5, 'pending', 199000, 'DH-STALE-001', 20001, 'payos', '{now.AddMinutes(-45):yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL),
+                      (@UserId2, 5, 'pending', 199000, 'DH-STALE-002', 20002, 'mock', '{now.AddMinutes(-60):yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL),
+                      (@UserId3, 5, 'pending', 199000, 'DH-FRESH-001', 20003, 'payos', '{now.AddMinutes(-10):yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL),
+                      (@UserId1, 5, 'paid', 199000, 'DH-PAID-001', 20004, 'payos', '{now.AddMinutes(-40):yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now.AddMinutes(-39):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
 
                     -- 3. Attempts for complaints FK
                     INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt)

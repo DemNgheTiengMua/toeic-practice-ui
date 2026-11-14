@@ -30,13 +30,11 @@ VALUES (@rAdmin, 'retake-admin@test.local', 0x01, N'Retake Admin');
 DECLARE @admin INT = SCOPE_IDENTITY();
 
 -- Source fixtures belonging to @u so source-refusal tests hit CK_CreditTxn_Source, not an FK.
-INSERT INTO Packages (Name, Credits, Price, IsActive) VALUES (N'10 credits', 10, 100000, 1);
-DECLARE @pk INT = SCOPE_IDENTITY();
-INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway)
-VALUES (@u, @pk, 'paid', 100000, 'DH-PR-0001', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
+INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway)
+VALUES (@u, 10, 'paid', 100000, 'DH-PR-0001', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
 DECLARE @o INT = SCOPE_IDENTITY();
-INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway)
-VALUES (@u, @pk, 'paid', 100000, 'DH-PR-0002', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
+INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway)
+VALUES (@u, 10, 'paid', 100000, 'DH-PR-0002', NEXT VALUE FOR SEQ_PaymentNo, 'mock');
 DECLARE @oUnused INT = SCOPE_IDENTITY();
 
 INSERT INTO Certificates (Code, Name, IsActive) VALUES ('TOEIC_PR', N'TOEIC', 1);

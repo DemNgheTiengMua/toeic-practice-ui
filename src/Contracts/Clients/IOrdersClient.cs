@@ -3,9 +3,8 @@ namespace Contracts;
 
 public interface IOrdersClient
 {
-    Task<IReadOnlyList<PackageDto>> GetPublicPackagesAsync(CancellationToken cancellationToken = default);
-    Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(int packageId, CancellationToken cancellationToken = default);
-    Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(int packageId, string bearerToken, CancellationToken cancellationToken = default) => GetCheckoutPreviewAsync(packageId, cancellationToken);
+    Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(int credits, CancellationToken cancellationToken = default);
+    Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(int credits, string bearerToken, CancellationToken cancellationToken = default) => GetCheckoutPreviewAsync(credits, cancellationToken);
     Task<CreateOrderResponse> CreateOrderAsync(CreateOrderRequest request, CancellationToken cancellationToken = default);
     Task<CreateOrderResponse> CreateOrderAsync(CreateOrderRequest request, string bearerToken, CancellationToken cancellationToken = default) => CreateOrderAsync(request, cancellationToken);
     Task<PaymentResultDto> HandleReturnAsync(HandleReturnRequest request, CancellationToken cancellationToken = default);

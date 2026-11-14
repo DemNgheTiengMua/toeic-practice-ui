@@ -1,11 +1,9 @@
-
 namespace Contracts;
 
 public sealed record PaymentResultDto(
     int OrderId,
     string OrderCode,
     OrderStatusDto Status,
-    string PackageName,
     int Credits,
     decimal Amount,
     PaymentGatewayDto Gateway,
@@ -15,4 +13,5 @@ public sealed record PaymentResultDto(
     string? GatewayErrorCode = null,
     string? Message = null,
     string? CheckoutUrl = null,
+    string? PackageName = null,
     int? PackageId = null);
