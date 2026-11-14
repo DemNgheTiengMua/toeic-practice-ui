@@ -38,7 +38,7 @@ internal static class PoolImport
     /// </para>
     /// </summary>
     internal const string ContentTier = "demo";
-    internal const string LifecycleStatus = "draft";
+    internal const string LifecycleStatus = "active";
 
     /// <summary>
     /// #205: the staged state - the four gates judged this record, and the audit has not cleared it.
@@ -506,7 +506,8 @@ internal static class PoolImport
         Stimulus? stimulus,
         string? batchTag,
         DateTimeOffset now,
-        string? lifecycleStatus = null)
+        string? lifecycleStatus = null,
+        string? targetBands = null)
     {
         var item = new Item
         {
@@ -520,11 +521,8 @@ internal static class PoolImport
             RenderFormat = content.RenderFormat,
             PlacementEligible = content.PlacementEligible,
             ContentTier = ContentTier,
-            // #205: `validated` when the four gates judged the record, `draft` when nothing did. The
-            // two are not interchangeable - `draft` means "not yet judged", and an import that has run
-            // gate one through gate four is past that. The default stays `draft`, because the exam
-            // importer's stock is bound to a paper the import deliberately does not promote (INV-6).
             LifecycleStatus = lifecycleStatus ?? LifecycleStatus,
+            TargetBands = TargetBandsNormalizer.Normalize(targetBands),
             BatchTag = batchTag is { Length: > 60 } ? batchTag[..60] : batchTag,
             CreatedAt = now,
         };

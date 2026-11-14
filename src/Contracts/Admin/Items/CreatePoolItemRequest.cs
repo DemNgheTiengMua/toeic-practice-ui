@@ -48,7 +48,8 @@ public sealed record CreatePoolItemRequest(
     /// is always a free response - because a reading item may be drawn as a radio group, a checkbox
     /// list, a select or a drag target and only the author knows which.
     /// </summary>
-    string? RenderFormat = null);
+    string? RenderFormat = null,
+    string TargetBands = "ALL");
 
 /// <summary>#188: the shared passage or audio a set of items hangs off. Pool-owned, no cert.</summary>
 public sealed record CreatePoolStimulusRequest(

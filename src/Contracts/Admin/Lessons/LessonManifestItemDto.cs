@@ -16,4 +16,5 @@ public sealed record LessonManifestItemDto(
     IReadOnlyList<LessonManifestCardDto> Cards,
     string Modality = "reading",
     string? TopicCode = null,
-    string CefrLevel = "B1");
+    string CefrLevel = "B1",
+    string TargetBands = "ALL");

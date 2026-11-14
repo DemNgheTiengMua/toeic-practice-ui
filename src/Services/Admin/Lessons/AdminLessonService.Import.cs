@@ -361,6 +361,7 @@ public sealed partial class AdminLessonService
                 lesson.Summary = string.IsNullOrWhiteSpace(item.Summary) ? null : item.Summary.Trim();
                 lesson.EstimatedMinutes = item.EstimatedMinutes > 0 ? item.EstimatedMinutes : 5;
                 lesson.DisplayOrder = item.DisplayOrder;
+                lesson.TargetBands = TargetBandsNormalizer.Normalize(item.TargetBands);
 
                 // Reset LastViewedCardId to avoid FK violations
                 await db.LearnerLessonProgresses
@@ -391,6 +392,7 @@ public sealed partial class AdminLessonService
                     Summary = string.IsNullOrWhiteSpace(item.Summary) ? null : item.Summary.Trim(),
                     EstimatedMinutes = item.EstimatedMinutes > 0 ? item.EstimatedMinutes : 5,
                     DisplayOrder = item.DisplayOrder,
+                    TargetBands = TargetBandsNormalizer.Normalize(item.TargetBands),
                     CreatedAt = clock.GetUtcNow(),
                 };
                 db.Lessons.Add(lesson);

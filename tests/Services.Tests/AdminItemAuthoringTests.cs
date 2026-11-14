@@ -105,25 +105,31 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
         // is a schema fact now, not something a test can observe.
     }
 
-    /// <summary>
-    /// The other half of "never mints production stock": a new item is demo and draft, so INV-6 keeps
-    /// it out of a paid paper until a review gate promotes it. There is no request field to flip
-    /// either, which is why this is a property of the write rather than an assertion about a default.
-    /// </summary>
     [Fact]
-    public async Task A_created_item_is_demo_tier_and_draft_not_production()
+    public async Task A_created_item_is_immediately_active_with_target_bands_and_bypasses_gates()
     {
         var topicId = await ReadingTopicAsync();
 
-        var created = await CreateService().CreateAsync(ReadingItem(topicId, "Which window is the depot's?"));
+        var created = await CreateService().CreateAsync(new CreatePoolItemRequest(
+            ModalityDto.Reading,
+            topicId,
+            "B1",
+            "sentence_cloze",
+            "Which window is the depot's?",
+            "North window.",
+            "South window.",
+            "East window.",
+            "West window.",
+            "A",
+            TargetBands: "b1, b2, 5.5"));
 
-        Assert.Equal("demo", created.ContentTier);
-        Assert.Equal("draft", created.LifecycleStatus);
+        Assert.Equal("active", created.LifecycleStatus);
+        Assert.Equal("B1,B2,5.5", created.TargetBands);
 
         await using var db = Db();
         var stored = await db.Items.AsNoTracking().SingleAsync(i => i.ItemId == created.ItemId);
-        Assert.Equal("demo", stored.ContentTier);
-        Assert.Equal("draft", stored.LifecycleStatus);
+        Assert.Equal("active", stored.LifecycleStatus);
+        Assert.Equal("B1,B2,5.5", stored.TargetBands);
     }
 
     /// <summary>

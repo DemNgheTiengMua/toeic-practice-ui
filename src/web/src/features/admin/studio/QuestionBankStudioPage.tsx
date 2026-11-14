@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Button,
   Card,
@@ -51,8 +51,8 @@ export function QuestionBankStudioPage() {
   const isCatalogManager = canManageCatalog(user);
   const canReviewContent = hasCapability(user, STAFF_PERMISSIONS.ContentReview);
 
-  // Active Tab
-  const [activeTab, setActiveTab] = useState<string>('coverage');
+  // Active Tab (2 flat tabs: questions | lessons)
+  const [activeTab, setActiveTab] = useState<string>('questions');
 
   // Coverage State
   const [coverage, setCoverage] = useState<AdminCoverageMatrixDto | null>(null);
@@ -63,6 +63,7 @@ export function QuestionBankStudioPage() {
   const [isNewItemOpen, setIsNewItemOpen] = useState(false);
   const [newItemModality, setNewItemModality] = useState('reading');
   const [newItemTopicId, setNewItemTopicId] = useState(1);
+  const [newItemTargetBands, setNewItemTargetBands] = useState<string[]>([]);
   const [newItemLevel, setNewItemLevel] = useState('B1');
   const [newItemType, setNewItemType] = useState('mcq');
   const [newItemStem, setNewItemStem] = useState('');
@@ -196,6 +197,7 @@ export function QuestionBankStudioPage() {
         rationaleC: newItemRationaleC || null,
         rationaleD: newItemRationaleD || null,
         placementEligible: newItemPlacementEligible,
+        targetBands: newItemTargetBands.length === 0 ? 'ALL' : newItemTargetBands.join(','),
       };
       await studioApi.createPoolItem(payload);
       setIsNewItemOpen(false);
@@ -409,31 +411,19 @@ export function QuestionBankStudioPage() {
       <Tabs selectedKey={activeTab} onSelectionChange={(k) => setActiveTab(String(k))}>
         <Tabs.ListContainer>
           <Tabs.List aria-label="Question Bank Studio tabs">
-            <Tabs.Tab id="coverage">
+            <Tabs.Tab id="questions">
               <Tabs.Indicator />
-              <span>Coverage Matrix & Pool Stock</span>
-            </Tabs.Tab>
-            <Tabs.Tab id="stimulus">
-              <Tabs.Indicator />
-              <span>Stimulus Studio</span>
-            </Tabs.Tab>
-            <Tabs.Tab id="productive">
-              <Tabs.Indicator />
-              <span>Productive Tasks</span>
-            </Tabs.Tab>
-            <Tabs.Tab id="ingestion">
-              <Tabs.Indicator />
-              <span>Manifest Import & Ingestion</span>
+              <span>Question Bank</span>
             </Tabs.Tab>
             <Tabs.Tab id="lessons">
               <Tabs.Indicator />
-              <span>Micro-Lessons</span>
+              <span>Lessons</span>
             </Tabs.Tab>
           </Tabs.List>
         </Tabs.ListContainer>
 
-        {/* Tab 1: Coverage Matrix */}
-        <Tabs.Panel id="coverage" className="pt-4 space-y-4">
+        {/* Tab 1: Question Bank */}
+        <Tabs.Panel id="questions" className="pt-4 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h2 className="text-base font-bold text-foreground">120-Cell Coverage Matrix</h2>
@@ -515,464 +505,6 @@ export function QuestionBankStudioPage() {
           </Card>
         </Tabs.Panel>
 
-        {/* Tab 2: Stimulus Studio */}
-        <Tabs.Panel id="stimulus" className="pt-4 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-bold font-display text-foreground">
-                Stimulus & Multi-Item Bundle Studio
-              </h2>
-              <p className="text-xs text-muted">
-                Author passages or audio stimuli with 2–4 child questions evaluated under gate 4 span independence and IoU overlap rules.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                onPress={handleAnalyseStimulus}
-                isDisabled={isAnalysingStimulus}
-              >
-                <Play className="w-3.5 h-3.5 mr-1" />
-                Analyse stimulus bundle
-              </Button>
-              <Button
-                size="sm"
-                variant="primary"
-                onPress={handleSaveStimulus}
-                isDisabled={isSavingStimulus}
-              >
-                Save stimulus bundle
-              </Button>
-            </div>
-          </div>
-
-          {stimulusNotice && (
-            <Alert status="accent">
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Title>Notice</Alert.Title>
-                <Alert.Description>{stimulusNotice}</Alert.Description>
-              </Alert.Content>
-            </Alert>
-          )}
-
-          {/* Analysis Feedback Banner */}
-          {stimulusAnalysis && (
-            <div className="space-y-3">
-              <Alert status={stimulusAnalysis.acceptable ? 'success' : 'danger'}>
-                <Alert.Indicator>
-                  {stimulusAnalysis.acceptable ? (
-                    <CheckCircle2 className="w-4 h-4 text-success" />
-                  ) : (
-                    <AlertTriangle className="w-4 h-4 text-danger" />
-                  )}
-                </Alert.Indicator>
-                <Alert.Content>
-                  <Alert.Title className="font-bold">{stimulusAnalysis.levelVerdict}</Alert.Title>
-                  <Alert.Description>
-                    {stimulusAnalysis.acceptable
-                      ? 'Bundle satisfies gate four rules and is acceptable for save.'
-                      : 'Bundle has outstanding refusals that must be resolved.'}
-                  </Alert.Description>
-                </Alert.Content>
-              </Alert>
-
-              {/* Gauges */}
-              {stimulusAnalysis.gauges.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {stimulusAnalysis.gauges.map((g, idx) => (
-                    <Card key={idx} className="p-3 bg-surface-secondary">
-                      <span className="text-xs text-muted block">{g.label}</span>
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="font-mono text-base font-bold text-foreground">{g.value}</span>
-                        <span className="text-xs text-muted font-mono">Target: {g.target}</span>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Stimulus Editor */}
-          <Card className="p-4 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground">Skill</label>
-                <select
-                  value={stimulusSkill}
-                  onChange={(e) => setStimulusSkill(e.target.value)}
-                  className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                >
-                  <option value="reading">Reading</option>
-                  <option value="listening">Listening</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground">Stimulus level</label>
-                <select
-                  value={stimulusLevel}
-                  onChange={(e) => setStimulusLevel(e.target.value)}
-                  className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground font-mono text-sm"
-                >
-                  <option value="A1">A1</option>
-                  <option value="A2">A2</option>
-                  <option value="B1">B1</option>
-                  <option value="B2">B2</option>
-                  <option value="C1">C1</option>
-                  <option value="C2">C2</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground">Item type</label>
-                <select
-                  value={stimulusItemType}
-                  onChange={(e) => setStimulusItemType(e.target.value)}
-                  className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                >
-                  <option value="mcq">Multiple choice (4 options)</option>
-                  <option value="mcq_3">3-option choice</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">Stimulus passage text</label>
-              <textarea
-                rows={5}
-                value={stimulusPassage}
-                onChange={(e) => setStimulusPassage(e.target.value)}
-                className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground font-mono text-xs"
-              />
-            </div>
-          </Card>
-        </Tabs.Panel>
-
-        {/* Tab 3: Productive Tasks */}
-        <Tabs.Panel id="productive" className="pt-4 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-bold font-display text-foreground">
-                Productive Task Studio
-              </h2>
-              <p className="text-xs text-muted">
-                Author speaking and writing tasks with scoped word ranges, placement recording caps, and benchmark explanations.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                onPress={handleAnalyseProductive}
-                isDisabled={isAnalysingProductive}
-              >
-                <Play className="w-3.5 h-3.5 mr-1" />
-                Analyse task
-              </Button>
-              <Button
-                size="sm"
-                variant="primary"
-                onPress={handleSaveProductive}
-                isDisabled={isSavingProductive}
-              >
-                Save task
-              </Button>
-            </div>
-          </div>
-
-          {productiveNotice && (
-            <Alert status="accent">
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Title>Notice</Alert.Title>
-                <Alert.Description>{productiveNotice}</Alert.Description>
-              </Alert.Content>
-            </Alert>
-          )}
-
-          <Card className="p-4 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground">Modality</label>
-                <select
-                  value={productiveSkill}
-                  onChange={(e) => setProductiveSkill(e.target.value)}
-                  className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                >
-                  <option value="writing">Writing</option>
-                  <option value="speaking">Speaking</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground">Level</label>
-                <select
-                  value={productiveLevel}
-                  onChange={(e) => setProductiveLevel(e.target.value)}
-                  className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground font-mono text-sm"
-                >
-                  <option value="B1">B1</option>
-                  <option value="B2">B2</option>
-                  <option value="C1">C1</option>
-                  <option value="C2">C2</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground">Topic code</label>
-                <input
-                  type="text"
-                  value={productiveTopic}
-                  onChange={(e) => setProductiveTopic(e.target.value)}
-                  className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground font-mono text-sm uppercase"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">Task prompt copy</label>
-              <textarea
-                rows={4}
-                value={productivePrompt}
-                onChange={(e) => setProductivePrompt(e.target.value)}
-                className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-              />
-            </div>
-          </Card>
-        </Tabs.Panel>
-
-        {/* Tab 4: Manifest Import & Ingestion */}
-        <Tabs.Panel id="ingestion" className="pt-4 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-bold font-display text-foreground">
-                Manifest Ingestion Batches & Workbench
-              </h2>
-              <p className="text-xs text-muted">
-                Review uploaded JSON/ZIP manifest batches, inspect per-line refusals, resubmit or discard records, and clear staged pool stock.
-              </p>
-            </div>
-          </div>
-
-          {workbenchNotice && (
-            <Alert status="accent">
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Title>Workbench Notice</Alert.Title>
-                <Alert.Description>{workbenchNotice}</Alert.Description>
-              </Alert.Content>
-            </Alert>
-          )}
-
-          {/* Batches Table */}
-          <Card>
-            <Table>
-              <Table.ScrollContainer>
-                <Table.Content aria-label="Ingestion batches table">
-                  <Table.Header>
-                    <Table.Column isRowHeader>Batch ID</Table.Column>
-                    <Table.Column>Source file</Table.Column>
-                    <Table.Column>Status</Table.Column>
-                    <Table.Column>Uploaded by</Table.Column>
-                    <Table.Column>Total records</Table.Column>
-                    <Table.Column>Accepted</Table.Column>
-                    <Table.Column>Discarded</Table.Column>
-                    <Table.Column className="text-right">Action</Table.Column>
-                  </Table.Header>
-                  <Table.Body>
-                    {batches.map((b) => (
-                      <Table.Row key={b.batchId}>
-                        <Table.Cell className="font-mono-tabular font-bold">#{b.batchId}</Table.Cell>
-                        <Table.Cell className="font-medium text-foreground">{b.sourceName}</Table.Cell>
-                        <Table.Cell>
-                          <Chip size="sm" variant="soft" color="success">
-                            {formatImportBatchStatusLabel(b.status)}
-                          </Chip>
-                        </Table.Cell>
-                        <Table.Cell className="text-xs text-muted">{b.uploadedByEmail}</Table.Cell>
-                        <Table.Cell className="font-mono-tabular">{b.records}</Table.Cell>
-                        <Table.Cell className="font-mono-tabular text-success font-medium">
-                          {b.accepted}
-                        </Table.Cell>
-                        <Table.Cell className="font-mono-tabular text-muted">{b.discarded}</Table.Cell>
-                        <Table.Cell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            aria-label={`Open workbench for batch ${b.batchId}`}
-                            onPress={() => {
-                              setSelectedBatchId(b.batchId);
-                              loadBatchDetail(b.batchId);
-                            }}
-                          >
-                            Open workbench
-                          </Button>
-                        </Table.Cell>
-                      </Table.Row>
-                    ))}
-                  </Table.Body>
-                </Table.Content>
-              </Table.ScrollContainer>
-            </Table>
-          </Card>
-
-          {/* Workbench Detail for Selected Batch */}
-          {selectedBatchId && batchDetail && (
-            <div className="space-y-6 pt-4 border-t border-border">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                    Workbench: {batchDetail.batch.sourceName}
-                    <Chip size="sm" variant="soft" color="accent">
-                      Batch #{batchDetail.batch.batchId}
-                    </Chip>
-                  </h3>
-                  <p className="text-xs text-muted mt-0.5">
-                    Records: {batchDetail.batch.records} · Accepted: {batchDetail.batch.accepted} · Discarded: {batchDetail.batch.discarded}
-                  </p>
-                </div>
-
-                {/* Batch Audit Link (coordinator #32) */}
-                <a
-                  href={`/admin/audit/${batchDetail.batch.batchId}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-foreground text-xs font-semibold no-underline hover:bg-surface-secondary"
-                  aria-label="Open batch audit queue"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-accent" />
-                  Open batch audit queue
-                </a>
-              </div>
-
-              {/* Records Table with Per-Line Errors */}
-              <Card>
-                <Card.Header className="pb-2">
-                  <Card.Title className="text-sm">Refused & Unsettled Records</Card.Title>
-                </Card.Header>
-                <Card.Content>
-                  <Table>
-                    <Table.ScrollContainer>
-                      <Table.Content aria-label="Ingestion records review table">
-                        <Table.Header>
-                          <Table.Column isRowHeader>Line</Table.Column>
-                          <Table.Column>Status</Table.Column>
-                          <Table.Column>Broken rule</Table.Column>
-                          <Table.Column>Refusal reason</Table.Column>
-                          <Table.Column className="text-right">Action</Table.Column>
-                        </Table.Header>
-                        <Table.Body>
-                          {batchDetail.records.map((rec) => (
-                            <Table.Row key={rec.line}>
-                              <Table.Cell className="font-mono-tabular font-bold">
-                                Line {rec.line}
-                              </Table.Cell>
-                              <Table.Cell>
-                                <Chip
-                                  size="sm"
-                                  variant="soft"
-                                  color={rec.accepted ? 'success' : rec.discarded ? 'default' : 'danger'}
-                                >
-                                  {rec.accepted ? 'Accepted' : rec.discarded ? 'Discarded' : 'Refused'}
-                                </Chip>
-                              </Table.Cell>
-                              <Table.Cell className="font-mono text-xs text-danger">
-                                {rec.rule || '—'}
-                              </Table.Cell>
-                              <Table.Cell className="text-xs text-foreground">
-                                {rec.message || rec.note || '—'}
-                              </Table.Cell>
-                              <Table.Cell className="text-right">
-                                {!rec.accepted && !rec.discarded && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onPress={() => handleDiscardRecord(batchDetail.batch.batchId, rec.line)}
-                                  >
-                                    Discard
-                                  </Button>
-                                )}
-                              </Table.Cell>
-                            </Table.Row>
-                          ))}
-                        </Table.Body>
-                      </Table.Content>
-                    </Table.ScrollContainer>
-                  </Table>
-                </Card.Content>
-              </Card>
-
-              {/* Staged Items List with Clear Gate */}
-              <Card>
-                <Card.Header className="pb-2">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <Card.Title className="text-sm">Staged Pool Stock Items</Card.Title>
-                      <Card.Description className="text-xs">
-                        Review gate promotion: clearing an item verifies it for serving in active tests.
-                      </Card.Description>
-                    </div>
-                    {!canReviewContent && (
-                      <Chip size="sm" variant="soft" color="warning">
-                        Requires pool.content.review
-                      </Chip>
-                    )}
-                  </div>
-                </Card.Header>
-                <Card.Content>
-                  <Table>
-                    <Table.ScrollContainer>
-                      <Table.Content aria-label="Staged items clear table">
-                        <Table.Header>
-                          <Table.Column isRowHeader>Item ID</Table.Column>
-                          <Table.Column>Topic</Table.Column>
-                          <Table.Column>CEFR</Table.Column>
-                          <Table.Column>Modality</Table.Column>
-                          <Table.Column>Status</Table.Column>
-                          <Table.Column className="text-right">Promotion gate</Table.Column>
-                        </Table.Header>
-                        <Table.Body>
-                          {batchDetail.staged.map((item) => (
-                            <Table.Row key={item.itemId}>
-                              <Table.Cell className="font-mono-tabular font-bold">
-                                #{item.itemId}
-                              </Table.Cell>
-                              <Table.Cell className="font-mono text-xs">{item.topicCode}</Table.Cell>
-                              <Table.Cell className="font-mono font-bold">{item.cefrLevel}</Table.Cell>
-                              <Table.Cell>{formatModalityLabel(item.modality)}</Table.Cell>
-                              <Table.Cell>
-                                <Chip size="sm" variant="soft" color="default">
-                                  {formatLifecycleStatusLabel(item.lifecycleStatus)}
-                                </Chip>
-                              </Table.Cell>
-                              <Table.Cell className="text-right">
-                                <Button
-                                  size="sm"
-                                  variant="primary"
-                                  aria-label={`Clear item ${item.itemId}`}
-                                  isDisabled={!canReviewContent}
-                                  onPress={() => handleClearWorkbenchItem(batchDetail.batch.batchId, item.itemId)}
-                                  onClick={() => handleClearWorkbenchItem(batchDetail.batch.batchId, item.itemId)}
-                                >
-                                  <ShieldCheck className="w-3.5 h-3.5 mr-1" />
-                                  Clear item
-                                </Button>
-                              </Table.Cell>
-                            </Table.Row>
-                          ))}
-                        </Table.Body>
-                      </Table.Content>
-                    </Table.ScrollContainer>
-                  </Table>
-                </Card.Content>
-              </Card>
-            </div>
-          )}
-        </Tabs.Panel>
-
         {/* Tab 5: Micro-Lessons */}
         <Tabs.Panel id="lessons" className="pt-4 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1005,9 +537,14 @@ export function QuestionBankStudioPage() {
                     <span className="font-mono text-xs font-bold text-accent">
                       {lesson.certCode} · {lesson.skillCode}
                     </span>
-                    <Chip size="sm" variant="soft" color="default">
-                      {lesson.cefrLevel}
-                    </Chip>
+                    <div className="flex items-center gap-1.5">
+                      <Chip size="sm" variant="soft" color="accent">
+                        {lesson.targetBands || 'ALL'}
+                      </Chip>
+                      <Chip size="sm" variant="soft" color="default">
+                        {lesson.cefrLevel}
+                      </Chip>
+                    </div>
                   </div>
                   <Card.Title className="text-base mt-1">{lesson.title}</Card.Title>
                   {lesson.summary && (
@@ -1207,6 +744,39 @@ export function QuestionBankStudioPage() {
                   <label htmlFor="new-placement-eligible" className="text-sm font-medium text-foreground">
                     Placement eligible
                   </label>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-foreground block">Target bands</span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="inline-flex items-center gap-1.5 text-xs text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={newItemTargetBands.length === 0}
+                      onChange={() => setNewItemTargetBands([])}
+                      className="w-3.5 h-3.5 rounded border-border"
+                    />
+                    ALL
+                  </label>
+                  {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((band) => {
+                    const checked = newItemTargetBands.includes(band);
+                    return (
+                      <label key={band} className="inline-flex items-center gap-1.5 text-xs text-foreground">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            setNewItemTargetBands((prev) =>
+                              checked ? prev.filter((b) => b !== band) : [...prev, band],
+                            )
+                          }
+                          className="w-3.5 h-3.5 rounded border-border"
+                        />
+                        {band}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 

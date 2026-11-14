@@ -51,9 +51,6 @@ public sealed partial class ExamQuickIngestService
         var exam = await db.Exams.Include(e => e.Cert).FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken)
             ?? throw new ExamNotFoundException(examId);
 
-        // #157: this service inserts groups and questions itself, so the admin service's lock never
-        // saw it. Both modes change what a finished attempt was scored against: append adds rows,
-        // replace deletes them.
         await ExamStructureLock.RequireEditableAsync(db, examId, cancellationToken);
 
         var section = await db.Sections.FirstOrDefaultAsync(s => s.SectionId == request.SectionId && s.CertId == exam.CertId, cancellationToken)
@@ -252,7 +249,8 @@ public sealed partial class ExamQuickIngestService
                     w.Source.ReferenceKind?.ToCode(),
                     groupStimuli.TryGetValue(groupId, out var stimulus)
                         ? stimulus
-                        : new PoolImport.StimulusInput(request.CefrLevel)))
+                        : new PoolImport.StimulusInput(request.CefrLevel),
+                    request.TargetBands))
                 .ToList();
 
             var outcome = await PoolImportWriter.WriteAsync(

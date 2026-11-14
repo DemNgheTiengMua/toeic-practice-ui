@@ -711,4 +711,25 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
         Assert.Contains("example", cardTypes);
         Assert.Contains("micro_check", cardTypes);
     }
+
+    [Fact]
+    public async Task CreateAndUpdateLesson_PersistsAndReturnsTargetBands()
+    {
+        var (certId, skillId, categoryId, topicId) = await SeedCertAndSkillAsync();
+        var service = CreateService();
+
+        var created = await service.CreateLessonAsync(new AdminLessonUpsertDto(
+            certId, skillId, categoryId, "TargetBands Lesson", "Summary", 5, 1,
+            new List<AdminLessonCardUpsertDto> { new(null, "rule", "Rule", "Body", DisplayOrder: 0) },
+            "reading", topicId, "B1", TargetBands: "a2, b1, b2"));
+
+        Assert.Equal("A2,B1,B2", created.TargetBands);
+
+        var updated = await service.UpdateLessonAsync(created.LessonId, new AdminLessonUpsertDto(
+            certId, skillId, categoryId, "TargetBands Lesson", "Summary", 5, 1,
+            new List<AdminLessonCardUpsertDto> { new(null, "rule", "Rule", "Body", DisplayOrder: 0) },
+            "reading", topicId, "B1", TargetBands: "ALL"));
+
+        Assert.Equal("ALL", updated.TargetBands);
+    }
 }

@@ -40,4 +40,5 @@ public sealed record PoolItemDto(
     string? RationaleA = null,
     string? RationaleB = null,
     string? RationaleC = null,
-    string? RationaleD = null);
+    string? RationaleD = null,
+    string TargetBands = "ALL");

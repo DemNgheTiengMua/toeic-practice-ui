@@ -78,9 +78,9 @@ const mockCertificates = [
 
 const mockPresets = [
   {
-    presetCode: 'TOEIC_LR_DEFAULT',
-    name: 'TOEIC L&R Blueprint Preset',
-    description: 'Standard 200-question listening and reading layout',
+    presetCode: 'two_skill',
+    name: '2-Skill (Listening & Reading)',
+    description: 'Listening and Reading template',
     scoreAggregationRule: 'SUM',
     skills: [
       {
@@ -92,7 +92,7 @@ const mockPresets = [
         sections: [
           {
             code: 'PART1',
-            name: 'Photographs',
+            name: 'Listening Part 1',
             displayOrder: 1,
             scoreWeight: 1,
             navigationMode: 'audio_driven',
@@ -101,12 +101,78 @@ const mockPresets = [
             optionCount: 4,
             clusterSize: 1,
             unitCount: 1,
-            hideOptionText: true,
+            hideOptionText: false,
             requirePassage: false,
             requireAudio: true,
-            requireImage: true,
+            requireImage: false,
             requiredKeywordCount: 0,
-            expectedQuestionCount: 6,
+            expectedQuestionCount: 25,
+            allowedComponentTypesJson: JSON.stringify(['mcq']),
+            toolsConfigJson: null,
+          },
+        ],
+      },
+      {
+        code: 'READING',
+        name: 'Reading',
+        modality: 'reading',
+        displayOrder: 2,
+        durationMinutes: 60,
+        sections: [
+          {
+            code: 'PART5',
+            name: 'Reading Part 1',
+            displayOrder: 1,
+            scoreWeight: 1,
+            navigationMode: 'full_sandbox',
+            timerPolicyJson: null,
+            layoutType: 'split_horizontal',
+            optionCount: 4,
+            clusterSize: 1,
+            unitCount: 1,
+            hideOptionText: false,
+            requirePassage: true,
+            requireAudio: false,
+            requireImage: false,
+            requiredKeywordCount: 0,
+            expectedQuestionCount: 25,
+            allowedComponentTypesJson: JSON.stringify(['mcq']),
+            toolsConfigJson: null,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    presetCode: 'four_skill',
+    name: '4-Skill (Listening, Reading, Speaking, Writing)',
+    description: 'Full 4-skill template',
+    scoreAggregationRule: 'AVERAGE',
+    skills: [
+      {
+        code: 'LISTENING',
+        name: 'Listening',
+        modality: 'listening',
+        displayOrder: 1,
+        durationMinutes: 30,
+        sections: [
+          {
+            code: 'L1',
+            name: 'Listening Section',
+            displayOrder: 1,
+            scoreWeight: 1,
+            navigationMode: 'audio_driven',
+            timerPolicyJson: null,
+            layoutType: 'split_horizontal',
+            optionCount: 4,
+            clusterSize: 1,
+            unitCount: 1,
+            hideOptionText: false,
+            requirePassage: false,
+            requireAudio: true,
+            requireImage: false,
+            requiredKeywordCount: 0,
+            expectedQuestionCount: 20,
             allowedComponentTypesJson: JSON.stringify(['mcq']),
             toolsConfigJson: null,
           },
@@ -251,9 +317,13 @@ describe('Certificates Studio (/admin/certificates) (#303)', () => {
 
     // Invariant check: Certificate Isolation notice must be visible
     expect(screen.getByText(/certificate isolation/i)).toBeInTheDocument();
+
+    // #310: Score Conversion and Rubric Studio tabs are removed
+    expect(screen.queryByRole('tab', { name: /score conversion/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /rubric studio/i })).not.toBeInTheDocument();
   });
 
-  it('supports blueprint wizard creation with presets and saves via /api/admin/certificates/wizard', async () => {
+  it('supports 3-step blueprint wizard creation with 2-skill/4-skill templates and 3-field sections', async () => {
     let savedRequest: any = null;
 
     installFetchMock((url, init) => {
@@ -279,14 +349,8 @@ describe('Certificates Studio (/admin/certificates) (#303)', () => {
           code: savedRequest.code,
           name: savedRequest.name,
           skillsCount: savedRequest.skills.length,
-          sectionsCount: 1,
+          sectionsCount: 2,
         });
-      }
-      if (url.startsWith('/api/admin/score-conversion')) {
-        return jsonResponse(mockScoreConversion);
-      }
-      if (url.startsWith('/api/admin/studio/rubric')) {
-        return jsonResponse(mockRubricStudio);
       }
       return jsonResponse({}, 404);
     });
@@ -296,18 +360,29 @@ describe('Certificates Studio (/admin/certificates) (#303)', () => {
     const createBtn = await screen.findByRole('button', { name: /new certificate/i });
     fireEvent.click(createBtn);
 
-    // Modal opens
+    // Modal opens at Step 1
     expect(await screen.findByRole('heading', { name: /certificate blueprint wizard/i })).toBeInTheDocument();
 
-    // Select preset
-    const presetSelect = screen.getByLabelText(/preset/i);
-    fireEvent.change(presetSelect, { target: { value: 'TOEIC_LR_DEFAULT' } });
+    // Step 1: Select 2-skill template and fill certificate code & name
+    const presetSelect = screen.getByLabelText(/template/i);
+    fireEvent.change(presetSelect, { target: { value: 'two_skill' } });
 
-    // Fill certificate code and name
     const codeInput = screen.getByLabelText(/certificate code/i);
     fireEvent.change(codeInput, { target: { value: 'TOEFL' } });
     const nameInput = screen.getByLabelText(/certificate name/i);
     fireEvent.change(nameInput, { target: { value: 'TOEFL iBT' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+
+    // Step 2: 3-field sections (Code, Name, ExpectedQuestionCount)
+    const countInputs = await screen.findAllByLabelText(/expected questions/i);
+    expect(countInputs.length).toBeGreaterThanOrEqual(2);
+    fireEvent.change(countInputs[0], { target: { value: '30' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+
+    // Step 3: ScoreBands & flat GradingCriteria
+    expect(await screen.findByRole('heading', { name: /score bands/i })).toBeInTheDocument();
 
     // Submit wizard
     const saveBtn = screen.getByRole('button', { name: /save blueprint/i });
@@ -315,89 +390,10 @@ describe('Certificates Studio (/admin/certificates) (#303)', () => {
 
     await waitFor(() => {
       expect(savedRequest).not.toBeNull();
+      expect(savedRequest.presetCode).toBe('two_skill');
       expect(savedRequest.code).toBe('TOEFL');
       expect(savedRequest.name).toBe('TOEFL iBT');
-    });
-  });
-
-  it('runs score preview simulation and rubric calibration ladder with authoritative outcome', async () => {
-    let ladderRan = false;
-
-    installFetchMock((url, init) => {
-      if (url === '/api/auth/me') {
-        return jsonResponse({
-          id: 1,
-          email: 'author@demo.local',
-          fullName: 'Content Author',
-          role: 'staff',
-          permissions: [STAFF_PERMISSIONS.BlueprintDesign, STAFF_PERMISSIONS.ContentAuthor],
-        });
-      }
-      if (url === '/api/admin/certificates') {
-        return jsonResponse(mockCertificates);
-      }
-      if (url === '/api/admin/certificates/presets') {
-        return jsonResponse(mockPresets);
-      }
-      if (url.startsWith('/api/admin/score-conversion/preview') && init?.method === 'POST') {
-        return jsonResponse({
-          scoreAggregationRule: 'SUM',
-          skillScores: [
-            { skillId: 10, skillCode: 'LISTENING', rawScore: 50, scaledScore: 250, sections: [] },
-          ],
-          totalScore: 250,
-          bandCode: 'BLUE',
-          bandName: 'Blue Working',
-        });
-      }
-      if (url.startsWith('/api/admin/score-conversion')) {
-        return jsonResponse(mockScoreConversion);
-      }
-      if (url === '/api/admin/studio/rubric/ladder' && init?.method === 'POST') {
-        ladderRan = true;
-        return jsonResponse({
-          outcome: 'accepted',
-          accepted: true,
-          reason: 'Every adjacent band separated cleanly and the verbose trap stayed under ceiling.',
-          responsibleCriteria: [],
-          points: [
-            { band: 0, composite: 0.2, isVerboseTrap: false },
-            { band: 1, composite: 1.1, isVerboseTrap: false },
-            { band: 2, composite: 2.3, isVerboseTrap: false },
-            { band: 3, composite: 3.4, isVerboseTrap: false },
-            { band: 4, composite: 4.5, isVerboseTrap: false },
-            { band: 5, composite: 5.6, isVerboseTrap: false },
-            { band: 6, composite: 6.0, isVerboseTrap: false },
-            { band: 3, composite: 3.2, isVerboseTrap: true },
-          ],
-          ranAt: new Date().toISOString(),
-        });
-      }
-      if (url.startsWith('/api/admin/studio/rubric')) {
-        return jsonResponse(mockRubricStudio);
-      }
-      return jsonResponse({}, 404);
-    });
-
-    renderRoute('/admin/certificates');
-
-    // Switch to Rubric Studio tab
-    const rubricTab = await screen.findByRole('tab', { name: /rubric studio/i });
-    fireEvent.click(rubricTab);
-
-    // Verify 28-cell grid rendered with distinct Descriptor and Binary Gates columns
-    expect(await screen.findByText('Pronunciation and Intonation')).toBeInTheDocument();
-    expect(screen.getByText('Pre-A1')).toBeInTheDocument();
-    expect(screen.getByText('Unintelligible pronunciation')).toBeInTheDocument();
-    expect(screen.getByText('No English words articulated')).toBeInTheDocument();
-
-    // Trigger ladder calibration
-    const runLadderBtn = screen.getByRole('button', { name: /run calibration ladder/i });
-    fireEvent.click(runLadderBtn);
-
-    await waitFor(() => {
-      expect(ladderRan).toBe(true);
-      expect(screen.getByText(/calibrated: every adjacent band separated/i)).toBeInTheDocument();
+      expect(savedRequest.skills[0].sections[0].expectedQuestionCount).toBe(30);
     });
   });
 });

@@ -16,4 +16,5 @@ public sealed record AdminLessonUpsertDto(
     IReadOnlyList<AdminLessonCardUpsertDto> Cards,
     string Modality = "reading",
     int TopicId = 0,
-    string CefrLevel = "B1");
+    string CefrLevel = "B1",
+    string TargetBands = "ALL");
