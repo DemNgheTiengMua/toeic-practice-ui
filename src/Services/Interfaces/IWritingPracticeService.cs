@@ -16,13 +16,13 @@ public interface IWritingPracticeService
 {
     Task<WritingPracticeInstructionsView> GetInstructionsAsync(int userId, int examId, CancellationToken cancellationToken = default);
 
-    Task<WritingAttemptInfo> StartAttemptAsync(int userId, int examId, CancellationToken cancellationToken = default);
+    Task<WritingAttemptInfo> StartAttemptAsync(int userId, int examId, CancellationToken cancellationToken = default, int? learnerPathStepId = null);
 
     Task<WritingTakeView> GetAttemptTakeAsync(int userId, int attemptId, int? questionId, CancellationToken cancellationToken = default);
 
     Task<SaveDraftResult> SaveDraftAsync(int userId, int attemptId, int questionId, string? responseText, CancellationToken cancellationToken = default);
 
-    Task<SubmitWritingResult> SubmitAttemptAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
+    Task<SubmitWritingResult> SubmitAttemptAsync(int userId, int attemptId, CancellationToken cancellationToken = default, int? learnerPathStepId = null);
 
     Task<WritingGradingPendingView> GetGradingPendingAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
 

@@ -78,6 +78,7 @@ internal static class OperationsLabels
             // #281: a refund is a return of value, not the bounded apology an admin_grant is.
             ("refund_credit", "Refund credits"),
             ("placement_retake", "Placement retake"),
+            ("learning_path", "4-week learning path"),
         ]);
 
         LabelFamily.Add<BookingStatusDto>(families, "Booking status not reported", [

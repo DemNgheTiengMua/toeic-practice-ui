@@ -114,7 +114,8 @@ public sealed class WritingPracticeService(
         };
     }
 
-    public async Task<WritingAttemptInfo> StartAttemptAsync(int userId, int examId, CancellationToken cancellationToken = default)
+    public async Task<WritingAttemptInfo> StartAttemptAsync(
+        int userId, int examId, CancellationToken cancellationToken = default, int? learnerPathStepId = null)
     {
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
         var exam = await db.Exams
@@ -148,8 +149,11 @@ public sealed class WritingPracticeService(
             }
         }
 
-        // Check credits before starting ("block before you charge" invariant)
-        if (!IsFreeDiagnostic(exam)
+        var pathStep = await ResolveActivePathStepAsync(userId, learnerPathStepId, cancellationToken);
+
+        // Check credits before starting ("block before you charge" invariant).
+        // Learning-path writing steps include AI grading at 0 extra credits.
+        if (!IsFreeDiagnostic(exam) && pathStep is null
             && await _creditLedger.GetBalanceAsync(userId, cancellationToken) < WritingPracticeCreditCost)
         {
             throw new WritingPracticeException(WritingPracticeException.InsufficientCredits, "You do not have enough credits to start writing practice.");
@@ -378,7 +382,8 @@ public sealed class WritingPracticeService(
         return new SaveDraftResult(freeResponse.FreeResponseId, questionId, now, wordCount);
     }
 
-    public async Task<SubmitWritingResult> SubmitAttemptAsync(int userId, int attemptId, CancellationToken cancellationToken = default)
+    public async Task<SubmitWritingResult> SubmitAttemptAsync(
+        int userId, int attemptId, CancellationToken cancellationToken = default, int? learnerPathStepId = null)
     {
         var attempt = await db.ExamAttempts
             .Where(a => a.AttemptId == attemptId && a.UserId == userId)
@@ -396,9 +401,10 @@ public sealed class WritingPracticeService(
         }
 
         var isFreeDiagnostic = IsFreeDiagnostic(attempt.Exam);
+        var pathStep = await ResolveActivePathStepAsync(userId, learnerPathStepId, cancellationToken);
 
         // Verify credit balance before charge (block before you charge)
-        if (!isFreeDiagnostic
+        if (!isFreeDiagnostic && pathStep is null
             && await _creditLedger.GetBalanceAsync(userId, cancellationToken) < WritingPracticeCreditCost)
         {
             throw new WritingPracticeException(WritingPracticeException.InsufficientCredits, "You do not have enough credits to submit and grade this writing attempt.");
@@ -431,8 +437,8 @@ public sealed class WritingPracticeService(
 
         await db.SaveChangesAsync(cancellationToken);
 
-        // Diagnostic writing is part of the free placement loop; paid practice is charged once.
-        if (!isFreeDiagnostic)
+        // Diagnostic writing and learning-path writing steps include AI grading at 0 extra credits.
+        if (!isFreeDiagnostic && pathStep is null)
         {
             try
             {
@@ -465,6 +471,12 @@ public sealed class WritingPracticeService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        if (pathStep is not null)
+        {
+            await PathStepCompletion.CloseStepAsync(db, pathStep, score: null, accuracyPct: null, cancellationToken);
+        }
+
         await tx.CommitAsync(cancellationToken);
 
         return new SubmitWritingResult(attempt.AttemptId, AttemptStatus.Submitted, now);
@@ -732,5 +744,31 @@ public sealed class WritingPracticeService(
             // blank or failed answer is not evidence of a level.
             GradedQuestions = gradedCount
         };
+    }
+
+    private async Task<LearnerPathStep?> ResolveActivePathStepAsync(
+        int userId, int? learnerPathStepId, CancellationToken cancellationToken)
+    {
+        if (!learnerPathStepId.HasValue)
+        {
+            return null;
+        }
+
+        var step = await db.LearnerPathSteps
+            .Include(s => s.LearnerPath)
+            .FirstOrDefaultAsync(s => s.StepId == learnerPathStepId.Value
+                && s.LearnerPath.UserId == userId
+                && s.LearnerPath.Status == LearnerPathStatus.Active.ToCode(), cancellationToken);
+
+        if (step is null
+            || step.Status == LearnerPathStepStatus.Locked.ToCode()
+            || !string.Equals(step.Modality, Modality.Writing.ToCode(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new WritingPracticeException(
+                WritingPracticeException.AttemptNotActive,
+                $"Learning path step {learnerPathStepId.Value} is not an unlocked writing step.");
+        }
+
+        return step;
     }
 }

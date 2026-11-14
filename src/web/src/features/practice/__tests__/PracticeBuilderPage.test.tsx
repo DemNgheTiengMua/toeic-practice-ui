@@ -412,12 +412,86 @@ describe('PracticeBuilderPage', () => {
     await renderPracticeBuilder('/practice');
 
     await waitFor(() => {
-      expect(screen.getByText(/unfinished practice session/i)).toBeTruthy();
+      expect(screen.getByText(/Core Grammar Review/i)).toBeTruthy();
     });
-    expect(screen.getByRole('link', { name: /resume session/i }).getAttribute('href')).toContain(
-      '/practice/session/333',
-    );
-    expect(screen.getByText(/Core Grammar Review/i)).toBeTruthy();
+    expect(screen.queryByText(/unfinished practice session/i)).toBeNull();
     expect(screen.getByText(/25 min/i)).toBeTruthy();
+  });
+
+  it('displays unlocked sections with accuracy vs locked sections with link to Learning Path', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/api/learner/practice/catalog')) {
+          return new Response(
+            JSON.stringify(
+              makeCatalog({
+                listeningSections: [
+                  {
+                    sectionId: 101,
+                    skillCode: 'LIST',
+                    skillName: 'Listening',
+                    modality: 'listening',
+                    code: 'PART1',
+                    name: 'Photographs',
+                    optionCount: 4,
+                    expectedQuestionCount: 10,
+                    availableQuestionCount: 25,
+                    accuracyPercentage: 80,
+                    answeredCount: 20,
+                    displayOrder: 1,
+                    totalCategoryCount: 4,
+                    categoriesInCooldown: 0,
+                    nextReviewDueAt: null,
+                    isUnlocked: true,
+                  },
+                ],
+                readingSections: [
+                  {
+                    sectionId: 102,
+                    skillCode: 'READ',
+                    skillName: 'Reading',
+                    modality: 'reading',
+                    code: 'PART5',
+                    name: 'Incomplete Sentences',
+                    optionCount: 4,
+                    expectedQuestionCount: 10,
+                    availableQuestionCount: 40,
+                    accuracyPercentage: null,
+                    answeredCount: 0,
+                    displayOrder: 5,
+                    totalCategoryCount: 6,
+                    categoriesInCooldown: 0,
+                    nextReviewDueAt: null,
+                    isUnlocked: false,
+                  },
+                ],
+              }),
+            ),
+            { status: 200 },
+          );
+        }
+        if (url.endsWith('/api/learner/practice/matrix')) {
+          return new Response(JSON.stringify([]), { status: 200 });
+        }
+        if (url.includes('/api/learner/practice/free-drill')) {
+          return new Response(JSON.stringify(makeFreeDrill()), { status: 200 });
+        }
+        return new Response('{}', { status: 404 });
+      }),
+    );
+
+    await renderPracticeBuilder('/practice');
+
+    await waitFor(() => {
+      expect(screen.getByText('Photographs')).toBeTruthy();
+    });
+    expect(screen.getByText('80%')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /start section drill/i })).toBeTruthy();
+    expect(screen.getByText(/locked · complete in learning path/i)).toBeTruthy();
+    expect(screen.getByRole('link', { name: /unlock in learning path/i }).getAttribute('href')).toContain(
+      '/learning-path',
+    );
   });
 });

@@ -14,13 +14,14 @@ public static partial class SpeakingEndpoints
         // POST /api/learner/speaking/{examId}/start
         learner.MapPost("/{examId:int}/start", async Task<IResult> (
             int examId,
+            [FromQuery] int? stepId,
             HttpContext http,
             ISpeakingPracticeService speakingService,
             CancellationToken cancellationToken) =>
         {
             try
             {
-                var attempt = await speakingService.StartAttemptAsync(CurrentUserId(http), examId, cancellationToken);
+                var attempt = await speakingService.StartAttemptAsync(CurrentUserId(http), examId, cancellationToken, stepId);
                 return Results.Ok(new StartSpeakingAttemptResponse(
                     attempt.AttemptId,
                     attempt.ExamId,

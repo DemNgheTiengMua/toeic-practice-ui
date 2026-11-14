@@ -410,6 +410,35 @@ public sealed class CreditLedger : ICreditLedger
         return await SaveTransactionAsync(txn, CreditReason.PlacementRetake, -amount, balance - amount, now, cancellationToken);
     }
 
+    public async Task<CreditReceipt> ChargeLearningPathAsync(int userId, int amount = 5, CancellationToken cancellationToken = default)
+    {
+        if (amount <= 0)
+        {
+            throw new CreditLedgerException(CreditLedgerException.InvalidCharge, "Charge amount must be positive.");
+        }
+
+        var balance = await GetBalanceAsync(userId, cancellationToken);
+        if (balance < amount)
+        {
+            throw new CreditLedgerException(
+                CreditLedgerException.InsufficientCredits,
+                $"Insufficient credits to generate a learning path. Balance is {balance}, required is {amount}.",
+                402);
+        }
+
+        var now = _clock.GetUtcNow();
+        var txn = new CreditTransaction
+        {
+            UserId = userId,
+            Reason = CreditReason.LearningPath.ToCode(),
+            Delta = -amount,
+            Note = "4-week learning path generation",
+            CreatedAt = now
+        };
+
+        return await SaveTransactionAsync(txn, CreditReason.LearningPath, -amount, balance - amount, now, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<CreditLedgerEntryDto>> GetLedgerHistoryAsync(int userId, CancellationToken cancellationToken = default)
     {
         var ledger = await _db.CreditTransactions

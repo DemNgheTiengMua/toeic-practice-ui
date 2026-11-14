@@ -99,6 +99,10 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
               VALUES (@path, @cert, @skill, 'reading',
                       (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'reading'),
                       'B1', 'focus_practice', 'developing', 'available');
+            INSERT INTO LearnerPathSteps (LearnerPathId, CertId, WeekNumber, WeekSequence, SkillId, Modality, TopicId, TargetCefr, StepType, SizingTier, Status, CompletedAt)
+              VALUES (@path, @cert, 1, 0, @skill, 'reading',
+                      (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'reading'),
+                      'B1', 'focus_practice', 'developing', 'done', SYSDATETIMEOFFSET());
             SELECT @user AS UserId, @path AS PathId, @sec AS SectionId;
             """);
 

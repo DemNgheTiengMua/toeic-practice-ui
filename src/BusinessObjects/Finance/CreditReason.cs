@@ -16,4 +16,5 @@ public enum CreditReason
     BookingCancel,
     RefundCredit,
     PlacementRetake,
+    LearningPath,
 }

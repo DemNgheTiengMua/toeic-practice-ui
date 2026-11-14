@@ -450,8 +450,11 @@ describe('Learner Hub (#300)', () => {
 
       expect(await screen.findByRole('heading', { name: /no learning path yet/i })).toBeInTheDocument();
 
-      const generateBtn = screen.getByRole('button', { name: /generate path/i });
+      const generateBtn = screen.getByRole('button', { name: /generate 4-week path \(5 credits\)/i });
       fireEvent.click(generateBtn);
+
+      const confirmBtn = await screen.findByRole('button', { name: /confirm \(5 credits\)/i });
+      fireEvent.click(confirmBtn);
 
       expect(
         await screen.findByText(/requires 80 hours but only 20 hours remain/i),

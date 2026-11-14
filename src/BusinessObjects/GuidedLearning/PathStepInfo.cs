@@ -29,7 +29,10 @@ public sealed record PathStepInfo(
     DateTimeOffset? StartedAt,
     DateTimeOffset? CompletedAt,
     int? RefLessonId,
-    int? RefExamId)
+    int? RefExamId,
+    string? GuideText = null,
+    System.Collections.Generic.IReadOnlyList<string>? RubricCriteria = null,
+    bool IsZeroCreditAiGrading = false)
 {
     /// <summary>D10: which surface this step opens. Derived from its type, never stored beside it.</summary>
     public StepRoute Route => LearningPathPlanner.ExecutionRouteOf(StepType);

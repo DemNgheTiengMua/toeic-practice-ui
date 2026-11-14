@@ -16,10 +16,9 @@ public sealed partial class PracticeService
 
         var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
 
-        // #235 / PLC-62..64: these are the free drill's locks. A *path* step does not come through
-        // here — LearningPathService starts its own session — so a step is never blocked by the plan
-        // that scheduled it (PLC-60).
-        await EnforceFreeDrillLocksAsync(userId, input, cancellationToken);
+        // #313: Free Practice unlocks strictly when the learner has a 'done' step covering the target
+        // section/skill/topic in their active Learning Path.
+        await EnforcePathCompletionUnlockAsync(userId, activeCertId, input, cancellationToken);
 
         return input.TopicId is { } topicId
             ? await StartPoolSessionAsync(userId, activeCertId, topicId, input.CefrLevel!.Value, input.ContentTier, cancellationToken)
@@ -31,6 +30,54 @@ public sealed partial class PracticeService
     /// each naming the way on. Throwing here means no session row is written, so a refused drill does
     /// not count against the learner's day.
     /// </summary>
+    private async Task EnforcePathCompletionUnlockAsync(
+        int userId, int certId, StartPracticeSessionInput input, CancellationToken cancellationToken)
+    {
+        var doneSteps = await db.LearnerPathSteps
+            .AsNoTracking()
+            .Where(s => s.LearnerPath.UserId == userId
+                && s.LearnerPath.CertId == certId
+                && s.LearnerPath.Status == LearnerPathStatus.Active.ToCode()
+                && s.Status == LearnerPathStepStatus.Done.ToCode())
+            .Select(s => new { s.SkillId, s.TopicId, s.Modality })
+            .ToListAsync(cancellationToken);
+
+        if (input.SectionId is { } sectionId)
+        {
+            var section = await db.Sections
+                .AsNoTracking()
+                .Where(s => s.SectionId == sectionId && s.CertId == certId)
+                .Select(s => new { s.SkillId, s.Modality })
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if (section is not null
+                && !doneSteps.Any(d => d.SkillId == section.SkillId
+                    || string.Equals(d.Modality, section.Modality, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new PracticeException(
+                    PracticeException.FreeDrillLocked,
+                    "Complete a step in your Learning Path for this skill to unlock free practice.");
+            }
+        }
+        else if (input.TopicId is { } topicId)
+        {
+            var topic = await db.Topics
+                .AsNoTracking()
+                .Where(t => t.TopicId == topicId)
+                .Select(t => new { t.TopicId, t.Modality })
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if (topic is not null
+                && !doneSteps.Any(d => d.TopicId == topic.TopicId
+                    || string.Equals(d.Modality, topic.Modality, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new PracticeException(
+                    PracticeException.FreeDrillLocked,
+                    "Complete a step in your Learning Path for this topic or skill to unlock free practice.");
+            }
+        }
+    }
+
     private async Task EnforceFreeDrillLocksAsync(
         int userId, StartPracticeSessionInput input, CancellationToken cancellationToken)
     {
@@ -75,8 +122,6 @@ public sealed partial class PracticeService
                 PracticeException.NoQuestionsAvailable,
                 $"No {contentTier} items are active at {topic.Code} {level.Code}.");
         }
-
-        await AbandonInProgressAsync(userId, certId, cancellationToken);
 
         var session = new PracticeSession
         {
@@ -164,8 +209,6 @@ public sealed partial class PracticeService
         var versionByItem = drawnItems.ToDictionary(
             d => d.ItemId,
             d => GateContext.Newest(d.Versions, v => v.VersionNumber)!.ItemVersionId);
-
-        await AbandonInProgressAsync(userId, certId, cancellationToken);
 
         var session = new PracticeSession
         {

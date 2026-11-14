@@ -63,10 +63,11 @@ function SectionCard({
   onStart: (sectionId: number) => void;
 }) {
   const reopenText = formatLocalReopenTime(section.nextReviewDueAt);
-  const canStart = section.availableQuestionCount > 0;
+  const isUnlocked = section.isUnlocked !== false;
+  const canStart = isUnlocked && section.availableQuestionCount > 0;
 
   return (
-    <Card className="border border-border bg-surface">
+    <Card className={`border bg-surface ${isUnlocked ? 'border-border' : 'border-warning/40 opacity-90'}`}>
       <Card.Header className="flex flex-row items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -76,6 +77,15 @@ function SectionCard({
             <Chip size="sm" variant="soft">
               <Chip.Label>{section.skillName}</Chip.Label>
             </Chip>
+            {isUnlocked ? (
+              <Chip size="sm" variant="soft" color="success">
+                <Chip.Label>Unlocked</Chip.Label>
+              </Chip>
+            ) : (
+              <Chip size="sm" variant="soft" color="warning">
+                <Chip.Label>Locked · complete in Learning Path</Chip.Label>
+              </Chip>
+            )}
           </div>
           <Card.Title className="text-base">{section.name}</Card.Title>
           <Card.Description>
@@ -104,15 +114,24 @@ function SectionCard({
       </Card.Content>
       <Card.Footer className="flex items-center justify-between gap-2 border-t border-separator pt-3">
         <span className="font-mono-tabular text-xs font-medium text-success">0 credits</span>
-        <Button
-          size="sm"
-          variant="primary"
-          isDisabled={!canStart || isStarting}
-          onPress={() => onStart(section.sectionId)}
-        >
-          <Play className="h-3.5 w-3.5" aria-hidden="true" />
-          <span>Start section drill</span>
-        </Button>
+        {isUnlocked ? (
+          <Button
+            size="sm"
+            variant="primary"
+            isDisabled={!canStart || isStarting}
+            onPress={() => onStart(section.sectionId)}
+          >
+            <Play className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Start section drill</span>
+          </Button>
+        ) : (
+          <Link to="/learning-path" className="no-underline">
+            <Button size="sm" variant="secondary">
+              <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Unlock in Learning Path</span>
+            </Button>
+          </Link>
+        )}
       </Card.Footer>
     </Card>
   );
@@ -376,31 +395,6 @@ export function PracticeBuilderPage() {
             </Card.Content>
           )}
         </Card>
-      )}
-
-      {catalog?.unfinishedSession && (
-        <Alert status="warning">
-          <Alert.Indicator />
-          <Alert.Content className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <Alert.Title>Unfinished practice session</Alert.Title>
-              <Alert.Description>
-                {catalog.unfinishedSession.sectionName} ({catalog.unfinishedSession.questionCount} questions) is still
-                in progress.
-              </Alert.Description>
-            </div>
-            <Link
-              to="/practice/session/$sessionId"
-              params={{ sessionId: String(catalog.unfinishedSession.sessionId) }}
-              className="no-underline"
-            >
-              <Button size="sm" variant="primary">
-                <span>Resume session</span>
-                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </Button>
-            </Link>
-          </Alert.Content>
-        </Alert>
       )}
 
       {freeDrill && !freeDrill.isUnlocked && (

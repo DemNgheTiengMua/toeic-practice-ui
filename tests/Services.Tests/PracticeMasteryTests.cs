@@ -45,9 +45,23 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
         await database.SqlAsync($"""
             IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
               INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
+            DECLARE @certId INT = (SELECT CertId FROM Certificates WHERE Code = '{activeCertCode}');
             INSERT INTO Users (RoleId, Email, PasswordHash, FullName, ActiveCertId)
-            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{email}', 0x01, N'Test Learner',
-                    (SELECT CertId FROM Certificates WHERE Code = '{activeCertCode}'));
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{email}', 0x01, N'Test Learner', @certId);
+            DECLARE @u INT = SCOPE_IDENTITY();
+            IF @certId IS NOT NULL AND EXISTS (SELECT 1 FROM Skills WHERE CertId = @certId)
+            BEGIN
+              DECLARE @band NVARCHAR(20) = COALESCE((SELECT TOP 1 Code FROM ScoreBands WHERE CertId = @certId ORDER BY DisplayOrder), 'B1');
+              INSERT INTO LearnerPaths (UserId, CertId, CurrentBandCode, Status, StartedAt, WindowStartDate)
+              VALUES (@u, @certId, @band, 'active', SYSDATETIMEOFFSET(), CAST(SYSDATETIMEOFFSET() AS DATE));
+              DECLARE @lp INT = SCOPE_IDENTITY();
+              INSERT INTO LearnerPathSteps
+                (LearnerPathId, CertId, WeekNumber, WeekSequence, StepType, Status, SkillId, Modality, TopicId, TargetCefr, SizingTier, PlannedItemCount, EstimatedMinutes, TargetAccuracyPct, CompletedAt)
+              SELECT @lp, @certId, 1, ROW_NUMBER() OVER (ORDER BY s.SkillId), 'focus_practice', 'done', s.SkillId, s.Modality, t.TopicId, 'B1', 'developing', 1, 10, 70, SYSDATETIMEOFFSET()
+              FROM Skills s
+              CROSS APPLY (SELECT TOP 1 TopicId FROM Topics tp WHERE tp.Modality = s.Modality ORDER BY tp.TopicId) t
+              WHERE s.CertId = @certId;
+            END
             """);
         await using var db = DbContextFactory.Create(database.ConnectionString);
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();

@@ -368,7 +368,7 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
             END
             """);
 
-        var learnerId = await SeedLearnerWithCreditsAsync(0, certCode);
+        var learnerId = await SeedLearnerWithCreditsAsync(5, certCode);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);

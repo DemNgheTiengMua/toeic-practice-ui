@@ -396,6 +396,9 @@ export interface PathStepDto {
   completedAt?: string | null;
   refLessonId?: number | null;
   refExamId?: number | null;
+  guideText?: string | null;
+  rubricCriteria?: string[] | null;
+  isZeroCreditAiGrading?: boolean;
 }
 
 export interface LearningPathWeekSummaryDto {
@@ -1416,6 +1419,7 @@ export interface PracticeSectionDto {
   totalCategoryCount: number;
   categoriesInCooldown: number;
   nextReviewDueAt?: string | null;
+  isUnlocked?: boolean;
 }
 
 export interface PracticeSessionDto {
@@ -1746,6 +1750,9 @@ export interface PathStepDto {
   completedAt?: string | null;
   refLessonId?: number | null;
   refExamId?: number | null;
+  guideText?: string | null;
+  rubricCriteria?: string[] | null;
+  isZeroCreditAiGrading?: boolean;
 }
 
 export interface StartStepResultDto {

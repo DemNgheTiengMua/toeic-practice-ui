@@ -48,6 +48,7 @@ export function LearningPathPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false);
 
   // 1. Learning path summary
   const { data: summary, isLoading, error, refetch } = useQuery<LearningPathSummaryDto>({
@@ -219,10 +220,18 @@ export function LearningPathPage() {
               <Compass className="w-8 h-8" />
             </div>
             <div>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Chip color="accent" variant="soft" size="sm">
+                  <Chip.Label className="font-mono">5 credits</Chip.Label>
+                </Chip>
+                <Chip color="success" variant="soft" size="sm">
+                  <Chip.Label>4-week sequential plan</Chip.Label>
+                </Chip>
+              </div>
               <h2 className="text-xl font-bold text-foreground m-0">No learning path yet</h2>
               <p className="text-sm text-muted max-w-md mt-2 mb-0 leading-relaxed">
-                Take a diagnostic placement test to generate your personalized learning path, or generate one from your
-                current assessed level.
+                Take a diagnostic placement test first, or generate your 4-week sequential learning path for{' '}
+                <strong>5 credits</strong> (includes 0-credit AI grading for Writing &amp; Speaking steps inside the path).
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
@@ -233,15 +242,37 @@ export function LearningPathPage() {
                 <span>Start placement test</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <Button
-                variant="secondary"
-                isDisabled={generateMutation.isPending}
-                onPress={() => generateMutation.mutate()}
-                className="gap-2"
-              >
-                {generateMutation.isPending ? <Spinner size="sm" /> : <Sparkles className="w-4 h-4 text-warning" />}
-                <span>Generate path</span>
-              </Button>
+              {!isGenerateConfirmOpen ? (
+                <Button
+                  variant="secondary"
+                  isDisabled={generateMutation.isPending}
+                  onPress={() => setIsGenerateConfirmOpen(true)}
+                  className="gap-2"
+                >
+                  <Sparkles className="w-4 h-4 text-warning" />
+                  <span>Generate 4-week path (5 credits)</span>
+                </Button>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2">
+                  <span className="text-xs font-medium text-foreground">Spend 5 credits to generate?</span>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    isDisabled={generateMutation.isPending}
+                    onPress={() => generateMutation.mutate()}
+                  >
+                    {generateMutation.isPending ? <Spinner size="sm" /> : 'Confirm (5 credits)'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    isDisabled={generateMutation.isPending}
+                    onPress={() => setIsGenerateConfirmOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
             </div>
           </Card.Content>
         </Card>
@@ -490,7 +521,7 @@ export function LearningPathPage() {
                             </span>
                             <span className="text-sm font-semibold text-foreground">{step.title}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-muted">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
                             <span>{formatStepType(step.stepType)}</span>
                             <span>·</span>
                             <span>{step.sizingTier}</span>
@@ -500,7 +531,29 @@ export function LearningPathPage() {
                                 <span>~{step.estimatedMinutes}m</span>
                               </>
                             )}
+                            {(step.isZeroCreditAiGrading ||
+                              step.modality === 'writing' ||
+                              step.modality === 'speaking') && (
+                              <Chip size="sm" color="success" variant="soft">
+                                <Chip.Label>0-credit AI grading</Chip.Label>
+                              </Chip>
+                            )}
                           </div>
+                          {(step.guideText || (step.rubricCriteria && step.rubricCriteria.length > 0)) && (
+                            <div className="mt-2 rounded-md border border-border bg-surface-secondary/40 p-2.5 text-xs space-y-1">
+                              {step.guideText && (
+                                <p className="text-foreground m-0">
+                                  <strong>Guide:</strong> {step.guideText}
+                                </p>
+                              )}
+                              {step.rubricCriteria && step.rubricCriteria.length > 0 && (
+                                <div className="text-muted">
+                                  <strong className="text-foreground">Rubric:</strong>{' '}
+                                  {step.rubricCriteria.join(' · ')}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 self-end sm:self-auto">
