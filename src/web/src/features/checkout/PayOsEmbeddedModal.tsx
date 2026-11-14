@@ -33,6 +33,11 @@ export function PayOsEmbeddedModal({
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
+  const safeReturnUrl =
+    returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')
+      ? returnUrl
+      : '/pricing';
+
   const handleCancelAndClose = async () => {
     setIsCancelling(true);
     try {
@@ -72,7 +77,7 @@ export function PayOsEmbeddedModal({
           // ignore
         }
         onClose();
-        void navigate({ to: returnUrl || '/pricing' });
+        void navigate({ to: safeReturnUrl });
       }, 1500);
     },
     onCancel: (_event) => {

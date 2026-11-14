@@ -2626,7 +2626,7 @@ GO
 -- order being reverted to 'pending'/'expired' afterwards, leaving a credit with no paid order
 -- behind it. A credited order is settled and may no longer leave 'paid'.
 CREATE TRIGGER trg_Orders_CreditedStaysPaid
-ON Orders AFTER INSERT, UPDATE AS
+ON Orders AFTER UPDATE AS
 BEGIN
   SET NOCOUNT ON;
   IF EXISTS (
@@ -2638,16 +2638,6 @@ BEGIN
                   WHERE ct.OrderId = i.OrderId AND ct.Reason = 'purchase')
   )
     THROW 50029, 'An order that has already been credited cannot leave the paid status.', 1;
-
-  IF EXISTS (SELECT 1 FROM inserted i JOIN Packages pk ON pk.PackageId = i.PackageId WHERE i.Credits = 1 AND pk.Credits <> 1)
-  BEGIN
-    UPDATE o
-    SET o.Credits = pk.Credits
-    FROM Orders o
-    JOIN inserted i ON o.OrderId = i.OrderId
-    JOIN Packages pk ON pk.PackageId = o.PackageId
-    WHERE i.Credits = 1 AND pk.Credits <> 1;
-  END
 END;
 GO
 -- backfill the complaint make-good FK now that CreditTransactions exists.

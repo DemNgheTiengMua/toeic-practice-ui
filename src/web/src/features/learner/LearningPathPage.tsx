@@ -303,7 +303,7 @@ export function LearningPathPage() {
 
       {/* Milestone Celebration Card */}
       {isSprintCompleted && (
-        <Card className="border-2 border-primary/40 bg-gradient-to-r from-primary/10 via-success/10 to-accent/10 shadow-md">
+        <Card className="border-2 border-accent/40 bg-gradient-to-r from-accent/10 via-success/10 to-accent/10 shadow-surface">
           <Card.Content className="p-6 space-y-5">
             {/* Header Banner */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -354,11 +354,11 @@ export function LearningPathPage() {
               </div>
 
               <div className="p-3.5 rounded-lg bg-surface/80 border border-border flex items-center gap-3">
-                <Award className="w-5 h-5 text-primary shrink-0" />
+                <Award className="w-5 h-5 text-accent shrink-0" />
                 <div>
                   <span className="text-xs text-muted block">Next Step</span>
                   <span className="font-bold text-sm text-foreground">
-                    Verify Level via Exit Mock Exam
+                    Verify Band via Exit Mock Exam
                   </span>
                 </div>
               </div>
@@ -369,7 +369,6 @@ export function LearningPathPage() {
               <Button
                 variant="primary"
                 onPress={() => navigate({ to: '/exams' as any })}
-                onClick={() => navigate({ to: '/exams' as any })}
                 className="gap-2 font-semibold"
               >
                 <Award className="w-4 h-4" />
@@ -382,11 +381,10 @@ export function LearningPathPage() {
                     variant="secondary"
                     isDisabled={generateMutation.isPending}
                     onPress={() => setIsGenerateConfirmOpen(true)}
-                    onClick={() => setIsGenerateConfirmOpen(true)}
                     className="gap-2 border-accent/40 text-accent font-semibold"
                   >
                     <Sparkles className="w-4 h-4 text-warning" />
-                    <span>Unlock Next Sprint ({summary.nextMilestoneBandName || summary.nextMilestoneBandCode || 'Next Level'})</span>
+                    <span>Unlock Next Sprint ({summary.nextMilestoneBandName || summary.nextMilestoneBandCode || 'Next Band'})</span>
                   </Button>
                 ) : (
                   <div className="flex flex-wrap items-center gap-2 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2">
@@ -396,7 +394,6 @@ export function LearningPathPage() {
                       variant="primary"
                       isDisabled={generateMutation.isPending}
                       onPress={() => generateMutation.mutate()}
-                      onClick={() => generateMutation.mutate()}
                     >
                       {generateMutation.isPending ? <Spinner size="sm" /> : 'Confirm (5 credits)'}
                     </Button>
@@ -412,7 +409,6 @@ export function LearningPathPage() {
                       variant="ghost"
                       isDisabled={generateMutation.isPending}
                       onPress={() => setIsGenerateConfirmOpen(false)}
-                      onClick={() => setIsGenerateConfirmOpen(false)}
                     >
                       Cancel
                     </Button>
@@ -625,7 +621,6 @@ export function LearningPathPage() {
                               variant="primary"
                               isDisabled={startStepMutation.isPending}
                               onPress={() => startStepMutation.mutate(step.stepId)}
-                              onClick={() => startStepMutation.mutate(step.stepId)}
                               className="gap-1"
                             >
                               <Play className="w-3 h-3" />

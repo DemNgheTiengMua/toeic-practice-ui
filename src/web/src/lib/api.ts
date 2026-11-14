@@ -2843,17 +2843,6 @@ export const api = {
 
   finance: {
     wallet: () => apiFetch<WalletDto>('/api/learner/wallet'),
-    checkoutPreview: (arg?: number | { packageId?: number; credits?: number }) => {
-      const sp = new URLSearchParams();
-      if (typeof arg === 'number') {
-        sp.set('packageId', String(arg));
-      } else if (arg) {
-        if (arg.packageId != null) sp.set('packageId', String(arg.packageId));
-        if (arg.credits != null) sp.set('credits', String(arg.credits));
-      }
-      const q = sp.toString();
-      return apiFetch<CheckoutPreviewDto>(`/api/checkout/preview${q ? `?${q}` : ''}`);
-    },
     getCheckoutPreview: (arg?: number | { packageId?: number; credits?: number }) => {
       const sp = new URLSearchParams();
       if (typeof arg === 'number') {

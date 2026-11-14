@@ -12,6 +12,8 @@ namespace Services;
 
 public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gateway, ICreditLedger? creditLedger = null) : IPaymentService
 {
+    public const decimal PricePerCreditVnd = 20000m;
+
     private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db);
 
     public async Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(
@@ -42,7 +44,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         else if (credits.HasValue && credits.Value > 0)
         {
             creditCount = credits.Value;
-            price = creditCount * 20000m;
+            price = creditCount * PricePerCreditVnd;
             resolvedPackageId = null;
             packageName = "Custom Credits";
         }
@@ -105,7 +107,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         else if (credits.HasValue && credits.Value > 0)
         {
             creditCount = credits.Value;
-            price = creditCount * 20000m;
+            price = creditCount * PricePerCreditVnd;
         }
         else
         {

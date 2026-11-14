@@ -7,6 +7,7 @@ import {
   Card,
   Chip,
   Label,
+  NumberField,
   Slider,
   Spinner,
 } from '@heroui/react';
@@ -40,13 +41,18 @@ export function useSearchParams() {
   };
   const browserSearch = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const credits = search?.credits ?? browserSearch?.get('credits') ?? undefined;
-  const returnUrl = search?.returnUrl ?? browserSearch?.get('returnUrl') ?? undefined;
+  const rawReturnUrl = search?.returnUrl ?? browserSearch?.get('returnUrl') ?? undefined;
+  const returnUrl =
+    rawReturnUrl && rawReturnUrl.startsWith('/') && !rawReturnUrl.startsWith('//')
+      ? rawReturnUrl
+      : '/pricing';
+  const hasExplicitReturnUrl = Boolean(rawReturnUrl && rawReturnUrl.startsWith('/') && !rawReturnUrl.startsWith('//'));
   const packageId = search?.packageId ?? browserSearch?.get('packageId') ?? undefined;
-  return { credits, returnUrl, packageId };
+  return { credits, returnUrl, packageId, hasExplicitReturnUrl };
 }
 
 export function CheckoutPage() {
-  const { credits: queryCredits, returnUrl, packageId: queryPackageId } = useSearchParams();
+  const { credits: queryCredits, returnUrl, packageId: queryPackageId, hasExplicitReturnUrl } = useSearchParams();
   const packageId = queryPackageId ? Number(queryPackageId) : NaN;
   const hasPackageId = !Number.isNaN(packageId) && packageId > 0;
 
@@ -82,7 +88,7 @@ export function CheckoutPage() {
     queryKey: ['finance', 'checkout-preview', isPackageMode ? `pkg-${packageId}` : `credits-${credits}`],
     queryFn: () => {
       if (isPackageMode) {
-        return api.finance.checkoutPreview(packageId);
+        return api.finance.getCheckoutPreview(packageId);
       }
       return api.finance.getCheckoutPreview({ credits });
     },
@@ -97,7 +103,7 @@ export function CheckoutPage() {
       setActiveOrder(order);
 
       // Legacy compatibility: package checkout without credits or returnUrl navigates to /orders/:code
-      if (isPackageMode && !queryCredits && !returnUrl) {
+      if (isPackageMode && !queryCredits && !hasExplicitReturnUrl) {
         void navigate({ to: `/orders/${order.orderCode}` });
         return;
       }
@@ -159,12 +165,11 @@ export function CheckoutPage() {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseInt(e.target.value, 10);
-    if (Number.isNaN(val)) {
+  const handleCreditsChange = (val: number | undefined) => {
+    if (typeof val === 'number' && !Number.isNaN(val)) {
+      setCredits(Math.min(100, Math.max(1, Math.round(val))));
+    } else if (val === undefined) {
       setCredits(1);
-    } else {
-      setCredits(Math.min(100, Math.max(1, val)));
     }
   };
 
@@ -389,24 +394,36 @@ export function CheckoutPage() {
           {/* Interactive Credit Slider Panel (when in custom credits mode) */}
           {!isPackageMode && (
             <div className="p-4 rounded-lg bg-surface-secondary border border-border space-y-4">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="custom-credits-input" className="text-sm font-semibold text-foreground">
+              <NumberField
+                minValue={1}
+                maxValue={100}
+                step={1}
+                value={credits}
+                onChange={handleCreditsChange}
+                className="flex items-center justify-between"
+              >
+                <Label className="text-sm font-semibold text-foreground">
                   Credits to purchase
                 </Label>
                 <div className="flex items-center gap-2">
-                  <input
-                    id="custom-credits-input"
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={credits}
-                    onChange={handleInputChange}
-                    aria-label="Custom credits count"
-                    className="w-20 px-2 py-1 text-right font-mono font-bold rounded-md border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-focus"
-                  />
+                  <NumberField.Group className="w-28 h-8">
+                    <NumberField.DecrementButton />
+                    <NumberField.Input
+                      id="custom-credits-input"
+                      aria-label="Custom credits count"
+                      className="w-12 text-center font-mono font-bold text-sm"
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!Number.isNaN(val)) {
+                          handleCreditsChange(val);
+                        }
+                      }}
+                    />
+                    <NumberField.IncrementButton />
+                  </NumberField.Group>
                   <span className="text-xs text-muted">credits</span>
                 </div>
-              </div>
+              </NumberField>
 
               {/* HeroUI v3 Slider */}
               <div className="pt-2">
@@ -439,7 +456,6 @@ export function CheckoutPage() {
                     size="sm"
                     variant={credits === preset ? 'primary' : 'secondary'}
                     onPress={() => setCredits(preset)}
-                    onClick={() => setCredits(preset)}
                     className="font-mono text-xs px-2.5 h-7 min-w-0"
                   >
                     {preset} credits
