@@ -80,6 +80,7 @@ export function PlacementRetakePage() {
     () => scopeOffers.find((o) => o.scope === selectedScope) ?? scopeOffers[0],
     [scopeOffers, selectedScope],
   );
+  const retakeCredits = activeOffer?.creditCost ?? 0;
 
   const reusableOffers = useMemo(
     () => (preflight?.offers ?? []).filter((o) => o.canReuse),
@@ -309,7 +310,11 @@ export function PlacementRetakePage() {
             </Alert.Description>
           </Alert.Content>
           <div className="flex items-center gap-2 shrink-0">
-            <Link to="/wallet" className="button button--sm button--primary">
+            <Link
+              to="/checkout"
+              search={{ credits: retakeCredits, returnUrl: '/placement/retake' } as any}
+              className="button button--sm button--primary"
+            >
               Top up wallet
             </Link>
             <Link to="/pricing" className="button button--sm button--outline">

@@ -280,7 +280,11 @@ export function SpeakingStudioPage() {
                             <span className="font-mono-tabular font-semibold">{instructions.creditBalance}</span>.
                           </p>
                           <div className="flex flex-wrap gap-3 pt-1">
-                            <Link to="/wallet" className="text-sm font-medium text-accent underline">
+                            <Link
+                              to="/checkout"
+                              search={{ credits: 1, returnUrl: '/practice/speaking' } as any}
+                              className="text-sm font-medium text-accent underline"
+                            >
                               Top up wallet
                             </Link>
                             <Link to="/pricing" className="text-sm font-medium text-accent underline">

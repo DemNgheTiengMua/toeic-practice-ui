@@ -121,7 +121,7 @@ export function MockExamCatalogPage() {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => void navigate({ to: '/wallet' as any })}
+                onClick={() => void navigate({ to: '/checkout', search: { credits: 1, returnUrl: '/exams' } as any })}
               >
                 <Wallet className="size-4 mr-1.5" />
                 Top up wallet

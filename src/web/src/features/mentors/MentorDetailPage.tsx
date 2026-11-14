@@ -390,7 +390,11 @@ export function MentorDetailPage() {
                         You have <strong className="font-mono-tabular">{userCredits}</strong> credits, but this session requires <strong className="font-mono-tabular">{mentor.priceCredits}</strong> credits.
                       </p>
                       <div className="pt-1">
-                        <Link to="/wallet" className="no-underline block">
+                        <Link
+                          to="/checkout"
+                          search={{ credits: mentor.priceCredits, returnUrl: `/mentors/${mentorId}` } as any}
+                          className="no-underline block"
+                        >
                           <Button size="sm" variant="primary" className="w-full justify-center">
                             <Sparkles className="w-3.5 h-3.5 mr-1 text-warning" />
                             Buy credits & top up

@@ -245,5 +245,12 @@ describe('AppShell layout and domain copy', () => {
     expect(within(header).queryByText('Admin')).not.toBeInTheDocument();
     expect(within(header).queryByText('Staff')).not.toBeInTheDocument();
     expect(screen.getByText(/not verified yet/i)).toBeInTheDocument();
+
+    await waitFor(() => {
+      const walletLink = within(header).getByRole('link', { name: /25 credits/i });
+      expect(walletLink).toHaveAttribute('href', '/wallet');
+    });
+    const topUpLink = within(header).getByRole('link', { name: /\+ top up/i });
+    expect(topUpLink).toHaveAttribute('href', '/checkout');
   });
 });

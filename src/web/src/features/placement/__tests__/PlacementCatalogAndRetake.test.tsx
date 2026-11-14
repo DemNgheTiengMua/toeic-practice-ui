@@ -15,11 +15,13 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({
     to,
     params,
+    search,
     children,
     className,
   }: {
     to: string;
     params?: Record<string, string>;
+    search?: Record<string, unknown>;
     children: ReactNode;
     className?: string;
   }) => {
@@ -28,6 +30,14 @@ vi.mock('@tanstack/react-router', () => ({
       for (const [k, v] of Object.entries(params)) {
         href = href.replace(`$${k}`, v);
       }
+    }
+    if (search) {
+      const q = new URLSearchParams();
+      for (const [k, v] of Object.entries(search)) {
+        if (v !== undefined) q.set(k, String(v));
+      }
+      const qs = q.toString();
+      if (qs) href += `?${qs}`;
     }
     return (
       <a href={href} className={className}>
@@ -227,7 +237,7 @@ describe('PlacementCatalogPage & PlacementRetakePage', () => {
     expect(retakeLink).toHaveAttribute('href', '/placement/retake/1');
   });
 
-  it('retake preflight blocks insufficient credits and links to /wallet without calling start', async () => {
+  it('retake preflight blocks insufficient credits and links to /checkout without calling start', async () => {
     vi.mocked(api.placement.preflightGate).mockResolvedValueOnce(
       makePreflight({
         creditBalance: 1,
@@ -245,7 +255,10 @@ describe('PlacementCatalogPage & PlacementRetakePage', () => {
     const startBtn = screen.getByRole('button', { name: /start placement retake/i });
     expect(startBtn).toBeDisabled();
     const walletLink = screen.getByRole('link', { name: /top up wallet/i });
-    expect(walletLink).toHaveAttribute('href', '/wallet');
+    expect(walletLink).toHaveAttribute(
+      'href',
+      '/checkout?credits=5&returnUrl=%2Fplacement%2Fretake',
+    );
     expect(api.placement.start).not.toHaveBeenCalled();
   });
 

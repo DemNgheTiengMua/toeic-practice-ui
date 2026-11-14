@@ -276,7 +276,9 @@ describe('MockExamReviewPage & MockExamHistoryPage', () => {
 
     // Attempts table
     expect(screen.getByText('Past attempts (1)')).toBeInTheDocument();
-    expect(screen.getByText('TOEIC Full Mock Test 1')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('TOEIC Full Mock Test 1')).toBeInTheDocument();
+    });
     expect(screen.getByText('listening: 430')).toBeInTheDocument();
     expect(screen.getByText('reading: 410')).toBeInTheDocument();
 

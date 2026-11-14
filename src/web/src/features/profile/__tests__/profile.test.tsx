@@ -110,6 +110,7 @@ describe('Profile feature (#301)', () => {
     expect(await screen.findByDisplayValue('Learner Demo')).toBeInTheDocument();
     expect(screen.getByDisplayValue('0901234567')).toBeInTheDocument();
     expect(screen.getByText('Asia/Ho_Chi_Minh')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /top up credits/i })).toHaveAttribute('href', '/checkout');
   });
 
   it('shows error state with retry on failed load and never renders an empty form', async () => {
