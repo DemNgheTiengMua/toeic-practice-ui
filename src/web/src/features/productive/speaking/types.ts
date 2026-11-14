@@ -1,3 +1,5 @@
+import type { WritingErrorSpan } from '../writing/types';
+
 export type AttemptStatus = 'in_progress' | 'submitted' | 'graded' | 'abandoned';
 export type AiGradingStatus = 'pending' | 'queued' | 'processing' | 'done' | 'failed';
 export type FreeResponseStatus = 'draft' | 'pending_ai' | 'graded';
@@ -148,6 +150,9 @@ export interface SpeakingQuestionReviewItem {
   totalScore: number;
   maxScore: number;
   criteria: SpeakingCriterionScore[];
+  errorSpans?: WritingErrorSpan[] | null;
+  priorityFix?: string | null;
+  modelRewrite?: string | null;
 }
 
 export interface SpeakingReview {

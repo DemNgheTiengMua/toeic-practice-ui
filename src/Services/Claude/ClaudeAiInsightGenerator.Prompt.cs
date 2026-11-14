@@ -62,8 +62,8 @@ public sealed partial class ClaudeAiInsightGenerator
 
         if (request.ErrorFingerprints is { Count: > 0 })
         {
-            prompt.AppendLine("[QUALITATIVE ERROR FINGERPRINTS & SECOND-GUESSING SIGNALS]");
-            foreach (var fp in request.ErrorFingerprints)
+            prompt.AppendLine("[QUALITATIVE ERROR FINGERPRINTS & SECOND-GUESSING SIGNALS (TOP 5)]");
+            foreach (var fp in request.ErrorFingerprints.Take(5))
             {
                 var hesitation = fp.WasFlagged ? " [FLAGGED / HESITATION DETECTED]" : "";
                 prompt.AppendLine($"- Stem: \"{fp.Stem}\"{hesitation}");
@@ -103,11 +103,13 @@ public sealed partial class ClaudeAiInsightGenerator
 
         prompt.AppendLine("Return a strictly valid JSON object with the following schema:");
         prompt.AppendLine("{");
-        prompt.AppendLine("  \"narrative\": \"<3 to 4 detailed sentences: (1) Current standing and concrete score gap to target band; (2) Top strength category/section cited by name with accuracy; (3) Primary vulnerability category cited with exact error rate and diagnosed linguistic root cause; (4) Immediate tactical focus module to drill next>. Every number must appear in the STORED FACTS or the accuracy lines above; never estimate, round to a new figure, or invent one.\",");
+        prompt.AppendLine("  \"narrative\": \"<concise Vietnamese diagnostic narrative (3 to 4 sentences) grounded in the learner's Certificate, CurrentBand -> TargetBand, scaled scores, weakest/strongest topics, and error fingerprints>\",");
         prompt.AppendLine("  \"trend\": \"Improving\" | \"Steady\" | \"Declining\",");
+        prompt.AppendLine("  \"strengths\": [\"<top strength with accuracy %>\"],");
+        prompt.AppendLine("  \"weaknesses\": [\"<core weakness with accuracy % or error pattern>\"],");
         prompt.AppendLine("  \"recommendations\": [");
         prompt.AppendLine("    {");
-        prompt.AppendLine("      \"text\": \"<prescriptive, concrete practice directive citing the exact section/category name and specific study method>\",");
+        prompt.AppendLine("      \"text\": \"<prescriptive, concrete practice directive in Vietnamese citing the exact section/topic name>\",");
         prompt.AppendLine("      \"severity\": \"High\" | \"Medium\" | \"Low\"");
         prompt.AppendLine("    }");
         prompt.AppendLine("  ]");

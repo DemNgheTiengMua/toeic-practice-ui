@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { Alert, Button, Card, Chip, Spinner } from '@heroui/react';
-import { AlertCircle, Brain, CheckCircle2, RotateCw, Sparkles, TrendingUp } from 'lucide-react';
+import { AlertCircle, ArrowRight, Brain, CheckCircle2, RotateCw } from 'lucide-react';
 import type { AiInsightDto } from '../../lib/api';
 import { formatAiInsightTrend, formatRecommendationSeverity } from './learnerHelpers';
 import { SafeMarkdown } from './SafeMarkdown';
@@ -75,12 +76,14 @@ export function AiInsightPanel({
             </span>
           )}
           {isDone && trendInfo && (
-            <span
+            <Chip
               id="ai-insight-trend-badge"
-              className={`font-mono text-xs px-2 py-0.5 rounded font-semibold ${trendInfo.badgeClass}`}
+              size="sm"
+              variant="soft"
+              color={trendInfo.chipColor}
             >
               {trendInfo.label}
-            </span>
+            </Chip>
           )}
         </div>
       </Card.Header>
@@ -148,6 +151,38 @@ export function AiInsightPanel({
               </div>
             )}
 
+            {((insight?.strengths && insight.strengths.length > 0) ||
+              (insight?.weaknesses && insight.weaknesses.length > 0)) && (
+              <div className="grid gap-3 sm:grid-cols-2 pt-2">
+                {insight?.strengths && insight.strengths.length > 0 && (
+                  <div className="rounded-lg border border-border bg-surface-secondary p-3 space-y-1.5">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-success">
+                      <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                      Strengths
+                    </div>
+                    <ul className="space-y-1 pl-4 text-xs text-foreground list-disc m-0">
+                      {insight.strengths.map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {insight?.weaknesses && insight.weaknesses.length > 0 && (
+                  <div className="rounded-lg border border-border bg-surface-secondary p-3 space-y-1.5">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-warning">
+                      <AlertCircle className="size-3.5" aria-hidden="true" />
+                      Weaknesses
+                    </div>
+                    <ul className="space-y-1 pl-4 text-xs text-foreground list-disc m-0">
+                      {insight.weaknesses.map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
             {insight?.recommendations && insight.recommendations.length > 0 && (
               <div className="pt-3 border-t border-border space-y-2">
                 <div className="text-xs uppercase text-muted font-bold tracking-wider">
@@ -156,22 +191,35 @@ export function AiInsightPanel({
                 <div className="space-y-2">
                   {insight.recommendations.map((rec) => {
                     const sev = formatRecommendationSeverity(rec.severity);
+                    const targetRoute = rec.severity?.toLowerCase() === 'major' || rec.severity?.toLowerCase() === 'high'
+                      ? '/learning-path'
+                      : '/practice';
+                    const targetLabel = targetRoute === '/learning-path' ? 'Open learning path' : 'Practice now';
                     return (
                       <div
                         key={rec.recId}
                         className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded border border-border bg-surface-secondary text-sm"
                       >
                         <div className="flex items-start sm:items-center gap-2">
-                          <span className={`text-xs px-2 py-0.5 rounded font-mono font-semibold ${sev.badgeClass}`}>
+                          <Chip size="sm" variant="soft" color={sev.chipColor}>
                             {sev.label}
-                          </span>
+                          </Chip>
                           <span className="text-foreground">{rec.text}</span>
                         </div>
-                        {rec.targetBandCode && (
-                          <span className="text-xs px-2 py-0.5 rounded bg-surface text-muted font-mono whitespace-nowrap self-start sm:self-auto">
-                            Band {rec.targetBandCode}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          {rec.targetBandCode && (
+                            <Chip size="sm" variant="soft" color="default">
+                              Band {rec.targetBandCode}
+                            </Chip>
+                          )}
+                          <Link
+                            to={targetRoute}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline whitespace-nowrap"
+                          >
+                            {targetLabel}
+                            <ArrowRight className="size-3" aria-hidden="true" />
+                          </Link>
+                        </div>
                       </div>
                     );
                   })}

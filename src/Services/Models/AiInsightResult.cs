@@ -15,5 +15,7 @@ public record AiInsightResult(
     AiInsightTrend? Trend,
     IReadOnlyList<GeneratedRecommendation> Recommendations,
     int? PromptTokens = null,
-    int? CompletionTokens = null
+    int? CompletionTokens = null,
+    IReadOnlyList<string>? Strengths = null,
+    IReadOnlyList<string>? Weaknesses = null
 );

@@ -48,37 +48,57 @@ public sealed class WritingGradingPromptTests
     }
 
     [Fact]
-    public async Task A_criterion_without_a_rubric_is_left_out_of_the_prompt_and_never_scored()
+    public async Task Flat_criteria_without_band_descriptors_or_rubric_text_are_graded_directly()
     {
-        // #147 made the description authorable; an empty one is an authoring gap, not a licence for the
-        // model to invent a standard for that criterion.
-        var client = new ScriptedClaudeClient(_ => """{ "scores": [{ "criterionId": 1, "score": 6, "comment": "ok" }] }""");
+        var client = new ScriptedClaudeClient(_ => FullAnswer(1, 2));
         var grader = new ClaudeAiGrader(client);
 
         var result = await grader.GradeAsync(Request([
             Criterion(1, "TR"),
-            new GradingCriterionDetail(2, "CC", "Coherence", 9m, 1m, RubricDescription: "   ")
+            new GradingCriterionDetail(2, "CC", "Coherence & Cohesion", 9m, 1m, RubricDescription: "   ")
         ]));
 
         Assert.True(result.Success);
-        Assert.DoesNotContain("ID: 2", client.LastPrompt);
-        Assert.Single(result.Scores);
-        Assert.Equal(1, result.Scores[0].CriterionId);
+        Assert.Contains("ID: 1", client.LastPrompt);
+        Assert.Contains("ID: 2", client.LastPrompt);
+        Assert.Contains("Coherence & Cohesion", client.LastPrompt);
+        Assert.Equal(2, result.Scores.Count);
     }
 
     [Fact]
-    public async Task A_rubric_with_no_descriptions_at_all_fails_instead_of_being_invented()
+    public async Task Prompt_includes_certificate_and_band_context_and_guide_when_provided()
     {
         var client = new ScriptedClaudeClient(_ => FullAnswer(1));
         var grader = new ClaudeAiGrader(client);
 
-        var result = await grader.GradeAsync(Request([
-            new GradingCriterionDetail(1, "TR", "Task Response", 9m, 1m)
-        ]));
+        var request = Request([Criterion(1, "TR")]) with
+        {
+            CertName = "IELTS Academic",
+            CurrentBandCode = "5.5",
+            TargetBandCode = "7.0",
+            Guide = "Write a clear thesis and two supporting paragraphs."
+        };
+
+        var result = await grader.GradeAsync(request);
+
+        Assert.True(result.Success);
+        Assert.Contains("IELTS Academic", client.LastPrompt);
+        Assert.Contains("5.5", client.LastPrompt);
+        Assert.Contains("7.0", client.LastPrompt);
+        Assert.Contains("Write a clear thesis and two supporting paragraphs.", client.LastPrompt);
+    }
+
+    [Fact]
+    public async Task Empty_criteria_list_fails_without_calling_claude()
+    {
+        var client = new ScriptedClaudeClient(_ => FullAnswer(1));
+        var grader = new ClaudeAiGrader(client);
+
+        var result = await grader.GradeAsync(Request(Array.Empty<GradingCriterionDetail>()));
 
         Assert.False(result.Success);
         Assert.Empty(result.Scores);
-        Assert.Contains("rubric description", result.FailureReason!, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no grading criteria", result.FailureReason!, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(client.Prompts);
     }
 
@@ -320,10 +340,8 @@ public sealed class WritingGradingPromptTests
     }
 
     [Fact]
-    public async Task A_grid_short_of_seven_bands_is_not_graded_even_though_it_has_seven_lines_of_text()
+    public async Task Partial_grid_still_grades_on_prose_rubric_without_blocking()
     {
-        // The input that would pass a "does it have text" check: six rows of real thresholds plus a
-        // prose description. The prose would happily be scored; the missing band would be inferred.
         var client = new ScriptedClaudeClient(_ => FullAnswer(1));
         var grader = new ClaudeAiGrader(client);
 
@@ -336,10 +354,8 @@ public sealed class WritingGradingPromptTests
             new GradingCriterionDetail(1, "W_TR", "Task Response", 6m, 1m, "Prose that looks complete.", grid)
         ]));
 
-        Assert.False(result.Success);
-        Assert.Contains("W_TR", result.FailureReason!, StringComparison.Ordinal);
-        Assert.Empty(result.Scores);
-        Assert.Empty(client.Prompts);
+        Assert.True(result.Success);
+        Assert.Single(result.Scores);
     }
 
     private static string FullAnswer(params int[] criterionIds) => $$"""

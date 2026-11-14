@@ -22,5 +22,7 @@ public sealed record AiInsightDto(
     DateTimeOffset? CompletedAt,
     IReadOnlyList<RecommendationDto> Recommendations,
     int? LearnerPathId = null,
-    string? FormattedNarrative = null
+    string? FormattedNarrative = null,
+    IReadOnlyList<string>? Strengths = null,
+    IReadOnlyList<string>? Weaknesses = null
 );

@@ -119,134 +119,29 @@ public sealed class AiGradingProcessor(
                     c.RubricDescription)).ToList();
             }
 
-            // The grid is per criterion. One grouped read, not a query per criterion: a rubric is at
-            // most four of them, but the loop version reads as N+1 and becomes N+1 the moment a
-            // section grows.
-            var appliedIds = criteriaDetails.Select(c => c.CriterionId).ToArray();
-            var gridByCriterion = appliedIds.Length == 0
-                ? new Dictionary<int, IReadOnlyList<GradingCriterionBandDescriptor>>()
-                : await db.GradingCriterionDescriptors
-                    .AsNoTracking()
-                    .Where(d => appliedIds.Contains(d.CriterionId))
-                    .GroupBy(d => d.CriterionId)
-                    .Select(g => new
-                    {
-                        CriterionId = g.Key,
-                        Bands = g.OrderBy(d => d.Band)
-                                 .Select(d => new GradingCriterionBandDescriptor(d.Band, d.Descriptor, d.BinaryGates))
-                                 .ToList(),
-                    })
-                    .ToDictionaryAsync(
-                        x => x.CriterionId,
-                        x => (IReadOnlyList<GradingCriterionBandDescriptor>)x.Bands,
-                        cancellationToken);
-
-            criteriaDetails = criteriaDetails
-                .Select(c => c with { Descriptors = gridByCriterion.GetValueOrDefault(c.CriterionId) })
-                .ToList();
-
-            // #193: the three calibrated anchors, read in one grouped query for the same reason as the
-            // grid - a rubric is at most four criteria, and the loop version would become N+1.
-            var anchorByCriterion = appliedIds.Length == 0
-                ? new Dictionary<int, IReadOnlyList<GradingCriterionBandAnchor>>()
-                : await db.GradingCriterionAnchors
-                    .AsNoTracking()
-                    .Where(a => appliedIds.Contains(a.CriterionId))
-                    .GroupBy(a => a.CriterionId)
-                    .Select(g => new
-                    {
-                        CriterionId = g.Key,
-                        Anchors = g.OrderBy(a => a.Band)
-                                   .Select(a => new GradingCriterionBandAnchor(a.Band, a.ResponseText))
-                                   .ToList(),
-                    })
-                    .ToDictionaryAsync(
-                        x => x.CriterionId,
-                        x => (IReadOnlyList<GradingCriterionBandAnchor>)x.Anchors,
-                        cancellationToken);
-
-            criteriaDetails = criteriaDetails
-                .Select(c => c with { Anchors = anchorByCriterion.GetValueOrDefault(c.CriterionId) })
-                .ToList();
-
-            // #193: a locked rubric was calibrated against all three anchors, so grading it without one
-            // moves the standard under the mark. The lock is what makes this a refusal rather than an
-            // authoring wish: an unlocked rubric is still being written, and every rubric that predates
-            // the anchors carries none, so only a locked one is refused. Unweighted here on purpose -
-            // the guard is the lock, and a skill modality check would be a second rule to keep in step.
-            var rubricLocked = await db.GradingRubricLocks
+            // #312: Grade directly against flat GradingCriteria (Name, RubricDescription, MaxScore, Weight)
+            // without 7-band GradingCriterionDescriptors, anchors, or rubric locks.
+            var certName = await db.Certificates
                 .AsNoTracking()
-                .AnyAsync(l => l.SkillId == grading.SkillId, cancellationToken);
+                .Where(c => c.CertId == fr.Attempt.CertId)
+                .Select(c => c.Name)
+                .FirstOrDefaultAsync(cancellationToken);
 
-            if (rubricLocked)
-            {
-                var unanchored = criteriaDetails.Where(c => !c.IsAnchored).ToList();
-                if (unanchored.Count > 0)
-                {
-                    // The band is named as well as the criterion: "W_TR has no anchors" and "W_TR has no
-                    // band-3 anchor" are different rows for the author to write.
-                    var named = string.Join(", ", unanchored.Select(c =>
-                        $"{c.Code} ({c.CriterionId})"
-                        + (c.MissingAnchorBands.Count > 0
-                            ? $" is missing its anchor for band {string.Join(", band ", c.MissingAnchorBands)}"
-                            : " has no anchor response")));
-                    logger?.LogWarning(
-                        "GradingId {GradingId} for FreeResponseId {FreeResponseId} failed: {Criteria}",
-                        grading.GradingId, fr.FreeResponseId, named);
+            var targetBand = await db.TargetBands
+                .AsNoTracking()
+                .Where(tb => tb.UserId == fr.Attempt.UserId && tb.CertId == fr.Attempt.CertId)
+                .OrderByDescending(tb => tb.SetAt)
+                .Select(tb => new { tb.CurrentBandCode, tb.TargetBandCode })
+                .FirstOrDefaultAsync(cancellationToken);
 
-                    grading.Status = AiGradingStatus.Failed.ToCode();
-                    grading.FailureReason = $"Nothing was scored: {named}. A locked rubric is graded against three benchmark anchors at bands 2, 3 and 4; author the missing ones, then grade again.";
-                    if (grading.FailureReason.Length > 400) grading.FailureReason = grading.FailureReason[..399] + "…";
-                    grading.CompletedAt = DateTimeOffset.UtcNow;
-                    ClearFeedback(grading);
-                    // #217 / PLC-35: settle on EVERY failure path, not only the grader's. Leaving the
-                    // response `pending_ai` keeps the attempt `submitted` forever, so the learner waits
-                    // for a result that never arrives and the sitting cannot record the honest
-                    // `not_measured`. This branch is a configuration fault an administrator can leave in
-                    // place for days, which makes it the one most likely to strand a learner.
-                    await SettleFreeResponseAsync(fr.FreeResponseId, cancellationToken);
-                    await db.SaveChangesAsync(cancellationToken);
-                    return false;
-                }
-            }
+            var currentBandCode = targetBand?.CurrentBandCode ?? await db.PlacementTests
+                .AsNoTracking()
+                .Where(p => p.UserId == fr.Attempt.UserId && p.CertId == fr.Attempt.CertId && p.ResultBandCode != null)
+                .OrderByDescending(p => p.TakenAt)
+                .Select(p => p.ResultBandCode)
+                .FirstOrDefaultAsync(cancellationToken);
 
-            // #192: a written answer is scored against a written standard. A criterion with no
-            // descriptor text cannot be scored against anything, and a rubric that silently scores
-            // three of four criteria reports a composite that is not the one its authors wrote
-            // (D0.6: M_t = 1/4 * sum c_j). So the whole grading is Failed, and the reason names the
-            // codes - never a filled-in score, never an inferred descriptor.
-            //
-            // Speaking is exempt on purpose: SpeechSuper measures pronunciation and fluency itself
-            // (#152) and drops a criterion its provider did not measure with its own stated reason.
-            // Its completeness is enforced at the lock door instead, where every skill modality is
-            // required to carry seven bands before it can be published against.
-            if (isWriting)
-            {
-                var ungradable = criteriaDetails.Where(c => !c.IsGradeable).ToList();
-                if (ungradable.Count > 0)
-                {
-                    var named = string.Join(", ", ungradable.Select(c =>
-                        $"{c.Code} ({c.CriterionId})"
-                        + (c.MissingBands.Count > 0
-                            ? $" is missing band(s) {string.Join(",", c.MissingBands)}"
-                            : " has no descriptor text")));
-                    logger?.LogWarning(
-                        "GradingId {GradingId} for FreeResponseId {FreeResponseId} failed: {Criteria}",
-                        grading.GradingId, fr.FreeResponseId, named);
-
-                    grading.Status = AiGradingStatus.Failed.ToCode();
-                    grading.FailureReason = $"Nothing was scored: {named}. An administrator has to write a descriptor for every band, then grade again.";
-                    if (grading.FailureReason.Length > 400) grading.FailureReason = grading.FailureReason[..399] + "…";
-                    grading.CompletedAt = DateTimeOffset.UtcNow;
-                    ClearFeedback(grading);
-                    // #217 / PLC-35: settle here too. A rubric with a band missing its descriptor is a
-                    // configuration fault, not a transient one, so a learner can sit in `pending_ai` for
-                    // as long as nobody edits the rubric.
-                    await SettleFreeResponseAsync(fr.FreeResponseId, cancellationToken);
-                    await db.SaveChangesAsync(cancellationToken);
-                    return false;
-                }
-            }
+            var targetBandCode = targetBand?.TargetBandCode;
 
             // #152: a spoken answer is graded against the reference its own task declares. No declared
             // kind means unscripted, not a guess.
@@ -270,20 +165,18 @@ public sealed class AiGradingProcessor(
                 fr.DurationMs,
                 referenceText,
                 describesImage,
-                position?.RequiredKeywords);
+                position?.RequiredKeywords,
+                CertName: certName,
+                CurrentBandCode: currentBandCode,
+                TargetBandCode: targetBandCode);
 
 
             var result = await aiGrader.GradeAsync(request, cancellationToken);
 
-            // E2.1 (#151): a writing rubric must come back whole. The grader refuses to fill a hole
-            // itself, and this is the second guard: a grader that answers "success" with fewer marks
-            // than were asked for cannot leave a silently averaged row behind. Speaking is exempt on
-            // purpose - SpeechSuper drops a criterion its provider did not measure (#152) and says so
-            // in the reason.
             if (result.Success && isWriting)
             {
                 var missing = criteriaDetails
-                    .Where(c => c.IsGradeable && result.Scores.All(s => s.CriterionId != c.CriterionId))
+                    .Where(c => result.Scores.All(s => s.CriterionId != c.CriterionId))
                     .ToList();
                 if (missing.Count > 0)
                 {

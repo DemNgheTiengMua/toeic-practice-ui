@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Alert, Button, Card, Chip, Label, Meter, ProgressBar, Spinner } from '@heroui/react';
+import { Alert, Button, Card, Chip, Label, ProgressBar, Spinner } from '@heroui/react';
 import { ArrowLeft, Award, RefreshCw, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
+import { ProductiveAiFeedback } from '../ProductiveAiFeedback';
 import {
   formatSpeakingAttemptStatusLabel,
   formatSpeakingAudioUrl,
@@ -322,45 +323,15 @@ export function SpeakingResultPage({ attemptId, pollIntervalMs = 2500 }: Speakin
                   </div>
                 )}
 
-                {question.transcript && (
-                  <div className="rounded-lg border border-border bg-surface-secondary p-3">
-                    <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">
-                      Transcript
-                    </div>
-                    <p className="text-sm leading-relaxed text-foreground">{question.transcript}</p>
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                    Pronunciation &amp; rubric criteria
-                  </div>
-                  {question.criteria.map((criterion) => {
-                    const comment =
-                      criterion.comment && criterion.comment.trim().length > 0
-                        ? criterion.comment
-                        : 'No note was recorded for this criterion on this grading.';
-                    return (
-                      <div key={criterion.criterionId} className="space-y-1.5 rounded-lg border border-border p-3">
-                        <Meter
-                          value={criterion.score}
-                          minValue={0}
-                          maxValue={criterion.maxScore > 0 ? criterion.maxScore : 1}
-                          color={criterion.score >= criterion.maxScore * 0.7 ? 'success' : 'accent'}
-                        >
-                          <Label>{criterion.name}</Label>
-                          <Meter.Output>
-                            {criterion.score} / {criterion.maxScore}
-                          </Meter.Output>
-                          <Meter.Track>
-                            <Meter.Fill />
-                          </Meter.Track>
-                        </Meter>
-                        <p className="text-xs text-muted">{comment}</p>
-                      </div>
-                    );
-                  })}
-                </div>
+                <ProductiveAiFeedback
+                  text={question.transcript}
+                  textLabel="Transcript"
+                  criteria={question.criteria}
+                  errorSpans={question.errorSpans}
+                  priorityFix={question.priorityFix}
+                  modelRewrite={question.modelRewrite}
+                  criteriaHeading="Pronunciation & rubric criteria"
+                />
               </Card.Content>
             </Card>
           );
