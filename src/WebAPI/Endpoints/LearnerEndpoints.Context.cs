@@ -21,6 +21,19 @@ public static partial class LearnerEndpoints
                 context.ExamDate));
         });
 
+        learner.MapGet("/onboarding-state", async (HttpContext http, ILearnerService learners, CancellationToken cancellationToken) =>
+        {
+            var state = await learners.GetOnboardingStateAsync(CurrentUserId(http), cancellationToken);
+            return Results.Ok(new OnboardingStateDto(
+                state.HasCompletedPlacement,
+                state.ActivePlacementAttemptId,
+                state.ActivePlacementId,
+                state.LatestPlacementId,
+                state.HasTargetGoal,
+                state.HasActiveLearningPath,
+                state.IsOobeComplete));
+        });
+
         learner.MapPut("/active-certificate", async Task<IResult> (
             SwitchCertificateRequest request,
             HttpContext http,

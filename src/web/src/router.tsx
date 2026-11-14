@@ -5,10 +5,13 @@ import {
   createRoute,
   createRouter,
   Link,
+  useNavigate,
   type RouterHistory,
 } from '@tanstack/react-router';
 import { Button, Card } from '@heroui/react';
 import { AppShell } from './components/shell/AppShell';
+import { OobeSoftLockEmptyState } from './components/shell/OobeSoftLockEmptyState';
+import { useAuth } from './context/AuthContext';
 import { SignInPage } from './features/auth/SignInPage';
 import { RegisterPage } from './features/auth/RegisterPage';
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
@@ -120,10 +123,39 @@ function stubRoute<TPath extends string>(path: TPath, title: string, ticket: str
   });
 }
 
+function OobeGate({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isStaff, onboardingState } = useAuth();
+  if (!isStaff && isAuthenticated && onboardingState && !onboardingState.isOobeComplete) {
+    return <OobeSoftLockEmptyState />;
+  }
+  return <>{children}</>;
+}
+
+function OnboardingRouteView() {
+  const { isAuthenticated, isStaff, onboardingState } = useAuth();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (!isStaff && isAuthenticated && onboardingState?.isOobeComplete) {
+      void navigate({ to: '/dashboard', replace: true });
+    }
+  }, [isAuthenticated, isStaff, navigate, onboardingState?.isOobeComplete]);
+
+  if (!isStaff && isAuthenticated && onboardingState?.isOobeComplete) {
+    return null;
+  }
+
+  return <OnboardingPage />;
+}
+
 const speakingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/speaking',
-  component: SpeakingStudioPage,
+  component: () => (
+    <OobeGate>
+      <SpeakingStudioPage />
+    </OobeGate>
+  ),
 });
 
 const speakingPracticeRoute = createRoute({
@@ -147,7 +179,11 @@ const speakingResultRoute = createRoute({
 const writingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/writing',
-  component: WritingStudioPage,
+  component: () => (
+    <OobeGate>
+      <WritingStudioPage />
+    </OobeGate>
+  ),
 });
 
 const writingPracticeRoute = createRoute({
@@ -328,7 +364,11 @@ const routeTree = rootRoute.addChildren([
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/practice',
-    component: PracticeBuilderPage,
+    component: () => (
+      <OobeGate>
+        <PracticeBuilderPage />
+      </OobeGate>
+    ),
   }),
   createRoute({
     getParentRoute: () => rootRoute,
@@ -359,12 +399,16 @@ const routeTree = rootRoute.addChildren([
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/dashboard',
-    component: DashboardPage,
+    component: () => (
+      <OobeGate>
+        <DashboardPage />
+      </OobeGate>
+    ),
   }),
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/onboarding',
-    component: OnboardingPage,
+    component: OnboardingRouteView,
   }),
   createRoute({
     getParentRoute: () => rootRoute,
@@ -374,7 +418,11 @@ const routeTree = rootRoute.addChildren([
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/learning-path',
-    component: LearningPathPage,
+    component: () => (
+      <OobeGate>
+        <LearningPathPage />
+      </OobeGate>
+    ),
   }),
   createRoute({
     getParentRoute: () => rootRoute,
@@ -389,7 +437,11 @@ const routeTree = rootRoute.addChildren([
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/weakness',
-    component: WeaknessAnalysisPage,
+    component: () => (
+      <OobeGate>
+        <WeaknessAnalysisPage />
+      </OobeGate>
+    ),
   }),
   createRoute({
     getParentRoute: () => rootRoute,

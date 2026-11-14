@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, AuthUserDto, LearnerContextDto, setUnauthorizedHandler } from '../lib/api';
+import { api, AuthUserDto, LearnerContextDto, OnboardingStateDto, setUnauthorizedHandler } from '../lib/api';
 import {
   STAFF_PERMISSIONS,
   hasCapability,
@@ -13,11 +13,13 @@ export { STAFF_PERMISSIONS };
 interface AuthContextValue {
   user: AuthUserDto | null;
   learnerContext: LearnerContextDto | null;
+  onboardingState: OnboardingStateDto | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   isStaff: boolean;
   hasCapability: (capability: string) => boolean;
   refreshSession: (nextUser?: AuthUserDto | null) => Promise<void>;
+  refreshOnboardingState: () => Promise<void>;
   switchCertificate: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -81,6 +83,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     retry: false,
   });
 
+  const onboardingStateQuery = useQuery({
+    queryKey: ['learner', 'onboarding-state', user?.userId],
+    queryFn: async () => {
+      try {
+        return await api.learner.onboardingState();
+      } catch {
+        return null;
+      }
+    },
+    enabled: isLearner,
+    staleTime: 30_000,
+    retry: false,
+  });
+
   const switchCertMutation = useMutation({
     mutationFn: (code: string) => api.learner.switchCertificate(code),
     onSuccess: () => {
@@ -99,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextValue = {
     user,
     learnerContext: learnerContextQuery.data ?? null,
+    onboardingState: onboardingStateQuery.data ?? null,
     isLoading: meQuery.isLoading || (meQuery.isFetching && !user),
     isAuthenticated: Boolean(user),
     isStaff,
@@ -109,6 +126,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       await queryClient.invalidateQueries({ queryKey: ['learner', 'context'] });
+      await queryClient.invalidateQueries({ queryKey: ['learner', 'onboarding-state'] });
+    },
+    refreshOnboardingState: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['learner', 'onboarding-state'] });
     },
     switchCertificate: async (code: string) => {
       await switchCertMutation.mutateAsync(code);

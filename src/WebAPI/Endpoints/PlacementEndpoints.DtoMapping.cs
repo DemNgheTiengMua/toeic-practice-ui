@@ -305,5 +305,19 @@ public static partial class PlacementEndpoints
                     r.ReusedFromPrior,
                     r.FailureReason))
                 .ToList() ?? [],
-            result.Scope.MapTo<PlacementScopeDto>());
+            result.Scope.MapTo<PlacementScopeDto>(),
+            result.ListeningPct,
+            result.ReadingPct,
+            result.SpeakingPct,
+            result.WritingPct,
+            result.OverallPct,
+            result.CertificatePreviews?.Select(p => new CertificateBandPreviewDto(
+                p.CertId,
+                p.CertCode,
+                p.CertName,
+                p.SkillCount,
+                p.MappedScaledScore,
+                p.MappedBandCode,
+                p.MappedBandName,
+                p.ScoreDisplayFactor)).ToList());
 }
