@@ -63,6 +63,20 @@ public sealed partial class LearningPathService
 
         RefuseUnrealisticGoal(savedTarget, currentBand, toBand, scoreBands);
 
+        // Milestone Learning Sprint Slicing (Immediate Next Band)
+        var currentIndex = scoreBands.FindIndex(b => b.Code.Equals(currentBand, StringComparison.OrdinalIgnoreCase));
+        var targetIndex = scoreBands.FindIndex(b => b.Code.Equals(toBand, StringComparison.OrdinalIgnoreCase));
+        if (currentIndex < 0 && scoreBands.Count > 0)
+        {
+            currentIndex = 0;
+        }
+
+        string sprintTargetBand = toBand;
+        if (currentIndex >= 0 && targetIndex > currentIndex + 1 && currentIndex + 1 < scoreBands.Count)
+        {
+            sprintTargetBand = scoreBands[currentIndex + 1].Code;
+        }
+
         // #313: Block Before Charge — verify wallet has at least 5 credits before building & persisting the path.
         var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
         if (balance < LearningPathCostCredits)
@@ -74,7 +88,7 @@ public sealed partial class LearningPathService
         }
 
         var plan = await BuildDeterministic4WeekPlanAsync(
-            userId, activeCertId, currentBand, toBand, scoreBands, savedTarget, cancellationToken);
+            userId, activeCertId, currentBand, sprintTargetBand, scoreBands, savedTarget, cancellationToken);
 
         if (plan.Count == 0)
         {
@@ -233,6 +247,13 @@ public sealed partial class LearningPathService
         var toIdx = scoreBands.ToList().FindIndex(b => b.Code.Equals(toBand, StringComparison.OrdinalIgnoreCase));
         if (fromIdx < 0) fromIdx = 0;
         if (toIdx < fromIdx) toIdx = fromIdx;
+
+        // Milestone Learning Sprint Slicing: if target band is more than 1 band step above current band, slice to immediate next band
+        if (fromIdx >= 0 && toIdx > fromIdx + 1 && fromIdx + 1 < scoreBands.Count)
+        {
+            toIdx = fromIdx + 1;
+            toBand = scoreBands[toIdx].Code;
+        }
 
         var fullRangeBands = scoreBands
             .Skip(fromIdx)

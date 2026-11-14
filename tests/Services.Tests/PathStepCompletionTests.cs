@@ -604,4 +604,45 @@ public sealed class PathStepCompletionTests : IAsyncLifetime
         Assert.Equal("done", first.Status);
         Assert.Equal(80m, first.Score);
     }
+
+    [Fact]
+    public async Task Completing_week_N_steps_immediately_unlocks_week_N_plus_1_steps()
+    {
+        var certCode = Unique("PACE");
+        var (certId, _, _, _, _, _, _) = await SeedCertAsync(certCode);
+        var userId = await SeedLearnerAsync(certId);
+        await GrantCreditsAsync(userId, 20);
+
+        var (paths, _, _, _, db) = CreateServices();
+        var summary = await paths.GeneratePathAsync(userId);
+        var steps = await StepsAsync(db, summary.LearnerPathId!.Value);
+
+        var week1Steps = steps.Where(s => s.WeekNumber == 1).ToList();
+        var week2Steps = steps.Where(s => s.WeekNumber == 2).ToList();
+
+        Assert.NotEmpty(week1Steps);
+        Assert.NotEmpty(week2Steps);
+        Assert.All(week2Steps, s => Assert.Equal("locked", s.Status));
+
+        // Complete each step in Week 1 sequentially
+        for (var i = 0; i < week1Steps.Count; i++)
+        {
+            var step = week1Steps[i];
+            await db.Entry(step).ReloadAsync();
+            Assert.Equal("available", step.Status);
+
+            await PathStepCompletion.CloseStepAsync(db, step, score: 85m, accuracyPct: 85m);
+        }
+
+        // Pure self-paced: completing the final step of Week 1 immediately unlocks all Week 2 steps!
+        foreach (var s in week2Steps)
+        {
+            await db.Entry(s).ReloadAsync();
+        }
+        Assert.All(week2Steps, s => Assert.Equal("available", s.Status));
+
+        var path = await db.LearnerPaths.AsNoTracking().SingleAsync(p => p.LearnerPathId == summary.LearnerPathId);
+        Assert.Equal(2, path.ActiveWeek);
+        Assert.Equal("active", path.Status);
+    }
 }

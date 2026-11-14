@@ -1074,4 +1074,37 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var activeAfter = await db.LearnerPaths.SingleAsync(p => p.LearnerPathId == secondPath.LearnerPathId);
         Assert.Equal("active", activeAfter.Status);
     }
+
+    [Fact]
+    public async Task A_multi_band_goal_generates_a_4_week_sprint_sliced_to_the_immediate_next_band()
+    {
+        var certCode = Unique("MB");
+        await SeedPathFixtureAsync(certCode);
+        // Learner starting at A1 with long-term goal of B2 (gap > 1 across A1 -> A2 -> B1 -> B2)
+        var userId = await SeedLearnerAsync(
+            certCode, currentBand: "A1", targetBand: "B2",
+            measuredScaledScore: 150, measuredBandCode: "A1");
+
+        var (service, _, _, db) = CreateServices();
+        var summary = await service.GeneratePathAsync(userId);
+
+        Assert.True(summary.HasActivePath);
+        Assert.Equal("A1", summary.FromBandCode);
+        // Sliced to immediate next band: A1 -> A2
+        Assert.Equal("A2", summary.ToBandCode);
+        // Long-term goal preserved in TargetBands / TargetBandCode
+        Assert.Equal("B2", summary.TargetBandCode);
+
+        // Curriculum steps for weeks 3-4 focus on achieving sprintTargetBand (A2)
+        var steps = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId)
+            .OrderBy(s => s.WeekNumber)
+            .ThenBy(s => s.WeekSequence)
+            .ToListAsync();
+
+        Assert.NotEmpty(steps);
+        var week3And4Steps = steps.Where(s => s.WeekNumber is 3 or 4).ToList();
+        Assert.NotEmpty(week3And4Steps);
+        Assert.All(week3And4Steps, s => Assert.Equal("A2", s.TargetCefr));
+    }
 }

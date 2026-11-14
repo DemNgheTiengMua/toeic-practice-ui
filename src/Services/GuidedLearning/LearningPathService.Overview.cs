@@ -64,14 +64,27 @@ public sealed partial class LearningPathService
             .Select(tb => tb.TargetBandCode)
             .FirstOrDefaultAsync(cancellationToken);
 
+        var sprintTargetBand = target;
+        if (!string.IsNullOrEmpty(activePath.CurrentBandCode) && !string.IsNullOrEmpty(target) && scoreBands.Count > 0)
+        {
+            var curIdx = scoreBands.FindIndex(b => b.Code.Equals(activePath.CurrentBandCode, StringComparison.OrdinalIgnoreCase));
+            var tgtIdx = scoreBands.FindIndex(b => b.Code.Equals(target, StringComparison.OrdinalIgnoreCase));
+            if (curIdx < 0) curIdx = 0;
+            if (tgtIdx > curIdx + 1 && curIdx + 1 < scoreBands.Count)
+            {
+                sprintTargetBand = scoreBands[curIdx + 1].Code;
+            }
+        }
+
         var latestPlacement = await db.PlacementTests
             .AsNoTracking()
             .Where(p => p.PlacementId == activePath.PlacementId)
             .FirstOrDefaultAsync(cancellationToken);
 
         int? currentScore = latestPlacement?.TotalScore;
-        var toBand = scoreBands.FirstOrDefault(b => b.Code == target);
-        int? targetScore = toBand?.MinTotal;
+        var toBand = scoreBands.FirstOrDefault(b => b.Code == sprintTargetBand) ?? scoreBands.FirstOrDefault(b => b.Code == target);
+        var ultimateBand = scoreBands.FirstOrDefault(b => b.Code == target);
+        int? targetScore = ultimateBand?.MinTotal ?? toBand?.MinTotal;
 
         var cefrBands = scoreBands.Select(b => new CefrBandInfo(
             b.Code,
@@ -133,9 +146,9 @@ public sealed partial class LearningPathService
             ActiveCert: cert,
             LearnerPathId: activePath.LearnerPathId,
             FromBandCode: activePath.CurrentBandCode,
-            ToBandCode: target,
+            ToBandCode: sprintTargetBand,
             FromBandName: scoreBands.FirstOrDefault(b => b.Code == activePath.CurrentBandCode)?.Name ?? activePath.CurrentBandCode,
-            ToBandName: toBand?.Name ?? target,
+            ToBandName: toBand?.Name ?? sprintTargetBand,
             CurrentBandCode: activePath.CurrentBandCode,
             CurrentScore: currentScore,
             TargetBandCode: target,

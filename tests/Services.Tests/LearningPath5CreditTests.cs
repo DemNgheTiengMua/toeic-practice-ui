@@ -361,8 +361,8 @@ public sealed class LearningPath5CreditTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var writingSkill = await db.Skills.FirstAsync(s => s.CertId == certId && s.Code == "WRIT");
         var writingSection = await db.Sections.FirstAsync(s => s.CertId == certId && s.SkillId == writingSkill.SkillId);
-        var writingTopic = await db.Topics.FirstAsync(t => t.Modality == "writing");
-        var writingItem = await db.Items.FirstAsync(i => i.TopicId == writingTopic.TopicId);
+        var writingItem = await db.Items.FirstAsync(i => i.Modality == "writing");
+        var writingTopic = await db.Topics.FirstAsync(t => t.TopicId == writingItem.TopicId);
         var writingVersion = await db.ItemVersions.FirstAsync(v => v.ItemId == writingItem.ItemId);
 
         db.GradingCriteria.Add(new GradingCriterion
