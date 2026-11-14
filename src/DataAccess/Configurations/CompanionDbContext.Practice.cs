@@ -14,12 +14,6 @@ public partial class CompanionDbContext
         {
             entity.HasKey(e => e.SessionId).HasName("PK__Practice__C9F4929081A3986C");
 
-            // #269 audit: HasTrigger is MANDATORY here. The status transitions are refused in the
-            // database, and EF's default OUTPUT-clause save fails on any table with an enabled trigger
-            // ("the target table of the DML statement cannot have any enabled triggers if the statement
-            // contains an OUTPUT clause"). Without this line every practice save threw DbUpdateException.
-            entity.ToTable(tb => tb.HasTrigger("trg_PracticeSessions_StatusTransitions"));
-
             entity.HasIndex(e => e.LearnerPathStepId, "IX_Practice_PathStep").HasFilter("([LearnerPathStepId] IS NOT NULL)");
             // #187: a pool drill is resumed and ceiling-checked by its cell, not by a section.
             entity.HasIndex(e => new { e.UserId, e.TopicId, e.CefrLevel, e.StartedAt }, "IX_Practice_Cell")

@@ -794,6 +794,57 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task AutoSubmitExpiredAttempts_Ignores_SkillPractice_Attempts_And_Rejects_Direct_Generic_Submit()
+    {
+        var certCode = Unique("ATTSP");
+        var (certId, _, _, _, _, _) = await SeedExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+
+        await using (var setupDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            var skillExam = new Exam
+            {
+                CertId = certId,
+                Name = $"Writing Practice {certCode}",
+                Purpose = ExamPurpose.WritingPractice.ToCode(),
+                Status = ExamStatus.Published.ToCode(),
+                DurationMinutes = 30,
+                QuestionCount = 1,
+            };
+            setupDb.Exams.Add(skillExam);
+            await setupDb.SaveChangesAsync();
+
+            var expiredAt = DateTimeOffset.UtcNow.AddMinutes(-30);
+            setupDb.ExamAttempts.Add(new ExamAttempt
+            {
+                UserId = userId,
+                ExamId = skillExam.ExamId,
+                CertId = certId,
+                Status = AttemptStatus.InProgress.ToCode(),
+                StartedAt = expiredAt.AddMinutes(-30),
+                ExpiresAt = expiredAt,
+                IsAutoSubmitted = false,
+                TotalScore = null,
+            });
+            await setupDb.SaveChangesAsync();
+        }
+
+        var engine = CreateEngine();
+        int processed = await engine.AutoSubmitExpiredAttemptsAsync(userId, certId);
+        Assert.Equal(0, processed);
+
+        await using var verifyDb = DbContextFactory.Create(database.ConnectionString);
+        var skillAttempt = await verifyDb.ExamAttempts
+            .SingleAsync(a => a.UserId == userId && a.CertId == certId);
+        Assert.Equal(AttemptStatus.InProgress.ToCode(), skillAttempt.Status);
+        Assert.Null(skillAttempt.TotalScore);
+
+        var ex = await Assert.ThrowsAsync<AttemptEngineException>(
+            () => CreateEngine().SubmitAttemptAsync(skillAttempt.AttemptId, userId, isAutoSubmit: true));
+        Assert.Equal(AttemptEngineException.AttemptNotActive, ex.Code);
+    }
+
+    [Fact]
     public async Task CancelAttempt_Marks_Attempt_Abandoned()
     {
         var certCode = Unique("ATTE");

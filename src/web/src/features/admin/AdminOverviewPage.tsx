@@ -112,7 +112,7 @@ export function AdminOverviewPage() {
           </div>
 
           {isSuperAdmin && (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="flex items-center gap-1.5 text-xs text-muted">
                 <Radio
                   className={`h-3 w-3 ${isLiveConnected ? 'text-success animate-pulse' : 'text-danger'}`}
@@ -237,9 +237,9 @@ export function AdminOverviewPage() {
             )}
 
             {/* Top KPI Cards */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {/* Active Learners */}
-              <Card className="border border-border">
+              <Card className="border border-border min-w-0">
                 <Card.Header className="flex flex-row items-center justify-between pb-2">
                   <span className="text-xs font-medium text-muted">Active learners</span>
                   <Users className="h-4 w-4 text-muted" />
@@ -304,7 +304,7 @@ export function AdminOverviewPage() {
                   <div className="text-2xl font-bold font-mono-tabular text-foreground">
                     {loading ? '—' : `${dashboard?.creditsUsedThisMonth.toLocaleString()} cr`}
                   </div>
-                  <div className="flex items-center justify-between text-xs text-muted pt-1">
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted pt-1">
                     <span>Refunded: <span className="font-mono-tabular font-medium text-foreground">{loading ? '—' : dashboard?.creditsRefundedThisMonth.toLocaleString()}</span> cr</span>
                     <span>Avg: <span className="font-mono-tabular font-medium text-foreground">{loading ? '—' : dashboard?.creditsPerDayAverage.toFixed(1)}</span>/day</span>
                   </div>
@@ -313,9 +313,9 @@ export function AdminOverviewPage() {
             </div>
 
             {/* Needs Attention & Recent Activity */}
-            <div className="grid gap-6 lg:grid-cols-3">
+            <div className="grid gap-6 xl:grid-cols-3">
               {/* Needs Attention */}
-              <Card className="border border-border lg:col-span-1">
+              <Card className="border border-border xl:col-span-1 min-w-0">
                 <Card.Header>
                   <Card.Title className="font-display text-lg font-semibold flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5 text-warning" />
@@ -368,7 +368,7 @@ export function AdminOverviewPage() {
               </Card>
 
               {/* Most Attempted Exams */}
-              <Card className="border border-border lg:col-span-2">
+              <Card className="border border-border xl:col-span-2 min-w-0">
                 <Card.Header>
                   <Card.Title className="font-display text-lg font-semibold flex items-center gap-2">
                     <FileCheck2 className="h-5 w-5 text-accent" />

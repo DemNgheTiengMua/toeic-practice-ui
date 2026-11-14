@@ -289,6 +289,67 @@ describe('Learner Hub (#300)', () => {
         expect(screen.getByText(/a new activation link has been sent to learner@demo\.local/i)).toBeInTheDocument();
       });
     });
+
+    it('renders upcoming mentor session reminder banner with Join Meet link and booking detail link', async () => {
+      const dashboardWithBookings: LearnerDashboardDto = {
+        certificate: { code: 'DEMO', name: 'DEMO - Custom Assessment' },
+        nextAction: {
+          eyebrow: 'NEXT UP',
+          title: 'Review Short Dialogs',
+          description: 'Practice 10 questions on short conversational dialogues.',
+          actionLabel: 'Resume practice',
+          actionUrl: '/practice',
+          severity: 'accent',
+          cascadeStep: 'step_1_active_path',
+        },
+        goal: {
+          completedPathSteps: 2,
+          totalPathSteps: 10,
+          weekPlannedMinutes: 120,
+          weekCompletedMinutes: 60,
+          scoreDisplayFactor: 1,
+          hasNoMeasurement: true,
+        },
+        skills: [],
+        attemptCount: 0,
+        practiceCount: 0,
+        upcomingBookings: [
+          {
+            bookingId: 777,
+            mentorId: 1,
+            mentorName: 'Dr. Trần Minh Khoa',
+            certCode: 'IELTS',
+            skillName: 'Speaking',
+            startAt: '2026-11-22T12:00:00Z',
+            endAt: '2026-11-22T13:00:00Z',
+            meetLink: 'https://meet.google.com/khoa-speaking-room',
+            focusArea: 'Part 2 cue card fluency & coherence',
+          },
+        ],
+      };
+
+      installFetchMock((url) => {
+        if (url === '/api/auth/me') return jsonResponse(DEMO_USER);
+        if (url === '/api/learner/context') return jsonResponse(DEMO_CONTEXT);
+        if (url === '/api/learner/dashboard') return jsonResponse(dashboardWithBookings);
+        return jsonResponse({}, 404);
+      });
+
+      renderRoute('/dashboard');
+
+      expect(await screen.findByText(/upcoming mentor session/i)).toBeInTheDocument();
+      expect(screen.getByText('Dr. Trần Minh Khoa')).toBeInTheDocument();
+      expect(screen.getByText(/IELTS · Speaking/i)).toBeInTheDocument();
+      expect(screen.getByText(/Part 2 cue card fluency & coherence/i)).toBeInTheDocument();
+
+      const joinMeetLink = screen.getByRole('link', { name: /join meet/i }) as HTMLAnchorElement;
+      expect(joinMeetLink).toBeInTheDocument();
+      expect(joinMeetLink.href).toBe('https://meet.google.com/khoa-speaking-room');
+      expect(joinMeetLink.target).toBe('_blank');
+
+      const detailLink = screen.getByRole('link', { name: /booking details/i }) as HTMLAnchorElement;
+      expect(detailLink.getAttribute('href')).toBe('/mentors/bookings/777');
+    });
   });
 
   describe('Onboarding & Goal Setup (/onboarding)', () => {

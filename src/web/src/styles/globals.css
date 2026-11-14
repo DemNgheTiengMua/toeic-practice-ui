@@ -125,3 +125,23 @@ body {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
+
+/* Keep HeroUI flex/grid compound containers constrained inside responsive shells */
+.card,
+.tabs,
+.tabs__panel,
+.table-root {
+  min-width: 0;
+}
+
+.tabs,
+.table-root {
+  max-width: 100%;
+}
+
+.tabs__list-container {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}

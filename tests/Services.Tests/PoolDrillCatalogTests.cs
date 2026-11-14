@@ -258,4 +258,61 @@ public sealed class PoolDrillCatalogTests(DatabaseFixture database)
 
         return new Fixture(user.UserId, cert.CertId, section.SectionId, topic.TopicId, firstItemId);
     }
+
+    [Fact]
+    public async Task A_section_drill_deduplicates_items_shared_across_multiple_exams_in_the_same_section()
+    {
+        var name = $"EE_DUP_{Guid.NewGuid():N}"[..24];
+        var connectionString = await database.CreateFreshDatabaseAsync(name);
+        try
+        {
+            var fixture = await SeedPoolCertAsync(connectionString);
+
+            await using (var setupDb = DbContextFactory.Create(connectionString))
+            {
+                var secondExam = new Exam
+                {
+                    CertId = fixture.CertId,
+                    Name = "Second paper sharing pool item",
+                    Status = "published",
+                    DurationMinutes = 30,
+                    Purpose = "mock",
+                    QuestionCount = 1,
+                };
+                setupDb.Exams.Add(secondExam);
+                await setupDb.SaveChangesAsync();
+
+                var firstItem = await setupDb.Items.AsNoTracking()
+                    .Include(i => i.ItemVersions)
+                    .SingleAsync(i => i.ItemId == fixture.FirstItemId);
+
+                setupDb.ExamItems.Add(new ExamItem
+                {
+                    ExamId = secondExam.ExamId,
+                    CertId = fixture.CertId,
+                    SectionId = fixture.SectionId,
+                    ItemId = firstItem.ItemId,
+                    ItemVersionId = firstItem.ItemVersions.OrderByDescending(v => v.VersionNumber).First().ItemVersionId,
+                    Modality = "reading",
+                    DisplayOrder = 1,
+                });
+                await setupDb.SaveChangesAsync();
+            }
+
+            await using var db = DbContextFactory.Create(connectionString);
+            var practice = new PracticeService(db, new LearnerService(db));
+
+            var catalog = await practice.GetPracticeSectionsAsync(fixture.UserId);
+            var section = Assert.Single(catalog.ReadingSections);
+            Assert.Equal(5, section.AvailableQuestionCount);
+
+            var session = await practice.StartSessionAsync(
+                fixture.UserId, new StartPracticeSessionInput(fixture.SectionId));
+            Assert.Equal(5, session.QuestionCount);
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(name);
+        }
+    }
 }

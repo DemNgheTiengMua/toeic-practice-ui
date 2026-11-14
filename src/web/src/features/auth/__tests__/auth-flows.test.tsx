@@ -323,4 +323,212 @@ describe('Auth flows (#295)', () => {
       expect(resetView.router.state.location.searchStr).toContain('reset=1');
     });
   });
+
+  it('automatically redirects already-authenticated staff from /sign-in?returnUrl=%2Fadmin to /admin and learners to /dashboard', async () => {
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          userId: 1,
+          email: 'admin@demo.local',
+          fullName: 'Admin User',
+          role: 'admin',
+          emailVerified: true,
+          permissions: [
+            'assessment.blueprint.design',
+            'operations.support.triage',
+            'pool.content.author',
+            'pool.content.review',
+            'system.governance.admin',
+          ],
+        });
+      }
+      if (url === '/api/admin/dashboard') {
+        return jsonResponse({
+          activeLearnersCount: 10,
+          newLearners7DaysCount: 2,
+          creditsUsedThisMonth: 100,
+          creditsRefundedThisMonth: 0,
+          creditsPerDayAverage: 5,
+          revenueTodayVnd: 0,
+          revenueThisMonthVnd: 0,
+          paidOrdersThisMonthCount: 0,
+          mostAttemptedExams: [],
+          needsAttention: {
+            draftExamsCount: 0,
+            stalePendingOrdersCount: 0,
+            openComplaintsCount: 0,
+          },
+        });
+      }
+      if (url === '/api/admin/dashboard/revision') {
+        return jsonResponse({
+          paidOrdersCount: 0,
+          paidOrdersAmount: 0,
+          complaintsOpen: 0,
+          complaintsReviewing: 0,
+          complaintsResolved: 0,
+          refundsRequested: 0,
+          refundsApproved: 0,
+          refundsSettled: 0,
+          refundsRejected: 0,
+          settledMoneyRefundsCount: 0,
+          settledMoneyRefundsAmount: 0,
+        });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    const staffView = renderRoute('/sign-in?returnUrl=%2Fadmin');
+    await waitFor(() => {
+      expect(staffView.router.state.location.pathname).toBe('/admin');
+    });
+    expect(await screen.findByRole('heading', { name: /command center/i })).toBeInTheDocument();
+    staffView.unmount();
+
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          userId: 5,
+          email: 'learner@demo.local',
+          fullName: 'Learner User',
+          role: 'learner',
+          emailVerified: true,
+          permissions: [],
+        });
+      }
+      if (url === '/api/learner/context') {
+        return jsonResponse({
+          active: { code: 'TOEIC', name: 'TOEIC' },
+          certificates: [{ code: 'TOEIC', name: 'TOEIC' }],
+          creditBalance: 20,
+        });
+      }
+      if (url === '/api/learner/dashboard') {
+        return jsonResponse({
+          certificate: { code: 'TOEIC', name: 'TOEIC' },
+          nextAction: {
+            eyebrow: 'Next',
+            title: 'Take placement',
+            description: 'Start placement',
+            actionLabel: 'Start',
+            actionUrl: '/placement',
+            severity: 'info',
+            cascadeStep: 'placement',
+          },
+          goal: {
+            completedPathSteps: 0,
+            totalPathSteps: 0,
+            weekPlannedMinutes: 0,
+            weekCompletedMinutes: 0,
+            scoreDisplayFactor: 1,
+            hasNoMeasurement: true,
+          },
+          skills: [],
+          attemptCount: 0,
+          practiceCount: 0,
+        });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    const learnerView = renderRoute('/sign-in');
+    await waitFor(() => {
+      expect(learnerView.router.state.location.pathname).toBe('/dashboard');
+    });
+  });
+
+  it('reads DOM/autofilled email & password on submit without false required-field errors, while still rejecting truly empty submit', async () => {
+    let signedIn = false;
+    let postedBody: unknown = null;
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') {
+        if (!signedIn) return jsonResponse({ code: 'AUTH_REQUIRED' }, 401);
+        return jsonResponse({
+          userId: 1,
+          email: 'admin@demo.local',
+          fullName: 'Admin User',
+          role: 'admin',
+          emailVerified: true,
+          permissions: ['system.governance.admin'],
+        });
+      }
+      if (url === '/api/auth/sign-in' && init?.method === 'POST') {
+        signedIn = true;
+        postedBody = JSON.parse(String(init.body));
+        return jsonResponse({
+          token: 'cookie-issued',
+          expiresAt: '2026-12-01T00:00:00Z',
+          user: {
+            userId: 1,
+            email: 'admin@demo.local',
+            fullName: 'Admin User',
+            role: 'admin',
+            emailVerified: true,
+            permissions: ['system.governance.admin'],
+          },
+        });
+      }
+      if (url === '/api/admin/dashboard') {
+        return jsonResponse({
+          activeLearnersCount: 1,
+          newLearners7DaysCount: 0,
+          creditsUsedThisMonth: 0,
+          creditsRefundedThisMonth: 0,
+          creditsPerDayAverage: 0,
+          revenueTodayVnd: 0,
+          revenueThisMonthVnd: 0,
+          paidOrdersThisMonthCount: 0,
+          mostAttemptedExams: [],
+          needsAttention: {
+            draftExamsCount: 0,
+            stalePendingOrdersCount: 0,
+            openComplaintsCount: 0,
+          },
+        });
+      }
+      if (url === '/api/admin/dashboard/revision') {
+        return jsonResponse({
+          paidOrdersCount: 0,
+          paidOrdersAmount: 0,
+          complaintsOpen: 0,
+          complaintsReviewing: 0,
+          complaintsResolved: 0,
+          refundsRequested: 0,
+          refundsApproved: 0,
+          refundsSettled: 0,
+          refundsRejected: 0,
+          settledMoneyRefundsCount: 0,
+          settledMoneyRefundsAmount: 0,
+        });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    const { router } = renderRoute('/sign-in?returnUrl=%2Fadmin');
+    const main = await screen.findByRole('main');
+    const emailInput = (await within(main).findByLabelText(/email/i)) as HTMLInputElement;
+    const passwordInput = within(main).getByLabelText(/password/i) as HTMLInputElement;
+    const submitBtn = within(main).getByRole('button', { name: /^sign in$/i });
+
+    // Empty submit shows required errors and does not hit /api/auth/sign-in
+    fireEvent.click(submitBtn);
+    expect(await within(main).findByText('Email is required.')).toBeInTheDocument();
+    expect(within(main).getByText('Password is required.')).toBeInTheDocument();
+    expect(postedBody).toBeNull();
+
+    // Simulate browser autofill populating DOM .value without triggering React synthetic onChange
+    emailInput.value = 'admin@demo.local';
+    passwordInput.value = 'Demo1234!';
+    fireEvent.submit(emailInput.closest('form')!);
+
+    await waitFor(() => {
+      expect(postedBody).toEqual({
+        email: 'admin@demo.local',
+        password: 'Demo1234!',
+      });
+      expect(router.state.location.pathname).toBe('/admin');
+    });
+    expect(within(main).queryByText('Email is required.')).not.toBeInTheDocument();
+    expect(within(main).queryByText('Password is required.')).not.toBeInTheDocument();
+  });
 });

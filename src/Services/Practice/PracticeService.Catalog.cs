@@ -28,13 +28,14 @@ public sealed partial class PracticeService
         var rows = await db.ExamItems
             .AsNoTracking()
             .Where(ei => ei.CertId == certId)
-            .Join(db.Items.AsNoTracking(), ei => ei.ItemId, i => i.ItemId, (ei, i) => new { ei.SectionId, i.Modality, i.LifecycleStatus })
+            .Join(db.Items.AsNoTracking(), ei => ei.ItemId, i => i.ItemId, (ei, i) => new { ei.SectionId, ei.ItemId, i.Modality, i.LifecycleStatus })
             .Where(x => x.Modality != SpeakingCode && x.LifecycleStatus == ItemSelector.ActiveLifecycle)
-            .Select(x => x.SectionId)
+            .Select(x => new { x.SectionId, x.ItemId })
+            .Distinct()
             .ToListAsync(cancellationToken);
 
         return rows
-            .GroupBy(sectionId => sectionId)
+            .GroupBy(x => x.SectionId)
             .ToDictionary(g => g.Key, g => g.Count());
     }
 
@@ -55,6 +56,7 @@ public sealed partial class PracticeService
             .Join(db.Items.AsNoTracking(), ei => ei.ItemId, i => i.ItemId, (ei, i) => new { ei, i })
             .Where(x => x.i.Modality != SpeakingCode && x.i.LifecycleStatus == ItemSelector.ActiveLifecycle)
             .Select(x => new { x.i.ItemId, x.i.TopicId, x.i.CefrLevel })
+            .Distinct()
             .ToListAsync(cancellationToken);
 
         if (rows.Count == 0)

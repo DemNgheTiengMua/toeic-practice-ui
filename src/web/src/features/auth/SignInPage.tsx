@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import {
   Alert,
@@ -12,7 +12,12 @@ import {
 } from '@heroui/react';
 import { CheckCircle2, LockKeyhole, ShieldAlert } from 'lucide-react';
 import { ApiClientError, api } from '../../lib/api';
-import { isLocalPath, isStaffSubject, resolveSafeReturnUrl } from '../../lib/security';
+import {
+  type CapabilitySubject,
+  isLocalPath,
+  isStaffSubject,
+  resolveSafeReturnUrl,
+} from '../../lib/security';
 import { useAuth } from '../../context/AuthContext';
 import { AuthCostSummaryCard } from './AuthCostSummaryCard';
 
@@ -28,6 +33,24 @@ function parseLocalDestination(localPath: string): {
   };
 }
 
+function resolvePostSignInDestination(
+  rawReturnUrl: string | undefined,
+  subject: CapabilitySubject | null | undefined,
+): string {
+  const fallbackDest = isStaffSubject(subject) ? '/admin' : '/dashboard';
+  const resolved = resolveSafeReturnUrl(rawReturnUrl, fallbackDest);
+  const parsed = parseLocalDestination(resolved);
+  if (
+    parsed.pathname === '/sign-in' ||
+    parsed.pathname.startsWith('/sign-in/') ||
+    parsed.pathname === '/auth/sign-in' ||
+    parsed.pathname.startsWith('/auth/sign-in/')
+  ) {
+    return fallbackDest;
+  }
+  return resolved;
+}
+
 export function SignInPage() {
   const search = useSearch({ strict: false }) as {
     returnUrl?: string;
@@ -35,7 +58,7 @@ export function SignInPage() {
     reset?: string;
   };
   const navigate = useNavigate();
-  const { refreshSession } = useAuth();
+  const { user, isAuthenticated, isLoading, refreshSession } = useAuth();
 
   const rawReturnUrl =
     typeof search?.returnUrl === 'string' ? search.returnUrl : undefined;
@@ -55,17 +78,49 @@ export function SignInPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const emailInputRef = useRef<HTMLInputElement | null>(null);
+  const passwordInputRef = useRef<HTMLInputElement | null>(null);
+  const didSubmitRef = useRef(false);
+
+  useEffect(() => {
+    if (isLoading || !isAuthenticated || !user || didSubmitRef.current) {
+      return;
+    }
+
+    const destination = resolvePostSignInDestination(rawReturnUrl, user);
+    const parsed = parseLocalDestination(destination);
+    void navigate({
+      to: parsed.pathname as never,
+      ...(parsed.search ? { search: parsed.search as never } : {}),
+      replace: true,
+    });
+  }, [isLoading, isAuthenticated, user, rawReturnUrl, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormError(null);
 
-    const trimmedEmail = email.trim();
+    const formData = new FormData(e.currentTarget);
+    const domEmail = emailInputRef.current?.value ?? String(formData.get('email') ?? '');
+    const domPassword =
+      passwordInputRef.current?.value ?? String(formData.get('password') ?? '');
+    const currentEmail = domEmail || email;
+    const currentPassword = domPassword || password;
+
+    if (currentEmail !== email) {
+      setEmail(currentEmail);
+    }
+    if (currentPassword !== password) {
+      setPassword(currentPassword);
+    }
+
+    const trimmedEmail = currentEmail.trim();
     const nextEmailErr = !trimmedEmail
       ? 'Email is required.'
       : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)
         ? "That doesn't look like an email address."
         : null;
-    const nextPassErr = !password ? 'Password is required.' : null;
+    const nextPassErr = !currentPassword ? 'Password is required.' : null;
 
     setEmailError(nextEmailErr);
     setPasswordError(nextPassErr);
@@ -75,17 +130,22 @@ export function SignInPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await api.auth.signIn({ email: trimmedEmail, password });
-      await refreshSession();
+      const response = await api.auth.signIn({
+        email: trimmedEmail,
+        password: currentPassword,
+      });
+      didSubmitRef.current = true;
+      await refreshSession(response.user);
 
-      const fallbackDest = isStaffSubject(response.user) ? '/admin' : '/dashboard';
-      const destination = resolveSafeReturnUrl(rawReturnUrl, fallbackDest);
+      const destination = resolvePostSignInDestination(rawReturnUrl, response.user);
       const parsed = parseLocalDestination(destination);
       await navigate({
         to: parsed.pathname as never,
         ...(parsed.search ? { search: parsed.search as never } : {}),
+        replace: true,
       });
     } catch (err) {
+      didSubmitRef.current = false;
       if (err instanceof ApiClientError) {
         if (err.status === 429 || err.code === 'TOO_MANY_REQUESTS') {
           setFormError('Too many attempts. Please wait a moment before trying again.');
@@ -100,10 +160,14 @@ export function SignInPage() {
     }
   };
 
+  if (!isLoading && isAuthenticated && user) {
+    return null;
+  }
+
   return (
-    <div className="max-w-5xl mx-auto py-4">
+    <div className="max-w-5xl mx-auto py-4 sm:py-8">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-7 flex flex-col gap-4">
+        <div className="lg:col-span-7 flex flex-col gap-4 min-w-0">
           <div>
             <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground m-0">
               Sign in
@@ -137,8 +201,8 @@ export function SignInPage() {
             </Alert>
           )}
 
-          <Card>
-            <Form onSubmit={handleSubmit} validationBehavior="aria">
+          <Card className="p-5 sm:p-6">
+            <Form className="flex flex-col gap-5" onSubmit={handleSubmit} validationBehavior="aria">
               <Card.Content className="flex flex-col gap-4">
                 <TextField
                   isRequired
@@ -153,8 +217,16 @@ export function SignInPage() {
                 >
                   <Label>Email</Label>
                   <Input
+                    ref={emailInputRef}
                     autoComplete="email"
                     placeholder="you@example.com"
+                    onInput={(e) => {
+                      const nextValue = e.currentTarget.value;
+                      if (nextValue !== email) {
+                        setEmail(nextValue);
+                      }
+                      if (emailError) setEmailError(null);
+                    }}
                   />
                   {emailError && <FieldError>{emailError}</FieldError>}
                 </TextField>
@@ -172,10 +244,20 @@ export function SignInPage() {
                     isInvalid={Boolean(passwordError)}
                   >
                     <Label>Password</Label>
-                    <Input autoComplete="current-password" />
+                    <Input
+                      ref={passwordInputRef}
+                      autoComplete="current-password"
+                      onInput={(e) => {
+                        const nextValue = e.currentTarget.value;
+                        if (nextValue !== password) {
+                          setPassword(nextValue);
+                        }
+                        if (passwordError) setPasswordError(null);
+                      }}
+                    />
                     {passwordError && <FieldError>{passwordError}</FieldError>}
                   </TextField>
-                  <div className="flex justify-end">
+                  <div className="flex justify-end pt-1">
                     <Link
                       to="/forgot-password"
                       className="text-xs font-medium text-accent hover:underline"
@@ -186,7 +268,7 @@ export function SignInPage() {
                 </div>
               </Card.Content>
 
-              <Card.Footer className="flex flex-col gap-3">
+              <Card.Footer className="flex flex-col gap-3.5 pt-1">
                 <Button
                   type="submit"
                   variant="primary"
@@ -214,7 +296,7 @@ export function SignInPage() {
           </Card>
         </div>
 
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-5 min-w-0">
           <AuthCostSummaryCard />
         </div>
       </div>

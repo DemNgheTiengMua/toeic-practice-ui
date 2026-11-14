@@ -1081,6 +1081,8 @@ CREATE TABLE Items (
       ('draft','validated','active','quarantined','retired','retired_defective')),
   -- CNT-03: the upload batch this item arrived in. NULL for hand-authored items.
   BatchTag         NVARCHAR(60) NULL,
+  -- #309: comma-separated target band codes (e.g. 'A2,B1,B2') or 'ALL' for general knowledge.
+  TargetBands      VARCHAR(100) NOT NULL CONSTRAINT DF_Items_TargetBands DEFAULT 'ALL',
   CreatedAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   -- the item's skill must be its topic's skill: a listening item on a reading topic is the defect
   CONSTRAINT FK_Items_TopicModality FOREIGN KEY (TopicId, Modality) REFERENCES Topics(TopicId, Modality),
@@ -1136,34 +1138,7 @@ GO
 -- A write that leaves the state where it was is not a transition, so CNT-46's bulk demo
 -- decommission (one UPDATE over many rows, re-runnable) is accepted. Every row of a multi-row
 -- update is judged, not the first: a trigger reading one row would part-apply a mixed batch.
-CREATE TRIGGER trg_Items_LifecycleTransitions
-ON Items AFTER UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN deleted d ON d.ItemId = i.ItemId
-    WHERE i.LifecycleStatus <> d.LifecycleStatus
-      AND NOT EXISTS (
-        SELECT 1 FROM (VALUES
-          ('draft',       'validated'),
-          ('draft',       'retired'),
-          ('validated',   'active'),
-          ('validated',   'quarantined'),
-          ('validated',   'retired'),
-          ('active',      'quarantined'),
-          ('active',      'retired'),
-          ('quarantined', 'active'),
-          ('quarantined', 'retired'),
-          ('quarantined', 'retired_defective')
-        ) AS allowed(FromState, ToState)
-        WHERE allowed.FromState = d.LifecycleStatus AND allowed.ToState = i.LifecycleStatus
-      )
-  )
-    THROW 50060, 'CNT-42: that item lifecycle transition is not one the specification names. Named: draft->validated, draft->retired, validated->active, validated->quarantined, validated->retired, active->quarantined, active->retired, quarantined->active, quarantined->retired, quarantined->retired_defective. retired and retired_defective are terminal.', 1;
-END;
-GO
+-- #309: trg_Items_LifecycleTransitions removed (Expand phase).
 -- Everything that can be scored. Copy-on-write (CNT-43): a new row per change, so an attempt that
 -- pinned version 3 renders version 3 forever. Only a cosmetic explanation fix may be edited in place,
 -- and trg_ItemVersions_ScoredFieldsImmutable is what refuses the rest - a convention in a service
@@ -1641,19 +1616,7 @@ GO
 --   in_progress -> finished   (the last question was answered, or the lesson micro-check closed)
 --   in_progress -> abandoned  (a later session superseded it, or the path moved on)
 -- and both are terminal. There is no writer that reopens one, so this refuses none of them.
-CREATE TRIGGER trg_PracticeSessions_StatusTransitions
-ON PracticeSessions AFTER UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN deleted d ON d.SessionId = i.SessionId
-    WHERE d.Status IN ('finished','abandoned') AND i.Status <> d.Status
-  )
-    THROW 50090, 'PracticeSessions.Status is terminal: a finished or abandoned session cannot change state.', 1;
-END;
-GO
+-- #309: trg_PracticeSessions_StatusTransitions removed (Expand phase).
 CREATE TABLE PracticeAnswers (
   AnswerId         INT IDENTITY(1,1) PRIMARY KEY,
   SessionId        INT NOT NULL REFERENCES PracticeSessions(SessionId),
@@ -2352,53 +2315,7 @@ GO
 -- The predicate looks at what CHANGED, not at what the row now holds. An attempt that is already
 -- graded has a non-null TotalScore; checking "is it non-null" would make every later status write
 -- look like a scoring write and refuse it.
-CREATE TRIGGER trg_Attempts_SingleWriter
-ON ExamAttempts AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  DECLARE @owner VARCHAR(64) =
-    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'attempt_score_and_band');
-
-  -- One list of "the rows in this write that move the derived fact", built once. Three separate
-  -- copies of this predicate is how one of them ends up subtly different from the others.
-  DECLARE @touched TABLE (AttemptId INT NOT NULL PRIMARY KEY, WasVersion INT NOT NULL);
-  INSERT INTO @touched (AttemptId, WasVersion)
-    SELECT i.AttemptId, ISNULL(d.ProjectionVersion, 0)
-    FROM inserted i
-    LEFT JOIN deleted d ON d.AttemptId = i.AttemptId
-    WHERE (d.AttemptId IS NULL
-             AND (i.TotalScore IS NOT NULL OR i.BandCode IS NOT NULL OR i.ProjectionVersion <> 0))
-       OR (d.AttemptId IS NOT NULL
-             AND (ISNULL(i.TotalScore, -2147483648) <> ISNULL(d.TotalScore, -2147483648)
-               OR ISNULL(i.BandCode, '') <> ISNULL(d.BandCode, '')
-               OR i.ProjectionVersion <> d.ProjectionVersion));
-
-  IF NOT EXISTS (SELECT 1 FROM @touched)
-    RETURN;
-
-  -- The declaration must be IN THIS STATEMENT, not inherited from whatever wrote the row last. A
-  -- column that already holds the owner's name vouches for nobody: a second writer that changes only
-  -- TotalScore leaves that value untouched, so a value-only check would pass it. `UPDATE()` is the
-  -- statement-level "this write assigned the column" test, which is exactly the missing half.
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN @touched t ON t.AttemptId = i.AttemptId
-    WHERE ISNULL(i.WrittenByService, '') <> @owner
-       OR (EXISTS (SELECT 1 FROM deleted d WHERE d.AttemptId = i.AttemptId) AND NOT UPDATE(WrittenByService))
-  )
-    THROW 50070, 'The attempt score and band has exactly one writer, AttemptEngine. A write declaring another writer (or none) is refused.', 1;
-
-  -- Monotonic: an older out-of-order callback must not overwrite a newer result. `<=` is the point -
-  -- an equal version is a replay, not progress, and a lower one is a callback that arrived late.
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN @touched t ON t.AttemptId = i.AttemptId
-    WHERE i.ProjectionVersion <= t.WasVersion
-  )
-    THROW 50071, 'The attempt score and band projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
-END;
-GO
+-- #309: trg_Attempts_SingleWriter removed (Expand phase).
 
 -- ============ Domain 8: AI Grading ============
 CREATE TABLE GradingCriteria (
@@ -2714,7 +2631,7 @@ CREATE TABLE AiGradings (
   -- E2.1 (#151): the feedback a learner can act on. An error span quotes the candidate's own text,
   -- so the page can show original -> corrected; all three stay NULL when the grader has nothing to
   -- fix, and a failed grading never carries any (Status = 'failed' means "not scored", not "bad").
-  PriorityFix    NVARCHAR(400) NULL,
+  PriorityFix    NVARCHAR(1000) NULL,
   ModelRewrite   NVARCHAR(MAX) NULL,
   ErrorSpansJson NVARCHAR(MAX) NULL,          -- <=5 {originalSnippet, correctedSnippet, category, explanationVi}
   AttemptCount   INT NOT NULL CONSTRAINT DF_AiGradings_AttemptCount DEFAULT 1
@@ -2933,7 +2850,8 @@ GO
 CREATE TABLE PlacementTests (
   PlacementId    INT IDENTITY(1,1) PRIMARY KEY,
   UserId         INT NOT NULL REFERENCES Users(UserId),
-  CertId         INT NOT NULL REFERENCES Certificates(CertId),
+  -- #309: NULL allows universal placement before certificate selection in OOBE Step 3.
+  CertId         INT NULL REFERENCES Certificates(CertId),
   ExamId         INT NULL,
   Status         VARCHAR(12) NOT NULL DEFAULT 'in_progress'
     CONSTRAINT CK_Placement_Status CHECK (Status IN ('in_progress','done','abandoned')),
@@ -2972,6 +2890,12 @@ CREATE TABLE PlacementTests (
   -- #289: learner's chosen scope ('all_skills' or 'listening_and_reading') and optional retake charge/idempotence links.
   Scope VARCHAR(24) NOT NULL CONSTRAINT DF_Placement_Scope DEFAULT 'all_skills'
     CONSTRAINT CK_Placement_Scope CHECK (Scope IN ('all_skills','listening_and_reading')),
+  -- #309: normalized per-skill and overall diagnostic percentages for universal placement band mapping.
+  ListeningPct     DECIMAL(5,2) NULL,
+  ReadingPct       DECIMAL(5,2) NULL,
+  SpeakingPct      DECIMAL(5,2) NULL,
+  WritingPct       DECIMAL(5,2) NULL,
+  OverallPct       DECIMAL(5,2) NULL,
   CreditTxnId INT NULL,
   IdempotencyKey VARCHAR(64) NULL,
   -- M-2: the placement exam must belong to the same certificate (NULL stays legal, MATCH SIMPLE)
@@ -3272,53 +3196,7 @@ GO
 --
 -- The derived fact is the snapshot (Status/ResultBandCode/TotalScore/TakenAt) - not AttemptId, which
 -- is set when the placement starts and derives nothing.
-CREATE TRIGGER trg_PlacementTests_SingleWriter
-ON PlacementTests AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  DECLARE @owner VARCHAR(64) =
-    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'placement_result');
-
-  DECLARE @touched TABLE (PlacementId INT NOT NULL PRIMARY KEY, WasVersion INT NOT NULL);
-  INSERT INTO @touched (PlacementId, WasVersion)
-    SELECT i.PlacementId, ISNULL(d.ProjectionVersion, 0)
-    FROM inserted i
-    LEFT JOIN deleted d ON d.PlacementId = i.PlacementId
-    -- The derived fact is the RESULT: the band, the total, the moment it was taken, and the move to
-    -- 'done'. Abandoning or starting a placement is a lifecycle act that derives nothing, so it needs
-    -- no declaration - refusing it would make the guard look right and break the product.
-    WHERE (d.PlacementId IS NULL
-             AND (i.ResultBandCode IS NOT NULL OR i.TotalScore IS NOT NULL
-                  OR i.Status = 'done' OR i.ProjectionVersion <> 0))
-       OR (d.PlacementId IS NOT NULL
-             AND (ISNULL(i.ResultBandCode, '') <> ISNULL(d.ResultBandCode, '')
-               OR ISNULL(i.TotalScore, -2147483648) <> ISNULL(d.TotalScore, -2147483648)
-               OR i.TakenAt <> d.TakenAt
-               OR (i.Status = 'done' AND d.Status <> 'done')
-               OR i.ProjectionVersion <> d.ProjectionVersion));
-
-  IF NOT EXISTS (SELECT 1 FROM @touched)
-    RETURN;
-
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN @touched t ON t.PlacementId = i.PlacementId
-    WHERE ISNULL(i.WrittenByService, '') <> @owner
-       OR (EXISTS (SELECT 1 FROM deleted d WHERE d.PlacementId = i.PlacementId) AND NOT UPDATE(WrittenByService))
-  )
-    THROW 50072, 'The placement snapshot has exactly one writer, AttemptEngine. A write declaring another writer (or none) is refused.', 1;
-
-  -- A version may only move forward, and a bare bump counts as a projection write: otherwise
-  -- "bump to the stored value, then write the result at that version" is a two-step bypass.
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN @touched t ON t.PlacementId = i.PlacementId
-    WHERE i.ProjectionVersion <= t.WasVersion
-  )
-    THROW 50073, 'The placement snapshot projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
-END;
-GO
+-- #309: trg_PlacementTests_SingleWriter removed (Expand phase).
 -- #156: the learner's answer to a calibration proposal. A row here is a *record of a decision the
 -- learner made*, not an automatic correction, so the path is only rewritten by the 'adjusted' branch
 -- and a 'deferred' row leaves it exactly as it was. The numbers are stored, not re-derived: after
@@ -3617,57 +3495,7 @@ GO
 -- A closed step is also terminal: reopening it would let a second writer reach the same row through
 -- the open-state door. PathStepCompletion is idempotent on an already-done step and the reset-path
 -- case is handled by LearnerPaths.Status, not by reopening the step.
-CREATE TRIGGER trg_LearnerPathSteps_SingleWriter
-ON LearnerPathSteps AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  DECLARE @owner VARCHAR(64) =
-    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'step_closure');
-
-  DECLARE @touched TABLE (StepId INT NOT NULL PRIMARY KEY, WasVersion INT NOT NULL, WasDone BIT NOT NULL);
-  INSERT INTO @touched (StepId, WasVersion, WasDone)
-    SELECT i.StepId, ISNULL(d.ProjectionVersion, 0),
-           CASE WHEN ISNULL(d.Status, '') = 'done' THEN 1 ELSE 0 END
-    FROM inserted i
-    LEFT JOIN deleted d ON d.StepId = i.StepId
-    WHERE (d.StepId IS NULL
-             AND (i.Status = 'done' OR i.Score IS NOT NULL
-                  OR i.ActualAccuracyPct IS NOT NULL OR i.ProjectionVersion <> 0))
-       OR (d.StepId IS NOT NULL
-             AND (i.Status = 'done' OR d.Status = 'done'
-               OR ISNULL(i.Score, -1) <> ISNULL(d.Score, -1)
-               OR ISNULL(i.ActualAccuracyPct, -1) <> ISNULL(d.ActualAccuracyPct, -1)
-               OR i.ProjectionVersion <> d.ProjectionVersion));
-
-  IF NOT EXISTS (SELECT 1 FROM @touched)
-    RETURN;
-
-  -- reopening a closed step is a closure write in reverse, so it is refused before the ownership
-  -- check rather than being counted as an ordinary state move
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN @touched t ON t.StepId = i.StepId
-    WHERE t.WasDone = 1 AND i.Status <> 'done'
-  )
-    THROW 50074, 'A closed step cannot be reopened; the step closure has exactly one writer.', 1;
-
-  IF EXISTS (
-    SELECT 1
-    FROM inserted i
-    JOIN @touched t ON t.StepId = i.StepId
-    WHERE ISNULL(i.WrittenByService, '') <> @owner
-       OR (EXISTS (SELECT 1 FROM deleted d WHERE d.StepId = i.StepId) AND NOT UPDATE(WrittenByService))
-  )
-    THROW 50075, 'The step closure has exactly one writer, PathStepCompletion. A write declaring another writer (or none) is refused.', 1;
-
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN @touched t ON t.StepId = i.StepId
-    WHERE i.ProjectionVersion <= t.WasVersion
-  )
-    THROW 50076, 'The step closure projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
-END;
-GO
+-- #309: trg_LearnerPathSteps_SingleWriter removed (Expand phase).
 -- ============ Domain 9.5: Guided Learning (Lessons) ============
 -- Issue #45: Interactive lesson walkthroughs for remediation and guided paths
 CREATE TABLE Lessons (
@@ -3679,6 +3507,8 @@ CREATE TABLE Lessons (
   Summary          NVARCHAR(500) NULL,
   EstimatedMinutes INT NOT NULL DEFAULT 5 CONSTRAINT CK_Lessons_Est CHECK (EstimatedMinutes > 0),
   DisplayOrder     INT NOT NULL DEFAULT 0,
+  -- #309: comma-separated target band codes (e.g. '5.5,6.0,6.5') or 'ALL' for general knowledge.
+  TargetBands      VARCHAR(100) NOT NULL CONSTRAINT DF_Lessons_TargetBands DEFAULT 'ALL',
   CreatedAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   CONSTRAINT FK_Lessons_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
   CONSTRAINT UQ_Lessons_Id_Cert UNIQUE (LessonId, CertId)
@@ -3762,28 +3592,31 @@ END;
 GO
 -- ============ Domain 10: Mentor ============
 CREATE TABLE MentorProfiles (
-  MentorId     INT IDENTITY(1,1) PRIMARY KEY,
-  UserId       INT NULL REFERENCES Users(UserId),   -- NULL for AI mentors
-  DisplayName  NVARCHAR(120) NOT NULL,
-  Bio          NVARCHAR(MAX) NULL,
-  CertId       INT NOT NULL REFERENCES Certificates(CertId),
-  SkillId      INT NULL REFERENCES Skills(SkillId),
-  Type         VARCHAR(6) NOT NULL CONSTRAINT CK_Mentor_Type CHECK (Type IN ('human','ai')),
-  PricePerSlot DECIMAL(10,2) NOT NULL CONSTRAINT CK_Mentor_Price CHECK (PricePerSlot >= 0),  -- payout basis (cash)
-  -- UI-26 (gap 7): what the learner is charged; the mentor_booking ledger Delta must equal -PriceCredits
-  PriceCredits INT NOT NULL CONSTRAINT DF_Mentor_PriceCredits DEFAULT 1
+  MentorId       INT IDENTITY(1,1) PRIMARY KEY,
+  DisplayName    NVARCHAR(120) NOT NULL,
+  Bio            NVARCHAR(MAX) NULL,
+  CertId         INT NOT NULL REFERENCES Certificates(CertId),
+  SkillId        INT NULL REFERENCES Skills(SkillId),
+  MeetLink       NVARCHAR(400) NOT NULL CONSTRAINT DF_Mentor_MeetLink DEFAULT N'https://meet.google.com/new',
+  -- UI-26 (gap 7): what the learner is charged; the mentor_booking ledger Delta must equal -Bookings.PriceCredits
+  PriceCredits   INT NOT NULL CONSTRAINT DF_Mentor_PriceCredits DEFAULT 1
     CONSTRAINT CK_Mentor_PriceCredits CHECK (PriceCredits > 0),
-  Headline     NVARCHAR(200) NULL,   -- UI-26: one-line card copy ("10 years teaching TOEICâ€¦")
-  Expertise    NVARCHAR(400) NULL,   -- UI-26: "Expertise: Listening strategies, pronunciationâ€¦"
+  Headline       NVARCHAR(200) NULL,
+  Expertise      NVARCHAR(400) NULL,
   SessionMinutes INT NOT NULL CONSTRAINT DF_Mentor_SessionMinutes DEFAULT 60
     CONSTRAINT CK_Mentor_SessionMinutes CHECK (SessionMinutes > 0),
-  IsActive     BIT NOT NULL DEFAULT 1,
-  -- M-14: human mentors are people (UserId set), AI mentors are not
-  CONSTRAINT CK_Mentor_TypeUserId CHECK ((Type='human' AND UserId IS NOT NULL) OR (Type='ai' AND UserId IS NULL)),
+  IsActive       BIT NOT NULL DEFAULT 1,
   -- M-14: a mentor's SkillId (if any) must belong to the mentor's own CertId
-  CONSTRAINT FK_Mentor_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
-  -- composite target so Bookings can carry MentorType down (M-14 / PartC-1):
-  CONSTRAINT UQ_MentorProfiles_Id_Type UNIQUE (MentorId, Type)
+  CONSTRAINT FK_Mentor_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId)
+);
+GO
+CREATE TABLE MentorWeeklySlots (
+  WeeklySlotId INT IDENTITY(1,1) PRIMARY KEY,
+  MentorId     INT NOT NULL REFERENCES MentorProfiles(MentorId),
+  DayOfWeek    TINYINT NOT NULL CONSTRAINT CK_MentorWeeklySlots_DayOfWeek CHECK (DayOfWeek BETWEEN 1 AND 7),
+  StartTime    TIME(0) NOT NULL,
+  EndTime      TIME(0) NOT NULL,
+  CONSTRAINT CK_MentorWeeklySlots_Range CHECK (EndTime > StartTime)
 );
 GO
 CREATE TABLE MentorSlots (
@@ -3799,35 +3632,29 @@ CREATE TABLE MentorSlots (
 );
 GO
 CREATE TABLE Bookings (
-  BookingId INT IDENTITY(1,1) PRIMARY KEY,
-  UserId    INT NOT NULL REFERENCES Users(UserId),
-  MentorId  INT NOT NULL REFERENCES MentorProfiles(MentorId),
-  SlotId    INT NULL REFERENCES MentorSlots(SlotId),   -- NULL for AI
-  MentorType VARCHAR(6) NOT NULL
-    CONSTRAINT CK_Bookings_MentorType CHECK (MentorType IN ('human','ai')),
-  Status    VARCHAR(10) NOT NULL DEFAULT 'pending'
+  BookingId    INT IDENTITY(1,1) PRIMARY KEY,
+  UserId       INT NOT NULL REFERENCES Users(UserId),
+  MentorId     INT NOT NULL REFERENCES MentorProfiles(MentorId),
+  SlotId       INT NOT NULL REFERENCES MentorSlots(SlotId),
+  PriceCredits INT NOT NULL CONSTRAINT DF_Bookings_PriceCredits DEFAULT 1
+    CONSTRAINT CK_Bookings_PriceCredits CHECK (PriceCredits > 0),
+  Status       VARCHAR(10) NOT NULL DEFAULT 'pending'
     CONSTRAINT CK_Bookings_Status CHECK (Status IN ('pending','confirmed','done','cancelled')),
-  MeetLink  NVARCHAR(400) NULL,
-  FocusArea NVARCHAR(120) NULL,          -- UI-27: mentor-confirm "Focus area: Listening strategies"
-  CancelledAt DATETIMEOFFSET NULL,       -- UI-27: refund only if cancelled 24h+ before the slot
-  CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  MeetLink     NVARCHAR(400) NULL,
+  FocusArea    NVARCHAR(120) NULL,          -- UI-27: mentor-confirm "Focus area: Listening strategies"
+  CancelledAt  DATETIMEOFFSET NULL,       -- UI-27: refund only if cancelled 24h+ before the slot
+  CreatedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   -- composite target so CreditTransactions can prove the charged user owns the booking (H-1).
   -- Batch 2 (PartC-3) also needs this constraint; reused there, not recreated.
   CONSTRAINT UQ_Bookings_Id_User UNIQUE (BookingId, UserId),
-  -- PartC-2: composite target so a payout item must agree with the booking's mentor
-  CONSTRAINT UQ_Bookings_Id_Mentor UNIQUE (BookingId, MentorId),
-  -- PartC-1: SlotId must belong to the same mentor as MentorId (NULL SlotId stays legal, MATCH SIMPLE)
+  -- PartC-1: SlotId must belong to the same mentor as MentorId
   CONSTRAINT FK_Bookings_SlotMentor FOREIGN KEY (SlotId, MentorId) REFERENCES MentorSlots(SlotId, MentorId),
-  -- M-14: MentorType must be the mentor's actual Type
-  CONSTRAINT FK_Bookings_MentorType FOREIGN KEY (MentorId, MentorType) REFERENCES MentorProfiles(MentorId, Type),
-  -- M-14: only human mentors need a scheduled slot; AI books without one
-  CONSTRAINT CK_Bookings_MentorTypeSlot CHECK ((MentorType='human' AND SlotId IS NOT NULL) OR (MentorType='ai' AND SlotId IS NULL)),
   CONSTRAINT CK_Bookings_CancelledAt CHECK (CancelledAt IS NULL OR Status = 'cancelled')
 );
 GO
 -- Review Focus #5: one live booking per slot (cancelled frees it)
 CREATE UNIQUE INDEX UX_Bookings_OnePerSlot
-  ON Bookings(SlotId) WHERE SlotId IS NOT NULL AND Status <> 'cancelled';
+  ON Bookings(SlotId) WHERE Status <> 'cancelled';
 GO
 CREATE TABLE Reviews (
   ReviewId  INT IDENTITY(1,1) PRIMARY KEY,
@@ -3878,31 +3705,6 @@ CREATE TABLE Complaints (
   CONSTRAINT CK_Complaints_ResolvedAt CHECK (ResolvedAt IS NULL OR Status = 'resolved')
 );
 GO
-CREATE TABLE MentorPayouts (
-  PayoutId     INT IDENTITY(1,1) PRIMARY KEY,
-  MentorId     INT NOT NULL REFERENCES MentorProfiles(MentorId),
-  PeriodStart  DATETIMEOFFSET NOT NULL,
-  PeriodEnd    DATETIMEOFFSET NOT NULL,
-  -- M-17: BookingCount/GrossAmount removed (stored aggregates drift) â€” see vw_MentorPayoutTotals
-  Status       VARCHAR(7) NOT NULL DEFAULT 'pending'
-    CONSTRAINT CK_Payouts_Status CHECK (Status IN ('pending','paid')),
-  PaidAt       DATETIMEOFFSET NULL,
-  CONSTRAINT CK_Payouts_Range CHECK (PeriodEnd > PeriodStart),
-  -- PartC-2: composite target so a payout item must agree with the payout's mentor
-  CONSTRAINT UQ_MentorPayouts_Id_Mentor UNIQUE (PayoutId, MentorId)
-);
-GO
-CREATE TABLE MentorPayoutItems (
-  PayoutId  INT NOT NULL,
-  BookingId INT NOT NULL,
-  MentorId  INT NOT NULL,
-  CONSTRAINT PK_PayoutItems PRIMARY KEY (PayoutId, BookingId),
-  CONSTRAINT UQ_PayoutItems_Booking UNIQUE (BookingId),   -- a booking settles once
-  -- PartC-2: the booking's mentor and the payout's mentor must agree
-  CONSTRAINT FK_PayoutItems_BookingMentor FOREIGN KEY (BookingId, MentorId) REFERENCES Bookings(BookingId, MentorId),
-  CONSTRAINT FK_PayoutItems_PayoutMentor  FOREIGN KEY (PayoutId, MentorId)  REFERENCES MentorPayouts(PayoutId, MentorId)
-);
-GO
 -- M-15: reject bookings placed on a closed slot, and keep MentorSlots.Status in sync
 -- with live (non-cancelled) bookings. Booking-side filtered unique index is the double-book
 -- guard (kept as the accepted deviation from the spec's slot-side wording); this trigger only
@@ -3916,13 +3718,13 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM inserted i
     JOIN MentorSlots ms ON ms.SlotId = i.SlotId
-    WHERE i.SlotId IS NOT NULL AND i.Status <> 'cancelled' AND ms.Status = 'closed'
+    WHERE i.Status <> 'cancelled' AND ms.Status = 'closed'
   )
     THROW 50024, 'Booking cannot be placed on a closed slot.', 1;
 
   ;WITH affected AS (
-    SELECT SlotId FROM inserted WHERE SlotId IS NOT NULL
-    UNION SELECT SlotId FROM deleted WHERE SlotId IS NOT NULL
+    SELECT SlotId FROM inserted
+    UNION SELECT SlotId FROM deleted
   )
   UPDATE ms
     SET Status = CASE WHEN EXISTS (
@@ -3938,17 +3740,6 @@ CREATE VIEW vw_MentorAvgRating AS
   SELECT b.MentorId, AVG(CAST(r.Rating AS DECIMAL(3,2))) AS AvgRating, COUNT(*) AS ReviewCount
   FROM Reviews r JOIN Bookings b ON b.BookingId = r.BookingId
   GROUP BY b.MentorId;
-GO
--- M-17: replaces the dropped MentorPayouts.BookingCount/GrossAmount stored counters
-CREATE VIEW vw_MentorPayoutTotals AS
-  SELECT mp.PayoutId, mp.MentorId,
-         COUNT(*) AS BookingCount,
-         SUM(m.PricePerSlot) AS GrossAmount
-  FROM MentorPayoutItems mpi
-  JOIN MentorPayouts mp ON mp.PayoutId = mpi.PayoutId
-  JOIN Bookings b ON b.BookingId = mpi.BookingId
-  JOIN MentorProfiles m ON m.MentorId = b.MentorId
-  GROUP BY mp.PayoutId, mp.MentorId;
 GO
 
 -- ============ Domain 5: Payment ============
@@ -4048,8 +3839,9 @@ CREATE TABLE CreditTransactions (
     CONSTRAINT CK_CreditTxn_Reason CHECK (Reason IN
       ('purchase','admin_grant','mock_exam_start','ai_grading','mentor_booking','admin_revoke',
        'booking_cancel',   -- UI-31 (gap 8): refund of a cancelled booking
-       'refund_credit',      -- #280: the credits a credit refund granted
-       'placement_retake')), -- #288: paid placement retake charge (16 chars, fits VARCHAR(16))
+       'refund_credit',    -- #280: the credits a credit refund granted
+       'placement_retake', -- #288: paid placement retake charge (16 chars, fits VARCHAR(16))
+       'learning_path')),  -- #309: 5-credit 4-week learning path generation charge
   Delta    INT NOT NULL CONSTRAINT CK_CreditTxn_NonZero CHECK (Delta <> 0),
   OrderId       INT NULL,
   AttemptId     INT NULL,
@@ -4082,7 +3874,7 @@ CREATE TABLE CreditTransactions (
   -- with a flipped sign.
   CONSTRAINT CK_CreditTxn_DeltaSign CHECK (
        (Reason IN ('purchase','admin_grant','booking_cancel','refund_credit') AND Delta > 0)
-    OR (Reason IN ('mock_exam_start','ai_grading','mentor_booking','admin_revoke','placement_retake') AND Delta < 0)
+    OR (Reason IN ('mock_exam_start','ai_grading','mentor_booking','admin_revoke','placement_retake','learning_path') AND Delta < 0)
   ),
   -- exactly the source column matching the reason is set (admin_* carry none)
   -- #280: refund_credit carries NO source column either, for a reason the ledger cannot express: the
@@ -4095,7 +3887,7 @@ CREATE TABLE CreditTransactions (
     OR (Reason='ai_grading'      AND AttemptId IS NOT NULL AND OrderId IS NULL AND BookingId IS NULL)
     OR (Reason IN ('mentor_booking','booking_cancel')
                                  AND BookingId IS NOT NULL AND OrderId IS NULL AND AttemptId IS NULL)
-    OR (Reason IN ('admin_grant','admin_revoke','refund_credit','placement_retake') AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL)
+    OR (Reason IN ('admin_grant','admin_revoke','refund_credit','placement_retake','learning_path') AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL)
   )
 );
 GO
@@ -4200,7 +3992,7 @@ BEGIN
     THROW 50038, 'This charge does not apply to the attempt''s exam purpose.', 1;
 END;
 GO
--- UI-26/UI-31: a mentor_booking charge must equal the mentor's PriceCredits; a booking_cancel refund
+-- UI-26/UI-31: a mentor_booking charge must equal the booking's PriceCredits; a booking_cancel refund
 -- must exactly reverse a prior charge on a booking that is now cancelled.
 CREATE TRIGGER trg_CreditTransactions_BookingAmounts
 ON CreditTransactions AFTER INSERT, UPDATE AS
@@ -4209,10 +4001,9 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM inserted i
     JOIN Bookings b ON b.BookingId = i.BookingId
-    JOIN MentorProfiles m ON m.MentorId = b.MentorId
-    WHERE i.Reason = 'mentor_booking' AND i.Delta <> -m.PriceCredits
+    WHERE i.Reason = 'mentor_booking' AND i.Delta <> -b.PriceCredits
   )
-    THROW 50035, 'mentor_booking Delta must equal minus the mentor''s PriceCredits.', 1;
+    THROW 50035, 'mentor_booking Delta must equal minus the booking''s PriceCredits.', 1;
   IF EXISTS (
     SELECT 1 FROM inserted i
     JOIN Bookings b ON b.BookingId = i.BookingId
@@ -4710,12 +4501,12 @@ CREATE INDEX IX_Steps_LearnerPath_Sequence ON LearnerPathSteps(LearnerPathId, We
 CREATE INDEX IX_Steps_Coordinate         ON LearnerPathSteps(TopicId, TargetCefr, StepType);
 -- Mentor
 CREATE INDEX IX_Mentors_Cert             ON MentorProfiles(CertId) WHERE IsActive = 1;
+CREATE INDEX IX_MentorWeeklySlots_Mentor ON MentorWeeklySlots(MentorId, DayOfWeek);
 CREATE INDEX IX_MentorSlots_Mentor       ON MentorSlots(MentorId, StartAt);
 CREATE INDEX IX_Bookings_User            ON Bookings(UserId, CreatedAt);
 CREATE INDEX IX_Bookings_Mentor          ON Bookings(MentorId);
 CREATE INDEX IX_Complaints_Status        ON Complaints(Status, CreatedAt);
 CREATE INDEX IX_Complaints_User          ON Complaints(UserId);
-CREATE INDEX IX_MentorPayouts_Mentor     ON MentorPayouts(MentorId);
 -- Payment (wallet history, balance view, admin orders)
 CREATE INDEX IX_Orders_User              ON Orders(UserId, CreatedAt);
 CREATE INDEX IX_Orders_Open              ON Orders(CreatedAt) WHERE Status IN ('pending','reconciling');

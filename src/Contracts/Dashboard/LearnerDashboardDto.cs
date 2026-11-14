@@ -1,5 +1,16 @@
 namespace Contracts;
 
+public sealed record UpcomingMentorBookingDto(
+    int BookingId,
+    int MentorId,
+    string MentorName,
+    string CertCode,
+    string? SkillName,
+    DateTimeOffset StartAt,
+    DateTimeOffset EndAt,
+    string MeetLink,
+    string? FocusArea);
+
 /// <summary>#159: the learner's dashboard is three blocks. Every other block the ticket names was
 /// deleted rather than hidden, so this DTO carries only what those three render.
 /// <para>
@@ -20,5 +31,5 @@ public sealed record LearnerDashboardDto(
     int AttemptCount,
     int PracticeCount,
     RecentAttemptDto? UnfinishedAttempt = null,
-    RecentPracticeDto? UnfinishedPractice = null);
-
+    RecentPracticeDto? UnfinishedPractice = null,
+    IReadOnlyList<UpcomingMentorBookingDto>? UpcomingBookings = null);

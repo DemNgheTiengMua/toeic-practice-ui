@@ -114,8 +114,8 @@ public sealed class MentorStandingPayloadTests : IAsyncLifetime
     private async Task<(int MentorId, int SlotId)> SeedMentorAndSlotAsync(int certId, int learnerId)
     {
         await SqlAsync($"""
-            INSERT INTO MentorProfiles (UserId, CertId, DisplayName, Type, PricePerSlot, PriceCredits, SessionMinutes, IsActive)
-              VALUES ({learnerId}, {certId}, N'Dr. Minh Khoa', 'human', 200000, 1, 60, 1);
+            INSERT INTO MentorProfiles (CertId, DisplayName, MeetLink, PriceCredits, SessionMinutes, IsActive)
+              VALUES ({certId}, N'Dr. Minh Khoa', N'https://meet.google.com/abc-defg-hij', 1, 60, 1);
             DECLARE @m INT = SCOPE_IDENTITY();
             INSERT INTO MentorSlots (MentorId, StartAt, EndAt, Status)
               VALUES (@m, DATEADD(day, 2, SYSDATETIMEOFFSET()), DATEADD(day, 2, DATEADD(hour, 1, SYSDATETIMEOFFSET())), 'open');
@@ -343,8 +343,8 @@ public sealed class MentorStandingPayloadTests : IAsyncLifetime
         await RecordAsync(fixture.LearnerId, fixture.CertId, fixture.Skills[0].SkillId, CefrLevel.B1, 30);
 
         await SqlAsync($"""
-            INSERT INTO Bookings (UserId, MentorId, SlotId, MentorType, Status, MeetLink, CreatedAt)
-              VALUES ({fixture.LearnerId}, {mentorId}, {slotId}, 'human', 'confirmed', N'https://meet.google.com/aaa-bbbb-ccc', SYSDATETIMEOFFSET());
+            INSERT INTO Bookings (UserId, MentorId, SlotId, PriceCredits, Status, MeetLink, CreatedAt)
+              VALUES ({fixture.LearnerId}, {mentorId}, {slotId}, 1, 'confirmed', N'https://meet.google.com/aaa-bbbb-ccc', SYSDATETIMEOFFSET());
             """);
 
         await using var db = Db();

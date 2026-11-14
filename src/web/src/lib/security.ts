@@ -60,13 +60,10 @@ export function canTriageSupport(subject: CapabilitySubject | null | undefined):
   return hasCapability(subject, STAFF_PERMISSIONS.SupportTriage);
 }
 
-export function canViewInstructorSessions(subject: CapabilitySubject | null | undefined): boolean {
-  const role = subject?.role?.toLowerCase();
-  return (
-    role === 'instructor' ||
-    hasCapability(subject, STAFF_PERMISSIONS.SupportTriage) ||
-    hasCapability(subject, STAFF_PERMISSIONS.SystemAdmin)
-  );
+export const VND_PER_CREDIT = 20_000;
+
+export function creditsToVnd(credits: number): number {
+  return Math.max(0, credits) * VND_PER_CREDIT;
 }
 
 export function isLocalPath(url: string | null | undefined): url is string {

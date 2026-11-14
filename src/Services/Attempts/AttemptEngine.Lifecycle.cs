@@ -227,13 +227,23 @@ public sealed partial class AttemptEngine
         }
     }
 
+    private static readonly string[] SkillPracticePurposes =
+    [
+        ExamPurpose.SpeakingPractice.ToCode(),
+        ExamPurpose.WritingPractice.ToCode(),
+    ];
+
     public async Task<int> AutoSubmitExpiredAttemptsAsync(
         int userId,
         int certId,
         CancellationToken cancellationToken = default)
     {
         var expiredAttempts = await db.ExamAttempts
-            .Where(a => a.UserId == userId && a.CertId == certId && a.Status == AttemptStatus.InProgress.ToCode() && DateTimeOffset.UtcNow >= a.ExpiresAt)
+            .Where(a => a.UserId == userId
+                     && a.CertId == certId
+                     && a.Status == AttemptStatus.InProgress.ToCode()
+                     && DateTimeOffset.UtcNow >= a.ExpiresAt
+                     && !SkillPracticePurposes.Contains(a.Exam.Purpose))
             .Select(a => a.AttemptId)
             .ToListAsync(cancellationToken);
 

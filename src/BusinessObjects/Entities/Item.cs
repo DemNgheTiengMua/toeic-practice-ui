@@ -75,6 +75,11 @@ public partial class Item
     [StringLength(60)]
     public string? BatchTag { get; set; }
 
+    /// <summary>#309: comma-separated target band codes (e.g. 'A2,B1,B2') or 'ALL' for general knowledge.</summary>
+    [StringLength(100)]
+    [Unicode(false)]
+    public string TargetBands { get; set; } = "ALL";
+
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>

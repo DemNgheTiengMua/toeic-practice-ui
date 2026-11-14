@@ -382,7 +382,7 @@ export function QuestionBankStudioPage() {
   );
 
   return (
-    <div className="p-6 max-w-[1440px] mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-4">
         <div>
@@ -442,7 +442,7 @@ export function QuestionBankStudioPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-muted">Filter:</span>
               {['all', 'reading', 'listening', 'speaking', 'writing'].map((mod) => (
                 <Button
@@ -527,7 +527,7 @@ export function QuestionBankStudioPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
                 variant="secondary"
@@ -664,7 +664,7 @@ export function QuestionBankStudioPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
                 variant="secondary"

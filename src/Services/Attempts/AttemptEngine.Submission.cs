@@ -45,6 +45,13 @@ public sealed partial class AttemptEngine
                 .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
                 ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
 
+            if (SkillPracticePurposes.Contains(attempt.Exam.Purpose))
+            {
+                throw new AttemptEngineException(
+                    AttemptEngineException.AttemptNotActive,
+                    "Skill-practice attempts must be submitted through their own practice workflow.");
+            }
+
             if (attempt.Status == AttemptStatus.Graded.ToCode()
                 || attempt.Status == AttemptStatus.Submitted.ToCode())
             {

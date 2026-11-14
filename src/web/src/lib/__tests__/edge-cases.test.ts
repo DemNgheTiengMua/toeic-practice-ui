@@ -15,7 +15,8 @@ import {
   canManageCatalog,
   canManageBilling,
   canTriageSupport,
-  canViewInstructorSessions,
+  VND_PER_CREDIT,
+  creditsToVnd,
 } from '../security';
 import {
   computePerSectionUnanswered,
@@ -114,8 +115,8 @@ describe('Security & Link-Injection Guards (Q12)', () => {
     expect(canManageBilling(contentOnly)).toBe(false);
 
     expect(canManageUsers(fullAdmin)).toBe(true);
-    expect(canViewInstructorSessions({ role: 'instructor', permissions: [] })).toBe(true);
-    expect(canViewInstructorSessions(learner)).toBe(false);
+    expect(VND_PER_CREDIT).toBe(20000);
+    expect(creditsToVnd(5)).toBe(100000);
   });
 });
 

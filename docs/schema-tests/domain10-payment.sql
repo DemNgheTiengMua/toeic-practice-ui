@@ -87,8 +87,9 @@ END CATCH
 
 -- reject (M-16): a complaint resolved by another user's admin_grant txn
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('TOEIC',N'T',1); DECLARE @c INT=SCOPE_IDENTITY();
-INSERT INTO MentorProfiles (DisplayName,CertId,Type,PricePerSlot,IsActive) VALUES (N'Coach',@c,'ai',0,1); DECLARE @m INT=SCOPE_IDENTITY();
-INSERT INTO Bookings (UserId,MentorId,MentorType,Status) VALUES (@u,@m,'ai','done'); DECLARE @bk INT=SCOPE_IDENTITY();
+INSERT INTO MentorProfiles (DisplayName,CertId,MeetLink,PriceCredits,IsActive) VALUES (N'Coach',@c,N'https://meet.google.com/abc-defg-hij',1,1); DECLARE @m INT=SCOPE_IDENTITY();
+INSERT INTO MentorSlots (MentorId,StartAt,EndAt,Status) VALUES (@m,'2026-10-01T09:00:00+07:00','2026-10-01T10:00:00+07:00','booked'); DECLARE @mslot INT=SCOPE_IDENTITY();
+INSERT INTO Bookings (UserId,MentorId,SlotId,PriceCredits,Status) VALUES (@u,@m,@mslot,1,'done'); DECLARE @bk INT=SCOPE_IDENTITY();
 INSERT INTO Complaints (BookingId,UserId,Type,Reason) VALUES (@bk,@u,'mentor_no_show',N'no show'); DECLARE @cp INT=SCOPE_IDENTITY();
 INSERT INTO CreditTransactions (UserId,Reason,Delta,AdminUserId,Note) VALUES (@u2,'admin_grant',5,@u,N'make-good'); DECLARE @grantTxn INT=SCOPE_IDENTITY();
 BEGIN TRY

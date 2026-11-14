@@ -23,8 +23,7 @@ import {
 import { api } from '../../lib/api';
 import {
   formatBookingStatus,
-  formatDateTime,
-  formatMentorType,
+  formatDateTimeRange,
 } from '../../lib/domain-labels';
 
 export function MentorBookingsPage() {
@@ -92,7 +91,7 @@ export function MentorBookingsPage() {
               <Calendar className="w-10 h-10 text-muted mx-auto" />
               <p className="text-base font-semibold text-foreground m-0">No bookings yet</p>
               <p className="text-sm text-muted m-0">
-                You have not booked any mentor or AI coaching sessions yet.
+                You have not booked any mentor sessions yet.
               </p>
               <div className="pt-2">
                 <Link to="/mentors" className="no-underline">
@@ -109,7 +108,7 @@ export function MentorBookingsPage() {
                   <Table.Header>
                     <Table.Column isRowHeader>Booking #</Table.Column>
                     <Table.Column>Mentor</Table.Column>
-                    <Table.Column>Type</Table.Column>
+                    <Table.Column>Focus area</Table.Column>
                     <Table.Column>Scheduled time</Table.Column>
                     <Table.Column>Credits</Table.Column>
                     <Table.Column>Status</Table.Column>
@@ -134,11 +133,11 @@ export function MentorBookingsPage() {
                           </Table.Cell>
 
                           <Table.Cell className="text-xs text-muted">
-                            {formatMentorType(booking.mentorType)}
+                            {booking.focusArea || '1-on-1 consultation'}
                           </Table.Cell>
 
                           <Table.Cell className="font-mono-tabular text-xs">
-                            {formatDateTime(booking.startAt)}
+                            {formatDateTimeRange(booking.startAt, booking.endAt)}
                           </Table.Cell>
 
                           <Table.Cell className="font-mono-tabular font-bold text-accent">

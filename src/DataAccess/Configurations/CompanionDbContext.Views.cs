@@ -15,13 +15,6 @@ public partial class CompanionDbContext
 
 
 
-        modelBuilder.Entity<vw_MentorPayoutTotal>(entity =>
-        {
-            entity.ToView("vw_MentorPayoutTotals");
-        });
-
-
-
         modelBuilder.Entity<vw_UserCreditBalance>(entity =>
         {
             entity.ToView("vw_UserCreditBalance");

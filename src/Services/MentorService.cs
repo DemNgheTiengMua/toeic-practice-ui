@@ -1,10 +1,5 @@
-using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
-using Contracts;
 using DataAccess;
-using BusinessObjects.Entities;
-using BusinessObjects.Views;
-using Microsoft.EntityFrameworkCore;
 using Services.Credits;
 
 namespace Services;
@@ -12,8 +7,6 @@ namespace Services;
 public sealed partial class MentorService(
     CompanionDbContext db,
     TimeProvider clock,
-    ILearnerService? learners = null,
-    ISpeakingPracticeService? speakingPracticeService = null,
     ICreditLedger? creditLedger = null,
     ISkillStateWriter? skillStates = null) : IMentorService
 {

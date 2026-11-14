@@ -19,6 +19,7 @@ public static class MediaUrlHelper
             trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
             trimmed.StartsWith("/media/", StringComparison.OrdinalIgnoreCase) ||
             trimmed.StartsWith("/audio/", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.StartsWith("/img/", StringComparison.OrdinalIgnoreCase) ||
             trimmed.StartsWith("/images/", StringComparison.OrdinalIgnoreCase))
         {
             return trimmed;

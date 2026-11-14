@@ -16,10 +16,14 @@ export function AdminAccessGuard({ children, predicate }: AdminAccessGuardProps)
     if (isLoading) return;
 
     if (!isAuthenticated) {
-      if (!location.pathname.startsWith('/sign-in')) {
+      if (
+        !location.pathname.startsWith('/sign-in') &&
+        !location.pathname.startsWith('/auth/sign-in')
+      ) {
+        const returnUrl = `${location.pathname}${location.searchStr || ''}`;
         void navigate({
           to: '/sign-in',
-          search: { returnUrl: location.pathname } as any,
+          search: { returnUrl } as any,
           replace: true,
         });
       }
@@ -40,7 +44,16 @@ export function AdminAccessGuard({ children, predicate }: AdminAccessGuardProps)
         replace: true,
       });
     }
-  }, [isLoading, isAuthenticated, isStaff, user, predicate, location.pathname, navigate]);
+  }, [
+    isLoading,
+    isAuthenticated,
+    isStaff,
+    user,
+    predicate,
+    location.pathname,
+    location.searchStr,
+    navigate,
+  ]);
 
   if (isLoading || !isAuthenticated || !isStaff) {
     return null;

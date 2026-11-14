@@ -227,16 +227,18 @@ export function AdminUsersPage() {
           onSelectionChange={(k) => setActiveTab(String(k))}
           className="w-full"
         >
-          <Tabs.List aria-label="People and governance navigation">
-            <Tabs.Tab id="users">Users &amp; credits</Tabs.Tab>
-            <Tabs.Tab id="roles">Roles &amp; capabilities</Tabs.Tab>
-            <Tabs.Tab id="audit">Audit queue launcher</Tabs.Tab>
-          </Tabs.List>
+          <div className="max-w-full overflow-x-auto">
+            <Tabs.List aria-label="People and governance navigation">
+              <Tabs.Tab id="users">Users &amp; credits</Tabs.Tab>
+              <Tabs.Tab id="roles">Roles &amp; capabilities</Tabs.Tab>
+              <Tabs.Tab id="audit">Audit queue launcher</Tabs.Tab>
+            </Tabs.List>
+          </div>
 
           {/* TAB 1: USERS & CREDITS */}
           <Tabs.Panel id="users" className="pt-4 space-y-6">
             {/* Status Summary Cards */}
-            <div className="grid gap-3 sm:grid-cols-4">
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
               <Card
                 className={`cursor-pointer border transition-colors ${statusFilter === 'all' ? 'border-accent bg-surface-secondary/40' : 'border-border'}`}
                 onClick={() => {
@@ -344,9 +346,9 @@ export function AdminUsersPage() {
             </form>
 
             {/* Users Table */}
-            <Card className="border border-border">
-              <Card.Content className="p-0">
-                <div className="overflow-x-auto">
+            <Card className="border border-border min-w-0">
+              <Card.Content className="p-0 min-w-0">
+                <div className="overflow-x-auto max-w-full">
                   <table className="w-full text-left text-sm">
                     <thead className="border-b border-border text-xs text-muted uppercase bg-surface-secondary/20">
                       <tr>

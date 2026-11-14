@@ -111,16 +111,13 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<LessonCard> LessonCards { get; set; }
 
 
-    public virtual DbSet<MentorPayout> MentorPayouts { get; set; }
-
-
-    public virtual DbSet<MentorPayoutItem> MentorPayoutItems { get; set; }
-
-
     public virtual DbSet<MentorProfile> MentorProfiles { get; set; }
 
 
     public virtual DbSet<MentorSlot> MentorSlots { get; set; }
+
+
+    public virtual DbSet<MentorWeeklySlot> MentorWeeklySlots { get; set; }
 
 
     public virtual DbSet<Order> Orders { get; set; }
@@ -250,9 +247,6 @@ public partial class CompanionDbContext : DbContext
 
 
     public virtual DbSet<vw_MentorAvgRating> vw_MentorAvgRatings { get; set; }
-
-
-    public virtual DbSet<vw_MentorPayoutTotal> vw_MentorPayoutTotals { get; set; }
 
 
     public virtual DbSet<vw_UserCreditBalance> vw_UserCreditBalances { get; set; }

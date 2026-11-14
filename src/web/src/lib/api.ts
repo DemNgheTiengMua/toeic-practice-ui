@@ -255,6 +255,18 @@ export interface RecentPracticeDto {
   completedAt?: string | null;
 }
 
+export interface UpcomingMentorBookingDto {
+  bookingId: number;
+  mentorId: number;
+  mentorName: string;
+  certCode: string;
+  skillName?: string | null;
+  startAt: string;
+  endAt: string;
+  meetLink: string;
+  focusArea?: string | null;
+}
+
 export interface LearnerDashboardDto {
   certificate: CertificateOptionDto;
   nextAction: NextActionDto;
@@ -264,6 +276,7 @@ export interface LearnerDashboardDto {
   practiceCount: number;
   unfinishedAttempt?: RecentAttemptDto | null;
   unfinishedPractice?: RecentPracticeDto | null;
+  upcomingBookings?: UpcomingMentorBookingDto[] | null;
 }
 
 export interface CefrBandInfoDto {
@@ -660,9 +673,22 @@ export interface PaymentResultDto {
   packageId: number;
 }
 
+export interface MentorWeeklySlotDto {
+  weeklySlotId: number;
+  mentorId: number;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+}
+
+export interface MentorWeeklySlotInputDto {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+}
+
 export interface MentorSummaryDto {
   mentorId: number;
-  userId?: number | null;
   displayName: string;
   bio?: string | null;
   certId: number;
@@ -672,8 +698,7 @@ export interface MentorSummaryDto {
   skillCode?: string | null;
   skillName?: string | null;
   modality?: string | null;
-  type: 'human' | 'ai' | string;
-  pricePerSlot: number;
+  meetLink: string;
   priceCredits: number;
   headline?: string | null;
   expertise?: string | null;
@@ -681,6 +706,7 @@ export interface MentorSummaryDto {
   isActive: boolean;
   avgRating?: number | null;
   reviewCount: number;
+  weeklySlots?: MentorWeeklySlotDto[];
 }
 
 export interface MentorSlotDto {
@@ -701,6 +727,7 @@ export interface MentorReviewDto {
 
 export interface MentorDetailDto {
   mentor: MentorSummaryDto;
+  weeklySlots?: MentorWeeklySlotDto[];
   availableSlots: MentorSlotDto[];
   reviews: MentorReviewDto[];
 }
@@ -732,8 +759,7 @@ export interface MentorBookingDto {
   mentorId: number;
   mentorName: string;
   mentorHeadline?: string | null;
-  mentorType: 'human' | 'ai' | string;
-  slotId?: number | null;
+  slotId: number;
   startAt?: string | null;
   endAt?: string | null;
   status: 'pending' | 'confirmed' | 'done' | 'cancelled' | string;
@@ -742,8 +768,6 @@ export interface MentorBookingDto {
   priceCredits: number;
   cancelledAt?: string | null;
   createdAt: string;
-  attemptId?: number | null;
-  redirectUrl?: string | null;
   review?: MentorReviewDto | null;
   standing?: MentorLearnerStandingDto | null;
 }
@@ -2007,69 +2031,94 @@ export interface UpdateComplaintStatusRequest {
   status: ComplaintStatusDto;
 }
 
-export type MentorTypeDto = 'human' | 'ai';
 export type SlotStatusDto = 'open' | 'booked' | 'closed';
 
 export interface AdminMentorListItemDto {
   mentorId: number;
-  userId?: number | null;
   displayName: string;
-  type: MentorTypeDto;
   certId: number;
   certCode: string;
   skillId?: number | null;
   skillName?: string | null;
-  pricePerSlot: number;
+  meetLink: string;
   priceCredits: number;
+  priceVnd: number;
   sessionMinutes: number;
   avgRating?: number | null;
   reviewCount: number;
-  totalSlotsCount: number;
-  openSlotsCount: number;
+  totalSlotsCount?: number;
+  openSlotsCount?: number;
   isActive: boolean;
-}
-
-export interface AdminMentorSlotDto {
-  slotId: number;
-  mentorId: number;
-  startAt: string;
-  endAt: string;
-  status: SlotStatusDto;
+  weeklySlots: MentorWeeklySlotDto[];
+  completedSessionsCount: number;
+  totalEarnedCredits: number;
+  totalEarnedVnd: number;
+  headline?: string | null;
+  bio?: string | null;
+  expertise?: string | null;
 }
 
 export interface CreateMentorProfileRequest {
-  userId?: number | null;
   displayName: string;
   bio?: string | null;
   certId: number;
   skillId?: number | null;
-  type: MentorTypeDto;
-  pricePerSlot: number;
   priceCredits: number;
+  meetLink: string;
   headline?: string | null;
   expertise?: string | null;
   sessionMinutes: number;
   isActive: boolean;
+  weeklySlots?: MentorWeeklySlotInputDto[];
 }
 
 export interface UpdateMentorProfileRequest {
-  userId?: number | null;
   displayName: string;
   bio?: string | null;
   certId: number;
   skillId?: number | null;
-  pricePerSlot: number;
   priceCredits: number;
+  meetLink: string;
   headline?: string | null;
   expertise?: string | null;
   sessionMinutes: number;
   isActive: boolean;
+  weeklySlots?: MentorWeeklySlotInputDto[];
 }
 
-export interface CreateMentorSlotRequest {
-  localStartAt: string;
-  localEndAt?: string | null;
-  timeZoneId?: string | null;
+export interface AdminMentorPayoutMentorSummaryDto {
+  mentorId: number;
+  mentorName: string;
+  certCode: string;
+  completedSessionsCount: number;
+  totalCredits: number;
+  totalAmountVnd: number;
+}
+
+export interface AdminMentorPayoutItemDto {
+  bookingId: number;
+  sessionDate: string;
+  startAt: string;
+  endAt: string;
+  mentorId: number;
+  mentorName: string;
+  learnerName: string;
+  learnerEmail: string;
+  certCode: string;
+  skillName?: string | null;
+  priceCredits: number;
+  amountVnd: number;
+}
+
+export interface AdminMentorPayoutsReportDto {
+  from?: string;
+  to?: string;
+  totalSessions: number;
+  totalCredits: number;
+  totalAmountVnd: number;
+  vndPerCredit: number;
+  mentors: AdminMentorPayoutMentorSummaryDto[];
+  sessions: AdminMentorPayoutItemDto[];
 }
 
 export interface MentorSkillOptionDto {
@@ -2804,7 +2853,7 @@ export const api = {
     detail: (mentorId: number) => apiFetch<MentorDetailDto>(`/api/mentors/${mentorId}`),
     book: (
       mentorId: number,
-      body: { slotId?: number | null; focusArea?: string | null; examId?: number | null },
+      body: { slotId: number; focusArea?: string | null },
     ) =>
       apiFetch<MentorBookingDto>(`/api/mentors/${mentorId}/book`, {
         method: 'POST',
@@ -3064,17 +3113,65 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(body),
       }),
-    mentorSlots: (mentorId: number) =>
-      apiFetch<AdminMentorSlotDto[]>(`/api/admin/mentors/${mentorId}/slots`),
-    createMentorSlot: (mentorId: number, body: CreateMentorSlotRequest) =>
-      apiFetch<AdminMentorSlotDto>(`/api/admin/mentors/${mentorId}/slots`, {
-        method: 'POST',
-        body: JSON.stringify(body),
+    mentorWeeklySlots: (mentorId: number) =>
+      apiFetch<MentorWeeklySlotDto[]>(`/api/admin/mentors/${mentorId}/weekly-slots`),
+    replaceMentorWeeklySlots: (mentorId: number, weeklySlots: MentorWeeklySlotInputDto[]) =>
+      apiFetch<MentorWeeklySlotDto[]>(`/api/admin/mentors/${mentorId}/weekly-slots`, {
+        method: 'PUT',
+        body: JSON.stringify({ weeklySlots }),
       }),
-    closeMentorSlot: (mentorId: number, slotId: number) =>
-      apiFetch<void>(`/api/admin/mentors/${mentorId}/slots/${slotId}/close`, {
-        method: 'POST',
-      }),
+    mentorPayouts: (from?: string, to?: string) => {
+      const sp = new URLSearchParams();
+      if (from) sp.set('from', from);
+      if (to) sp.set('to', to);
+      const q = sp.toString();
+      return apiFetch<AdminMentorPayoutsReportDto>(
+        `/api/admin/mentors/payouts${q ? `?${q}` : ''}`,
+      );
+    },
+    mentorPayoutsExportUrl: (from?: string, to?: string) => {
+      const sp = new URLSearchParams();
+      if (from) sp.set('from', from);
+      if (to) sp.set('to', to);
+      const q = sp.toString();
+      return `/api/admin/mentors/payouts/export${q ? `?${q}` : ''}`;
+    },
+    exportMentorPayoutsCsv: async (
+      from?: string,
+      to?: string,
+    ): Promise<{ blob: Blob; filename: string }> => {
+      const sp = new URLSearchParams();
+      if (from) sp.set('from', from);
+      if (to) sp.set('to', to);
+      const query = sp.toString() ? `?${sp.toString()}` : '';
+      const response = await fetch(`/api/admin/mentors/payouts/export${query}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        let code = 'unexpected_error';
+        let title = response.statusText || 'Export failed';
+        let detail: string | undefined;
+        try {
+          const problem = await response.json();
+          if (problem && typeof problem === 'object') {
+            code = problem.code || problem.error || code;
+            title = problem.title || problem.message || title;
+            detail = problem.detail || problem.message;
+          }
+        } catch {}
+        throw new ApiClientError(response.status, code, title, detail);
+      }
+      const disposition = response.headers.get('content-disposition');
+      let filename = `mentor-payouts-${from || 'today'}-to-${to || 'today'}.csv`;
+      if (disposition) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          filename = match[1].replace(/['"]/g, '').trim();
+        }
+      }
+      const blob = await response.blob();
+      return { blob, filename };
+    },
   },
 };
 

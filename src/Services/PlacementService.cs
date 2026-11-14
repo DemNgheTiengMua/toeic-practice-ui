@@ -391,7 +391,7 @@ public sealed partial class PlacementService(
             take.AttemptId,
             take.ExamId,
             take.ExamName,
-            placement.Cert.Code,
+            placement.Cert?.Code ?? string.Empty,
             EnumCodes.Parse<PlacementStatus>(placement.Status),
             take.StartedAt,
             take.ExpiresAt,

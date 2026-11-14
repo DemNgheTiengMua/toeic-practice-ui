@@ -222,9 +222,9 @@ BEGIN TRY
   THROW 50000,'EXPECT_REJECT FAILED: anonymous admin grant accepted',1;
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected admin grant without actor/note'; END CATCH
 
-INSERT INTO MentorProfiles (UserId,DisplayName,CertId,Type,PricePerSlot,PriceCredits) VALUES (@adm,N'Dr. Khoa',@c,'human',50000,2); DECLARE @m INT=SCOPE_IDENTITY();
+INSERT INTO MentorProfiles (DisplayName,CertId,MeetLink,PriceCredits) VALUES (N'Dr. Khoa',@c,N'https://meet.google.com/abc-defg-hij',2); DECLARE @m INT=SCOPE_IDENTITY();
 INSERT INTO MentorSlots (MentorId,StartAt,EndAt) VALUES (@m,'2026-09-30T09:00:00+07:00','2026-09-30T10:00:00+07:00'); DECLARE @slot INT=SCOPE_IDENTITY();
-INSERT INTO Bookings (UserId,MentorId,SlotId,MentorType,Status,FocusArea) VALUES (@u,@m,@slot,'human','pending',N'Listening'); DECLARE @bk INT=SCOPE_IDENTITY();
+INSERT INTO Bookings (UserId,MentorId,SlotId,PriceCredits,Status,FocusArea) VALUES (@u,@m,@slot,2,'pending',N'Listening'); DECLARE @bk INT=SCOPE_IDENTITY();
 BEGIN TRY
   INSERT INTO CreditTransactions (UserId,Reason,Delta,BookingId) VALUES (@u,'mentor_booking',-1,@bk);
   THROW 50000,'EXPECT_REJECT FAILED: booking charge below price accepted',1;

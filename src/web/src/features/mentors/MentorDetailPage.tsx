@@ -23,10 +23,15 @@ import {
   User,
   Wallet,
 } from 'lucide-react';
-import { api, ApiClientError } from '../../lib/api';
+import { api, ApiClientError, type MentorWeeklySlotDto } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
-import { formatVnd, resolveSafeReturnUrl } from '../../lib/security';
-import { formatDateTime, formatMentorType } from '../../lib/domain-labels';
+import { creditsToVnd, formatVnd } from '../../lib/security';
+import {
+  formatDateTime,
+  formatDateTimeRange,
+  formatIsoWeekday,
+  formatWeeklyTime,
+} from '../../lib/domain-labels';
 
 export function MentorDetailPage() {
   const params = useParams({ strict: false }) as { mentorId?: string };
@@ -49,24 +54,21 @@ export function MentorDetailPage() {
   });
 
   const bookMutation = useMutation({
-    mutationFn: () =>
-      api.mentors.book(mentorId, {
+    mutationFn: () => {
+      if (!selectedSlotId) {
+        throw new Error('Please select an open schedule slot.');
+      }
+      return api.mentors.book(mentorId, {
         slotId: selectedSlotId,
         focusArea: focusArea.trim() || undefined,
-      }),
+      });
+    },
     onSuccess: (booking) => {
       void queryClient.invalidateQueries({ queryKey: ['learner', 'context'] });
       void queryClient.invalidateQueries({ queryKey: ['mentors', 'bookings'] });
-
-      if (booking.mentorType === 'ai' && booking.redirectUrl) {
-        const safeUrl = resolveSafeReturnUrl(
-          booking.redirectUrl,
-          `/mentors/bookings/${booking.bookingId}`,
-        );
-        window.location.assign(safeUrl);
-      } else {
-        void navigate({ to: `/mentors/bookings/${booking.bookingId}` });
-      }
+      void queryClient.invalidateQueries({ queryKey: ['mentors', 'detail', mentorId] });
+      void queryClient.invalidateQueries({ queryKey: ['learner', 'dashboard'] });
+      void navigate({ to: `/mentors/bookings/${booking.bookingId}` });
     },
     onError: (err) => {
       if (err instanceof ApiClientError) {
@@ -127,12 +129,27 @@ export function MentorDetailPage() {
   }
 
   const { mentor, availableSlots, reviews } = mentorQuery.data;
-  const isAi = (mentor.type || '').toLowerCase() === 'ai';
+  const weeklySlots: MentorWeeklySlotDto[] =
+    mentorQuery.data.weeklySlots ?? mentor.weeklySlots ?? [];
+
+  const groupedWeeklySlots = new Map<number, MentorWeeklySlotDto[]>();
+  for (const w of [...weeklySlots].sort(
+    (a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime),
+  )) {
+    const list = groupedWeeklySlots.get(w.dayOfWeek) ?? [];
+    list.push(w);
+    groupedWeeklySlots.set(w.dayOfWeek, list);
+  }
 
   const userCredits = learnerContext?.creditBalance ?? 0;
   const hasInsufficientCredits = userCredits < mentor.priceCredits;
 
-  const openSlots = availableSlots.filter((s) => (s.status || '').toLowerCase() === 'open');
+  const scheduleSlots = availableSlots.filter(
+    (s) => (s.status || '').toLowerCase() !== 'closed',
+  );
+  const openSlots = scheduleSlots.filter(
+    (s) => (s.status || '').toLowerCase() === 'open',
+  );
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 flex flex-col gap-8">
@@ -152,8 +169,8 @@ export function MentorDetailPage() {
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <Chip size="sm" color={isAi ? 'accent' : 'default'} variant="soft">
-                      {formatMentorType(mentor.type)}
+                    <Chip size="sm" color="accent" variant="soft">
+                      {mentor.skillName || 'All skills'}
                     </Chip>
                     <Chip size="sm" variant="secondary" className="font-mono-tabular">
                       {mentor.certCode}
@@ -163,7 +180,7 @@ export function MentorDetailPage() {
                     {mentor.displayName}
                   </h1>
                   <p className="text-sm font-medium text-accent mt-1 mb-0">
-                    {mentor.headline || (isAi ? 'Autonomous AI Coaching Agent' : 'Certified Mentor')}
+                    {mentor.headline || 'Certified Mentor'}
                   </p>
                 </div>
 
@@ -197,6 +214,41 @@ export function MentorDetailPage() {
                   <p className="text-sm text-foreground m-0">{mentor.expertise}</p>
                 </div>
               )}
+
+              {/* Weekly Recurring Availability */}
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-muted mb-2">
+                  Weekly recurring availability (UTC+7)
+                </h3>
+                {groupedWeeklySlots.size === 0 ? (
+                  <p className="text-xs text-muted m-0">
+                    Weekly recurring windows have not been published yet.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {Array.from(groupedWeeklySlots.entries()).map(([dayOfWeek, windows]) => (
+                      <div
+                        key={dayOfWeek}
+                        className="p-3 rounded-lg bg-surface-secondary border border-border flex flex-col gap-1.5"
+                      >
+                        <span className="text-xs font-semibold text-foreground">
+                          {formatIsoWeekday(dayOfWeek)}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {windows.map((w, idx) => (
+                            <span
+                              key={w.weeklySlotId || idx}
+                              className="font-mono-tabular text-xs px-2 py-0.5 rounded bg-surface border border-border text-foreground"
+                            >
+                              {formatWeeklyTime(w.startTime)} – {formatWeeklyTime(w.endTime)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </Card.Content>
           </Card>
 
@@ -266,9 +318,63 @@ export function MentorDetailPage() {
                     {mentor.priceCredits} credits
                   </span>
                   <span className="font-mono-tabular text-xs text-muted">
-                    ({formatVnd(mentor.pricePerSlot)})
+                    ({formatVnd(creditsToVnd(mentor.priceCredits))})
                   </span>
                 </div>
+              </div>
+
+              {/* Upcoming 7-day slot occurrences (open & booked) */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-foreground uppercase tracking-wider block">
+                  Upcoming 7-day schedule slots:
+                </label>
+                {scheduleSlots.length === 0 ? (
+                  <p className="text-xs text-muted m-0 p-3 bg-surface-secondary rounded border border-border">
+                    No upcoming slots currently available. Please check back later.
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {scheduleSlots.map((slot) => {
+                      const isBooked = (slot.status || '').toLowerCase() === 'booked';
+                      const isSelected = !isBooked && selectedSlotId === slot.slotId;
+                      return (
+                        <button
+                          key={slot.slotId}
+                          data-testid={`mentor-slot-${slot.slotId}`}
+                          type="button"
+                          disabled={isBooked}
+                          onClick={() => {
+                            if (!isBooked) {
+                              setSelectedSlotId(slot.slotId);
+                            }
+                          }}
+                          className={`w-full text-left p-2.5 rounded-md border text-xs transition-colors flex items-center justify-between gap-2 ${
+                            isBooked
+                              ? 'bg-surface-secondary border-border text-muted opacity-50 cursor-not-allowed'
+                              : isSelected
+                                ? 'bg-accent/10 border-accent font-semibold text-accent'
+                                : 'bg-surface hover:bg-surface-secondary border-border text-foreground'
+                          }`}
+                        >
+                          <span className="font-mono-tabular">
+                            {formatDateTimeRange(slot.startAt, slot.endAt)}
+                          </span>
+                          {isBooked ? (
+                            <Chip size="sm" color="default" variant="soft">
+                              Booked
+                            </Chip>
+                          ) : isSelected ? (
+                            <CheckCircle2 className="w-4 h-4 text-accent shrink-0" />
+                          ) : (
+                            <Chip size="sm" color="success" variant="soft">
+                              Open
+                            </Chip>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Block-before-charge Paywall Check */}
@@ -303,43 +409,6 @@ export function MentorDetailPage() {
                     </Alert>
                   )}
 
-                  {/* Slot selection (for human mentors) */}
-                  {!isAi && (
-                    <div className="space-y-2">
-                      <label className="text-xs font-semibold text-foreground uppercase tracking-wider block">
-                        Available schedule slots:
-                      </label>
-                      {openSlots.length === 0 ? (
-                        <p className="text-xs text-muted m-0 p-3 bg-surface-secondary rounded border border-border">
-                          No open slots currently available. Please check back later.
-                        </p>
-                      ) : (
-                        <div className="space-y-2 max-h-56 overflow-y-auto">
-                          {openSlots.map((slot) => {
-                            const isSelected = selectedSlotId === slot.slotId;
-                            return (
-                              <button
-                                key={slot.slotId}
-                                type="button"
-                                onClick={() => setSelectedSlotId(slot.slotId)}
-                                className={`w-full text-left p-2.5 rounded-md border text-xs transition-colors flex items-center justify-between ${
-                                  isSelected
-                                    ? 'bg-accent/10 border-accent font-semibold text-accent'
-                                    : 'bg-surface hover:bg-surface-secondary border-border text-foreground'
-                                }`}
-                              >
-                                <span className="font-mono-tabular">
-                                  {formatDateTime(slot.startAt)}
-                                </span>
-                                {isSelected && <CheckCircle2 className="w-4 h-4 text-accent" />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   {/* Focus area input */}
                   <div className="space-y-1.5">
                     <label htmlFor="focus-area" className="text-xs font-semibold text-foreground block">
@@ -363,7 +432,7 @@ export function MentorDetailPage() {
                     variant="primary"
                     size="lg"
                     className="w-full justify-center"
-                    isDisabled={!isAi && (!selectedSlotId || openSlots.length === 0)}
+                    isDisabled={!selectedSlotId || openSlots.length === 0}
                     isPending={bookMutation.isPending}
                     onPress={() => bookMutation.mutate()}
                   >

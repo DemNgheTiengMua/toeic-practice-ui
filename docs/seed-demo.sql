@@ -50,24 +50,6 @@ END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
-BEGIN TRY
-  INSERT INTO [Certificates] ([CertId], [Code], [Name], [Description], [IsActive], [ScoreAggregationRule], [PresetCode], [SectionNoun]) VALUES (3, N'VSTEP', N'VSTEP — the Vietnamese national test', N'The national English proficiency test used by Vietnamese universities and employers. Four skills, reported on a 0–10 scale mapped to CEFR levels A2 to C1.', 1, N'avg_whole', N'vstep', N'Section');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Certificates] ([CertId], [Code], [Name], [Description], [IsActive], [ScoreAggregationRule], [PresetCode], [SectionNoun]) VALUES (4, N'TOEIC_CAT', N'TOEIC Multi-Stage Adaptive CAT', N'Computerized adaptive TOEIC test with 2-stage reading units and audio-paced listening.', 1, N'sum', N'toeic_lr_cat', N'Part');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Certificates] ([CertId], [Code], [Name], [Description], [IsActive], [ScoreAggregationRule], [PresetCode], [SectionNoun]) VALUES (5, N'TOEIC_SW', N'TOEIC Speaking & Writing', N'Authentic ETS workplace speaking and writing assessment with automated timers and on-screen tools.', 1, N'sum', N'toeic_sw', N'Part');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
 SET IDENTITY_INSERT [Certificates] OFF;
 
 -- ---- ContentQuotas (24 rows)
@@ -412,24 +394,6 @@ END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
-BEGIN TRY
-  INSERT INTO [QuestionCategories] ([CategoryId], [CertId], [Code], [Name]) VALUES (13, 3, N'vstep_detail', N'Factual detail');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [QuestionCategories] ([CategoryId], [CertId], [Code], [Name]) VALUES (14, 3, N'vstep_grammar', N'Grammar & structure');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [QuestionCategories] ([CategoryId], [CertId], [Code], [Name]) VALUES (15, 3, N'vstep_vocab', N'Vocabulary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
 SET IDENTITY_INSERT [QuestionCategories] OFF;
 
 -- ---- Roles (2 rows)
@@ -510,54 +474,6 @@ END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreBands] ([BandId], [CertId], [Code], [Name], [MinTotal], [MaxTotal], [DisplayOrder], [CumulativeStudyHours]) VALUES (11, 3, N'A2', N'A2 (4.0)', 40, 45, 1, 250);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreBands] ([BandId], [CertId], [Code], [Name], [MinTotal], [MaxTotal], [DisplayOrder], [CumulativeStudyHours]) VALUES (12, 3, N'B1', N'B1 (5.5–6.0)', 50, 60, 2, 500);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreBands] ([BandId], [CertId], [Code], [Name], [MinTotal], [MaxTotal], [DisplayOrder], [CumulativeStudyHours]) VALUES (13, 3, N'B2', N'B2 (6.5–7.5)', 65, 75, 3, 800);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreBands] ([BandId], [CertId], [Code], [Name], [MinTotal], [MaxTotal], [DisplayOrder], [CumulativeStudyHours]) VALUES (14, 3, N'C1', N'C1 (8.5+)', 80, 100, 4, 1150);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreBands] ([BandId], [CertId], [Code], [Name], [MinTotal], [MaxTotal], [DisplayOrder], [CumulativeStudyHours]) VALUES (15, 4, N'CAT_B1', N'Intermediate', 400, 695, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreBands] ([BandId], [CertId], [Code], [Name], [MinTotal], [MaxTotal], [DisplayOrder], [CumulativeStudyHours]) VALUES (16, 4, N'CAT_B2', N'Professional', 700, 990, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreBands] ([BandId], [CertId], [Code], [Name], [MinTotal], [MaxTotal], [DisplayOrder], [CumulativeStudyHours]) VALUES (17, 5, N'SW_B1', N'Basic Working', 160, 250, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreBands] ([BandId], [CertId], [Code], [Name], [MinTotal], [MaxTotal], [DisplayOrder], [CumulativeStudyHours]) VALUES (18, 5, N'SW_B2', N'Advanced Working', 260, 400, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
 SET IDENTITY_INSERT [ScoreBands] OFF;
 
 -- ---- Skills (16 rows)
@@ -570,18 +486,6 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [Skills] ([SkillId], [CertId], [Code], [Name], [Modality], [DisplayOrder], [DurationMinutes], [MinScaledScore], [MaxScaledScore], [ScoreStep], [LockNavigationOneWay]) VALUES (2, 1, N'READ', N'Reading', N'reading', 2, 75, 5, 495, 5, 0);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Skills] ([SkillId], [CertId], [Code], [Name], [Modality], [DisplayOrder], [DurationMinutes], [MinScaledScore], [MaxScaledScore], [ScoreStep], [LockNavigationOneWay]) VALUES (3, 1, N'SPEA', N'Speaking', N'speaking', 3, 20, NULL, NULL, NULL, 0);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Skills] ([SkillId], [CertId], [Code], [Name], [Modality], [DisplayOrder], [DurationMinutes], [MinScaledScore], [MaxScaledScore], [ScoreStep], [LockNavigationOneWay]) VALUES (4, 1, N'WRIT', N'Writing', N'writing', 4, 60, NULL, NULL, NULL, 0);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -606,54 +510,6 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [Skills] ([SkillId], [CertId], [Code], [Name], [Modality], [DisplayOrder], [DurationMinutes], [MinScaledScore], [MaxScaledScore], [ScoreStep], [LockNavigationOneWay]) VALUES (8, 2, N'SPEA', N'Speaking', N'speaking', 4, 14, NULL, NULL, NULL, 0);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Skills] ([SkillId], [CertId], [Code], [Name], [Modality], [DisplayOrder], [DurationMinutes], [MinScaledScore], [MaxScaledScore], [ScoreStep], [LockNavigationOneWay]) VALUES (9, 3, N'LIST', N'Listening', N'listening', 1, 40, 20, 90, 5, 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Skills] ([SkillId], [CertId], [Code], [Name], [Modality], [DisplayOrder], [DurationMinutes], [MinScaledScore], [MaxScaledScore], [ScoreStep], [LockNavigationOneWay]) VALUES (10, 3, N'READ', N'Reading', N'reading', 2, 60, 20, 90, 5, 0);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Skills] ([SkillId], [CertId], [Code], [Name], [Modality], [DisplayOrder], [DurationMinutes], [MinScaledScore], [MaxScaledScore], [ScoreStep], [LockNavigationOneWay]) VALUES (11, 3, N'WRIT', N'Writing', N'writing', 3, 60, NULL, NULL, NULL, 0);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Skills] ([SkillId], [CertId], [Code], [Name], [Modality], [DisplayOrder], [DurationMinutes], [MinScaledScore], [MaxScaledScore], [ScoreStep], [LockNavigationOneWay]) VALUES (12, 3, N'SPEA', N'Speaking', N'speaking', 4, 12, NULL, NULL, NULL, 0);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Skills] ([SkillId], [CertId], [Code], [Name], [Modality], [DisplayOrder], [DurationMinutes], [MinScaledScore], [MaxScaledScore], [ScoreStep], [LockNavigationOneWay]) VALUES (13, 4, N'LIST', N'Listening', N'listening', 1, 45, 200, 495, 5, 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Skills] ([SkillId], [CertId], [Code], [Name], [Modality], [DisplayOrder], [DurationMinutes], [MinScaledScore], [MaxScaledScore], [ScoreStep], [LockNavigationOneWay]) VALUES (14, 4, N'READ', N'Reading', N'reading', 2, 45, 200, 850, 5, 0);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Skills] ([SkillId], [CertId], [Code], [Name], [Modality], [DisplayOrder], [DurationMinutes], [MinScaledScore], [MaxScaledScore], [ScoreStep], [LockNavigationOneWay]) VALUES (15, 5, N'SPEA', N'Speaking', N'speaking', 1, 20, 50, 200, 10, 0);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Skills] ([SkillId], [CertId], [Code], [Name], [Modality], [DisplayOrder], [DurationMinutes], [MinScaledScore], [MaxScaledScore], [ScoreStep], [LockNavigationOneWay]) VALUES (16, 5, N'WRIT', N'Writing', N'writing', 2, 60, 50, 200, 10, 0);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -1297,41 +1153,11 @@ END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScoreVersions] ([CertId], [TableVersion], [ReportsSkillsSeparately], [Source], [PublishedAt]) VALUES (3, 1, 0, N'VSTEP (VSTEP.3-5) level descriptors, MOET Vietnam', '2023-06-01T00:00:00.0000000');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScoreVersions] ([CertId], [TableVersion], [ReportsSkillsSeparately], [Source], [PublishedAt]) VALUES (5, 1, 1, N'ETS TOEIC Speaking & Writing standard-setting (per-skill cuts)', '2023-06-01T00:00:00.0000000');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
 
 -- ---- Exams (17 rows)
 SET IDENTITY_INSERT [Exams] ON;
 BEGIN TRY
   INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (1, 1, N'ETS 2024 — Test 1', N'published', 120, N'mock', N'strict_exam', NULL, N'A full TOEIC Listening & Reading form.', N'ETS 2024', NULL, 200, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.1857920+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (2, 1, N'TOEIC Placement Test — Diagnostic', N'published', 45, N'placement', N'strict_exam', NULL, N'A 29-question diagnostic across all four skills: Listening, Reading, Speaking and Writing. It sets your starting CEFR band, and your practice answers keep checking that band afterwards.', N'ETS Diagnostic 2024', NULL, 29, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.2670809+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (3, 1, N'ETS TOEIC Speaking Practice Exam 1', N'published', 20, N'speaking_practice', N'strict_exam', NULL, N'Workplace English speaking practice with read-aloud, image description, and question response.', N'ETS Official 2024', NULL, 3, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.4797638+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (4, 1, N'ETS TOEIC Writing Practice Test 1', N'published', 60, N'writing_practice', N'strict_exam', NULL, N'Workplace English writing practice: sentence writing and opinion essay.', N'ETS Official 2024', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.4832693+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -1343,67 +1169,7 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (6, 2, N'IELTS-DIAG-01', N'published', 60, N'placement', N'strict_exam', NULL, N'Free IELTS baseline benchmark: Listening and Academic Reading, followed by a separately graded free diagnostic Writing extension.', N'Cambridge Assessment', NULL, 10, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.4937789+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (7, 2, N'Cambridge IELTS 18 — Speaking Practice Test 1', N'published', 15, N'speaking_practice', N'strict_exam', NULL, N'Complete Academic Speaking test with Part 1 interview questions and Part 2 long-turn cue card topic.', N'Cambridge 18', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.4972873+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (8, 2, N'Cambridge IELTS 18 — Writing Practice Test 1', N'published', 60, N'writing_practice', N'strict_exam', NULL, N'Complete Academic Writing test with Task 1 (visual chart report) and Task 2 (argumentative essay). Scored with AI against official IELTS criteria.', N'Cambridge 18', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.5002873+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (9, 3, N'VSTEP Sample Test 1', N'published', 180, N'mock', N'strict_exam', NULL, N'Four-skill national examination form.', N'VSTEP 2024', NULL, 75, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.5032873+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (10, 3, N'VSTEP-DIAG-01', N'published', 45, N'placement', N'strict_exam', NULL, N'Free VSTEP baseline benchmark: Listening and Reading, followed by a separately graded free diagnostic Writing extension.', N'VSTEP Center', NULL, 10, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.5119845+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (11, 3, N'VSTEP Speaking Practice Test 1', N'published', 15, N'speaking_practice', N'strict_exam', NULL, N'Complete VSTEP Speaking practice with social interaction and topic presentation.', N'VSTEP Center', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.5164923+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (12, 3, N'VSTEP Writing Practice Test 1', N'published', 60, N'writing_practice', N'strict_exam', NULL, N'Complete VSTEP Writing practice with Task 1 (informal/formal letter) and Task 2 (essay).', N'VSTEP Center', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.5184920+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (14, 2, N'IELTS-DIAG-01 Writing Extension', N'published', 60, N'writing_practice', N'strict_exam', NULL, N'Free diagnostic extension: IELTS Academic Task 1 trend report and Task 2 opinion essay, graded against the four IELTS writing criteria.', N'Free diagnostic benchmark', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:02.5391107+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (15, 3, N'VSTEP-DIAG-01 Writing Extension', N'published', 45, N'writing_practice', N'strict_exam', NULL, N'Free diagnostic extension: formal email response and a developed opinion essay, graded against the four VSTEP writing criteria.', N'Free diagnostic benchmark', NULL, 2, N'demo', 1, NULL, 0, '2026-11-11T01:44:02.5411108+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (16, 4, N'TOEIC CAT Benchmark Test 1', N'published', 90, N'mock', N'strict_exam', N'TOEIC', N'Representative multi-component exam showcasing all 11 standardized question items across adaptive units.', NULL, NULL, 11, N'demo', 1, NULL, 0, '2026-11-11T01:44:02.7538862+07:00', NULL, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (17, 5, N'TOEIC Speaking & Writing Mock Test 1', N'published', 80, N'mock', N'strict_exam', N'TOEIC', N'Full TOEIC S&W mock sitting with SYSTEM_PACED_AUTO speaking pacer, HYBRID_GROUP_LOCKED writing, mandatory keywords, and on-screen Cut/Paste toolbar.', NULL, NULL, 3, N'demo', 1, NULL, 0, '2026-11-11T01:44:02.7653951+07:00', NULL, NULL);
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (6, 2, N'Universal Placement Exam', N'published', 60, N'placement', N'strict_exam', NULL, N'Single universal 4-skill diagnostic placement exam (Listening, Reading, Speaking, Writing) supporting 2-skill or 4-skill OOBE scope.', N'Universal Placement', NULL, 12, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.4937789+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -1412,54 +1178,6 @@ SET IDENTITY_INSERT [Exams] OFF;
 
 -- ---- GradingCriteria (28 rows)
 SET IDENTITY_INSERT [GradingCriteria] ON;
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (1, 1, 3, N'PRON', N'Pronunciation', NULL, 3.00, 1.00, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (2, 1, 3, N'INT', N'Intonation and stress', NULL, 3.00, 1.00, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (3, 1, 3, N'GRAM', N'Grammar, vocabulary and cohesion', NULL, 3.00, 1.00, 3, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (4, 1, 3, N'REL', N'Relevance and completeness', NULL, 3.00, 1.00, 4, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (5, 1, 4, N'GRAM', N'Grammar & sentence structure', N'5: consistently accurate complex sentences, errors do not impede meaning. 4: good control with occasional slips. 3: simple structures accurate, complex ones faulty. 2: frequent errors that sometimes obscure meaning. 1: errors make the sentence unreadable. 0: no assessable language.', 5.00, 1.00, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (6, 1, 4, N'VOCAB', N'Vocabulary and word choice', N'5: precise, varied and task-appropriate word choice. 4: generally appropriate with some imprecision. 3: adequate but repetitive; wrong word forms appear. 2: limited range, frequent wrong collocations. 1: vocabulary too limited to convey the idea. 0: no assessable language.', 5.00, 1.00, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (7, 1, 4, N'ORG', N'Organization and coherence', N'5: ideas ordered logically, clear links throughout. 4: generally well organised, links mostly clear. 3: some organisation but progression is uneven. 2: ideas scattered, cohesion largely absent. 1: no discernible organisation. 0: no assessable text.', 5.00, 1.00, 3, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (8, 1, 4, N'REL', N'Relevance to the prompt', N'5: fully addresses every part of the task with sufficient detail. 4: addresses the task, some parts underdeveloped. 3: addresses the task only partially; one requirement ignored. 2: barely addresses the task, largely off-topic. 1: does not address the task. 0: no response to the task.', 5.00, 1.00, 4, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
 BEGIN TRY
   INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (9, 2, 7, N'TR', N'Task Response', N'9: fully addresses all parts of the task, fully developed position. 8: sufficiently addresses all parts, well-developed position. 7: addresses all parts, clear position throughout. 6: addresses all parts though some more fully than others, position relevant. 5: addresses the task only partially, format may be inappropriate. 4: responds to the task only in a minimal way, position unclear. 3: does not adequately address the task, may be unrelated. 2: barely responds to the task. 1: answer is completely unrelated. 0: does not attempt the task.', 9.00, 1.00, 1, NULL);
 END TRY
@@ -1508,918 +1226,986 @@ END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (17, 3, 11, N'TASK', N'Task Fulfillment', N'9-10: fulfils every communicative purpose fully, well developed. 7-8: fulfils the purposes, development mostly adequate. 5-6: fulfils the purposes only partially, some parts missing. 3-4: addresses the task minimally, several requirements ignored. 1-2: barely related to the task. 0: no response to the task.', 10.00, 1.00, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (18, 3, 11, N'ORG', N'Organization', N'9-10: clear paragraphs, logical progression, effective linking. 7-8: generally well organised with clear links. 5-6: some organisation, progression uneven, linking mechanical. 3-4: ideas scattered, little cohesion. 1-2: no discernible organisation. 0: no assessable text.', 10.00, 1.00, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (19, 3, 11, N'VOCAB', N'Vocabulary', N'9-10: wide, precise and natural range for the register. 7-8: adequate range with occasional imprecision. 5-6: limited range, noticeable errors in word choice. 3-4: basic vocabulary, frequent errors that may distort the message. 1-2: very limited range. 0: no assessable language.', 10.00, 1.00, 3, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (20, 3, 11, N'GRAM', N'Grammar & Structures', N'9-10: wide range of structures, almost always accurate. 7-8: variety of structures, occasional errors that do not impede meaning. 5-6: simple structures accurate, complex ones faulty. 3-4: very limited range, frequent errors that can impede communication. 1-2: little control of sentence forms. 0: no assessable language.', 10.00, 1.00, 4, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (21, 3, 12, N'PRON', N'Pronunciation', NULL, 10.00, 1.00, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (22, 3, 12, N'FLU', N'Fluency', NULL, 10.00, 1.00, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (23, 3, 12, N'VOCAB', N'Vocabulary & Grammar', NULL, 10.00, 1.00, 3, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (24, 3, 12, N'DEV', N'Topic Development', NULL, 10.00, 1.00, 4, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (25, 5, 15, N'PRON', N'Pronunciation & Intonation', NULL, 5.00, 1.00, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (26, 5, 15, N'FLU', N'Fluency & Delivery', NULL, 5.00, 1.00, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (27, 5, 16, N'GRAM', N'Grammar & Keyword Usage', N'5: accurate complex sentences and every required keyword used naturally. 4: good control, keywords present with minor slips. 3: simple sentences accurate, one keyword missing. 2: frequent errors, several keywords missing. 1: errors obscure meaning. 0: no assessable language.', 5.00, 1.00, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [GradingCriteria] ([CriterionId], [CertId], [SkillId], [Code], [Name], [RubricDescription], [MaxScore], [Weight], [DisplayOrder], [LastWrittenBy]) VALUES (28, 5, 16, N'ORG', N'Organization & Development', N'5: ideas ordered logically with a clear link between them. 4: generally clear progression. 3: some organisation, links mechanical. 2: ideas scattered, little cohesion. 1: no discernible organisation. 0: no assessable text.', 5.00, 1.00, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
 SET IDENTITY_INSERT [GradingCriteria] OFF;
 
 -- ---- Items (140 rows)
 SET IDENTITY_INSERT [Items] ON;
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (1, 1, N'listening', 2, N'A2', N'short_exchange', N'mcq', 0, N'demo', N'active', N'seed-vstep-sample-1', '2026-11-11T01:44:02.8064239+07:00', NULL);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (1, 1, N'listening', 2, N'A2', N'short_exchange', N'mcq', 0, N'demo', N'active', N'seed-vstep-sample-1', '2026-11-11T01:44:02.8064239+07:00', NULL, N'A2,B1');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (2, 2, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', N'seed-vstep-sample-1', '2026-11-11T01:44:02.8156557+07:00', NULL);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (2, 2, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', N'seed-vstep-sample-1', '2026-11-11T01:44:02.8156557+07:00', NULL, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (3, 3, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0905658+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (3, 3, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0905658+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (4, 4, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0925664+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (4, 4, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0925664+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (5, 5, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0935658+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (5, 5, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0935658+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (6, 6, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0945657+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (6, 6, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0945657+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (7, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0945657+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (7, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0945657+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (8, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0955657+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (8, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0955657+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (9, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0960710+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (9, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0960710+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (10, 7, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0970728+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (10, 7, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0970728+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (11, 8, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0970728+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (11, 8, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0970728+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (12, 9, N'listening', 2, N'A2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0985774+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (12, 9, N'listening', 2, N'A2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0985774+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (13, 9, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0985774+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (13, 9, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0985774+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (14, 11, N'listening', 2, N'A2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0995808+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (14, 11, N'listening', 2, N'A2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.0995808+07:00', 1, N'A2,B1');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (15, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1005852+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (15, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1005852+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (16, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1005852+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (16, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1005852+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (17, 11, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1015853+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (17, 11, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1015853+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (18, 15, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1025851+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (18, 15, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1025851+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (19, 15, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1035852+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (19, 15, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1035852+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (20, 17, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1035852+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (20, 17, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1035852+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (21, 17, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1045851+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (21, 17, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1045851+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (22, 20, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1055851+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (22, 20, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1055851+07:00', 1, N'A2,B1');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (23, 20, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1060901+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (23, 20, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1060901+07:00', 1, N'A2,B1');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (24, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1070918+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (24, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1070918+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (25, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1070918+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (25, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1070918+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (26, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1080931+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (26, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1080931+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (27, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1085966+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (27, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1085966+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (28, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1096028+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (28, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1096028+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (29, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1106079+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (29, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1106079+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (30, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1106079+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (30, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1106079+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (31, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1116072+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (31, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1116072+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (32, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1126103+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (32, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1126103+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (33, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1153611+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (33, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1153611+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (34, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1168502+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (34, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1168502+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (35, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1178519+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (35, 20, N'reading', 8, N'B2', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1178519+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (36, 19, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1178519+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (36, 19, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1178519+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (37, 70, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1188603+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (37, 70, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1188603+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (38, 71, N'speaking', 13, N'B2', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1188603+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (38, 71, N'speaking', 13, N'B2', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1188603+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (39, 72, N'writing', 19, N'B1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1198611+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (39, 72, N'writing', 19, N'B1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1198611+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (40, 22, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1208609+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (40, 22, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1208609+07:00', 1, N'7.5,8.0,8.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (41, 23, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1208609+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (41, 23, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1208609+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (42, 24, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1218611+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (42, 24, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1218611+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (43, 25, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1228609+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (43, 25, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1228609+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (44, 26, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1238641+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (44, 26, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1238641+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (45, 73, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1253700+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (45, 73, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1253700+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (46, 27, N'speaking', 13, N'C1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1253700+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (46, 27, N'speaking', 13, N'C1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1253700+07:00', 1, N'7.5,8.0,8.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (47, 28, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1263764+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (47, 28, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1263764+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (48, 29, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1273762+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (48, 29, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1273762+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (49, 30, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1273762+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (49, 30, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1273762+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (50, 31, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1283811+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (50, 31, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1283811+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (51, 74, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1293815+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (51, 74, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1293815+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (52, 32, N'speaking', 13, N'B2', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1293815+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (52, 32, N'speaking', 13, N'B2', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1293815+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (53, 33, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1303815+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (53, 33, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1303815+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (54, 34, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1313813+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (54, 34, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1313813+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (55, 35, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1313813+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (55, 35, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1313813+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (56, 36, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1323818+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (56, 36, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1323818+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (57, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1333816+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (57, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1333816+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (58, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1343816+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (58, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1343816+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (59, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1343816+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (59, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1343816+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (60, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1358864+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (60, 11, N'listening', 2, N'B1', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1358864+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (61, 41, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1358864+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (61, 41, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1358864+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (62, 41, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1368924+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (62, 41, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1368924+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (63, 41, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1378978+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (63, 41, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1378978+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (64, 42, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1388980+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (64, 42, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1388980+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (65, 42, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1388980+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (65, 42, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1388980+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (66, 42, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1398978+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (66, 42, N'listening', 2, N'B1', N'extended_dialogue', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1398978+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (67, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1408973+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (67, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1408973+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (68, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1418972+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (68, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1418972+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (69, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1428977+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (69, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1428977+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (70, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1428977+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (70, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1428977+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (71, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1438977+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (71, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1438977+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (72, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1448973+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (72, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1448973+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (73, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1454026+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (73, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1454026+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (74, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1464088+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (74, 20, N'reading', 8, N'B1', N'sentence_cloze', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1464088+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (75, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1469138+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (75, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1469138+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (76, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1479187+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (76, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1479187+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (77, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1479187+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (77, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1479187+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (78, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1494661+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (78, 43, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1494661+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (79, 44, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1504726+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (79, 44, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1504726+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (80, 44, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1514729+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (80, 44, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1514729+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (81, 44, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1514729+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (81, 44, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1514729+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (82, 45, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1524730+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (82, 45, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1524730+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (83, 45, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1534728+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (83, 45, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1534728+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (84, 45, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1544730+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (84, 45, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1544730+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (85, 75, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1559794+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (85, 75, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1559794+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (86, 76, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1564819+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (86, 76, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1564819+07:00', 1, N'7.5,8.0,8.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (87, 46, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1575543+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (87, 46, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1575543+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (88, 47, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1575543+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (88, 47, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1575543+07:00', 1, N'7.5,8.0,8.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (89, 48, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1589292+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (89, 48, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1589292+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (90, 49, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1589292+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (90, 49, N'writing', 19, N'C1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1589292+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (91, 50, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1602111+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (91, 50, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1602111+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (92, 51, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1612089+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (92, 51, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1612089+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (93, 52, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1612089+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (93, 52, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1612089+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (94, 53, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1622086+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (94, 53, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1622086+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (95, 54, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1632085+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (95, 54, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1632085+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (96, 55, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1642086+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (96, 55, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1642086+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (97, 56, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1642086+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (97, 56, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1642086+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (98, 57, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1657118+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (98, 57, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1657118+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (99, 58, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1667175+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (99, 58, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1667175+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (100, 59, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1667175+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (100, 59, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1667175+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (101, 60, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1677166+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (101, 60, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1677166+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (102, 61, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1687165+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (102, 61, N'listening', 2, N'B2', N'short_exchange', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1687165+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (103, 62, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1697180+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (103, 62, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1697180+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (104, 63, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1707167+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (104, 63, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1707167+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (105, 64, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1707167+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (105, 64, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1707167+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (106, 65, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1717165+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (106, 65, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1717165+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (107, 66, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1727164+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (107, 66, N'reading', 8, N'B1', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1727164+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (108, 66, N'reading', 8, N'B1', N'passage_comprehension', N'mcq_3', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1737164+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (108, 66, N'reading', 8, N'B1', N'passage_comprehension', N'mcq_3', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1737164+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (109, 66, N'reading', 8, N'B2', N'passage_comprehension', N'multi_select', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1747166+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (109, 66, N'reading', 8, N'B2', N'passage_comprehension', N'multi_select', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1747166+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (110, 66, N'reading', 8, N'B1', N'passage_comprehension', N'inline_completion', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1747166+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (110, 66, N'reading', 8, N'B1', N'passage_comprehension', N'inline_completion', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1747166+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (111, 66, N'reading', 8, N'B2', N'passage_comprehension', N'dropdown', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1762225+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (111, 66, N'reading', 8, N'B2', N'passage_comprehension', N'dropdown', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1762225+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (112, 66, N'reading', 8, N'B2', N'passage_comprehension', N'drag_drop', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1762225+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (112, 66, N'reading', 8, N'B2', N'passage_comprehension', N'drag_drop', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1762225+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (113, 67, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1772244+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (113, 67, N'reading', 8, N'B2', N'passage_comprehension', N'mcq', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1772244+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (114, 77, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1782242+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (114, 77, N'speaking', 13, N'B1', N'descriptive_monologue', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1782242+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (115, 78, N'writing', 19, N'B1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1792242+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (115, 78, N'writing', 19, N'B1', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1792242+07:00', 1, N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (116, 79, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1792242+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (116, 79, N'writing', 19, N'B2', N'transactional_correspondence', N'free_response', 0, N'demo', N'active', NULL, '2026-11-11T01:44:03.1792242+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (118, NULL, N'listening', 2, N'A1', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9218259+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (118, NULL, N'listening', 2, N'A1', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9218259+07:00', 1, N'A2,B1');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (119, NULL, N'listening', 2, N'A1', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9387647+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (119, NULL, N'listening', 2, N'A1', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9387647+07:00', 1, N'A2,B1');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (120, NULL, N'listening', 2, N'A2', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9397649+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (120, NULL, N'listening', 2, N'A2', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9397649+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (121, NULL, N'listening', 2, N'A2', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9397649+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (121, NULL, N'listening', 2, N'A2', N'short_exchange', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9397649+07:00', 1, N'A2,B1');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (122, NULL, N'listening', 3, N'B1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9407647+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (122, NULL, N'listening', 3, N'B1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9407647+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (123, NULL, N'listening', 3, N'B1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9417644+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (123, NULL, N'listening', 3, N'B1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9417644+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (124, NULL, N'listening', 3, N'B2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9422700+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (124, NULL, N'listening', 3, N'B2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9422700+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (125, NULL, N'listening', 3, N'B2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9422700+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (125, NULL, N'listening', 3, N'B2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9422700+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (126, NULL, N'listening', 6, N'C1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9422700+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (126, NULL, N'listening', 6, N'C1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9422700+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (127, NULL, N'listening', 6, N'C1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9432717+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (127, NULL, N'listening', 6, N'C1', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9432717+07:00', 1, N'7.5,8.0,8.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (128, NULL, N'listening', 6, N'C2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9432717+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (128, NULL, N'listening', 6, N'C2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9432717+07:00', 1, N'7.5,8.0,8.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (129, NULL, N'listening', 6, N'C2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9442715+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (129, NULL, N'listening', 6, N'C2', N'extended_dialogue', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9442715+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (130, NULL, N'reading', 8, N'A1', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9442715+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (130, NULL, N'reading', 8, N'A1', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9442715+07:00', 1, N'A2,B1');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (131, NULL, N'reading', 8, N'A1', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9452714+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (131, NULL, N'reading', 8, N'A1', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9452714+07:00', 1, N'A2,B1');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (132, NULL, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9452714+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (132, NULL, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9452714+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (133, NULL, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9452714+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (133, NULL, N'reading', 8, N'A2', N'sentence_cloze', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9452714+07:00', 1, N'A2,B1');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (134, NULL, N'reading', 9, N'B1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9462717+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (134, NULL, N'reading', 9, N'B1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9462717+07:00', 1, N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (135, NULL, N'reading', 9, N'B1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9462717+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (135, NULL, N'reading', 9, N'B1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9462717+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (136, NULL, N'reading', 9, N'B2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9472713+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (136, NULL, N'reading', 9, N'B2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9472713+07:00', 1, N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (137, NULL, N'reading', 9, N'B2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9477761+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (137, NULL, N'reading', 9, N'B2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9477761+07:00', 1, N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (138, NULL, N'reading', 7, N'C1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9477761+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (138, NULL, N'reading', 7, N'C1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9477761+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (139, NULL, N'reading', 7, N'C1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9487794+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (139, NULL, N'reading', 7, N'C1', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9487794+07:00', 1, N'7.5,8.0,8.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (140, NULL, N'reading', 7, N'C2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9492906+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (140, NULL, N'reading', 7, N'C2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9492906+07:00', 1, N'7.5,8.0,8.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy]) VALUES (141, NULL, N'reading', 7, N'C2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9492906+07:00', 1);
+  INSERT INTO [Items] ([ItemId], [StimulusId], [Modality], [TopicId], [CefrLevel], [ItemType], [RenderFormat], [PlacementEligible], [ContentTier], [LifecycleStatus], [BatchTag], [CreatedAt], [LastWrittenBy], [TargetBands]) VALUES (141, NULL, N'reading', 7, N'C2', N'passage_comprehension', N'mcq', 1, N'demo', N'active', NULL, '2026-11-11T02:12:01.9492906+07:00', 1, N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -3273,100 +3059,94 @@ SET IDENTITY_INSERT [ItemVersions] OFF;
 -- ---- Lessons (13 rows)
 SET IDENTITY_INSERT [Lessons] ON;
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (1, 1, 2, 1, N'Present Continuous Tense', N'Master the present continuous tense for temporary and ongoing actions in TOEIC Part 5.', 5, 1, '2026-11-11T01:44:01.6437563+07:00', N'reading', 12, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel], [TargetBands]) VALUES (1, 1, 2, 1, N'Present Continuous Tense', N'Master the present continuous tense for temporary and ongoing actions in TOEIC Part 5.', 5, 1, '2026-11-11T01:44:01.6437563+07:00', N'reading', 12, N'B1', N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (2, 1, 2, NULL, N'Tense & Aspect Mastery in Business Contexts', N'Phương pháp 3 giây nhận diện dấu hiệu phối hợp thì (Time Markers) và phân biệt chủ động - bị động trong Part 5.', 15, 1, '2026-11-11T01:44:02.3963832+07:00', N'reading', 12, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel], [TargetBands]) VALUES (2, 1, 2, NULL, N'Tense & Aspect Mastery in Business Contexts', N'Phương pháp 3 giây nhận diện dấu hiệu phối hợp thì (Time Markers) và phân biệt chủ động - bị động trong Part 5.', 15, 1, '2026-11-11T01:44:02.3963832+07:00', N'reading', 12, N'B1', N'450,550,650');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (3, 1, 1, NULL, N'Eliminating Auditory Traps & Mastering Indirect Responses', N'Kỹ thuật loại trừ đáp án lặp âm/lặp từ và nhận diện các mẫu câu trả lời gián tiếp đạt điểm tuyệt đối Part 2.', 15, 2, '2026-11-11T01:44:02.3983832+07:00', N'listening', 5, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel], [TargetBands]) VALUES (3, 1, 1, NULL, N'Eliminating Auditory Traps & Mastering Indirect Responses', N'Kỹ thuật loại trừ đáp án lặp âm/lặp từ và nhận diện các mẫu câu trả lời gián tiếp đạt điểm tuyệt đối Part 2.', 15, 2, '2026-11-11T01:44:02.3983832+07:00', N'listening', 5, N'B1', N'450,550');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (4, 1, 4, NULL, N'High-Scoring Business Email Architecture (Writing W2)', N'Khung sườn 4 bước viết email giải quyết sự cố thương mại trong 10 phút với văn phong trang trọng chuẩn ETS.', 20, 3, '2026-11-11T01:44:02.3993830+07:00', N'writing', 17, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel], [TargetBands]) VALUES (5, 1, 2, NULL, N'Cross-Text Inference in Multi-Passage Reading (Part 7)', N'Phương pháp tìm "Từ khóa cầu nối" (Bridge Keywords) để giải quyết câu hỏi suy luận chéo giữa Hóa đơn, Lịch trình và Email.', 20, 4, '2026-11-11T01:44:02.4003832+07:00', N'reading', 9, N'B1', N'650,750,850');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (5, 1, 2, NULL, N'Cross-Text Inference in Multi-Passage Reading (Part 7)', N'Phương pháp tìm "Từ khóa cầu nối" (Bridge Keywords) để giải quyết câu hỏi suy luận chéo giữa Hóa đơn, Lịch trình và Email.', 20, 4, '2026-11-11T01:44:02.4003832+07:00', N'reading', 9, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel], [TargetBands]) VALUES (6, 2, 5, NULL, N'IELTS Listening: Follow Signposts and Corrections', N'Track the speaker''s purpose, changes, and final answer rather than matching isolated words.', 12, 1, '2026-11-11T01:44:02.5741463+07:00', N'listening', 1, N'B1', N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (6, 2, 5, NULL, N'IELTS Listening: Follow Signposts and Corrections', N'Track the speaker''s purpose, changes, and final answer rather than matching isolated words.', 12, 1, '2026-11-11T01:44:02.5741463+07:00', N'listening', 1, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel], [TargetBands]) VALUES (7, 2, 6, NULL, N'IELTS Reading: Paraphrase Claims and Match Evidence', N'Connect question wording to synonyms, references, and evidence across academic passages.', 12, 2, '2026-11-11T01:44:02.5741463+07:00', N'reading', 7, N'B1', N'ALL');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (7, 2, 6, NULL, N'IELTS Reading: Paraphrase Claims and Match Evidence', N'Connect question wording to synonyms, references, and evidence across academic passages.', 12, 2, '2026-11-11T01:44:02.5741463+07:00', N'reading', 7, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel], [TargetBands]) VALUES (8, 2, 7, NULL, N'IELTS Task 1: Select and Describe Trends', N'Write a concise overview, group key features, and compare data without listing every figure.', 12, 3, '2026-11-11T01:44:02.5756495+07:00', N'writing', 17, N'B1', N'5.5,6.0,6.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (8, 2, 7, NULL, N'IELTS Task 1: Select and Describe Trends', N'Write a concise overview, group key features, and compare data without listing every figure.', 12, 3, '2026-11-11T01:44:02.5756495+07:00', N'writing', 17, N'B1');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (9, 2, 7, NULL, N'IELTS Writing: Coherence, Cohesion, and Position', N'Build a clear Task 2 position with purposeful paragraphs and controlled linking.', 12, 4, '2026-11-11T01:44:02.5756495+07:00', N'writing', 17, N'B1');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (10, 3, 9, NULL, N'VSTEP Listening: Catch Purpose, Time, and Changes', N'Identify the speaker''s main purpose and distinguish confirmed details from corrected plans.', 12, 1, '2026-11-11T01:44:02.5766542+07:00', N'listening', 1, N'B1');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (11, 3, 10, NULL, N'VSTEP Reading: Locate Paraphrases and References', N'Scan for names, dates, and synonyms, then check pronouns and nearby evidence.', 12, 2, '2026-11-11T01:44:02.5766542+07:00', N'reading', 7, N'B1');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (12, 3, 11, NULL, N'VSTEP Writing: Organise a Formal Email', N'Use an appropriate greeting, answer every point, request or suggest details, and close politely.', 12, 3, '2026-11-11T01:44:02.5781597+07:00', N'writing', 17, N'B1');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel]) VALUES (13, 3, 11, NULL, N'VSTEP Writing: Build and Support an Argument', N'State a position, develop reasons, and connect each example to the argument.', 12, 4, '2026-11-11T01:44:02.5785977+07:00', N'writing', 17, N'B1');
+  INSERT INTO [Lessons] ([LessonId], [CertId], [SkillId], [CategoryId], [Title], [Summary], [EstimatedMinutes], [DisplayOrder], [CreatedAt], [Modality], [TopicId], [CefrLevel], [TargetBands]) VALUES (9, 2, 7, NULL, N'IELTS Writing: Coherence, Cohesion, and Position', N'Build a clear Task 2 position with purposeful paragraphs and controlled linking.', 12, 4, '2026-11-11T01:44:02.5756495+07:00', N'writing', 17, N'B1', N'6.5,7.0,7.5');
+
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 SET IDENTITY_INSERT [Lessons] OFF;
 
--- ---- MentorProfiles (2 rows)
+-- ---- MentorProfiles (1 rows)
 SET IDENTITY_INSERT [MentorProfiles] ON;
 BEGIN TRY
-  INSERT INTO [MentorProfiles] ([MentorId], [UserId], [DisplayName], [Bio], [CertId], [SkillId], [Type], [PricePerSlot], [PriceCredits], [Headline], [Expertise], [SessionMinutes], [IsActive]) VALUES (1, 4, N'Dr. Trần Minh Khoa', N'10 years teaching TOEIC at major language centers in Ho Chi Minh City. Specializes in listening strategies and accent training for Vietnamese learners.', 1, 1, N'human', 200000.00, 1, N'10 years teaching TOEIC. Specializes in listening strategies and accent training for Vietnamese learners.', N'Listening strategies, pronunciation, test-taking techniques', 60, 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [MentorProfiles] ([MentorId], [UserId], [DisplayName], [Bio], [CertId], [SkillId], [Type], [PricePerSlot], [PriceCredits], [Headline], [Expertise], [SessionMinutes], [IsActive]) VALUES (2, NULL, N'AI Mentor — TOEIC Coach', N'AI-powered speaking practice. Available 24/7 with instant feedback and pronunciation analysis.', 1, NULL, N'ai', 0.00, 1, N'AI-powered speaking practice. Available 24/7 with instant feedback and pronunciation analysis.', N'Instant speaking feedback, AI pronunciation diagnosis, 24/7 practice', 60, 1);
+  INSERT INTO [MentorProfiles] ([MentorId], [DisplayName], [Bio], [CertId], [SkillId], [MeetLink], [PriceCredits], [Headline], [Expertise], [SessionMinutes], [IsActive]) VALUES (1, N'Dr. Trần Minh Khoa', N'10 years teaching TOEIC at major language centers in Ho Chi Minh City. Specializes in listening strategies and accent training for Vietnamese learners.', 1, 1, N'https://meet.google.com/abc-defg-hij', 1, N'10 years teaching TOEIC. Specializes in listening strategies and accent training for Vietnamese learners.', N'Listening strategies, pronunciation, test-taking techniques', 60, 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 SET IDENTITY_INSERT [MentorProfiles] OFF;
+
+-- ---- MentorWeeklySlots (3 rows)
+SET IDENTITY_INSERT [MentorWeeklySlots] ON;
+BEGIN TRY
+  INSERT INTO [MentorWeeklySlots] ([WeeklySlotId], [MentorId], [DayOfWeek], [StartTime], [EndTime]) VALUES (1, 1, 2, '19:00:00', '20:00:00');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [MentorWeeklySlots] ([WeeklySlotId], [MentorId], [DayOfWeek], [StartTime], [EndTime]) VALUES (2, 1, 4, '19:00:00', '20:00:00');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [MentorWeeklySlots] ([WeeklySlotId], [MentorId], [DayOfWeek], [StartTime], [EndTime]) VALUES (3, 1, 6, '09:00:00', '10:00:00');
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+SET IDENTITY_INSERT [MentorWeeklySlots] OFF;
 
 -- ---- MentorSlots (6 rows)
 SET IDENTITY_INSERT [MentorSlots] ON;
@@ -3749,54 +3529,6 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (44, 3, 9, 9, 0, 20);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (45, 3, 9, 9, 1, 35);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (46, 3, 10, 9, 0, 20);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (47, 3, 10, 9, 1, 35);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (48, 3, 9, 10, 0, 40);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (49, 3, 9, 10, 1, 50);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (50, 3, 10, 10, 0, 40);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (51, 3, 10, 10, 1, 50);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
   INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (52, 2, 5, 6, 2, 60);
 END TRY
 BEGIN CATCH
@@ -3840,186 +3572,6 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (59, 2, 6, 6, 5, 90);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (60, 3, 9, 10, 2, 60);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (61, 3, 9, 10, 3, 70);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (62, 3, 9, 10, 4, 80);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (63, 3, 9, 10, 5, 90);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (64, 3, 10, 10, 2, 60);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (65, 3, 10, 10, 3, 70);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (66, 3, 10, 10, 4, 80);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (67, 3, 10, 10, 5, 90);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (68, 4, 13, NULL, 0, 200);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (69, 4, 13, NULL, 1, 250);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (70, 4, 13, NULL, 2, 300);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (71, 4, 13, NULL, 3, 350);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (72, 4, 13, NULL, 4, 400);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (73, 4, 13, NULL, 5, 450);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (74, 4, 13, NULL, 6, 475);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (75, 4, 13, NULL, 7, 495);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (76, 4, 14, NULL, 0, 200);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (77, 4, 14, NULL, 1, 275);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (78, 4, 14, NULL, 2, 350);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (79, 4, 14, NULL, 3, 425);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (80, 4, 14, NULL, 4, 500);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (81, 4, 14, NULL, 5, 600);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (82, 4, 14, NULL, 6, 700);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (83, 4, 14, NULL, 7, 850);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (84, 5, 15, NULL, 0, 50);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (85, 5, 15, NULL, 1, 160);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (86, 5, 15, NULL, 2, 200);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (87, 5, 16, NULL, 0, 50);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (88, 5, 16, NULL, 1, 130);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ScoreScales] ([ScaleId], [CertId], [SkillId], [ExamId], [RawScore], [ScaledScore]) VALUES (89, 5, 16, NULL, 2, 200);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -4071,54 +3623,6 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (8, 3, 1, N'speaking', N'S1', N'Read a text aloud', 1.00, N'SYSTEM_PACED_AUTO', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 0, 0, 0, N'["free_response"]', NULL, 2, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (9, 3, 1, N'speaking', N'S2', N'Describe a picture', 1.00, N'SYSTEM_PACED_AUTO', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 0, 1, 0, N'["free_response"]', NULL, 2, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (10, 3, 1, N'speaking', N'S3', N'Respond to questions', 1.00, N'SYSTEM_PACED_AUTO', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 0, 0, 0, N'["free_response"]', NULL, 3, 3, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (11, 3, 1, N'speaking', N'S4', N'Respond using information provided', 1.00, N'SYSTEM_PACED_AUTO', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 0, 0, 0, N'["free_response"]', NULL, 3, 4, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (12, 3, 1, N'speaking', N'S5', N'Express an opinion', 1.00, N'SYSTEM_PACED_AUTO', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 0, 0, 0, N'["free_response"]', NULL, 1, 5, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (13, 4, 1, N'writing', N'W1', N'Write a sentence based on a picture', 1.00, N'HYBRID_GROUP_LOCKED', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 0, 1, 2, N'["free_response"]', N'{"wordCount":true,"disableSpellcheck":true,"cutPaste":true,"showWordCount":true,"disableSpellCheck":true,"allowKeyboardCutPaste":false,"showOnScreenCutPaste":true}', 5, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (14, 4, 1, N'writing', N'W2', N'Respond to a written request', 1.00, N'HYBRID_GROUP_LOCKED', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 0, 0, 0, N'["free_response"]', N'{"wordCount":true,"disableSpellcheck":true,"cutPaste":true,"showWordCount":true,"disableSpellCheck":true,"allowKeyboardCutPaste":false,"showOnScreenCutPaste":true}', 2, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (15, 4, 1, N'writing', N'W3', N'Write an opinion essay', 2.00, N'HYBRID_GROUP_LOCKED', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 0, 0, 0, N'["free_response"]', N'{"wordCount":true,"disableSpellcheck":true,"cutPaste":true,"showWordCount":true,"disableSpellCheck":true,"allowKeyboardCutPaste":false,"showOnScreenCutPaste":true}', 1, 3, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
   INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (16, 5, 2, N'listening', N'REC', N'Four recordings: everyday conversation to academic lecture', 1.00, N'AUDIO_DRIVEN', N'{"timerMode":"AUDIO_PLUS_CHECK","reviewSeconds":120}', N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 1, 0, 0, NULL, N'{"highlighter":true,"notes":true,"allowHighlight":true,"allowNotes":true}', 40, 1, NULL);
 END TRY
 BEGIN CATCH
@@ -4148,96 +3652,18 @@ END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (21, 9, 3, N'listening', N'L3', N'Three parts, played once, with conversations and talks', 1.00, N'AUDIO_DRIVEN', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 1, 0, 0, NULL, N'{"highlighter":true,"notes":true,"allowHighlight":true,"allowNotes":true}', 35, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (22, 10, 3, N'reading', N'R4', N'Four passages, 40 multiple-choice questions', 1.00, N'FULL_SANDBOX', NULL, N'SPLIT_HORIZONTAL', 4, 1, 1, 0, 1, 0, 0, 0, NULL, N'{"highlighter":true,"notes":true,"allowHighlight":true,"allowNotes":true}', 40, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (23, 11, 3, N'writing', N'W1', N'A letter or email', 1.00, N'FULL_SANDBOX', NULL, N'SPLIT_HORIZONTAL', 4, 1, 1, 0, 0, 0, 0, 0, N'["free_response"]', N'{"wordCount":true,"disableSpellcheck":true,"cutPaste":true,"showWordCount":true,"disableSpellCheck":true,"allowKeyboardCutPaste":false,"showOnScreenCutPaste":true}', 1, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (24, 11, 3, N'writing', N'W2', N'An essay', 2.00, N'FULL_SANDBOX', NULL, N'SPLIT_HORIZONTAL', 4, 1, 1, 0, 0, 0, 0, 0, N'["free_response"]', N'{"wordCount":true,"disableSpellcheck":true,"cutPaste":true,"showWordCount":true,"disableSpellCheck":true,"allowKeyboardCutPaste":false,"showOnScreenCutPaste":true}', 1, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (25, 12, 3, N'speaking', N'S3', N'Social interaction, description and discussion', 1.00, N'SYSTEM_PACED_AUTO', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 0, 0, 0, N'["free_response"]', NULL, 3, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (26, 13, 4, N'listening', N'P1_CAT', N'Photographs (Adaptive)', 1.00, N'AUDIO_DRIVEN', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 1, 0, 1, 0, 0, NULL, NULL, 6, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (27, 13, 4, N'listening', N'P2_CAT', N'Question-Response (Adaptive)', 1.00, N'AUDIO_DRIVEN', NULL, N'STANDARD_VERTICAL', 3, 1, 1, 1, 0, 1, 0, 0, NULL, NULL, 25, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (28, 14, 4, N'reading', N'P5_CAT', N'Incomplete Sentences (Stage 1 & 2)', 1.00, N'UNIT_LOCKED_SANDBOX', NULL, N'STANDARD_VERTICAL', 4, 1, 2, 0, 0, 0, 0, 0, N'["mcq","mcq_3","multi_select","inline_completion","dropdown","drag_drop"]', NULL, 20, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (29, 14, 4, N'reading', N'P7_CAT', N'Reading Comprehension (Adaptive)', 1.00, N'UNIT_LOCKED_SANDBOX', NULL, N'STANDARD_VERTICAL', 4, 1, 2, 0, 1, 0, 0, 0, NULL, N'{"highlighter":true,"notes":true,"allowHighlight":true,"allowNotes":true}', 25, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (30, 15, 5, N'speaking', N'SW_S1', N'Read Aloud', 1.00, N'SYSTEM_PACED_AUTO', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 0, 0, 0, N'["free_response"]', NULL, 2, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (31, 15, 5, N'speaking', N'SW_S2', N'Describe a Picture', 1.00, N'SYSTEM_PACED_AUTO', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 0, 1, 0, N'["free_response"]', NULL, 2, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (32, 16, 5, N'writing', N'SW_W1', N'Write a sentence based on a picture', 1.00, N'HYBRID_GROUP_LOCKED', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 0, 1, 2, N'["free_response"]', N'{"wordCount":true,"disableSpellcheck":true,"cutPaste":true,"showWordCount":true,"disableSpellCheck":true,"allowKeyboardCutPaste":false,"showOnScreenCutPaste":true}', 5, 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [Sections] ([SectionId], [SkillId], [CertId], [Modality], [Code], [Name], [ScoreWeight], [NavigationMode], [TimerPolicyJson], [LayoutType], [OptionCount], [ClusterSize], [UnitCount], [HideOptionText], [RequirePassage], [RequireAudio], [RequireImage], [RequiredKeywordCount], [AllowedComponentTypesJson], [ToolsConfigJson], [ExpectedQuestionCount], [DisplayOrder], [LastWrittenBy]) VALUES (33, 16, 5, N'writing', N'SW_W3', N'Write an opinion essay', 2.00, N'HYBRID_GROUP_LOCKED', NULL, N'STANDARD_VERTICAL', 4, 1, 1, 0, 0, 0, 0, 0, N'["free_response"]', N'{"wordCount":true,"disableSpellcheck":true,"cutPaste":true,"showWordCount":true,"disableSpellCheck":true,"allowKeyboardCutPaste":false,"showOnScreenCutPaste":true}', 1, 2, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
 SET IDENTITY_INSERT [Sections] OFF;
 
 -- ---- Bookings (2 rows)
 SET IDENTITY_INSERT [Bookings] ON;
 BEGIN TRY
-  INSERT INTO [Bookings] ([BookingId], [UserId], [MentorId], [SlotId], [MentorType], [Status], [MeetLink], [FocusArea], [CancelledAt], [CreatedAt]) VALUES (1, 2, 1, 5, N'human', N'done', NULL, N'Listening strategies Part 3 & 4', NULL, '2026-11-06T01:44:01.8497237+07:00');
+  INSERT INTO [Bookings] ([BookingId], [UserId], [MentorId], [SlotId], [PriceCredits], [Status], [MeetLink], [FocusArea], [CancelledAt], [CreatedAt]) VALUES (1, 2, 1, 5, 1, N'done', N'https://meet.google.com/abc-defg-hij', N'Listening strategies Part 3 & 4', NULL, '2026-11-06T01:44:01.8497237+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Bookings] ([BookingId], [UserId], [MentorId], [SlotId], [MentorType], [Status], [MeetLink], [FocusArea], [CancelledAt], [CreatedAt]) VALUES (2, 2, 1, 6, N'human', N'confirmed', N'https://meet.google.com/abc-defg-hij', N'Exam strategy & timing for Reading Part 7', NULL, '2026-11-10T01:44:01.8702933+07:00');
+  INSERT INTO [Bookings] ([BookingId], [UserId], [MentorId], [SlotId], [PriceCredits], [Status], [MeetLink], [FocusArea], [CancelledAt], [CreatedAt]) VALUES (2, 2, 1, 6, 1, N'confirmed', N'https://meet.google.com/abc-defg-hij', N'Exam strategy & timing for Reading Part 7', NULL, '2026-11-10T01:44:01.8702933+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -4258,508 +3684,10 @@ END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (3, 1, 1, 1, N'A2', N'cut', 110, 270);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (4, 1, 1, 1, N'B1', N'cut', 275, 395);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (5, 1, 1, 1, N'B2', N'cut', 400, 485);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (6, 1, 1, 1, N'C1', N'cut', 490, 495);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (7, 1, 1, 1, N'C2', N'display_ceiling', NULL, 495);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (8, 1, 1, 2, N'pre_a1', N'cut', 5, 55);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (9, 1, 1, 2, N'A1', N'cut', 60, 110);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (10, 1, 1, 2, N'A2', N'cut', 115, 270);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (11, 1, 1, 2, N'B1', N'cut', 275, 380);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (12, 1, 1, 2, N'B2', N'cut', 385, 450);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (13, 1, 1, 2, N'C1', N'cut', 455, 495);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (14, 1, 1, 2, N'C2', N'display_ceiling', NULL, 495);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (15, 2, 1, 5, N'pre_a1', N'uncertified', 0, 15);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (16, 2, 1, 5, N'A1', N'cut', 20, 25);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (17, 2, 1, 5, N'A2', N'cut', 30, 35);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (18, 2, 1, 5, N'B1', N'cut', 40, 50);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (19, 2, 1, 5, N'B2', N'cut', 55, 65);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (20, 2, 1, 5, N'C1', N'cut', 70, 80);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (21, 2, 1, 5, N'C2', N'cut', 85, 90);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (22, 2, 1, 6, N'pre_a1', N'uncertified', 0, 15);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (23, 2, 1, 6, N'A1', N'cut', 20, 25);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (24, 2, 1, 6, N'A2', N'cut', 30, 35);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (25, 2, 1, 6, N'B1', N'cut', 40, 50);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (26, 2, 1, 6, N'B2', N'cut', 55, 65);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (27, 2, 1, 6, N'C1', N'cut', 70, 80);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (28, 2, 1, 6, N'C2', N'cut', 85, 90);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (29, 2, 1, 7, N'pre_a1', N'uncertified', 0, 15);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (30, 2, 1, 7, N'A1', N'cut', 20, 25);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (31, 2, 1, 7, N'A2', N'cut', 30, 35);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (32, 2, 1, 7, N'B1', N'cut', 40, 50);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (33, 2, 1, 7, N'B2', N'cut', 55, 65);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (34, 2, 1, 7, N'C1', N'cut', 70, 80);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (35, 2, 1, 7, N'C2', N'cut', 85, 90);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (36, 2, 1, 8, N'pre_a1', N'uncertified', 0, 15);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (37, 2, 1, 8, N'A1', N'cut', 20, 25);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (38, 2, 1, 8, N'A2', N'cut', 30, 35);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (39, 2, 1, 8, N'B1', N'cut', 40, 50);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (40, 2, 1, 8, N'B2', N'cut', 55, 65);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (41, 2, 1, 8, N'C1', N'cut', 70, 80);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (42, 2, 1, 8, N'C2', N'cut', 85, 90);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (43, 3, 1, 9, N'pre_a1', N'uncertified', 0, 15);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (44, 3, 1, 9, N'A1', N'uncertified', 20, 25);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (45, 3, 1, 9, N'A2', N'uncertified', 30, 35);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (46, 3, 1, 9, N'B1', N'cut', 40, 55);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (47, 3, 1, 9, N'B2', N'cut', 60, 80);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (48, 3, 1, 9, N'C1', N'cut', 85, 100);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (49, 3, 1, 9, N'C2', N'display_ceiling', NULL, 100);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (50, 3, 1, 10, N'pre_a1', N'uncertified', 0, 15);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (51, 3, 1, 10, N'A1', N'uncertified', 20, 25);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (52, 3, 1, 10, N'A2', N'uncertified', 30, 35);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (53, 3, 1, 10, N'B1', N'cut', 40, 55);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (54, 3, 1, 10, N'B2', N'cut', 60, 80);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (55, 3, 1, 10, N'C1', N'cut', 85, 100);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (56, 3, 1, 10, N'C2', N'display_ceiling', NULL, 100);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (57, 3, 1, 11, N'pre_a1', N'uncertified', 0, 15);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (58, 3, 1, 11, N'A1', N'uncertified', 20, 25);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (59, 3, 1, 11, N'A2', N'uncertified', 30, 35);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (60, 3, 1, 11, N'B1', N'cut', 40, 55);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (61, 3, 1, 11, N'B2', N'cut', 60, 80);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (62, 3, 1, 11, N'C1', N'cut', 85, 100);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (63, 3, 1, 11, N'C2', N'display_ceiling', NULL, 100);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (64, 3, 1, 12, N'pre_a1', N'uncertified', 0, 15);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (65, 3, 1, 12, N'A1', N'uncertified', 20, 25);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (66, 3, 1, 12, N'A2', N'uncertified', 30, 35);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (67, 3, 1, 12, N'B1', N'cut', 40, 55);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (68, 3, 1, 12, N'B2', N'cut', 60, 80);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (69, 3, 1, 12, N'C1', N'cut', 85, 100);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (70, 3, 1, 12, N'C2', N'display_ceiling', NULL, 100);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (71, 5, 1, 15, N'pre_a1', N'cut', 0, 40);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (72, 5, 1, 15, N'A1', N'cut', 50, 80);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (73, 5, 1, 15, N'A2', N'cut', 90, 110);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (74, 5, 1, 15, N'B1', N'cut', 120, 150);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (75, 5, 1, 15, N'B2', N'cut', 160, 170);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (76, 5, 1, 15, N'C1', N'cut', 180, 200);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (77, 5, 1, 15, N'C2', N'display_ceiling', NULL, 200);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (78, 5, 1, 16, N'pre_a1', N'cut', 0, 20);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (79, 5, 1, 16, N'A1', N'cut', 30, 60);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (80, 5, 1, 16, N'A2', N'cut', 70, 110);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (81, 5, 1, 16, N'B1', N'cut', 120, 140);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (82, 5, 1, 16, N'B2', N'cut', 150, 170);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (83, 5, 1, 16, N'C1', N'cut', 180, 200);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [CefrCutScores] ([CutScoreId], [CertId], [TableVersion], [SkillId], [CefrLevel], [RowKind], [MinScaled], [MaxScaled]) VALUES (84, 5, 1, 16, N'C2', N'display_ceiling', NULL, 200);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
 SET IDENTITY_INSERT [CefrCutScores] OFF;
 
 -- ---- ExamAttempts (2 rows)
 SET IDENTITY_INSERT [ExamAttempts] ON;
-BEGIN TRY
-  INSERT INTO [ExamAttempts] ([AttemptId], [UserId], [ExamId], [CertId], [ActiveSkillId], [ActiveUnitNumber], [ActiveGroupId], [AuthorizationCode], [PhaseDeadlineAt], [LastAudioOffsetMs], [CandidateNotesJson], [PreflightVerifiedAt], [Status], [StartedAt], [ExpiresAt], [LastActivityAt], [IsAutoSubmitted], [SubmittedAt], [CurrentExamItemId], [TotalScore], [BandCode], [WrittenByService], [ProjectionVersion], [EpochTag]) VALUES (1, 2, 2, 1, NULL, 1, NULL, NULL, NULL, 0, NULL, NULL, N'graded', '2026-10-20T01:44:01.5425880+07:00', '2026-10-20T02:44:01.5425880+07:00', NULL, 0, '2026-10-20T02:22:01.5425880+07:00', NULL, 650, N'B1', N'AttemptEngine', 1, NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
 BEGIN TRY
   INSERT INTO [ExamAttempts] ([AttemptId], [UserId], [ExamId], [CertId], [ActiveSkillId], [ActiveUnitNumber], [ActiveGroupId], [AuthorizationCode], [PhaseDeadlineAt], [LastAudioOffsetMs], [CandidateNotesJson], [PreflightVerifiedAt], [Status], [StartedAt], [ExpiresAt], [LastActivityAt], [IsAutoSubmitted], [SubmittedAt], [CurrentExamItemId], [TotalScore], [BandCode], [WrittenByService], [ProjectionVersion], [EpochTag]) VALUES (2, 2, 1, 1, NULL, 1, NULL, NULL, NULL, 0, NULL, NULL, N'graded', '2026-11-08T01:44:01.7977460+07:00', '2026-11-08T03:44:01.7977460+07:00', NULL, 0, '2026-11-08T03:29:01.7977460+07:00', NULL, 720, N'B1', N'AttemptEngine', 1, NULL);
 END TRY
@@ -4776,24 +3704,6 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (2, 1, 1, 2700, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (3, 1, 1, 1200, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (4, 1, 1, 3600, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
   INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (5, 2, 1, 10200, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
 END TRY
 BEGIN CATCH
@@ -4805,87 +3715,9 @@ END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
-BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (7, 2, 1, 900, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (8, 2, 1, 3600, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (9, 3, 1, 10800, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (10, 3, 1, 2700, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (11, 3, 1, 900, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (12, 3, 1, 3600, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (13, 1, 1, 2700, N'[]', N'sum', 1, N'[{"Code":"below_A1","Name":"Below A1","MinTotal":10,"MaxTotal":119},{"Code":"A1","Name":"Beginner","MinTotal":120,"MaxTotal":220},{"Code":"A2","Name":"Elementary","MinTotal":225,"MaxTotal":545},{"Code":"B1","Name":"Intermediate","MinTotal":550,"MaxTotal":780},{"Code":"B2","Name":"Upper intermediate","MinTotal":785,"MaxTotal":940},{"Code":"C1","Name":"Advanced","MinTotal":945,"MaxTotal":990}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (14, 2, 1, 3600, N'[]', N'avg_half_step', 1, N'[{"Code":"B1","Name":"Intermediate (4.0–5.0)","MinTotal":40,"MaxTotal":50},{"Code":"B2","Name":"Upper intermediate (5.5–6.5)","MinTotal":55,"MaxTotal":65},{"Code":"C1","Name":"Advanced (7.0–8.0)","MinTotal":70,"MaxTotal":80},{"Code":"C2","Name":"Expert (8.5–9.0)","MinTotal":85,"MaxTotal":90}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (15, 3, 1, 2700, N'[]', N'avg_whole', 1, N'[{"Code":"A2","Name":"A2 (4.0)","MinTotal":40,"MaxTotal":45},{"Code":"B1","Name":"B1 (5.5–6.0)","MinTotal":50,"MaxTotal":60},{"Code":"B2","Name":"B2 (6.5–7.5)","MinTotal":65,"MaxTotal":75},{"Code":"C1","Name":"C1 (8.5+)","MinTotal":80,"MaxTotal":100}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (16, 4, 1, 5400, N'[]', N'sum', NULL, N'[{"Code":"CAT_B1","Name":"Intermediate","MinTotal":400,"MaxTotal":695},{"Code":"CAT_B2","Name":"Professional","MinTotal":700,"MaxTotal":990}]', '2026-11-12T01:45:26.2631332+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamEditions] ([ExamId], [CertId], [EditionNumber], [TotalDurationSeconds], [PhasePlanJson], [ScoreAggregationRule], [CutScoreTableVersion], [BandsJson], [FrozenAt], [WrittenByService], [ProjectionVersion]) VALUES (17, 5, 1, 4800, N'[]', N'sum', 1, N'[{"Code":"SW_B1","Name":"Basic Working","MinTotal":160,"MaxTotal":250},{"Code":"SW_B2","Name":"Advanced Working","MinTotal":260,"MaxTotal":400}]', '2026-11-12T01:45:26.2700085+07:00', N'ExamEditionFreeze', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
 
 -- ---- ExamItems (116 rows)
 SET IDENTITY_INSERT [ExamItems] ON;
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (1, 9, 21, 3, 1, 1, N'listening', 1, 1, '2026-11-11T01:44:02.8291799+07:00', NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (2, 9, 22, 3, 2, 2, N'reading', 1, 1, '2026-11-11T01:44:02.8476407+07:00', NULL);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
 BEGIN TRY
   INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (3, 1, 1, 1, 3, 3, N'listening', 1, 1, '2026-11-11T01:44:03.0925664+07:00', 1);
 END TRY
@@ -4941,210 +3773,6 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (12, 2, 1, 1, 12, 12, N'listening', 1, 1, '2026-11-11T01:44:03.0985774+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (13, 2, 1, 1, 13, 13, N'listening', 2, 1, '2026-11-11T01:44:03.0995808+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (14, 2, 2, 1, 14, 14, N'listening', 1, 1, '2026-11-11T01:44:03.1005852+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (15, 2, 2, 1, 15, 15, N'listening', 2, 1, '2026-11-11T01:44:03.1005852+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (16, 2, 2, 1, 16, 16, N'listening', 3, 1, '2026-11-11T01:44:03.1015853+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (17, 2, 2, 1, 17, 17, N'listening', 4, 1, '2026-11-11T01:44:03.1025851+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (18, 2, 3, 1, 18, 18, N'listening', 1, 1, '2026-11-11T01:44:03.1025851+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (19, 2, 3, 1, 19, 19, N'listening', 2, 1, '2026-11-11T01:44:03.1035852+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (20, 2, 4, 1, 20, 20, N'listening', 1, 1, '2026-11-11T01:44:03.1045851+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (21, 2, 4, 1, 21, 21, N'listening', 2, 1, '2026-11-11T01:44:03.1045851+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (22, 2, 5, 1, 22, 22, N'reading', 1, 1, '2026-11-11T01:44:03.1060901+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (23, 2, 5, 1, 23, 23, N'reading', 2, 1, '2026-11-11T01:44:03.1060901+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (24, 2, 5, 1, 24, 24, N'reading', 3, 1, '2026-11-11T01:44:03.1070918+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (25, 2, 5, 1, 25, 25, N'reading', 4, 1, '2026-11-11T01:44:03.1080931+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (26, 2, 5, 1, 26, 26, N'reading', 5, 1, '2026-11-11T01:44:03.1085966+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (27, 2, 5, 1, 27, 27, N'reading', 6, 1, '2026-11-11T01:44:03.1096028+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (28, 2, 6, 1, 28, 28, N'reading', 1, 1, '2026-11-11T01:44:03.1096028+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (29, 2, 6, 1, 29, 29, N'reading', 2, 1, '2026-11-11T01:44:03.1106079+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (30, 2, 6, 1, 30, 30, N'reading', 3, 1, '2026-11-11T01:44:03.1116072+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (31, 2, 6, 1, 31, 31, N'reading', 4, 1, '2026-11-11T01:44:03.1126103+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (32, 2, 7, 1, 32, 32, N'reading', 1, 1, '2026-11-11T01:44:03.1153611+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (33, 2, 7, 1, 33, 33, N'reading', 2, 1, '2026-11-11T01:44:03.1168502+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (34, 2, 7, 1, 34, 34, N'reading', 3, 1, '2026-11-11T01:44:03.1168502+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (35, 2, 7, 1, 35, 35, N'reading', 4, 1, '2026-11-11T01:44:03.1178519+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (117, 2, 8, 1, 36, 36, N'speaking', 1, 1, SYSDATETIMEOFFSET(), 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (118, 2, 9, 1, 37, 37, N'speaking', 1, 1, SYSDATETIMEOFFSET(), 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (119, 2, 10, 1, 38, 38, N'speaking', 1, 1, SYSDATETIMEOFFSET(), 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (120, 2, 13, 1, 39, 39, N'writing', 1, 1, SYSDATETIMEOFFSET(), 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (121, 2, 14, 1, 40, 40, N'writing', 1, 1, SYSDATETIMEOFFSET(), 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (36, 3, 8, 1, 36, 36, N'speaking', 1, 1, '2026-11-11T01:44:03.1188603+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (37, 3, 9, 1, 37, 37, N'speaking', 1, 1, '2026-11-11T01:44:03.1188603+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (38, 3, 10, 1, 38, 38, N'speaking', 1, 1, '2026-11-11T01:44:03.1198611+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (39, 4, 13, 1, 39, 39, N'writing', 1, 1, '2026-11-11T01:44:03.1208609+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (40, 4, 14, 1, 40, 40, N'writing', 1, 1, '2026-11-11T01:44:03.1208609+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
   INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (41, 5, 16, 2, 41, 41, N'listening', 1, 1, '2026-11-11T01:44:03.1218611+07:00', 1);
 END TRY
 BEGIN CATCH
@@ -5164,90 +3792,6 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (44, 6, 17, 2, 44, 44, N'reading', 1, 1, '2026-11-11T01:44:03.1238641+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (45, 7, 20, 2, 45, 45, N'speaking', 1, 1, '2026-11-11T01:44:03.1253700+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (46, 7, 20, 2, 46, 46, N'speaking', 2, 1, '2026-11-11T01:44:03.1263764+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (47, 8, 18, 2, 47, 47, N'writing', 1, 1, '2026-11-11T01:44:03.1263764+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (48, 8, 19, 2, 48, 48, N'writing', 1, 1, '2026-11-11T01:44:03.1273762+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (49, 10, 21, 3, 49, 49, N'listening', 1, 1, '2026-11-11T01:44:03.1283811+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (50, 10, 22, 3, 50, 50, N'reading', 1, 1, '2026-11-11T01:44:03.1283811+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (51, 11, 25, 3, 51, 51, N'speaking', 1, 1, '2026-11-11T01:44:03.1293815+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (52, 11, 25, 3, 52, 52, N'speaking', 2, 1, '2026-11-11T01:44:03.1303815+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (53, 12, 23, 3, 53, 53, N'writing', 1, 1, '2026-11-11T01:44:03.1303815+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (54, 12, 24, 3, 54, 54, N'writing', 1, 1, '2026-11-11T01:44:03.1313813+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (87, 14, 18, 2, 87, 87, N'writing', 1, 1, '2026-11-11T01:44:03.1575543+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (88, 14, 19, 2, 88, 88, N'writing', 1, 1, '2026-11-11T01:44:03.1589292+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (89, 15, 23, 3, 89, 89, N'writing', 1, 1, '2026-11-11T01:44:03.1589292+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (90, 15, 24, 3, 90, 90, N'writing', 1, 1, '2026-11-11T01:44:03.1602111+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -5301,109 +3845,13 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (99, 10, 21, 3, 99, 99, N'listening', 2, 1, '2026-11-11T01:44:03.1667175+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (99, 6, 20, 2, 45, 45, N'speaking', 1, 1, '2026-11-11T01:44:03.1660000+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (100, 10, 21, 3, 100, 100, N'listening', 3, 1, '2026-11-11T01:44:03.1677166+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (101, 10, 21, 3, 101, 101, N'listening', 4, 1, '2026-11-11T01:44:03.1687165+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (102, 10, 21, 3, 102, 102, N'listening', 5, 1, '2026-11-11T01:44:03.1697180+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (103, 10, 22, 3, 103, 103, N'reading', 2, 1, '2026-11-11T01:44:03.1697180+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (104, 10, 22, 3, 104, 104, N'reading', 3, 1, '2026-11-11T01:44:03.1707167+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (105, 10, 22, 3, 105, 105, N'reading', 4, 1, '2026-11-11T01:44:03.1717165+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (106, 10, 22, 3, 106, 106, N'reading', 5, 1, '2026-11-11T01:44:03.1727164+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (107, 16, 28, 4, 107, 107, N'reading', 1, 1, '2026-11-11T01:44:03.1727164+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (108, 16, 28, 4, 108, 108, N'reading', 2, 1, '2026-11-11T01:44:03.1737164+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (109, 16, 28, 4, 109, 109, N'reading', 3, 1, '2026-11-11T01:44:03.1747166+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (110, 16, 28, 4, 110, 110, N'reading', 4, 1, '2026-11-11T01:44:03.1757164+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (111, 16, 28, 4, 111, 111, N'reading', 5, 1, '2026-11-11T01:44:03.1762225+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (112, 16, 28, 4, 112, 112, N'reading', 6, 1, '2026-11-11T01:44:03.1772244+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (113, 16, 29, 4, 113, 113, N'reading', 1, 2, '2026-11-11T01:44:03.1782242+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (114, 17, 30, 5, 114, 114, N'speaking', 1, 1, '2026-11-11T01:44:03.1782242+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (115, 17, 32, 5, 115, 115, N'writing', 1, 1, '2026-11-11T01:44:03.1792242+07:00', 1);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (116, 17, 33, 5, 116, 116, N'writing', 1, 1, '2026-11-11T01:44:03.1802239+07:00', 1);
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (100, 6, 18, 2, 47, 47, N'writing', 1, 1, '2026-11-11T01:44:03.1670000+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -5436,18 +3884,6 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (2, 1, 1, N'/audio/toeic/placement-p1.mp3', 120, 1920000, '2026-11-11T01:44:01.2886738+07:00');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (2, 2, 1, N'/audio/toeic/placement-p2.mp3', 180, 2880000, '2026-11-11T01:44:01.2886738+07:00');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
   INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (5, 16, 2, N'/audio/ielts/cambridge18-t1-listening.mp3', 1800, 28800000, '2026-11-11T01:44:01.4867791+07:00');
 END TRY
 BEGIN CATCH
@@ -5455,42 +3891,6 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (6, 16, 2, N'/audio/ielts/placement-diagnostic.mp3', 600, 9600000, '2026-11-11T01:44:01.4937789+07:00');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (9, 21, 3, N'/audio/vstep/sample1-listening.mp3', 2400, 38400000, '2026-11-11T01:44:01.5052873+07:00');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (10, 21, 3, N'/audio/vstep/placement-diagnostic.mp3', 600, 9600000, '2026-11-11T01:44:01.5129846+07:00');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (13, 1, 1, N'/audio/toeic/placement-p1.mp3', 180, 2880000, '2026-11-11T01:44:02.3621871+07:00');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (13, 2, 1, N'/audio/toeic/placement-p2.mp3', 300, 4800000, '2026-11-11T01:44:02.3631872+07:00');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (13, 3, 1, N'/audio/toeic/test1-p3.mp3', 600, 9600000, '2026-11-11T01:44:02.3631872+07:00');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [ExamSectionAudio] ([ExamId], [SectionId], [CertId], [AudioPath], [DurationSec], [SizeBytes], [UploadedAt]) VALUES (13, 4, 1, N'/audio/toeic/test1-p4.mp3', 600, 9600000, '2026-11-11T01:44:02.3631872+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -5566,30 +3966,6 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (12, 3, 1, N'micro_check', N'Kiểm tra nhanh: Nhận diện phản hồi gián tiếp', N'Đọc câu hỏi dưới đây và loại bỏ các bẫy âm thanh/lặp từ để chọn phản hồi tự nhiên nhất.', N'Question: "How much will it cost to upgrade our server capacity?" — Which response is best?', N'Yes, the server is at full capacity.', N'I''m still waiting for a quote from the vendor.', N'Along the coast of California.', N'To improve our data processing speed.', N'B', N'Câu hỏi "How much" hỏi về chi phí, nhưng người trả lời chưa có con số chính xác vì vẫn đang đợi bảng báo giá (waiting for a quote) từ nhà cung cấp — đây là phản hồi gián tiếp cực kỳ phổ biến trong TOEIC.', N'(A) Bẫy Yes/No cho câu hỏi Wh- kèm lặp từ "server" và "capacity"; (B) Đáp án đúng dạng gián tiếp; (C) Bẫy đồng âm "cost" và "coast"; (D) Bẫy trả lời cho câu hỏi mục đích "Why" thay vì "How much".', 3, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (13, 4, 1, N'rule', N'Quy tắc cốt lõi: Khung 4 đoạn chuẩn mực cho Business Email', N'Để đạt điểm tối đa (Level 5) trong TOEIC Writing Task 1, email phải tuân thủ nghiêm ngặt 4 khối nội dung:' + CHAR(10) + N'' + CHAR(10) + N'1. **Salutation & Purpose (Chào hỏi & Nêu mục đích)**: *"Thank you for contacting us regarding..."*, *"I am writing to apologize for the delay in..."*' + CHAR(10) + N'2. **Cause & Details (Giải trình nguyên nhân)**: Trình bày lý do khách quan bằng cấu trúc bị động hoặc danh từ hóa (*"Due to an unexpected supply chain disruption..."*).' + CHAR(10) + N'3. **Action & Compensation (Giải pháp & Đền bù)**: Đưa ra mốc thời gian giải quyết cụ thể và phương án bồi thường thỏa đáng (*"We have dispatched a replacement order via express air freight..."*).' + CHAR(10) + N'4. **Professional Closing (Lời chúc & Ký tên)**: *"Please accept our sincere apologies for any inconvenience caused. Sincerely, [Name]"*.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (14, 4, 1, N'pitfall', N'Bẫy kinh điển: Thiếu một trong các yêu cầu của đề bài (Missing Task Element)', N'ETS luôn đưa ra **từ 2 đến 3 chỉ dẫn bắt buộc** trong phần Directions (ví dụ: giải thích lý do, hẹn ngày mới, và đề xuất bồi thường).' + CHAR(10) + N'' + CHAR(10) + N'- ❌ **Lỗi mất điểm nặng nhất**: Dù tiếng Anh của bạn hoàn hảo, ngữ pháp không sai một lỗi nào, nhưng nếu bạn **quên đề xuất phương án bồi thường**, bài viết sẽ bị giới hạn ở mức **điểm 3/5**!' + CHAR(10) + N'- ✔️ **Kỹ thuật Check-off**: Trước khi bấm nộp bài, hãy dành 60 giây đối chiếu từng gạch đầu dòng của đề bài xem đã có trong bài viết chưa.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (15, 4, 1, N'example', N'Mẫu câu ghi điểm tuyệt đối cho phần Đền bù (Compensation)', N'- *"To compensate for this inconvenience, we would like to offer a 15% discount on your next wholesale order."*' + CHAR(10) + N'- *"In addition, we have waived all freight charges for this delivery and credited your corporate account accordingly."*' + CHAR(10) + N'- *"As a gesture of goodwill, please accept a complimentary one-year warranty extension on all delivered equipment."*', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 2, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (16, 4, 1, N'micro_check', N'Kiểm tra nhanh: Lựa chọn câu đền bù chuẩn văn phong thương mại', N'Chọn câu văn thể hiện thái độ đền bù khách hàng chuyên nghiệp và trang trọng nhất.', N'Which sentence best demonstrates appropriate tone and professional vocabulary when offering compensation?', N'We feel really bad, so you don''t have to pay for shipping this time.', N'As a gesture of goodwill, we have waived the shipping fee and credited a 10% discount to your account.', N'You should take a 10% discount because our delivery driver was late.', N'If you want your money back, tell our accounting team right now.', N'B', N'Phương án (B) sử dụng cụm từ thương mại chuẩn mực "As a gesture of goodwill", động từ học thuật "waived" (miễn phí) và "credited" (hoàn/cộng vào tài khoản), thể hiện sự chủ động và tôn trọng khách hàng.', N'(A) Quá suồng sã ("feel really bad"); (B) Chuẩn văn phong Business English; (C) Thiếu lịch sự và đổ lỗi trực tiếp; (D) Giọng điệu mệnh lệnh gây phản cảm cho đối tác.', 3, N'primary');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -5710,102 +4086,6 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (36, 9, 2, N'micro_check', N'Micro-check', N'Which paragraph plan best supports a clear Task 2 argument?', N'Which paragraph plan best supports a clear Task 2 argument?', N'One paragraph with several unrelated claims', N'Claim, explanation, and relevant example', N'Only a list of linking words', N'A conclusion with new arguments', N'B', N'A developed paragraph connects one claim to its reasoning and evidence.', NULL, 3, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (37, 10, 3, N'rule', N'Rule', N'Note who is speaking, why, and what action is required. Listen for dates, deadlines, and changes signalled by “because”, “but”, or “not”.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (38, 10, 3, N'pitfall', N'Pitfall', N'Do not choose the first date or room you hear if the speaker later corrects it.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (39, 10, 3, N'example', N'Worked example', N'“It was planned for the 16th, but it will take place on the 18th” confirms 18 June.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 2, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (40, 10, 3, N'micro_check', N'Micro-check', N'A notice corrects an event from 16 June to 18 June. Which date should volunteers use?', N'A notice corrects an event from 16 June to 18 June. Which date should volunteers use?', N'16 June', N'18 June', N'Both dates', N'The date is cancelled', N'B', N'The later correction replaces the earlier printed date.', NULL, 3, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (41, 11, 3, N'rule', N'Rule', N'Scan for a distinctive detail, read its surrounding sentence, and connect paraphrases such as “cannot travel easily” with “limited mobility”.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (42, 11, 3, N'pitfall', N'Pitfall', N'A nearby pronoun can refer to a different person or object than the closest noun. Check meaning across the sentence.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (43, 11, 3, N'example', N'Worked example', N'“The last bus left before closing” supports the inference that late visitors lacked transport home.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 2, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (44, 11, 3, N'micro_check', N'Micro-check', N'“Applicants must register by phone” means applicants should ...', N'“Applicants must register by phone” means applicants should ...', N'Call to complete registration', N'Visit without registering', N'Pay at the library', N'Wait until classes begin', N'A', N'Registering by phone is equivalent to calling to complete registration.', NULL, 3, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (45, 12, 3, N'rule', N'Rule', N'Plan the email in four moves: greeting and purpose, response to each required point, any request or suggestion, and an appropriate closing.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (46, 12, 3, N'pitfall', N'Pitfall', N'A friendly tone does not mean omitting the requested information or using chat abbreviations in a formal email.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (47, 12, 3, N'example', N'Worked example', N'Dear Project Coordinator, I can join the Saturday clean-up. Could you confirm the meeting point? I will bring gloves. Kind regards, ...', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 2, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (48, 12, 3, N'micro_check', N'Micro-check', N'What should a complete reply do first after a suitable greeting?', N'What should a complete reply do first after a suitable greeting?', N'Answer the prompt''s required points clearly', N'Add an unrelated story', N'Use informal abbreviations', N'End without a closing', N'A', N'Task fulfilment requires responding to the requested information before adding unrelated content.', NULL, 3, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (49, 13, 3, N'rule', N'Rule', N'Use an introduction with a clear position, body paragraphs with one reason each, and a conclusion that reinforces the argument.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (50, 13, 3, N'pitfall', N'Pitfall', N'A list of examples without explaining their relevance does not develop an argument.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (51, 13, 3, N'example', N'Worked example', N'Claim: parks improve public health. Reason: they provide safe exercise space. Example: residents can walk daily without travelling far.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 2, N'primary');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-BEGIN TRY
-  INSERT INTO [LessonCards] ([CardId], [LessonId], [CertId], [CardType], [Title], [ContentMarkdown], [QuestionPrompt], [OptionA], [OptionB], [OptionC], [OptionD], [CorrectOption], [Explanation], [Rationale], [DisplayOrder], [Module]) VALUES (52, 13, 3, N'micro_check', N'Micro-check', N'Which sequence best develops one body-paragraph idea?', N'Which sequence best develops one body-paragraph idea?', N'Example, unrelated claim, conclusion', N'Claim, explanation, relevant example', N'Three linking words only', N'New position, then copied prompt', N'B', N'A claim supported by an explanation and relevant example forms a developed argument.', NULL, 3, N'primary');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;

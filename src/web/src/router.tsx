@@ -60,7 +60,6 @@ import { MentorsCatalogPage } from './features/mentors/MentorsCatalogPage';
 import { MentorDetailPage } from './features/mentors/MentorDetailPage';
 import { MentorBookingsPage } from './features/mentors/MentorBookingsPage';
 import { MentorBookingDetailPage } from './features/mentors/MentorBookingDetailPage';
-import { InstructorSessionsPage } from './features/instructor/InstructorSessionsPage';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { SupportPage } from './features/support/SupportPage';
 import { MockExamCatalogPage } from './features/exams/MockExamCatalogPage';
@@ -456,11 +455,6 @@ const routeTree = rootRoute.addChildren([
     getParentRoute: () => rootRoute,
     path: '/support/history',
     component: SupportPage,
-  }),
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/instructor/sessions',
-    component: InstructorSessionsPage,
   }),
   createRoute({
     getParentRoute: () => rootRoute,

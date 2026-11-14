@@ -7,8 +7,8 @@ import type {
   RefundStatusDto,
   ComplaintTypeDto,
   ComplaintStatusDto,
-  MentorTypeDto,
   SlotStatusDto,
+  MentorWeeklySlotInputDto,
 } from '../../../lib/api';
 
 /**
@@ -133,15 +133,30 @@ export function formatComplaintStatusLabel(status?: ComplaintStatusDto | string 
   }
 }
 
-export function formatMentorTypeLabel(type?: MentorTypeDto | string | null): string {
-  switch (type) {
-    case 'human':
-      return 'Human mentor';
-    case 'ai':
-      return 'AI coach';
-    default:
-      return 'Not reported';
-  }
+export const WEEKDAY_OPTIONS: readonly {
+  dayOfWeek: number;
+  label: string;
+  shortLabel: string;
+}[] = [
+  { dayOfWeek: 1, label: 'Thứ 2 (Monday)', shortLabel: 'Thứ 2' },
+  { dayOfWeek: 2, label: 'Thứ 3 (Tuesday)', shortLabel: 'Thứ 3' },
+  { dayOfWeek: 3, label: 'Thứ 4 (Wednesday)', shortLabel: 'Thứ 4' },
+  { dayOfWeek: 4, label: 'Thứ 5 (Thursday)', shortLabel: 'Thứ 5' },
+  { dayOfWeek: 5, label: 'Thứ 6 (Friday)', shortLabel: 'Thứ 6' },
+  { dayOfWeek: 6, label: 'Thứ 7 (Saturday)', shortLabel: 'Thứ 7' },
+  { dayOfWeek: 7, label: 'Chủ Nhật (Sunday)', shortLabel: 'CN' },
+];
+
+export function formatWeekdayLabel(dayOfWeek: number): string {
+  const found = WEEKDAY_OPTIONS.find((d) => d.dayOfWeek === dayOfWeek);
+  return found ? found.label : `Day ${dayOfWeek}`;
+}
+
+export function normalizeWeeklyTime(value?: string | null): string {
+  if (!value) return '';
+  const trimmed = value.trim();
+  const match = /^(\d{2}:\d{2})/.exec(trimmed);
+  return match ? match[1] : trimmed;
 }
 
 export function formatMentorSlotStatusLabel(status?: SlotStatusDto | string | null): string {
@@ -367,6 +382,65 @@ export function validateCsvExportDates(from?: string, to?: string): { valid: boo
     return { valid: false, error: 'From date cannot be after to date.' };
   }
   return { valid: true };
+}
+
+export function validateWeeklySlots(
+  slots: MentorWeeklySlotInputDto[],
+): { valid: boolean; error?: string } {
+  const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    if (!slot || slot.dayOfWeek < 1 || slot.dayOfWeek > 7) {
+      return { valid: false, error: 'Day of week must be between Monday (1) and Sunday (7).' };
+    }
+    const start = normalizeWeeklyTime(slot.startTime);
+    const end = normalizeWeeklyTime(slot.endTime);
+    if (!timeRegex.test(start) || !timeRegex.test(end)) {
+      return {
+        valid: false,
+        error: `Invalid time format on ${formatWeekdayLabel(slot.dayOfWeek)}. Use HH:mm.`,
+      };
+    }
+    if (end <= start) {
+      return {
+        valid: false,
+        error: `End time must be after start time on ${formatWeekdayLabel(slot.dayOfWeek)} (${start} – ${end}).`,
+      };
+    }
+  }
+
+  for (let i = 0; i < slots.length; i++) {
+    for (let j = i + 1; j < slots.length; j++) {
+      const a = slots[i];
+      const b = slots[j];
+      if (a.dayOfWeek !== b.dayOfWeek) continue;
+      const aStart = normalizeWeeklyTime(a.startTime);
+      const aEnd = normalizeWeeklyTime(a.endTime);
+      const bStart = normalizeWeeklyTime(b.startTime);
+      const bEnd = normalizeWeeklyTime(b.endTime);
+      if (aStart < bEnd && bStart < aEnd) {
+        return {
+          valid: false,
+          error: `Weekly windows overlap on ${formatWeekdayLabel(a.dayOfWeek)} (${aStart}–${aEnd} and ${bStart}–${bEnd}).`,
+        };
+      }
+    }
+  }
+
+  return { valid: true };
+}
+
+export function getDefaultUtc7MonthRange(now = new Date()): { from: string; to: string } {
+  const utc7Millis = now.getTime() + 7 * 60 * 60 * 1000;
+  const utc7Date = new Date(utc7Millis);
+  const year = utc7Date.getUTCFullYear();
+  const month = String(utc7Date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(utc7Date.getUTCDate()).padStart(2, '0');
+  return {
+    from: `${year}-${month}-01`,
+    to: `${year}-${month}-${day}`,
+  };
 }
 
 /**

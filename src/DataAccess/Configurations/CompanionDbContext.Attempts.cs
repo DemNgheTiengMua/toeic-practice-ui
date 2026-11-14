@@ -24,8 +24,6 @@ public partial class CompanionDbContext
                     // #227: an attempt's ExamId is the edition it sat and never moves. Declared here or
                     // every EF save on this table fails on the OUTPUT clause (ADR-0001).
                     tb.HasTrigger("trg_ExamAttempts_EditionIsFixed");
-                    // #191: the single-writer guard, which reads WrittenByService and ProjectionVersion
-                    tb.HasTrigger("trg_Attempts_SingleWriter");
                     // #246: a preserved attempt is read-only. Declared here or every EF save on this
                     // table fails on the OUTPUT clause (ADR-0001).
                     tb.HasTrigger("trg_Attempts_EpochIsReadOnly");
@@ -218,8 +216,6 @@ public partial class CompanionDbContext
             // #212: a placement cannot be marked done without a measured row or a recorded failure.
             // Declared or every EF save on this table fails on the OUTPUT clause (ADR-0001).
             entity.ToTable(tb => tb.HasTrigger("trg_PlacementTests_CompletionIsEarned"));
-
-            entity.ToTable(tb => tb.HasTrigger("trg_PlacementTests_SingleWriter"));
 
             entity.HasIndex(e => e.AttemptId, "UX_PlacementTests_Attempt")
                 .IsUnique()

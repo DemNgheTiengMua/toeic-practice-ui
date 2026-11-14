@@ -37,6 +37,8 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY --from=publish /out/api ./
+COPY src/web/public/audio/ ./wwwroot/audio/
+COPY src/web/public/img/ ./wwwroot/img/
 
 # The audio store is the only path this app writes that must survive a redeploy (compose mounts a
 # named volume here). Creating it and handing it to the app user is what makes a fresh volume

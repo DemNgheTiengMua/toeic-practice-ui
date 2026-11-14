@@ -52,8 +52,6 @@ public partial class CompanionDbContext
         {
             entity.HasKey(e => e.StepId).HasName("PK__LearnerP__24343357410D371C");
 
-            // #191: the step-closure single-writer guard
-            entity.ToTable(tb => tb.HasTrigger("trg_LearnerPathSteps_SingleWriter"));
             // #232: UI-44's rule moved here from the dropped PathModuleItems
             entity.ToTable(tb => tb.HasTrigger("trg_LearnerPathSteps_MockSectionIsSittableExam"));
 
@@ -163,6 +161,7 @@ public partial class CompanionDbContext
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.EstimatedMinutes).HasDefaultValue(5);
+            entity.Property(e => e.TargetBands).HasDefaultValue("ALL", "DF_Lessons_TargetBands");
 
             entity.HasOne(d => d.Category).WithMany(p => p.Lessons).HasConstraintName("FK__Lessons__Categor__38EE7070");
 
@@ -216,6 +215,7 @@ public partial class CompanionDbContext
             entity.HasIndex(e => e.CertId, "IX_Mentors_Cert").HasFilter("([IsActive]=(1))");
 
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.MeetLink).HasDefaultValue("https://meet.google.com/new", "DF_Mentor_MeetLink");
             entity.Property(e => e.PriceCredits).HasDefaultValue(1, "DF_Mentor_PriceCredits");
             entity.Property(e => e.SessionMinutes).HasDefaultValue(60, "DF_Mentor_SessionMinutes");
 
@@ -225,12 +225,20 @@ public partial class CompanionDbContext
 
             entity.HasOne(d => d.Skill).WithMany(p => p.MentorProfileSkills).HasConstraintName("FK__MentorPro__Skill__5772F790");
 
-            entity.HasOne(d => d.User).WithMany(p => p.MentorProfiles).HasConstraintName("FK__MentorPro__UserI__558AAF1E");
-
             entity.HasOne(d => d.SkillNavigation).WithMany(p => p.MentorProfileSkillNavigations)
                 .HasPrincipalKey(p => new { p.SkillId, p.CertId })
                 .HasForeignKey(d => new { d.SkillId, d.CertId })
                 .HasConstraintName("FK_Mentor_SkillCert");
+        });
+
+
+
+        modelBuilder.Entity<MentorWeeklySlot>(entity =>
+        {
+            entity.HasKey(e => e.WeeklySlotId);
+
+            entity.HasOne(d => d.Mentor).WithMany(p => p.MentorWeeklySlots)
+                .OnDelete(DeleteBehavior.ClientSetNull);
         });
 
 
@@ -256,30 +264,28 @@ public partial class CompanionDbContext
 
             entity.HasIndex(e => e.SlotId, "UX_Bookings_OnePerSlot")
                 .IsUnique()
-                .HasFilter("([SlotId] IS NOT NULL AND [Status]<>'cancelled')");
+                .HasFilter("([Status]<>'cancelled')");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+            entity.Property(e => e.PriceCredits).HasDefaultValue(1, "DF_Bookings_PriceCredits");
             entity.Property(e => e.Status).HasDefaultValue("pending");
 
             entity.HasOne(d => d.Mentor).WithMany(p => p.BookingMentors)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Bookings__Mentor__6C6E1476");
 
-            entity.HasOne(d => d.Slot).WithOne(p => p.BookingSlot).HasConstraintName("FK__Bookings__SlotId__6D6238AF");
+            entity.HasOne(d => d.Slot).WithOne(p => p.BookingSlot)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__Bookings__SlotId__6D6238AF");
 
             entity.HasOne(d => d.User).WithMany(p => p.Bookings)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Bookings__UserId__6B79F03D");
 
-            entity.HasOne(d => d.MentorProfile).WithMany(p => p.BookingMentorProfiles)
-                .HasPrincipalKey(p => new { p.MentorId, p.Type })
-                .HasForeignKey(d => new { d.MentorId, d.MentorType })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Bookings_MentorType");
-
             entity.HasOne(d => d.MentorSlot).WithMany(p => p.BookingMentorSlots)
                 .HasPrincipalKey(p => new { p.SlotId, p.MentorId })
                 .HasForeignKey(d => new { d.SlotId, d.MentorId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Bookings_SlotMentor");
         });
 

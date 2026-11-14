@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, AuthUserDto, LearnerContextDto, setUnauthorizedHandler } from '../lib/api';
 import {
@@ -17,7 +17,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isStaff: boolean;
   hasCapability: (capability: string) => boolean;
-  refreshSession: () => Promise<void>;
+  refreshSession: (nextUser?: AuthUserDto | null) => Promise<void>;
   switchCertificate: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -26,6 +26,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
+  const isSigningOutRef = useRef(false);
 
   const meQuery = useQuery({
     queryKey: ['auth', 'me'],
@@ -46,9 +47,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
+      if (isSigningOutRef.current) {
+        return;
+      }
       queryClient.setQueryData(['auth', 'me'], null);
       queryClient.removeQueries({ queryKey: ['learner', 'context'] });
-      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/sign-in')) {
+      if (
+        typeof window !== 'undefined' &&
+        !window.location.pathname.startsWith('/sign-in') &&
+        !window.location.pathname.startsWith('/auth/sign-in')
+      ) {
         const current = resolveSafeReturnUrl(
           `${window.location.pathname}${window.location.search}`,
           '/dashboard',
@@ -83,19 +91,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOutMutation = useMutation({
     mutationFn: () => api.auth.signOut(),
     onSuccess: () => {
-      queryClient.setQueryData(['auth', 'me'], null);
       queryClient.clear();
+      queryClient.setQueryData(['auth', 'me'], null);
     },
   });
 
   const value: AuthContextValue = {
     user,
     learnerContext: learnerContextQuery.data ?? null,
-    isLoading: meQuery.isLoading,
+    isLoading: meQuery.isLoading || (meQuery.isFetching && !user),
     isAuthenticated: Boolean(user),
     isStaff,
     hasCapability: (capability: string) => hasCapability(user, capability),
-    refreshSession: async () => {
+    refreshSession: async (nextUser?: AuthUserDto | null) => {
+      if (nextUser) {
+        queryClient.setQueryData(['auth', 'me'], nextUser);
+      }
       await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       await queryClient.invalidateQueries({ queryKey: ['learner', 'context'] });
     },
@@ -103,7 +114,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await switchCertMutation.mutateAsync(code);
     },
     signOut: async () => {
-      await signOutMutation.mutateAsync();
+      isSigningOutRef.current = true;
+      try {
+        await queryClient.cancelQueries();
+        await signOutMutation.mutateAsync();
+      } finally {
+        isSigningOutRef.current = false;
+      }
     },
   };
 

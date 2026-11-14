@@ -26,9 +26,12 @@ import {
   Sparkles,
   Target,
   Trophy,
+  Video,
 } from 'lucide-react';
 import { api, ApiClientError, LearnerDashboardDto } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
+import { formatDateTimeRange } from '../../lib/domain-labels';
+import { safeExternalHref } from '../../lib/security';
 import { formatFeasibilityStatus } from './learnerHelpers';
 
 export function DashboardPage() {
@@ -86,7 +89,15 @@ export function DashboardPage() {
     );
   }
 
-  const { certificate, nextAction, goal, skills, unfinishedAttempt, unfinishedPractice } = dashboard;
+  const {
+    certificate,
+    nextAction,
+    goal,
+    skills,
+    unfinishedAttempt,
+    unfinishedPractice,
+    upcomingBookings,
+  } = dashboard;
   const isUnplaced = goal.hasNoMeasurement;
 
   // Determine countdown to exam date
@@ -177,6 +188,73 @@ export function DashboardPage() {
             </Link>
           </Alert.Content>
         </Alert>
+      )}
+
+      {/* Upcoming Mentor Session Reminder Banner */}
+      {upcomingBookings && upcomingBookings.length > 0 && (
+        <section
+          aria-label="Upcoming mentor sessions"
+          className="space-y-3"
+        >
+          {upcomingBookings.map((booking) => {
+            const safeMeetHref = safeExternalHref(booking.meetLink);
+            return (
+              <Card
+                key={booking.bookingId}
+                className="border-2 border-accent/40 bg-accent/5 shadow-surface"
+              >
+                <Card.Content className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-accent">
+                        <Calendar className="w-3.5 h-3.5" />
+                        Upcoming mentor session
+                      </span>
+                      <Chip size="sm" color="accent" variant="soft">
+                        {booking.skillName
+                          ? `${booking.certCode} · ${booking.skillName}`
+                          : booking.certCode}
+                      </Chip>
+                    </div>
+                    <p className="text-base font-bold text-foreground m-0">
+                      {booking.mentorName}
+                    </p>
+                    <p className="text-xs font-mono-tabular text-foreground font-semibold m-0">
+                      {formatDateTimeRange(booking.startAt, booking.endAt)}
+                    </p>
+                    {booking.focusArea && (
+                      <p className="text-xs text-muted m-0">
+                        Focus: <span className="text-foreground">{booking.focusArea}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                    {safeMeetHref && (
+                      <a
+                        href={safeMeetHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent text-accent-foreground font-semibold text-xs no-underline hover:opacity-90 transition-opacity"
+                      >
+                        <Video className="w-4 h-4" />
+                        <span>Join Meet</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    <Link
+                      to={`/mentors/bookings/${booking.bookingId}`}
+                      className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-border bg-surface text-foreground font-medium text-xs no-underline hover:bg-surface-secondary transition-colors"
+                    >
+                      <span>Booking details</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </Card.Content>
+              </Card>
+            );
+          })}
+        </section>
       )}
 
       {/* BLOCK 1: Hero Next Action */}

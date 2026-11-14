@@ -20,8 +20,8 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
-import { formatVnd } from '../../lib/security';
-import { formatMentorType, formatModality } from '../../lib/domain-labels';
+import { creditsToVnd, formatVnd } from '../../lib/security';
+import { formatModality } from '../../lib/domain-labels';
 
 export function MentorsCatalogPage() {
   const { learnerContext } = useAuth();
@@ -57,7 +57,7 @@ export function MentorsCatalogPage() {
             Mentors & instructors
           </h1>
           <p className="text-sm text-muted mt-1 mb-0">
-            Connect with certified master mentors and AI coaches for 1-on-1 diagnostic sessions.
+            Connect with certified master mentors for 1-on-1 diagnostic consultations.
           </p>
         </div>
 
@@ -124,79 +124,72 @@ export function MentorsCatalogPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mentors.map((mentor) => {
-            const isAi = (mentor.type || '').toLowerCase() === 'ai';
-            return (
-              <Card
-                key={mentor.mentorId}
-                className="flex flex-col justify-between shadow-surface hover:border-accent transition-colors"
-              >
-                <Card.Header className="space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <Card.Title className="text-lg font-bold">{mentor.displayName}</Card.Title>
-                      <Card.Description className="text-xs line-clamp-1">
-                        {mentor.headline || (isAi ? 'AI Diagnostic Coach' : 'Certified Instructor')}
-                      </Card.Description>
-                    </div>
+          {mentors.map((mentor) => (
+            <Card
+              key={mentor.mentorId}
+              className="flex flex-col justify-between shadow-surface hover:border-accent transition-colors"
+            >
+              <Card.Header className="space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <Card.Title className="text-lg font-bold">{mentor.displayName}</Card.Title>
+                    <Card.Description className="text-xs line-clamp-1">
+                      {mentor.headline || 'Certified Instructor'}
+                    </Card.Description>
+                  </div>
 
-                    <Chip
-                      size="sm"
-                      color={isAi ? 'accent' : 'default'}
-                      variant="soft"
+                  <Chip size="sm" color="accent" variant="soft">
+                    {mentor.skillName || mentor.certCode}
+                  </Chip>
+                </div>
+
+                <div className="flex items-center gap-3 text-xs">
+                  <div className="flex items-center gap-1 text-warning font-semibold">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    <span>{mentor.avgRating ? mentor.avgRating.toFixed(1) : 'New'}</span>
+                  </div>
+                  <span className="text-muted">
+                    ({mentor.reviewCount} {mentor.reviewCount === 1 ? 'review' : 'reviews'})
+                  </span>
+                  <span className="text-separator">•</span>
+                  <span className="text-muted font-mono-tabular">{mentor.sessionMinutes} min/session</span>
+                </div>
+              </Card.Header>
+
+              <Card.Content className="space-y-4 pt-1 flex-1 flex flex-col justify-between">
+                <p className="text-sm text-muted line-clamp-3 m-0">
+                  {mentor.bio || mentor.expertise || 'Dedicated mentorship for target score attainment.'}
+                </p>
+
+                <div className="pt-4 border-t border-separator space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted">Session cost:</span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="font-mono-tabular font-bold text-accent text-base">
+                        {mentor.priceCredits} credits
+                      </span>
+                      <span className="text-xs text-muted font-mono-tabular">
+                        ({formatVnd(creditsToVnd(mentor.priceCredits))})
+                      </span>
+                    </div>
+                  </div>
+
+                  <Link
+                    to={`/mentors/${mentor.mentorId}`}
+                    className="no-underline w-full block"
+                  >
+                    <Button
+                      variant="secondary"
+                      className="w-full justify-center"
                     >
-                      {formatMentorType(mentor.type)}
-                    </Chip>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-xs">
-                    <div className="flex items-center gap-1 text-warning font-semibold">
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                      <span>{mentor.avgRating ? mentor.avgRating.toFixed(1) : 'New'}</span>
-                    </div>
-                    <span className="text-muted">
-                      ({mentor.reviewCount} {mentor.reviewCount === 1 ? 'review' : 'reviews'})
-                    </span>
-                    <span className="text-separator">•</span>
-                    <span className="text-muted font-mono-tabular">{mentor.sessionMinutes} min/session</span>
-                  </div>
-                </Card.Header>
-
-                <Card.Content className="space-y-4 pt-1 flex-1 flex flex-col justify-between">
-                  <p className="text-sm text-muted line-clamp-3 m-0">
-                    {mentor.bio || mentor.expertise || 'Dedicated mentorship for target score attainment.'}
-                  </p>
-
-                  <div className="pt-4 border-t border-separator space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted">Session cost:</span>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="font-mono-tabular font-bold text-accent text-base">
-                          {mentor.priceCredits} credits
-                        </span>
-                        <span className="text-xs text-muted font-mono-tabular">
-                          ({formatVnd(mentor.pricePerSlot)})
-                        </span>
-                      </div>
-                    </div>
-
-                    <Link
-                      to={`/mentors/${mentor.mentorId}`}
-                      className="no-underline w-full block"
-                    >
-                      <Button
-                        variant={isAi ? 'primary' : 'secondary'}
-                        className="w-full justify-center"
-                      >
-                        {isAi ? 'Start AI session' : 'Book session'}
-                        <ArrowRight className="w-4 h-4 ml-1.5" />
-                      </Button>
-                    </Link>
-                  </div>
-                </Card.Content>
-              </Card>
-            );
-          })}
+                      Book session
+                      <ArrowRight className="w-4 h-4 ml-1.5" />
+                    </Button>
+                  </Link>
+                </div>
+              </Card.Content>
+            </Card>
+          ))}
         </div>
       )}
     </div>

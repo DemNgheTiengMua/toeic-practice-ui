@@ -1,11 +1,4 @@
-using System.ComponentModel.DataAnnotations;
-using BusinessObjects;
 using Contracts;
-using DataAccess;
-using BusinessObjects.Entities;
-using BusinessObjects.Views;
-using Microsoft.EntityFrameworkCore;
-using Services.Credits;
 
 namespace Services;
 
@@ -22,13 +15,14 @@ public interface IMentorService
     Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(int userId, CancellationToken cancellationToken = default);
     Task<MentorReviewDto> RateBookingAsync(int bookingId, int userId, RateMentorRequest request, CancellationToken cancellationToken = default);
 
-    // Admin management
+    // Admin management & payouts
     Task<IReadOnlyList<AdminMentorListItemDto>> GetAdminMentorsAsync(CancellationToken cancellationToken = default);
     Task<MentorSummaryDto> GetAdminMentorByIdAsync(int mentorId, CancellationToken cancellationToken = default);
     Task<MentorSummaryDto> CreateMentorAsync(CreateMentorProfileRequest request, CancellationToken cancellationToken = default);
     Task<MentorSummaryDto> UpdateMentorAsync(int mentorId, UpdateMentorProfileRequest request, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<AdminMentorSlotDto>> GetAdminMentorSlotsAsync(int mentorId, CancellationToken cancellationToken = default);
-    Task<AdminMentorSlotDto> CreateMentorSlotAsync(int mentorId, int adminUserId, CreateMentorSlotRequest request, CancellationToken cancellationToken = default);
-    Task CloseMentorSlotAsync(int mentorId, int slotId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<MentorWeeklySlotDto>> GetAdminMentorWeeklySlotsAsync(int mentorId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<MentorWeeklySlotDto>> ReplaceMentorWeeklySlotsAsync(int mentorId, IReadOnlyList<MentorWeeklySlotInputDto> weeklySlots, CancellationToken cancellationToken = default);
+    Task<AdminMentorPayoutsReportDto> GetAdminMentorPayoutsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<MentorPayoutExportRow>> GetMentorPayoutExportRowsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MentorCertificateOptionDto>> GetCertificateOptionsAsync(CancellationToken cancellationToken = default);
 }

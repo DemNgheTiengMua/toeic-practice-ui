@@ -95,9 +95,6 @@ public partial class User
     public virtual ICollection<LearnerSkillState> LearnerSkillStates { get; set; } = new List<LearnerSkillState>();
 
     [InverseProperty("User")]
-    public virtual ICollection<MentorProfile> MentorProfiles { get; set; } = new List<MentorProfile>();
-
-    [InverseProperty("User")]
     public virtual Order? Order { get; set; }
 
     [InverseProperty("User")]

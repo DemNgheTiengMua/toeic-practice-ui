@@ -29,7 +29,7 @@ import { safeExternalHref } from '../../lib/security';
 import {
   formatBookingStatus,
   formatDateTime,
-  formatMentorType,
+  formatDateTimeRange,
 } from '../../lib/domain-labels';
 import { MentorStandingCard } from './MentorStandingCard';
 
@@ -161,7 +161,7 @@ export function MentorBookingDetailPage() {
               Booking #{booking.bookingId}
             </h1>
             <p className="text-sm text-muted mt-1 mb-0">
-              Session with <strong className="font-semibold text-foreground">{booking.mentorName}</strong> ({formatMentorType(booking.mentorType)})
+              1-on-1 session with <strong className="font-semibold text-foreground">{booking.mentorName}</strong>
             </p>
           </div>
 
@@ -207,7 +207,7 @@ export function MentorBookingDetailPage() {
             <div>
               <span className="text-xs text-muted block mb-1">Scheduled time</span>
               <span className="font-mono-tabular font-semibold text-foreground">
-                {formatDateTime(booking.startAt)}
+                {formatDateTimeRange(booking.startAt, booking.endAt)}
               </span>
             </div>
 

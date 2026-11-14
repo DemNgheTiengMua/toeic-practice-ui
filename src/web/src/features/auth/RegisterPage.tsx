@@ -131,9 +131,9 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-4">
+    <div className="max-w-5xl mx-auto py-4 sm:py-8">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-7 flex flex-col gap-4">
+        <div className="lg:col-span-7 flex flex-col gap-4 min-w-0">
           <div>
             <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground m-0">
               Sign up
@@ -155,8 +155,8 @@ export function RegisterPage() {
             </Alert>
           )}
 
-          <Card>
-            <Form onSubmit={handleSubmit} validationBehavior="aria">
+          <Card className="p-5 sm:p-6">
+            <Form className="flex flex-col gap-5" onSubmit={handleSubmit} validationBehavior="aria">
               <Card.Content className="flex flex-col gap-4">
                 <TextField
                   isRequired
@@ -251,7 +251,7 @@ export function RegisterPage() {
                 </Checkbox>
               </Card.Content>
 
-              <Card.Footer className="flex flex-col gap-3">
+              <Card.Footer className="flex flex-col gap-3.5 pt-1">
                 <Button
                   type="submit"
                   variant="primary"
@@ -279,7 +279,7 @@ export function RegisterPage() {
           </Card>
         </div>
 
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-5 min-w-0">
           <AuthCostSummaryCard
             title="What you get on day one"
             footerNote="Credits do not expire once bought. Start with your free placement exam and learning path."

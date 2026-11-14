@@ -33,140 +33,51 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
                 return Convert.ToInt32(await command.ExecuteScalarAsync());
             }
 
-            Assert.Equal(2, await CountAsync("""
-                SELECT COUNT(*) FROM Exams
-                WHERE (Name='IELTS-DIAG-01' AND Purpose='placement' AND DurationMinutes=60 AND QuestionCount=10)
-                   OR (Name='VSTEP-DIAG-01' AND Purpose='placement' AND DurationMinutes=45 AND QuestionCount=10)
-                """));
+            // #309: Strictly 2 active certificates (TOEIC 2-skill L&R, IELTS 4-skill L/R/S/W); VSTEP/TOEIC_CAT/TOEIC_SW purged.
+            Assert.Equal(2, await CountAsync("SELECT COUNT(*) FROM Certificates WHERE IsActive = 1"));
+            Assert.Equal(0, await CountAsync("SELECT COUNT(*) FROM Certificates WHERE Code IN ('VSTEP','TOEIC_CAT','TOEIC_SW')"));
+            Assert.Equal(2, await CountAsync("SELECT COUNT(*) FROM Skills s JOIN Certificates c ON c.CertId=s.CertId WHERE c.Code='TOEIC'"));
+            Assert.Equal(4, await CountAsync("SELECT COUNT(*) FROM Skills s JOIN Certificates c ON c.CertId=s.CertId WHERE c.Code='IELTS'"));
 
-            // #156: the two toy TOEIC placement exams (4 and 2 questions) are gone, and the one that
-            // replaced them is long enough for a band to mean something: at least 20 real items,
-            // across every Listening and Reading part, at more than one difficulty.
-            Assert.Equal(1, await CountAsync("""
-                SELECT COUNT(*) FROM Exams
-                WHERE Name = 'TOEIC Placement Test — Diagnostic'
-                  AND Purpose='placement' AND Status='published' AND QuestionCount >= 20
-                """));
-            // #267: the seed's paper content is the pool now. Same assertion, pool source.
-            Assert.Equal(29, await CountAsync("""
-                SELECT COUNT(*) FROM ExamItems ei
-                JOIN Exams e ON e.ExamId=ei.ExamId
-                WHERE e.Name='TOEIC Placement Test — Diagnostic'
-                """));
-            Assert.Equal(12, await CountAsync("""
-                SELECT COUNT(DISTINCT ei.SectionId) FROM ExamItems ei
-                JOIN Exams e ON e.ExamId=ei.ExamId
-                WHERE e.Name='TOEIC Placement Test — Diagnostic'
-                """));
-            // #230: the diagnostic must span more than one level, for the same reason it had to span
-            // more than one difficulty: a paper stratified on one band cannot separate the bands above
-            // it. The count reads the level, and the threshold is unchanged.
-            Assert.True(await CountAsync("""
-                SELECT COUNT(DISTINCT i.CefrLevel) FROM ExamItems ei
-                JOIN Exams e ON e.ExamId=ei.ExamId
-                JOIN Items i ON i.ItemId=ei.ItemId
-                WHERE e.Name='TOEIC Placement Test — Diagnostic'
-                """) >= 3, "the diagnostic must carry more than one level");
-            Assert.Equal(0, await CountAsync("""
-                SELECT COUNT(*) FROM Exams
-                WHERE Purpose='placement' AND CertId=(SELECT CertId FROM Certificates WHERE Code='TOEIC')
-                  AND QuestionCount < 20
-                """));
-            // The card copy must not claim the exam is adaptive: it is not. (TOEIC_CAT genuinely is
-            // a different, adaptive certificate, so the assertion is scoped to placement exams.)
-            Assert.Equal(0, await CountAsync("""
-                SELECT COUNT(*) FROM Exams WHERE Purpose='placement' AND Description LIKE '%daptive%'
-                """));
-            Assert.Equal(20, await CountAsync("""
-                SELECT COUNT(*) FROM ExamItems ei
-                JOIN Exams e ON e.ExamId=ei.ExamId
-                JOIN Items i ON i.ItemId=ei.ItemId
-                WHERE e.Name IN ('IELTS-DIAG-01','VSTEP-DIAG-01') AND e.Purpose='placement' AND i.RenderFormat='mcq'
-                """));
-            // A pool version carries one rationale per option column, so "eighty option rows with a
-            // rationale" becomes "twenty versions whose four rationales are all present".
-            Assert.Equal(20, await CountAsync("""
-                SELECT COUNT(*) FROM ExamItems ei
-                JOIN Exams e ON e.ExamId=ei.ExamId
-                JOIN ItemVersions v ON v.ItemVersionId=ei.ItemVersionId
-                WHERE e.Name IN ('IELTS-DIAG-01','VSTEP-DIAG-01')
-                  AND v.RationaleA IS NOT NULL AND v.RationaleB IS NOT NULL
-                  AND v.RationaleC IS NOT NULL AND v.RationaleD IS NOT NULL
-                """));
-            Assert.Equal(2, await CountAsync("""
-                SELECT COUNT(*) FROM ExamSectionAudio a
-                JOIN Exams e ON e.ExamId=a.ExamId
-                WHERE e.Name IN ('IELTS-DIAG-01','VSTEP-DIAG-01')
-                """));
-            // #267: a pool position's audio slice and transcript live on its stimulus, not a question
-            // group. Same assertion: eight positions in the two diagnostics carry all three.
-            Assert.Equal(8, await CountAsync("""
-                SELECT COUNT(*) FROM ExamItems ei
-                JOIN Exams e ON e.ExamId=ei.ExamId
-                JOIN Items i ON i.ItemId=ei.ItemId
-                JOIN Stimuli st ON st.StimulusId=i.StimulusId
-                WHERE e.Name IN ('IELTS-DIAG-01','VSTEP-DIAG-01')
-                  AND st.AudioStartMs IS NOT NULL AND st.AudioEndMs IS NOT NULL AND st.Transcript IS NOT NULL
-                """));
-            Assert.Equal(2, await CountAsync("""
-                SELECT COUNT(*) FROM Exams
-                WHERE Name IN ('IELTS-DIAG-01 Writing Extension','VSTEP-DIAG-01 Writing Extension')
-                  AND Purpose='writing_practice' AND SourceName='Free diagnostic benchmark'
-                """));
+            // #309: 1 published Universal Placement Exam covering all 4 skills, and 1 published Mock Exam per certificate.
+            Assert.Equal(1, await CountAsync("SELECT COUNT(*) FROM Exams WHERE Purpose='placement' AND Status='published'"));
             Assert.Equal(4, await CountAsync("""
-                SELECT COUNT(*) FROM ExamItems ei
+                SELECT COUNT(DISTINCT ei.Modality) FROM ExamItems ei
                 JOIN Exams e ON e.ExamId=ei.ExamId
-                JOIN Items i ON i.ItemId=ei.ItemId
-                JOIN ItemVersions v ON v.ItemVersionId=ei.ItemVersionId
-                WHERE e.Name IN ('IELTS-DIAG-01 Writing Extension','VSTEP-DIAG-01 Writing Extension')
-                  AND i.RenderFormat='free_response' AND v.MinWords IS NOT NULL
+                WHERE e.Purpose='placement' AND e.Status='published'
                 """));
-            Assert.Equal(8, await CountAsync("""
-                SELECT COUNT(*) FROM GradingCriteria c
-                JOIN Exams e ON e.CertId=c.CertId
-                JOIN Skills s ON s.SkillId=c.SkillId AND s.CertId=e.CertId AND s.Code='WRIT'
-                WHERE e.Name IN ('IELTS-DIAG-01 Writing Extension','VSTEP-DIAG-01 Writing Extension')
-                """));
-            // #232: the diagnostic sprint seeds its lessons and cards; the path steps that use them are
-            // planned at run time, so there is no template row to count here any more.
-            Assert.Equal(8, await CountAsync("""
+            Assert.Equal(2, await CountAsync("SELECT COUNT(*) FROM Exams WHERE Purpose='mock' AND Status='published'"));
+
+            // #309: Flat GradingCriteria on IELTS Writing & Speaking.
+            Assert.True(await CountAsync("""
+                SELECT COUNT(*) FROM GradingCriteria gc
+                JOIN Certificates c ON c.CertId=gc.CertId
+                WHERE c.Code='IELTS'
+                """) >= 8);
+
+            // #309: Multi-format Items and Lessons tagged with 'ALL' and band ranges.
+            Assert.Equal(7, await CountAsync("SELECT COUNT(DISTINCT RenderFormat) FROM Items"));
+            Assert.True(await CountAsync("SELECT COUNT(*) FROM Items WHERE TargetBands = 'ALL'") > 0);
+            Assert.True(await CountAsync("SELECT COUNT(*) FROM Items WHERE TargetBands <> 'ALL'") > 0);
+            Assert.True(await CountAsync("SELECT COUNT(*) FROM Lessons WHERE TargetBands = 'ALL'") > 0);
+            Assert.True(await CountAsync("SELECT COUNT(*) FROM Lessons WHERE TargetBands <> 'ALL'") > 0);
+
+            Assert.Equal(4, await CountAsync("""
                 SELECT COUNT(*) FROM Lessons
                 WHERE Title IN (
                   'IELTS Listening: Follow Signposts and Corrections',
                   'IELTS Reading: Paraphrase Claims and Match Evidence',
                   'IELTS Task 1: Select and Describe Trends',
-                  'IELTS Writing: Coherence, Cohesion, and Position',
-                  'VSTEP Listening: Catch Purpose, Time, and Changes',
-                  'VSTEP Reading: Locate Paraphrases and References',
-                  'VSTEP Writing: Organise a Formal Email',
-                  'VSTEP Writing: Build and Support an Argument')
+                  'IELTS Writing: Coherence, Cohesion, and Position')
                 """));
-            Assert.Equal(32, await CountAsync("""
+            Assert.Equal(16, await CountAsync("""
                 SELECT COUNT(*) FROM LessonCards c
                 JOIN Lessons l ON l.LessonId=c.LessonId
                 WHERE l.Title IN (
                   'IELTS Listening: Follow Signposts and Corrections',
                   'IELTS Reading: Paraphrase Claims and Match Evidence',
                   'IELTS Task 1: Select and Describe Trends',
-                  'IELTS Writing: Coherence, Cohesion, and Position',
-                  'VSTEP Listening: Catch Purpose, Time, and Changes',
-                  'VSTEP Reading: Locate Paraphrases and References',
-                  'VSTEP Writing: Organise a Formal Email',
-                  'VSTEP Writing: Build and Support an Argument')
-                """));
-            Assert.Equal(8, await CountAsync("""
-                SELECT COUNT(*) FROM Lessons l
-                WHERE l.Title IN (
-                  'IELTS Listening: Follow Signposts and Corrections',
-                  'IELTS Reading: Paraphrase Claims and Match Evidence',
-                  'IELTS Task 1: Select and Describe Trends',
-                  'IELTS Writing: Coherence, Cohesion, and Position',
-                  'VSTEP Listening: Catch Purpose, Time, and Changes',
-                  'VSTEP Reading: Locate Paraphrases and References',
-                  'VSTEP Writing: Organise a Formal Email',
-                  'VSTEP Writing: Build and Support an Argument')
-                  AND (SELECT COUNT(*) FROM LessonCards c WHERE c.LessonId=l.LessonId)=4
-                  AND (SELECT COUNT(DISTINCT CardType) FROM LessonCards c WHERE c.LessonId=l.LessonId)=4
+                  'IELTS Writing: Coherence, Cohesion, and Position')
                 """));
             // #232: PathModules and PathModuleItems are dropped. The demo path is no longer seeded:
             // #267 generates the seed from a migrated database, and a learning path is DERIVED from a
@@ -260,7 +171,7 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
             await using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = @"SELECT AvgRating FROM vw_MentorAvgRating 
-                                    WHERE MentorId = (SELECT MentorId FROM MentorProfiles WHERE UserId = (SELECT UserId FROM Users WHERE Email = 'mentor.khoa@demo.local'))";
+                                    WHERE MentorId = (SELECT MentorId FROM MentorProfiles WHERE DisplayName = N'Dr. Trần Minh Khoa')";
                 var rating = Convert.ToDecimal(await cmd.ExecuteScalarAsync());
                 Assert.Equal(5.00m, rating);
             }

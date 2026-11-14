@@ -11,9 +11,9 @@ import type {
   AdminComplaintsSummaryDto,
   AdminComplaintDetailDto,
   AdminMentorListItemDto,
-  AdminMentorSlotDto,
+  AdminMentorPayoutsReportDto,
   MentorCertificateOptionDto,
-  MentorSummaryDto,
+  MentorWeeklySlotDto,
   AuthUserDto,
 } from '../../../../lib/api';
 
@@ -111,42 +111,69 @@ const SAMPLE_COMPLAINT_DETAIL_RESOLVED: AdminComplaintDetailDto = {
   grantedCredits: 2,
 };
 
+const SAMPLE_WEEKLY_SLOTS: MentorWeeklySlotDto[] = [
+  {
+    weeklySlotId: 701,
+    mentorId: 10,
+    dayOfWeek: 1,
+    startTime: '08:00',
+    endTime: '09:00',
+  },
+  {
+    weeklySlotId: 702,
+    mentorId: 10,
+    dayOfWeek: 5,
+    startTime: '19:30',
+    endTime: '20:30',
+  },
+];
+
 const SAMPLE_MENTORS: AdminMentorListItemDto[] = [
   {
     mentorId: 10,
-    userId: 25,
     displayName: 'Thầy John Smith',
-    type: 'human',
     certId: 1,
     certCode: 'TOEIC',
     skillId: 3,
     skillName: 'Speaking',
-    pricePerSlot: 250000,
-    priceCredits: 2,
+    meetLink: 'https://meet.google.com/john-smith-room',
+    priceCredits: 5,
+    priceVnd: 100000,
     sessionMinutes: 45,
     avgRating: 4.8,
     reviewCount: 32,
-    totalSlotsCount: 12,
-    openSlotsCount: 4,
     isActive: true,
+    weeklySlots: SAMPLE_WEEKLY_SLOTS,
+    completedSessionsCount: 4,
+    totalEarnedCredits: 20,
+    totalEarnedVnd: 400000,
   },
   {
     mentorId: 11,
-    userId: null,
-    displayName: 'AI Fluency Coach',
-    type: 'ai',
+    displayName: 'Dr. Trần Minh Khoa',
     certId: 1,
     certCode: 'TOEIC',
     skillId: null,
     skillName: null,
-    pricePerSlot: 0,
-    priceCredits: 1,
-    sessionMinutes: 30,
-    avgRating: 4.6,
-    reviewCount: 128,
-    totalSlotsCount: 0,
-    openSlotsCount: 0,
+    meetLink: 'https://meet.google.com/khoa-room',
+    priceCredits: 3,
+    priceVnd: 60000,
+    sessionMinutes: 60,
+    avgRating: 4.9,
+    reviewCount: 54,
     isActive: true,
+    weeklySlots: [
+      {
+        weeklySlotId: 703,
+        mentorId: 11,
+        dayOfWeek: 7,
+        startTime: '09:00',
+        endTime: '10:00',
+      },
+    ],
+    completedSessionsCount: 2,
+    totalEarnedCredits: 6,
+    totalEarnedVnd: 120000,
   },
 ];
 
@@ -164,22 +191,48 @@ const SAMPLE_MENTOR_OPTIONS: MentorCertificateOptionDto[] = [
   },
 ];
 
-const SAMPLE_MENTOR_SLOTS: AdminMentorSlotDto[] = [
-  {
-    slotId: 801,
-    mentorId: 10,
-    startAt: '2026-11-15T10:00:00Z',
-    endAt: '2026-11-15T10:45:00Z',
-    status: 'open',
-  },
-  {
-    slotId: 802,
-    mentorId: 10,
-    startAt: '2026-11-15T11:00:00Z',
-    endAt: '2026-11-15T11:45:00Z',
-    status: 'booked',
-  },
-];
+const SAMPLE_PAYOUTS_REPORT: AdminMentorPayoutsReportDto = {
+  from: '2026-11-01',
+  to: '2026-11-14',
+  totalSessions: 6,
+  totalCredits: 26,
+  totalAmountVnd: 520000,
+  vndPerCredit: 20000,
+  mentors: [
+    {
+      mentorId: 10,
+      mentorName: 'Thầy John Smith',
+      certCode: 'TOEIC',
+      completedSessionsCount: 4,
+      totalCredits: 20,
+      totalAmountVnd: 400000,
+    },
+    {
+      mentorId: 11,
+      mentorName: 'Dr. Trần Minh Khoa',
+      certCode: 'TOEIC',
+      completedSessionsCount: 2,
+      totalCredits: 6,
+      totalAmountVnd: 120000,
+    },
+  ],
+  sessions: [
+    {
+      bookingId: 501,
+      sessionDate: '2026-11-10',
+      startAt: '2026-11-10T01:00:00Z',
+      endAt: '2026-11-10T01:45:00Z',
+      mentorId: 10,
+      mentorName: 'Thầy John Smith',
+      learnerName: 'Nguyễn Văn A',
+      learnerEmail: 'learnera@test.local',
+      certCode: 'TOEIC',
+      skillName: 'Speaking',
+      priceCredits: 5,
+      amountVnd: 100000,
+    },
+  ],
+};
 
 function renderRoute(initialUrl = '/admin/operations', user: AuthUserDto | null = null) {
   activeUser = user;
@@ -258,20 +311,33 @@ describe('AdminOperationsPage (#304)', () => {
       if (url.startsWith('/api/admin/mentors/options')) {
         return jsonResponse(SAMPLE_MENTOR_OPTIONS);
       }
-      if (url.startsWith('/api/admin/mentors/10/slots/801/close')) {
-        return new Response(null, { status: 200 });
-      }
-      if (url.startsWith('/api/admin/mentors/10/slots') && init?.method === 'POST') {
-        return jsonResponse({
-          slotId: 803,
-          mentorId: 10,
-          startAt: '2026-11-16T14:00:00Z',
-          endAt: '2026-11-16T14:45:00Z',
-          status: 'open',
+      if (url.startsWith('/api/admin/mentors/payouts/export')) {
+        return new Response('\uFEFF"Booking ID","Mentor name"\r\n"501","Thầy John Smith"\r\n', {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': 'attachment; filename="mentor-payouts-2026-11-01-to-2026-11-14.csv"',
+          },
         });
       }
-      if (url.startsWith('/api/admin/mentors/10/slots')) {
-        return jsonResponse(SAMPLE_MENTOR_SLOTS);
+      if (url.startsWith('/api/admin/mentors/payouts')) {
+        return jsonResponse(SAMPLE_PAYOUTS_REPORT);
+      }
+      if (url.startsWith('/api/admin/mentors/10/weekly-slots') && init?.method === 'PUT') {
+        const body = JSON.parse(init?.body as string);
+        const list = Array.isArray(body) ? body : body.weeklySlots ?? [];
+        return jsonResponse(
+          list.map((w: any, idx: number) => ({
+            weeklySlotId: 710 + idx,
+            mentorId: 10,
+            dayOfWeek: w.dayOfWeek,
+            startTime: w.startTime,
+            endTime: w.endTime,
+          })),
+        );
+      }
+      if (url.startsWith('/api/admin/mentors/10/weekly-slots')) {
+        return jsonResponse(SAMPLE_WEEKLY_SLOTS);
       }
       if (url.startsWith('/api/admin/mentors') && init?.method === 'POST') {
         const body = JSON.parse(init?.body as string);
@@ -396,7 +462,11 @@ describe('AdminOperationsPage (#304)', () => {
     });
   });
 
-  it('manages mentors and scheduling slots: filters skills by cert, validates human user ID, and schedules slot', async () => {
+  it('manages human mentors with fixed MeetLink, credit pricing, weekly availability schedule, and payout CSV export', async () => {
+    window.URL.createObjectURL = vi.fn(() => 'blob:mock-payout-csv');
+    window.URL.revokeObjectURL = vi.fn();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
     renderRoute('/admin/operations', {
       userId: 1,
       email: 'admin@test.local',
@@ -410,32 +480,37 @@ describe('AdminOperationsPage (#304)', () => {
     const mentorsTab = await screen.findByRole('tab', { name: /mentors & schedules/i });
     fireEvent.click(mentorsTab);
 
-    expect(await screen.findByText('Thầy John Smith')).toBeInTheDocument();
-    expect(screen.getByText('AI Fluency Coach')).toBeInTheDocument();
+    expect(await screen.findAllByText('Thầy John Smith')).not.toHaveLength(0);
+    expect(screen.getAllByText('Dr. Trần Minh Khoa')).not.toHaveLength(0);
+    expect(screen.queryByText(/ai coach/i)).not.toBeInTheDocument();
 
-    // Check sentence-case type labels
-    expect(screen.getByText('Human mentor')).toBeInTheDocument();
-    expect(screen.getByText('AI coach')).toBeInTheDocument();
-
-    // 1. Create mentor modal
+    // 1. Create mentor modal (human-only, mandatory MeetLink, credits with live VND equivalent)
     const createMentorBtn = screen.getByRole('button', { name: /create mentor profile/i });
     fireEvent.click(createMentorBtn);
 
     expect(await screen.findByRole('heading', { name: /create mentor profile/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/associated user id/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/price per session/i)).not.toBeInTheDocument();
 
-    // Human mentor requires associated user ID
     fireEvent.change(screen.getByLabelText(/display name/i), { target: { value: 'Cô Lan Anh' } });
-    fireEvent.change(screen.getByLabelText(/price per session/i), { target: { value: '300000' } });
+    fireEvent.change(screen.getByLabelText(/price in credits/i), { target: { value: '4' } });
     fireEvent.change(screen.getByLabelText(/session duration/i), { target: { value: '60' } });
+
+    // Live VND equivalent (4 * 20,000 = 80.000 ₫)
+    expect(screen.getByText(/80\.000\s*₫/)).toBeInTheDocument();
+
+    // Clear MeetLink to verify mandatory validation
+    fireEvent.change(screen.getByLabelText(/meeting link/i), { target: { value: '' } });
 
     const saveMentorBtn = screen.getByRole('button', { name: /save mentor/i });
     fireEvent.click(saveMentorBtn);
 
-    // Shows user ID required error for human mentor
-    expect(await screen.findByText(/user account id is required for human mentors/i)).toBeInTheDocument();
+    expect(await screen.findByText(/valid meeting link.*is required/i)).toBeInTheDocument();
 
-    // Provide user ID
-    fireEvent.change(screen.getByLabelText(/associated user id/i), { target: { value: '35' } });
+    // Provide valid MeetLink
+    fireEvent.change(screen.getByLabelText(/meeting link/i), {
+      target: { value: 'https://meet.google.com/lan-anh-room' },
+    });
     fireEvent.click(saveMentorBtn);
 
     await waitFor(() => {
@@ -445,39 +520,52 @@ describe('AdminOperationsPage (#304)', () => {
       );
     });
 
-    // 2. Open slots management modal for Human mentor (mentor 10)
-    const manageSlotsBtns = screen.getAllByRole('button', { name: /manage slots/i });
-    fireEvent.click(manageSlotsBtns[0]);
+    // 2. Open weekly schedule modal for mentor 10 and add a weekly availability window
+    const scheduleBtns = screen.getAllByRole('button', { name: /weekly schedule/i });
+    fireEvent.click(scheduleBtns[0]);
 
-    expect(await screen.findByText(/schedule slots — thầy john smith/i)).toBeInTheDocument();
+    expect(await screen.findByText(/weekly schedule — thầy john smith/i)).toBeInTheDocument();
+    expect(await screen.findByText(/08:00 – 09:00/)).toBeInTheDocument();
 
-    // Existing slots displayed with sentence-case status (wait for async query)
-    expect(await screen.findByText('Booked')).toBeInTheDocument();
-    expect(screen.getAllByText('Open').length).toBeGreaterThan(0);
+    // Try adding an overlapping window on Monday (08:30 - 09:30 overlaps 08:00 - 09:00)
+    fireEvent.change(screen.getByLabelText(/weekday/i), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText(/window start/i), { target: { value: '08:30' } });
+    fireEvent.change(screen.getByLabelText(/window end/i), { target: { value: '09:30' } });
+    fireEvent.click(screen.getByRole('button', { name: /add window/i }));
 
-    // Add new slot
-    fireEvent.change(screen.getByLabelText(/start time/i), {
-      target: { value: '2026-11-16T14:00' },
-    });
-    const addSlotBtn = screen.getByRole('button', { name: /add slot/i });
-    fireEvent.click(addSlotBtn);
+    expect(await screen.findByText(/overlap/i)).toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('/api/admin/mentors/10/slots'),
-        expect.objectContaining({ method: 'POST' }),
-      );
-    });
+    // Add a non-overlapping window on Monday (14:00 - 15:00)
+    fireEvent.change(screen.getByLabelText(/window start/i), { target: { value: '14:00' } });
+    fireEvent.change(screen.getByLabelText(/window end/i), { target: { value: '15:00' } });
+    fireEvent.click(screen.getByRole('button', { name: /add window/i }));
 
-    // Close an open slot
-    const closeSlotBtn = screen.getByRole('button', { name: /close slot/i });
-    fireEvent.click(closeSlotBtn);
+    expect(await screen.findByText(/14:00 – 15:00/)).toBeInTheDocument();
+
+    // Save weekly schedule
+    fireEvent.click(screen.getByRole('button', { name: /save weekly schedule/i }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('/api/admin/mentors/10/slots/801/close'),
-        expect.objectContaining({ method: 'POST' }),
+        expect.stringContaining('/api/admin/mentors/10/weekly-slots'),
+        expect.objectContaining({ method: 'PUT' }),
       );
     });
-  });
+
+    // 3. Mentor payouts & CSV export section
+    expect(screen.getByText(/mentor payouts & completed sessions/i)).toBeInTheDocument();
+    expect(await screen.findByText('Nguyễn Văn A')).toBeInTheDocument();
+    expect(screen.getAllByText(/520\.000\s*₫/).length).toBeGreaterThan(0);
+
+    const exportCsvBtn = screen.getByRole('button', { name: /export payout csv/i });
+    fireEvent.click(exportCsvBtn);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/admin/mentors/payouts/export'),
+        expect.anything(),
+      );
+      expect(clickSpy).toHaveBeenCalled();
+    });
+  }, 15_000);
 });

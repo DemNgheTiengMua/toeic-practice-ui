@@ -63,14 +63,48 @@ export function formatBookingStatus(status?: string | null): StatusDisplay {
   return BOOKING_STATUS_MAP[key] ?? { label: 'Scheduled', tone: 'default' };
 }
 
-export const MENTOR_TYPE_MAP: Record<string, string> = {
-  human: 'Human mentor',
-  ai: 'AI coach',
+export const ISO_WEEKDAY_LABELS: Record<
+  number,
+  { vi: string; en: string; label: string }
+> = {
+  1: { vi: 'Thứ 2', en: 'Monday', label: 'Thứ 2 · Monday' },
+  2: { vi: 'Thứ 3', en: 'Tuesday', label: 'Thứ 3 · Tuesday' },
+  3: { vi: 'Thứ 4', en: 'Wednesday', label: 'Thứ 4 · Wednesday' },
+  4: { vi: 'Thứ 5', en: 'Thursday', label: 'Thứ 5 · Thursday' },
+  5: { vi: 'Thứ 6', en: 'Friday', label: 'Thứ 6 · Friday' },
+  6: { vi: 'Thứ 7', en: 'Saturday', label: 'Thứ 7 · Saturday' },
+  7: { vi: 'Chủ Nhật', en: 'Sunday', label: 'Chủ Nhật · Sunday' },
 };
 
-export function formatMentorType(type?: string | null): string {
-  const key = (type ?? '').trim().toLowerCase();
-  return MENTOR_TYPE_MAP[key] ?? 'Mentor';
+export function formatIsoWeekday(dayOfWeek: number): string {
+  return ISO_WEEKDAY_LABELS[dayOfWeek]?.label ?? `Day ${dayOfWeek}`;
+}
+
+export function formatWeeklyTime(value?: string | null): string {
+  if (!value) return '—';
+  const trimmed = value.trim();
+  const match = /^(\d{2}:\d{2})/.exec(trimmed);
+  return match ? match[1] : trimmed;
+}
+
+export function formatDateTimeRange(
+  startAt?: string | null,
+  endAt?: string | null,
+): string {
+  if (!startAt) return '—';
+  const startDate = new Date(startAt);
+  if (Number.isNaN(startDate.getTime())) return '—';
+  const weekday = new Intl.DateTimeFormat('en-GB', { weekday: 'short' }).format(
+    startDate,
+  );
+  const startStr = formatDateTime(startAt);
+  if (!endAt) return `${weekday}, ${startStr}`;
+  const endDate = new Date(endAt);
+  if (Number.isNaN(endDate.getTime())) return `${weekday}, ${startStr}`;
+  const endTime = new Intl.DateTimeFormat('en-GB', {
+    timeStyle: 'short',
+  }).format(endDate);
+  return `${weekday}, ${startStr} – ${endTime}`;
 }
 
 export const STANDING_STATUS_MAP: Record<string, StatusDisplay> = {

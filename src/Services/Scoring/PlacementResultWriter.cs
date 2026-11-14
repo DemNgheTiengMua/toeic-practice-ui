@@ -157,12 +157,13 @@ public sealed class PlacementResultWriter(
 
         // The projection is the score-to-level direction #222 shipped: the cut-score table and nothing
         // else decides a projected level (LVL-12). It is read, not recomputed.
+        var certId = placement.CertId ?? attempt.CertId;
         var projectionsBySkill = new Dictionary<int, ScaledScoreSkillProjection>();
         var judgeable = scored.Where(s => skills.Contains(s.Key)).ToDictionary(s => s.Key, s => s.Value);
         if (judgeable.Count > 0 && tableVersion is not null)
         {
             var projection = await _projections.ProjectScoresAsync(
-                placement.CertId, judgeable, tableVersion, cancellationToken);
+                certId, judgeable, tableVersion, cancellationToken);
             foreach (var skill in projection.Skills)
             {
                 projectionsBySkill[skill.SkillId] = skill;
@@ -209,7 +210,7 @@ public sealed class PlacementResultWriter(
                 db.PlacementSkillResults.Add(row);
             }
 
-            row!.CertId = placement.CertId;
+            row!.CertId = certId;
 
             // The declaration is set BEFORE anything that can save this row. SkillStateWriter's
             // RecordAsync calls SaveChanges on the shared context, and that flush would persist a row
@@ -309,7 +310,7 @@ public sealed class PlacementResultWriter(
                 // The same numbers feed the learner's stored state, so the dashboard and this result
                 // cannot report different levels for one sitting.
                 await _skillStates.RecordAsync(
-                    placement.UserId, placement.CertId, skillId,
+                    placement.UserId, certId, skillId,
                     level, position, coordinate,
                     LearnerSkillStateSource.Placement, cancellationToken);
             }

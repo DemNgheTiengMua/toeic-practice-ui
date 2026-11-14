@@ -80,9 +80,9 @@ export function ResetPasswordPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-4">
+    <div className="max-w-5xl mx-auto py-4 sm:py-8">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-7 flex flex-col gap-4">
+        <div className="lg:col-span-7 flex flex-col gap-4 min-w-0">
           <div>
             <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground m-0">
               Choose a new password
@@ -127,8 +127,8 @@ export function ResetPasswordPage() {
                 </Alert>
               )}
 
-              <Card>
-                <Form onSubmit={handleSubmit} validationBehavior="aria">
+              <Card className="p-5 sm:p-6">
+                <Form className="flex flex-col gap-5" onSubmit={handleSubmit} validationBehavior="aria">
                   <Card.Content className="flex flex-col gap-4">
                     <TextField
                       isRequired
@@ -191,8 +191,8 @@ export function ResetPasswordPage() {
           )}
         </div>
 
-        <div className="lg:col-span-5">
-          <Card>
+        <div className="lg:col-span-5 min-w-0">
+          <Card className="p-5 sm:p-6">
             <Card.Header>
               <Card.Title>Password requirements</Card.Title>
             </Card.Header>

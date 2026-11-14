@@ -138,6 +138,70 @@ describe('Admin Overview, Users, Roles, Credit Grants & Audit Queue (#302)', () 
     });
   });
 
+  it('completes admin sign-in from /admin -> /sign-in?returnUrl=%2Fadmin -> /admin without bouncing back even if /api/auth/me is delayed', async () => {
+    let signedIn = false;
+    let resolveDelayedMe: ((res: Response) => void) | null = null;
+    let meCallCount = 0;
+
+    installFetchMock((url, init) => {
+      if (url.endsWith('/api/auth/me')) {
+        meCallCount += 1;
+        if (!signedIn) {
+          return jsonResponse({ error: 'Unauthenticated' }, 401);
+        }
+        if (meCallCount === 2) {
+          return new Promise<Response>((resolve) => {
+            resolveDelayedMe = resolve;
+          });
+        }
+        return jsonResponse(makeMe({ role: 'admin' }));
+      }
+      if (url.endsWith('/api/auth/sign-in') && init?.method === 'POST') {
+        signedIn = true;
+        return jsonResponse({
+          token: 'cookie-issued',
+          expiresAt: '2026-12-01T00:00:00Z',
+          user: makeMe({ role: 'admin' }),
+        });
+      }
+      if (url.endsWith('/api/admin/dashboard')) {
+        return jsonResponse(makeDashboard());
+      }
+      if (url.endsWith('/api/admin/dashboard/revision')) {
+        return jsonResponse(makeRevision());
+      }
+      return jsonResponse({}, 404);
+    });
+
+    const { router } = renderRoute('/admin');
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/sign-in');
+      expect((router.state.location.search as any)?.returnUrl).toBe('/admin');
+    });
+
+    const main = await screen.findByRole('main');
+    fireEvent.change(await within(main).findByLabelText(/email/i), {
+      target: { value: 'admin@demo.local' },
+    });
+    fireEvent.change(within(main).getByLabelText(/password/i), {
+      target: { value: 'Demo1234!' },
+    });
+    fireEvent.click(within(main).getByRole('button', { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      expect(resolveDelayedMe).not.toBeNull();
+    });
+
+    // Resolve delayed /api/auth/me refetch cleanly
+    resolveDelayedMe!(jsonResponse(makeMe({ role: 'admin' })));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/admin');
+    });
+    expect(await screen.findByRole('heading', { name: /command center/i })).toBeInTheDocument();
+  });
+
   it('redirects learner accounts without staff capabilities to /access-denied on /admin and /admin/users', async () => {
     installFetchMock((url) => {
       if (url.endsWith('/api/auth/me')) {

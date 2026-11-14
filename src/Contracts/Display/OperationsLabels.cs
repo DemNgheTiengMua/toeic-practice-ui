@@ -93,11 +93,6 @@ internal static class OperationsLabels
             ("closed", "Closed"),
         ]);
 
-        LabelFamily.Add<MentorTypeDto>(families, "Mentor type not reported", [
-            ("human", "Human mentor"),
-            ("ai", "AI coach"),
-        ]);
-
         // #281: the refund vocabulary. A refused refund reads as "Rejected" rather than a status code,
         // and a money refund says so, because it is not the credit path this screen creates.
         LabelFamily.Add<RefundStatusDto>(families, "Refund status not reported", [

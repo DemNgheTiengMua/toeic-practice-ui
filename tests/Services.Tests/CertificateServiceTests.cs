@@ -138,7 +138,10 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // #280: two more, 68 -> 70 - trg_Refunds_AppendOnly (a refund is a record, never edited away) and
         // trg_Refunds_CreditTxnIsRefundCredit (a refund may only point at a refund_credit row of its own
         // size, so a credit refund cannot quietly cite an unrelated ledger entry).
-        Assert.Equal(70, triggerCount);
+        // #309: 5 triggers removed in Expand phase (trg_Items_LifecycleTransitions,
+        // trg_PracticeSessions_StatusTransitions, trg_Attempts_SingleWriter,
+        // trg_PlacementTests_SingleWriter, trg_LearnerPathSteps_SingleWriter): 70 -> 65.
+        Assert.Equal(65, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
@@ -149,9 +152,6 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
                      "trg_CefrCutScores_NoOverlap",
                      "trg_GradingRubricLocks_CompleteCanonicalRubric",
                      "trg_GradingRubricLocks_IrreversibleOnceGraded",
-                     "trg_Attempts_SingleWriter",
-                     "trg_PlacementTests_SingleWriter",
-                     "trg_LearnerPathSteps_SingleWriter",
                      "trg_LearnerSkillStates_SingleWriter",
                      // #212: the fifth covered derived fact, and the completion rule it takes two
                      // triggers to express (the placement side and the skill-row side).
@@ -185,8 +185,6 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
                      "trg_UserCellMasteries_StateIsEarned",
                      // #274: the tenth covered derived fact - the paper a sitting was served.
                      "trg_AttemptStageBundles_SingleWriter",
-                     // #269 audit: a finished practice session is terminal.
-                     "trg_PracticeSessions_StatusTransitions",
                  })
         {
             var present = await db.Database

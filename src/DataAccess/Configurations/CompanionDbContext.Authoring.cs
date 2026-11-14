@@ -368,7 +368,6 @@ public partial class CompanionDbContext
             // breaks every save to Items. The removal is proved in prove-guard-lifecycle.sh's control.
             entity.ToTable(tb =>
             {
-                tb.HasTrigger("trg_Items_LifecycleTransitions");
                 tb.HasTrigger("trg_Items_NoHardDelete");
                 // #255: triage cannot write this table. Declared or every EF save fails on the
                 // OUTPUT clause (ADR-0001).
@@ -383,6 +382,7 @@ public partial class CompanionDbContext
             entity.Property(e => e.PlacementEligible).HasDefaultValue(false);
             entity.Property(e => e.ContentTier).HasDefaultValue("demo");
             entity.Property(e => e.LifecycleStatus).HasDefaultValue("draft");
+            entity.Property(e => e.TargetBands).HasDefaultValue("ALL", "DF_Items_TargetBands");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
 
             entity.HasIndex(e => new { e.TopicId, e.CefrLevel }, "IX_Items_Cell");

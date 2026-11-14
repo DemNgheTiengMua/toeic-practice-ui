@@ -167,38 +167,6 @@ public partial class CompanionDbContext
 
 
 
-        modelBuilder.Entity<MentorPayout>(entity =>
-        {
-            entity.HasKey(e => e.PayoutId).HasName("PK__MentorPa__35C3DF8E859EADFC");
-
-            entity.Property(e => e.Status).HasDefaultValue("pending");
-
-            entity.HasOne(d => d.Mentor).WithMany(p => p.MentorPayouts)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__MentorPay__Mento__0CDAE408");
-        });
-
-
-
-        modelBuilder.Entity<MentorPayoutItem>(entity =>
-        {
-            entity.HasKey(e => new { e.PayoutId, e.BookingId }).HasName("PK_PayoutItems");
-
-            entity.HasOne(d => d.Booking).WithMany(p => p.MentorPayoutItems)
-                .HasPrincipalKey(p => new { p.BookingId, p.MentorId })
-                .HasForeignKey(d => new { d.BookingId, d.MentorId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PayoutItems_BookingMentor");
-
-            entity.HasOne(d => d.MentorPayout).WithMany(p => p.MentorPayoutItems)
-                .HasPrincipalKey(p => new { p.PayoutId, p.MentorId })
-                .HasForeignKey(d => new { d.PayoutId, d.MentorId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PayoutItems_PayoutMentor");
-        });
-
-
-
         modelBuilder.Entity<Complaint>(entity =>
         {
             entity.HasKey(e => e.ComplaintId).HasName("PK__Complain__740D898F85AEDFE4");

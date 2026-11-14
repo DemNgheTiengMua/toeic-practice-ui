@@ -8,8 +8,10 @@ import {
   formatRefundStatusLabel,
   formatComplaintTypeLabel,
   formatComplaintStatusLabel,
-  formatMentorTypeLabel,
   formatMentorSlotStatusLabel,
+  formatWeekdayLabel,
+  validateWeeklySlots,
+  getDefaultUtc7MonthRange,
   getOrderStatusColor,
   getRefundStatusColor,
   getComplaintStatusColor,
@@ -71,13 +73,13 @@ describe('opsHelpers - sentence-case label mappers', () => {
     expect(formatComplaintStatusLabel('resolved')).toBe('Resolved');
   });
 
-  it('formats mentor type and slot status labels', () => {
-    expect(formatMentorTypeLabel('human')).toBe('Human mentor');
-    expect(formatMentorTypeLabel('ai')).toBe('AI coach');
-
+  it('formats mentor slot status and weekday labels', () => {
     expect(formatMentorSlotStatusLabel('open')).toBe('Open');
     expect(formatMentorSlotStatusLabel('booked')).toBe('Booked');
     expect(formatMentorSlotStatusLabel('closed')).toBe('Closed');
+
+    expect(formatWeekdayLabel(1)).toBe('Thứ 2 (Monday)');
+    expect(formatWeekdayLabel(7)).toBe('Chủ Nhật (Sunday)');
   });
 });
 
@@ -183,5 +185,39 @@ describe('opsHelpers - validation helpers', () => {
     expect(validateCsvExportDates('2026-10-15', '2026-10-01').valid).toBe(false);
     expect(validateCsvExportDates('invalid-date', '2026-10-01').valid).toBe(false);
     expect(validateCsvExportDates(undefined, undefined).valid).toBe(true);
+  });
+
+  it('validates weekly availability windows and rejects invalid or overlapping ranges on the same weekday', () => {
+    // Multiple non-overlapping windows on Monday (dayOfWeek = 1) + Friday (dayOfWeek = 5)
+    expect(
+      validateWeeklySlots([
+        { dayOfWeek: 1, startTime: '08:00', endTime: '09:00' },
+        { dayOfWeek: 1, startTime: '14:00', endTime: '15:00' },
+        { dayOfWeek: 5, startTime: '08:30', endTime: '09:30' },
+      ]).valid,
+    ).toBe(true);
+
+    // End time not after start time
+    const badRange = validateWeeklySlots([
+      { dayOfWeek: 2, startTime: '15:00', endTime: '14:00' },
+    ]);
+    expect(badRange.valid).toBe(false);
+    expect(badRange.error).toMatch(/after start time/i);
+
+    // Overlapping windows on the same day of week
+    const overlap = validateWeeklySlots([
+      { dayOfWeek: 1, startTime: '08:00', endTime: '09:30' },
+      { dayOfWeek: 1, startTime: '09:00', endTime: '10:00' },
+    ]);
+    expect(overlap.valid).toBe(false);
+    expect(overlap.error).toMatch(/overlap/i);
+  });
+
+  it('computes default current month range in UTC+7', () => {
+    const range = getDefaultUtc7MonthRange(new Date('2026-11-14T03:00:00Z'));
+    expect(range).toEqual({
+      from: '2026-11-01',
+      to: '2026-11-14',
+    });
   });
 });

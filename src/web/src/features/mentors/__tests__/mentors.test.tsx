@@ -81,36 +81,71 @@ const MOCK_MENTORS: MentorSummaryDto[] = [
     skillCode: 'LR',
     skillName: 'Listening & Reading',
     modality: 'listening',
-    type: 'human',
-    pricePerSlot: 100000,
-    priceCredits: 20,
+    meetLink: 'https://meet.google.com/sarah-room',
+    priceCredits: 5,
     headline: 'Senior TOEIC Specialist',
     expertise: 'Listening strategies, error traps',
     sessionMinutes: 45,
     isActive: true,
     avgRating: 4.9,
     reviewCount: 18,
+    weeklySlots: [
+      {
+        weeklySlotId: 101,
+        mentorId: 1,
+        dayOfWeek: 1,
+        startTime: '08:00',
+        endTime: '09:00',
+      },
+      {
+        weeklySlotId: 102,
+        mentorId: 1,
+        dayOfWeek: 1,
+        startTime: '19:30',
+        endTime: '20:30',
+      },
+      {
+        weeklySlotId: 103,
+        mentorId: 1,
+        dayOfWeek: 5,
+        startTime: '14:00',
+        endTime: '15:00',
+      },
+    ],
   },
   {
     mentorId: 2,
-    displayName: 'AI Fluency Coach',
-    bio: 'Interactive synthetic examiner for instant conversation simulation.',
+    displayName: 'Dr. Trần Minh Khoa',
+    bio: 'Speaking & Writing examiner specializing in structured feedback.',
     certId: 1,
     certCode: 'TOEIC',
     certName: 'TOEIC Listening & Reading',
-    type: 'ai',
-    pricePerSlot: 25000,
-    priceCredits: 5,
-    headline: 'Instant 24/7 AI Mock Interview',
-    sessionMinutes: 20,
+    skillId: 11,
+    skillCode: 'SPK',
+    skillName: 'Speaking',
+    modality: 'speaking',
+    meetLink: 'https://meet.google.com/khoa-room',
+    priceCredits: 3,
+    headline: 'Speaking & Pronunciation Lead',
+    sessionMinutes: 60,
     isActive: true,
     avgRating: 4.8,
     reviewCount: 42,
+    weeklySlots: [
+      {
+        weeklySlotId: 201,
+        mentorId: 2,
+        dayOfWeek: 7,
+        startTime: '09:00',
+        endTime: '10:00',
+      },
+    ],
   },
 ];
 
 const MOCK_DETAIL_1: MentorDetailDto = {
   mentor: MOCK_MENTORS[0]!,
+  weeklySlots: MOCK_MENTORS[0]!.weeklySlots,
   availableSlots: [
     {
       slotId: 501,
@@ -124,7 +159,7 @@ const MOCK_DETAIL_1: MentorDetailDto = {
       mentorId: 1,
       startAt: '2026-11-21T10:00:00Z',
       endAt: '2026-11-21T10:45:00Z',
-      status: 'open',
+      status: 'booked',
     },
   ],
   reviews: [
@@ -144,14 +179,13 @@ const MOCK_BOOKING_SAFE: MentorBookingDto = {
   mentorId: 1,
   mentorName: 'Sarah Jenkins',
   mentorHeadline: 'Senior TOEIC Specialist',
-  mentorType: 'human',
   slotId: 501,
   startAt: '2026-11-20T14:00:00Z',
   endAt: '2026-11-20T14:45:00Z',
   status: 'confirmed',
   meetLink: 'https://meet.google.com/abc-defg-hij',
   focusArea: 'Listening traps in Part 3',
-  priceCredits: 20,
+  priceCredits: 5,
   createdAt: '2026-11-13T10:00:00Z',
   standing: {
     certId: 1,
@@ -218,7 +252,7 @@ describe('Mentor bookings & standing feature (#301)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders mentor catalog with skill filtering and active certificate info', async () => {
+  it('renders mentor catalog with human mentors only, skill filtering, and credit pricing', async () => {
     installFetchMock((url) => {
       if (url === '/api/auth/me') return jsonResponse(MOCK_USER);
       if (url === '/api/learner/context') return jsonResponse(MOCK_LEARNER_CONTEXT);
@@ -230,15 +264,22 @@ describe('Mentor bookings & standing feature (#301)', () => {
 
     expect(await screen.findByRole('heading', { name: /mentors & instructors/i })).toBeInTheDocument();
     expect(screen.getByText('Sarah Jenkins')).toBeInTheDocument();
-    expect(screen.getByText('AI Fluency Coach')).toBeInTheDocument();
-    expect(screen.getByText('20 credits')).toBeInTheDocument();
+    expect(screen.getByText('Dr. Trần Minh Khoa')).toBeInTheDocument();
+    expect(screen.getByText('5 credits')).toBeInTheDocument();
+    expect(screen.queryByText(/ai coach/i)).not.toBeInTheDocument();
   });
 
-  it('renders mentor detail with available slots and reviews', async () => {
-    installFetchMock((url) => {
+  it('renders mentor detail with weekly recurring schedule, selectable open slots, and disabled greyed-out booked slots', async () => {
+    let bookedPayload: unknown = null;
+    installFetchMock((url, init) => {
       if (url === '/api/auth/me') return jsonResponse(MOCK_USER);
       if (url === '/api/learner/context') return jsonResponse(MOCK_LEARNER_CONTEXT);
       if (url === '/api/mentors/1') return jsonResponse(MOCK_DETAIL_1);
+      if (url === '/api/mentors/1/book' && init?.method === 'POST') {
+        bookedPayload = JSON.parse(String(init.body));
+        return jsonResponse(MOCK_BOOKING_SAFE);
+      }
+      if (url === '/api/mentors/bookings/901') return jsonResponse(MOCK_BOOKING_SAFE);
       return jsonResponse({}, 404);
     });
 
@@ -247,15 +288,50 @@ describe('Mentor bookings & standing feature (#301)', () => {
     expect(await screen.findByRole('heading', { name: /sarah jenkins/i })).toBeInTheDocument();
     expect(screen.getByText('Senior TOEIC Specialist')).toBeInTheDocument();
     expect(screen.getByText(/exceptional feedback/i)).toBeInTheDocument();
-    expect(screen.getByText(/4\.9/)).toBeInTheDocument(); // avg rating
+    expect(screen.getByText(/4\.9/)).toBeInTheDocument();
+
+    // Weekly recurring schedule windows displayed
+    expect(screen.getByText(/thứ 2 · monday/i)).toBeInTheDocument();
+    expect(screen.getByText(/08:00 – 09:00/i)).toBeInTheDocument();
+    expect(screen.getByText(/19:30 – 20:30/i)).toBeInTheDocument();
+    expect(screen.getByText(/thứ 6 · friday/i)).toBeInTheDocument();
+    expect(screen.getByText(/14:00 – 15:00/i)).toBeInTheDocument();
+
+    // Both open (#501) and booked (#502) slots are rendered in the schedule list
+    const openSlotBtn = screen.getByTestId('mentor-slot-501');
+    const bookedSlotBtn = screen.getByTestId('mentor-slot-502');
+
+    expect(openSlotBtn).not.toBeDisabled();
+    expect(bookedSlotBtn).toBeDisabled();
+    expect(within(bookedSlotBtn).getByText(/^booked$/i)).toBeInTheDocument();
+
+    // Confirm button starts disabled until an open slot is selected
+    const confirmBtn = await screen.findByRole('button', { name: /confirm & book/i });
+    expect(confirmBtn).toBeDisabled();
+
+    // Selecting the open slot enables booking
+    fireEvent.click(openSlotBtn);
+    expect(confirmBtn).not.toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/target focus or questions/i), {
+      target: { value: 'Listening Part 3 & 4 pacing' },
+    });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(bookedPayload).toEqual({
+        slotId: 501,
+        focusArea: 'Listening Part 3 & 4 pacing',
+      });
+    });
   });
 
   it('enforces block-before-charge paywall when credits are insufficient', async () => {
     installFetchMock((url) => {
       if (url === '/api/auth/me') return jsonResponse(MOCK_USER);
-      // Low balance: 5 credits, but mentor costs 20
+      // Low balance: 2 credits, but mentor costs 5
       if (url === '/api/learner/context')
-        return jsonResponse({ ...MOCK_LEARNER_CONTEXT, creditBalance: 5 });
+        return jsonResponse({ ...MOCK_LEARNER_CONTEXT, creditBalance: 2 });
       if (url === '/api/mentors/1') return jsonResponse(MOCK_DETAIL_1);
       return jsonResponse({}, 404);
     });
@@ -345,7 +421,7 @@ describe('Mentor bookings & standing feature (#301)', () => {
           bookingId: 901,
           status: 'cancelled',
           cancelledAt: '2026-11-13T12:00:00Z',
-          refundedCredits: 20,
+          refundedCredits: 5,
         };
         return jsonResponse(res);
       }
@@ -360,6 +436,6 @@ describe('Mentor bookings & standing feature (#301)', () => {
     fireEvent.click(cancelBtn);
 
     expect(await screen.findByText(/booking cancelled/i)).toBeInTheDocument();
-    expect(screen.getByText(/20 credits refunded/i)).toBeInTheDocument();
+    expect(screen.getByText(/5 credits refunded/i)).toBeInTheDocument();
   });
 });

@@ -268,11 +268,14 @@ public sealed class PlacementRetakeLedgerSchemaTests(DatabaseFixture database)
             INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, IsAutoSubmitted)
             VALUES ({learnerId}, @exam, @cert, 'in_progress', SYSDATETIMEOFFSET(), DATEADD(hour, 72, SYSDATETIMEOFFSET()), 0);
 
-            INSERT INTO MentorProfiles (DisplayName, CertId, Type, PricePerSlot, IsActive)
-            VALUES (N'Coach {suffix}', @cert, 'ai', 0, 1);
+            INSERT INTO MentorProfiles (DisplayName, CertId, MeetLink, PriceCredits, IsActive)
+            VALUES (N'Coach {suffix}', @cert, N'https://meet.google.com/abc-defg-hij', 1, 1);
             DECLARE @mentor INT = SCOPE_IDENTITY();
-            INSERT INTO Bookings (UserId, MentorId, MentorType, Status)
-            VALUES ({learnerId}, @mentor, 'ai', 'done');
+            INSERT INTO MentorSlots (MentorId, StartAt, EndAt, Status)
+            VALUES (@mentor, '2026-10-01T09:00:00+07:00', '2026-10-01T10:00:00+07:00', 'booked');
+            DECLARE @slot INT = SCOPE_IDENTITY();
+            INSERT INTO Bookings (UserId, MentorId, SlotId, PriceCredits, Status)
+            VALUES ({learnerId}, @mentor, @slot, 1, 'done');
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);

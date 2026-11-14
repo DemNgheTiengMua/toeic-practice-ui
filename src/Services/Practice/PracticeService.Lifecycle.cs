@@ -138,7 +138,9 @@ public sealed partial class PracticeService
         }
 
         // #263 / #269: the section draws from its pool bindings, which is the only source a section has.
-        var plan = await PlanSmartPracticeAsync(userId, certId, section.SectionId, cancellationToken);
+        var plan = (await PlanSmartPracticeAsync(userId, certId, section.SectionId, cancellationToken))
+            .Distinct()
+            .ToList();
 
         if (plan.Count == 0)
         {

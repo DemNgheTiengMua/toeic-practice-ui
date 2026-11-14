@@ -1,13 +1,9 @@
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace Contracts;
 
 public sealed partial class CompanionApiClient
 {
-
     public Task<IReadOnlyList<AdminMentorListItemDto>> GetAdminMentorsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<IReadOnlyList<AdminMentorListItemDto>>("api/admin/mentors", bearerToken, cancellationToken);
 
@@ -29,18 +25,28 @@ public sealed partial class CompanionApiClient
         return (await response.Content.ReadFromJsonAsync<MentorSummaryDto>(Json, cancellationToken))!;
     }
 
-    public Task<IReadOnlyList<AdminMentorSlotDto>> GetAdminMentorSlotsAsync(int mentorId, string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<IReadOnlyList<AdminMentorSlotDto>>($"api/admin/mentors/{mentorId}/slots", bearerToken, cancellationToken);
+    public Task<IReadOnlyList<MentorWeeklySlotDto>> GetAdminMentorWeeklySlotsAsync(int mentorId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<IReadOnlyList<MentorWeeklySlotDto>>($"api/admin/mentors/{mentorId}/weekly-slots", bearerToken, cancellationToken);
 
-    public Task<AdminMentorSlotDto> CreateMentorSlotAsync(int mentorId, CreateMentorSlotRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        PostAuthorizedAsync<CreateMentorSlotRequest, AdminMentorSlotDto>($"api/admin/mentors/{mentorId}/slots", request, bearerToken, cancellationToken);
-
-    public async Task CloseMentorSlotAsync(int mentorId, int slotId, string bearerToken, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<MentorWeeklySlotDto>> ReplaceMentorWeeklySlotsAsync(int mentorId, IReadOnlyList<MentorWeeklySlotInputDto> weeklySlots, string bearerToken, CancellationToken cancellationToken = default)
     {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/admin/mentors/{mentorId}/slots/{slotId}/close");
+        using var message = new HttpRequestMessage(HttpMethod.Put, $"api/admin/mentors/{mentorId}/weekly-slots")
+        {
+            Content = JsonContent.Create(new ReplaceMentorWeeklySlotsRequest(weeklySlots), options: Json),
+        };
         AttachBearer(message, bearerToken);
         using var response = await http.SendAsync(message, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<IReadOnlyList<MentorWeeklySlotDto>>(Json, cancellationToken))!;
+    }
+
+    public Task<AdminMentorPayoutsReportDto> GetAdminMentorPayoutsAsync(DateOnly? from, DateOnly? to, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var query = new List<string>();
+        if (from.HasValue) query.Add($"from={from.Value:yyyy-MM-dd}");
+        if (to.HasValue) query.Add($"to={to.Value:yyyy-MM-dd}");
+        var uri = "api/admin/mentors/payouts" + (query.Count > 0 ? "?" + string.Join("&", query) : "");
+        return GetAuthorizedAsync<AdminMentorPayoutsReportDto>(uri, bearerToken, cancellationToken);
     }
 
     public Task<IReadOnlyList<AdminMentorListItemDto>> GetAdminMentorsAsync(CancellationToken cancellationToken = default) =>
@@ -55,12 +61,12 @@ public sealed partial class CompanionApiClient
     public Task<MentorSummaryDto> UpdateMentorAsync(int mentorId, UpdateMentorProfileRequest request, CancellationToken cancellationToken = default) =>
         UpdateMentorAsync(mentorId, request, string.Empty, cancellationToken);
 
-    public Task<IReadOnlyList<AdminMentorSlotDto>> GetAdminMentorSlotsAsync(int mentorId, CancellationToken cancellationToken = default) =>
-        GetAdminMentorSlotsAsync(mentorId, string.Empty, cancellationToken);
+    public Task<IReadOnlyList<MentorWeeklySlotDto>> GetAdminMentorWeeklySlotsAsync(int mentorId, CancellationToken cancellationToken = default) =>
+        GetAdminMentorWeeklySlotsAsync(mentorId, string.Empty, cancellationToken);
 
-    public Task<AdminMentorSlotDto> CreateMentorSlotAsync(int mentorId, CreateMentorSlotRequest request, CancellationToken cancellationToken = default) =>
-        CreateMentorSlotAsync(mentorId, request, string.Empty, cancellationToken);
+    public Task<IReadOnlyList<MentorWeeklySlotDto>> ReplaceMentorWeeklySlotsAsync(int mentorId, IReadOnlyList<MentorWeeklySlotInputDto> weeklySlots, CancellationToken cancellationToken = default) =>
+        ReplaceMentorWeeklySlotsAsync(mentorId, weeklySlots, string.Empty, cancellationToken);
 
-    public Task CloseMentorSlotAsync(int mentorId, int slotId, CancellationToken cancellationToken = default) =>
-        CloseMentorSlotAsync(mentorId, slotId, string.Empty, cancellationToken);
+    public Task<AdminMentorPayoutsReportDto> GetAdminMentorPayoutsAsync(DateOnly? from = null, DateOnly? to = null, CancellationToken cancellationToken = default) =>
+        GetAdminMentorPayoutsAsync(from, to, string.Empty, cancellationToken);
 }

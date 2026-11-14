@@ -10,12 +10,11 @@ public static partial class AdminEndpoints
 {
     private static void MapMedia(IEndpointRouteBuilder app)
     {
-
-        app.MapGet("/api/media/exams/{examId:int}/{fileName}", async Task<IResult> (
+        static async Task<IResult> HandleExamMedia(
             int examId,
             string fileName,
             IFileStore fileStore,
-            CancellationToken cancellationToken) =>
+            CancellationToken cancellationToken)
         {
             // The imports route beside this one has always checked the name; this one did not, so the
             // exams path accepted anything the route could carry. The store's own traversal guard is
@@ -30,6 +29,9 @@ public static partial class AdminEndpoints
             return info is null
                 ? Results.NotFound()
                 : Results.Stream(info.Stream, info.ContentType, enableRangeProcessing: true);
-        }).RequireAuthorization();
+        }
+
+        app.MapGet("/api/media/exams/{examId:int}/{fileName}", HandleExamMedia).RequireAuthorization();
+        app.MapGet("/media/exams/{examId:int}/{fileName}", HandleExamMedia).RequireAuthorization();
     }
 }

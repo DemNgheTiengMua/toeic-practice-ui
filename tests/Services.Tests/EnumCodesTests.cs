@@ -39,7 +39,6 @@ public sealed class EnumCodesTests
         { typeof(LearnerPathStepStatus), typeof(LearnerPathStepStatusDto), "CK_Steps_Status" },
         { typeof(PathStepType), typeof(PathStepTypeDto), "CK_Steps_StepType" },
         { typeof(SizingTier), typeof(SizingTierDto), "CK_Steps_SizingTier" },
-        { typeof(MentorType), typeof(MentorTypeDto), "CK_Mentor_Type" },
         { typeof(SlotStatus), typeof(SlotStatusDto), "CK_Slots_Status" },
         { typeof(BookingStatus), typeof(BookingStatusDto), "CK_Bookings_Status" },
         { typeof(ComplaintType), typeof(ComplaintTypeDto), "CK_Complaints_Type" },

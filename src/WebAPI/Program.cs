@@ -1,3 +1,4 @@
+using Microsoft.Extensions.FileProviders;
 using WebAPI;
 using WebAPI.Extensions;
 using WebAPI.Utilities;
@@ -19,8 +20,22 @@ builder.Services.AddDomainServices(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
-// 4. Exception handling and health diagnostics
+// 4. Exception handling, static seed media (/audio, /img), and health diagnostics
 app.UseApiProblemDetails();
+foreach (var folder in new[] { "audio", "img" })
+{
+    var publishedDir = Path.Combine(app.Environment.ContentRootPath, "wwwroot", folder);
+    var repoPublicDir = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "web", "public", folder));
+    var dir = Directory.Exists(publishedDir) ? publishedDir : Directory.Exists(repoPublicDir) ? repoPublicDir : null;
+    if (dir is not null)
+    {
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new PhysicalFileProvider(dir),
+            RequestPath = "/" + folder,
+        });
+    }
+}
 app.MapHealthChecks("/healthz");
 
 // 5. Auth and rate limiting pipeline
