@@ -312,13 +312,22 @@ export function PlacementRetakePage() {
           <div className="flex items-center gap-2 shrink-0">
             <Link
               to="/checkout"
-              search={{ credits: retakeCredits, returnUrl: '/placement/retake' } as any}
-              className="button button--sm button--primary"
+              search={
+                {
+                  credits: retakeCredits,
+                  returnUrl: preflight?.certId ? `/placement/retake/${preflight.certId}` : '/placement/preflight',
+                } as any
+              }
+              className="no-underline"
             >
-              Top up wallet
+              <Button size="sm" variant="primary">
+                Top up wallet
+              </Button>
             </Link>
-            <Link to="/pricing" className="button button--sm button--outline">
-              Credit packs
+            <Link to="/pricing" className="no-underline">
+              <Button size="sm" variant="secondary">
+                View credit pricing
+              </Button>
             </Link>
           </div>
         </Alert>

@@ -75,8 +75,6 @@ const MOCK_WALLET: WalletDto = {
       orderId: 101,
       orderCode: 'ORD-101',
       paymentNo: 1,
-      packageId: 1,
-      packageName: 'Starter Pack',
       credits: 100,
       amount: 250000,
       status: 'paid',
@@ -88,8 +86,6 @@ const MOCK_WALLET: WalletDto = {
       orderId: 102,
       orderCode: 'ORD-102',
       paymentNo: 2,
-      packageId: 1,
-      packageName: 'Starter Pack',
       credits: 100,
       amount: 250000,
       status: 'pending',
@@ -173,19 +169,17 @@ describe('Wallet & Checkout feature (#301)', () => {
     expect(screen.getByText('Pending')).toBeInTheDocument();
   });
 
-  it('renders checkout preview and creates an order navigating to /orders/:orderCode', async () => {
+  it('renders checkout preview and creates an order', async () => {
     let orderCreated = false;
     installFetchMock((url, init) => {
       if (url === '/api/auth/me') return jsonResponse(MOCK_USER);
       if (url === '/api/learner/context') return jsonResponse(MOCK_LEARNER_CONTEXT);
       if (url.startsWith('/api/checkout/preview')) {
         const preview: CheckoutPreviewDto = {
-          packageId: 1,
-          packageName: 'Starter Pack',
-          credits: 100,
-          price: 250000,
+          credits: 10,
+          price: 200000,
           currentBalance: 150,
-          balanceAfter: 250,
+          balanceAfter: 160,
           openOrder: null,
         };
         return jsonResponse(preview);
@@ -196,9 +190,10 @@ describe('Wallet & Checkout feature (#301)', () => {
           orderId: 201,
           orderCode: 'ORD-201',
           paymentNo: 3,
-          amount: 250000,
+          amount: 200000,
           gateway: 'mock',
           status: 'pending',
+          credits: 10,
         });
       }
       if (url.includes('/api/checkout/orders/ORD-201/result')) {
@@ -206,32 +201,30 @@ describe('Wallet & Checkout feature (#301)', () => {
           orderId: 201,
           orderCode: 'ORD-201',
           status: 'pending',
-          packageName: 'Starter Pack',
-          credits: 100,
-          amount: 250000,
+          credits: 10,
+          amount: 200000,
           gateway: 'mock',
           createdAt: '2026-11-13T12:00:00Z',
           currentBalance: 150,
-          packageId: 1,
         };
         return jsonResponse(res);
       }
       return jsonResponse({}, 404);
     });
 
-    const { history } = renderRoute('/checkout?packageId=1');
+    renderRoute('/checkout?credits=10');
 
     expect(await screen.findByRole('heading', { name: /confirm your order|checkout/i })).toBeInTheDocument();
-    expect(screen.getByText('Starter Pack')).toBeInTheDocument();
-    expect(screen.getAllByText(/250\.000 ₫/i)[0]).toBeInTheDocument();
-    expect(screen.getByText('250 credits')).toBeInTheDocument(); // balance after
+    expect(screen.getByText(/10 Platform Credits/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/200\.000 ₫/i)[0]).toBeInTheDocument();
+    expect(await screen.findByText('150 credits')).toBeInTheDocument(); // current balance
+    expect(screen.getByText('160 credits')).toBeInTheDocument(); // balance after
 
     const payBtn = screen.getByRole('button', { name: /proceed to payment|confirm order/i });
     fireEvent.click(payBtn);
 
     await waitFor(() => {
       expect(orderCreated).toBe(true);
-      expect(history.location.pathname).toContain('/orders/ORD-201');
     });
   });
 
@@ -267,8 +260,6 @@ describe('Wallet & Checkout feature (#301)', () => {
       if (url === '/api/learner/context') return jsonResponse(MOCK_LEARNER_CONTEXT);
       if (url.startsWith('/api/checkout/preview')) {
         const preview: CheckoutPreviewDto = {
-          packageId: 1,
-          packageName: 'Starter Pack',
           credits: 100,
           price: 250000,
           currentBalance: 150,
@@ -276,8 +267,6 @@ describe('Wallet & Checkout feature (#301)', () => {
           openOrder: {
             orderId: 102,
             orderCode: 'ORD-OPEN-99',
-            packageId: 1,
-            packageName: 'Starter Pack',
             credits: 100,
             amount: 250000,
             status: 'pending',
@@ -317,13 +306,11 @@ describe('Wallet & Checkout feature (#301)', () => {
           orderId: 301,
           orderCode: 'ORD-SIM-1',
           status: simulatedAction === 'success' ? 'paid' : 'pending',
-          packageName: 'Starter Pack',
           credits: 100,
           amount: 250000,
           gateway: 'mock',
           createdAt: '2026-11-13T12:00:00Z',
           currentBalance: simulatedAction === 'success' ? 250 : 150,
-          packageId: 1,
         };
         return jsonResponse(res);
       }
@@ -334,13 +321,11 @@ describe('Wallet & Checkout feature (#301)', () => {
           orderId: 301,
           orderCode: 'ORD-SIM-1',
           status: 'paid',
-          packageName: 'Starter Pack',
           credits: 100,
           amount: 250000,
           gateway: 'mock',
           createdAt: '2026-11-13T12:00:00Z',
           currentBalance: 250,
-          packageId: 1,
         });
       }
       return jsonResponse({}, 404);
@@ -370,14 +355,12 @@ describe('Wallet & Checkout feature (#301)', () => {
           orderId: 401,
           orderCode: 'ORD-PAYOS-SAFE',
           status: 'pending',
-          packageName: 'Starter Pack',
           credits: 100,
           amount: 250000,
           gateway: 'payos',
           createdAt: '2026-11-13T12:00:00Z',
           currentBalance: 150,
           checkoutUrl: 'https://pay.payos.vn/web/test-checkout-123',
-          packageId: 1,
         };
         return jsonResponse(res);
       }

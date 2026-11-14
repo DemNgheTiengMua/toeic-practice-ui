@@ -193,7 +193,7 @@ export function OrderStatusPage() {
         <Card.Header>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <Card.Title className="text-xl font-bold">{order.packageName}</Card.Title>
+              <Card.Title className="text-xl font-bold">{order.credits} Platform Credits</Card.Title>
               <Card.Description>
                 Gateway: {formatGatewayLabel(order.gateway)}
               </Card.Description>

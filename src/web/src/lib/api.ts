@@ -598,8 +598,6 @@ export interface OrderDto {
   orderId: number;
   orderCode: string;
   paymentNo?: number;
-  packageId?: number | null;
-  packageName?: string | null;
   credits: number;
   amount: number;
   status: 'pending' | 'reconciling' | 'paid' | 'failed' | 'expired' | string;
@@ -631,8 +629,6 @@ export interface WalletDto {
 }
 
 export interface CheckoutPreviewDto {
-  packageId?: number | null;
-  packageName?: string | null;
   credits: number;
   price: number;
   currentBalance: number;
@@ -655,7 +651,6 @@ export interface PaymentResultDto {
   orderId: number;
   orderCode: string;
   status: string;
-  packageName?: string | null;
   credits: number;
   amount: number;
   gateway: string;
@@ -665,7 +660,6 @@ export interface PaymentResultDto {
   gatewayErrorCode?: string | null;
   message?: string | null;
   checkoutUrl?: string | null;
-  packageId?: number | null;
 }
 
 export interface MentorWeeklySlotDto {
@@ -808,7 +802,8 @@ export interface EligibleAttemptSubjectDto {
 export interface EligibleOrderSubjectDto {
   orderId: number;
   orderCode: string;
-  packageName: string;
+  credits?: number;
+  packageName?: string | null;
   amount: number;
   createdAt: string;
   status: string;
@@ -1852,8 +1847,8 @@ export interface AdminOrderDto {
   userId: number;
   userEmail: string;
   userFullName?: string | null;
-  packageId: number;
-  packageName: string;
+  packageId?: number | null;
+  packageName?: string | null;
   credits: number;
   amount: number;
   status: OrderStatusDto;
@@ -1964,46 +1959,6 @@ export interface RejectRefundRequest {
   reason: string;
 }
 
-export interface AdminPackagesSummaryDto {
-  packages: Array<{
-    packageId: number;
-    name: string;
-    packageName?: string;
-    credits: number;
-    price: number;
-    isActive: boolean;
-    isFeatured: boolean;
-    features?: string | null;
-    displayOrder: number;
-    ordersSold?: number;
-    totalRevenue?: number;
-    featureList?: string[];
-  }>;
-  packagesOnSale: number;
-  featuredCount: number;
-  totalOrdersSold: number;
-  totalRevenue: number;
-}
-
-export interface CreatePackageRequest {
-  name: string;
-  credits: number;
-  price: number;
-  isActive?: boolean;
-  isFeatured?: boolean;
-  features?: string | null;
-  displayOrder?: number;
-}
-
-export interface UpdatePackageRequest {
-  name: string;
-  credits: number;
-  price: number;
-  isActive: boolean;
-  isFeatured: boolean;
-  features?: string | null;
-  displayOrder?: number;
-}
 
 export type ComplaintTypeDto =
   | 'mentor_no_show'
@@ -2840,19 +2795,18 @@ export const api = {
 
   finance: {
     wallet: () => apiFetch<WalletDto>('/api/learner/wallet'),
-    getCheckoutPreview: (arg?: number | { packageId?: number; credits?: number }) => {
+    getCheckoutPreview: (arg?: number | { credits?: number }) => {
       const sp = new URLSearchParams();
       if (typeof arg === 'number') {
-        sp.set('packageId', String(arg));
+        sp.set('credits', String(arg));
       } else if (arg) {
-        if (arg.packageId != null) sp.set('packageId', String(arg.packageId));
         if (arg.credits != null) sp.set('credits', String(arg.credits));
       }
       const q = sp.toString();
       return apiFetch<CheckoutPreviewDto>(`/api/checkout/preview${q ? `?${q}` : ''}`);
     },
-    createOrder: (arg: number | { packageId?: number; credits?: number }) => {
-      const body = typeof arg === 'number' ? { packageId: arg } : arg;
+    createOrder: (arg: number | { credits?: number }) => {
+      const body = typeof arg === 'number' ? { credits: arg } : arg;
       return apiFetch<CreateOrderResponseDto>('/api/checkout/orders', {
         method: 'POST',
         body: JSON.stringify(body),
@@ -2964,21 +2918,6 @@ export const api = {
     certificates: () => apiFetch<any[]>('/api/admin/certificates'),
     certificateBlueprint: (certId: number) =>
       apiFetch<any>(`/api/admin/certificates/${certId}/blueprint`),
-    packages: () => apiFetch<AdminPackagesSummaryDto>('/api/admin/packages'),
-    createPackage: (body: CreatePackageRequest) =>
-      apiFetch<any>('/api/admin/packages', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
-    updatePackage: (packageId: number, body: UpdatePackageRequest) =>
-      apiFetch<any>(`/api/admin/packages/${packageId}`, {
-        method: 'PUT',
-        body: JSON.stringify(body),
-      }),
-    deactivatePackage: (packageId: number) =>
-      apiFetch<void>(`/api/admin/packages/${packageId}/deactivate`, {
-        method: 'POST',
-      }),
     lessons: () => apiFetch<any>('/api/admin/lessons'),
     users: (params?: { q?: string; status?: string; page?: number; pageSize?: number }) => {
       const sp = new URLSearchParams();

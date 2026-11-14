@@ -257,7 +257,7 @@ describe('PlacementCatalogPage & PlacementRetakePage', () => {
     const walletLink = screen.getByRole('link', { name: /top up wallet/i });
     expect(walletLink).toHaveAttribute(
       'href',
-      '/checkout?credits=5&returnUrl=%2Fplacement%2Fretake',
+      '/checkout?credits=5&returnUrl=%2Fplacement%2Fretake%2F1',
     );
     expect(api.placement.start).not.toHaveBeenCalled();
   });

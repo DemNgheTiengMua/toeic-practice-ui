@@ -33,8 +33,6 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
 
         var currentBalance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
 
-        await ExpireStaleOrdersAsync(olderThanMinutes: 15, cancellationToken);
-
         var openOrder = await db.Orders
             .Where(o => o.UserId == userId && (o.Status == OrderStatus.Pending.ToCode() || o.Status == OrderStatus.Reconciling.ToCode()))
             .OrderByDescending(o => o.CreatedAt)

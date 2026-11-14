@@ -340,13 +340,11 @@ describe('PayOS Embedded Checkout & Interactive Credit Slider (#317)', () => {
           orderId: 904,
           orderCode: 'ORD-MOCK-904',
           status: 'paid',
-          packageName: '10 Platform Credits',
           credits: 10,
           amount: 200000,
           gateway: 'mock',
           createdAt: '2026-11-14T10:00:00Z',
           currentBalance: 35,
-          packageId: null,
         };
         return jsonResponse(res);
       }

@@ -274,7 +274,7 @@ export function WritingStudioPage() {
                           <div className="flex flex-wrap gap-3 pt-1">
                             <Link
                               to="/checkout"
-                              search={{ credits: 1, returnUrl: '/practice/writing' } as any}
+                              search={{ credits: 1, returnUrl: '/writing' } as any}
                               className="text-sm font-medium text-accent underline"
                             >
                               Top up wallet

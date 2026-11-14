@@ -282,7 +282,7 @@ export function SpeakingStudioPage() {
                           <div className="flex flex-wrap gap-3 pt-1">
                             <Link
                               to="/checkout"
-                              search={{ credits: 1, returnUrl: '/practice/speaking' } as any}
+                              search={{ credits: 1, returnUrl: '/speaking' } as any}
                               className="text-sm font-medium text-accent underline"
                             >
                               Top up wallet

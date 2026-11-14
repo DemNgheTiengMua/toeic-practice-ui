@@ -19,15 +19,13 @@ import {
   Clock,
   CreditCard,
   MailWarning,
-  Package,
   ShieldCheck,
   Sparkles,
-  Sliders,
   Wallet,
   XCircle,
 } from 'lucide-react';
 import { api, ApiClientError, type CreateOrderResponseDto } from '../../lib/api';
-import { formatVnd, formatVndUnitPrice } from '../../lib/security';
+import { formatVnd } from '../../lib/security';
 import { PayOsEmbeddedModal } from './PayOsEmbeddedModal';
 
 const FLAT_CREDIT_PRICE = 20_000;
@@ -37,7 +35,6 @@ export function useSearchParams() {
   const search = useSearch({ strict: false }) as {
     credits?: string | number;
     returnUrl?: string;
-    packageId?: string | number;
   };
   const browserSearch = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const credits = search?.credits ?? browserSearch?.get('credits') ?? undefined;
@@ -47,14 +44,11 @@ export function useSearchParams() {
       ? rawReturnUrl
       : '/pricing';
   const hasExplicitReturnUrl = Boolean(rawReturnUrl && rawReturnUrl.startsWith('/') && !rawReturnUrl.startsWith('//'));
-  const packageId = search?.packageId ?? browserSearch?.get('packageId') ?? undefined;
-  return { credits, returnUrl, packageId, hasExplicitReturnUrl };
+  return { credits, returnUrl, hasExplicitReturnUrl };
 }
 
 export function CheckoutPage() {
-  const { credits: queryCredits, returnUrl, packageId: queryPackageId, hasExplicitReturnUrl } = useSearchParams();
-  const packageId = queryPackageId ? Number(queryPackageId) : NaN;
-  const hasPackageId = !Number.isNaN(packageId) && packageId > 0;
+  const { credits: queryCredits, returnUrl } = useSearchParams();
 
   // If credits query param is given, use it; otherwise default to 5
   const initialCredits = queryCredits
@@ -62,7 +56,6 @@ export function CheckoutPage() {
     : 5;
 
   const [credits, setCredits] = useState<number>(initialCredits);
-  const [useCustomSlider, setUseCustomSlider] = useState<boolean>(!hasPackageId || Boolean(queryCredits));
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Active created order and settlement state
@@ -74,8 +67,6 @@ export function CheckoutPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const isPackageMode = hasPackageId && !useCustomSlider;
-
   // Learner context for wallet balance fallback
   const learnerContextQuery = useQuery({
     queryKey: ['learner', 'context'],
@@ -83,30 +74,19 @@ export function CheckoutPage() {
     staleTime: 10_000,
   });
 
-  // Preview query: either for fixed package or custom credits
+  // Preview query for custom credits
   const previewQuery = useQuery({
-    queryKey: ['finance', 'checkout-preview', isPackageMode ? `pkg-${packageId}` : `credits-${credits}`],
-    queryFn: () => {
-      if (isPackageMode) {
-        return api.finance.getCheckoutPreview(packageId);
-      }
-      return api.finance.getCheckoutPreview({ credits });
-    },
+    queryKey: ['finance', 'checkout-preview', `credits-${credits}`],
+    queryFn: () => api.finance.getCheckoutPreview({ credits }),
     staleTime: 5_000,
     retry: false,
   });
 
   const createOrderMutation = useMutation({
-    mutationFn: (payload: { packageId?: number; credits?: number }) => api.finance.createOrder(payload),
+    mutationFn: (payload: { credits: number }) => api.finance.createOrder(payload),
     onSuccess: (order) => {
       setErrorMessage(null);
       setActiveOrder(order);
-
-      // Legacy compatibility: package checkout without credits or returnUrl navigates to /orders/:code
-      if (isPackageMode && !queryCredits && !hasExplicitReturnUrl) {
-        void navigate({ to: `/orders/${order.orderCode}` });
-        return;
-      }
 
       if (order.gateway?.toLowerCase() === 'payos' && order.checkoutUrl) {
         setIsPayOsModalOpen(true);
@@ -174,28 +154,10 @@ export function CheckoutPage() {
   };
 
   const handleCreateOrder = () => {
-    if (isPackageMode) {
-      createOrderMutation.mutate({ packageId });
-    } else {
-      createOrderMutation.mutate({ credits });
-    }
+    createOrderMutation.mutate({ credits });
   };
 
-  // Loading state while preview is calculating (only for initial package preview)
-  if (isPackageMode && previewQuery.isLoading) {
-    return (
-      <div className="max-w-2xl mx-auto py-12 px-4 sm:px-6">
-        <Card>
-          <Card.Content className="flex items-center justify-center py-12 gap-3">
-            <Spinner size="sm" />
-            <span className="text-sm text-muted">Calculating checkout summary...</span>
-          </Card.Content>
-        </Card>
-      </div>
-    );
-  }
-
-  // Error states for unverified email or invalid package
+  // Error states for unverified email
   if (previewQuery.isError) {
     const error = previewQuery.error as any;
     const isEmailNotVerified =
@@ -228,42 +190,13 @@ export function CheckoutPage() {
         </div>
       );
     }
-
-    if (isPackageMode) {
-      return (
-        <div className="max-w-2xl mx-auto py-12 px-4 sm:px-6 flex flex-col gap-6">
-          <Alert status="danger">
-            <Alert.Indicator>
-              <AlertCircle className="w-5 h-5" />
-            </Alert.Indicator>
-            <Alert.Content>
-              <Alert.Title>Package unavailable</Alert.Title>
-              <Alert.Description>
-                {error?.detail || error?.title || 'The requested package was not found or is currently inactive.'}
-              </Alert.Description>
-            </Alert.Content>
-          </Alert>
-
-          <div>
-            <Link to="/wallet" className="no-underline">
-              <Button variant="secondary">
-                <ArrowLeft className="w-4 h-4 mr-1.5" />
-                Back to wallet
-              </Button>
-            </Link>
-          </div>
-        </div>
-      );
-    }
   }
 
   const preview = previewQuery.data;
   const currentBalance =
     preview?.currentBalance ?? learnerContextQuery.data?.creditBalance ?? 0;
-  const creditsToGrant = isPackageMode && preview ? preview.credits : credits;
-  const totalPrice = isPackageMode && preview
-    ? preview.price
-    : credits * FLAT_CREDIT_PRICE;
+  const creditsToGrant = credits;
+  const totalPrice = credits * FLAT_CREDIT_PRICE;
   const balanceAfter = currentBalance + creditsToGrant;
   const hasOpenOrder = Boolean(preview?.openOrder);
 
@@ -281,33 +214,9 @@ export function CheckoutPage() {
           Confirm your order
         </h1>
         <p className="text-sm text-muted mt-1 mb-0">
-          {isPackageMode
-            ? 'Review your selected package credits and payment total before creating the payment link.'
-            : 'Select the exact amount of credits you need. Flat rate of 20.000 ₫ per credit.'}
+          Select the exact amount of credits you need. Flat rate of 20.000 ₫ per credit.
         </p>
       </div>
-
-      {/* Mode toggle when a package was provided in query */}
-      {hasPackageId && (
-        <div className="flex items-center gap-3">
-          <Button
-            size="sm"
-            variant={!useCustomSlider ? 'primary' : 'secondary'}
-            onPress={() => setUseCustomSlider(false)}
-          >
-            <Package className="w-4 h-4 mr-1.5" />
-            Selected Package
-          </Button>
-          <Button
-            size="sm"
-            variant={useCustomSlider ? 'primary' : 'secondary'}
-            onPress={() => setUseCustomSlider(true)}
-          >
-            <Sliders className="w-4 h-4 mr-1.5" />
-            Custom Credit Slider
-          </Button>
-        </div>
-      )}
 
       {/* Error alert if creation failed */}
       {errorMessage && (
@@ -334,7 +243,7 @@ export function CheckoutPage() {
               <p className="m-0">
                 You already have an open order ({preview.openOrder.orderCode}) for{' '}
                 <strong className="font-semibold text-foreground">
-                  {preview.openOrder.packageName || `${preview.openOrder.credits} credits`}
+                  {`${preview.openOrder.credits} credits`}
                 </strong>{' '}
                 awaiting completion or cancellation.
               </p>
@@ -380,7 +289,7 @@ export function CheckoutPage() {
           <div className="flex items-center justify-between">
             <div>
               <Card.Title className="text-xl font-bold">
-                {isPackageMode ? preview?.packageName || 'Credit Package' : `${credits} Platform Credits`}
+                {credits} Platform Credits
               </Card.Title>
               <Card.Description>Instant digital credit grant upon payment confirmation</Card.Description>
             </div>
@@ -391,79 +300,77 @@ export function CheckoutPage() {
         </Card.Header>
 
         <Card.Content className="space-y-6">
-          {/* Interactive Credit Slider Panel (when in custom credits mode) */}
-          {!isPackageMode && (
-            <div className="p-4 rounded-lg bg-surface-secondary border border-border space-y-4">
-              <NumberField
+          {/* Interactive Credit Slider Panel */}
+          <div className="p-4 rounded-lg bg-surface-secondary border border-border space-y-4">
+            <NumberField
+              minValue={1}
+              maxValue={100}
+              step={1}
+              value={credits}
+              onChange={handleCreditsChange}
+              className="flex items-center justify-between"
+            >
+              <Label className="text-sm font-semibold text-foreground">
+                Credits to purchase
+              </Label>
+              <div className="flex items-center gap-2">
+                <NumberField.Group className="w-28 h-8">
+                  <NumberField.DecrementButton />
+                  <NumberField.Input
+                    id="custom-credits-input"
+                    aria-label="Custom credits count"
+                    className="w-12 text-center font-mono font-bold text-sm"
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!Number.isNaN(val)) {
+                        handleCreditsChange(val);
+                      }
+                    }}
+                  />
+                  <NumberField.IncrementButton />
+                </NumberField.Group>
+                <span className="text-xs text-muted">credits</span>
+              </div>
+            </NumberField>
+
+            {/* HeroUI v3 Slider */}
+            <div className="pt-2">
+              <Slider
+                aria-label="Credit slider"
                 minValue={1}
                 maxValue={100}
                 step={1}
                 value={credits}
-                onChange={handleCreditsChange}
-                className="flex items-center justify-between"
+                onChange={handleSliderChange}
               >
-                <Label className="text-sm font-semibold text-foreground">
-                  Credits to purchase
-                </Label>
-                <div className="flex items-center gap-2">
-                  <NumberField.Group className="w-28 h-8">
-                    <NumberField.DecrementButton />
-                    <NumberField.Input
-                      id="custom-credits-input"
-                      aria-label="Custom credits count"
-                      className="w-12 text-center font-mono font-bold text-sm"
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!Number.isNaN(val)) {
-                          handleCreditsChange(val);
-                        }
-                      }}
-                    />
-                    <NumberField.IncrementButton />
-                  </NumberField.Group>
-                  <span className="text-xs text-muted">credits</span>
+                <div className="flex items-center justify-between text-xs text-muted mb-1">
+                  <span>1 credit</span>
+                  <Slider.Output className="font-mono-tabular font-semibold text-foreground" />
+                  <span>100 credits</span>
                 </div>
-              </NumberField>
-
-              {/* HeroUI v3 Slider */}
-              <div className="pt-2">
-                <Slider
-                  aria-label="Credit slider"
-                  minValue={1}
-                  maxValue={100}
-                  step={1}
-                  value={credits}
-                  onChange={handleSliderChange}
-                >
-                  <div className="flex items-center justify-between text-xs text-muted mb-1">
-                    <span>1 credit</span>
-                    <Slider.Output className="font-mono-tabular font-semibold text-foreground" />
-                    <span>100 credits</span>
-                  </div>
-                  <Slider.Track>
-                    <Slider.Fill />
-                    <Slider.Thumb />
-                  </Slider.Track>
-                </Slider>
-              </div>
-
-              {/* Quick preset chips */}
-              <div className="flex items-center gap-2 pt-1">
-                <span className="text-xs text-muted mr-1">Presets:</span>
-                {PRESET_CREDITS.map((preset) => (
-                  <Button
-                    key={preset}
-                    size="sm"
-                    variant={credits === preset ? 'primary' : 'secondary'}
-                    onPress={() => setCredits(preset)}
-                    className="font-mono text-xs px-2.5 h-7 min-w-0"
-                  >
-                    {preset} credits
-                  </Button>
-                ))}
-              </div>
+                <Slider.Track>
+                  <Slider.Fill />
+                  <Slider.Thumb />
+                </Slider.Track>
+              </Slider>
             </div>
-          )}
+
+            {/* Quick preset chips */}
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-xs text-muted mr-1">Presets:</span>
+              {PRESET_CREDITS.map((preset) => (
+                <Button
+                  key={preset}
+                  size="sm"
+                  variant={credits === preset ? 'primary' : 'secondary'}
+                  onPress={() => setCredits(preset)}
+                  className="font-mono text-xs px-2.5 h-7 min-w-0"
+                >
+                  {preset} credits
+                </Button>
+              ))}
+            </div>
+          </div>
 
           {/* Pricing Breakdown Summary */}
           <div className="p-4 rounded-lg bg-surface-secondary border border-border space-y-3">
@@ -476,9 +383,7 @@ export function CheckoutPage() {
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted">Unit price:</span>
               <span className="font-mono-tabular text-xs text-muted">
-                {isPackageMode && preview
-                  ? formatVndUnitPrice(totalPrice, creditsToGrant)
-                  : `${formatVnd(FLAT_CREDIT_PRICE)} / credit`}
+                {`${formatVnd(FLAT_CREDIT_PRICE)} / credit`}
               </span>
             </div>
             <div className="border-t border-separator pt-3 flex items-center justify-between text-sm">

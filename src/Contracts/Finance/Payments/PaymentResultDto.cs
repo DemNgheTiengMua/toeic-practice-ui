@@ -12,6 +12,4 @@ public sealed record PaymentResultDto(
     int CurrentBalance,
     string? GatewayErrorCode = null,
     string? Message = null,
-    string? CheckoutUrl = null,
-    string? PackageName = null,
-    int? PackageId = null);
+    string? CheckoutUrl = null);

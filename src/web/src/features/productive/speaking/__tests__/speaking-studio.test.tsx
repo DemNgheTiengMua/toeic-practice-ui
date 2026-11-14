@@ -186,7 +186,7 @@ describe('SpeakingStudioPage (/speaking)', () => {
 
     expect(await screen.findByText(/Not enough credits to start/i)).toBeTruthy();
     expect(screen.getByRole('link', { name: /Top up wallet/i }).getAttribute('href')).toBe(
-      '/checkout?credits=1&returnUrl=%2Fpractice%2Fspeaking',
+      '/checkout?credits=1&returnUrl=%2Fspeaking',
     );
     expect(screen.getByRole('link', { name: /View credit pricing/i }).getAttribute('href')).toBe('/pricing');
     const startBtn = screen.getByRole('button', { name: /Start speaking session/i }) as HTMLButtonElement;

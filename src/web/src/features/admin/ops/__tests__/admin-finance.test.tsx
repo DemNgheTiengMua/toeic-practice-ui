@@ -12,7 +12,6 @@ import type {
   AdminOrderDetailDto,
   AdminRefundsSummaryDto,
   AdminRefundDetailDto,
-  AdminPackagesSummaryDto,
   AuthUserDto,
 } from '../../../../lib/api';
 
@@ -171,39 +170,6 @@ const SAMPLE_REFUND_DETAIL_APPROVED_MONEY: AdminRefundDetailDto = {
   decidedAt: '2026-11-05T09:00:00Z',
 };
 
-const SAMPLE_PACKAGES_SUMMARY: AdminPackagesSummaryDto = {
-  packages: [
-    {
-      packageId: 1,
-      name: 'Starter Pack',
-      credits: 5,
-      price: 199000,
-      isActive: true,
-      isFeatured: false,
-      features: '5 practice sessions\n1 mock exam',
-      displayOrder: 1,
-      ordersSold: 42,
-      totalRevenue: 8358000,
-    },
-    {
-      packageId: 2,
-      name: 'Standard Pack',
-      credits: 15,
-      price: 499000,
-      isActive: true,
-      isFeatured: true,
-      features: '15 practice sessions\n3 mock exams\nPriority support',
-      displayOrder: 2,
-      ordersSold: 18,
-      totalRevenue: 8982000,
-    },
-  ],
-  packagesOnSale: 2,
-  featuredCount: 1,
-  totalOrdersSold: 60,
-  totalRevenue: 17340000,
-};
-
 function renderRoute(initialUrl = '/admin/finance', user: AuthUserDto | null = null) {
   activeUser = user;
   const queryClient = new QueryClient({
@@ -317,21 +283,6 @@ describe('AdminFinancePage (#304)', () => {
       }
       if (url.startsWith('/api/admin/refunds')) {
         return jsonResponse(SAMPLE_REFUNDS_SUMMARY);
-      }
-      if (url.startsWith('/api/admin/packages/1/deactivate')) {
-        return new Response(null, { status: 204 });
-      }
-      if (url.startsWith('/api/admin/packages') && init?.method === 'POST') {
-        const body = JSON.parse(init.body as string);
-        return jsonResponse({
-          packageId: 3,
-          ...body,
-          ordersSold: 0,
-          totalRevenue: 0,
-        });
-      }
-      if (url.startsWith('/api/admin/packages')) {
-        return jsonResponse(SAMPLE_PACKAGES_SUMMARY);
       }
       return jsonResponse({ error: 'Not found' }, 404);
     });
@@ -525,7 +476,7 @@ describe('AdminFinancePage (#304)', () => {
     });
   });
 
-  it('manages credit packages: creates package with unit price calculation and deactivates package', async () => {
+  it('does not render credit packages tab for SystemAdmin (#320 eradication)', async () => {
     renderRoute('/admin/finance', {
       userId: 1,
       email: 'admin@test.local',
@@ -535,52 +486,9 @@ describe('AdminFinancePage (#304)', () => {
       permissions: [STAFF_PERMISSIONS.SystemAdmin],
     });
 
-    // Switch to Credit packages tab
-    const packagesTab = await screen.findByRole('tab', { name: /credit packages/i });
-    fireEvent.click(packagesTab);
-
-    expect(await screen.findByText('Starter Pack')).toBeInTheDocument();
-    expect(screen.getByText('Standard Pack')).toBeInTheDocument();
-    expect(screen.getByText(/39\.800 ₫\/credit/)).toBeInTheDocument(); // 199.000 / 5
-
-    // Open create package modal
-    const createPkgBtn = screen.getByRole('button', { name: /create package/i });
-    fireEvent.click(createPkgBtn);
-
-    expect(await screen.findByText(/create credit package/i)).toBeInTheDocument();
-
-    // Type name, credits, and price -> check live unit price calculation
-    fireEvent.change(screen.getByLabelText(/package name/i), { target: { value: 'Master Pack' } });
-    fireEvent.change(screen.getByLabelText(/credits/i), { target: { value: '50' } });
-    fireEvent.change(screen.getByLabelText(/price/i), { target: { value: '1500000' } });
-
-    // 1,500,000 / 50 = 30,000 ₫/credit
-    expect(screen.getByText(/30\.000 ₫\/credit/i)).toBeInTheDocument();
-
-    const saveBtn = screen.getByRole('button', { name: /save package/i });
-    fireEvent.click(saveBtn);
-
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('/api/admin/packages'),
-        expect.objectContaining({ method: 'POST' }),
-      );
-    });
-
-    // Deactivate package triggers confirmation dialog
-    const deactivateBtns = screen.getAllByRole('button', { name: /deactivate/i });
-    fireEvent.click(deactivateBtns[0]);
-
-    expect(await screen.findByText(/deactivate package\?/i)).toBeInTheDocument();
-    const confirmDeactivate = screen.getByRole('button', { name: /confirm deactivation/i });
-    fireEvent.click(confirmDeactivate);
-
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('/api/admin/packages/1/deactivate'),
-        expect.anything(),
-      );
-    });
+    expect(await screen.findByRole('tab', { name: /orders/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /refunds desk/i })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /credit packages/i })).not.toBeInTheDocument();
   });
 });
 

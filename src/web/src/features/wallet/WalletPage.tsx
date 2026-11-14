@@ -278,7 +278,7 @@ export function WalletPage() {
                                   {order.orderCode}
                                 </Link>
                               </Table.Cell>
-                              <Table.Cell>{order.packageName || `${order.credits} credits`}</Table.Cell>
+                              <Table.Cell>{`${order.credits} credits`}</Table.Cell>
                               <Table.Cell className="font-mono-tabular">
                                 {order.credits}
                               </Table.Cell>

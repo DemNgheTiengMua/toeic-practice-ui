@@ -467,7 +467,7 @@ export function SupportPage() {
                       >
                         {subjects!.orders.map((o) => (
                           <option key={o.orderId} value={o.orderId}>
-                            Order {o.orderCode} — {o.packageName} ({formatVnd(o.amount)})
+                            Order {o.orderCode} — {o.credits ? `${o.credits} credits` : (o.packageName || 'Credits')} ({formatVnd(o.amount)})
                           </option>
                         ))}
                       </select>

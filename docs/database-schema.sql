@@ -2563,7 +2563,7 @@ BEGIN
     WHERE i.Reason = 'purchase'
       AND (o.Status <> 'paid' OR i.Delta <> o.Credits)
   )
-    THROW 50022, 'purchase txn must reference a paid order with Delta equal to the package credits.', 1;
+    THROW 50022, 'purchase txn must reference a paid order with Delta equal to the order credits.', 1;
 END;
 GO
 -- UI-37: what an attempt may be charged depends on its exam's purpose:
