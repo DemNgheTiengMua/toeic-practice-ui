@@ -76,9 +76,11 @@ public sealed class PlacementResultWriter(
 
 
 
+        var certId = placement.CertId ?? attempt.CertId;
+
         var skillsQuery = db.Skills
             .AsNoTracking()
-            .Where(s => s.CertId == placement.CertId);
+            .Where(s => s.CertId == certId);
 
         if (scope == PlacementScope.ListeningAndReading)
         {
@@ -87,19 +89,24 @@ public sealed class PlacementResultWriter(
             skillsQuery = skillsQuery.Where(s => s.Modality == listening || s.Modality == reading);
         }
 
-        var skills = await skillsQuery
+        var skillMetaList = await skillsQuery
             .OrderBy(s => s.DisplayOrder).ThenBy(s => s.SkillId)
-            .Select(s => s.SkillId)
+            .Select(s => new { s.SkillId, s.Modality, s.MinScaledScore, s.MaxScaledScore })
             .ToListAsync(cancellationToken);
+        var skills = skillMetaList.Select(s => s.SkillId).ToList();
+        var skillMetaById = skillMetaList.ToDictionary(s => s.SkillId);
 
         // What the paper actually scored, and whether each skill was attempted at all. The engine
         // pre-creates an empty AttemptAnswers row per objective question when the sitting starts, so a
         // row is not evidence of an answer: only a selected option is (the same rule the review page
         // and the answered counter use).
-        var scored = await db.AttemptSkillScores
+        var skillScoreRows = await db.AttemptSkillScores
             .AsNoTracking()
             .Where(s => s.AttemptId == attempt.AttemptId)
-            .ToDictionaryAsync(s => s.SkillId, s => s.ScaledScore, cancellationToken);
+            .Select(s => new { s.SkillId, s.RawScore, s.ScaledScore })
+            .ToListAsync(cancellationToken);
+        var scored = skillScoreRows.ToDictionary(s => s.SkillId, s => s.ScaledScore);
+        var rawScored = skillScoreRows.ToDictionary(s => s.SkillId, s => s.RawScore);
 
         // #269: a skill comes from the answer's own row - the roster position on a pool paper, the
         // legacy question otherwise - never from a navigation that is null on half the rows.
@@ -150,14 +157,13 @@ public sealed class PlacementResultWriter(
         // every projection a null triple rather than a number nobody can reproduce.
         var tableVersion = await db.CefrCutScoreVersions
             .AsNoTracking()
-            .Where(v => v.CertId == placement.CertId)
+            .Where(v => v.CertId == certId)
             .OrderByDescending(v => v.TableVersion)
             .Select(v => (int?)v.TableVersion)
             .FirstOrDefaultAsync(cancellationToken);
 
         // The projection is the score-to-level direction #222 shipped: the cut-score table and nothing
         // else decides a projected level (LVL-12). It is read, not recomputed.
-        var certId = placement.CertId ?? attempt.CertId;
         var projectionsBySkill = new Dictionary<int, ScaledScoreSkillProjection>();
         var judgeable = scored.Where(s => skills.Contains(s.Key)).ToDictionary(s => s.Key, s => s.Value);
         if (judgeable.Count > 0 && tableVersion is not null)
@@ -170,9 +176,15 @@ public sealed class PlacementResultWriter(
             }
         }
 
+        var totalQuestionsBySkill = skillByAnswer.Values
+            .GroupBy(id => id)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var pctByModality = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
         var bands = await db.ScoreBands
             .AsNoTracking()
-            .Where(b => b.CertId == placement.CertId)
+            .Where(b => b.CertId == certId)
             .OrderBy(b => b.MinTotal)
             .ToListAsync(cancellationToken);
 
@@ -272,26 +284,63 @@ public sealed class PlacementResultWriter(
 
             if (measuredNow)
             {
-                // #259 / PRN-03: the projection owns the level, and only the projection. When it could
-                // not place the score — a gap between two cut ranges, or no table at all — there IS no
-                // level, and the band's own name is not one.
-                if (projected?.AwardedLevel is not { } level)
+                var meta = skillMetaById[skillId];
+                decimal skillPct = 0m;
+                if (meta.Modality is "listening" or "reading")
+                {
+                    var totalQ = totalQuestionsBySkill.GetValueOrDefault(skillId);
+                    var raw = rawScored.GetValueOrDefault(skillId);
+                    skillPct = totalQ > 0 ? Math.Round(100m * raw / totalQ, 2) : 0m;
+                }
+                else
+                {
+                    var scaled = (decimal)scored.GetValueOrDefault(skillId);
+                    var minS = meta.MinScaledScore ?? 0;
+                    var maxS = meta.MaxScaledScore ?? 0;
+                    var range = (decimal)(maxS - minS);
+                    skillPct = range > 0m
+                        ? Math.Clamp(Math.Round(100m * (scaled - minS) / range, 2), 0m, 100m)
+                        : 0m;
+                }
+                pctByModality[meta.Modality] = skillPct;
+
+                CefrLevel level;
+                int position;
+                decimal coordinate;
+                if (projected?.AwardedLevel is { } projectedLevel)
+                {
+                    level = projectedLevel;
+                    position = projected.PositionInBand!.Value;
+                    coordinate = projected.ContinuousCoordinate;
+                }
+                else if (tableVersion is null)
+                {
+                    // #311: Universal Placement & Wizard certificates without legacy CefrCutScoreVersions
+                    // derive CEFR level directly from normalized skill percentage.
+                    level = skillPct switch
+                    {
+                        >= 85m => CefrLevel.C1,
+                        >= 70m => CefrLevel.B2,
+                        >= 55m => CefrLevel.B1,
+                        >= 40m => CefrLevel.A2,
+                        >= 20m => CefrLevel.A1,
+                        _ => CefrLevel.PreA1,
+                    };
+                    position = (int)Math.Clamp(Math.Round(skillPct), 0, 100);
+                    coordinate = Math.Clamp(Math.Round(1.00m + (skillPct / 100m) * 5.99m, 2), 1.00m, 6.99m);
+                }
+                else
                 {
                     RecordUnplaceable(row);
-                    // A gap is a content fact, not a learner outcome, so it is NOT a completion failure:
-                    // the placement can still be a partial result on its other skills.
                     firstFailure ??= PlacementFailureReason.NoCutScoreRow;
                     continue;
                 }
 
-                var position = projected.PositionInBand!.Value;
-                var coordinate = projected.ContinuousCoordinate;
-
                 row.CefrLevel = level;
                 row.PositionInBand = position;
                 row.ContinuousCoordinate = coordinate;
-                row.ProjectedBandCode = BandCodeFor(attempt.TotalScore, bands);
-                row.ProjectedScore = attempt.TotalScore;
+                row.ProjectedBandCode = tableVersion is not null ? BandCodeFor(attempt.TotalScore, bands) : null;
+                row.ProjectedScore = tableVersion is not null ? attempt.TotalScore : null;
                 row.CutScoreTableVersion = tableVersion;
                 row.MeasuredAt = now;
                 row.ExpiresAt = now + ReuseWindow;
@@ -385,6 +434,13 @@ public sealed class PlacementResultWriter(
         placementRow.TotalScore = attempt.TotalScore;
         placementRow.ResultBandCode = attempt.BandCode;
         placementRow.TakenAt = attempt.SubmittedAt ?? placementRow.TakenAt;
+        placementRow.ListeningPct = pctByModality.TryGetValue("listening", out var lPct) ? lPct : null;
+        placementRow.ReadingPct = pctByModality.TryGetValue("reading", out var rPct) ? rPct : null;
+        placementRow.SpeakingPct = pctByModality.TryGetValue("speaking", out var sPct) ? sPct : null;
+        placementRow.WritingPct = pctByModality.TryGetValue("writing", out var wPct) ? wPct : null;
+        placementRow.OverallPct = pctByModality.Count > 0
+            ? Math.Round(pctByModality.Values.Average(), 2)
+            : null;
         placementRow.WrittenByService = DerivedFactWriters.PlacementResult;
         db.Entry(placementRow).Property(p => p.WrittenByService).IsModified = true;
         placementRow.ProjectionVersion++;

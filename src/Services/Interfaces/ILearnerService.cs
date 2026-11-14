@@ -20,4 +20,15 @@ public interface ILearnerService
     /// <summary>The certificate id every learner query filters on. Later slices (practice, attempts,
     /// history, weakness analysis) call this instead of taking a certificate from the request.</summary>
     Task<int> GetActiveCertIdAsync(int userId, CancellationToken cancellationToken = default);
+
+    Task<OnboardingState> GetOnboardingStateAsync(int userId, CancellationToken cancellationToken = default);
 }
+
+public sealed record OnboardingState(
+    bool HasCompletedPlacement,
+    int? ActivePlacementAttemptId,
+    int? ActivePlacementId,
+    int? LatestPlacementId,
+    bool HasTargetGoal,
+    bool HasActiveLearningPath,
+    bool IsOobeComplete);

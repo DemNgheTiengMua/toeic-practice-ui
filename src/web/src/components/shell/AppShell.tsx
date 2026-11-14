@@ -61,12 +61,37 @@ function getInitialTheme(): 'light' | 'dark' {
   return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 }
 
+const OOBE_STUDY_ROUTES = new Set([
+  '/dashboard',
+  '/placement',
+  '/learning-path',
+  '/practice',
+  '/speaking',
+  '/writing',
+  '/exams',
+  '/weakness',
+]);
+
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, learnerContext, isAuthenticated, isStaff, switchCertificate, signOut } =
-    useAuth();
+  const {
+    user,
+    learnerContext,
+    onboardingState,
+    isAuthenticated,
+    isStaff,
+    switchCertificate,
+    signOut,
+  } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
+  const [skipRevision, setSkipRevision] = useState(0);
+
+  useEffect(() => {
+    const onSkipChanged = () => setSkipRevision((n) => n + 1);
+    window.addEventListener('ee:oobe-skip-changed', onSkipChanged);
+    return () => window.removeEventListener('ee:oobe-skip-changed', onSkipChanged);
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -136,10 +161,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     });
   }
 
+  const isOobeSkipped =
+    skipRevision >= 0 &&
+    typeof window !== 'undefined' &&
+    window.sessionStorage.getItem('ee_oobe_skip_session') === '1';
+  const isOobeLocked = Boolean(
+    !isStaff && isAuthenticated && onboardingState && !onboardingState.isOobeComplete,
+  );
+  const filteredLearnerNav =
+    isOobeLocked && !isOobeSkipped
+      ? LEARNER_NAV.filter((item) => !OOBE_STUDY_ROUTES.has(item.to))
+      : LEARNER_NAV;
+
   const navItems: NavItem[] = isStaff
     ? staffNav
     : isAuthenticated
-      ? LEARNER_NAV
+      ? filteredLearnerNav
       : [];
 
   const staffRoleLabel = canManageUsers(user) ? 'Admin' : 'Staff';
@@ -277,6 +314,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
+
+      {isOobeLocked && isOobeSkipped && (
+        <div
+          data-testid="oobe-return-banner"
+          className="bg-accent/10 border-b border-accent/30 text-foreground px-4 sm:px-6 py-2 text-xs"
+        >
+          <div className="w-full flex items-center justify-between gap-4">
+            <span className="font-medium">
+              Bạn chưa hoàn tất thiết lập lộ trình học — Tiếp tục thiết lập (OOBE)
+            </span>
+            <Link to="/onboarding" className="font-semibold underline text-accent">
+              Tiếp tục thiết lập (OOBE)
+            </Link>
+          </div>
+        </div>
+      )}
 
       {isAuthenticated && user && !user.emailVerified && !isStaff && (
         <div className="bg-warning/15 border-b border-warning/40 text-foreground px-4 sm:px-6 py-2 text-xs">

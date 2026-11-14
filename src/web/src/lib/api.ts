@@ -1303,6 +1303,27 @@ export interface PlacementSkillScoreInfoDto {
   bandCode?: string | null;
 }
 
+export interface CertificateBandPreviewDto {
+  certId: number;
+  certCode: string;
+  certName: string;
+  skillCount: number;
+  mappedScaledScore: number;
+  mappedBandCode: string;
+  mappedBandName: string;
+  scoreDisplayFactor?: number;
+}
+
+export interface OnboardingStateDto {
+  hasCompletedPlacement: boolean;
+  activePlacementAttemptId?: number | null;
+  activePlacementId?: number | null;
+  latestPlacementId?: number | null;
+  hasTargetGoal: boolean;
+  hasActiveLearningPath: boolean;
+  isOobeComplete: boolean;
+}
+
 export interface PlacementResultViewDto {
   placementId: number;
   attemptId: number;
@@ -1327,6 +1348,12 @@ export interface PlacementResultViewDto {
   isGraded: boolean;
   skillResults?: PlacementSkillResultInfoDto[] | null;
   scope?: PlacementScopeCode | string;
+  listeningPct?: number | null;
+  readingPct?: number | null;
+  speakingPct?: number | null;
+  writingPct?: number | null;
+  overallPct?: number | null;
+  certificatePreviews?: CertificateBandPreviewDto[] | null;
 }
 
 export interface PlacementGradingStatusDto {
@@ -2370,6 +2397,7 @@ export const api = {
         body: JSON.stringify({ code }),
       }),
     dashboard: () => apiFetch<LearnerDashboardDto>('/api/learner/dashboard'),
+    onboardingState: () => apiFetch<OnboardingStateDto>('/api/learner/onboarding-state'),
     profile: () => apiFetch<ProfileDto>('/api/profile'),
     updateProfile: (body: { fullName: string; phone?: string | null; timeZoneId: string }) =>
       apiFetch<ProfileDto>('/api/profile', {

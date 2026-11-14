@@ -28,4 +28,20 @@ public sealed record PlacementResultViewDto(
     bool IsGraded = true,
     // #213 / story 55: the per-skill rows, carrying ReusedFromPrior and the original MeasuredAt.
     List<PlacementSkillResultInfoDto>? SkillResults = null,
-    PlacementScopeDto Scope = PlacementScopeDto.AllSkills);
+    PlacementScopeDto Scope = PlacementScopeDto.AllSkills,
+    decimal? ListeningPct = null,
+    decimal? ReadingPct = null,
+    decimal? SpeakingPct = null,
+    decimal? WritingPct = null,
+    decimal? OverallPct = null,
+    List<CertificateBandPreviewDto>? CertificatePreviews = null);
+
+public sealed record CertificateBandPreviewDto(
+    int CertId,
+    string CertCode,
+    string CertName,
+    int SkillCount,
+    int MappedScaledScore,
+    string MappedBandCode,
+    string MappedBandName,
+    int ScoreDisplayFactor = 1);

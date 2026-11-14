@@ -224,6 +224,43 @@ public sealed partial class LearnerService(
         }
     }
 
+    public async Task<OnboardingState> GetOnboardingStateAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var donePlacementId = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.UserId == userId && p.Status == PlacementStatus.Done.ToCode())
+            .OrderByDescending(p => p.TakenAt)
+            .Select(p => (int?)p.PlacementId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var activePlacement = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.UserId == userId && p.Status == PlacementStatus.InProgress.ToCode())
+            .OrderByDescending(p => p.TakenAt)
+            .Select(p => new { p.PlacementId, p.AttemptId })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var hasTargetGoal = await db.TargetBands
+            .AsNoTracking()
+            .AnyAsync(t => t.UserId == userId, cancellationToken);
+
+        var hasActiveLearningPath = await db.LearnerPaths
+            .AsNoTracking()
+            .AnyAsync(p => p.UserId == userId && p.Status == LearnerPathStatus.Active.ToCode(), cancellationToken);
+
+        var hasCompletedPlacement = donePlacementId.HasValue;
+        var isOobeComplete = hasCompletedPlacement && hasTargetGoal && hasActiveLearningPath;
+
+        return new OnboardingState(
+            HasCompletedPlacement: hasCompletedPlacement,
+            ActivePlacementAttemptId: activePlacement?.AttemptId,
+            ActivePlacementId: activePlacement?.PlacementId,
+            LatestPlacementId: donePlacementId,
+            HasTargetGoal: hasTargetGoal,
+            HasActiveLearningPath: hasActiveLearningPath,
+            IsOobeComplete: isOobeComplete);
+    }
+
     private IQueryable<User> LiveUser(int userId) => db.Users.Where(u => u.UserId == userId && !u.IsDeleted);
 
     private static InvalidOperationException UserMissing(int userId) => new($"User {userId} does not exist.");

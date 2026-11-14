@@ -23,3 +23,12 @@ public sealed record LearnerContextDto(
     /// read the certificate".</summary>
     public bool Examines(ModalityDto skill) => ExaminedSkills is null || ExaminedSkills.Contains(skill);
 }
+
+public sealed record OnboardingStateDto(
+    bool HasCompletedPlacement,
+    int? ActivePlacementAttemptId,
+    int? ActivePlacementId,
+    int? LatestPlacementId,
+    bool HasTargetGoal,
+    bool HasActiveLearningPath,
+    bool IsOobeComplete);
