@@ -436,6 +436,10 @@ export interface LearningPathSummaryDto {
   nextStepId?: number | null;
   weeks?: LearningPathWeekSummaryDto[] | null;
   skillLevels?: Record<string, string> | null;
+  isSprintCompleted?: boolean;
+  nextMilestoneBandCode?: string | null;
+  nextMilestoneBandName?: string | null;
+  canStartNextSprint?: boolean;
 }
 
 export interface StartStepResultDto {

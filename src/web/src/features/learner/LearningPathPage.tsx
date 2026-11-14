@@ -13,6 +13,7 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowRight,
+  Award,
   BookOpen,
   Calendar,
   CheckCircle2,
@@ -24,6 +25,7 @@ import {
   RotateCw,
   Sparkles,
   TrendingUp,
+  Trophy,
 } from 'lucide-react';
 import {
   api,
@@ -257,6 +259,12 @@ export function LearningPathPage() {
     ? Math.round((summary.completedSteps / summary.totalSteps) * 100)
     : 0;
 
+  const isSprintCompleted = Boolean(
+    summary.isSprintCompleted ||
+    summary.status === 'completed' ||
+    (summary.totalSteps > 0 && summary.completedSteps === summary.totalSteps)
+  );
+
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-6">
       {/* Title & Info */}
@@ -291,6 +299,129 @@ export function LearningPathPage() {
             <Alert.Description>{errorMessage}</Alert.Description>
           </Alert.Content>
         </Alert>
+      )}
+
+      {/* Milestone Celebration Card */}
+      {isSprintCompleted && (
+        <Card className="border-2 border-primary/40 bg-gradient-to-r from-primary/10 via-success/10 to-accent/10 shadow-md">
+          <Card.Content className="p-6 space-y-5">
+            {/* Header Banner */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="p-3 rounded-full bg-success/20 text-success border border-success/30 shrink-0">
+                  <Trophy className="w-8 h-8" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Chip color="success" variant="soft" size="sm">
+                      <Chip.Label className="font-semibold">Milestone Completed</Chip.Label>
+                    </Chip>
+                    <Chip color="accent" variant="soft" size="sm">
+                      <Chip.Label className="font-mono">Target: {summary.toBandCode}</Chip.Label>
+                    </Chip>
+                  </div>
+                  <h2 className="text-2xl font-bold tracking-tight text-foreground m-0">
+                    Sprint Milestone Achieved!
+                  </h2>
+                  <p className="text-sm text-muted mt-1 mb-0">
+                    Congratulations! You have completed all curriculum steps for{' '}
+                    <strong>{summary.toBandName || summary.toBandCode}</strong>.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Metrics Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              <div className="p-3.5 rounded-lg bg-surface/80 border border-border flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
+                <div>
+                  <span className="text-xs text-muted block">Curriculum Covered</span>
+                  <span className="font-bold text-sm text-foreground">
+                    {summary.completedSteps}/{summary.totalSteps} steps completed
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-surface/80 border border-border flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-accent shrink-0" />
+                <div>
+                  <span className="text-xs text-muted block">Milestone Band</span>
+                  <span className="font-bold text-sm text-foreground">
+                    {summary.toBandName || summary.toBandCode}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-surface/80 border border-border flex items-center gap-3">
+                <Award className="w-5 h-5 text-primary shrink-0" />
+                <div>
+                  <span className="text-xs text-muted block">Next Step</span>
+                  <span className="font-bold text-sm text-foreground">
+                    Verify Level via Exit Mock Exam
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* CTAs */}
+            <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border/60">
+              <Button
+                variant="primary"
+                onPress={() => navigate({ to: '/exams' as any })}
+                onClick={() => navigate({ to: '/exams' as any })}
+                className="gap-2 font-semibold"
+              >
+                <Award className="w-4 h-4" />
+                <span>Take Exit Mock Exam</span>
+              </Button>
+
+              {summary.canStartNextSprint && (
+                !isGenerateConfirmOpen ? (
+                  <Button
+                    variant="secondary"
+                    isDisabled={generateMutation.isPending}
+                    onPress={() => setIsGenerateConfirmOpen(true)}
+                    onClick={() => setIsGenerateConfirmOpen(true)}
+                    className="gap-2 border-accent/40 text-accent font-semibold"
+                  >
+                    <Sparkles className="w-4 h-4 text-warning" />
+                    <span>Unlock Next Sprint ({summary.nextMilestoneBandName || summary.nextMilestoneBandCode || 'Next Level'})</span>
+                  </Button>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2">
+                    <span className="text-xs font-medium text-foreground">Spend 5 credits to start next sprint?</span>
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      isDisabled={generateMutation.isPending}
+                      onPress={() => generateMutation.mutate()}
+                      onClick={() => generateMutation.mutate()}
+                    >
+                      {generateMutation.isPending ? <Spinner size="sm" /> : 'Confirm (5 credits)'}
+                    </Button>
+                    <Link
+                      to="/checkout"
+                      search={{ credits: 5, returnUrl: '/learning-path' } as any}
+                      className="text-xs text-accent hover:underline px-1"
+                    >
+                      Need credits?
+                    </Link>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      isDisabled={generateMutation.isPending}
+                      onPress={() => setIsGenerateConfirmOpen(false)}
+                      onClick={() => setIsGenerateConfirmOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )
+              )}
+            </div>
+          </Card.Content>
+        </Card>
       )}
 
       {/* Level by Skill Strip */}

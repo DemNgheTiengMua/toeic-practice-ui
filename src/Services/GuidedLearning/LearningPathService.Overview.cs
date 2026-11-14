@@ -30,7 +30,9 @@ public sealed partial class LearningPathService
 
         var activePath = await db.LearnerPaths
             .AsNoTracking()
-            .Where(p => p.UserId == userId && p.CertId == activeCertId && p.Status == "active")
+            .Where(p => p.UserId == userId && p.CertId == activeCertId && (p.Status == "active" || p.Status == "completed"))
+            .OrderByDescending(p => p.Status == "active" ? 1 : 0)
+            .ThenByDescending(p => p.LearnerPathId)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (activePath is null)
@@ -141,6 +143,30 @@ public sealed partial class LearningPathService
             .GroupBy(s => s.Skill.Code)
             .ToDictionary(g => g.Key, g => CefrLevel.TryParseAuthored(g.First().TargetCefr, out var lvl) ? lvl : CefrLevel.PreA1);
 
+        var completedCount = steps.Count(s => s.Status == LearnerPathStepStatus.Done.ToCode());
+        var isSprintCompleted = activePath.Status == LearnerPathStatus.Completed.ToCode()
+            || (steps.Count > 0 && completedCount == steps.Count);
+
+        string? nextMilestoneBandCode = null;
+        string? nextMilestoneBandName = null;
+        bool canStartNextSprint = false;
+
+        if (isSprintCompleted)
+        {
+            var curSprintTargetIdx = scoreBands.FindIndex(b => b.Code.Equals(sprintTargetBand, StringComparison.OrdinalIgnoreCase));
+            var overallTargetIdx = !string.IsNullOrEmpty(target)
+                ? scoreBands.FindIndex(b => b.Code.Equals(target, StringComparison.OrdinalIgnoreCase))
+                : -1;
+
+            if (overallTargetIdx > curSprintTargetIdx && curSprintTargetIdx >= 0 && curSprintTargetIdx + 1 < scoreBands.Count)
+            {
+                var nextBand = scoreBands[curSprintTargetIdx + 1];
+                nextMilestoneBandCode = nextBand.Code;
+                nextMilestoneBandName = nextBand.Name;
+                canStartNextSprint = true;
+            }
+        }
+
         return new LearningPathSummaryView(
             HasActivePath: true,
             ActiveCert: cert,
@@ -156,12 +182,16 @@ public sealed partial class LearningPathService
             Status: EnumCodes.Parse<LearnerPathStatus>(activePath.Status),
             StartedAt: activePath.StartedAt,
             TotalSteps: steps.Count,
-            CompletedSteps: steps.Count(s => s.Status == LearnerPathStepStatus.Done.ToCode()),
+            CompletedSteps: completedCount,
             TotalEstimatedMinutes: steps.Sum(s => s.EstimatedMinutes ?? 0),
             RemainingMinutes: open.Sum(s => s.EstimatedMinutes ?? 0),
             CefrBands: cefrBands,
             OpenSteps: open.Select(s => ToStepInfo(s, guidesBySkill, rubricsBySkill)).ToList(),
-            NextStepId: open.FirstOrDefault()?.StepId)
+            NextStepId: open.FirstOrDefault()?.StepId,
+            IsSprintCompleted: isSprintCompleted,
+            NextMilestoneBandCode: nextMilestoneBandCode,
+            NextMilestoneBandName: nextMilestoneBandName,
+            CanStartNextSprint: canStartNextSprint)
         {
             Weeks = weeks,
             SkillLevels = skillLevels

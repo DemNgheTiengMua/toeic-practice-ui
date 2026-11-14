@@ -1107,4 +1107,82 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         Assert.NotEmpty(week3And4Steps);
         Assert.All(week3And4Steps, s => Assert.Equal("A2", s.TargetCefr));
     }
+
+    [Fact]
+    public async Task Milestone_completion_detects_next_milestone_band_and_enables_next_sprint()
+    {
+        var certCode = Unique("MC");
+        await SeedPathFixtureAsync(certCode);
+        // Learner starting at A1 with long-term goal of B2 (bands: A1 -> A2 -> B1 -> B2)
+        var userId = await SeedLearnerAsync(
+            certCode, currentBand: "A1", targetBand: "B2",
+            measuredScaledScore: 150, measuredBandCode: "A1");
+
+        var (service, _, _, db) = CreateServices();
+        var summary = await service.GeneratePathAsync(userId);
+
+        Assert.True(summary.HasActivePath);
+        Assert.False(summary.IsSprintCompleted);
+        Assert.False(summary.CanStartNextSprint);
+        Assert.Null(summary.NextMilestoneBandCode);
+
+        // Mark all steps done
+        var steps = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId)
+            .ToListAsync();
+        foreach (var step in steps)
+        {
+            step.Status = "done";
+            step.CompletedAt = DateTimeOffset.UtcNow;
+        }
+        await db.SaveChangesAsync();
+
+        // Mark path completed
+        var path = await db.LearnerPaths.SingleAsync(p => p.LearnerPathId == summary.LearnerPathId);
+        path.Status = "completed";
+        await db.SaveChangesAsync();
+
+        var completedSummary = await service.GetActivePathAsync(userId);
+        Assert.True(completedSummary.HasActivePath);
+        Assert.True(completedSummary.IsSprintCompleted);
+        Assert.True(completedSummary.CanStartNextSprint);
+        Assert.Equal("B1", completedSummary.NextMilestoneBandCode);
+        Assert.NotNull(completedSummary.NextMilestoneBandName);
+    }
+
+    [Fact]
+    public async Task Final_milestone_completion_sets_can_start_next_sprint_to_false()
+    {
+        var certCode = Unique("MCF");
+        await SeedPathFixtureAsync(certCode);
+        // Learner starting at B1 with target of B2 (immediate next is also final target)
+        var userId = await SeedLearnerAsync(
+            certCode, currentBand: "B1", targetBand: "B2",
+            measuredScaledScore: 550, measuredBandCode: "B1");
+
+        var (service, _, _, db) = CreateServices();
+        var summary = await service.GeneratePathAsync(userId);
+
+        Assert.True(summary.HasActivePath);
+        Assert.Equal("B2", summary.ToBandCode);
+
+        // Mark all steps done & path completed
+        var steps = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId)
+            .ToListAsync();
+        foreach (var step in steps)
+        {
+            step.Status = "done";
+            step.CompletedAt = DateTimeOffset.UtcNow;
+        }
+        var path = await db.LearnerPaths.SingleAsync(p => p.LearnerPathId == summary.LearnerPathId);
+        path.Status = "completed";
+        await db.SaveChangesAsync();
+
+        var completedSummary = await service.GetActivePathAsync(userId);
+        Assert.True(completedSummary.IsSprintCompleted);
+        Assert.False(completedSummary.CanStartNextSprint);
+        Assert.Null(completedSummary.NextMilestoneBandCode);
+        Assert.Null(completedSummary.NextMilestoneBandName);
+    }
 }

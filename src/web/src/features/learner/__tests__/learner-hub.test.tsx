@@ -594,6 +594,64 @@ describe('Learner Hub (#300)', () => {
         expect(startCalledWith).toBe(502);
       });
     });
+
+    it('renders sprint milestone celebration card with exit mock exam and next sprint CTAs when sprint is completed', async () => {
+      const completedSummary: LearningPathSummaryDto = {
+        hasActivePath: true,
+        activeCert: { code: 'DEMO', name: 'DEMO' },
+        learnerPathId: 101,
+        fromBandCode: 'A1',
+        toBandCode: 'A2',
+        fromBandName: 'Elementary',
+        toBandName: 'Pre-Intermediate',
+        currentBandCode: 'A1',
+        targetBandCode: 'B2',
+        status: 'completed',
+        totalSteps: 20,
+        completedSteps: 20,
+        totalEstimatedMinutes: 300,
+        remainingMinutes: 0,
+        isSprintCompleted: true,
+        nextMilestoneBandCode: 'B1',
+        nextMilestoneBandName: 'Intermediate',
+        canStartNextSprint: true,
+        cefrBands: [
+          { code: 'A1', name: 'Elementary', minTotal: 100, maxTotal: 199, isReached: true, isCurrent: true },
+          { code: 'A2', name: 'Pre-Intermediate', minTotal: 200, maxTotal: 299, isReached: true, isCurrent: false, isTarget: false },
+          { code: 'B1', name: 'Intermediate', minTotal: 300, maxTotal: 399, isReached: false, isCurrent: false, isTarget: false },
+          { code: 'B2', name: 'Upper Intermediate', minTotal: 400, maxTotal: 499, isReached: false, isCurrent: false, isTarget: true },
+        ],
+        openSteps: [],
+        weeks: [],
+      };
+
+      installFetchMock((url, init) => {
+        if (url === '/api/auth/me') return jsonResponse(DEMO_USER);
+        if (url === '/api/learner/context') return jsonResponse(DEMO_CONTEXT);
+        if (url === '/api/learner/learning-path') return jsonResponse(completedSummary);
+        if (url === '/api/learner/insights/path') return jsonResponse({}, 404);
+        return jsonResponse({}, 404);
+      });
+
+      renderRoute('/learning-path');
+
+      expect(await screen.findByRole('heading', { name: /sprint milestone achieved!/i })).toBeInTheDocument();
+      expect(screen.getByText(/milestone completed/i)).toBeInTheDocument();
+      expect(screen.getByText(/20\/20 steps completed/i)).toBeInTheDocument();
+
+      // Primary CTA: Take Exit Mock Exam
+      const exitMockBtn = screen.getByRole('button', { name: /take exit mock exam/i });
+      expect(exitMockBtn).toBeInTheDocument();
+
+      // Next sprint CTA
+      const nextSprintBtn = screen.getByRole('button', { name: /unlock next sprint \(intermediate\)/i });
+      expect(nextSprintBtn).toBeInTheDocument();
+
+      // Click to open confirmation
+      fireEvent.click(nextSprintBtn);
+      expect(await screen.findByText(/spend 5 credits to start next sprint\?/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /confirm \(5 credits\)/i })).toBeInTheDocument();
+    });
   });
 
   describe('Micro-Lesson Reader (/lessons/$lessonId)', () => {

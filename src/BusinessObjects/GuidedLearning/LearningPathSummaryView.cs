@@ -23,7 +23,11 @@ public sealed record LearningPathSummaryView(
     int RemainingMinutes,
     List<CefrBandInfo> CefrBands,
     List<PathStepInfo> OpenSteps,
-    int? NextStepId)
+    int? NextStepId,
+    bool IsSprintCompleted = false,
+    string? NextMilestoneBandCode = null,
+    string? NextMilestoneBandName = null,
+    bool CanStartNextSprint = false)
 {
     /// <summary>
     /// #154/#232: the same steps grouped into the four planning weeks, with each week's On Track
