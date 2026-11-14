@@ -5,16 +5,28 @@ Self-directed certification prep platform providing diagnostic practice, simulat
 ## Language
 
 **Credit**:
-The internal currency unit consumed to access premium learning actions such as mock exams, AI grading, and mentor sessions.
+The internal currency unit consumed to access premium learning actions such as mock exams, AI grading, and mentor sessions. Standard conversion rate is a flat 20,000 VND = 1 Credit.
 _Avoid_: Token, point, coin, balance unit
 
 **Credit Ledger**:
 The append-only record of all credit adjustments, purchases, debits, and refunds for each learner.
 _Avoid_: Credit database, transaction table, wallet balance table
 
-**Append-Only Ledger**:
-An immutable ledger where records are strictly inserted and never deleted or modified after posting.
-_Avoid_: Transaction history, audit log
+**Order**:
+A formal purchase record for credits via an integrated payment gateway (`payos` or `mock`). Each order specifies the quantity of credits purchased (`Amount = Credits * 20,000 VND`), a unique numeric merchant `PaymentNo` (for VietQR/payOS), and transitions through `pending` -> `paid` (or `cancelled`, `expired`, `failed`).
+_Avoid_: Invoice entity, cart checkout, transaction slip
+
+**PayOS Embedded Checkout**:
+The in-app payment experience using `@payos/payos-checkout` (`embedded: true`) rendering dynamic VietQR code frames directly within the web app, eliminating external tab redirection and capturing `onSuccess`, `onCancel`, and `onExit` events.
+_Avoid_: Pop-out checkout tab, external payment redirect, static QR image
+
+**Context-Aware Return URL**:
+The sanitized internal path (`returnUrl`, e.g., `/learning-path` or `/mentors`) where a learner is automatically redirected after a successful credit purchase.
+_Avoid_: Open redirect, external callback URL
+
+**Milestone Learning Sprint**:
+A 4-week modular curriculum focused on achieving the immediate next score band (`SprintTargetBand`) towards a learner's overarching goal. Non-expiring, self-paced, and verified via an Exit Mock Exam.
+_Avoid_: Fixed 28-day countdown course, calendar-locked syllabus, multi-month monolithic path
 
 **Block Before Charge**:
 The domain invariant requiring that a learner's available credit balance and all action preconditions are verified before debiting credits.
