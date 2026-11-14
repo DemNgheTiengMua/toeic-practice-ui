@@ -1,4 +1,4 @@
-ï»¿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -25,11 +25,11 @@ namespace Services.Tests;
 /// 5. Practice Drilling & Weakness Analysis (#119) - non-MCQ drilling, deterministic SQL views
 ///
 /// Also verifies score calibration across all 5 official presets:
-/// - IELTS (Academic/GT): 0â€“9.0 band scale with half-step rounding (avg_half_step) and 2:1 Task 2 weighting
-/// - TOEIC Standard CBT: 10â€“990 scale with sum aggregation
+/// - IELTS (Academic/GT): 0–9.0 band scale with half-step rounding (avg_half_step) and 2:1 Task 2 weighting
+/// - TOEIC Standard CBT: 10–990 scale with sum aggregation
 /// - TOEIC Adaptive CAT: 2-stage unit locking and scoring
-/// - TOEIC S&W: two 0â€“200 skill scales, summed
-/// - VSTEP: 0â€“10 scale with avg_whole rounding
+/// - TOEIC S&W: two 0–200 skill scales, summed
+/// - VSTEP: 0–10 scale with avg_whole rounding
 /// </summary>
 [Collection(DatabaseCollection.Name)]
 public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
@@ -204,14 +204,6 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                 ItemId = itemId,
                 Level = "info",
                 Message = "accepted by the E2E full-chain fixture",
-            });
-            db.ReviewSampleDecisions.Add(new ReviewSampleDecision
-            {
-                BatchId = batch.BatchId,
-                ItemId = itemId,
-                ActorUserId = reviewer.UserId,
-                Decision = "clear",
-                DecidedAt = DateTimeOffset.UtcNow,
             });
         }
 
@@ -955,7 +947,7 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
         Assert.Equal(1.0m, writing.Sections[0].ScoreWeight); // Task 1
         Assert.Equal(2.0m, writing.Sections[1].ScoreWeight); // Task 2 (2:1 ratio)
 
-        // 2. IELTS 0â€“9.0 scale with half-step rounding rule verification
+        // 2. IELTS 0–9.0 scale with half-step rounding rule verification
         // Test edge boundaries:
         // .0 to < .25 -> .0
         Assert.Equal(60, AttemptEngine.RoundHalfStep(6.0));
@@ -1009,7 +1001,7 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
         Assert.Equal("sum", toeic.ScoreAggregationRule);
         Assert.Equal(2, toeic.Skills.Count);
 
-        // 2. Sum Aggregation (10â€“990 scale)
+        // 2. Sum Aggregation (10–990 scale)
         var maxScores = new List<AttemptSkillScore>
         {
             new() { ScaledScore = 495 }, // Listening max
@@ -1125,8 +1117,8 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
         // 2. The TOEIC S&W shape scores: two 0-200 skill scores sum, exactly as the preset now says.
         var skillScores = new List<AttemptSkillScore>
         {
-            new() { ScaledScore = 160 }, // Speaking 0â€“200
-            new() { ScaledScore = 170 }  // Writing 0â€“200
+            new() { ScaledScore = 160 }, // Speaking 0–200
+            new() { ScaledScore = 170 }  // Writing 0–200
         };
         var total = AttemptEngine.AggregateTotalScore(toeicSw.ScoreAggregationRule, skillScores);
         Assert.Equal(330, total);
@@ -1144,7 +1136,7 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
         Assert.Equal("avg_whole", vstep.ScoreAggregationRule);
         Assert.Equal(4, vstep.Skills.Count);
 
-        // 2. Average Whole Band Rounding (0â€“10 scale)
+        // 2. Average Whole Band Rounding (0–10 scale)
         // Average 56.25 -> 56
         var scores1 = new List<AttemptSkillScore>
         {

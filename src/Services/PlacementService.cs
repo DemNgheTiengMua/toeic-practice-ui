@@ -18,18 +18,10 @@ public sealed partial class PlacementService(
     ILearnerService learners,
     IAttemptEngine? attemptEngine = null,
     TimeProvider? clock = null,
-    IPlacementStageOneDrawService? stageOneDraw = null,
-    IPlacementStageTwoDrawService? stageTwoDraw = null,
     ICreditLedger? creditLedger = null,
     PlacementOptions? options = null) : IPlacementService
 {
     private readonly IAttemptEngine _attemptEngine = attemptEngine ?? new AttemptEngine(db);
-
-    // #276: the two draws, constructed over the same DbContext when no caller supplies them - so a
-    // test that does `new PlacementService(db, learners)` still exercises the real draw rather than a
-    // branch nobody runs in production.
-    private readonly IPlacementStageOneDrawService _stageOneDraw = stageOneDraw ?? new PlacementStageOneDrawService(db);
-    private readonly IPlacementStageTwoDrawService _stageTwoDraw = stageTwoDraw ?? new PlacementStageTwoDrawService(db);
 
     /// <summary>#213: the cooldown is a wall-clock rule, so the clock is injected rather than assumed.</summary>
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
@@ -298,7 +290,6 @@ public sealed partial class PlacementService(
 
                 var attempt = await _attemptEngine.CreateAttemptAsync(
                     userId, exam.CertId, examId, exam.DurationMinutes,
-                    drawnPaper: null,
                     scope,
                     cancellationToken);
 
@@ -498,11 +489,6 @@ public sealed partial class PlacementService(
         // Before the transition, because the transition may submit the attempt on the last skill and
         // RecordStageTwoRouteAsync refuses a sitting that is no longer open. A repeated boundary click
         // re-records nothing: the engine returns false when the row already exists.
-        await RecordStageTwoRoutingAsync(take.AttemptId, activeSkillId, cancellationToken);
-
-        // Safe under a duplicate request: the engine derives the next skill from the attempt's
-        // active one, so a racing second advance repeats this one instead of skipping a skill, and
-        // it is never reached with the last skill active, so it never submits the attempt.
         await _attemptEngine.TransitionToNextSkillAsync(take.AttemptId, userId, cancellationToken);
         return true;
     }
@@ -1271,33 +1257,134 @@ public sealed partial class PlacementService(
                 resultBandCode));
         }
 
-        // #213 / story 55: the per-skill rows are READ, not derived here. They are the one writer's
-        // product, and they are the only place a carried-over result exists: its skill has no
-        // AttemptSkillScore (it was never sat), so a page built only from the scores above would omit
-        // the very number the learner is being shown.
-        var skillResults = await db.PlacementSkillResults
+
+
+        var (freeResponseCount, gradedFreeResponseCount, failedFreeResponseCount, isGraded) =
+            await GetAttemptGradingCountsAsync(attempt.AttemptId, attempt.Status, cancellationToken);
+
+        var certId = placement.CertId ?? attempt.CertId;
+        var allCertSkills = await db.Skills
             .AsNoTracking()
-            .Where(r => r.PlacementId == placement.PlacementId)
-            .Join(db.Skills.AsNoTracking(), r => r.SkillId, s => s.SkillId, (r, s) => new { r, s })
-            .OrderBy(x => x.s.DisplayOrder).ThenBy(x => x.s.SkillId)
-            .Select(x => new PlacementSkillResultInfo(
-                x.r.SkillId,
-                x.s.Code,
-                x.s.Name,
-                x.r.ResultStatus,
-                x.r.CefrLevel,
-                x.r.PositionInBand,
-                x.r.MeasuredAt,
-                x.r.ReusedFromPrior,
-                x.r.FailureReason))
+            .Where(s => s.CertId == certId)
+            .OrderBy(s => s.DisplayOrder)
+            .ThenBy(s => s.SkillId)
             .ToListAsync(cancellationToken);
 
-        // Weaker section analysis: compare percentage of raw scores
-        string? weakerSkillName = null;
-        if (skillInfos.Count >= 2)
+
+
+        var pendingAiSkillIds = await db.FreeResponses
+            .AsNoTracking()
+            .Where(fr => fr.AttemptId == attempt.AttemptId
+                && db.AiGradings.Any(g => g.FreeResponseId == fr.FreeResponseId && g.Status == AiGradingStatus.Pending.ToCode()))
+            .Select(fr => fr.SkillId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var freeResponseSkillIds = await db.FreeResponses
+            .AsNoTracking()
+            .Where(fr => fr.AttemptId == attempt.AttemptId)
+            .Select(fr => fr.SkillId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var answeredAnswerIds = await db.AttemptAnswers
+            .AsNoTracking()
+            .Where(a => a.AttemptId == attempt.AttemptId && (a.SelectedOptionId != null || a.SelectedLabel != null || a.ResponseText != null || a.SelectedOptionIdsJson != null))
+            .Select(a => a.AnswerId)
+            .ToListAsync(cancellationToken);
+
+        var answeredSkillIds = answeredAnswerIds
+            .Select(id => skillByAnswer.GetValueOrDefault(id))
+            .Where(id => id > 0)
+            .Distinct()
+            .ToList();
+
+        var allAttemptAnsweredSkillIds = answeredSkillIds.Union(freeResponseSkillIds).ToHashSet();
+
+        var priorPlacement = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.UserId == placement.UserId
+                && p.PlacementId != placement.PlacementId
+                && p.Status == PlacementStatus.Done.ToCode()
+                && (p.CertId == certId || p.CertId == null))
+            .OrderByDescending(p => p.TakenAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var standing = await LearnerStandingReader.ReadAsync(db, placement.UserId, certId, _clock, cancellationToken);
+        var standingBySkill = standing?.Skills.ToDictionary(s => s.SkillId) ?? new Dictionary<int, SkillStanding>();
+        var scoreBySkillId = skillScores.ToDictionary(s => s.SkillId);
+
+        var skillResults = new List<PlacementSkillResultInfo>();
+        foreach (var skill in allCertSkills)
         {
-            var lowest = skillInfos
-                .OrderBy(s => s.TotalQuestions > 0 ? (double)s.RawScore / s.TotalQuestions : 0)
+            standingBySkill.TryGetValue(skill.SkillId, out var st);
+            var hasScore = scoreBySkillId.TryGetValue(skill.SkillId, out var sc);
+            var isAnsweredInAttempt = allAttemptAnsweredSkillIds.Contains(skill.SkillId);
+            var isPendingAi = pendingAiSkillIds.Contains(skill.SkillId) || (!isGraded && freeResponseSkillIds.Contains(skill.SkillId));
+
+            if (isPendingAi)
+            {
+                skillResults.Add(new PlacementSkillResultInfo(
+                    skill.SkillId,
+                    skill.Code,
+                    skill.Name,
+                    PlacementResultStatus.Grading,
+                    null,
+                    null,
+                    null,
+                    false,
+                    null));
+            }
+            else if (hasScore && isAnsweredInAttempt)
+            {
+                skillResults.Add(new PlacementSkillResultInfo(
+                    skill.SkillId,
+                    skill.Code,
+                    skill.Name,
+                    PlacementResultStatus.Measured,
+                    st?.Level,
+                    st?.PositionInBand,
+                    attempt.SubmittedAt ?? placement.TakenAt,
+                    false,
+                    null));
+            }
+            else if (placement.ReusesPriorResults && st != null && !st.IsStale)
+            {
+                skillResults.Add(new PlacementSkillResultInfo(
+                    skill.SkillId,
+                    skill.Code,
+                    skill.Name,
+                    PlacementResultStatus.Measured,
+                    st.Level,
+                    st.PositionInBand,
+                    priorPlacement?.TakenAt ?? st.MeasuredAt,
+                    true,
+                    null));
+            }
+            else
+            {
+                skillResults.Add(new PlacementSkillResultInfo(
+                    skill.SkillId,
+                    skill.Code,
+                    skill.Name,
+                    PlacementResultStatus.NotMeasured,
+                    null,
+                    null,
+                    null,
+                    false,
+                    PlacementFailureReason.CandidateSkipped));
+            }
+        }
+
+        // Weaker section analysis: compare percentage of raw scores among sat skills
+        string? weakerSkillName = null;
+        var satSkillInfos = skillInfos
+            .Where(si => allAttemptAnsweredSkillIds.Contains(si.SkillId) && si.TotalQuestions > 0)
+            .ToList();
+        if (satSkillInfos.Count >= 2)
+        {
+            var lowest = satSkillInfos
+                .OrderBy(s => (double)s.RawScore / s.TotalQuestions)
                 .First();
             weakerSkillName = lowest.SkillName;
         }
@@ -1338,8 +1425,7 @@ public sealed partial class PlacementService(
             ? Math.Max(1, (int)(attempt.SubmittedAt.Value - attempt.StartedAt).TotalMinutes)
             : attempt.Exam.DurationMinutes;
 
-        var (freeResponseCount, gradedFreeResponseCount, failedFreeResponseCount, isGraded) =
-            await GetAttemptGradingCountsAsync(attempt.AttemptId, attempt.Status, cancellationToken);
+
 
         var resultScope = EnumCodes.Parse<PlacementScope>(placement.Scope);
 

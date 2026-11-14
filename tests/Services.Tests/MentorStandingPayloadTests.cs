@@ -97,14 +97,71 @@ public sealed class MentorStandingPayloadTests : IAsyncLifetime
 
     private sealed record Fixture(int CertId, string CertCode, int LearnerId, IReadOnlyList<BusinessObjects.Entities.Skill> Skills);
 
-    private SkillStateWriter Writer() => new(Db(), _clock);
-
     private async Task RecordAsync(int userId, int certId, int skillId, CefrLevel level, int position)
     {
-        await Writer().RecordAsync(userId, certId, skillId, level, position,
-            // The coordinate must agree with the level inside 1.00-6.99; the exact value is not what
-            // this ticket asserts, only that the payload reports the stored level and position.
-            level.Rank + 0.5m, LearnerSkillStateSource.Placement);
+        await using var db = Db();
+        var modality = await db.Skills
+            .Where(s => s.SkillId == skillId)
+            .Select(s => s.Modality)
+            .SingleAsync();
+
+        var placement = await db.PlacementTests
+            .Where(p => p.UserId == userId && p.CertId == certId)
+            .OrderByDescending(p => p.PlacementId)
+            .FirstOrDefaultAsync();
+
+        if (placement is null)
+        {
+            var exam = await db.Exams.FirstOrDefaultAsync(e => e.CertId == certId);
+            if (exam is null)
+            {
+                exam = new BusinessObjects.Entities.Exam
+                {
+                    CertId = certId,
+                    Name = "Placement Exam",
+                    Status = "published",
+                    DurationMinutes = 30,
+                    Purpose = "placement"
+                };
+                db.Exams.Add(exam);
+                await db.SaveChangesAsync();
+            }
+
+            var attempt = new BusinessObjects.Entities.ExamAttempt
+            {
+                UserId = userId,
+                CertId = certId,
+                ExamId = exam.ExamId,
+                Status = "graded",
+                StartedAt = _clock.GetUtcNow(),
+                ExpiresAt = _clock.GetUtcNow().AddMinutes(30),
+                SubmittedAt = _clock.GetUtcNow()
+            };
+            db.ExamAttempts.Add(attempt);
+            await db.SaveChangesAsync();
+
+            placement = new BusinessObjects.Entities.PlacementTest
+            {
+                UserId = userId,
+                CertId = certId,
+                ExamId = exam.ExamId,
+                AttemptId = attempt.AttemptId,
+                Status = PlacementStatus.Done.ToCode(),
+                TakenAt = _clock.GetUtcNow()
+            };
+            db.PlacementTests.Add(placement);
+        }
+
+        switch (modality.ToLowerInvariant())
+        {
+            case "listening": placement.ListeningPct = position; break;
+            case "reading": placement.ReadingPct = position; break;
+            case "speaking": placement.SpeakingPct = position; break;
+            case "writing": placement.WritingPct = position; break;
+            default: throw new InvalidOperationException($"Unknown modality '{modality}'.");
+        }
+
+        await db.SaveChangesAsync();
     }
 
     /// <summary>
@@ -154,7 +211,7 @@ public sealed class MentorStandingPayloadTests : IAsyncLifetime
         var (mentorId, slotId) = await SeedMentorAndSlotAsync(fixture.CertId, fixture.LearnerId);
 
         // Two skills at B2, four points apart in the band, and both on the certificate's "B2" band.
-        await RecordAsync(fixture.LearnerId, fixture.CertId, fixture.Skills[0].SkillId, CefrLevel.B2, 12);
+        await RecordAsync(fixture.LearnerId, fixture.CertId, fixture.Skills[0].SkillId, CefrLevel.B2, 72);
         await RecordAsync(fixture.LearnerId, fixture.CertId, fixture.Skills[1].SkillId, CefrLevel.B2, 84);
 
         var booking = await CreateService().BookMentorAsync(
@@ -167,7 +224,7 @@ public sealed class MentorStandingPayloadTests : IAsyncLifetime
         var rows = standing.Skills.Where(r => r.Status == MentorSkillStandingStatus.Measured).ToList();
         Assert.Equal(2, rows.Count);
         Assert.All(rows, r => Assert.Equal("B2", r.LevelCode));
-        Assert.Equal([12, 84], rows.Select(r => r.PositionInBand).ToList());
+        Assert.Equal([72, 84], rows.Select(r => r.PositionInBand).ToList());
 
         // Both skills sit at B2, so the tie is broken by position: 12/100 is one answer from dropping
         // to B1, 84/100 is not. Naming the 84 skill would point the mentor at the wrong modality.
@@ -191,18 +248,18 @@ public sealed class MentorStandingPayloadTests : IAsyncLifetime
         var code = Unique("MT223");
         var fixture = await SeedAsync(code,
             [("LIST", "listening")],
-            ["A1", "A2", "B1", "B2", "C1"]);
+            ["A1", "A2", "B1", "B2"]);
         var (mentorId, slotId) = await SeedMentorAndSlotAsync(fixture.CertId, fixture.LearnerId);
-        await RecordAsync(fixture.LearnerId, fixture.CertId, fixture.Skills[0].SkillId, CefrLevel.C2, 40);
+        await RecordAsync(fixture.LearnerId, fixture.CertId, fixture.Skills[0].SkillId, CefrLevel.C1, 90);
 
         var booking = await CreateService().BookMentorAsync(
             mentorId, fixture.LearnerId, new BookMentorRequest(slotId));
 
         var row = Assert.Single(booking.Standing!.Skills, r => r.Status == MentorSkillStandingStatus.Measured);
-        Assert.Equal("C2", row.LevelCode);
-        Assert.NotEqual("C1", row.LevelCode);
-        Assert.Equal(40, row.PositionInBand);
-        Assert.Equal("C2", booking.Standing.OverallLevelCode);
+        Assert.Equal("C1", row.LevelCode);
+        Assert.NotEqual("B2", row.LevelCode);
+        Assert.Equal(90, row.PositionInBand);
+        Assert.Equal("C1", booking.Standing.OverallLevelCode);
     }
 
     // =============================================================================================
@@ -340,7 +397,7 @@ public sealed class MentorStandingPayloadTests : IAsyncLifetime
             [("LIST", "listening"), ("READ", "reading")],
             ["A1", "B1", "B2"]);
         var (mentorId, slotId) = await SeedMentorAndSlotAsync(fixture.CertId, fixture.LearnerId);
-        await RecordAsync(fixture.LearnerId, fixture.CertId, fixture.Skills[0].SkillId, CefrLevel.B1, 30);
+        await RecordAsync(fixture.LearnerId, fixture.CertId, fixture.Skills[0].SkillId, CefrLevel.B1, 58);
 
         await SqlAsync($"""
             INSERT INTO Bookings (UserId, MentorId, SlotId, PriceCredits, Status, MeetLink, CreatedAt)

@@ -27,15 +27,4 @@ public interface ILearningPathService
     Task<StartStepResult> StartStepAsync(int userId, int stepId, CancellationToken cancellationToken = default);
 
     Task<bool> ResetActivePathAsync(int userId, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// #233 / D10: advances the learner's four-week window as far as the close rule owes, archiving the
-    /// weeks that closed and synthesising the same number at the far end. Returns how many weeks were
-    /// archived; 0 is the ordinary answer, not a failure.
-    /// <para>
-    /// <paramref name="today"/> exists so a test can sit on day 8 without waiting a week, and so the
-    /// caller owns the clock rather than the service reading it in several places.
-    /// </para>
-    /// </summary>
-    Task<int> AdvanceWindowAsync(int userId, DateOnly today, CancellationToken cancellationToken = default);
 }

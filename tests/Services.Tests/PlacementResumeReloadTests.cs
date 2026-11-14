@@ -725,7 +725,6 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
         string statusBefore;
         int? scoreBefore;
         string? bandBefore;
-        int versionBefore;
 
         await using (var db = Db())
         {
@@ -735,7 +734,6 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
             statusBefore = attempt.Status;
             scoreBefore = attempt.TotalScore;
             bandBefore = attempt.BandCode;
-            versionBefore = attempt.ProjectionVersion;
             Assert.Equal(1, gradingsBefore);
         }
 
@@ -766,7 +764,6 @@ public sealed class PlacementResumeReloadTests : IAsyncLifetime
             Assert.Equal(statusBefore, attempt.Status);
             Assert.Equal(scoreBefore, attempt.TotalScore);
             Assert.Equal(bandBefore, attempt.BandCode);
-            Assert.Equal(versionBefore, attempt.ProjectionVersion);
         }
     }
 }

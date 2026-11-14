@@ -64,12 +64,6 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
             -- #232: the step coordinate's topic and the skill's own level from its cut-score table.
             IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading')
               INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Detail');
-            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
-            VALUES (@cert, 1, 0, N'Feasibility standard-setting', '2024-01-01');
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled) VALUES
-              (@cert, 1, @sR, 'A2', 'cut', 0, 100),
-              (@cert, 1, @sR, 'B1', 'cut', 101, 500),
-              (@cert, 1, @sR, 'B2', 'cut', 501, 990);
             """);
 
         // #269: the drillable stock is a pool position bound to the section, because a drill reads
@@ -410,22 +404,12 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
             VALUES (@cert, N'Diag', 'published', 30, 'placement');
             DECLARE @exam INT = SCOPE_IDENTITY();
-            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
-            VALUES ({userId}, @exam, @cert, 'graded', SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), 400, 'B1', 'AttemptEngine', 1);
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode)
+            VALUES ({userId}, @exam, @cert, 'graded', SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), 400, 'B1');
             DECLARE @attempt INT = SCOPE_IDENTITY();
             -- #212: a done placement needs one measured skill. Rows first, then the move to done.
-            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, AttemptId)
-            VALUES ({userId}, @cert, @exam, 'in_progress', @attempt);
-            DECLARE @plc INT = SCOPE_IDENTITY();
-            INSERT INTO PlacementSkillResults
-              (PlacementId, SkillId, CertId, ResultStatus, CefrLevel, PositionInBand, ContinuousCoordinate,
-               MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
-            VALUES (@plc, (SELECT TOP 1 SkillId FROM Skills WHERE CertId = @cert), @cert, 'measured', 'B1', 50, 3.50,
-                    SYSDATETIMEOFFSET(), DATEADD(DAY, 90, SYSDATETIMEOFFSET()), 'AttemptEngine', 1);
-            UPDATE PlacementTests
-              SET Status = 'done', ResultBandCode = 'B1', TotalScore = 400,
-                  WrittenByService = 'AttemptEngine', ProjectionVersion = 1
-            WHERE PlacementId = @plc;
+            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, AttemptId, ResultBandCode, TotalScore, ListeningPct, ReadingPct)
+            VALUES ({userId}, @cert, @exam, 'done', @attempt, 'B1', 400, 60, 60);
             """);
 
         var (_, paths, db) = CreateServices();

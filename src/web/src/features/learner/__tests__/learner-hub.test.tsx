@@ -12,7 +12,6 @@ import type {
   LearnerDashboardDto,
   TargetBandViewDto,
   LearningPathSummaryDto,
-  CalibrationViewDto,
   LessonDetailDto,
   LessonProgressDto,
   MicroCheckResultDto,
@@ -461,7 +460,7 @@ describe('Learner Hub (#300)', () => {
       ).toBeInTheDocument();
     });
 
-    it('renders active learning path with weeks, steps, calibration proposal, and insight panel', async () => {
+    it('renders active learning path with weeks, steps, and insight panel', async () => {
       const activeSummary: LearningPathSummaryDto = {
         hasActivePath: true,
         activeCert: { code: 'DEMO', name: 'DEMO' },
@@ -535,24 +534,6 @@ describe('Learner Hub (#300)', () => {
         ],
       };
 
-      const calibrationView: CalibrationViewDto = {
-        placedBandCode: 'B2',
-        placedBandName: 'Vantage',
-        validAnswerCount: 20,
-        requiredValidAnswerCount: 15,
-        excludedRushedCount: 2,
-        observedAccuracyPct: 40.0,
-        reason: 'diverged',
-        proposal: {
-          proposedBandCode: 'B1',
-          proposedBandName: 'Independent',
-          observedAccuracyPct: 40.0,
-          validAnswerCount: 20,
-          requiredAccuracyPct: 70,
-          evidence: 'Your recent practice accuracy (40.0%) is below B2 expectations.',
-        },
-      };
-
       const pathInsight: AiInsightDto = {
         insightId: 901,
         userId: 42,
@@ -575,24 +556,12 @@ describe('Learner Hub (#300)', () => {
       };
 
       let startCalledWith: number | null = null;
-      let calibrationAdjustChosen: boolean | null = null;
 
       installFetchMock((url, init) => {
         if (url === '/api/auth/me') return jsonResponse(DEMO_USER);
         if (url === '/api/learner/context') return jsonResponse(DEMO_CONTEXT);
         if (url === '/api/learner/learning-path') return jsonResponse(activeSummary);
-        if (url === '/api/learner/placement/calibration') return jsonResponse(calibrationView);
         if (url === '/api/learner/insights/path') return jsonResponse(pathInsight);
-        if (url === '/api/learner/placement/calibration/decision' && init?.method === 'POST') {
-          const body = JSON.parse(String(init.body));
-          calibrationAdjustChosen = body.adjust;
-          return jsonResponse({
-            decision: body.adjust ? 'adjusted' : 'kept',
-            placedBandCode: 'B2',
-            proposedBandCode: 'B1',
-            pathAdjusted: body.adjust,
-          });
-        }
         if (url === '/api/learner/learning-path/steps/502/start' && init?.method === 'POST') {
           startCalledWith = 502;
           return jsonResponse({
@@ -611,17 +580,6 @@ describe('Learner Hub (#300)', () => {
       expect(screen.getByText('Comprehension:')).toBeInTheDocument();
       expect(screen.getByText('Dialog Connectors')).toBeInTheDocument();
       expect(screen.getByText('Done')).toBeInTheDocument();
-
-      // Calibration divergence proposal check
-      expect(await screen.findByText(/your practice does not match your placement band/i)).toBeInTheDocument();
-      expect(await screen.findByText(/2 answers under 3 seconds were left out/i)).toBeInTheDocument();
-
-      const lowerBandBtn = screen.getByRole('button', { name: /lower my starting band to b1/i });
-      fireEvent.click(lowerBandBtn);
-
-      await waitFor(() => {
-        expect(calibrationAdjustChosen).toBe(true);
-      });
 
       // Path AI Insight verification
       expect(await screen.findByText(/you are progressing steadily through week 1 connectors/i)).toBeInTheDocument();

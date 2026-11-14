@@ -163,12 +163,6 @@ public static class PathStepCompletion
         step.CompletedAt ??= now;
         step.Score = score;
         step.ActualAccuracyPct = accuracyPct;
-        // #191 / D14: this class is the step closure's one writer, and the trigger on
-        // LearnerPathSteps refuses any other declaration. The version moves forward so a late
-        // duplicate closure cannot overwrite a result the learner has already seen.
-        step.WrittenByService = DerivedFactWriters.StepClosure;
-        step.ProjectionVersion++;
-        db.Entry(step).Property(s => s.WrittenByService).IsModified = true;
 
         await db.SaveChangesAsync(cancellationToken);
 

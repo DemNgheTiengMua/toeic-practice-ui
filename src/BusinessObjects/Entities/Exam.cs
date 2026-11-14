@@ -108,18 +108,6 @@ public partial class Exam
     [InverseProperty("Exam")]
     public virtual ICollection<PlacementTest> PlacementTestExams { get; set; } = new List<PlacementTest>();
 
-    [InverseProperty("Exam")]
-    /// <summary>#226: the recorded readiness pass that unlocks the publish door. At most one row.</summary>
-    public virtual ExamPublishAudit? PublishAudit { get; set; }
-
-    /// <summary>
-    /// #227: the frozen edition - what was in force when this paper went live. Written by the publish
-    /// trigger and by nothing else. NULL on a draft, which has no learners and therefore no edition to
-    /// protect.
-    /// </summary>
-    [InverseProperty("Exam")]
-    public virtual ExamEdition? Edition { get; set; }
-
     /// <summary>#227: the edition this paper replaced, or NULL for a first edition.</summary>
     [InverseProperty("SupersededBy")]
     public virtual Exam? SupersedesExam { get; set; }

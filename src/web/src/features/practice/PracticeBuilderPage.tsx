@@ -152,8 +152,6 @@ export function PracticeBuilderPage() {
   }, [location.search, location.searchStr]);
 
   const [skillFilter, setSkillFilter] = useState<string>('all');
-  const [matrixModalityFilter, setMatrixModalityFilter] = useState<string>('all');
-  const [selectedCellKey, setSelectedCellKey] = useState<string>('');
   const [actionError, setActionError] = useState<string | null>(null);
 
   const activeCertCode = learnerContext?.active?.code ?? 'default';
@@ -167,12 +165,6 @@ export function PracticeBuilderPage() {
   const catalogQuery = useQuery({
     queryKey: ['practice', 'catalog', activeCertCode],
     queryFn: () => api.practice.catalog(),
-  });
-
-  const matrixQuery = useQuery({
-    queryKey: ['practice', 'matrix', activeCertCode],
-    queryFn: () => api.practice.matrix(),
-    retry: false,
   });
 
   const freeDrillQuery = useQuery({
@@ -217,7 +209,6 @@ export function PracticeBuilderPage() {
   });
 
   const catalog: PracticeCatalogDto | undefined = catalogQuery.data;
-  const cells: PracticeCellDto[] = matrixQuery.data ?? [];
   const freeDrill = freeDrillQuery.data;
 
   const allSections = useMemo(() => {
@@ -242,31 +233,9 @@ export function PracticeBuilderPage() {
     return allSections.filter((s) => s.skillCode === skillFilter);
   }, [allSections, skillFilter]);
 
-  const filteredCells = useMemo(() => {
-    if (matrixModalityFilter === 'all') return cells;
-    return cells.filter((c) => String(c.modality).toLowerCase() === matrixModalityFilter);
-  }, [cells, matrixModalityFilter]);
-
-  const openCells = useMemo(
-    () => filteredCells.filter((c) => !(c.isResting && c.reopensAt != null)),
-    [filteredCells],
-  );
-
-  const selectedCell = useMemo(() => {
-    if (!selectedCellKey) return null;
-    return openCells.find((c) => `${c.topicId}:${c.levelCode}` === selectedCellKey) ?? null;
-  }, [openCells, selectedCellKey]);
-
   const handleStartSection = (sectionId: number) => {
     setActionError(null);
     startSessionMutation.mutate(buildStartSessionPayload({ sectionId }));
-  };
-
-  const handleStartCell = (cell: PracticeCellDto) => {
-    setActionError(null);
-    startSessionMutation.mutate(
-      buildStartSessionPayload({ topicId: cell.topicId, cefrLevelCode: cell.levelCode }),
-    );
   };
 
   const availableCertificates = learnerContext?.certificates ?? learnerContext?.available ?? [];
@@ -542,193 +511,6 @@ export function PracticeBuilderPage() {
                 />
               ))}
             </div>
-          </section>
-
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 className="font-display text-lg font-semibold text-foreground">
-                  Topic × CEFR mastery matrix
-                </h2>
-                <p className="text-sm text-muted">
-                  Choose any open topic and CEFR level cell for a focused pool drill.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-end gap-3">
-                <Select
-                  aria-label="Filter matrix by modality"
-                  className="w-44"
-                  value={matrixModalityFilter}
-                  onChange={(key) => setMatrixModalityFilter(key != null ? String(key) : 'all')}
-                >
-                  <Label>Modality</Label>
-                  <Select.Trigger>
-                    <Select.Value />
-                    <Select.Indicator />
-                  </Select.Trigger>
-                  <Select.Popover>
-                    <ListBox>
-                      <ListBox.Item id="all" textValue="All modalities">
-                        All modalities
-                        <ListBox.ItemIndicator />
-                      </ListBox.Item>
-                      <ListBox.Item id="listening" textValue="Listening">
-                        Listening
-                        <ListBox.ItemIndicator />
-                      </ListBox.Item>
-                      <ListBox.Item id="reading" textValue="Reading">
-                        Reading
-                        <ListBox.ItemIndicator />
-                      </ListBox.Item>
-                    </ListBox>
-                  </Select.Popover>
-                </Select>
-
-                {openCells.length > 0 && (
-                  <div className="flex items-end gap-2">
-                    <Select
-                      aria-label="Quick topic cell picker"
-                      placeholder="Choose topic & level"
-                      className="w-60"
-                      value={selectedCellKey || undefined}
-                      onChange={(key) => setSelectedCellKey(key != null ? String(key) : '')}
-                    >
-                      <Label>Quick cell launch</Label>
-                      <Select.Trigger>
-                        <Select.Value />
-                        <Select.Indicator />
-                      </Select.Trigger>
-                      <Select.Popover>
-                        <ListBox>
-                          {openCells.map((cell) => {
-                            const id = `${cell.topicId}:${cell.levelCode}`;
-                            const label = `${cell.topicName} (${cell.levelCode})`;
-                            return (
-                              <ListBox.Item key={id} id={id} textValue={label}>
-                                {label}
-                                <ListBox.ItemIndicator />
-                              </ListBox.Item>
-                            );
-                          })}
-                        </ListBox>
-                      </Select.Popover>
-                    </Select>
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      isDisabled={!selectedCell || startSessionMutation.isPending}
-                      onPress={() => selectedCell && handleStartCell(selectedCell)}
-                    >
-                      <span>Start cell</span>
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {matrixQuery.isError || freeDrillQuery.isError ? (
-              <Alert status="warning">
-                <Alert.Indicator />
-                <Alert.Content>
-                  <Alert.Title>Topic matrix is currently unavailable</Alert.Title>
-                  <Alert.Description>
-                    {getPracticeErrorMessage(
-                      matrixQuery.error ?? freeDrillQuery.error,
-                      'Topic matrix could not be loaded. You can still start section drills above.',
-                    )}
-                  </Alert.Description>
-                </Alert.Content>
-              </Alert>
-            ) : matrixQuery.isLoading ? (
-              <Card className="p-6">
-                <div className="flex items-center gap-2 text-sm text-muted">
-                  <Spinner size="sm" />
-                  <span>Loading topic mastery matrix…</span>
-                </div>
-              </Card>
-            ) : filteredCells.length === 0 ? (
-              <Card className="p-6 text-sm text-muted">
-                No topic × CEFR cells match the selected modality.
-              </Card>
-            ) : (
-              <Card className="border border-border bg-surface">
-                <Table>
-                  <Table.ScrollContainer>
-                    <Table.Content aria-label="Topic mastery practice matrix">
-                      <Table.Header>
-                        <Table.Column isRowHeader>Topic</Table.Column>
-                        <Table.Column>Level</Table.Column>
-                        <Table.Column>Modality</Table.Column>
-                        <Table.Column>Mastery</Table.Column>
-                        <Table.Column>Availability</Table.Column>
-                        <Table.Column>Action</Table.Column>
-                      </Table.Header>
-                      <Table.Body>
-                        {filteredCells.map((cell) => {
-                          const mastery = normalizeMasteryState(cell.mastery);
-                          const resting = Boolean(cell.isResting && cell.reopensAt);
-                          const reopenLocal = formatLocalReopenTime(cell.reopensAt);
-                          const isCellLocked = Boolean(freeDrill && !freeDrill.isUnlocked) || Boolean(freeDrill?.dailyCeilingReached);
-
-                          return (
-                            <Table.Row key={`${cell.topicId}-${cell.levelCode}`}>
-                              <Table.Cell>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="font-medium text-foreground">{cell.topicName}</span>
-                                  {cell.isPrioritised && (
-                                    <Chip size="sm" color="accent" variant="soft">
-                                      <Chip.Label>Prioritised</Chip.Label>
-                                    </Chip>
-                                  )}
-                                </div>
-                              </Table.Cell>
-                              <Table.Cell>
-                                <span className="font-mono-tabular font-medium">{cell.levelCode}</span>
-                              </Table.Cell>
-                              <Table.Cell>
-                                <span className="inline-flex items-center gap-1 text-muted">
-                                  {String(cell.modality).toLowerCase() === 'listening' ? (
-                                    <Headphones className="h-3.5 w-3.5" aria-hidden="true" />
-                                  ) : (
-                                    <Compass className="h-3.5 w-3.5" aria-hidden="true" />
-                                  )}
-                                  {formatModalityLabel(cell.modality)}
-                                </span>
-                              </Table.Cell>
-                              <Table.Cell>
-                                <Chip size="sm" color={masteryChipColor(mastery)} variant="soft">
-                                  <Chip.Label>{mastery}</Chip.Label>
-                                </Chip>
-                              </Table.Cell>
-                              <Table.Cell>
-                                {resting && reopenLocal ? (
-                                  <span className="inline-flex items-center gap-1 text-xs text-muted">
-                                    <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-                                    Resting until {reopenLocal}
-                                  </span>
-                                ) : (
-                                  <span className="text-xs text-success">Ready</span>
-                                )}
-                              </Table.Cell>
-                              <Table.Cell>
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  isDisabled={resting || isCellLocked || startSessionMutation.isPending}
-                                  onPress={() => handleStartCell(cell)}
-                                >
-                                  Start cell drill
-                                </Button>
-                              </Table.Cell>
-                            </Table.Row>
-                          );
-                        })}
-                      </Table.Body>
-                    </Table.Content>
-                  </Table.ScrollContainer>
-                </Table>
-              </Card>
-            )}
           </section>
 
           {catalog?.speakingSections && catalog.speakingSections.length > 0 && (

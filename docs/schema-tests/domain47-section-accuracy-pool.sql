@@ -45,8 +45,6 @@ DECLARE @sec2 INT = SCOPE_IDENTITY();
 -- pass. A fixture that INSERTs `published` is refused by design, so it takes the same two steps.
 INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, LastWrittenBy) VALUES (@cert, N'Accuracy paper', 'draft', 60, 'mock', @user);
 DECLARE @exam INT = SCOPE_IDENTITY();
-INSERT INTO ExamPublishAudits (ExamId, PassedAt, WrittenByService)
-VALUES (@exam, DATEADD(SECOND, 1, SYSDATETIMEOFFSET()), 'AdminExamService');
 UPDATE Exams SET Status = 'published', LastWrittenBy = @user WHERE ExamId = @exam;
 
 INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Local factual retrieval and paraphrase matching');
@@ -100,7 +98,7 @@ INSERT INTO AttemptAnswers (AttemptId, ExamId, ItemId, ItemVersionId, ExamItemId
   (@attempt, @exam, @i4, @v4, @p4, 'A', 1);
 
 UPDATE ExamAttempts
-SET Status = 'graded', WrittenByService = 'AttemptEngine', ProjectionVersion = 1
+SET Status = 'graded'
 WHERE AttemptId = @attempt;
 
 -- ---------------------------------------------------------------------------------------------
@@ -160,8 +158,6 @@ PRINT 'an in-progress attempt contributes no row';
 -- ---------------------------------------------------------------------------------------------
 INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, LastWrittenBy) VALUES (@cert, N'Other paper', 'draft', 60, 'mock', @user);
 DECLARE @otherExam INT = SCOPE_IDENTITY();
-INSERT INTO ExamPublishAudits (ExamId, PassedAt, WrittenByService)
-VALUES (@otherExam, DATEADD(SECOND, 1, SYSDATETIMEOFFSET()), 'AdminExamService');
 UPDATE Exams SET Status = 'published', LastWrittenBy = @user WHERE ExamId = @otherExam;
 INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder, LastWrittenBy)
 VALUES (@otherExam, @sec1, @cert, @v1, @i1, 'reading', 1, @user);

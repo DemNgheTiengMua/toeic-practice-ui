@@ -76,7 +76,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             DECLARE @batch INT = SCOPE_IDENTITY();
 
             INSERT INTO ImportLog (BatchId, RowNo, Level, Message, ItemId, Attempt) VALUES {logs};
-            INSERT INTO ReviewSampleDecisions (BatchId, ItemId, ActorUserId, Decision, DecidedAt) VALUES {decisions};
             """);
     }
 

@@ -88,8 +88,8 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
             VALUES ({certId}, N'{examName}', 'published', 120, 'mock', SYSDATETIMEOFFSET());
             DECLARE @examId INT = SCOPE_IDENTITY();
 
-            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, WrittenByService, ProjectionVersion)
-            VALUES ({userId}, @examId, {certId}, 'graded', DATEADD(hour, -2, SYSDATETIMEOFFSET()), DATEADD(hour, 1, SYSDATETIMEOFFSET()), DATEADD(hour, -1, SYSDATETIMEOFFSET()), 850, 'AttemptEngine', 1);
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore)
+            VALUES ({userId}, @examId, {certId}, 'graded', DATEADD(hour, -2, SYSDATETIMEOFFSET()), DATEADD(hour, 1, SYSDATETIMEOFFSET()), DATEADD(hour, -1, SYSDATETIMEOFFSET()), 850);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);

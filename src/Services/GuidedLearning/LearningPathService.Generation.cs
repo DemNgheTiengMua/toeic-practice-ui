@@ -515,23 +515,6 @@ public sealed partial class LearningPathService
             startingBand = latestMock?.BandCode;
         }
 
-        // #156: accepting a lower band and then regenerating must not rebuild at the old band the
-        // placement still claims.
-        if (savedTarget?.CurrentBandCode is { Length: > 0 } calibrated)
-        {
-            var correctedAt = await db.CalibrationDecisions
-                .AsNoTracking()
-                .Where(d => d.UserId == userId && d.CertId == certId)
-                .OrderByDescending(d => d.DecidedAt)
-                .Select(d => (DateTimeOffset?)d.DecidedAt)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (correctedAt is not null && (latestPlacement is null || correctedAt >= latestPlacement.TakenAt))
-            {
-                startingBand = calibrated;
-            }
-        }
-
         // #153: the band the goal recorded is the fallback when the certificate has no measured band yet.
         // no certificate's rows. With neither, the certificate cannot say where the learner starts.
         startingBand ??= savedTarget?.CurrentBandCode;

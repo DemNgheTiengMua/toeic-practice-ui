@@ -206,9 +206,7 @@ public sealed partial class AttemptEngine
         // re-standardisation rewrites. The attempt stores the code, so the name comes from the
         // edition's frozen grid. Falling back to today's `ScoreBands` is for a paper with no edition
         // only - a paper that has one must not read a grid nobody was measured against.
-        var frozenBandName = MatchFrozenBandName(
-            await LoadEditionAsync(attempt.ExamId, cancellationToken),
-            attempt.BandCode);
+        string? frozenBandName = null;
 
         var sectionMasterAudio = await LoadSectionMasterAudioAsync(attempt.ExamId, cancellationToken);
         var reviewQuestions = new List<AttemptReviewQuestion>();

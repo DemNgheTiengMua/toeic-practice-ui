@@ -59,8 +59,6 @@ public partial class LearnerPath
     public virtual ICollection<LearnerPathStep> LearnerPathSteps { get; set; } = new List<LearnerPathStep>();
 
     /// <summary>#233: the weeks this path has closed, frozen by <c>trg_LearnerPathWeeks_SingleWriter</c>.</summary>
-    [InverseProperty("LearnerPath")]
-    public virtual ICollection<LearnerPathWeek> LearnerPathWeeks { get; set; } = new List<LearnerPathWeek>();
 
     [ForeignKey("PlacementId, UserId")]
     [InverseProperty("LearnerPaths")]

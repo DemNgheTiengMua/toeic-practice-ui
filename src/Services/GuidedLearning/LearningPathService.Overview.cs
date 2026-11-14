@@ -14,12 +14,6 @@ public sealed partial class LearningPathService
 {
     public async Task<LearningPathSummaryView> GetActivePathAsync(int userId, CancellationToken cancellationToken = default)
     {
-        // #233 / D10: closing a week is observed on the screen that shows the window. Reading the path
-        // is the one moment the learner asks "what is my week", and a window that only advanced from a
-        // background worker would leave a learner who returned after a fortnight looking at week one.
-        // It is idempotent, so the many readers of this method cost nothing once the window is current.
-        await AdvanceWindowAsync(userId, DateOnly.FromDateTime(DateTime.UtcNow), cancellationToken);
-
         var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
         var cert = await db.Certificates
             .AsNoTracking()

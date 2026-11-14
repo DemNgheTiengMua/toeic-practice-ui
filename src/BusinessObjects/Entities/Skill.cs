@@ -57,8 +57,6 @@ public partial class Skill
     public virtual ICollection<GradingCriterion> GradingCriteria { get; set; } = new List<GradingCriterion>();
 
     /// <summary>#192: at most one lock per skill; present means this skill's rubric is locked.</summary>
-    [InverseProperty("Skill")]
-    public virtual GradingRubricLock? RubricLock { get; set; }
 
     [InverseProperty("Skill")]
     public virtual ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
@@ -80,20 +78,12 @@ public partial class Skill
     public virtual ICollection<ScoreScale> ScoreScales { get; set; } = new List<ScoreScale>();
 
     /// <summary>#210: this skill's rows in every published cut-score version.</summary>
-    [InverseProperty("SkillNavigation")]
-    public virtual ICollection<CefrCutScore> CutScores { get; set; } = new List<CefrCutScore>();
 
     /// <summary>#211: this skill's stored state, one row per learner who has been measured in it.</summary>
-    [InverseProperty("SkillNavigation")]
-    public virtual ICollection<LearnerSkillState> LearnerSkillStates { get; set; } = new List<LearnerSkillState>();
 
     /// <summary>#212: this skill's row in each placement sitting that touched it.</summary>
-    [InverseProperty("SkillNavigation")]
-    public virtual ICollection<PlacementSkillResult> PlacementSkillResults { get; set; } = new List<PlacementSkillResult>();
 
     /// <summary>#274: the stage bundles this skill was drawn for, across every sitting.</summary>
-    [InverseProperty("SkillNavigation")]
-    public virtual ICollection<AttemptStageBundle> AttemptStageBundleSkillNavigations { get; set; } = new List<AttemptStageBundle>();
 
     [InverseProperty("SkillNavigation")]
     public virtual ICollection<Section> SectionSkillNavigations { get; set; } = new List<Section>();

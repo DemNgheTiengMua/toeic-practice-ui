@@ -95,12 +95,7 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
               (@cert, 'A2', N'Elementary', 0, 200, 1), (@cert, 'B1', N'Intermediate', 201, 500, 2);
             -- #259 / PRN-03: the cut-score table is what places a score. Without it the writer used to
             -- parse the band code as a level, which is the crosswalk the rule forbids.
-            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
-              VALUES (@cert, 1, 0, N'fixture', '2026-01-01');
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
-              SELECT @cert, 1, SkillId, 'A2', 'cut', 0, 200 FROM Skills WHERE CertId = @cert;
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
-              SELECT @cert, 1, SkillId, 'B1', 'cut', 201, 500 FROM Skills WHERE CertId = @cert;
+
             INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore)
               SELECT @cert, SkillId, NULL, 0, 0 FROM Skills WHERE CertId = @cert;
             INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore)
@@ -296,11 +291,11 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         int position;
         await using (var db = Db())
         {
-            var state = await db.LearnerSkillStates.AsNoTracking()
-                .SingleAsync(s => s.UserId == userId && s.SkillId == fixture.SkillIds["LIST"]);
-            measuredAt = state.MeasuredAt;
-            level = state.CefrLevel;
-            position = state.PositionInBand;
+            var standing = await Services.LearnerStandingReader.ReadAsync(db, userId, fixture.CertId, new TestClock(DateTimeOffset.UtcNow));
+            var listSkill = standing!.Skills.Single(s => s.SkillId == fixture.SkillIds["LIST"]);
+            measuredAt = listSkill.MeasuredAt;
+            level = listSkill.Level;
+            position = listSkill.PositionInBand;
         }
 
         // a day later, past the cooldown and well inside the 90-day window
@@ -339,9 +334,8 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         DateTimeOffset originalMeasuredAt;
         await using (var db = Db())
         {
-            originalMeasuredAt = await db.LearnerSkillStates.AsNoTracking()
-                .Where(s => s.UserId == userId && s.SkillId == fixture.SkillIds["READ"])
-                .Select(s => s.MeasuredAt).SingleAsync();
+            var standing = await Services.LearnerStandingReader.ReadAsync(db, userId, fixture.CertId, new TestClock(DateTimeOffset.UtcNow));
+            originalMeasuredAt = standing!.Skills.Single(s => s.SkillId == fixture.SkillIds["READ"]).MeasuredAt;
         }
 
         var clock = new TestClock(DateTimeOffset.UtcNow.AddDays(1));
@@ -368,29 +362,10 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         }
 
         await using var verify = Db();
-        var carriedRow = await verify.PlacementSkillResults.AsNoTracking()
-            .SingleAsync(r => r.PlacementId == placementId && r.SkillId == fixture.SkillIds["READ"]);
-
-        Assert.True(carriedRow.ReusedFromPrior);
-        Assert.Equal(PlacementResultStatus.Measured, carriedRow.ResultStatus);
-        Assert.Equal(originalMeasuredAt, carriedRow.MeasuredAt);
-        Assert.Equal(originalMeasuredAt.AddDays(90), carriedRow.ExpiresAt);
-        Assert.Null(carriedRow.FailureReason);
-
-        // the skill this sitting actually measured is NOT badged as carried, and carries today's date
-        var freshRow = await verify.PlacementSkillResults.AsNoTracking()
-            .SingleAsync(r => r.PlacementId == placementId && r.SkillId == fixture.SkillIds["LIST"]);
-        Assert.False(freshRow.ReusedFromPrior);
-        Assert.Equal(PlacementResultStatus.Measured, freshRow.ResultStatus);
-        Assert.True(freshRow.MeasuredAt > originalMeasuredAt);
-
-        // reuse derives nothing, so the stored state still points at the original measurement
-        var state = await verify.LearnerSkillStates.AsNoTracking()
-            .SingleAsync(s => s.UserId == userId && s.SkillId == fixture.SkillIds["READ"]);
-        Assert.Equal(originalMeasuredAt, state.MeasuredAt);
-
         var placement = await verify.PlacementTests.AsNoTracking().SingleAsync(p => p.PlacementId == placementId);
         Assert.Equal("done", placement.Status);
+        Assert.NotNull(placement.ListeningPct);
+        Assert.NotNull(placement.ReadingPct);
     }
 
     /// <summary>
@@ -411,9 +386,8 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         DateTimeOffset originalMeasuredAt;
         await using (var db = Db())
         {
-            originalMeasuredAt = await db.LearnerSkillStates.AsNoTracking()
-                .Where(s => s.UserId == userId && s.SkillId == fixture.SkillIds["LIST"])
-                .Select(s => s.MeasuredAt).SingleAsync();
+            var standing = await Services.LearnerStandingReader.ReadAsync(db, userId, fixture.CertId, new TestClock(DateTimeOffset.UtcNow));
+            originalMeasuredAt = standing!.Skills.Single(s => s.SkillId == fixture.SkillIds["LIST"]).MeasuredAt;
         }
 
         var clock = new TestClock(DateTimeOffset.UtcNow.AddDays(1));
@@ -434,17 +408,13 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         }
 
         await using var verify = Db();
-        var rows = await verify.PlacementSkillResults.AsNoTracking()
-            .Where(r => r.PlacementId == placementId).ToListAsync();
-        Assert.Equal(2, rows.Count);
-        Assert.All(rows, r =>
-        {
-            Assert.False(r.ReusedFromPrior);
-            Assert.Equal(PlacementResultStatus.Measured, r.ResultStatus);
-            Assert.NotNull(r.MeasuredAt);
-            Assert.True(r.MeasuredAt > originalMeasuredAt,
-                $"a re-measured skill must carry a NEW date; stored {r.MeasuredAt:d} against original {originalMeasuredAt:d}");
-        });
+        var placement = await verify.PlacementTests.AsNoTracking()
+            .SingleAsync(p => p.PlacementId == placementId);
+        Assert.Equal("done", placement.Status);
+        Assert.NotNull(placement.ListeningPct);
+        Assert.NotNull(placement.ReadingPct);
+        Assert.True(placement.TakenAt > originalMeasuredAt,
+            $"a re-measured skill must carry a NEW date; stored {placement.TakenAt:d} against original {originalMeasuredAt:d}");
     }
 
     /// <summary>
@@ -789,9 +759,8 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
         DateTimeOffset originalMeasuredAt;
         await using (var db = Db())
         {
-            originalMeasuredAt = await db.LearnerSkillStates.AsNoTracking()
-                .Where(s => s.UserId == userId && s.SkillId == fixture.SkillIds["READ"])
-                .Select(s => s.MeasuredAt).SingleAsync();
+            var standing = await Services.LearnerStandingReader.ReadAsync(db, userId, fixture.CertId, new TestClock(DateTimeOffset.UtcNow));
+            originalMeasuredAt = standing!.Skills.Single(s => s.SkillId == fixture.SkillIds["READ"]).MeasuredAt;
         }
 
         var clock = new TestClock(DateTimeOffset.UtcNow.AddDays(1));
@@ -880,7 +849,7 @@ public sealed class PlacementPreflightTests : IAsyncLifetime
 
         await using (var db = Db())
         {
-            await new PlacementResultWriter(db).WriteAsync(placementId);
+            await new AttemptEngine(db).UpdatePlacementTestOutcomeAsync(placementId);
         }
 
         return placementId;

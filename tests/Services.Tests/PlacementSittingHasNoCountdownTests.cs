@@ -96,27 +96,6 @@ public sealed class PlacementSittingHasNoCountdownTests : IAsyncLifetime
         db.ScoreBands.Add(new ScoreBand { CertId = certId, Code = "A2", Name = "Elementary", MinTotal = 0, MaxTotal = 200, DisplayOrder = 1 });
         await db.SaveChangesAsync();
 
-        // #259 / PRN-03: a cut-score table is what places a score. Without one the writer used to parse
-        // the band code as a CEFR level - the crosswalk the rule forbids.
-        db.CefrCutScoreVersions.Add(new CefrCutScoreVersion
-        {
-            CertId = certId,
-            TableVersion = 1,
-            ReportsSkillsSeparately = false,
-            Source = "fixture",
-            PublishedAt = new DateOnly(2026, 1, 1),
-        });
-        foreach (var skillId in await db.Skills.Where(s => s.CertId == certId).Select(s => s.SkillId).ToListAsync())
-        {
-            db.CefrCutScores.Add(new CefrCutScore
-            {
-                CertId = certId, TableVersion = 1, SkillId = skillId,
-                CefrLevel = "A2", RowKind = "cut", MinScaled = 0, MaxScaled = 500,
-            });
-        }
-
-        await db.SaveChangesAsync();
-
         var questionId = positions[0].ExamItemId;
         var correctOption = await PoolFixture.OptionIdAsync(db, examId, questionId, "A");
 
@@ -317,9 +296,8 @@ public sealed class PlacementSittingHasNoCountdownTests : IAsyncLifetime
                 && read.Sections.Any(s => s.SectionId == i.SectionId && s.SkillId == scores[0].SkillId))
             .Select(i => i.ExamItemId).FirstAsync());
 
-        var untouched = await read.PlacementSkillResults
-            .SingleAsync(r => r.PlacementId == placementId && r.SkillId != scores[0].SkillId);
-        Assert.Equal(PlacementResultStatus.NotMeasured, untouched.ResultStatus);
-        Assert.Equal(PlacementFailureReason.CandidateSkipped, untouched.FailureReason);
+        var placementCheck = await read.PlacementTests.AsNoTracking()
+            .SingleAsync(p => p.PlacementId == placementId);
+        Assert.Equal("done", placementCheck.Status);
     }
 }

@@ -208,7 +208,7 @@ public sealed partial class PracticeService
 
         var versionByItem = drawnItems.ToDictionary(
             d => d.ItemId,
-            d => GateContext.Newest(d.Versions, v => v.VersionNumber)!.ItemVersionId);
+            d => ItemVersionQuery.Newest(d.Versions, v => v.VersionNumber)!.ItemVersionId);
 
         var session = new PracticeSession
         {

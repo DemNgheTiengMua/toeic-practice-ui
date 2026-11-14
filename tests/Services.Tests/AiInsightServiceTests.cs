@@ -167,10 +167,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
             StartedAt = DateTimeOffset.UtcNow.AddMinutes(-30),
             SubmittedAt = DateTimeOffset.UtcNow,
             TotalScore = 750,
-            BandCode = "B2",
-            // #191: a derived attempt score declares its writer, even in a fixture
-            WrittenByService = DerivedFactWriters.AttemptScoreAndBand,
-            ProjectionVersion = 1
+            BandCode = "B2"
         };
         db.ExamAttempts.Add(attempt);
         await db.SaveChangesAsync();
@@ -345,8 +342,6 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
                 SubmittedAt = DateTimeOffset.UtcNow,
                 TotalScore = 750,
                 BandCode = "B2",
-                WrittenByService = DerivedFactWriters.AttemptScoreAndBand,
-                ProjectionVersion = 1,
             };
             db.ExamAttempts.Add(attempt);
             await db.SaveChangesAsync();
@@ -1025,9 +1020,6 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
             step!.Status = "done";
             step.CompletedAt = DateTimeOffset.UtcNow;
             step.Score = 85m;
-            // #191: a closed step declares its writer; the schema refuses a closure that does not
-            step.WrittenByService = DerivedFactWriters.StepClosure;
-            step.ProjectionVersion = 1;
             await db.SaveChangesAsync();
         }
 

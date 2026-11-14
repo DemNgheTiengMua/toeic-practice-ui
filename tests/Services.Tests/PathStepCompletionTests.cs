@@ -118,12 +118,6 @@ public sealed class PathStepCompletionTests : IAsyncLifetime
               (@cert, @sR, 1, 990);
 
             -- #232: the skill's OWN level, from this certificate's cut-score rows.
-            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
-            VALUES (@cert, 1, 0, N'Test standard-setting', '2024-01-01');
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled) VALUES
-              (@cert, 1, @sR, 'A2', 'cut', 0, 100),
-              (@cert, 1, @sR, 'B1', 'cut', 101, 500),
-              (@cert, 1, @sR, 'B2', 'cut', 501, 990);
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
             VALUES (@cert, N'Mock Exam', 'published', 60, 'mock');
@@ -199,10 +193,10 @@ public sealed class PathStepCompletionTests : IAsyncLifetime
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
             VALUES ({certId}, N'Measurement sitting {Guid.NewGuid():N}', 'published', 60, 'mock');
             DECLARE @measExam INT = SCOPE_IDENTITY();
-            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode)
             VALUES (@u, @measExam, {certId}, 'graded',
                     DATEADD(DAY, -1, SYSDATETIMEOFFSET()), DATEADD(DAY, -1, SYSDATETIMEOFFSET()),
-                    DATEADD(DAY, -1, SYSDATETIMEOFFSET()), 700, 'B2', 'AttemptEngine', 1);
+                    DATEADD(DAY, -1, SYSDATETIMEOFFSET()), 700, 'B2');
             DECLARE @measAttempt INT = SCOPE_IDENTITY();
             INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore)
             VALUES (@measAttempt, @measSkill, {certId}, 18, 700);

@@ -40,11 +40,9 @@ public partial class PlacementTest
     /// snapshot; NULL while the placement is still in progress.</summary>
     [StringLength(64)]
     [Unicode(false)]
-    public string? WrittenByService { get; set; }
 
     /// <summary>#191: monotonic ordering token, so an older out-of-order callback cannot overwrite a
     /// newer result.</summary>
-    public int ProjectionVersion { get; set; }
 
     public DateTimeOffset TakenAt { get; set; }
 
@@ -99,8 +97,6 @@ public partial class PlacementTest
     /// <see cref="PlacementResultStatus.EstimatedFromOneTask"/>, or when
     /// <see cref="CompletionFailureReason"/> is set.
     /// </summary>
-    [InverseProperty("Placement")]
-    public virtual ICollection<PlacementSkillResult> SkillResults { get; set; } = new List<PlacementSkillResult>();
 
     [ForeignKey("CertId")]
     [InverseProperty("PlacementTests")]

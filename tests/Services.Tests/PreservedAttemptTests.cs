@@ -51,8 +51,6 @@ public sealed class PreservedAttemptTests(DatabaseFixture database)
                     SubmittedAt = DateTimeOffset.UtcNow.AddMinutes(-30),
                     TotalScore = 720,
                     BandCode = "B1",
-                    WrittenByService = DerivedFactWriters.AttemptScoreAndBand,
-                    ProjectionVersion = 1,
                 };
                 db.ExamAttempts.Add(attempt);
                 await db.SaveChangesAsync();

@@ -22,9 +22,9 @@ public sealed partial class AiInsightService(
     IAiInsightGenerator generator,
     ILogger<AiInsightService> logger,
     ILearnerService? learners = null,
-    ISkillStateWriter? skillStates = null) : IAiInsightService
+    TimeProvider? clock = null) : IAiInsightService
 {
     private static readonly ConcurrentDictionary<int, int> RetryCounts = new();
     private readonly ILearnerService _learners = learners ?? new LearnerService(db);
-    private readonly ISkillStateWriter _skillStates = skillStates ?? new SkillStateWriter(db);
+    private readonly TimeProvider _clock = clock ?? TimeProvider.System;
 }

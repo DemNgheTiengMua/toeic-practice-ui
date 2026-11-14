@@ -94,22 +94,6 @@ public partial class CompanionDbContext
 
         // #233 / D10: the archived week. HasTrigger is required or every insert fails on the OUTPUT
         // clause, exactly as it does on the five other guarded tables.
-        modelBuilder.Entity<LearnerPathWeek>(entity =>
-        {
-            entity.HasKey(e => e.LearnerPathWeekId);
-            entity.ToTable(tb => tb.HasTrigger("trg_LearnerPathWeeks_SingleWriter"));
-
-            entity.HasIndex(e => new { e.LearnerPathId, e.WeekNumber }, "UQ_PathWeeks_Path_Week").IsUnique();
-
-            entity.Property(e => e.ArchivedAt).HasDefaultValueSql("(sysdatetimeoffset())");
-            entity.Property(e => e.ProjectionVersion).HasDefaultValue(0);
-
-            entity.HasOne(d => d.LearnerPath).WithMany(p => p.LearnerPathWeeks)
-                .HasPrincipalKey(p => new { p.LearnerPathId, p.CertId })
-                .HasForeignKey(d => new { d.LearnerPathId, d.CertId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PathWeeks_PathCert");
-        });
 
         modelBuilder.Entity<LearnerLessonProgress>(entity =>
         {

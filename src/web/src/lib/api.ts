@@ -2511,12 +2511,6 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(body),
       }),
-    calibration: () => apiFetch<CalibrationViewDto>('/api/learner/placement/calibration'),
-    decideCalibration: (adjust: boolean) =>
-      apiFetch<CalibrationDecisionResultDto>('/api/learner/placement/calibration/decision', {
-        method: 'POST',
-        body: JSON.stringify({ adjust }),
-      }),
   },
 
   exams: {
@@ -2582,12 +2576,6 @@ export const api = {
       }),
     result: (attemptId: number) =>
       apiFetch<AttemptResultDto>(`/api/learner/attempts/${attemptId}/result`),
-    projection: (attemptId: number) =>
-      apiFetch<MockResultProjectionDto>(`/api/learner/attempts/${attemptId}/projection`),
-    syncProjection: (attemptId: number) =>
-      apiFetch<MockSyncResultDto>(`/api/learner/attempts/${attemptId}/projection/sync`, {
-        method: 'POST',
-      }),
     review: (attemptId: number) =>
       apiFetch<AttemptReviewDto>(`/api/learner/attempts/${attemptId}/review`),
     history: () => apiFetch<ExamHistoryDto>('/api/learner/exams/history'),
@@ -2680,7 +2668,6 @@ export const api = {
 
   practice: {
     catalog: () => apiFetch<PracticeCatalogDto>('/api/learner/practice/catalog'),
-    matrix: () => apiFetch<PracticeCellDto[]>('/api/learner/practice/matrix'),
     freeDrill: (topicId?: number, cefrLevelCode?: string) => {
       const params = new URLSearchParams();
       if (topicId != null) params.set('topicId', String(topicId));
@@ -2926,38 +2913,6 @@ export const api = {
   admin: {
     dashboard: () => apiFetch<AdminDashboardDto>('/api/admin/dashboard'),
     dashboardRevision: () => apiFetch<DashboardRevision>('/api/admin/dashboard/revision'),
-    auditQueue: (batchId: number) => apiFetch<AuditQueueDto>(`/api/admin/audit/batches/${batchId}`),
-    auditDraw: (batchId: number) =>
-      apiFetch<AuditQueueDto>(`/api/admin/audit/batches/${batchId}/draw`, { method: 'POST' }),
-    auditSolve: (sampleItemId: number, label: string) =>
-      apiFetch<void>(`/api/admin/audit/samples/${sampleItemId}/solve`, {
-        method: 'POST',
-        body: JSON.stringify({ label }),
-      }),
-    auditReveal: (sampleItemId: number) =>
-      apiFetch<AuditKeyRevealDto>(`/api/admin/audit/samples/${sampleItemId}/reveal`, {
-        method: 'POST',
-      }),
-    auditVerdict: (sampleItemId: number, verdict: string) =>
-      apiFetch<void>(`/api/admin/audit/samples/${sampleItemId}/verdict`, {
-        method: 'POST',
-        body: JSON.stringify({ verdict }),
-      }),
-    auditDecide: (stratumId: number) =>
-      apiFetch<AuditDecisionDto>(`/api/admin/audit/strata/${stratumId}/decide`, {
-        method: 'POST',
-      }),
-    ingestionBatches: () => apiFetch<any>('/api/admin/ingestion'),
-    ingestionBatch: (batchId: number, rule?: string) =>
-      apiFetch<any>(
-        rule
-          ? `/api/admin/ingestion/${batchId}?rule=${encodeURIComponent(rule)}`
-          : `/api/admin/ingestion/${batchId}`,
-      ),
-    clearWorkbenchItem: (batchId: number, itemId: number) =>
-      apiFetch<void>(`/api/admin/ingestion/${batchId}/items/${itemId}/clear`, {
-        method: 'POST',
-      }),
     discardWorkbenchRecord: (batchId: number, line: number, reason?: string) =>
       apiFetch<void>(`/api/admin/ingestion/${batchId}/records/${line}/discard`, {
         method: 'POST',

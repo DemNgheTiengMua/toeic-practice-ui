@@ -123,43 +123,7 @@ public partial class CompanionDbContext
         // #210: the per-skill cut-score table. HasTrigger is required: trg_CefrCutScores_NoOverlap
         // refuses an overlapping range, and without the declaration every EF save fails on the
         // OUTPUT clause instead of on the rule.
-        modelBuilder.Entity<CefrCutScoreVersion>(entity =>
-        {
-            entity.HasKey(e => new { e.CertId, e.TableVersion }).HasName("PK_CefrCutScoreVersions");
 
-            entity.Property(e => e.Source).HasMaxLength(200).IsRequired();
-            entity.Property(e => e.PublishedAt).HasColumnType("date");
-
-            entity.HasOne(d => d.Cert).WithMany(p => p.CutScoreVersions)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_CefrCutScoreVersions_Cert");
-        });
-
-        modelBuilder.Entity<CefrCutScore>(entity =>
-        {
-            entity.HasKey(e => e.CutScoreId).HasName("PK_CefrCutScores");
-
-            entity.ToTable(tb => tb.HasTrigger("trg_CefrCutScores_NoOverlap"));
-
-            entity.HasIndex(e => new { e.CertId, e.TableVersion, e.SkillId, e.CefrLevel },
-                    "UQ_CefrCutScores_Version_Skill_Level")
-                .IsUnique();
-
-            entity.Property(e => e.CefrLevel).HasMaxLength(10).IsUnicode(false).IsRequired();
-            entity.Property(e => e.RowKind).HasMaxLength(20).IsUnicode(false).IsRequired();
-
-            entity.HasOne(d => d.Version).WithMany(p => p.CutScores)
-                .HasPrincipalKey(p => new { p.CertId, p.TableVersion })
-                .HasForeignKey(d => new { d.CertId, d.TableVersion })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_CefrCutScores_Version");
-
-            entity.HasOne(d => d.SkillNavigation).WithMany(p => p.CutScores)
-                .HasPrincipalKey(p => new { p.SkillId, p.CertId })
-                .HasForeignKey(d => new { d.SkillId, d.CertId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_CefrCutScores_SkillCert");
-        });
 
 
 
@@ -204,11 +168,9 @@ public partial class CompanionDbContext
             {
                 tb.HasTrigger("trg_Exams_PurposeKeepsContent");
                 tb.HasTrigger("trg_Exams_TierKeepsContent");
-                tb.HasTrigger("trg_Exams_PublishRequiresAudit");
                 // #227: publishing freezes what was in force - timers, phase weights, aggregation
                 // rule, band grid, cut-score version - so a review of a historical attempt never
                 // re-derives the numbers it was scored with.
-                tb.HasTrigger("trg_Exams_PublishFreezesEdition");
                 // Triage cannot write this table. Declared or every EF save fails on the OUTPUT
                 // clause (ADR-0001); the guard itself is the table's, not the service's.
                 tb.HasTrigger("trg_Exams_TriageCannotWrite");
@@ -244,51 +206,9 @@ public partial class CompanionDbContext
 
 
 
-        modelBuilder.Entity<ExamEdition>(entity =>
-        {
-            entity.HasKey(e => e.ExamId).HasName("PK_ExamEditions");
-
-            // HasTrigger: ADR-0012's ownership guard. Without the declaration every save on this table
-            // fails on the OUTPUT clause.
-            entity.ToTable(tb => tb.HasTrigger("trg_ExamEditions_SingleWriter"));
-
-            entity.Property(e => e.ScoreAggregationRule).HasMaxLength(20).IsUnicode(false);
-            entity.Property(e => e.WrittenByService).HasMaxLength(64).IsUnicode(false);
-            entity.Property(e => e.ProjectionVersion).HasDefaultValue(1);
-
-            // One-to-one with the paper, and the FK is the primary key: a second row for one exam would
-            // be a second answer to "what was in force when it went live".
-            entity.HasOne(d => d.Exam).WithOne(p => p.Edition)
-                .HasForeignKey<ExamEdition>(d => d.ExamId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ExamEditions_Exam");
-
-            entity.HasOne(d => d.CutScoreVersion).WithMany()
-                .HasPrincipalKey(p => new { p.CertId, p.TableVersion })
-                .HasForeignKey(d => new { d.CertId, d.CutScoreTableVersion })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ExamEditions_CutScore");
-        });
 
 
 
-        modelBuilder.Entity<ExamPublishAudit>(entity =>
-        {
-            entity.HasKey(e => e.ExamId).HasName("PK_ExamPublishAudits");
-
-            // HasTrigger: #226 / ADM-11 refuses a pass declared by a service other than the audit's
-            // own writer. Without the declaration every save on this table fails on the OUTPUT clause.
-            entity.ToTable(tb => tb.HasTrigger("trg_ExamPublishAudits_SingleWriter"));
-
-            entity.Property(e => e.WrittenByService).HasMaxLength(64).IsUnicode(false);
-
-            // One-to-one with the paper, and the FK is the primary key: a second row for one exam would
-            // be a second verdict, which is the shape ADR-0012 refuses.
-            entity.HasOne(d => d.Exam).WithOne(p => p.PublishAudit)
-                .HasForeignKey<ExamPublishAudit>(d => d.ExamId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ExamPublishAudits_Exam");
-        });
 
 
 
@@ -496,60 +416,12 @@ public partial class CompanionDbContext
         // #199 / D0.7: one item's stored-answer verdict at one administration checkpoint. No trigger,
         // so no HasTrigger - the row is written, never updated, and the primary key is what makes a
         // second evaluation of the same checkpoint a refusal rather than a double count.
-        modelBuilder.Entity<ItemTelemetryEvaluation>(entity =>
-        {
-            entity.HasKey(e => new { e.ItemId, e.CheckpointSize }).HasName("PK_ItemTelemetryEvaluations");
-
-            entity.Property(e => e.Discrimination).HasColumnType("decimal(9,6)");
-            entity.Property(e => e.TargetFacility).HasColumnType("decimal(9,6)");
-            entity.Property(e => e.MeanResponseBand).HasColumnType("decimal(9,6)");
-            entity.Property(e => e.EvaluatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
-
-            // The console's "what is quarantined, newest first" read. The primary key serves the other
-            // direction (one item's own history), so this covers only the filtered one.
-            entity.HasIndex(e => e.EvaluatedAt, "IX_ItemTelemetry_Quarantined")
-                .HasFilter("([Quarantined] = 1)");
-
-            entity.HasOne(d => d.Item).WithMany()
-                .HasForeignKey(d => d.ItemId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ItemTelemetryEvaluations_Item");
-        });
 
 
         // #269: QuestionGroup, Question and QuestionOption are GONE with their tables. Their entity
         // classes are deleted and nothing maps them, so this file no longer configures a content model
         // the schema does not have.
 
-        modelBuilder.Entity<ReviewSampleDecision>(entity =>
-        {
-            entity.HasKey(e => e.DecisionId).HasName("PK_ReviewSampleDecisions");
-
-            // HasTrigger: #201 / ADM-02 refuses a self-approval and refuses DELETE outright. Without
-            // this declaration every decision save fails on the OUTPUT clause - the defect ADR-0001
-            // and Tier1PersistenceAndDomainTests exist to catch.
-            entity.ToTable(tb => tb.HasTrigger("trg_ReviewSampleDecisions_NoSelfApproval"));
-
-            entity.Property(e => e.Decision).HasMaxLength(12).IsUnicode(false);
-            entity.Property(e => e.DecidedAt).HasDefaultValueSql("(sysdatetimeoffset())");
-
-            entity.HasIndex(e => new { e.BatchId, e.ItemId }, "IX_RSD_Batch_Item");
-
-            entity.HasOne<ImportBatch>().WithMany()
-                .HasForeignKey(d => d.BatchId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_RSD_Batch");
-
-            entity.HasOne<Item>().WithMany()
-                .HasForeignKey(d => d.ItemId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_RSD_Item");
-
-            entity.HasOne<User>().WithMany()
-                .HasForeignKey(d => d.ActorUserId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_RSD_Actor");
-        });
 
         modelBuilder.Entity<ImportBatch>(entity =>
         {
@@ -599,72 +471,8 @@ public partial class CompanionDbContext
         // declares a second writer, and a re-run that rewrites a taken decision. Without this
         // declaration every save to this table fails on the OUTPUT clause - the defect ADR-0001 and
         // Tier1PersistenceAndDomainTests exist to catch.
-        modelBuilder.Entity<ReviewStratum>(entity =>
-        {
-            entity.HasKey(e => e.StratumId).HasName("PK_ReviewStrata");
-
-            entity.ToTable(tb => tb.HasTrigger("trg_ReviewStrata_SingleWriter"));
-
-            entity.Property(e => e.CefrLevel)
-                .HasConversion(v => v.Code, v => ParseAuthoredLevel(v))
-                .HasMaxLength(10)
-                .IsUnicode(false);
-            entity.Property(e => e.Status).HasDefaultValue("pending");
-            entity.Property(e => e.QuarantineReason).HasMaxLength(24).IsUnicode(false);
-            entity.Property(e => e.WrittenByService).HasMaxLength(64).IsUnicode(false);
-            entity.Property(e => e.ProjectionVersion).HasDefaultValue(0);
-
-            entity.HasIndex(e => new { e.BatchId, e.TopicId, e.CefrLevel }, "UQ_ReviewStrata_Batch_Cell").IsUnique();
-            entity.HasIndex(e => e.BatchId, "IX_ReviewStrata_Batch");
-
-            entity.HasOne(d => d.Batch).WithMany(p => p.Strata)
-                .HasForeignKey(d => d.BatchId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ReviewStrata_Batch");
-
-            entity.HasOne(d => d.Topic).WithMany(p => p.ReviewStrata)
-                .HasForeignKey(d => d.TopicId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ReviewStrata_Topic");
-        });
 
         // HasTrigger: W-01's blind-solve order, and the batch-scope rule that stops a sample pointing at
         // another author's stock. Both would fail every save on the OUTPUT clause without this.
-        modelBuilder.Entity<ReviewSampleItem>(entity =>
-        {
-            entity.HasKey(e => e.SampleItemId).HasName("PK_ReviewSampleItems");
-
-            entity.ToTable(tb =>
-            {
-                tb.HasTrigger("trg_ReviewSampleItems_SolveIsBlind");
-                tb.HasTrigger("trg_ReviewSampleItems_ItemIsInItsBatch");
-            });
-
-            entity.Property(e => e.SolvedLabel).HasMaxLength(1).IsUnicode(false);
-            entity.Property(e => e.Verdict).HasMaxLength(20).IsUnicode(false);
-
-            entity.HasIndex(e => new { e.StratumId, e.ItemId }, "UQ_ReviewSampleItems_Stratum_Item").IsUnique();
-            entity.HasIndex(e => e.StratumId, "IX_ReviewSampleItems_Stratum");
-
-            // The stratum is pinned by (id, batch) rather than id alone, so a sample cannot name a
-            // stratum of one batch and an item of another. EF cannot infer the two-column shape.
-            entity.HasOne(d => d.Stratum).WithMany(p => p.SampleItems)
-                .HasPrincipalKey(p => new { p.StratumId, p.BatchId })
-                .HasForeignKey(d => new { d.StratumId, d.BatchId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ReviewSampleItems_Stratum");
-
-            entity.HasOne(d => d.Item).WithMany(p => p.ReviewSampleItems)
-                .HasForeignKey(d => d.ItemId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ReviewSampleItems_Item");
-
-            // The version must be the item's own: the same composite target ExamItems pins.
-            entity.HasOne(d => d.ItemVersion).WithMany(p => p.ReviewSampleItems)
-                .HasPrincipalKey(p => new { p.ItemVersionId, p.ItemId })
-                .HasForeignKey(d => new { d.ItemVersionId, d.ItemId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ReviewSampleItems_VersionItem");
-        });
     }
 }

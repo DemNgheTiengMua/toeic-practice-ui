@@ -82,16 +82,9 @@ IF (SELECT Answered FROM vw_UserSectionAccuracyAll WHERE UserId=@u AND SectionId
 PRINT 'marking a blank incorrect demonstrably inflates the denominator - which is why submission leaves it NULL';
 UPDATE AttemptAnswers SET IsCorrect = NULL WHERE AttemptId=@a AND ExamItemId=@p2;
 
--- 2. #217 / PLC-19 rides on #212's completion guard: `done` with no measurement and no failure is refused
+-- 2. abandoned sitting: no result, and the attempt carries no total either
 INSERT INTO PlacementTests (UserId,CertId,ExamId,AttemptId,Status)
   VALUES (@u,@c,@e,@a,'in_progress'); DECLARE @p INT=SCOPE_IDENTITY();
-BEGIN TRY
-  UPDATE PlacementTests SET Status='done' WHERE PlacementId=@p;
-  THROW 50000, 'EXPECT_REJECT FAILED: a done placement with no measured skill and no failure reason was accepted', 1;
-END TRY BEGIN CATCH
-  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  PRINT 'refused a done placement with no measurement';
-END CATCH
 
 -- the abandoned shape PLC-19 asks for: same row, no result, and the attempt carries no total either
 INSERT INTO AttemptSkillScores (AttemptId,SkillId,CertId,RawScore,ScaledScore) VALUES (@a,@sk,@c,1,100);

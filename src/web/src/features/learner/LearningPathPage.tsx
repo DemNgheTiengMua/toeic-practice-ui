@@ -30,7 +30,6 @@ import {
   ApiClientError,
   LearningPathSummaryDto,
   PathStepDto,
-  CalibrationViewDto,
   AiInsightDto,
 } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
@@ -56,14 +55,7 @@ export function LearningPathPage() {
     queryFn: () => api.learningPath.get(),
   });
 
-  // 2. Calibration status
-  const { data: calibration, refetch: refetchCalibration } = useQuery<CalibrationViewDto>({
-    queryKey: ['learner', 'calibration'],
-    queryFn: () => api.placement.calibration(),
-    enabled: Boolean(summary?.hasActivePath),
-  });
-
-  // 3. Path AI Insight
+  // 2. Path AI Insight
   const { data: insight, isLoading: isInsightLoading, refetch: refetchInsight } = useQuery<AiInsightDto>({
     queryKey: ['learner', 'insights', 'path'],
     queryFn: () => api.insights.path(),
@@ -126,25 +118,6 @@ export function LearningPathPage() {
       } else {
         setErrorMessage('Failed to reset learning path.');
       }
-    },
-  });
-
-  // Calibration decision mutation
-  const calibrationMutation = useMutation({
-    mutationFn: async (adjust: boolean) => {
-      return await api.placement.decideCalibration(adjust);
-    },
-    onSuccess: (res) => {
-      setSuccessMessage(
-        res.pathAdjusted
-          ? `Starting band adjusted to ${res.proposedBandCode}. Your path has been updated.`
-          : 'Path kept as is for now.',
-      );
-      queryClient.invalidateQueries({ queryKey: ['learner', 'learning-path'] });
-      queryClient.invalidateQueries({ queryKey: ['learner', 'calibration'] });
-    },
-    onError: () => {
-      setErrorMessage('Could not record calibration decision.');
     },
   });
 
@@ -394,76 +367,7 @@ export function LearningPathPage() {
         </Card.Content>
       </Card>
 
-      {/* Calibration Proposal Alert if diverged */}
-      {calibration?.reason === 'diverged' && calibration.proposal && (
-        <Card className="border-warning/60 bg-warning/5" id="calibration-card">
-          <Card.Header className="border-b border-warning/20 pb-3">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-warning" />
-              <strong className="text-foreground text-sm">
-                Your practice does not match your placement band
-              </strong>
-            </div>
-          </Card.Header>
-          <Card.Content className="space-y-4 pt-3">
-            <p className="text-sm text-foreground m-0 leading-relaxed">
-              {calibration.proposal.evidence}
-            </p>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-lg bg-surface border border-border text-xs font-mono">
-              <div>
-                <span className="text-muted block">Valid answers</span>
-                <span className="font-bold text-foreground">{calibration.proposal.validAnswerCount}</span>
-              </div>
-              <div>
-                <span className="text-muted block">Accuracy</span>
-                <span className="font-bold text-foreground">
-                  {calibration.proposal.observedAccuracyPct.toFixed(1)}%
-                </span>
-              </div>
-              <div>
-                <span className="text-muted block">Placement band</span>
-                <span className="font-bold text-foreground">{calibration.placedBandCode}</span>
-              </div>
-              <div>
-                <span className="text-muted block">Proposed band</span>
-                <span className="font-bold text-accent">{calibration.proposal.proposedBandCode}</span>
-              </div>
-            </div>
-
-            {calibration.excludedRushedCount > 0 && (
-              <p className="text-xs text-muted m-0">
-                {`${calibration.excludedRushedCount} answer${calibration.excludedRushedCount === 1 ? '' : 's'} under 3 seconds ${calibration.excludedRushedCount === 1 ? 'was' : 'were'} left out: quick guesses are not counted as level evidence.`}
-              </p>
-            )}
-
-            <p className="text-xs text-muted m-0">
-              Nothing changes until you choose. "Keep my path" leaves everything untouched.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-2.5 pt-1">
-              <Button
-                variant="primary"
-                size="sm"
-                isDisabled={calibrationMutation.isPending}
-                onPress={() => calibrationMutation.mutate(true)}
-                onClick={() => calibrationMutation.mutate(true)}
-              >
-                Lower my starting band to {calibration.proposal.proposedBandCode}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                isDisabled={calibrationMutation.isPending}
-                onPress={() => calibrationMutation.mutate(false)}
-                onClick={() => calibrationMutation.mutate(false)}
-              >
-                Keep my path for now
-              </Button>
-            </div>
-          </Card.Content>
-        </Card>
-      )}
+      {/* Path AI Insight */}
 
       {/* AI Diagnostic Insight Panel for Path */}
       {insight && (

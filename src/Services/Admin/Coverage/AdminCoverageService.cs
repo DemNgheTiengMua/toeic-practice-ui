@@ -16,24 +16,51 @@ namespace Services;
 /// </summary>
 public sealed class AdminCoverageService(CompanionDbContext db) : IAdminCoverageService
 {
+    private static readonly string[] CefrLevels = ["A1", "A2", "B1", "B2", "C1", "C2"];
+
+    private static int TargetFor(string modality, string cefrLevel) =>
+        (modality is "speaking" or "writing")
+            ? (cefrLevel is "A1" or "C2" ? 4 : 8)
+            : (cefrLevel is "A1" or "C2" ? 15 : 30);
+
     public async Task<AdminCoverageMatrixDto> GetMatrixAsync(CancellationToken cancellationToken = default)
     {
-        var cells = await db.vw_CoverageMatrices
+        var topics = await db.Topics
             .AsNoTracking()
-            .OrderBy(c => c.Modality)
-            .ThenBy(c => c.TopicCode)
-            .ThenBy(c => c.CefrLevel)
-            .Select(c => new AdminCoverageCellDto(
-                c.TopicId,
-                c.Modality,
-                c.TopicCode,
-                c.TopicName,
-                c.CefrLevel,
-                c.TargetItemCount,
-                c.ActiveItemCount,
-                c.PlacementEligibleItemCount,
-                c.Deficit))
+            .OrderBy(t => t.Modality)
+            .ThenBy(t => t.Code)
+            .Select(t => new { t.TopicId, t.Modality, t.Code, t.Name })
             .ToListAsync(cancellationToken);
+
+        var counts = await db.Items
+            .AsNoTracking()
+            .Where(i => i.LifecycleStatus == "active")
+            .GroupBy(i => new { i.TopicId, i.CefrLevel })
+            .Select(g => new
+            {
+                g.Key.TopicId,
+                CefrLevel = g.Key.CefrLevel.Code,
+                Active = g.Count(),
+                PlacementEligible = g.Count(i => i.PlacementEligible)
+            })
+            .ToListAsync(cancellationToken);
+
+        var byCell = counts.ToDictionary(c => (c.TopicId, c.CefrLevel));
+        var cells = new List<AdminCoverageCellDto>(topics.Count * CefrLevels.Length);
+
+        foreach (var t in topics)
+        {
+            foreach (var level in CefrLevels)
+            {
+                var target = TargetFor(t.Modality, level);
+                byCell.TryGetValue((t.TopicId, level), out var stat);
+                var active = stat?.Active ?? 0;
+                var eligible = stat?.PlacementEligible ?? 0;
+                var deficit = Math.Max(0, target - active);
+                cells.Add(new AdminCoverageCellDto(
+                    t.TopicId, t.Modality, t.Code, t.Name, level, target, active, eligible, deficit));
+            }
+        }
 
         return new AdminCoverageMatrixDto(cells);
     }

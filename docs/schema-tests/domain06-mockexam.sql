@@ -37,15 +37,15 @@ END TRY BEGIN CATCH
   PRINT 'rejected draft-exam attempt as expected';
 END CATCH
 -- valid: attempt on published exam, two skill scores, total = 250+250
-INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt,TotalScore,WrittenByService,ProjectionVersion)
-  VALUES (@u,@pub,@c,'submitted',SYSDATETIMEOFFSET(),500,'AttemptEngine',1);
+INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt,TotalScore)
+  VALUES (@u,@pub,@c,'submitted',SYSDATETIMEOFFSET(),500);
 DECLARE @a INT=SCOPE_IDENTITY();
 INSERT INTO AttemptSkillScores (AttemptId,SkillId,CertId,RawScore,ScaledScore)
   VALUES (@a,@sL,@c,40,250),(@a,@sR,@c,42,250);
 PRINT 'valid published attempt accepted';
 -- reject (Review Focus #2): TotalScore that disagrees with the skill sum
 BEGIN TRY
-  UPDATE ExamAttempts SET TotalScore=999, WrittenByService='AttemptEngine', ProjectionVersion=2 WHERE AttemptId=@a;
+  UPDATE ExamAttempts SET TotalScore=999 WHERE AttemptId=@a;
   THROW 50000,'EXPECT_REJECT FAILED: total mismatch accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;

@@ -42,7 +42,7 @@ public sealed partial class AiInsightService
             .Select(s => new { s.SkillId, s.Code, s.Name, s.Modality })
             .ToListAsync(cancellationToken);
 
-        var standing = await _skillStates.ReadAsync(userId, certId, cancellationToken);
+        var standing = await LearnerStandingReader.ReadAsync(db, userId, certId, _clock, cancellationToken);
         var measured = standing?.Skills.ToDictionary(s => s.SkillId) ?? [];
 
         var rows = skills

@@ -126,8 +126,7 @@ public sealed class FreeDrillStateTests(DatabaseFixture database)
         {
             await using var db = DbContextFactory.Create(fixture.ConnectionString);
             await db.Database.ExecuteSqlRawAsync($"""
-                UPDATE LearnerPathSteps SET Status = 'done', CompletedAt = SYSDATETIMEOFFSET(),
-                    WrittenByService = 'PathStepCompletion', ProjectionVersion = 1
+                UPDATE LearnerPathSteps SET Status = 'done', CompletedAt = SYSDATETIMEOFFSET()
                 WHERE LearnerPathId = {fixture.PathId};
                 """);
 
@@ -224,8 +223,7 @@ public sealed class FreeDrillStateTests(DatabaseFixture database)
             // Unlock the plan first, so the ceiling is the only lock left.
             await using var db = DbContextFactory.Create(fixture.ConnectionString);
             await db.Database.ExecuteSqlRawAsync($"""
-                UPDATE LearnerPathSteps SET Status = 'done', CompletedAt = SYSDATETIMEOFFSET(),
-                    WrittenByService = 'PathStepCompletion', ProjectionVersion = 1
+                UPDATE LearnerPathSteps SET Status = 'done', CompletedAt = SYSDATETIMEOFFSET()
                 WHERE LearnerPathId = {fixture.PathId};
                 """);
 

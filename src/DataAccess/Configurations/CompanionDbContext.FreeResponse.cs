@@ -104,7 +104,6 @@ public partial class CompanionDbContext
             entity.ToTable(tb =>
                 {
                     tb.HasTrigger("trg_GradingCriteria_MaxScoreNotBelowStored");
-                    tb.HasTrigger("trg_GradingCriteria_FrozenWhenLocked");
                     // #201 / ADM-03: a rubric is not writable by support triage.
                     tb.HasTrigger("trg_GradingCriteria_TriageCannotWrite");
                 });
@@ -143,72 +142,11 @@ public partial class CompanionDbContext
 
         // #192: a descriptor is frozen while its rubric is locked, so the table is triggered and
         // needs HasTrigger or every save against it fails on the OUTPUT clause.
-        modelBuilder.Entity<GradingCriterionDescriptor>(entity =>
-        {
-            entity.HasKey(e => new { e.CriterionId, e.Band });
-
-            entity.ToTable(tb =>
-            {
-                tb.HasTrigger("trg_GradingCriterionDescriptors_FrozenWhenLocked");
-                // #201 / ADM-03: a rubric descriptor is not writable by support triage.
-                tb.HasTrigger("trg_GradingCriterionDescriptors_TriageCannotWrite");
-            });
-
-            entity.Property(e => e.CriterionId).ValueGeneratedNever();
-
-            // TINYINT in the schema; kept as byte so a band value outside 0..6 is a range error and
-            // not a silent narrowing.
-            entity.Property(e => e.Band).HasColumnType("tinyint");
-
-            entity.HasOne(d => d.Criterion).WithMany(p => p.Descriptors)
-                .HasForeignKey(d => d.CriterionId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_GCD_Criterion");
-        });
 
         // #193: an anchor is frozen while its rubric is locked, so the table is triggered and needs
         // HasTrigger: without it every anchor save fails on the OUTPUT clause.
-        modelBuilder.Entity<GradingCriterionAnchor>(entity =>
-        {
-            entity.HasKey(e => new { e.CriterionId, e.Band });
-
-            entity.ToTable(tb => tb.HasTrigger("trg_GradingCriterionAnchors_FrozenWhenLocked"));
-
-            entity.Property(e => e.CriterionId).ValueGeneratedNever();
-
-            // TINYINT in the schema, so a band outside 2..4 is a range error and not a silent narrowing.
-            entity.Property(e => e.Band).HasColumnType("tinyint");
-
-            entity.HasOne(d => d.Criterion).WithMany(p => p.Anchors)
-                .HasForeignKey(d => d.CriterionId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_GCA_Criterion");
-        });
 
         // #192: the lock is itself guarded by a trigger on delete, and by the completeness trigger
         // on insert.
-        modelBuilder.Entity<GradingRubricLock>(entity =>
-        {
-            entity.HasKey(e => e.SkillId);
-
-            entity.ToTable(tb =>
-                {
-                    tb.HasTrigger("trg_GradingRubricLocks_CompleteCanonicalRubric");
-                    tb.HasTrigger("trg_GradingRubricLocks_IrreversibleOnceGraded");
-                });
-
-            entity.Property(e => e.SkillId).ValueGeneratedNever();
-            entity.Property(e => e.LockedAt).HasDefaultValueSql("(sysdatetimeoffset())");
-            // #208: the ladder verdict. NULL is "not run", which the lock trigger refuses, so the
-            // column needs no default and no non-null constraint to be safe.
-            entity.Property(e => e.LadderOutcome).HasMaxLength(20);
-            entity.Property(e => e.LadderReason).HasMaxLength(400);
-
-            entity.HasOne(d => d.Skill).WithOne(p => p.RubricLock)
-                .HasPrincipalKey<Skill>(p => new { p.SkillId, p.CertId })
-                .HasForeignKey<GradingRubricLock>(d => new { d.SkillId, d.CertId })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_GradingRubricLocks_SkillCert");
-        });
     }
 }

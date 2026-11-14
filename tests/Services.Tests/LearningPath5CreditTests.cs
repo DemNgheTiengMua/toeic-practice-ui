@@ -223,31 +223,15 @@ public sealed class LearningPath5CreditTests(DatabaseFixture database)
             CertId = certId,
             AttemptId = attempt.AttemptId,
             Scope = "all_skills",
-            Status = "in_progress",
+            Status = "done",
             ResultBandCode = currentBand,
+            ReadingPct = 45m,
+            ListeningPct = 45m,
+            SpeakingPct = 45m,
+            WritingPct = 45m,
             TakenAt = DateTimeOffset.UtcNow.AddMinutes(-10)
         };
         db.PlacementTests.Add(pt);
-        await db.SaveChangesAsync();
-
-        var measuredAt = DateTimeOffset.UtcNow.AddMinutes(-10);
-        db.PlacementSkillResults.Add(new PlacementSkillResult
-        {
-            PlacementId = pt.PlacementId,
-            CertId = certId,
-            SkillId = skillId,
-            ResultStatus = PlacementResultStatus.Measured,
-            CefrLevel = CefrLevel.A2,
-            PositionInBand = 50,
-            ContinuousCoordinate = 1.5m,
-            MeasuredAt = measuredAt,
-            ExpiresAt = measuredAt.AddDays(90),
-            WrittenByService = "AttemptEngine",
-            ProjectionVersion = 1
-        });
-        await db.SaveChangesAsync();
-
-        pt.Status = "done";
         await db.SaveChangesAsync();
         db.TargetBands.Add(new TargetBand
         {

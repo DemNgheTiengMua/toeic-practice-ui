@@ -29,8 +29,6 @@ DECLARE @writSec INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND 
 INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, LastWrittenBy)
 VALUES (@cert, N'FR paper', 'draft', 30, 'mock', @user);
 DECLARE @exam INT = SCOPE_IDENTITY();
-INSERT INTO ExamPublishAudits (ExamId, PassedAt, WrittenByService)
-VALUES (@exam, DATEADD(SECOND, 1, SYSDATETIMEOFFSET()), 'AdminExamService');
 UPDATE Exams SET Status = 'published', LastWrittenBy = @user WHERE ExamId = @exam;
 
 INSERT INTO Topics (Modality, Code, Name) VALUES ('writing', 'W-CORR', N'Transactional correspondence');

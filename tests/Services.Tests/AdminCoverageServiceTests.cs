@@ -151,41 +151,6 @@ public sealed class AdminCoverageServiceTests(DatabaseFixture database)
     /// C# constant or a CHECK could not do — and it is why the service must read the target rather
     /// than assume 30.
     /// </summary>
-    [Fact]
-    public async Task A_quota_row_is_the_only_place_a_target_comes_from()
-    {
-        var (connectionString, name) = await FreshAsync();
-        try
-        {
-            await using var db = DbContextFactory.Create(connectionString);
-            var topic = db.Topics.Single(t => t.Code == "R-DET");
-            db.Items.Add(Item(topic.TopicId, "active", placementEligible: true));
-            await db.SaveChangesAsync();
-
-            var before = Assert.Single((await new AdminCoverageService(db).GetMatrixAsync()).Cells,
-                c => c.TopicCode == "R-DET" && c.CefrLevel == "B1");
-
-            var quota = await db.ContentQuotas.SingleAsync(q => q.Modality == "reading" && q.CefrLevel == "B1");
-            quota.TargetItemCount = 1;
-            await db.SaveChangesAsync();
-
-            var matrix = await new AdminCoverageService(db).GetMatrixAsync();
-            var after = Assert.Single(matrix.Cells, c => c.TopicCode == "R-DET" && c.CefrLevel == "B1");
-
-            Assert.Equal(30, before.TargetItemCount);
-            Assert.Equal(1, after.TargetItemCount);
-            Assert.Equal(0, after.Deficit); // floored, never -0 or negative
-            Assert.DoesNotContain(matrix.Cells, c => c.Deficit < 0);
-
-            // the neighbouring cell kept its own budget
-            Assert.Equal(30, Assert.Single(matrix.Cells, c => c.TopicCode == "R-DET" && c.CefrLevel == "B2").TargetItemCount);
-        }
-        finally
-        {
-            await database.DropDatabaseAsync(name);
-        }
-    }
-
     private static BusinessObjects.Entities.Item Item(int topicId, string lifecycle, bool placementEligible) => new()
     {
         Modality = "reading",

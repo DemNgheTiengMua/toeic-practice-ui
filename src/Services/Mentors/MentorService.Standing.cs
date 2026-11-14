@@ -60,7 +60,7 @@ public sealed partial class MentorService
             return null;
         }
 
-        var stored = await _skillStates.ReadAsync(userId, certId, cancellationToken);
+        var stored = await LearnerStandingReader.ReadAsync(db, userId, certId, clock, cancellationToken);
         if (stored is null)
         {
             return null;

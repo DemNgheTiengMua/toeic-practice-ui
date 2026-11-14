@@ -80,12 +80,7 @@ public sealed class PlacementScopeAndRetakeTests : IAsyncLifetime
         lines.Add("""
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cert, 'A2', N'Elementary', 0, 200, 1), (@cert, 'B1', N'Intermediate', 201, 500, 2);
-            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
-              VALUES (@cert, 1, 0, N'fixture', '2026-01-01');
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
-              SELECT @cert, 1, SkillId, 'A2', 'cut', 0, 200 FROM Skills WHERE CertId = @cert;
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
-              SELECT @cert, 1, SkillId, 'B1', 'cut', 201, 500 FROM Skills WHERE CertId = @cert;
+
             INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore)
               SELECT @cert, SkillId, NULL, 0, 0 FROM Skills WHERE CertId = @cert;
             INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore)
@@ -181,7 +176,7 @@ public sealed class PlacementScopeAndRetakeTests : IAsyncLifetime
         var engine = new AttemptEngine(db);
 
         var attempt = await engine.CreateAttemptAsync(
-            userId, f.CertId, f.ExamId, 30, drawnPaper: null, PlacementScope.ListeningAndReading);
+            userId, f.CertId, f.ExamId, 30, PlacementScope.ListeningAndReading);
 
         Assert.Equal(PlacementScope.ListeningAndReading.ToCode(), attempt.PlacementScope);
 
@@ -199,28 +194,15 @@ public sealed class PlacementScopeAndRetakeTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ListeningAndReading_result_writer_omits_speaking_and_writing_and_preserves_prior_skill_states()
+    public async Task ListeningAndReading_result_writer_omits_speaking_and_writing()
     {
         var f = await SeedFourSkillCertAsync(Unique("LRW"));
         var userId = await SeedLearnerAsync(f.CertCode);
-        var priorMeasuredAt = new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero);
-
-        await using (var setup = Db())
-        {
-            var stateWriter = new SkillStateWriter(setup, new FixedClock(priorMeasuredAt));
-            await stateWriter.RecordAsync(
-                userId, f.CertId, f.SkillIds["SPEAK"], CefrLevel.B1, 50, 3.5m,
-                "placement");
-            await stateWriter.RecordAsync(
-                userId, f.CertId, f.SkillIds["WRIT"], CefrLevel.B1, 40, 3.4m,
-                "placement");
-            await setup.SaveChangesAsync();
-        }
 
         await using var db = Db();
         var engine = new AttemptEngine(db);
         var attempt = await engine.CreateAttemptAsync(
-            userId, f.CertId, f.ExamId, 30, drawnPaper: null, PlacementScope.ListeningAndReading);
+            userId, f.CertId, f.ExamId, 30, PlacementScope.ListeningAndReading);
 
         var placement = new PlacementTest
         {
@@ -247,27 +229,13 @@ public sealed class PlacementScopeAndRetakeTests : IAsyncLifetime
         var finished = await engine.TransitionToNextSkillAsync(attempt.AttemptId, userId);
         Assert.Equal(AttemptStatus.Graded, finished.Status);
 
-        var skillResults = await db.PlacementSkillResults
-            .AsNoTracking()
-            .Where(r => r.PlacementId == placement.PlacementId)
-            .Select(r => r.SkillId)
-            .ToListAsync();
+        var updated = await db.PlacementTests.AsNoTracking()
+            .SingleAsync(p => p.PlacementId == placement.PlacementId);
 
-        Assert.Equal(2, skillResults.Count);
-        Assert.Contains(f.SkillIds["LIST"], skillResults);
-        Assert.Contains(f.SkillIds["READ"], skillResults);
-        Assert.DoesNotContain(f.SkillIds["SPEAK"], skillResults);
-        Assert.DoesNotContain(f.SkillIds["WRIT"], skillResults);
-
-        var speakState = await db.LearnerSkillStates.AsNoTracking()
-            .SingleAsync(s => s.UserId == userId && s.CertId == f.CertId && s.SkillId == f.SkillIds["SPEAK"]);
-        var writState = await db.LearnerSkillStates.AsNoTracking()
-            .SingleAsync(s => s.UserId == userId && s.CertId == f.CertId && s.SkillId == f.SkillIds["WRIT"]);
-
-        Assert.Equal(CefrLevel.B1, speakState.CefrLevel);
-        Assert.Equal(priorMeasuredAt, speakState.MeasuredAt);
-        Assert.Equal(CefrLevel.B1, writState.CefrLevel);
-        Assert.Equal(priorMeasuredAt, writState.MeasuredAt);
+        Assert.NotNull(updated.ListeningPct);
+        Assert.NotNull(updated.ReadingPct);
+        Assert.Null(updated.SpeakingPct);
+        Assert.Null(updated.WritingPct);
     }
 
     private static PlacementService Service(
@@ -305,12 +273,7 @@ public sealed class PlacementScopeAndRetakeTests : IAsyncLifetime
                       @cert, 'writing', 'S1', N'Writing', 2, 1, 0);
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cert, 'A2', N'Elementary', 0, 200, 1), (@cert, 'B1', N'Intermediate', 201, 500, 2);
-            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
-              VALUES (@cert, 1, 0, N'fixture', '2026-01-01');
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
-              SELECT @cert, 1, SkillId, 'A2', 'cut', 0, 200 FROM Skills WHERE CertId = @cert;
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
-              SELECT @cert, 1, SkillId, 'B1', 'cut', 201, 500 FROM Skills WHERE CertId = @cert;
+
             INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore)
               SELECT @cert, SkillId, NULL, 0, 0 FROM Skills WHERE CertId = @cert;
             INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore)
@@ -697,7 +660,7 @@ public sealed class PlacementScopeAndRetakeTests : IAsyncLifetime
 
         await using (var db = Db())
         {
-            await new PlacementResultWriter(db).WriteAsync(failPlacementId);
+            await new AttemptEngine(db).UpdatePlacementTestOutcomeAsync(failPlacementId);
             var svc = Service(db, clock);
             var waivedRetake = await svc.StartPlacementTestAsync(
                 userFail, wf.ExamId, PlacementReuseChoice.Remeasure, PlacementScope.AllSkills);

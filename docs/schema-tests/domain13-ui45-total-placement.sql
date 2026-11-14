@@ -12,8 +12,7 @@ INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal) VALUES (@c,'A2',N'A2
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'Writing 1','published',60,'writing_practice'); DECLARE @wx INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt) VALUES (@u,@wx,@c,DATEADD(HOUR,1,SYSDATETIMEOFFSET())); DECLARE @a INT=SCOPE_IDENTITY();
 BEGIN TRY
-  UPDATE ExamAttempts SET Status='graded', SubmittedAt=SYSDATETIMEOFFSET(), TotalScore=180,
-    WrittenByService='AttemptEngine', ProjectionVersion=1 WHERE AttemptId=@a;
+  UPDATE ExamAttempts SET Status='graded', SubmittedAt=SYSDATETIMEOFFSET(), TotalScore=180 WHERE AttemptId=@a;
   THROW 50000,'EXPECT_REJECT FAILED: total score on writing practice accepted',1;
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   -- #191: the refusal must be the total-score ban, not the single-writer guard firing first
@@ -32,35 +31,22 @@ END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose,QuestionCount) VALUES (@c,N'Placement standard','published',30,'placement',40); DECLARE @ps INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt) VALUES (@u,@ps,@c,'submitted',DATEADD(HOUR,-1,SYSDATETIMEOFFSET())); DECLARE @pa INT=SCOPE_IDENTITY();
 INSERT INTO AttemptSkillScores (AttemptId,SkillId,CertId,RawScore,ScaledScore) VALUES (@pa,@ls,@c,13,215), (@pa,@rd,@c,10,170);
-UPDATE ExamAttempts SET TotalScore=385, WrittenByService='AttemptEngine', ProjectionVersion=1 WHERE AttemptId=@pa;
-INSERT INTO PlacementTests (UserId,CertId,ExamId,AttemptId,ResultBandCode,TotalScore,WrittenByService,ProjectionVersion)
-  VALUES (@u,@c,@ps,@pa,'A2',385,'AttemptEngine',1);
+UPDATE ExamAttempts SET TotalScore=385 WHERE AttemptId=@pa;
+INSERT INTO PlacementTests (UserId,CertId,ExamId,AttemptId,ResultBandCode,TotalScore)
+  VALUES (@u,@c,@ps,@pa,'A2',385);
 PRINT 'accepted placement snapshot';
 BEGIN TRY
   -- a second attempt, so the refusal under test is the snapshot guard and not UX_PlacementTests_Attempt
-  INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt,TotalScore,WrittenByService,ProjectionVersion)
-    VALUES (@u,@ps,@c,'submitted',DATEADD(HOUR,-1,SYSDATETIMEOFFSET()),200,'AttemptEngine',1);
+  INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt,TotalScore)
+    VALUES (@u,@ps,@c,'submitted',DATEADD(HOUR,-1,SYSDATETIMEOFFSET()),200);
   DECLARE @pa2 INT=SCOPE_IDENTITY();
-  INSERT INTO PlacementTests (UserId,CertId,ExamId,AttemptId,TotalScore,WrittenByService,ProjectionVersion)
-    VALUES (@u,@c,@ps,@pa2,999,'AttemptEngine',1);
+  INSERT INTO PlacementTests (UserId,CertId,ExamId,AttemptId,TotalScore)
+    VALUES (@u,@c,@ps,@pa2,999);
   THROW 50000,'EXPECT_REJECT FAILED: placement total disagrees with attempt accepted',1;
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   -- #191: the refusal must be the snapshot-agrees-with-attempt guard, not the writer guard
   IF ERROR_MESSAGE() NOT LIKE '%snapshot of the attempt%' THROW;
   PRINT 'rejected placement total that disagrees with the attempt'; END CATCH
-BEGIN TRY
-  -- likewise a third attempt, so the refusal is the completion guard
-  INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt)
-    VALUES (@u,@ps,@c,'submitted',DATEADD(HOUR,-1,SYSDATETIMEOFFSET())); DECLARE @pa3 INT=SCOPE_IDENTITY();
-  INSERT INTO PlacementTests (UserId,CertId,ExamId,AttemptId,Status,WrittenByService,ProjectionVersion)
-    VALUES (@u,@c,@ps,@pa3,'done','AttemptEngine',1);
-  THROW 50000,'EXPECT_REJECT FAILED: done placement without a result accepted',1;
-END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  -- #212 replaced CK_Placement_DoneHasResult ("done needs a band and a total") with the rule that a
-  -- done placement needs one measured skill or a recorded completion failure. Both refuse this row;
-  -- the message names which one, so a future narrowing cannot silently pass.
-  IF ERROR_MESSAGE() NOT LIKE '%without at least one measured skill%' THROW;
-  PRINT 'rejected done placement without a measured skill'; END CATCH
 
 -- UI-44, carried across #232: a mock_section step may open a mock exam and nothing else. Before
 -- #232 this rule lived on PathModuleItems' ai_task rows, which D10 drops; the surviving shape is the

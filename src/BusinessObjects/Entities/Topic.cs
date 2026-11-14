@@ -43,15 +43,11 @@ public partial class Topic
     public virtual ICollection<LearnerPathStep> LearnerPathSteps { get; set; } = new List<LearnerPathStep>();
 
     /// <summary>#206: the audit strata drawn from this topic's cells.</summary>
-    [InverseProperty("Topic")]
-    public virtual ICollection<ReviewStratum> ReviewStrata { get; set; } = new List<ReviewStratum>();
 
     /// <summary>#240: the leveled lessons teaching this cell's topic.</summary>
     [InverseProperty("Topic")]
     public virtual ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
 
     /// <summary>#237: the learner mastery rows at this topic's cells.</summary>
-    [InverseProperty("Topic")]
-    public virtual ICollection<UserCellMastery> UserCellMasteries { get; set; } = new List<UserCellMastery>();
 }
 

@@ -16,18 +16,11 @@ namespace Services;
 public sealed partial class LearnerService(
     CompanionDbContext db,
     ICreditLedger? creditLedger = null,
-    ISkillStateWriter? skillStates = null,
     TimeProvider? clock = null) : ILearnerService
 {
     private const int RecentCount = 5;
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
     private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db, clock ?? TimeProvider.System);
-
-    // #241 / #211: the ONE reader of a learner's per-skill state. Defaulted rather than required,
-    // following this file's own `creditLedger ?? new CreditLedger(db)` convention: every existing
-    // caller passes a context and nothing else, and the container's registration is what a host that
-    // wants its own clock substitutes.
-    private readonly ISkillStateWriter _skillStates = skillStates ?? new SkillStateWriter(db, clock ?? TimeProvider.System);
 
     public async Task<LearnerContext> GetContextAsync(int userId, CancellationToken cancellationToken = default)
     {
@@ -110,7 +103,7 @@ public sealed partial class LearnerService(
         // #241 / #211: the per-skill vector is read ONCE, from its one reader, and every block that
         // prints a level reads this. A second read is how the hero and the skill rows come to
         // disagree about one learner's band in the same page load.
-        var standing = await _skillStates.ReadAsync(userId, certId, cancellationToken);
+        var standing = await LearnerStandingReader.ReadAsync(db, userId, certId, _clock, cancellationToken);
 
         // #159: each number the three blocks print is measured once here. The blocks never derive a
         // second opinion - a hero that guesses its own "next" is how the page grew two of them.

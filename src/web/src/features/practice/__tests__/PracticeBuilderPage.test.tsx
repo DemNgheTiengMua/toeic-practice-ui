@@ -238,8 +238,6 @@ describe('PracticeBuilderPage', () => {
 
     expect(screen.getAllByText(/0 credits/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Incomplete Sentences')).toBeTruthy();
-    expect(screen.getByText('Verb Tenses')).toBeTruthy();
-    expect(screen.getByText('Prioritised')).toBeTruthy();
     expect(screen.getByText('Read a Text Aloud')).toBeTruthy();
 
     // Speaking sections must navigate to /speaking, never call startSession
@@ -254,16 +252,13 @@ describe('PracticeBuilderPage', () => {
     });
   });
 
-  it('keeps section drills available even when matrix and free-drill endpoints fail', async () => {
+  it('keeps section drills available even when free-drill endpoint fails', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
         if (url.endsWith('/api/learner/practice/catalog')) {
           return new Response(JSON.stringify(makeCatalog()), { status: 200 });
-        }
-        if (url.endsWith('/api/learner/practice/matrix')) {
-          return new Response(JSON.stringify({ title: 'Matrix unavailable' }), { status: 500 });
         }
         if (url.includes('/api/learner/practice/free-drill')) {
           return new Response(JSON.stringify({ title: 'Free drill state unavailable' }), { status: 500 });
@@ -277,7 +272,6 @@ describe('PracticeBuilderPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Photographs')).toBeTruthy();
     });
-    expect(screen.getByText(/topic matrix is currently unavailable/i)).toBeTruthy();
   });
 
   it('supports ?stepId= learning path launch without charging credits', async () => {

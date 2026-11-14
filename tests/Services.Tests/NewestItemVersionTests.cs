@@ -204,19 +204,10 @@ public sealed class NewestItemVersionTests(DatabaseFixture database)
         }
     }
 
-    /// <summary>The four readers, each through its own public seam, all naming version 2.</summary>
+    /// <summary>The live readers, each through its own public seam, all naming version 2.</summary>
     private static async Task AssertEveryReaderNamesVersionTwoAsync(string connectionString, Fixture fixture)
     {
         await using var db = DbContextFactory.Create(connectionString);
-
-        // ---- gate one: judged on version 2's rationales, not version 1's ---------------------
-        var gateOne = await PoolGateOne.ReviewAsync(db, fixture.ItemAId);
-        var rationaleRefusal = Assert.Single(gateOne.Refusals, r => r.Rule == GateOneRules.OptionRationale);
-        Assert.Contains("option(s) B carry", rationaleRefusal.Message, StringComparison.Ordinal);
-
-        // ---- gate four: version 2's evidence span, which does not overlap the sibling ---------
-        var gateFour = await PoolGateFour.ReviewBundleAsync(db, fixture.StimulusId);
-        Assert.DoesNotContain(gateFour, r => r.Rule == GateFourRules.SpanOverlap);
 
         // ---- the drill selector -------------------------------------------------------------
         var drilled = await DrillAnswersAsync(connectionString, fixture.DrillerUserId, fixture.TopicId);

@@ -128,10 +128,10 @@ PRINT 'accepted ai_grading charge on writing practice';
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal) VALUES (@c,'A1',N'A1',120,224);
 -- E1.3 (#148): the band ban is gone, so a writing-practice attempt accepts one; UI-45 still forbids
 -- the certificate total. The app keeps this column NULL and the estimate on AiGradings.BandCode.
-UPDATE ExamAttempts SET BandCode='A1', WrittenByService='AttemptEngine', ProjectionVersion=1 WHERE AttemptId=@a;
+UPDATE ExamAttempts SET BandCode='A1' WHERE AttemptId=@a;
 PRINT 'accepted a band on writing practice: the ban was dropped in #148';
 BEGIN TRY
-  UPDATE ExamAttempts SET TotalScore=180, WrittenByService='AttemptEngine', ProjectionVersion=2 WHERE AttemptId=@a;
+  UPDATE ExamAttempts SET TotalScore=180 WHERE AttemptId=@a;
   THROW 50000,'EXPECT_REJECT FAILED: total score on writing practice accepted',1;
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   -- #191: refuse must be the total-score ban, not the single-writer guard firing first

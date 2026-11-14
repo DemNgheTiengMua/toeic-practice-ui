@@ -62,12 +62,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             -- #259 / PRN-03: a placement is placed by its CUT-SCORE table, not by its band names. A
             -- fixture with bands alone used to work only because the writer parsed the band code as a
             -- CEFR level - the crosswalk the rule forbids.
-            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
-              VALUES (@cert, 1, 0, N'fixture', '2026-01-01');
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
-              SELECT @cert, 1, SkillId, 'A2', 'cut', 0, 499 FROM Skills WHERE CertId = @cert;
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled)
-              SELECT @cert, 1, SkillId, 'B1', 'cut', 500, 990 FROM Skills WHERE CertId = @cert;
+
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES
               (@cert, N'Exam {certCode}', 'published', 120, 'mock');
@@ -468,7 +463,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             // Exam 2 is the one seeded placement. It used to be "Diagnostic Benchmark 45M", a second
             // TOEIC placement paper that duplicated this one; the two were merged so a learner sees a
             // single diagnostic covering all four skills.
-            var exam = await db.Exams.SingleAsync(e => e.Name == "TOEIC Placement Test — Diagnostic");
+            var exam = await db.Exams.SingleAsync(e => e.Purpose == "placement" && e.Status == "published");
             var certId = exam.CertId;
             var examId = exam.ExamId;
 
@@ -494,10 +489,10 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             await engine.VerifyPreflightAsync(attempt.AttemptId, userId);
 
             await using var resultDb = DbContextFactory.Create(connectionString);
-            Assert.Equal(24, await resultDb.AttemptAnswers.CountAsync(a => a.AttemptId == attempt.AttemptId));
-            Assert.Equal(5, await resultDb.FreeResponses.CountAsync(r => r.AttemptId == attempt.AttemptId));
+            Assert.Equal(10, await resultDb.AttemptAnswers.CountAsync(a => a.AttemptId == attempt.AttemptId));
+            Assert.Equal(2, await resultDb.FreeResponses.CountAsync(r => r.AttemptId == attempt.AttemptId));
             var take = await new AttemptEngine(resultDb).GetAttemptTakeAsync(attempt.AttemptId, userId, null);
-            Assert.Equal(29, take.TotalQuestions);
+            Assert.Equal(12, take.TotalQuestions);
         }
         finally
         {

@@ -58,7 +58,6 @@ vi.mock('@/lib/api', async (importOriginal) => {
         saveDraft: vi.fn(),
         submit: vi.fn(),
         result: vi.fn(),
-        projection: vi.fn(),
         preflightStatus: vi.fn(),
         verifyPreflight: vi.fn(),
       },
@@ -308,19 +307,6 @@ describe('MockExamTakePage & MockExamResultPage', () => {
         isAutoSubmitted: true,
       }),
     );
-    vi.mocked(api.exams.projection).mockResolvedValue({
-      attemptId: 88,
-      certId: 1,
-      certificateScore: 780,
-      bandCode: 'blue',
-      bandName: 'Blue',
-      scoreDisplayFactor: 1,
-      skills: [],
-      hasNoStoredMeasurement: false,
-      differingSkillIds: [],
-      syncOffered: false,
-      historical: true,
-    });
 
     render(<MockExamResultPage />);
 

@@ -416,45 +416,45 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                     DECLARE @ExamF INT = (SELECT ExamId FROM Exams WHERE Name = 'Exam F (0 completed attempts)');
 
                     -- Exam D: 5 graded attempts (scores 900, 900, 900, 900, 900)
-                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore, WrittenByService, ProjectionVersion)
+                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
                     VALUES
-                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900, 'AttemptEngine', 1),
-                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900, 'AttemptEngine', 1),
-                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900, 'AttemptEngine', 1),
-                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900, 'AttemptEngine', 1),
-                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900, 'AttemptEngine', 1);
+                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900),
+                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900),
+                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900),
+                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900),
+                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900);
 
                     -- Exam B: 4 graded attempts (scores 600, 700, 600, 700) -> avg 650
-                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore, WrittenByService, ProjectionVersion)
+                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
                     VALUES
-                      (@UserId, @ExamB, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 600, 'AttemptEngine', 1),
-                      (@UserId, @ExamB, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 700, 'AttemptEngine', 1),
-                      (@UserId, @ExamB, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 600, 'AttemptEngine', 1),
-                      (@UserId, @ExamB, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 700, 'AttemptEngine', 1);
+                      (@UserId, @ExamB, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 600),
+                      (@UserId, @ExamB, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 700),
+                      (@UserId, @ExamB, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 600),
+                      (@UserId, @ExamB, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 700);
 
                     -- Exam A: 3 attempts (2 graded 750, 850; 1 submitted 800) -> avg 800
-                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore, WrittenByService, ProjectionVersion)
+                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
                     VALUES
-                      (@UserId, @ExamA, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 750, 'AttemptEngine', 1),
-                      (@UserId, @ExamA, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 850, 'AttemptEngine', 1),
-                      (@UserId, @ExamA, @CertId, 'submitted', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 800, 'AttemptEngine', 1);
+                      (@UserId, @ExamA, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 750),
+                      (@UserId, @ExamA, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 850),
+                      (@UserId, @ExamA, @CertId, 'submitted', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 800);
 
                     -- Exam C: 2 attempts (avg 700)
-                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore, WrittenByService, ProjectionVersion)
+                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
                     VALUES
-                      (@UserId, @ExamC, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 650, 'AttemptEngine', 1),
-                      (@UserId, @ExamC, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 750, 'AttemptEngine', 1);
+                      (@UserId, @ExamC, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 650),
+                      (@UserId, @ExamC, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 750);
 
                     -- Exam E: 1 attempt (avg 500)
-                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore, WrittenByService, ProjectionVersion)
+                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
                     VALUES
-                      (@UserId, @ExamE, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 500, 'AttemptEngine', 1);
+                      (@UserId, @ExamE, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 500);
 
                     -- Exam F: in_progress and abandoned (not completed -> not counted)
-                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore, WrittenByService, ProjectionVersion)
+                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
                     VALUES
-                      (@UserId, @ExamF, @CertId, 'in_progress', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL, 'AttemptEngine', 1),
-                      (@UserId, @ExamF, @CertId, 'abandoned', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL, 'AttemptEngine', 1);
+                      (@UserId, @ExamF, @CertId, 'in_progress', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL),
+                      (@UserId, @ExamF, @CertId, 'abandoned', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL);
                     """);
             }
 

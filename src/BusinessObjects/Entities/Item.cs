@@ -111,6 +111,4 @@ public partial class Item
     public virtual ICollection<ExamItem> ExamItems { get; set; } = new List<ExamItem>();
 
     /// <summary>#206: the audit samples that drew this item.</summary>
-    [InverseProperty("Item")]
-    public virtual ICollection<ReviewSampleItem> ReviewSampleItems { get; set; } = new List<ReviewSampleItem>();
 }

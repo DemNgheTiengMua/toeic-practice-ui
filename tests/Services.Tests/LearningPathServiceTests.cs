@@ -77,9 +77,21 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             };
             var keyOptionId = unanswered.ItemVersionId * 10 + keyIndex + 1;
 
-            var chosen = correct
-                ? unanswered.Options.First(o => o.OptionId == keyOptionId)
-                : unanswered.Options.First(o => o.OptionId != keyOptionId);
+            var keyOption = unanswered.Options.FirstOrDefault(o => o.OptionId == keyOptionId)
+                ?? (keyIndex >= 0 && keyIndex < unanswered.Options.Count ? unanswered.Options[keyIndex] : unanswered.Options.FirstOrDefault());
+
+            if (keyOption is null)
+            {
+                await practice.SubmitAnswerAsync(
+                    userId,
+                    sessionId,
+                    unanswered.ItemVersionId!.Value,
+                    new SubmitPracticeAnswerInput(ResponseText: "test answer"));
+                continue;
+            }
+
+            var wrongOption = unanswered.Options.FirstOrDefault(o => o.OptionId != keyOption.OptionId) ?? keyOption;
+            var chosen = correct ? keyOption : wrongOption;
 
             await practice.SubmitAnswerAsync(
                 userId,
@@ -122,10 +134,10 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
               INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
               VALUES (@measCert, N'Measurement sitting {Guid.NewGuid():N}', 'published', 60, 'mock');
               DECLARE @measExam INT = SCOPE_IDENTITY();
-              INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
+              INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode)
               VALUES (@u, @measExam, @measCert, 'graded',
                       DATEADD(DAY, -1, SYSDATETIMEOFFSET()), DATEADD(DAY, -1, SYSDATETIMEOFFSET()),
-                      DATEADD(DAY, -1, SYSDATETIMEOFFSET()), {measuredScaledScore}, '{measuredBandCode}', 'AttemptEngine', 1);
+                      DATEADD(DAY, -1, SYSDATETIMEOFFSET()), {measuredScaledScore}, '{measuredBandCode}');
               DECLARE @measAttempt INT = SCOPE_IDENTITY();
               INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore)
               VALUES (@measAttempt, @measSkill, @measCert, 18, {measuredScaledScore});
@@ -197,12 +209,6 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
               (@cert, 'B2', N'Upper intermediate', 751, 990, 4, 800);
 
             -- #232: the skill's OWN level, from the certificate's own cut-score rows.
-            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
-            VALUES (@cert, 1, 0, N'Test standard-setting', '2024-01-01');
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled) VALUES
-              (@cert, 1, @sR, 'A2', 'cut', 0, 100),
-              (@cert, 1, @sR, 'B1', 'cut', 101, 500),
-              (@cert, 1, @sR, 'B2', 'cut', 501, 990);
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
             VALUES (@cert, N'Mock Exam 1', 'published', 120, 'mock');
@@ -1013,10 +1019,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
             VALUES (@i, 1, N'Stem', N'A', N'B', N'C', N'D', 'A');
 
-            INSERT INTO LearnerSkillStates (UserId, CertId, SkillId, CefrLevel, PositionInBand, ContinuousCoordinate,
-                                            Source, MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
-            VALUES ({userId}, {certId}, {skillId}, 'C1', 40, 5.40, 'mock_section',
-                    SYSDATETIMEOFFSET(), DATEADD(DAY, 90, SYSDATETIMEOFFSET()), 'SkillStateWriter', 1);
+            UPDATE PlacementTests SET ReadingPct = 90, ListeningPct = 90, SpeakingPct = 90, WritingPct = 90 WHERE UserId = {userId} AND CertId = {certId} AND Status = 'done';
             """);
 
         var (service, _, _, db) = CreateServices();

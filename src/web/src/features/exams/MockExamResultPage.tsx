@@ -12,7 +12,6 @@ import {
   api,
   type AttemptResultDto,
   type AttemptSkillScoreDto,
-  type MockResultProjectionDto,
 } from '@/lib/api';
 
 function formatDurationSeconds(seconds: number): string {
@@ -43,9 +42,6 @@ export function MockExamResultPage() {
   const id = Number(attemptId);
 
   const [result, setResult] = useState<AttemptResultDto | null>(null);
-  const [projection, setProjection] = useState<MockResultProjectionDto | null>(null);
-  const [isSyncingProjection, setIsSyncingProjection] = useState(false);
-  const [syncDone, setSyncDone] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,14 +60,6 @@ export function MockExamResultPage() {
       const data = await api.exams.result(id);
       setResult(data);
       setError(null);
-
-      // Try fetching projection if finished
-      try {
-        const proj = await api.exams.projection(id);
-        setProjection(proj);
-      } catch {
-        // Projection is optional or might not be ready
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load attempt results.');
     } finally {
@@ -348,64 +336,6 @@ export function MockExamResultPage() {
           })}
         </div>
       </div>
-
-      {/* Projection Card (ADR-0012 / #222) */}
-      {projection && !projection.historical && (
-        <Card className="bg-surface border-border">
-          <Card.Header className="pb-2">
-            <Card.Title className="text-base font-semibold flex items-center gap-2">
-              <Award className="size-4 text-accent" />
-              Projected level from this paper
-            </Card.Title>
-          </Card.Header>
-          <Card.Content className="space-y-3">
-            {projection.cannotJudgeReason ? (
-              <p className="text-sm text-muted">{projection.cannotJudgeReason}</p>
-            ) : (
-              <>
-                {projection.weakestProjectedLevelCode && (
-                  <div className="p-3 rounded-lg bg-surface-secondary text-sm flex items-center justify-between">
-                    <span className="text-muted">Weakest projected skill level:</span>
-                    <strong className="text-foreground font-mono-tabular">
-                      {projection.weakestProjectedLevelCode}
-                    </strong>
-                  </div>
-                )}
-                {projection.syncOffered && !syncDone && (
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
-                    <p className="text-xs text-muted">
-                      {projection.hasNoStoredMeasurement
-                        ? 'You have no stored skill standing for this certificate yet.'
-                        : `Your current stored overall standing is ${projection.storedOverallLevelCode ?? '--'}.`}
-                    </p>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      isDisabled={isSyncingProjection}
-                      onClick={async () => {
-                        setIsSyncingProjection(true);
-                        try {
-                          await api.exams.syncProjection(id);
-                          setSyncDone(true);
-                        } finally {
-                          setIsSyncingProjection(false);
-                        }
-                      }}
-                    >
-                      {isSyncingProjection ? 'Syncing...' : 'Sync standing to profile'}
-                    </Button>
-                  </div>
-                )}
-                {syncDone && (
-                  <p className="text-xs text-success font-medium">
-                    Skill standing updated from this paper.
-                  </p>
-                )}
-              </>
-            )}
-          </Card.Content>
-        </Card>
-      )}
 
       {/* Bottom Actions */}
       <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">

@@ -274,11 +274,6 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
             BatchId = clearanceBatch.BatchId, ItemId = position.ItemId,
             Level = "info", Message = "accepted by the tier4 scenario",
         });
-        db.ReviewSampleDecisions.Add(new ReviewSampleDecision
-        {
-            BatchId = clearanceBatch.BatchId, ItemId = position.ItemId,
-            ActorUserId = reviewer.UserId, Decision = "clear", DecidedAt = DateTimeOffset.UtcNow,
-        });
         await db.SaveChangesAsync();
 
         // 4. Audit exam readiness
@@ -345,11 +340,6 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
 
             -- #232: the plan is synthesised from the skill's own level, so the fixture supplies the
             -- coordinate's inputs - a cut-score row and drillable stock - rather than a template.
-            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
-            VALUES (@cert, 1, 0, N'Tier4 standard-setting', '2024-01-01');
-            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled) VALUES
-              (@cert, 1, @sR, 'A2', 'cut', 0, 50),
-              (@cert, 1, @sR, 'B1', 'cut', 51, 100);
 
             -- Stock is at B1 because the placement below reports B1, and it is stocked in R-COH rather
             -- than R-DET because `PoolIngestionTests` counts that cell exactly and the pool is shared by

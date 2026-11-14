@@ -17,7 +17,7 @@ public sealed partial class AttemptEngine
         int examId,
         int durationMinutes,
         CancellationToken cancellationToken = default) =>
-        await CreateAttemptAsync(userId, certId, examId, durationMinutes, drawnPaper: null, cancellationToken);
+        await CreateAttemptAsync(userId, certId, examId, durationMinutes, placementScope: null, cancellationToken);
 
     /// <summary>
     /// #274: the same creation, with the paper this sitting is served supplied by the caller.
@@ -33,22 +33,11 @@ public sealed partial class AttemptEngine
     /// two branches differ in what is written, not in how the attempt behaves afterwards.
     /// </para>
     /// </summary>
-    public Task<ExamAttempt> CreateAttemptAsync(
-        int userId,
-        int certId,
-        int examId,
-        int durationMinutes,
-        AttemptPaperDraw? drawnPaper,
-        CancellationToken cancellationToken = default) =>
-        CreateAttemptAsync(
-            userId, certId, examId, durationMinutes, drawnPaper, placementScope: null, cancellationToken);
-
     public async Task<ExamAttempt> CreateAttemptAsync(
         int userId,
         int certId,
         int examId,
         int durationMinutes,
-        AttemptPaperDraw? drawnPaper,
         PlacementScope? placementScope,
         CancellationToken cancellationToken = default)
     {
@@ -84,13 +73,7 @@ public sealed partial class AttemptEngine
             // and the sitting projection cannot disagree about what the paper is - before this, creation
             // read Questions directly, so a pool-only paper was refused here with "that position holds
             // no question". PoolOnlyPaperTests pins that.
-            var servedPositionIds = drawnPaper?.Positions
-                .OrderBy(p => p.PositionNumber)
-                .Select(p => p.ExamItemId)
-                .ToList();
-            var questions = servedPositionIds is { Count: > 0 }
-                ? await ProjectPaperAsync(examId, servedPositionIds, placementScope, cancellationToken)
-                : await LoadSittingQuestionsAsync(examId, attemptId: null, placementScope, cancellationToken);
+            var questions = await LoadSittingQuestionsAsync(examId, attemptId: null, placementScope, cancellationToken);
 
             var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(
                 examId, questions, placementScope, cancellationToken);
@@ -157,20 +140,6 @@ public sealed partial class AttemptEngine
 
             db.ExamAttempts.Add(attempt);
             await db.SaveChangesAsync(cancellationToken);
-
-            // #274: record the paper this sitting is served, in the same transaction as the attempt and
-            // its seeded answers - so a half-written paper is not a state anyone can observe. The
-            // bundles say why (the stage plan and routed pair); the responses say what (the positions,
-            // in sitting order). Written through the one seam that then reads them back.
-            //
-            // Only when the projection produced positions: a draw whose every position failed to project
-            // would otherwise claim a served paper while the sitting read the shared roster - two
-            // answers to "what paper is this", which is the defect this ticket is about.
-            if (drawnPaper is not null && questions.Count > 0)
-            {
-                RecordServedPaper(attempt, drawnPaper, questions);
-                await db.SaveChangesAsync(cancellationToken);
-            }
 
             if (questions.Count > 0)
             {

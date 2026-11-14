@@ -15,44 +15,16 @@ public sealed partial class LearnerServiceTests
               INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
               VALUES (@cert, N'Placement {certCode}', 'published', 30, 'placement');
             DECLARE @exam INT = (SELECT TOP 1 ExamId FROM Exams WHERE CertId = @cert AND Purpose = 'placement');
-            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode)
             VALUES ({userId}, @exam, @cert, 'graded',
                     DATEADD(MINUTE, -30, CAST('{takenAt}' AS DATETIMEOFFSET)),
                     DATEADD(MINUTE, 30, CAST('{takenAt}' AS DATETIMEOFFSET)),
-                    '{takenAt}', {total}, '{band}', 'AttemptEngine', 1);
+                    '{takenAt}', {total}, '{band}');
             DECLARE @attempt INT = SCOPE_IDENTITY();
-            -- #212: a done placement needs a measured skill or a recorded completion failure, and the
-            -- per-skill row is what the result screen reads. Rows first, then the move to done.
-            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, AttemptId, TakenAt)
-            VALUES ({userId}, @cert, @exam, 'in_progress', @attempt, '{takenAt}');
-            DECLARE @plc INT = SCOPE_IDENTITY();
-            DECLARE @skill INT = (SELECT TOP 1 SkillId FROM Skills WHERE CertId = @cert);
-            INSERT INTO PlacementSkillResults
-              (PlacementId, SkillId, CertId, ResultStatus, CefrLevel, PositionInBand, ContinuousCoordinate,
-               MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
-            VALUES (@plc, @skill, @cert, 'measured', 'B1', 50, 3.50,
-                    '{takenAt}', DATEADD(DAY, 90, CAST('{takenAt}' AS DATETIMEOFFSET)), 'AttemptEngine', 1);
-            UPDATE PlacementTests
-              SET Status = 'done', ResultBandCode = '{band}', TotalScore = {total},
-                  WrittenByService = 'AttemptEngine', ProjectionVersion = 1
-            WHERE PlacementId = @plc;
-
-            -- #241 / #211: a completed placement ALSO writes the learner's per-skill state, which is
-            -- the record every screen reads a level from (PlacementResultWriter calls
-            -- SkillStateWriter.RecordAsync per measured skill). Writing only PlacementSkillResults
-            -- left the fixture in a state the real writer never produces, and the cascade then read
-            -- it as nothing-measured. One row per examined skill, so a clean sitting measures the
-            -- whole vector. ExpiresAt is MeasuredAt + 90 days exactly, per CK_LSS_Expiry.
-            INSERT INTO LearnerSkillStates
-              (UserId, CertId, SkillId, CefrLevel, PositionInBand, ContinuousCoordinate,
-               Source, MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
-            SELECT {userId}, @cert, s.SkillId, 'B1', 50, 3.50,
-                   'placement', '{takenAt}', DATEADD(DAY, 90, CAST('{takenAt}' AS DATETIMEOFFSET)),
-                   'SkillStateWriter', 1
-            FROM Skills s
-            WHERE s.CertId = @cert
-              AND NOT EXISTS (SELECT 1 FROM LearnerSkillStates l
-                              WHERE l.UserId = {userId} AND l.CertId = @cert AND l.SkillId = s.SkillId);
+            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, AttemptId, TakenAt, ResultBandCode, TotalScore,
+                                        ListeningPct, ReadingPct, SpeakingPct, WritingPct)
+            VALUES ({userId}, @cert, @exam, 'done', @attempt, '{takenAt}', '{band}', {total},
+                    60, 60, 60, 60);
             """);
 
     /// <summary>A published placement paper, so "how long it takes" has a stored duration to state
@@ -124,43 +96,46 @@ public sealed partial class LearnerServiceTests
 
             """ + string.Concat(weekSteps.Select((s, i) => $"""
             INSERT INTO LearnerPathSteps (LearnerPathId, CertId, SkillId, Modality, TopicId, TargetCefr, StepType, SizingTier,
-                                          Status, WeekNumber, WeekSequence, EstimatedMinutes,
-                                          WrittenByService, ProjectionVersion)
+                                          Status, WeekNumber, WeekSequence, EstimatedMinutes)
             VALUES (@path, @cert, @skill, @mod,
                     (SELECT TOP 1 TopicId FROM Topics WHERE Modality = @mod),
                     'B1', 'focus_practice', 'developing',
                     '{(s.Done ? "done" : "available")}',
-                    {(s.Week is null ? "NULL" : s.Week.Value.ToString())}, {i + 1}, {s.Minutes},
-                    {(s.Done ? "'PathStepCompletion'" : "NULL")}, {(s.Done ? 1 : 0)});
+                    {(s.Week is null ? "NULL" : s.Week.Value.ToString())}, {i + 1}, {s.Minutes});
             """)));
 
-    /// <summary>Records one skill's measured state, as the placement writer does. Used by tests that
-    /// need a PARTIAL vector: #241's cascade treats an unmeasured skill as a task, so a fixture with
-    /// three measured skills and one not is the only way to prove step 2 fires above step 3.</summary>
     private Task SeedSkillStateAsync(
         int userId, string certCode, string skillCode, string level, int position, decimal coordinate,
-        string measuredAt) =>
-        database.SqlAsync($"""
+        string measuredAt)
+    {
+        decimal pct = level switch
+        {
+            "C2" or "C1" => 90m,
+            "B2" => 75m,
+            "B1" => 60m,
+            "A2" => 45m,
+            "A1" => 25m,
+            _ => 10m
+        };
+        return database.SqlAsync($"""
             DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
-            DECLARE @skill INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = '{skillCode}');
-            MERGE LearnerSkillStates AS tgt
-            USING (SELECT {userId} AS UserId, @cert AS CertId, @skill AS SkillId) AS src
-            ON tgt.UserId = src.UserId AND tgt.CertId = src.CertId AND tgt.SkillId = src.SkillId
-            WHEN MATCHED THEN UPDATE SET
-                CefrLevel = '{level}', PositionInBand = {position},
-                ContinuousCoordinate = {coordinate.ToString(System.Globalization.CultureInfo.InvariantCulture)},
-                Source = 'placement', MeasuredAt = '{measuredAt}',
-                ExpiresAt = DATEADD(DAY, 90, CAST('{measuredAt}' AS DATETIMEOFFSET)),
-                WrittenByService = 'SkillStateWriter', ProjectionVersion = tgt.ProjectionVersion + 1
-            WHEN NOT MATCHED THEN INSERT
-                (UserId, CertId, SkillId, CefrLevel, PositionInBand, ContinuousCoordinate,
-                 Source, MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
-                VALUES ({userId}, @cert, @skill, '{level}', {position},
-                        {coordinate.ToString(System.Globalization.CultureInfo.InvariantCulture)},
-                        'placement', '{measuredAt}',
-                        DATEADD(DAY, 90, CAST('{measuredAt}' AS DATETIMEOFFSET)),
-                        'SkillStateWriter', 1);
+            DECLARE @mod NVARCHAR(32) = (SELECT LOWER(Modality) FROM Skills WHERE CertId = @cert AND Code = '{skillCode}');
+            DECLARE @plc INT = (SELECT TOP 1 PlacementId FROM PlacementTests WHERE UserId = {userId} AND CertId = @cert AND Status = 'done' ORDER BY PlacementId DESC);
+            IF @plc IS NULL
+            BEGIN
+              INSERT INTO PlacementTests (UserId, CertId, Status, TakenAt)
+              VALUES ({userId}, @cert, 'done', '{measuredAt}');
+              SET @plc = SCOPE_IDENTITY();
+            END
+            UPDATE PlacementTests SET
+              TakenAt = '{measuredAt}',
+              ListeningPct = CASE WHEN @mod = 'listening' THEN {pct.ToString(System.Globalization.CultureInfo.InvariantCulture)} ELSE ListeningPct END,
+              ReadingPct = CASE WHEN @mod = 'reading' THEN {pct.ToString(System.Globalization.CultureInfo.InvariantCulture)} ELSE ReadingPct END,
+              SpeakingPct = CASE WHEN @mod = 'speaking' THEN {pct.ToString(System.Globalization.CultureInfo.InvariantCulture)} ELSE SpeakingPct END,
+              WritingPct = CASE WHEN @mod = 'writing' THEN {pct.ToString(System.Globalization.CultureInfo.InvariantCulture)} ELSE WritingPct END
+            WHERE PlacementId = @plc;
             """);
+    }
 
     /// <summary>A finished practice session with answers, which is what the daily-ceiling view counts.
     /// The cascade reads it, so a test that needs "the day is full" seeds it rather than a stored

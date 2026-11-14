@@ -81,7 +81,7 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
         Stimulus? existingStimulus = null;
         if (request.StimulusId is int existingStimulusId)
         {
-            existingStimulus = await GateContext.FindStimulusAsync(db, existingStimulusId, cancellationToken)
+            existingStimulus = await ItemVersionQuery.FindStimulusAsync(db, existingStimulusId, cancellationToken)
                 ?? throw new AdminItemException(ApiError.Codes.Validation, $"Stimulus {existingStimulusId} not found.");
         }
 
@@ -161,7 +161,7 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
             .Where(v => v.ItemId == itemId)
             .ToListAsync(cancellationToken);
 
-        var current = GateContext.Newest(versions, v => v.VersionNumber)
+        var current = ItemVersionQuery.Newest(versions, v => v.VersionNumber)
             ?? throw new AdminItemException(ApiError.Codes.Validation, $"Item {itemId} has no version to edit.", 409);
 
         // CNT-43: a scored change forks a version; a cosmetic one does not. Comparing the incoming
@@ -220,61 +220,6 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
     /// judge an item differently from a create.
     /// </para>
     /// </summary>
-    private async Task RequireGateOneAsync(
-        GateOneItem gateItem,
-        int topicId,
-        CefrLevel level,
-        int? exceptItemId,
-        string refusalPrefix,
-        CancellationToken cancellationToken)
-    {
-        // excludeItemId is what makes the balance rule answerable at each door: a create has nothing to
-        // exclude yet, and an edit must exclude itself or its own key would vouch for its own balance.
-        var cell = await GateContext.CellAsync(db, topicId, level, exceptItemId, cancellationToken);
-
-        var verdict = GateOne.Review(gateItem, cell);
-        if (verdict.Accepted)
-        {
-            return;
-        }
-
-        throw new AdminItemException(
-            ApiError.Codes.Validation,
-            refusalPrefix + string.Join(" ", verdict.Refusals.Select(r => $"[{r.Rule}] {r.Message}")));
-    }
-
-    /// <summary>
-    /// The create request as the gate sees it. <paramref name="stimulusText"/> is the passage,
-    /// transcript or prompt copy of the stimulus the item is authored with or joins - gate one's lemma
-    /// rule compares the stem and key against the text the learner will read, and a rule that skipped
-    /// it whenever the passage came from a second row would judge nothing on a shared passage.
-    /// </summary>
-    private static GateOneItem GateItem(CreatePoolItemRequest request, string? stimulusText) =>
-        new(
-            request.Stem,
-            stimulusText,
-            Normalize(request.OptionA), Normalize(request.OptionB),
-            Normalize(request.OptionC), Normalize(request.OptionD),
-            NormalizeKey(request.KeyLabel),
-            Normalize(request.Explanation),
-            Normalize(request.RationaleA), Normalize(request.RationaleB),
-            Normalize(request.RationaleC), Normalize(request.RationaleD));
-
-    /// <summary>
-    /// The edit request as the gate sees it. The stimulus is not editable through this request, so its
-    /// text is read from the item rather than from the edit.
-    /// </summary>
-    private static GateOneItem GateItem(UpdatePoolItemRequest request, string? stimulusText) =>
-        new(
-            request.Stem,
-            stimulusText,
-            Normalize(request.OptionA), Normalize(request.OptionB),
-            Normalize(request.OptionC), Normalize(request.OptionD),
-            NormalizeKey(request.KeyLabel),
-            Normalize(request.Explanation),
-            Normalize(request.RationaleA), Normalize(request.RationaleB),
-            Normalize(request.RationaleC), Normalize(request.RationaleD));
-
     private static Stimulus BuildStimulus(CreatePoolStimulusRequest request)
     {
         var level = RequireAuthoredLevel(request.CefrLevelCode);

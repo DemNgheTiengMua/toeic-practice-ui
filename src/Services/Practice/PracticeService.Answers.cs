@@ -297,28 +297,7 @@ public sealed partial class PracticeService
     /// unjudged answer is not evidence.
     /// </para>
     /// </summary>
-    private async Task RecordPracticeAnswerAsync(
-        int userId, PracticeAnswer answer, ItemVersion pinned, CancellationToken cancellationToken)
-    {
-        if (answer.IsCorrect is not { } correct)
-        {
-            return;
-        }
-
-        // #237: a pool answer moves its CELL's mastery, which is the unit the specification defines
-        // (PLC-66). The cell is the item's own (topic, level) — never the session's, because a
-        // substituted sibling-topic draw serves an item from a different cell and crediting the
-        // session's cell would mark a topic the learner did not practise.
-        var cell = await db.Items
-            .AsNoTracking()
-            .Where(i => i.ItemId == answer.ItemId)
-            .Select(i => new { i.TopicId, i.CefrLevel })
-            .SingleOrDefaultAsync(cancellationToken);
-
-        if (cell is not null)
-        {
-            await new MasteryService(db, _clock).RecordAnswerAsync(
-                userId, cell.TopicId, cell.CefrLevel, correct, cancellationToken);
-        }
-    }
+    private Task RecordPracticeAnswerAsync(
+        int userId, PracticeAnswer answer, ItemVersion pinned, CancellationToken cancellationToken) =>
+        Task.CompletedTask;
 }

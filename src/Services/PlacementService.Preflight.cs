@@ -44,13 +44,8 @@ public sealed partial class PlacementService
             .Select(s => new { s.SkillId, s.Code, s.Name, s.Modality })
             .ToListAsync(cancellationToken);
 
-        // The reuse window is the STORED one, not a second window computed here: LearnerSkillStates'
-        // ExpiresAt is pinned to MeasuredAt + 90 days by CK_LSS_Expiry, and MeasuredAt is the original
-        // measurement. Reading them is what makes a carried skill keep its own date.
-        var states = await db.LearnerSkillStates
-            .AsNoTracking()
-            .Where(s => s.UserId == userId && s.CertId == certId)
-            .ToDictionaryAsync(s => s.SkillId, cancellationToken);
+        var standing = await LearnerStandingReader.ReadAsync(db, userId, certId, _clock, cancellationToken);
+        var states = standing?.Skills.ToDictionary(s => s.SkillId) ?? new Dictionary<int, SkillStanding>();
 
         var offers = skills.Select(skill =>
         {
@@ -63,7 +58,7 @@ public sealed partial class PlacementService
                 skill.Modality,
                 RequiresMicrophone: string.Equals(skill.Modality, Modality.Speaking.ToCode(), StringComparison.OrdinalIgnoreCase),
                 RequiresAudio: string.Equals(skill.Modality, Modality.Listening.ToCode(), StringComparison.OrdinalIgnoreCase),
-                Level: state?.CefrLevel,
+                Level: state?.Level,
                 PositionInBand: state?.PositionInBand,
                 MeasuredAt: state?.MeasuredAt,
                 ExpiresAt: state?.ExpiresAt,
@@ -147,25 +142,7 @@ public sealed partial class PlacementService
             return (null, false);
         }
 
-        // "Measured nothing because of an internal failure" is the whole waiver, and the skill rows are
-        // what it is read from: the placement-level reason is only set when nothing was measured, and
-        // the per-skill statuses are what tell a grading failure from a skip when both occur together.
-        var statuses = await db.PlacementSkillResults
-            .AsNoTracking()
-            .Where(r => r.PlacementId == previous.PlacementId)
-            .Select(r => new { r.ResultStatus, r.FailureReason })
-            .ToListAsync(cancellationToken);
-
-        var measured = statuses.Count(r =>
-            r.ResultStatus is PlacementResultStatus.Measured or PlacementResultStatus.EstimatedFromOneTask);
-        // #217: an abandoned sitting has NO per-skill rows at all (nothing was measured, so the writer
-        // has nothing to say per skill) - the placement-level reason is then the only evidence, and it
-        // is the same one a `done` sitting records.
-        var systemFailure = measured == 0
-            && (statuses.Count == 0
-                ? previous.CompletionFailureReason == PlacementFailureReason.AiGradingFailed
-                : statuses.All(r => r.ResultStatus == PlacementResultStatus.NotMeasured
-                    && r.FailureReason == PlacementFailureReason.AiGradingFailed));
+        var systemFailure = previous.CompletionFailureReason == PlacementFailureReason.AiGradingFailed;
 
         return (
             PlacementCooldown.Until(previous.TakenAt, systemFailure, now),
