@@ -27,8 +27,23 @@ import {
   RefreshCw,
   Sparkles,
 } from 'lucide-react';
-import { api, type PackageDto } from '../../../lib/api';
+import { api } from '../../../lib/api';
 import { formatVnd, formatVndUnitPrice } from '../../../lib/security';
+
+interface PackageDto {
+  packageId: number;
+  name: string;
+  packageName?: string;
+  credits: number;
+  price: number;
+  isActive: boolean;
+  isFeatured: boolean;
+  features?: string | null;
+  displayOrder: number;
+  ordersSold?: number;
+  totalRevenue?: number;
+  featureList?: string[];
+}
 
 export function PackagesTab() {
   const queryClient = useQueryClient();

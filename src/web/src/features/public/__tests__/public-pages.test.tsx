@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
 import { AuthProvider } from '../../../context/AuthContext';
 import { createAppRouter } from '../../../router';
-import type { CertificateDto, PackageDto } from '../../../lib/api';
+import type { CertificateDto } from '../../../lib/api';
 
 function installFetchMock(
   handler: (url: string, init?: RequestInit) => Promise<Response> | Response,
@@ -92,31 +92,6 @@ const DEMO_CERTIFICATES: CertificateDto[] = [
     bands: [
       { code: 'B1', name: 'Intermediate', minTotal: 0, maxTotal: 100 },
     ],
-  },
-];
-
-const SAMPLE_PACKAGES: PackageDto[] = [
-  {
-    packageId: 1,
-    name: 'Pay as you go',
-    credits: 1,
-    price: 49000,
-    isActive: true,
-    isFeatured: false,
-    features: '1 mock exam credit\nNever expires',
-    displayOrder: 1,
-    featureList: ['1 mock exam credit', 'Never expires'],
-  },
-  {
-    packageId: 2,
-    name: 'Exam Prep',
-    credits: 5,
-    price: 199000,
-    isActive: true,
-    isFeatured: true,
-    features: '5 mock exam credits\nNever expires',
-    displayOrder: 2,
-    featureList: ['5 mock exam credits', 'Never expires'],
   },
 ];
 
@@ -247,7 +222,7 @@ describe('Public catalog, pricing & legal pages (#295)', () => {
     expect(await screen.findByText('Mastery')).toBeInTheDocument();
   });
 
-  it('renders pricing page with VND packages, free diagnostic clarity, learner balance, and FAQ accordion', async () => {
+  it('renders pricing page with flat credit calculator, free diagnostic clarity, learner balance, and FAQ accordion', async () => {
     installFetchMock((url) => {
       if (url === '/api/auth/me') {
         return jsonResponse({
@@ -266,18 +241,23 @@ describe('Public catalog, pricing & legal pages (#295)', () => {
           creditBalance: 12,
         });
       }
-      if (url === '/api/packages') return jsonResponse(SAMPLE_PACKAGES);
       return jsonResponse({}, 404);
     });
 
     renderRoute('/pricing');
 
     const main = await screen.findByRole('main');
-    expect(await within(main).findByText('Exam Prep')).toBeInTheDocument();
-    expect(within(main).getByText('Popular')).toBeInTheDocument();
-    expect(within(main).getByText(/199\.000/)).toBeInTheDocument();
+    expect(await within(main).findByText(/flat-rate pricing: 1 credit = 20,000 vnd/i)).toBeInTheDocument();
+    expect(within(main).getByText('Credit Calculator')).toBeInTheDocument();
+    expect(within(main).getByText(/100\.000 ₫/i)).toBeInTheDocument(); // default 5 credits * 20000
+    expect(within(main).getByText(/proceed to top-up/i)).toBeInTheDocument();
     expect(within(main).getByText(/12 credits/i)).toBeInTheDocument();
     expect(within(main).getByText(/do credits expire/i)).toBeInTheDocument();
+
+    // Presets can be clicked to update live calculation
+    const preset20 = within(main).getByRole('button', { name: /20 credits/i });
+    fireEvent.click(preset20);
+    expect(within(main).getByText(/400\.000 ₫/i)).toBeInTheDocument();
   });
 
   it('renders /terms, /privacy, and neutral capability-safe /access-denied routes', async () => {

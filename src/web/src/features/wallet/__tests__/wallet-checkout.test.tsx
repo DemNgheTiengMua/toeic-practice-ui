@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
 import { AuthProvider } from '../../../context/AuthContext';
 import { createAppRouter } from '../../../router';
-import type { WalletDto, PackageDto, CheckoutPreviewDto, PaymentResultDto } from '../../../lib/api';
+import type { WalletDto, CheckoutPreviewDto, PaymentResultDto } from '../../../lib/api';
 
 function installFetchMock(
   handler: (url: string, init?: RequestInit) => Promise<Response> | Response,
@@ -116,31 +116,6 @@ const MOCK_WALLET: WalletDto = {
   ],
 };
 
-const MOCK_PACKAGES: PackageDto[] = [
-  {
-    packageId: 1,
-    name: 'Starter Pack',
-    packageName: 'Starter Pack',
-    credits: 100,
-    price: 250000,
-    isActive: true,
-    isFeatured: true,
-    displayOrder: 1,
-    featureList: ['100 credits', 'Full mock exams', 'AI grading'],
-  },
-  {
-    packageId: 2,
-    name: 'Pro Booster',
-    packageName: 'Pro Booster',
-    credits: 300,
-    price: 650000,
-    isActive: true,
-    isFeatured: false,
-    displayOrder: 2,
-    featureList: ['300 credits', 'Priority mentor booking', 'Detailed weakness analysis'],
-  },
-];
-
 describe('Wallet & Checkout feature (#301)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -160,12 +135,11 @@ describe('Wallet & Checkout feature (#301)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders /wallet workspace with credit balance, packages, ledger deltas, and orders', async () => {
+  it('renders /wallet workspace with credit balance, ledger deltas, and orders', async () => {
     installFetchMock((url) => {
       if (url === '/api/auth/me') return jsonResponse(MOCK_USER);
       if (url === '/api/learner/context') return jsonResponse(MOCK_LEARNER_CONTEXT);
       if (url === '/api/learner/wallet') return jsonResponse(MOCK_WALLET);
-      if (url === '/api/packages' || url === '/api/catalog/packages') return jsonResponse(MOCK_PACKAGES);
       return jsonResponse({}, 404);
     });
 
@@ -176,15 +150,14 @@ describe('Wallet & Checkout feature (#301)', () => {
     expect(screen.getByText('150')).toBeInTheDocument(); // Balance
     expect(screen.getByText(/500\.000 ₫/i)).toBeInTheDocument(); // Amount purchased
 
-    // Packages tab (default or selected)
-    expect(await screen.findByText('Starter Pack')).toBeInTheDocument();
-    expect(screen.getByText('Pro Booster')).toBeInTheDocument();
+    // Buy credits button links to /checkout
+    const buyCreditsLink = screen.getByRole('link', { name: /buy credits/i });
+    expect(buyCreditsLink).toHaveAttribute('href', '/checkout');
 
-    // Check Ledger tab
-    const ledgerTab = screen.getByRole('tab', { name: /credit history|ledger/i });
-    fireEvent.click(ledgerTab);
+    // Credit packages tab is removed
+    expect(screen.queryByRole('tab', { name: /credit packages/i })).not.toBeInTheDocument();
 
-    // Ledger entries with signed deltas
+    // Default tab is Credit history (ledger) - deltas immediately visible
     expect(await screen.findByText('Credit purchase')).toBeInTheDocument();
     expect(screen.getByText('+100')).toBeInTheDocument();
     expect(screen.getByText('Mock exam')).toBeInTheDocument();

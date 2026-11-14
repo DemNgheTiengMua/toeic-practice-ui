@@ -52,6 +52,36 @@ public static class OpenApiExtensions
                     BearerFormat = "JWT",
                     Description = $"Token from POST /api/auth/sign-in, or {DemoSignInPath} while this flag is on.",
                 };
+
+                document.Tags = new HashSet<OpenApiTag>
+                {
+                    new() { Name = "Authentication & Profile", Description = "User authentication, profile management, password recovery, and session tokens." },
+                    new() { Name = "Learner Dashboard & Context", Description = "Active certificate context, onboarding state, and learner metrics." },
+                    new() { Name = "Mock Exams & Attempts", Description = "Full-length standardized mock exams, timer lifecycle, answer persistence, and score scaling." },
+                    new() { Name = "Universal Placement", Description = "Diagnostic placement exam sittings (2 or 4 skills) and baseline band calibration." },
+                    new() { Name = "Learning Path & Sprints", Description = "4-week deterministic milestone learning sprints and step progression." },
+                    new() { Name = "Practice Drilling", Description = "Untimed topic and section review drills with instant feedback." },
+                    new() { Name = "Speaking Practice & AI Grading", Description = "Speaking audio recording, audio submission, and asynchronous AI acoustic/transcript grading." },
+                    new() { Name = "Writing Practice & AI Grading", Description = "Writing draft autosave, essay submission, and asynchronous AI rubric grading." },
+                    new() { Name = "Skill Practice", Description = "Direct skill modality drilling and answer evaluation." },
+                    new() { Name = "Lessons & Study Material", Description = "Theory lessons, concept cards, and category study materials." },
+                    new() { Name = "Mentors & Bookings", Description = "Human mentor profiles, weekly availability windows, and credit-based session bookings." },
+                    new() { Name = "Wallet & Orders", Description = "Credit purchasing, PayOS embedded checkout orders, and transaction receipts." },
+                    new() { Name = "AI Insights", Description = "Fact-grounded learner accuracy analytics and LLM study recommendations." },
+                    new() { Name = "Weakness Analysis", Description = "Deterministic section and topic accuracy views and wrong-answer fingerprints." },
+                    new() { Name = "Saved Questions", Description = "Learner bookmarked questions and review notes." },
+                    new() { Name = "Catalog & Certificates", Description = "Public certificates, sections, score scales, and band hierarchies." },
+                    new() { Name = "Learner Complaints", Description = "Learner question feedback and item complaints." },
+                    new() { Name = "Admin - Content Studio & Blueprints", Description = "Exam papers, question banks, section blueprints, and rubric criteria authoring." },
+                    new() { Name = "Admin - Question Imports", Description = "Batch question ZIP importing and media assets." },
+                    new() { Name = "Admin - Lesson Authoring", Description = "Theory lesson creation and concept card management." },
+                    new() { Name = "Admin - Mentor Management", Description = "Staff mentor administration, meeting links, and schedules." },
+                    new() { Name = "Admin - Operations & Governance", Description = "Platform executive dashboard, user governance, orders, and system health." },
+                    new() { Name = "Admin - Support & Complaints", Description = "Support triage for question disputes and learner complaints." },
+                    new() { Name = "Admin - Refunds", Description = "Credit and payment refund processing." },
+                    new() { Name = "Health & Diagnostics", Description = "Application health status and ping." },
+                };
+
                 return Task.CompletedTask;
             });
 
@@ -69,6 +99,12 @@ public static class OpenApiExtensions
                         [new OpenApiSecuritySchemeReference(BearerScheme, context.Document!, null)] = new List<string>(),
                     });
                 }
+
+                var tagName = DeriveTagFromPath(context.Description.RelativePath);
+                operation.Tags = new HashSet<OpenApiTagReference>
+                {
+                    new(tagName, context.Document!)
+                };
 
                 return Task.CompletedTask;
             });
@@ -179,4 +215,90 @@ public static class OpenApiExtensions
 
     private static bool IsEnabled(IConfiguration configuration) =>
         configuration.GetValue($"{SectionName}:Enabled", true);
+
+    private static string DeriveTagFromPath(string? path)
+    {
+        var normalized = (path ?? string.Empty).TrimStart('/').ToLowerInvariant();
+
+        if (normalized.StartsWith("api/auth") || normalized.StartsWith("api/profile"))
+            return "Authentication & Profile";
+
+        if (normalized.StartsWith("api/admin/imports"))
+            return "Admin - Question Imports";
+        if (normalized.StartsWith("api/admin/lessons"))
+            return "Admin - Lesson Authoring";
+        if (normalized.StartsWith("api/admin/mentors"))
+            return "Admin - Mentor Management";
+        if (normalized.StartsWith("api/admin/complaints"))
+            return "Admin - Support & Complaints";
+        if (normalized.StartsWith("api/admin/refunds"))
+            return "Admin - Refunds";
+        if (normalized.StartsWith("api/admin/studio")
+            || normalized.StartsWith("api/admin/exams")
+            || normalized.StartsWith("api/admin/questions")
+            || normalized.StartsWith("api/admin/items")
+            || normalized.StartsWith("api/admin/coverage")
+            || normalized.StartsWith("api/admin/quick-ingest")
+            || normalized.StartsWith("api/admin/certificates")
+            || normalized.StartsWith("api/admin/score-conversion"))
+            return "Admin - Content Studio & Blueprints";
+        if (normalized.StartsWith("api/admin"))
+            return "Admin - Operations & Governance";
+
+        if (normalized.StartsWith("api/learner/exams")
+            || normalized.StartsWith("api/learner/attempts")
+            || normalized.StartsWith("api/exams"))
+            return "Mock Exams & Attempts";
+
+        if (normalized.StartsWith("api/learner/placement")
+            || normalized.StartsWith("api/placement"))
+            return "Universal Placement";
+
+        if (normalized.StartsWith("api/learner/learning-path"))
+            return "Learning Path & Sprints";
+
+        if (normalized.StartsWith("api/learner/speaking"))
+            return "Speaking Practice & AI Grading";
+
+        if (normalized.StartsWith("api/learner/writing"))
+            return "Writing Practice & AI Grading";
+
+        if (normalized.StartsWith("api/learner/skill-practice"))
+            return "Skill Practice";
+
+        if (normalized.StartsWith("api/learner/practice"))
+            return "Practice Drilling";
+
+        if (normalized.StartsWith("api/learner/lessons") || normalized.StartsWith("lessons"))
+            return "Lessons & Study Material";
+
+        if (normalized.StartsWith("api/learner/insights"))
+            return "AI Insights";
+
+        if (normalized.StartsWith("api/learner/weakness"))
+            return "Weakness Analysis";
+
+        if (normalized.StartsWith("api/learner/saved-questions"))
+            return "Saved Questions";
+
+        if (normalized.StartsWith("api/learner/complaints"))
+            return "Learner Complaints";
+
+        if (normalized.StartsWith("api/learner"))
+            return "Learner Dashboard & Context";
+
+        if (normalized.StartsWith("api/mentors"))
+            return "Mentors & Bookings";
+
+        if (normalized.StartsWith("api/checkout") || normalized.StartsWith("api/orders"))
+            return "Wallet & Orders";
+
+        if (normalized.StartsWith("api/catalog"))
+            return "Catalog & Certificates";
+
+        if (normalized.StartsWith("healthz"))
+            return "Health & Diagnostics";
+
+        return "General";
+    }
 }

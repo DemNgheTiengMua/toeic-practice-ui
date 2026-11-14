@@ -152,21 +152,6 @@ export interface CertificateDto {
   isActive?: boolean;
 }
 
-export interface PackageDto {
-  packageId: number;
-  name: string;
-  packageName?: string;
-  credits: number;
-  price: number;
-  isActive: boolean;
-  isFeatured: boolean;
-  features?: string | null;
-  displayOrder: number;
-  ordersSold?: number;
-  totalRevenue?: number;
-  featureList?: string[];
-}
-
 export interface LearnerContextDto {
   active: CertificateOptionDto;
   certificates: CertificateOptionDto[];
@@ -1980,7 +1965,20 @@ export interface RejectRefundRequest {
 }
 
 export interface AdminPackagesSummaryDto {
-  packages: PackageDto[];
+  packages: Array<{
+    packageId: number;
+    name: string;
+    packageName?: string;
+    credits: number;
+    price: number;
+    isActive: boolean;
+    isFeatured: boolean;
+    features?: string | null;
+    displayOrder: number;
+    ordersSold?: number;
+    totalRevenue?: number;
+    featureList?: string[];
+  }>;
   packagesOnSale: number;
   featuredCount: number;
   totalOrdersSold: number;
@@ -2390,7 +2388,6 @@ export const api = {
 
   catalog: {
     certificates: () => apiFetch<CertificateDto[]>('/api/certificates'),
-    packages: () => apiFetch<PackageDto[]>('/api/packages'),
   },
 
   learner: {
@@ -2969,12 +2966,12 @@ export const api = {
       apiFetch<any>(`/api/admin/certificates/${certId}/blueprint`),
     packages: () => apiFetch<AdminPackagesSummaryDto>('/api/admin/packages'),
     createPackage: (body: CreatePackageRequest) =>
-      apiFetch<PackageDto>('/api/admin/packages', {
+      apiFetch<any>('/api/admin/packages', {
         method: 'POST',
         body: JSON.stringify(body),
       }),
     updatePackage: (packageId: number, body: UpdatePackageRequest) =>
-      apiFetch<PackageDto>(`/api/admin/packages/${packageId}`, {
+      apiFetch<any>(`/api/admin/packages/${packageId}`, {
         method: 'PUT',
         body: JSON.stringify(body),
       }),

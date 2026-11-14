@@ -13,7 +13,6 @@ import type {
   AdminRefundsSummaryDto,
   AdminRefundDetailDto,
   AdminPackagesSummaryDto,
-  PackageDto,
   AuthUserDto,
 } from '../../../../lib/api';
 
