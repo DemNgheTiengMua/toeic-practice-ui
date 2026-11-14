@@ -609,8 +609,8 @@ export interface OrderDto {
   orderId: number;
   orderCode: string;
   paymentNo?: number;
-  packageId: number;
-  packageName: string;
+  packageId?: number | null;
+  packageName?: string | null;
   credits: number;
   amount: number;
   status: 'pending' | 'reconciling' | 'paid' | 'failed' | 'expired' | string;
@@ -642,8 +642,8 @@ export interface WalletDto {
 }
 
 export interface CheckoutPreviewDto {
-  packageId: number;
-  packageName: string;
+  packageId?: number | null;
+  packageName?: string | null;
   credits: number;
   price: number;
   currentBalance: number;
@@ -659,13 +659,14 @@ export interface CreateOrderResponseDto {
   gateway: string;
   checkoutUrl?: string | null;
   status: string;
+  credits?: number;
 }
 
 export interface PaymentResultDto {
   orderId: number;
   orderCode: string;
   status: string;
-  packageName: string;
+  packageName?: string | null;
   credits: number;
   amount: number;
   gateway: string;
@@ -675,7 +676,7 @@ export interface PaymentResultDto {
   gatewayErrorCode?: string | null;
   message?: string | null;
   checkoutUrl?: string | null;
-  packageId: number;
+  packageId?: number | null;
 }
 
 export interface MentorWeeklySlotDto {
@@ -2838,13 +2839,35 @@ export const api = {
 
   finance: {
     wallet: () => apiFetch<WalletDto>('/api/learner/wallet'),
-    checkoutPreview: (packageId: number) =>
-      apiFetch<CheckoutPreviewDto>(`/api/checkout/preview?packageId=${packageId}`),
-    createOrder: (packageId: number) =>
-      apiFetch<CreateOrderResponseDto>('/api/checkout/orders', {
+    checkoutPreview: (arg?: number | { packageId?: number; credits?: number }) => {
+      const sp = new URLSearchParams();
+      if (typeof arg === 'number') {
+        sp.set('packageId', String(arg));
+      } else if (arg) {
+        if (arg.packageId != null) sp.set('packageId', String(arg.packageId));
+        if (arg.credits != null) sp.set('credits', String(arg.credits));
+      }
+      const q = sp.toString();
+      return apiFetch<CheckoutPreviewDto>(`/api/checkout/preview${q ? `?${q}` : ''}`);
+    },
+    getCheckoutPreview: (arg?: number | { packageId?: number; credits?: number }) => {
+      const sp = new URLSearchParams();
+      if (typeof arg === 'number') {
+        sp.set('packageId', String(arg));
+      } else if (arg) {
+        if (arg.packageId != null) sp.set('packageId', String(arg.packageId));
+        if (arg.credits != null) sp.set('credits', String(arg.credits));
+      }
+      const q = sp.toString();
+      return apiFetch<CheckoutPreviewDto>(`/api/checkout/preview${q ? `?${q}` : ''}`);
+    },
+    createOrder: (arg: number | { packageId?: number; credits?: number }) => {
+      const body = typeof arg === 'number' ? { packageId: arg } : arg;
+      return apiFetch<CreateOrderResponseDto>('/api/checkout/orders', {
         method: 'POST',
-        body: JSON.stringify({ packageId }),
-      }),
+        body: JSON.stringify(body),
+      });
+    },
     cancelOrder: (orderCode: string) =>
       apiFetch<{ message: string }>('/api/checkout/cancel', {
         method: 'POST',

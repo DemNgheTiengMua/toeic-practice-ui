@@ -56,7 +56,7 @@ import { LearningPathStepPage } from './features/learner/LearningPathStepPage';
 import { LessonReaderPage } from './features/learner/LessonReaderPage';
 import { WeaknessAnalysisPage } from './features/learner/WeaknessAnalysisPage';
 import { WalletPage } from './features/wallet/WalletPage';
-import { CheckoutPage } from './features/wallet/CheckoutPage';
+import { CheckoutPage } from './features/checkout/CheckoutPage';
 import { OrderStatusPage } from './features/wallet/OrderStatusPage';
 import { MentorsCatalogPage } from './features/mentors/MentorsCatalogPage';
 import { MentorDetailPage } from './features/mentors/MentorDetailPage';
