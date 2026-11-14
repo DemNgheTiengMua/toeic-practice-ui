@@ -71,32 +71,50 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
             var version = await db.ItemVersions.AsNoTracking()
                 .FirstAsync(v => v.ItemVersionId == unanswered.ItemVersionId);
-            var keyIndex = version.KeyLabel?.Trim().ToUpperInvariant() switch
-            {
-                "A" => 0, "B" => 1, "C" => 2, "D" => 3, _ => -1,
-            };
-            var keyOptionId = unanswered.ItemVersionId * 10 + keyIndex + 1;
 
-            var keyOption = unanswered.Options.FirstOrDefault(o => o.OptionId == keyOptionId)
-                ?? (keyIndex >= 0 && keyIndex < unanswered.Options.Count ? unanswered.Options[keyIndex] : unanswered.Options.FirstOrDefault());
-
-            if (keyOption is null)
+            if (!string.IsNullOrWhiteSpace(version.AcceptedAnswersJson))
             {
+                var accepted = System.Text.Json.JsonSerializer.Deserialize<string[]>(version.AcceptedAnswersJson)?.FirstOrDefault() ?? "answer";
+                var text = correct ? accepted : "wrong answer text";
                 await practice.SubmitAnswerAsync(
-                    userId,
-                    sessionId,
-                    unanswered.ItemVersionId!.Value,
-                    new SubmitPracticeAnswerInput(ResponseText: "test answer"));
+                    userId, sessionId, unanswered.ItemVersionId!.Value,
+                    new SubmitPracticeAnswerInput(ResponseText: text));
                 continue;
             }
 
-            var wrongOption = unanswered.Options.FirstOrDefault(o => o.OptionId != keyOption.OptionId) ?? keyOption;
-            var chosen = correct ? keyOption : wrongOption;
+            var keyStr = version.KeyLabel?.Trim() ?? "A";
+            var keys = keyStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            if (keys.Length > 1)
+            {
+                var matchingOptions = unanswered.Options
+                    .Where(o => keys.Contains(o.Label, StringComparer.OrdinalIgnoreCase))
+                    .Select(o => o.OptionId)
+                    .ToList();
+                var selected = correct
+                    ? matchingOptions
+                    : unanswered.Options.Take(1).Select(o => o.OptionId).ToList();
+                await practice.SubmitAnswerAsync(
+                    userId, sessionId, unanswered.ItemVersionId!.Value,
+                    new SubmitPracticeAnswerInput(SelectedOptionIds: selected));
+                continue;
+            }
+
+            var keyLabel = keys.Length > 0 ? keys[0] : "A";
+            var correctOption = unanswered.Options.FirstOrDefault(o => string.Equals(o.Label, keyLabel, StringComparison.OrdinalIgnoreCase))
+                ?? unanswered.Options.FirstOrDefault();
+
+            if (correctOption is null)
+            {
+                continue;
+            }
+
+            var wrongOption = unanswered.Options.FirstOrDefault(o => o.OptionId != correctOption.OptionId) ?? correctOption;
+            var chosen = correct ? correctOption : wrongOption;
 
             await practice.SubmitAnswerAsync(
                 userId,
                 sessionId,
-                // #187: a pool answer is addressed by the version it pinned.
                 unanswered.ItemVersionId!.Value,
                 new SubmitPracticeAnswerInput(SelectedOptionId: chosen.OptionId));
         }

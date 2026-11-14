@@ -85,8 +85,9 @@ public sealed partial class LearningPathService
 
         var latestPlacement = await db.PlacementTests
             .AsNoTracking()
-            .Where(p => p.UserId == userId && (p.CertId == activeCertId || p.CertId == null) && p.Status == PlacementStatus.Done.ToCode())
-            .OrderByDescending(p => p.TakenAt)
+            .Where(p => p.UserId == userId && p.Status == PlacementStatus.Done.ToCode())
+            .OrderByDescending(p => p.CertId == activeCertId ? 1 : 0)
+            .ThenByDescending(p => p.TakenAt)
             .FirstOrDefaultAsync(cancellationToken);
 
         var ownsTransaction = db.Database.CurrentTransaction is null;
@@ -252,22 +253,31 @@ public sealed partial class LearningPathService
         }
 
         // Rank skills by placement accuracy (weakest first; unmeasured skills treated as priority foundation)
-        var latestPlacementAttemptId = await db.PlacementTests
+        var latestPlacement = await db.PlacementTests
             .AsNoTracking()
-            .Where(p => p.UserId == userId && (p.CertId == certId || p.CertId == null) && p.Status == PlacementStatus.Done.ToCode())
-            .OrderByDescending(p => p.TakenAt)
-            .Select(p => (int?)p.AttemptId)
+            .Where(p => p.UserId == userId && p.Status == PlacementStatus.Done.ToCode())
+            .OrderByDescending(p => p.CertId == certId ? 1 : 0)
+            .ThenByDescending(p => p.TakenAt)
+            .Select(p => new { p.AttemptId, p.ListeningPct, p.ReadingPct, p.SpeakingPct, p.WritingPct })
             .FirstOrDefaultAsync(cancellationToken);
 
-        var skillScoreBySkillId = latestPlacementAttemptId.HasValue
+        var skillScoreBySkillId = latestPlacement?.AttemptId is { } attId
             ? await db.AttemptSkillScores
                 .AsNoTracking()
-                .Where(s => s.AttemptId == latestPlacementAttemptId.Value)
+                .Where(s => s.AttemptId == attId)
                 .ToDictionaryAsync(s => s.SkillId, s => s.ScaledScore, cancellationToken)
             : new Dictionary<int, int>();
 
+        var modalityPct = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        if (latestPlacement?.ListeningPct is { } lp) modalityPct["listening"] = lp;
+        if (latestPlacement?.ReadingPct is { } rp) modalityPct["reading"] = rp;
+        if (latestPlacement?.SpeakingPct is { } sp) modalityPct["speaking"] = sp;
+        if (latestPlacement?.WritingPct is { } wp) modalityPct["writing"] = wp;
+
         var rankedSkills = skills
-            .OrderBy(s => skillScoreBySkillId.TryGetValue(s.SkillId, out var sc) ? sc : -1)
+            .OrderBy(s => skillScoreBySkillId.TryGetValue(s.SkillId, out var sc)
+                ? sc
+                : (modalityPct.TryGetValue(s.Modality, out var mpct) ? (int)Math.Round(mpct) : -1))
             .ToList();
 
         var modalities = rankedSkills.Select(s => s.Modality).Distinct().ToList();
@@ -500,11 +510,40 @@ public sealed partial class LearningPathService
     {
         var latestPlacement = await db.PlacementTests
             .AsNoTracking()
-            .Where(p => p.UserId == userId && p.CertId == certId && p.Status == PlacementStatus.Done.ToCode())
-            .OrderByDescending(p => p.TakenAt)
+            .Where(p => p.UserId == userId && p.Status == PlacementStatus.Done.ToCode())
+            .OrderByDescending(p => p.CertId == certId ? 1 : 0)
+            .ThenByDescending(p => p.TakenAt)
             .FirstOrDefaultAsync(cancellationToken);
 
-        var startingBand = latestPlacement?.ResultBandCode;
+        string? startingBand = null;
+        if (latestPlacement is not null)
+        {
+            if (latestPlacement.CertId == certId && !string.IsNullOrEmpty(latestPlacement.ResultBandCode))
+            {
+                startingBand = latestPlacement.ResultBandCode;
+            }
+            else if (latestPlacement.OverallPct.HasValue)
+            {
+                var certBands = await db.ScoreBands
+                    .AsNoTracking()
+                    .Where(b => b.CertId == certId)
+                    .OrderBy(b => b.MinTotal)
+                    .ToListAsync(cancellationToken);
+
+                if (certBands.Count > 0)
+                {
+                    var minScale = certBands.Min(b => b.MinTotal);
+                    var maxScale = certBands.Max(b => b.MaxTotal);
+                    var clampedPct = Math.Clamp(latestPlacement.OverallPct.Value, 0m, 100m);
+                    var mappedScore = (int)Math.Round(minScale + (clampedPct / 100m) * (maxScale - minScale));
+                    mappedScore = Math.Clamp(mappedScore, minScale, maxScale);
+                    var matched = certBands.FirstOrDefault(b => mappedScore >= b.MinTotal && mappedScore <= b.MaxTotal)
+                        ?? certBands.OrderBy(b => Math.Abs(((b.MinTotal + b.MaxTotal) / 2.0) - mappedScore)).First();
+                    startingBand = matched.Code;
+                }
+            }
+        }
+
         if (string.IsNullOrEmpty(startingBand))
         {
             var latestMock = await db.ExamAttempts

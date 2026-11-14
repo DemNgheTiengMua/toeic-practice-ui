@@ -190,7 +190,6 @@ public sealed partial class PracticeService
             .ToListAsync(cancellationToken);
 
         var unlockedSkillIds = doneSteps.Select(s => s.SkillId).ToHashSet();
-        var unlockedModalities = doneSteps.Select(s => s.Modality).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var items = sections.Select(s =>
         {
@@ -210,7 +209,7 @@ public sealed partial class PracticeService
 
             questionCounts.TryGetValue(s.SectionId, out var available);
             rests.TryGetValue(s.SectionId, out var rest);
-            var isUnlocked = unlockedSkillIds.Contains(s.SkillId) || unlockedModalities.Contains(s.Modality);
+            var isUnlocked = unlockedSkillIds.Contains(s.SkillId);
             return new PracticeSectionItem(
                 s.SectionId,
                 s.Skill.Code,

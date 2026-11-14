@@ -164,7 +164,7 @@ export function OnboardingPage() {
       window.sessionStorage.setItem('ee_oobe_skip_session', '1');
       window.dispatchEvent(new CustomEvent('ee:oobe-skip-changed'));
     }
-    void navigate({ to: '/dashboard' });
+    void navigate({ to: '/mentors' });
   };
 
   const handleSubmitGoal = (e: React.FormEvent) => {

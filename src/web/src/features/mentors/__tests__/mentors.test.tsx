@@ -262,7 +262,7 @@ describe('Mentor bookings & standing feature (#301)', () => {
 
     renderRoute('/mentors');
 
-    expect(await screen.findByRole('heading', { name: /mentors & instructors/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /^mentors$/i })).toBeInTheDocument();
     expect(screen.getByText('Sarah Jenkins')).toBeInTheDocument();
     expect(screen.getByText('Dr. Trần Minh Khoa')).toBeInTheDocument();
     expect(screen.getByText('5 credits')).toBeInTheDocument();

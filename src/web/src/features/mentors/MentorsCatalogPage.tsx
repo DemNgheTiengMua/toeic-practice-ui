@@ -54,7 +54,7 @@ export function MentorsCatalogPage() {
             </span>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground m-0">
-            Mentors & instructors
+            Mentors
           </h1>
           <p className="text-sm text-muted mt-1 mb-0">
             Connect with certified master mentors for 1-on-1 diagnostic consultations.
@@ -134,7 +134,7 @@ export function MentorsCatalogPage() {
                   <div>
                     <Card.Title className="text-lg font-bold">{mentor.displayName}</Card.Title>
                     <Card.Description className="text-xs line-clamp-1">
-                      {mentor.headline || 'Certified Instructor'}
+                      {mentor.headline || 'Certified Mentor'}
                     </Card.Description>
                   </div>
 
