@@ -60,6 +60,11 @@ public interface ICreditLedger
     Task<CreditReceipt> ChargePlacementRetakeAsync(int userId, PlacementScope scope, int amount, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #313: debits 5 credits for generating a 4-week Learning Path (<c>learning_path</c> reason).
+    /// </summary>
+    Task<CreditReceipt> ChargeLearningPathAsync(int userId, int amount = 5, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves the ordered ledger history for a learner's wallet.
     /// </summary>
     Task<IReadOnlyList<CreditLedgerEntryDto>> GetLedgerHistoryAsync(int userId, CancellationToken cancellationToken = default);

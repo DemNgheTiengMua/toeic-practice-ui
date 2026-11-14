@@ -17,13 +17,13 @@ public interface ISpeakingPracticeService
 {
     Task<SpeakingPracticeInstructionsView> GetInstructionsAsync(int userId, int examId, CancellationToken cancellationToken = default);
 
-    Task<SpeakingAttemptInfo> StartAttemptAsync(int userId, int examId, CancellationToken cancellationToken = default);
+    Task<SpeakingAttemptInfo> StartAttemptAsync(int userId, int examId, CancellationToken cancellationToken = default, int? learnerPathStepId = null);
 
     Task<SpeakingTakeView> GetAttemptTakeAsync(int userId, int attemptId, int? questionId, CancellationToken cancellationToken = default);
 
     Task<SaveSpeakingAudioResult> SaveAudioAsync(int userId, int attemptId, int questionId, Stream stream, string contentType, string fileName, int? durationMs, CancellationToken cancellationToken = default);
 
-    Task<SubmitSpeakingResult> SubmitAttemptAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
+    Task<SubmitSpeakingResult> SubmitAttemptAsync(int userId, int attemptId, CancellationToken cancellationToken = default, int? learnerPathStepId = null);
 
     Task<SpeakingGradingPendingView> GetGradingPendingAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
 

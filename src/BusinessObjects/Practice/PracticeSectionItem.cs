@@ -23,4 +23,5 @@ public sealed record PracticeSectionItem(
     int DisplayOrder,
     int TotalCategoryCount = 0,
     int CategoriesInCooldown = 0,
-    DateTimeOffset? NextReviewDueAt = null);
+    DateTimeOffset? NextReviewDueAt = null,
+    bool IsUnlocked = false);

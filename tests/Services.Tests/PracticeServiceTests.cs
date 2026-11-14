@@ -25,9 +25,23 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         await database.SqlAsync($"""
             IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
               INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
+            DECLARE @certId INT = (SELECT CertId FROM Certificates WHERE Code = {(activeCertCode is null ? "NULL" : $"'{activeCertCode}'")});
             INSERT INTO Users (RoleId, Email, PasswordHash, FullName, ActiveCertId)
-            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{email}', 0x01, N'Test Learner',
-                    (SELECT CertId FROM Certificates WHERE Code = {(activeCertCode is null ? "NULL" : $"'{activeCertCode}'")}));
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{email}', 0x01, N'Test Learner', @certId);
+            DECLARE @u INT = SCOPE_IDENTITY();
+            IF @certId IS NOT NULL AND EXISTS (SELECT 1 FROM Skills WHERE CertId = @certId)
+            BEGIN
+              DECLARE @band NVARCHAR(20) = COALESCE((SELECT TOP 1 Code FROM ScoreBands WHERE CertId = @certId ORDER BY DisplayOrder), 'B1');
+              INSERT INTO LearnerPaths (UserId, CertId, CurrentBandCode, Status, StartedAt, WindowStartDate)
+              VALUES (@u, @certId, @band, 'active', SYSDATETIMEOFFSET(), CAST(SYSDATETIMEOFFSET() AS DATE));
+              DECLARE @lp INT = SCOPE_IDENTITY();
+              INSERT INTO LearnerPathSteps
+                (LearnerPathId, CertId, WeekNumber, WeekSequence, StepType, Status, SkillId, Modality, TopicId, TargetCefr, SizingTier, PlannedItemCount, EstimatedMinutes, TargetAccuracyPct, CompletedAt)
+              SELECT @lp, @certId, 1, ROW_NUMBER() OVER (ORDER BY s.SkillId), 'focus_practice', 'done', s.SkillId, s.Modality, t.TopicId, 'B1', 'developing', 1, 10, 70, SYSDATETIMEOFFSET()
+              FROM Skills s
+              CROSS APPLY (SELECT TOP 1 TopicId FROM Topics tp WHERE tp.Modality = s.Modality ORDER BY tp.TopicId) t
+              WHERE s.CertId = @certId;
+            END
             """);
         await using var db = DbContextFactory.Create(database.ConnectionString);
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
@@ -673,68 +687,41 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
     }
 
     [Fact]
-    public async Task StartSession_cleans_up_empty_unstarted_in_progress_sessions()
+    public async Task StartSession_is_stateless_and_does_not_delete_or_abandon_prior_sessions()
     {
         var certCode = Unique("AB");
         var pooled = await SeedPoolCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        // Start session 1 but do not answer any questions
-        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
-
-        // Start session 2 -> s1 was empty, so it should be cleaned up immediately
-        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
-
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-        var sessions = await db.PracticeSessions.Where(s => s.UserId == userId).ToListAsync();
-
-        Assert.Single(sessions);
-        Assert.Equal(s2.SessionId, sessions[0].SessionId);
-
-        var s1Answers = await db.PracticeAnswers.Where(pa => pa.SessionId == s1.SessionId).ToListAsync();
-        Assert.Empty(s1Answers);
-    }
-
-    [Fact]
-    public async Task StartSession_marks_partially_answered_in_progress_session_as_abandoned()
-    {
-        var certCode = Unique("PA");
-        var pooled = await SeedPoolCertificateAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-        var (practice, _) = CreateServices();
-
-        // Start session 1 and answer question 1
         var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
         await practice.SubmitAnswerAsync(userId, s1.SessionId, pooled.VersionIds[0], new SubmitPracticeAnswerInput(pooled.CorrectOptionIds[0]));
 
-        // Start session 2 -> s1 had an answer, so it should be preserved as "abandoned"
+        // Starting a second session leaves s1 untouched (stateless Practice — no abandoned status).
         var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
-        var session1InDb = await db.PracticeSessions.SingleOrDefaultAsync(s => s.SessionId == s1.SessionId);
+        var sessions = await db.PracticeSessions.Where(s => s.UserId == userId).OrderBy(s => s.SessionId).ToListAsync();
 
-        Assert.NotNull(session1InDb);
-        Assert.Equal("abandoned", session1InDb.Status);
-        Assert.NotNull(session1InDb.FinishedAt);
+        Assert.Equal(2, sessions.Count);
+        Assert.Equal(s1.SessionId, sessions[0].SessionId);
+        Assert.NotEqual("abandoned", sessions[0].Status);
+        Assert.Equal(s2.SessionId, sessions[1].SessionId);
     }
 
     [Fact]
-    public async Task GetPracticeSections_returns_unfinished_session_when_in_progress()
+    public async Task GetPracticeSections_never_returns_unfinished_session_because_practice_is_stateless()
     {
         var certCode = Unique("UP");
         var pooled = await SeedPoolCertificateAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
+        await practice.StartSessionAsync(userId, new StartPracticeSessionInput(pooled.SectionId));
 
         var catalog = await practice.GetPracticeSectionsAsync(userId);
 
-        Assert.NotNull(catalog.UnfinishedSession);
-        Assert.Equal(s1.SessionId, catalog.UnfinishedSession.SessionId);
-        Assert.Equal(PracticeStatus.InProgress, catalog.UnfinishedSession.Status);
-        Assert.Equal(pooled.SectionId, catalog.UnfinishedSession.SectionId);
+        Assert.Null(catalog.UnfinishedSession);
     }
 
     [Fact]

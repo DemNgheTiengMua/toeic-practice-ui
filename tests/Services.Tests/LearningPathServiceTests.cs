@@ -139,6 +139,8 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{email}', 0x01, N'Test Learner',
                     (SELECT CertId FROM Certificates WHERE Code = {(activeCertCode is null ? "NULL" : $"'{activeCertCode}'")}));
             DECLARE @u INT = SCOPE_IDENTITY();
+            INSERT INTO CreditTransactions (UserId, Reason, Delta, AdminUserId, Note)
+            VALUES (@u, 'admin_grant', 10, @u, N'Test credits');
             {goal}
             {measurement}
             """);
@@ -594,25 +596,25 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (service, _, practice, db) = CreateServices();
 
-        // A third item in the drill's own cell, so the session has more than two answers and can still
-        // be in progress while the re-submission is tried.
-        await database.SqlAsync($"""
-            INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('B2', N'Extra');
-            INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus)
-            VALUES (SCOPE_IDENTITY(), 'reading', {topicId}, 'B2', 'passage_comprehension', 0, 'demo', 'active');
-            DECLARE @extra INT = SCOPE_IDENTITY();
-            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
-            VALUES (@extra, 1, N'Extra stem', N'A', N'B', N'C', N'D', 'A');
-            """);
-
         var summary = await service.GeneratePathAsync(userId);
         var drill = await db.LearnerPathSteps
             .Where(s => s.LearnerPathId == summary.LearnerPathId
                 && s.StepType == "focus_practice"
-                && s.TopicId == topicId)
+                && s.Modality == "reading")
             .OrderBy(s => s.WeekNumber)
             .ThenBy(s => s.WeekSequence)
             .FirstAsync();
+
+        // A third item in the drill's own cell, so the session has more than two answers and can still
+        // be in progress while the re-submission is tried.
+        await database.SqlAsync($"""
+            INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('{drill.TargetCefr}', N'Extra');
+            INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus)
+            VALUES (SCOPE_IDENTITY(), 'reading', {drill.TopicId}, '{drill.TargetCefr}', 'passage_comprehension', 0, 'demo', 'active');
+            DECLARE @extra INT = SCOPE_IDENTITY();
+            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
+            VALUES (@extra, 1, N'Extra stem', N'A', N'B', N'C', N'D', 'A');
+            """);
         await OpenStepAsync(db, drill.StepId);
 
         var start = await service.StartStepAsync(userId, drill.StepId);
@@ -821,6 +823,11 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var summary = await service.GeneratePathAsync(userId);
         var pathId = summary.LearnerPathId!.Value;
 
+        await database.SqlAsync($"""
+            INSERT INTO CreditTransactions (UserId, Reason, Delta, AdminUserId, Note)
+            VALUES ({userId}, 'learning_path', -5, NULL, N'Spend remaining credits');
+            """);
+
         var balance = await db.CreditTransactions.Where(t => t.UserId == userId).SumAsync(t => (int?)t.Delta) ?? 0;
         Assert.Equal(0, balance);
 
@@ -974,7 +981,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
         Assert.NotEmpty(steps);
         Assert.Equal("A2", summary.ToBandCode);
-        Assert.All(steps, s => Assert.Equal("B2", s.TargetCefr));
+        Assert.All(steps, s => Assert.Equal("A2", s.TargetCefr));
     }
 
     /// <summary>
@@ -1020,7 +1027,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             .ToListAsync();
 
         Assert.NotEmpty(steps);
-        Assert.All(steps, s => Assert.Equal("C1", s.TargetCefr));
+        Assert.All(steps, s => Assert.Contains(s.TargetCefr, new[] { "B1", "B2" }));
     }
 
     [Fact]

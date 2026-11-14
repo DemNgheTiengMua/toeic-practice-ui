@@ -89,6 +89,10 @@ public static partial class PracticeEndpoints
             {
                 return ValidationProblem(ex);
             }
+            catch (PracticeException ex) when (ex.Code == PracticeException.FreeDrillLocked)
+            {
+                return Problem(StatusCodes.Status403Forbidden, "Practice section locked", ApiError.Codes.PracticeFreeDrillLocked, ex.Message);
+            }
             catch (PracticeException ex) when (ex.Code == PracticeException.ModalityNotAllowed)
             {
                 return Problem(StatusCodes.Status400BadRequest, "Modality not allowed for the free drill", ApiError.Codes.PracticeModalityNotAllowed, ex.Message);

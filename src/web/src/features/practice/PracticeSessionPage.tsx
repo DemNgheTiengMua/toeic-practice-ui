@@ -697,25 +697,39 @@ export function PracticeSessionPage() {
                   </Select.Popover>
                 </Select>
               ) : qType === 'inline_completion' || qType === 'free_response' ? (
-                <TextField
-                  aria-label="Your answer"
-                  isDisabled={locked}
-                  value={draftText}
-                  onChange={setDraftText}
-                >
-                  <Label>Your answer</Label>
-                  {qType === 'free_response' ? (
-                    <TextArea rows={4} placeholder="Type your response..." />
-                  ) : (
-                    <Input placeholder="Type missing word or phrase..." />
+                <div className="space-y-3">
+                  {qType === 'free_response' && (
+                    <Alert status="accent">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Title>Writing / Speaking Guide &amp; Rubric</Alert.Title>
+                        <Alert.Description>
+                          {activeQuestion.explanation ||
+                            'Address every part of the prompt clearly. Graded against Task Achievement, Coherence & Cohesion, Lexical Resource, and Grammatical Accuracy.'}
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert>
                   )}
-                  <Description className="font-mono-tabular">
-                    {wordCount} {wordCount === 1 ? 'word' : 'words'}
-                    {activeQuestion.maxWords != null ? ` · max ${activeQuestion.maxWords}` : ''}
-                    {activeQuestion.minWords != null ? ` · min ${activeQuestion.minWords}` : ''}
-                    {!activeQuestion.allowNumber ? ' · letters only' : ''}
-                  </Description>
-                </TextField>
+                  <TextField
+                    aria-label="Your answer"
+                    isDisabled={locked}
+                    value={draftText}
+                    onChange={setDraftText}
+                  >
+                    <Label>Your answer</Label>
+                    {qType === 'free_response' ? (
+                      <TextArea rows={4} placeholder="Type your response..." />
+                    ) : (
+                      <Input placeholder="Type missing word or phrase..." />
+                    )}
+                    <Description className="font-mono-tabular">
+                      {wordCount} {wordCount === 1 ? 'word' : 'words'}
+                      {activeQuestion.maxWords != null ? ` · max ${activeQuestion.maxWords}` : ''}
+                      {activeQuestion.minWords != null ? ` · min ${activeQuestion.minWords}` : ''}
+                      {!activeQuestion.allowNumber ? ' · letters only' : ''}
+                    </Description>
+                  </TextField>
+                </div>
               ) : qType === 'drag_drop' ? (
                 <div className="space-y-3">
                   <div className="text-xs font-medium text-muted">

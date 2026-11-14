@@ -209,7 +209,9 @@ public sealed class PathStepCompletionTests : IAsyncLifetime
             """);
 
         await using var db = DbContextFactory.Create(_connectionString);
-        return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
+        var userId = await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
+        await GrantCreditsAsync(userId, 10);
+        return userId;
     }
 
     /// <summary>Ten credits so a mock exam can be started (one credit a sitting).</summary>

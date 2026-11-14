@@ -90,6 +90,7 @@ public sealed partial class LearningPathService
 
         var steps = await LoadPathStepsAsync(activePath.LearnerPathId, cancellationToken);
         await ApplyLessonProgressAsync(userId, steps, cancellationToken);
+        var (guidesBySkill, rubricsBySkill) = await LoadProductiveMetadataAsync(activePath.CertId, steps, cancellationToken);
 
         var weeks = steps
             .Where(s => s.WeekNumber.HasValue)
@@ -116,7 +117,7 @@ public sealed partial class LearningPathService
                     LearningPathPlanner.IsWeekOnTrack(weekSteps.Count, completed, accuracy, weekTarget),
                     weekTarget,
                     accuracy,
-                    weekSteps.Select(ToStepInfo).ToList());
+                    weekSteps.Select(s => ToStepInfo(s, guidesBySkill, rubricsBySkill)).ToList());
             })
             .ToList();
 
@@ -152,7 +153,7 @@ public sealed partial class LearningPathService
             TotalEstimatedMinutes: steps.Sum(s => s.EstimatedMinutes ?? 0),
             RemainingMinutes: open.Sum(s => s.EstimatedMinutes ?? 0),
             CefrBands: cefrBands,
-            OpenSteps: open.Select(ToStepInfo).ToList(),
+            OpenSteps: open.Select(s => ToStepInfo(s, guidesBySkill, rubricsBySkill)).ToList(),
             NextStepId: open.FirstOrDefault()?.StepId)
         {
             Weeks = weeks,
@@ -177,7 +178,13 @@ public sealed partial class LearningPathService
                 && s.LearnerPath.UserId == userId
                 && s.LearnerPath.Status == "active", cancellationToken);
 
-        return step is null ? null : ToStepInfo(step);
+        if (step is null)
+        {
+            return null;
+        }
+
+        var (guidesBySkill, rubricsBySkill) = await LoadProductiveMetadataAsync(step.CertId, [step], cancellationToken);
+        return ToStepInfo(step, guidesBySkill, rubricsBySkill);
     }
 
     /// <summary>The path's steps with everything a coordinate needs to render, in plan order.</summary>
@@ -225,12 +232,75 @@ public sealed partial class LearningPathService
         }
     }
 
+    private async Task<(Dictionary<int, string> GuidesBySkill, Dictionary<int, IReadOnlyList<string>> RubricsBySkill)>
+        LoadProductiveMetadataAsync(int certId, List<LearnerPathStep> steps, CancellationToken cancellationToken)
+    {
+        var productiveSkillIds = steps
+            .Where(s => string.Equals(s.Modality, Modality.Writing.ToCode(), StringComparison.OrdinalIgnoreCase)
+                || string.Equals(s.Modality, Modality.Speaking.ToCode(), StringComparison.OrdinalIgnoreCase))
+            .Select(s => s.SkillId)
+            .Distinct()
+            .ToList();
+
+        if (productiveSkillIds.Count == 0)
+        {
+            return ([], []);
+        }
+
+        var guides = await db.Lessons
+            .AsNoTracking()
+            .Where(l => l.CertId == certId && productiveSkillIds.Contains(l.SkillId) && l.Summary != null)
+            .OrderBy(l => l.DisplayOrder)
+            .Select(l => new { l.SkillId, l.Summary })
+            .ToListAsync(cancellationToken);
+
+        var guidesBySkill = guides
+            .GroupBy(g => g.SkillId)
+            .ToDictionary(g => g.Key, g => g.First().Summary!);
+
+        var criteria = await db.GradingCriteria
+            .AsNoTracking()
+            .Where(c => productiveSkillIds.Contains(c.SkillId))
+            .OrderBy(c => c.DisplayOrder)
+            .Select(c => new { c.SkillId, c.Name, c.RubricDescription })
+            .ToListAsync(cancellationToken);
+
+        var rubricsBySkill = criteria
+            .GroupBy(c => c.SkillId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<string>)g
+                    .Select(c => string.IsNullOrWhiteSpace(c.RubricDescription) ? c.Name : $"{c.Name}: {c.RubricDescription}")
+                    .ToList());
+
+        return (guidesBySkill, rubricsBySkill);
+    }
+
     /// <summary>#232/D21a: the four metadata columns a step shows before it starts — sequence and
     /// skill, topic code and name, level badge, exact item count with estimated minutes.</summary>
-    private static PathStepInfo ToStepInfo(LearnerPathStep step)
+    private static PathStepInfo ToStepInfo(
+        LearnerPathStep step,
+        IReadOnlyDictionary<int, string> guidesBySkill,
+        IReadOnlyDictionary<int, IReadOnlyList<string>> rubricsBySkill)
     {
         var stepType = EnumCodes.Parse<PathStepType>(step.StepType);
         var status = EnumCodes.Parse<LearnerPathStepStatus>(step.Status);
+        var modality = EnumCodes.Parse<Modality>(step.Modality);
+        var isProductive = modality is Modality.Writing or Modality.Speaking;
+
+        string? guideText = null;
+        IReadOnlyList<string>? rubricCriteria = null;
+        if (isProductive)
+        {
+            guideText = step.Lesson?.Summary
+                ?? (guidesBySkill.TryGetValue(step.SkillId, out var g) ? g : null)
+                ?? (modality == Modality.Writing
+                    ? "Plan your response around task achievement, coherence, lexical resource, and grammatical accuracy."
+                    : "Structure your spoken response clearly with relevant examples, natural fluency, and accurate pronunciation.");
+            rubricCriteria = rubricsBySkill.TryGetValue(step.SkillId, out var r) && r.Count > 0
+                ? r
+                : ["Task Achievement & Coherence", "Lexical Resource & Grammar"];
+        }
 
         return new PathStepInfo(
             step.StepId,
@@ -241,7 +311,7 @@ public sealed partial class LearningPathService
             status,
             step.Skill.Code,
             step.Skill.Name,
-            EnumCodes.Parse<Modality>(step.Modality),
+            modality,
             step.Topic.Code,
             step.Topic.Name,
             CefrLevel.TryParseAuthored(step.TargetCefr, out var level) ? level : CefrLevel.PreA1,
@@ -255,7 +325,10 @@ public sealed partial class LearningPathService
             step.StartedAt,
             step.CompletedAt,
             step.RefLessonId,
-            step.RefExamId);
+            step.RefExamId,
+            GuideText: guideText,
+            RubricCriteria: rubricCriteria,
+            IsZeroCreditAiGrading: isProductive);
     }
 
     /// <summary>The one-line name a step is shown under, read off what the step actually opens so a

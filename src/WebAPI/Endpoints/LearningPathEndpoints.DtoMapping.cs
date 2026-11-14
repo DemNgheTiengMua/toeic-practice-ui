@@ -67,5 +67,8 @@ public static partial class LearningPathEndpoints
             step.StartedAt,
             step.CompletedAt,
             step.RefLessonId,
-            step.RefExamId);
+            step.RefExamId,
+            step.GuideText,
+            step.RubricCriteria,
+            step.IsZeroCreditAiGrading);
 }

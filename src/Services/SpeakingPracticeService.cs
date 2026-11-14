@@ -99,7 +99,8 @@ public sealed class SpeakingPracticeService(
         };
     }
 
-    public async Task<SpeakingAttemptInfo> StartAttemptAsync(int userId, int examId, CancellationToken cancellationToken = default)
+    public async Task<SpeakingAttemptInfo> StartAttemptAsync(
+        int userId, int examId, CancellationToken cancellationToken = default, int? learnerPathStepId = null)
     {
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
         var exam = await db.Exams
@@ -108,9 +109,10 @@ public sealed class SpeakingPracticeService(
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new SpeakingPracticeException(SpeakingPracticeException.ExamNotFound, $"Speaking practice exam {examId} not found.");
 
+        var pathStep = await ResolveActivePathStepAsync(userId, learnerPathStepId, cancellationToken);
         var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
 
-        if (balance < SpeakingPracticeCreditCost)
+        if (pathStep is null && balance < SpeakingPracticeCreditCost)
         {
             throw new SpeakingPracticeException(SpeakingPracticeException.InsufficientCredits, "You do not have enough credits to start speaking practice.");
         }
@@ -441,7 +443,8 @@ public sealed class SpeakingPracticeService(
             now);
     }
 
-    public async Task<SubmitSpeakingResult> SubmitAttemptAsync(int userId, int attemptId, CancellationToken cancellationToken = default)
+    public async Task<SubmitSpeakingResult> SubmitAttemptAsync(
+        int userId, int attemptId, CancellationToken cancellationToken = default, int? learnerPathStepId = null)
     {
         var attempt = await db.ExamAttempts
             .Where(a => a.AttemptId == attemptId && a.UserId == userId)
@@ -453,8 +456,9 @@ public sealed class SpeakingPracticeService(
             throw new SpeakingPracticeException(SpeakingPracticeException.AttemptNotActive, $"Attempt {attemptId} is not in progress.");
         }
 
+        var pathStep = await ResolveActivePathStepAsync(userId, learnerPathStepId, cancellationToken);
         var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
-        if (balance < SpeakingPracticeCreditCost)
+        if (pathStep is null && balance < SpeakingPracticeCreditCost)
         {
             throw new SpeakingPracticeException(SpeakingPracticeException.InsufficientCredits, "You do not have enough credits to submit speaking practice.");
         }
@@ -501,14 +505,17 @@ public sealed class SpeakingPracticeService(
 
         await db.SaveChangesAsync(cancellationToken);
 
-        // Charge 1 credit via CreditLedger: Reason='ai_grading', Delta=-1
-        try
+        // Charge 1 credit via CreditLedger: Reason='ai_grading', Delta=-1 (0 extra credits inside learning path)
+        if (pathStep is null)
         {
-            await _creditLedger.ChargeAiGradingAsync(userId, attemptId, SpeakingPracticeCreditCost, cancellationToken);
-        }
-        catch (CreditLedgerException ex) when (ex.Code == CreditLedgerException.InsufficientCredits)
-        {
-            throw new SpeakingPracticeException(SpeakingPracticeException.InsufficientCredits, "You do not have enough credits to submit speaking practice.");
+            try
+            {
+                await _creditLedger.ChargeAiGradingAsync(userId, attemptId, SpeakingPracticeCreditCost, cancellationToken);
+            }
+            catch (CreditLedgerException ex) when (ex.Code == CreditLedgerException.InsufficientCredits)
+            {
+                throw new SpeakingPracticeException(SpeakingPracticeException.InsufficientCredits, "You do not have enough credits to submit speaking practice.");
+            }
         }
 
         // Queue one AiGradings row per free response
@@ -532,6 +539,12 @@ public sealed class SpeakingPracticeService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        if (pathStep is not null)
+        {
+            await PathStepCompletion.CloseStepAsync(db, pathStep, score: null, accuracyPct: null, cancellationToken);
+        }
+
         await tx.CommitAsync(cancellationToken);
 
         return new SubmitSpeakingResult(
@@ -861,5 +874,31 @@ public sealed class SpeakingPracticeService(
         }
 
         return result;
+    }
+
+    private async Task<LearnerPathStep?> ResolveActivePathStepAsync(
+        int userId, int? learnerPathStepId, CancellationToken cancellationToken)
+    {
+        if (!learnerPathStepId.HasValue)
+        {
+            return null;
+        }
+
+        var step = await db.LearnerPathSteps
+            .Include(s => s.LearnerPath)
+            .FirstOrDefaultAsync(s => s.StepId == learnerPathStepId.Value
+                && s.LearnerPath.UserId == userId
+                && s.LearnerPath.Status == LearnerPathStatus.Active.ToCode(), cancellationToken);
+
+        if (step is null
+            || step.Status == LearnerPathStepStatus.Locked.ToCode()
+            || !string.Equals(step.Modality, Modality.Speaking.ToCode(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new SpeakingPracticeException(
+                SpeakingPracticeException.AttemptNotActive,
+                $"Learning path step {learnerPathStepId.Value} is not an unlocked speaking step.");
+        }
+
+        return step;
     }
 }

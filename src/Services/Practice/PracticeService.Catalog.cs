@@ -137,6 +137,21 @@ public sealed partial class PracticeService
             .Where(v => v.UserId == userId)
             .ToDictionaryAsync(v => v.SectionId, cancellationToken);
 
+        var practiceAccuracies = await db.PracticeAnswers
+            .AsNoTracking()
+            .Where(pa => pa.Session.UserId == userId
+                && pa.Session.CertId == activeCertId
+                && pa.Session.SectionId != null
+                && pa.IsCorrect != null)
+            .GroupBy(pa => pa.Session.SectionId!.Value)
+            .Select(g => new
+            {
+                SectionId = g.Key,
+                Answered = g.Count(),
+                Correct = g.Count(pa => pa.IsCorrect == true)
+            })
+            .ToDictionaryAsync(x => x.SectionId, cancellationToken);
+
         // #155 / #263: which cells are resting, per section. A cell is the pool's unit of mastery
         // (topic, level), and a section's cells are the ones its bound items belong to.
         var now = _clock.GetUtcNow();
@@ -163,18 +178,39 @@ public sealed partial class PracticeService
                     return (Total: g.Count(), Resting: due.Count, Next: due.Count > 0 ? (DateTimeOffset?)due.Min() : null);
                 });
 
+        // #313: Free Practice unlocks strictly when the learner has a 'done' step covering the section/skill
+        // in their active Learning Path.
+        var doneSteps = await db.LearnerPathSteps
+            .AsNoTracking()
+            .Where(s => s.LearnerPath.UserId == userId
+                && s.LearnerPath.CertId == activeCertId
+                && s.LearnerPath.Status == LearnerPathStatus.Active.ToCode()
+                && s.Status == LearnerPathStepStatus.Done.ToCode())
+            .Select(s => new { s.SkillId, s.Modality })
+            .ToListAsync(cancellationToken);
+
+        var unlockedSkillIds = doneSteps.Select(s => s.SkillId).ToHashSet();
+        var unlockedModalities = doneSteps.Select(s => s.Modality).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var items = sections.Select(s =>
         {
             int answered = 0;
-            int? accuracy = null;
+            int correct = 0;
             if (accuracies.TryGetValue(s.SectionId, out var acc) && acc.Answered is { } total && total > 0)
             {
-                answered = total;
-                accuracy = (int)Math.Round((double)(acc.Correct ?? 0) / total * 100);
+                answered += total;
+                correct += acc.Correct ?? 0;
             }
+            if (practiceAccuracies.TryGetValue(s.SectionId, out var pAcc) && pAcc.Answered > 0)
+            {
+                answered += pAcc.Answered;
+                correct += pAcc.Correct;
+            }
+            int? accuracy = answered > 0 ? (int)Math.Round((double)correct / answered * 100) : null;
 
             questionCounts.TryGetValue(s.SectionId, out var available);
             rests.TryGetValue(s.SectionId, out var rest);
+            var isUnlocked = unlockedSkillIds.Contains(s.SkillId) || unlockedModalities.Contains(s.Modality);
             return new PracticeSectionItem(
                 s.SectionId,
                 s.Skill.Code,
@@ -190,7 +226,8 @@ public sealed partial class PracticeService
                 s.DisplayOrder,
                 rest.Total,
                 rest.Resting,
-                rest.Next);
+                rest.Next,
+                isUnlocked);
         }).ToList();
 
         var listening = items.Where(i => i.Modality == Modality.Listening).ToList();
@@ -207,19 +244,6 @@ public sealed partial class PracticeService
             .ThenByDescending(i => i.AnsweredCount)
             .FirstOrDefault();
 
-        var unfinishedSession = await db.PracticeSessions
-            .AsNoTracking()
-            .Include(ps => ps.Section)
-            .Include(ps => ps.Topic)
-            .Where(ps => ps.UserId == userId
-                && ps.CertId == activeCertId
-                && ps.Status == PracticeStatus.InProgress.ToCode()
-                // #240: a lesson sitting resumes inside the reader, not from the practice catalog.
-                && ps.LearnerPathStepId == null
-                && ps.LessonId == null)
-            .OrderByDescending(ps => ps.StartedAt)
-            .ToListAsync(cancellationToken);
-
         // #150: speaking has no typed drill. Point at its recorded, AI-graded practice when the
         // certificate has one published, so the card is a real link rather than a refusal.
         var speakingPracticeExamId = await db.Exams
@@ -232,7 +256,9 @@ public sealed partial class PracticeService
             .Select(e => (int?)e.ExamId)
             .FirstOrDefaultAsync(cancellationToken);
 
+        // #313: Free Practice is stateless — no in_progress or abandoned session resume tracking.
+        // Resume remains strictly on Mock & Placement ExamAttempts.
         return new PracticeSectionsView(cert, listening, reading, other, weakest,
-            unfinishedSession.Count == 0 ? null : ToSessionInfo(unfinishedSession[0]), speaking, speakingPracticeExamId);
+            UnfinishedSession: null, speaking, speakingPracticeExamId);
     }
 }

@@ -32,7 +32,7 @@ public static partial class PracticeEndpoints
             static PracticeSectionDto ToSectionDto(PracticeSectionItem s) => new(
                 s.SectionId, s.SkillCode, s.SkillName, s.Modality.MapTo<ModalityDto>(), s.Code, s.Name, s.OptionCount,
                 s.ExpectedQuestionCount, s.AvailableQuestionCount, s.AccuracyPercentage, s.AnsweredCount, s.DisplayOrder,
-                s.TotalCategoryCount, s.CategoriesInCooldown, s.NextReviewDueAt);
+                s.TotalCategoryCount, s.CategoriesInCooldown, s.NextReviewDueAt, s.IsUnlocked);
 
             return Results.Ok(new PracticeCatalogDto(
                 ToCertificateDto(view.Certificate),

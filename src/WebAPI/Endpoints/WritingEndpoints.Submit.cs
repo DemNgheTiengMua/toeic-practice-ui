@@ -12,13 +12,14 @@ public static partial class WritingEndpoints
         // POST /api/learner/writing/attempts/{attemptId}/submit
         learner.MapPost("/attempts/{attemptId:int}/submit", async Task<IResult> (
             int attemptId,
+            [FromQuery] int? stepId,
             HttpContext http,
             IWritingPracticeService writingService,
             CancellationToken cancellationToken) =>
         {
             try
             {
-                var result = await writingService.SubmitAttemptAsync(CurrentUserId(http), attemptId, cancellationToken);
+                var result = await writingService.SubmitAttemptAsync(CurrentUserId(http), attemptId, cancellationToken, stepId);
                 return Results.Ok(new SubmitWritingResponse(
                     result.AttemptId,
                     result.Status.MapTo<AttemptStatusDto>(),

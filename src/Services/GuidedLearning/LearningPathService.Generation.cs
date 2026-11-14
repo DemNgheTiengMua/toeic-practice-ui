@@ -7,11 +7,15 @@ using BusinessObjects;
 using DataAccess;
 using BusinessObjects.Entities;
 using Microsoft.EntityFrameworkCore;
+using Services.Credits;
 
 namespace Services;
 
 public sealed partial class LearningPathService
 {
+    public const int LearningPathCostCredits = 5;
+    public const int WeekCount = 4;
+
     public async Task<LearningPathSummaryView> GeneratePathAsync(int userId, string? targetBandCode = null, CancellationToken cancellationToken = default, bool archiveExisting = false)
     {
         var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
@@ -59,41 +63,36 @@ public sealed partial class LearningPathService
 
         RefuseUnrealisticGoal(savedTarget, currentBand, toBand, scoreBands);
 
-        // #232 / D10: the plan is built from each skill's OWN level, resolved from the certificate's
-        // per-skill cut scores. There is no template, no module and no section rank: a step is a
-        // coordinate, and the skill's level is the axis it is pitched on.
-        var skillLevels = await LoadSkillLevelsAsync(userId, activeCertId, cancellationToken);
-
-        var targetBand = scoreBands.FirstOrDefault(b => b.Code == toBand);
-        var targetAccuracy = LearningPathPlanner.TargetAccuracyFor(
-            isTopBand: targetBand is not null && targetBand.DisplayOrder >= scoreBands.Max(b => b.DisplayOrder));
-
-        // #233: one place resolves the pacing and the blocks, shared with the window's slide, so a
-        // synthesised week is sized by the same arithmetic as the plan it extends.
-        var (pacing, blocks) = await ResolvePacingAndBlocksAsync(
-            userId, activeCertId, savedTarget, currentBand, toBand, scoreBands, skillLevels, cancellationToken);
-
-        if (blocks.Count == 0)
+        // #313: Block Before Charge — verify wallet has at least 5 credits before building & persisting the path.
+        var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
+        if (balance < LearningPathCostCredits)
         {
-            throw new LearningPathException(
-                LearningPathException.NoQuestionsAvailable,
-                "This certificate has no skill with a level and drillable stock yet, so a path would have no steps. Author content for at least one skill first.");
+            throw new CreditLedgerException(
+                CreditLedgerException.InsufficientCredits,
+                $"Insufficient credits to generate a learning path. Balance is {balance}, required is {LearningPathCostCredits}.",
+                402);
         }
 
-        var plan = LearningPathPlanner.Plan(pacing, blocks);
+        var plan = await BuildDeterministic4WeekPlanAsync(
+            userId, activeCertId, currentBand, toBand, scoreBands, savedTarget, cancellationToken);
 
         if (plan.Count == 0)
         {
             throw new LearningPathException(
                 LearningPathException.NoQuestionsAvailable,
-                "This certificate's stock cannot fill any of the four weeks, so a path would have no steps. Add items first.");
+                "This certificate has no skills or content yet, so a path would have no steps. Author content for at least one skill first.");
         }
 
         var latestPlacement = await db.PlacementTests
             .AsNoTracking()
-            .Where(p => p.UserId == userId && p.CertId == activeCertId && p.Status == PlacementStatus.Done.ToCode())
+            .Where(p => p.UserId == userId && (p.CertId == activeCertId || p.CertId == null) && p.Status == PlacementStatus.Done.ToCode())
             .OrderByDescending(p => p.TakenAt)
             .FirstOrDefaultAsync(cancellationToken);
+
+        var ownsTransaction = db.Database.CurrentTransaction is null;
+        await using var tx = ownsTransaction ? await db.Database.BeginTransactionAsync(cancellationToken) : null;
+
+        await _creditLedger.ChargeLearningPathAsync(userId, LearningPathCostCredits, cancellationToken);
 
         var learnerPath = new LearnerPath
         {
@@ -103,8 +102,6 @@ public sealed partial class LearningPathService
             PlacementId = latestPlacement?.PlacementId,
             Status = "active",
             StartedAt = DateTimeOffset.UtcNow,
-            // #233: the window opens today and its first live week is 1. Named explicitly so a plan is
-            // never built against the schema's insert default by accident.
             WindowStartDate = DateOnly.FromDateTime(DateTime.UtcNow),
             ActiveWeek = 1,
             WindowSlides = 0
@@ -127,36 +124,28 @@ public sealed partial class LearningPathService
             throw;
         }
 
-        var blocksById = blocks.ToDictionary(b => b.SkillId);
         var isFirst = true;
-
-        foreach (var planned in plan)
+        foreach (var step in plan)
         {
-            var block = blocksById[planned.SkillId];
-
             db.LearnerPathSteps.Add(new LearnerPathStep
             {
                 LearnerPathId = learnerPath.LearnerPathId,
                 CertId = activeCertId,
-                SkillId = planned.SkillId,
-                Modality = block.Modality.ToCode(),
-                TopicId = planned.TopicId,
-                TargetCefr = planned.TargetCefr.Code,
-                StepType = planned.StepType.ToCode(),
-                SizingTier = planned.SizingTier.ToCode(),
-                // A drill names no resource: the selector decides its items at run time, which is what
-                // lets it route around a cooling cell instead of blocking the step (D11/PLC-60).
-                RefLessonId = planned.StepType is PathStepType.ConceptLesson or PathStepType.ExpandedRemedial
-                    ? block.LessonId
-                    : null,
-                RefExamId = planned.StepType is PathStepType.MockSection ? block.MockExamId : null,
+                SkillId = step.SkillId,
+                Modality = step.Modality,
+                TopicId = step.TopicId,
+                TargetCefr = step.TargetCefr,
+                StepType = step.StepType,
+                SizingTier = step.SizingTier,
+                RefLessonId = step.RefLessonId,
+                RefExamId = step.RefExamId,
                 Status = isFirst ? "available" : "locked",
                 Score = null,
-                WeekNumber = planned.WeekNumber,
-                WeekSequence = planned.WeekSequence,
-                PlannedItemCount = planned.PlannedItemCount,
-                EstimatedMinutes = planned.EstimatedMinutes,
-                TargetAccuracyPct = targetAccuracy,
+                WeekNumber = step.WeekNumber,
+                WeekSequence = step.WeekSequence,
+                PlannedItemCount = step.PlannedItemCount,
+                EstimatedMinutes = step.EstimatedMinutes,
+                TargetAccuracyPct = step.TargetAccuracyPct,
                 ActualAccuracyPct = null,
                 StartedAt = null,
                 CompletedAt = null
@@ -166,7 +155,300 @@ public sealed partial class LearningPathService
 
         await db.SaveChangesAsync(cancellationToken);
 
+        if (tx is not null)
+        {
+            await tx.CommitAsync(cancellationToken);
+        }
+
         return await GetActivePathAsync(userId, cancellationToken);
+    }
+
+    private sealed record PlannedStepRow(
+        int SkillId,
+        string Modality,
+        int TopicId,
+        string TargetCefr,
+        string StepType,
+        string SizingTier,
+        int? RefLessonId,
+        int? RefExamId,
+        int WeekNumber,
+        int WeekSequence,
+        int? PlannedItemCount,
+        int EstimatedMinutes,
+        int TargetAccuracyPct);
+
+    private static bool MatchesTargetBands(string? targetBands, ISet<string> bandCodes)
+    {
+        if (string.IsNullOrWhiteSpace(targetBands) ||
+            targetBands.Trim().Equals("ALL", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var tokens = targetBands.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return tokens.Any(t => t.Equals("ALL", StringComparison.OrdinalIgnoreCase) || bandCodes.Contains(t));
+    }
+
+    private static CefrLevel ResolveStepCefr(string bandCode, CefrLevel? fallbackItemCefr)
+    {
+        if (CefrLevel.TryParseAuthored(bandCode, out var parsed))
+        {
+            return parsed;
+        }
+
+        if (fallbackItemCefr is { } itemLevel && itemLevel != CefrLevel.PreA1)
+        {
+            return itemLevel;
+        }
+
+        return CefrLevel.B1;
+    }
+
+    private async Task<List<PlannedStepRow>> BuildDeterministic4WeekPlanAsync(
+        int userId,
+        int certId,
+        string currentBand,
+        string toBand,
+        IReadOnlyList<ScoreBand> scoreBands,
+        TargetBand? savedTarget,
+        CancellationToken cancellationToken)
+    {
+        var skills = await db.Skills
+            .AsNoTracking()
+            .Where(s => s.CertId == certId)
+            .OrderBy(s => s.DisplayOrder)
+            .ThenBy(s => s.SkillId)
+            .Select(s => new { s.SkillId, s.Modality })
+            .ToListAsync(cancellationToken);
+
+        if (skills.Count == 0)
+        {
+            return [];
+        }
+
+        // Determine band range [CurrentBand .. TargetBand]
+        var fromIdx = scoreBands.ToList().FindIndex(b => b.Code.Equals(currentBand, StringComparison.OrdinalIgnoreCase));
+        var toIdx = scoreBands.ToList().FindIndex(b => b.Code.Equals(toBand, StringComparison.OrdinalIgnoreCase));
+        if (fromIdx < 0) fromIdx = 0;
+        if (toIdx < fromIdx) toIdx = fromIdx;
+
+        var fullRangeBands = scoreBands
+            .Skip(fromIdx)
+            .Take(toIdx - fromIdx + 1)
+            .Select(b => b.Code)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        fullRangeBands.Add(currentBand);
+        fullRangeBands.Add(toBand);
+
+        var foundationBands = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { currentBand };
+        var targetRangeBands = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { toBand };
+        if (scoreBands.Count > 0 && toIdx > fromIdx)
+        {
+            for (var i = fromIdx + 1; i <= toIdx; i++)
+            {
+                targetRangeBands.Add(scoreBands[i].Code);
+            }
+        }
+
+        // Rank skills by placement accuracy (weakest first; unmeasured skills treated as priority foundation)
+        var latestPlacementAttemptId = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.UserId == userId && (p.CertId == certId || p.CertId == null) && p.Status == PlacementStatus.Done.ToCode())
+            .OrderByDescending(p => p.TakenAt)
+            .Select(p => (int?)p.AttemptId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var skillScoreBySkillId = latestPlacementAttemptId.HasValue
+            ? await db.AttemptSkillScores
+                .AsNoTracking()
+                .Where(s => s.AttemptId == latestPlacementAttemptId.Value)
+                .ToDictionaryAsync(s => s.SkillId, s => s.ScaledScore, cancellationToken)
+            : new Dictionary<int, int>();
+
+        var rankedSkills = skills
+            .OrderBy(s => skillScoreBySkillId.TryGetValue(s.SkillId, out var sc) ? sc : -1)
+            .ToList();
+
+        var modalities = rankedSkills.Select(s => s.Modality).Distinct().ToList();
+        var allTopics = await db.Topics
+            .AsNoTracking()
+            .Where(t => modalities.Contains(t.Modality))
+            .OrderBy(t => t.TopicId)
+            .ToListAsync(cancellationToken);
+
+        var allItems = await db.Items
+            .AsNoTracking()
+            .Where(i => modalities.Contains(i.Modality) && i.LifecycleStatus == ActiveItemLifecycle)
+            .Select(i => new { i.ItemId, i.Modality, i.TopicId, i.CefrLevel, i.TargetBands, i.PlacementEligible })
+            .ToListAsync(cancellationToken);
+
+        var allLessons = await db.Lessons
+            .AsNoTracking()
+            .Where(l => l.CertId == certId)
+            .OrderBy(l => l.DisplayOrder)
+            .ThenBy(l => l.LessonId)
+            .Select(l => new { l.LessonId, l.SkillId, l.Modality, l.TopicId, l.CefrLevel, l.TargetBands, l.EstimatedMinutes })
+            .ToListAsync(cancellationToken);
+
+        var mockExamId = await db.Exams
+            .AsNoTracking()
+            .Where(e => e.CertId == certId && e.Purpose == ExamPurpose.Mock.ToCode() && e.Status == ExamStatus.Published.ToCode())
+            .OrderBy(e => e.ExamId)
+            .Select(e => (int?)e.ExamId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var targetBand = scoreBands.FirstOrDefault(b => b.Code == toBand);
+        var targetAccuracy = LearningPathPlanner.TargetAccuracyFor(
+            isTopBand: targetBand is not null && scoreBands.Count > 0 && targetBand.DisplayOrder >= scoreBands.Max(b => b.DisplayOrder));
+
+        var steps = new List<PlannedStepRow>();
+
+        for (var week = 1; week <= WeekCount; week++)
+        {
+            var isFoundationWeek = week <= 2;
+            var preferredBands = isFoundationWeek ? foundationBands : targetRangeBands;
+            var bandLabelForWeek = isFoundationWeek ? currentBand : toBand;
+            var seq = 1;
+
+            // Rotate/prioritize weakest skills in weeks 1-2, all skills in weeks 3-4
+            var weekSkills = isFoundationWeek
+                ? rankedSkills
+                : rankedSkills.AsEnumerable().Reverse().ToList();
+
+            foreach (var skill in weekSkills)
+            {
+                var skillItems = allItems
+                    .Where(i => i.Modality == skill.Modality && !i.PlacementEligible)
+                    .ToList();
+                if (skillItems.Count == 0)
+                {
+                    skillItems = allItems.Where(i => i.Modality == skill.Modality).ToList();
+                }
+
+                // Nearest-band fallback for items: preferredBands+ALL -> fullRangeBands+ALL -> any active items for modality
+                var matchedItems = skillItems.Where(i => MatchesTargetBands(i.TargetBands, preferredBands)).ToList();
+                if (matchedItems.Count == 0)
+                {
+                    matchedItems = skillItems.Where(i => MatchesTargetBands(i.TargetBands, fullRangeBands)).ToList();
+                }
+                if (matchedItems.Count == 0)
+                {
+                    matchedItems = skillItems;
+                }
+
+                // Nearest-band fallback for lessons
+                var skillLessons = allLessons.Where(l => l.SkillId == skill.SkillId).ToList();
+                if (skillLessons.Count == 0)
+                {
+                    skillLessons = allLessons.Where(l => l.Modality == skill.Modality).ToList();
+                }
+
+                var lesson = skillLessons.FirstOrDefault(l => MatchesTargetBands(l.TargetBands, preferredBands))
+                    ?? skillLessons.FirstOrDefault(l => MatchesTargetBands(l.TargetBands, fullRangeBands))
+                    ?? skillLessons.FirstOrDefault();
+
+                var topicId = matchedItems.FirstOrDefault()?.TopicId
+                    ?? lesson?.TopicId
+                    ?? allTopics.FirstOrDefault(t => t.Modality == skill.Modality)?.TopicId
+                    ?? 0;
+
+                if (topicId == 0)
+                {
+                    continue;
+                }
+
+                var stepCefr = ResolveStepCefr(
+                    bandLabelForWeek,
+                    matchedItems.FirstOrDefault()?.CefrLevel ?? lesson?.CefrLevel).Code;
+
+                // 1. ConceptLesson (if lesson exists)
+                if (lesson is not null)
+                {
+                    steps.Add(new PlannedStepRow(
+                        skill.SkillId,
+                        skill.Modality,
+                        lesson.TopicId,
+                        stepCefr,
+                        PathStepType.ConceptLesson.ToCode(),
+                        SizingTier.Developing.ToCode(),
+                        lesson.LessonId,
+                        null,
+                        week,
+                        seq++,
+                        null,
+                        Math.Max(5, lesson.EstimatedMinutes),
+                        targetAccuracy));
+                }
+
+                // 2. FocusPractice (if drillable items exist)
+                if (matchedItems.Count > 0)
+                {
+                    var itemCount = Math.Min(10, Math.Max(1, matchedItems.Count));
+                    steps.Add(new PlannedStepRow(
+                        skill.SkillId,
+                        skill.Modality,
+                        topicId,
+                        stepCefr,
+                        PathStepType.FocusPractice.ToCode(),
+                        SizingTier.Developing.ToCode(),
+                        null,
+                        null,
+                        week,
+                        seq++,
+                        itemCount,
+                        Math.Max(5, itemCount * 2),
+                        targetAccuracy));
+                }
+
+                // 3. ReviewSpaced on alternating weeks when items exist
+                if (matchedItems.Count > 0 && week is 1 or 3)
+                {
+                    var reviewCount = Math.Min(6, Math.Max(1, matchedItems.Count));
+                    steps.Add(new PlannedStepRow(
+                        skill.SkillId,
+                        skill.Modality,
+                        topicId,
+                        stepCefr,
+                        PathStepType.ReviewSpaced.ToCode(),
+                        SizingTier.Mastered.ToCode(),
+                        null,
+                        null,
+                        week,
+                        seq++,
+                        reviewCount,
+                        Math.Max(5, reviewCount * 2),
+                        targetAccuracy));
+                }
+            }
+
+            // Milestone MockSection at Weeks 2 and 4
+            if (mockExamId.HasValue && week is 2 or 4)
+            {
+                var anchorSkill = rankedSkills[0];
+                var anchorTopicId = allTopics.FirstOrDefault(t => t.Modality == anchorSkill.Modality)?.TopicId ?? 0;
+                if (anchorTopicId > 0)
+                {
+                    var anchorCefr = ResolveStepCefr(bandLabelForWeek, null).Code;
+                    steps.Add(new PlannedStepRow(
+                        anchorSkill.SkillId,
+                        anchorSkill.Modality,
+                        anchorTopicId,
+                        anchorCefr,
+                        PathStepType.MockSection.ToCode(),
+                        SizingTier.Developing.ToCode(),
+                        null,
+                        mockExamId.Value,
+                        week,
+                        seq++,
+                        null,
+                        20,
+                        targetAccuracy));
+                }
+            }
+        }
+
+        return steps;
     }
 
     /// <summary>
