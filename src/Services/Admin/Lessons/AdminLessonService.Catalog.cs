@@ -48,7 +48,8 @@ public sealed partial class AdminLessonService
                 l.TopicId,
                 l.Topic.Code,
                 l.Topic.Name,
-                l.CefrLevel.Code))
+                l.CefrLevel.Code,
+                l.TargetBands))
             .ToListAsync(cancellationToken);
     }
 
@@ -104,7 +105,8 @@ public sealed partial class AdminLessonService
             lesson.Modality,
             lesson.TopicId,
             lesson.Topic?.Code ?? "",
-            lesson.CefrLevel.Code);
+            lesson.CefrLevel.Code,
+            lesson.TargetBands);
     }
 
     public async Task<AdminLessonFormOptionsDto> GetFormOptionsAsync(int? certId = null, CancellationToken cancellationToken = default)

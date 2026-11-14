@@ -11,7 +11,6 @@ import {
 import {
   CheckCircle,
   Coins,
-  FileCheck2,
   Lock,
   Mail,
   Phone,
@@ -71,9 +70,6 @@ export function AdminUsersPage() {
   const [adjustValidationError, setAdjustValidationError] = useState<string | null>(null);
   const [adjustSubmitting, setAdjustSubmitting] = useState(false);
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
-
-  // Stratified audit queue launcher state
-  const [auditBatchInput, setAuditBatchInput] = useState('7');
 
   async function loadUsers(currentQuery = query, currentStatus = statusFilter, currentPage = page) {
     try {
@@ -231,7 +227,6 @@ export function AdminUsersPage() {
             <Tabs.List aria-label="People and governance navigation">
               <Tabs.Tab id="users">Users &amp; credits</Tabs.Tab>
               <Tabs.Tab id="roles">Roles &amp; capabilities</Tabs.Tab>
-              <Tabs.Tab id="audit">Audit queue launcher</Tabs.Tab>
             </Tabs.List>
           </div>
 
@@ -489,39 +484,6 @@ export function AdminUsersPage() {
                     );
                   })}
                 </div>
-              </Card.Content>
-            </Card>
-          </Tabs.Panel>
-
-          {/* TAB 3: AUDIT QUEUE LAUNCHER */}
-          <Tabs.Panel id="audit" className="pt-4 space-y-6">
-            <Card className="border border-border max-w-xl">
-              <Card.Header>
-                <Card.Title className="font-display text-lg font-semibold flex items-center gap-2">
-                  <FileCheck2 className="h-5 w-5 text-accent" />
-                  Stratified content audit queue
-                </Card.Title>
-                <Card.Description className="text-xs text-muted">
-                  Jump directly to a batch audit queue to perform blind-solve verification and promotion.
-                </Card.Description>
-              </Card.Header>
-              <Card.Content className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">Batch ID</label>
-                  <input
-                    type="number"
-                    value={auditBatchInput}
-                    onChange={(e) => setAuditBatchInput(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-surface rounded-lg border border-border focus:border-accent focus:outline-none font-mono-tabular"
-                    placeholder="e.g. 7"
-                  />
-                </div>
-                <Button
-                  variant="primary"
-                  onPress={() => void navigate({ to: `/admin/audit/${auditBatchInput.trim() || '7'}` })}
-                >
-                  Open audit batch #{auditBatchInput.trim() || '7'}
-                </Button>
               </Card.Content>
             </Card>
           </Tabs.Panel>

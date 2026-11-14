@@ -139,20 +139,27 @@ public sealed partial class CertificateService
             if (skillDto.Sections is null || skillDto.Sections.Count == 0)
                 throw new ArgumentException($"Skill '{skillCode}' must have at least one section.", nameof(request));
 
+            var sectionOrder = 0;
             foreach (var secDto in skillDto.Sections)
             {
+                sectionOrder++;
                 if (string.IsNullOrWhiteSpace(secDto.Code))
                     throw new ArgumentException($"Section code is required for skill '{skillCode}'.", nameof(request));
                 if (string.IsNullOrWhiteSpace(secDto.Name))
                     throw new ArgumentException($"Section name is required for section '{secDto.Code}'.", nameof(request));
-                // #157: the column is NOT NULL CHECK (> 0). Say so here rather than letting the
-                // constraint surface as a 500 from deep inside the save.
                 if (secDto.ExpectedQuestionCount <= 0)
                     throw new ArgumentException($"Section '{secDto.Code}' must declare how many questions it holds (ExpectedQuestionCount > 0).", nameof(request));
 
                 var secCode = secDto.Code.Trim().ToUpperInvariant();
-                var navModeStr = FormatUpperSnakeCase(secDto.NavigationMode.ToString());
-                var layoutStr = FormatUpperSnakeCase(secDto.LayoutType.ToString());
+                var defaults = ModalityDefaults(modalityStr);
+                var displayOrder = secDto.DisplayOrder > 0 ? secDto.DisplayOrder : sectionOrder;
+                var navModeStr = FormatUpperSnakeCase((secDto.NavigationMode ?? defaults.NavigationMode).ToString());
+                var layoutStr = FormatUpperSnakeCase((secDto.LayoutType ?? defaults.LayoutType).ToString());
+                var timerPolicy = secDto.TimerPolicyJson ?? defaults.TimerPolicyJson;
+                var requirePassage = secDto.RequirePassage ?? defaults.RequirePassage;
+                var requireAudio = secDto.RequireAudio ?? defaults.RequireAudio;
+                var allowedTypes = secDto.AllowedComponentTypesJson ?? defaults.AllowedComponentTypesJson;
+                var toolsConfig = secDto.ToolsConfigJson ?? defaults.ToolsConfigJson;
 
                 Section section;
                 if (secDto.SectionId.HasValue && secDto.SectionId.Value > 0)
@@ -163,22 +170,22 @@ public sealed partial class CertificateService
 
                     section.Name = secDto.Name.Trim();
                     section.Modality = modalityStr;
-                    section.DisplayOrder = secDto.DisplayOrder;
+                    section.DisplayOrder = displayOrder;
                     section.ScoreWeight = secDto.ScoreWeight > 0 ? secDto.ScoreWeight : 1.0m;
                     section.NavigationMode = navModeStr;
-                    section.TimerPolicyJson = secDto.TimerPolicyJson;
+                    section.TimerPolicyJson = timerPolicy;
                     section.LayoutType = layoutStr;
                     section.OptionCount = secDto.OptionCount > 0 ? secDto.OptionCount : 4;
                     section.ClusterSize = secDto.ClusterSize > 0 ? secDto.ClusterSize : 1;
                     section.UnitCount = secDto.UnitCount > 0 ? secDto.UnitCount : 1;
                     section.HideOptionText = secDto.HideOptionText;
-                    section.RequirePassage = secDto.RequirePassage;
-                    section.RequireAudio = secDto.RequireAudio;
+                    section.RequirePassage = requirePassage;
+                    section.RequireAudio = requireAudio;
                     section.RequireImage = secDto.RequireImage;
                     section.RequiredKeywordCount = secDto.RequiredKeywordCount;
                     section.ExpectedQuestionCount = secDto.ExpectedQuestionCount;
-                    section.AllowedComponentTypesJson = secDto.AllowedComponentTypesJson;
-                    section.ToolsConfigJson = secDto.ToolsConfigJson;
+                    section.AllowedComponentTypesJson = allowedTypes;
+                    section.ToolsConfigJson = toolsConfig;
                 }
                 else
                 {
@@ -190,22 +197,22 @@ public sealed partial class CertificateService
                         section = existingSec;
                         section.Name = secDto.Name.Trim();
                         section.Modality = modalityStr;
-                        section.DisplayOrder = secDto.DisplayOrder;
+                        section.DisplayOrder = displayOrder;
                         section.ScoreWeight = secDto.ScoreWeight > 0 ? secDto.ScoreWeight : 1.0m;
                         section.NavigationMode = navModeStr;
-                        section.TimerPolicyJson = secDto.TimerPolicyJson;
+                        section.TimerPolicyJson = timerPolicy;
                         section.LayoutType = layoutStr;
                         section.OptionCount = secDto.OptionCount > 0 ? secDto.OptionCount : 4;
                         section.ClusterSize = secDto.ClusterSize > 0 ? secDto.ClusterSize : 1;
                         section.UnitCount = secDto.UnitCount > 0 ? secDto.UnitCount : 1;
                         section.HideOptionText = secDto.HideOptionText;
-                        section.RequirePassage = secDto.RequirePassage;
-                        section.RequireAudio = secDto.RequireAudio;
+                        section.RequirePassage = requirePassage;
+                        section.RequireAudio = requireAudio;
                         section.RequireImage = secDto.RequireImage;
                         section.RequiredKeywordCount = secDto.RequiredKeywordCount;
                         section.ExpectedQuestionCount = secDto.ExpectedQuestionCount;
-                        section.AllowedComponentTypesJson = secDto.AllowedComponentTypesJson;
-                        section.ToolsConfigJson = secDto.ToolsConfigJson;
+                        section.AllowedComponentTypesJson = allowedTypes;
+                        section.ToolsConfigJson = toolsConfig;
                     }
                     else
                     {
@@ -216,22 +223,22 @@ public sealed partial class CertificateService
                             Modality = modalityStr,
                             Code = secCode,
                             Name = secDto.Name.Trim(),
-                            DisplayOrder = secDto.DisplayOrder,
+                            DisplayOrder = displayOrder,
                             ScoreWeight = secDto.ScoreWeight > 0 ? secDto.ScoreWeight : 1.0m,
                             NavigationMode = navModeStr,
-                            TimerPolicyJson = secDto.TimerPolicyJson,
+                            TimerPolicyJson = timerPolicy,
                             LayoutType = layoutStr,
                             OptionCount = secDto.OptionCount > 0 ? secDto.OptionCount : 4,
                             ClusterSize = secDto.ClusterSize > 0 ? secDto.ClusterSize : 1,
                             UnitCount = secDto.UnitCount > 0 ? secDto.UnitCount : 1,
                             HideOptionText = secDto.HideOptionText,
-                            RequirePassage = secDto.RequirePassage,
-                            RequireAudio = secDto.RequireAudio,
+                            RequirePassage = requirePassage,
+                            RequireAudio = requireAudio,
                             RequireImage = secDto.RequireImage,
                             RequiredKeywordCount = secDto.RequiredKeywordCount,
                             ExpectedQuestionCount = secDto.ExpectedQuestionCount,
-                            AllowedComponentTypesJson = secDto.AllowedComponentTypesJson,
-                            ToolsConfigJson = secDto.ToolsConfigJson
+                            AllowedComponentTypesJson = allowedTypes,
+                            ToolsConfigJson = toolsConfig
                         };
                         db.Sections.Add(section);
                     }
@@ -422,12 +429,6 @@ public sealed partial class CertificateService
             .ToListAsync(cancellationToken);
         var skillIdsByCode = skills.ToDictionary(s => s.Code, s => s.SkillId, StringComparer.OrdinalIgnoreCase);
 
-        // #192: criteria created in this save have no identity yet, so their grids are written after
-        // the first SaveChanges assigns one.
-        var pendingBands = new List<(GradingCriterion Criterion, IReadOnlyList<SaveGradingCriterionBandDto> Bands)>();
-        // #193: the same for anchors, for the same reason.
-        var pendingAnchors = new List<(GradingCriterion Criterion, IReadOnlyList<SaveGradingCriterionAnchorDto> Anchors)>();
-
         foreach (var dto in criteria)
         {
             if (!skillIdsByCode.TryGetValue(dto.SkillCode.Trim(), out var skillId))
@@ -446,10 +447,9 @@ public sealed partial class CertificateService
                              : c.Code == dto.Code),
                     cancellationToken);
 
-            GradingCriterion criterion;
             if (existing is null)
             {
-                criterion = new GradingCriterion
+                db.GradingCriteria.Add(new GradingCriterion
                 {
                     CertId = certId,
                     SkillId = skillId,
@@ -459,12 +459,10 @@ public sealed partial class CertificateService
                     Weight = dto.Weight > 0 ? dto.Weight : 1.0m,
                     DisplayOrder = dto.DisplayOrder,
                     RubricDescription = dto.RubricDescription?.Trim()
-                };
-                db.GradingCriteria.Add(criterion);
+                });
             }
             else
             {
-                criterion = existing;
                 existing.Code = dto.Code.Trim();
                 existing.Name = dto.Name.Trim();
                 existing.MaxScore = dto.MaxScore;
@@ -472,80 +470,63 @@ public sealed partial class CertificateService
                 existing.DisplayOrder = dto.DisplayOrder;
                 existing.RubricDescription = dto.RubricDescription?.Trim();
             }
-
-            // #192: the seven-band grid, written in the same save as the criterion that owns it, so a
-            // criterion and its descriptors cannot half-exist. Empty means "this request does not
-            // author a grid", which leaves any grid already stored alone: removing seven rows because
-            // a form did not post them would silently un-grade a rubric.
-            if (dto.Bands is { Count: > 0 } bands)
-            {
-                // A new criterion has no id until the save below, so its grid is written after it.
-                if (criterion.CriterionId > 0)
-                {
-                    await ReplaceBandsAsync(criterion.CriterionId, bands, cancellationToken);
-                }
-                else
-                {
-                    pendingBands.Add((criterion, bands));
-                }
-            }
-
-            // #193: the anchors, on the same "empty means not authored here" rule as the grid. They are
-            // authored before the lock; the schema trigger refuses them after it.
-            if (dto.Anchors is { Count: > 0 } anchors)
-            {
-                if (criterion.CriterionId > 0)
-                {
-                    await ReplaceAnchorsAsync(criterion.CriterionId, anchors, cancellationToken);
-                }
-                else
-                {
-                    pendingAnchors.Add((criterion, anchors));
-                }
-            }
         }
 
         await db.SaveChangesAsync(cancellationToken);
-
-        // Second pass for criteria that did not exist a moment ago: the grid needs the identity the
-        // first save produced.
-        foreach (var (criterion, bands) in pendingBands)
-        {
-            await ReplaceBandsAsync(criterion.CriterionId, bands, cancellationToken);
-        }
-        foreach (var (criterion, anchors) in pendingAnchors)
-        {
-            await ReplaceAnchorsAsync(criterion.CriterionId, anchors, cancellationToken);
-        }
-        if (pendingBands.Count > 0 || pendingAnchors.Count > 0)
-        {
-            await db.SaveChangesAsync(cancellationToken);
-        }
     }
 
-    /// <summary>
-    /// #193: the anchors as posted are the anchors stored, on the same rule as the grid - bands the
-    /// request omits are deleted, not merged. The trigger refuses this outright once the rubric is
-    /// locked, which is why authoring happens before the lock.
-    /// </summary>
-    private async Task ReplaceAnchorsAsync(
-        int criterionId, IReadOnlyList<SaveGradingCriterionAnchorDto> anchors, CancellationToken cancellationToken) =>
-        await RubricGridWriter.ReplaceAnchorsAsync(
-            db, criterionId,
-            anchors.Select(a => new RubricGridWriter.Anchor(a.Band, a.ResponseText)).ToList(),
-            cancellationToken);
+    private sealed record SectionModalityDefaults(
+        NavigationModeDto NavigationMode,
+        LayoutTypeDto LayoutType,
+        bool RequirePassage,
+        bool RequireAudio,
+        string? AllowedComponentTypesJson,
+        string? TimerPolicyJson,
+        string? ToolsConfigJson);
 
-    /// <summary>
-    /// #192: the grid as posted is the grid stored - bands the request omits are deleted, not merged.
-    /// A merge would let a seven-band grid keep an eighth row from an earlier save, which the lock
-    /// counts as a defect. The trigger refuses this outright once the rubric is locked.
-    /// </summary>
-    private async Task ReplaceBandsAsync(
-        int criterionId, IReadOnlyList<SaveGradingCriterionBandDto> bands, CancellationToken cancellationToken) =>
-        await RubricGridWriter.ReplaceCellsAsync(
-            db, criterionId,
-            bands.Select(b => new RubricGridWriter.Cell(b.Band, b.Descriptor, b.BinaryGates)).ToList(),
-            cancellationToken);
+    private static SectionModalityDefaults ModalityDefaults(string modality) => modality switch
+    {
+        "listening" => new(
+            NavigationModeDto.AudioDriven,
+            LayoutTypeDto.StandardVertical,
+            RequirePassage: false,
+            RequireAudio: true,
+            AllowedComponentTypesJson: "[\"mcq\"]",
+            TimerPolicyJson: "{\"timerMode\":\"AUDIO_PLUS_CHECK\",\"reviewSeconds\":120}",
+            ToolsConfigJson: null),
+        "reading" => new(
+            NavigationModeDto.FullSandbox,
+            LayoutTypeDto.SplitHorizontal,
+            RequirePassage: true,
+            RequireAudio: false,
+            AllowedComponentTypesJson: "[\"mcq\"]",
+            TimerPolicyJson: "{\"timerMode\":\"SECTION_SHARED\"}",
+            ToolsConfigJson: "{\"highlighter\":true,\"notes\":true}"),
+        "writing" => new(
+            NavigationModeDto.FullSandbox,
+            LayoutTypeDto.SplitHorizontal,
+            RequirePassage: false,
+            RequireAudio: false,
+            AllowedComponentTypesJson: "[\"free_response\"]",
+            TimerPolicyJson: "{\"timerMode\":\"SECTION_SHARED\"}",
+            ToolsConfigJson: "{\"wordCount\":true,\"disableSpellcheck\":true}"),
+        "speaking" => new(
+            NavigationModeDto.SystemPacedAuto,
+            LayoutTypeDto.StandardVertical,
+            RequirePassage: false,
+            RequireAudio: false,
+            AllowedComponentTypesJson: "[\"free_response\"]",
+            TimerPolicyJson: "{\"timerMode\":\"ITEM_FIXED\"}",
+            ToolsConfigJson: null),
+        _ => new(
+            NavigationModeDto.FullSandbox,
+            LayoutTypeDto.StandardVertical,
+            RequirePassage: false,
+            RequireAudio: false,
+            AllowedComponentTypesJson: null,
+            TimerPolicyJson: "{\"timerMode\":\"SECTION_SHARED\"}",
+            ToolsConfigJson: null)
+    };
 
     private static string FormatUpperSnakeCase(string input)
     {

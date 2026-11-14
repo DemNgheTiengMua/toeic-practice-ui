@@ -274,10 +274,17 @@ describe('Question Bank Studio (/admin/question-bank) (#303)', () => {
 
     // Deficit cell renders authoritative deficit count
     expect(screen.getByText('Deficit: 5')).toBeInTheDocument();
+
+    // #310: Only 2 flat tabs (Question Bank & Lessons)
+    expect(screen.getByRole('tab', { name: /question bank/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /lessons/i })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /stimulus studio/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /productive tasks/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /manifest import/i })).not.toBeInTheDocument();
   });
 
-  it('supports stimulus studio analysis and bundle save', async () => {
-    let bundleSaved = false;
+  it('creates a pool item with TargetBands selector and immediately active status', async () => {
+    let savedBody: any = null;
 
     installFetchMock((url, init) => {
       if (url === '/api/auth/me') {
@@ -292,127 +299,96 @@ describe('Question Bank Studio (/admin/question-bank) (#303)', () => {
       if (url === '/api/admin/coverage') {
         return jsonResponse(mockCoverage);
       }
-      if (url.startsWith('/api/admin/studio/stimulus/options')) {
-        return jsonResponse(mockStimulusOptions);
-      }
-      if (url === '/api/admin/studio/stimulus/analyse' && init?.method === 'POST') {
-        return jsonResponse({
-          refusals: [],
-          unrunChecks: [],
-          gauges: [
-            { label: 'Flesch-Kincaid Grade Level', value: '7.8', target: '7.0 - 9.0', inside: true },
-          ],
-          levelVerdict: 'Fits CEFR B1 band',
-          overlaps: [],
-          gaps: [],
-          fittingBand: 'B1',
-          selectedBand: 'B1',
-          acceptable: true,
-        });
-      }
-      if (url === '/api/admin/studio/stimulus' && init?.method === 'POST') {
-        bundleSaved = true;
-        return jsonResponse({
-          stimulusId: 44,
-          stimulusLevel: 'B1',
-          children: [],
-        });
-      }
-      if (url === '/api/admin/ingestion') {
-        return jsonResponse(mockIngestionBatches);
-      }
       if (url.startsWith('/api/admin/lessons')) {
         return jsonResponse(mockLessons);
+      }
+      if (url === '/api/admin/items' && init?.method === 'POST') {
+        savedBody = JSON.parse(init.body as string);
+        return jsonResponse({
+          itemId: 501,
+          itemVersionId: 1,
+          versionNumber: 1,
+          versionCount: 1,
+          modality: savedBody.modality,
+          topicId: savedBody.topicId,
+          topicCode: 'R-GIST',
+          cefrLevelCode: savedBody.cefrLevelCode,
+          itemType: savedBody.itemType,
+          contentTier: 'production',
+          lifecycleStatus: 'active',
+          placementEligible: false,
+          stimulusId: null,
+          stem: savedBody.stem,
+          optionA: savedBody.optionA,
+          optionB: savedBody.optionB,
+          optionC: savedBody.optionC,
+          optionD: savedBody.optionD,
+          keyLabel: savedBody.keyLabel,
+          explanation: savedBody.explanation,
+          evidenceStart: null,
+          evidenceEnd: null,
+          evidenceUnit: null,
+          evidenceQuote: null,
+          referenceText: null,
+          referenceKind: null,
+          createdAt: new Date().toISOString(),
+          targetBands: savedBody.targetBands,
+        });
       }
       return jsonResponse({}, 404);
     });
 
     renderRoute('/admin/question-bank');
 
-    // Switch to Stimulus Studio tab
-    const stimulusTab = await screen.findByRole('tab', { name: /stimulus studio/i });
-    fireEvent.click(stimulusTab);
+    const newItemBtn = await screen.findByRole('button', { name: /new pool item/i });
+    fireEvent.click(newItemBtn);
 
-    expect(await screen.findByRole('heading', { name: /stimulus & multi-item bundle studio/i })).toBeInTheDocument();
+    const stemInput = await screen.findByPlaceholderText(/enter clear, concise question prompt/i);
+    fireEvent.change(stemInput, { target: { value: 'What is the main idea of the memo?' } });
 
-    // Click Analyse Bundle
-    const analyseBtn = screen.getByRole('button', { name: /analyse stimulus bundle/i });
-    fireEvent.click(analyseBtn);
+    // Select multi-band TargetBands (uncheck ALL or click B1, B2)
+    const bandB1 = screen.getByRole('checkbox', { name: /^B1$/i });
+    const bandB2 = screen.getByRole('checkbox', { name: /^B2$/i });
+    fireEvent.click(bandB1);
+    fireEvent.click(bandB2);
 
-    expect(await screen.findByText(/fits cefr b1 band/i)).toBeInTheDocument();
-    expect(screen.getByText('Flesch-Kincaid Grade Level')).toBeInTheDocument();
-
-    // Click Save Bundle
-    const saveBtn = screen.getByRole('button', { name: /save stimulus bundle/i });
-    fireEvent.click(saveBtn);
+    const createBtn = screen.getByRole('button', { name: /create item/i });
+    fireEvent.click(createBtn);
 
     await waitFor(() => {
-      expect(bundleSaved).toBe(true);
-      expect(screen.getByText(/stimulus bundle saved successfully/i)).toBeInTheDocument();
+      expect(savedBody).not.toBeNull();
+      expect(savedBody.targetBands).toBe('B1,B2');
     });
   });
 
-  it('renders ingestion workbench, reports per-line errors, and gates Clear button with pool.content.review', async () => {
-    let clearCalled = false;
-
-    installFetchMock((url, init) => {
+  it('displays Lessons tab with TargetBands chips', async () => {
+    installFetchMock((url) => {
       if (url === '/api/auth/me') {
         return jsonResponse({
-          userId: 2,
-          email: 'reviewer@demo.local',
-          fullName: 'Content Reviewer',
+          id: 1,
+          email: 'author@demo.local',
+          fullName: 'Content Author',
           role: 'staff',
-          emailVerified: true,
-          // Has ContentAuthor AND ContentReview
-          permissions: [STAFF_PERMISSIONS.ContentAuthor, STAFF_PERMISSIONS.ContentReview],
+          permissions: [STAFF_PERMISSIONS.ContentAuthor],
         });
       }
       if (url === '/api/admin/coverage') {
         return jsonResponse(mockCoverage);
       }
-      if (url === '/api/admin/ingestion') {
-        return jsonResponse(mockIngestionBatches);
-      }
-      if (url === '/api/admin/ingestion/901/items/801/clear' && init?.method === 'POST') {
-        clearCalled = true;
-        return new Response(null, { status: 204 });
-      }
-      if (url.startsWith('/api/admin/ingestion/901')) {
-        return jsonResponse(mockBatchDetail);
-      }
       if (url.startsWith('/api/admin/lessons')) {
-        return jsonResponse(mockLessons);
+        return jsonResponse([
+          { ...mockLessons[0], targetBands: 'B1,B2' },
+        ]);
       }
       return jsonResponse({}, 404);
     });
 
     renderRoute('/admin/question-bank');
 
-    // Switch to Ingestion Workbench tab
-    const ingestTab = await screen.findByRole('tab', { name: /manifest import & ingestion/i });
-    fireEvent.click(ingestTab);
+    const lessonsTab = await screen.findByRole('tab', { name: /lessons/i });
+    fireEvent.click(lessonsTab);
 
-    expect(await screen.findByText('ETS_2026_Reading_Pool.json')).toBeInTheDocument();
-
-    // Open batch 901
-    const openBatchBtn = screen.getByRole('button', { name: /open workbench for batch 901/i });
-    fireEvent.click(openBatchBtn);
-
-    // Verify per-line refusal message is displayed
-    expect(await screen.findByText(/all 4 options require clear author rationale/i)).toBeInTheDocument();
-    expect(screen.getByText('Line 12')).toBeInTheDocument();
-    expect(screen.getByText('gate1.options.rationale_required')).toBeInTheDocument();
-
-    // Verify batch audit queue link (#32)
-    const auditLink = screen.getByRole('link', { name: /open batch audit queue/i });
-    expect(auditLink).toHaveAttribute('href', '/admin/audit/901');
-
-    // Click Clear item button (gated by pool.content.review)
-    const clearBtn = screen.getByRole('button', { name: /clear item 801/i });
-    fireEvent.click(clearBtn);
-
-    await waitFor(() => {
-      expect(clearCalled).toBe(true);
-    });
+    expect(await screen.findByText('Skimming & Scanning Mastery')).toBeInTheDocument();
+    expect(screen.getByText('B1,B2')).toBeInTheDocument();
   });
 });

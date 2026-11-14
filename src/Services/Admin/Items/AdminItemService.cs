@@ -85,19 +85,7 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
                 ?? throw new AdminItemException(ApiError.Codes.Validation, $"Stimulus {existingStimulusId} not found.");
         }
 
-        // D17: the gates run server-side, so an item cannot be persisted with no explanation, no
-        // rationale or options that give the key away. Gate one is the one that needs no model and no
-        // provider call, and it is the gate the review's example failed; gates two to four need a
-        // profiler, verifiers and a classifier, and run at the ingestion seam (PoolIngestionService)
-        // where those are composed.
-        await RequireGateOneAsync(
-            GateItem(request, GateContext.TextOf(stimulus) ?? GateContext.TextOf(existingStimulus)),
-            request.TopicId,
-            level,
-            exceptItemId: null,
-            "The item was refused by gate one (D17), so nothing was saved: ",
-            cancellationToken);
-
+        // Gates 1-4 and blind audit are retired (#310): items are immediately active with TargetBands.
         var item = new Item
         {
             Stimulus = stimulus,
@@ -112,10 +100,9 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
                 ? PoolImport.DefaultRenderFormat(modality)
                 : request.RenderFormat.Trim(),
             PlacementEligible = request.PlacementEligible,
-            // Demo and draft are the schema defaults on purpose: an unreviewed item must not reach a
-            // paid paper (INV-6), so neither is a request field an author can flip.
             ContentTier = "demo",
-            LifecycleStatus = "draft",
+            LifecycleStatus = "active",
+            TargetBands = TargetBandsNormalizer.Normalize(request.TargetBands),
         };
 
         var version = new ItemVersion
@@ -162,20 +149,10 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
             .FirstOrDefaultAsync(i => i.ItemId == itemId, cancellationToken)
             ?? throw new ItemNotFoundException(itemId);
 
-        // D17: an edit that forks a version is the same door as a create, one save later. A gate that
-        // only guarded creation would let an author write a version with no rationale by editing one
-        // away, which is the bypass #198's review found wearing a different route. The cell excludes
-        // this item, because the balance rule is about the distribution the item makes rather than the
-        // one it found.
-        await RequireGateOneAsync(
-            GateItem(
-                request,
-                GateContext.TextOf(await GateContext.FindStimulusAsync(db, item.StimulusId, cancellationToken))),
-            item.TopicId,
-            item.CefrLevel,
-            exceptItemId: item.ItemId,
-            "The edit was refused by gate one (D17), so nothing was written: ",
-            cancellationToken);
+        if (request.TargetBands is not null)
+        {
+            item.TargetBands = TargetBandsNormalizer.Normalize(request.TargetBands);
+        }
 
         // #254: which version is current is stated once, in GateContext. Picking the newest here with a
         // local ordering was a second definition, so a version inserted out of order would have been
@@ -470,5 +447,6 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
             version.RationaleA,
             version.RationaleB,
             version.RationaleC,
-            version.RationaleD);
+            version.RationaleD,
+            item.TargetBands);
 }

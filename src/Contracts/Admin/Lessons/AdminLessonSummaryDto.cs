@@ -20,4 +20,5 @@ public sealed record AdminLessonSummaryDto(
     int TopicId = 0,
     string TopicCode = "",
     string TopicName = "",
-    string CefrLevel = "");
+    string CefrLevel = "",
+    string TargetBands = "ALL");

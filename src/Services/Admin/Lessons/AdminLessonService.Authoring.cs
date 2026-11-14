@@ -31,6 +31,7 @@ public sealed partial class AdminLessonService
             Summary = string.IsNullOrWhiteSpace(request.Summary) ? null : request.Summary.Trim(),
             EstimatedMinutes = request.EstimatedMinutes,
             DisplayOrder = request.DisplayOrder,
+            TargetBands = TargetBandsNormalizer.Normalize(request.TargetBands),
             CreatedAt = clock.GetUtcNow(),
         };
 
@@ -91,6 +92,7 @@ public sealed partial class AdminLessonService
         lesson.Summary = string.IsNullOrWhiteSpace(request.Summary) ? null : request.Summary.Trim();
         lesson.EstimatedMinutes = request.EstimatedMinutes;
         lesson.DisplayOrder = request.DisplayOrder;
+        lesson.TargetBands = TargetBandsNormalizer.Normalize(request.TargetBands);
 
         // Reset LastViewedCardId to avoid FK violations when removing existing cards
         await db.LearnerLessonProgresses

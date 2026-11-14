@@ -413,8 +413,6 @@ export function ExamsStudioPage() {
               <option value="">All statuses</option>
               <option value="draft">Draft</option>
               <option value="published">Published</option>
-              <option value="withdrawn">Withdrawn</option>
-              <option value="hidden">Hidden</option>
             </select>
 
             <select

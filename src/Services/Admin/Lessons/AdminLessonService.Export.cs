@@ -54,7 +54,8 @@ public sealed partial class AdminLessonService
             cards,
             lesson.Modality,
             lesson.Topic?.Code,
-            lesson.CefrLevel.Code);
+            lesson.CefrLevel.Code,
+            lesson.TargetBands);
 
         return new LessonManifestDto(new[] { item });
     }

@@ -997,6 +997,7 @@ export interface CreatePoolItemRequest {
   stimulus?: CreatePoolStimulusRequest | null;
   stimulusId?: number | null;
   renderFormat?: string | null;
+  targetBands?: string;
 }
 
 export interface UpdatePoolItemRequest {
@@ -1017,6 +1018,7 @@ export interface UpdatePoolItemRequest {
   rationaleB?: string | null;
   rationaleC?: string | null;
   rationaleD?: string | null;
+  targetBands?: string | null;
 }
 
 export interface PoolItemDto {
@@ -1051,6 +1053,7 @@ export interface PoolItemDto {
   rationaleB?: string | null;
   rationaleC?: string | null;
   rationaleD?: string | null;
+  targetBands?: string | null;
 }
 
 export interface StimulusDraftChild {
@@ -1327,6 +1330,7 @@ export interface AdminLessonSummaryDto {
   topicCode?: string;
   topicName?: string;
   cefrLevel?: string;
+  targetBands?: string;
 }
 
 export interface LessonCardDto {
@@ -1424,6 +1428,7 @@ export interface AdminLessonUpsertDto {
   modality?: string;
   topicId?: number;
   cefrLevel?: string;
+  targetBands?: string;
 }
 
 export interface AdminLessonImportResultDto {

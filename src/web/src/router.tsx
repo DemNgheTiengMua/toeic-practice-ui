@@ -46,7 +46,6 @@ import { AdminFinancePage } from './features/admin/ops/AdminFinancePage';
 import { AdminOperationsPage } from './features/admin/ops/AdminOperationsPage';
 import { AdminOverviewPage } from './features/admin/AdminOverviewPage';
 import { AdminUsersPage } from './features/admin/AdminUsersPage';
-import { AdminAuditBatchPage } from './features/admin/AdminAuditBatchPage';
 import { CertificatesStudioPage } from './features/admin/studio/CertificatesStudioPage';
 import { ExamsStudioPage } from './features/admin/studio/ExamsStudioPage';
 import { QuestionBankStudioPage } from './features/admin/studio/QuestionBankStudioPage';
@@ -517,11 +516,6 @@ const routeTree = rootRoute.addChildren([
     getParentRoute: () => rootRoute,
     path: '/admin/users',
     component: AdminUsersPage,
-  }),
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/admin/audit/$batchId',
-    component: AdminAuditBatchPage,
   }),
   createRoute({
     getParentRoute: () => rootRoute,
