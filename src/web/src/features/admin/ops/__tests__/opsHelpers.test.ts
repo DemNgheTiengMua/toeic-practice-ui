@@ -9,6 +9,7 @@ import {
   formatComplaintTypeLabel,
   formatComplaintStatusLabel,
   formatMentorSlotStatusLabel,
+  formatMentorPayoutOutcomeLabel,
   formatWeekdayLabel,
   validateWeeklySlots,
   getDefaultUtc7MonthRange,
@@ -20,7 +21,6 @@ import {
   validateComplaintResolve,
   validateCsvExportDates,
   DEFAULT_ORDERLESS_CEILING,
-  MAX_COMPLAINT_GRANT_CREDITS,
 } from '../opsHelpers';
 
 describe('opsHelpers - sentence-case label mappers', () => {
@@ -69,7 +69,7 @@ describe('opsHelpers - sentence-case label mappers', () => {
     expect(formatComplaintTypeLabel('payment_issue')).toBe('Payment issue');
 
     expect(formatComplaintStatusLabel('open')).toBe('Open');
-    expect(formatComplaintStatusLabel('reviewing')).toBe('Under review');
+    expect(formatComplaintStatusLabel('reviewing')).toBe('Processing');
     expect(formatComplaintStatusLabel('resolved')).toBe('Resolved');
   });
 
@@ -80,6 +80,16 @@ describe('opsHelpers - sentence-case label mappers', () => {
 
     expect(formatWeekdayLabel(1)).toBe('Thứ 2 (Monday)');
     expect(formatWeekdayLabel(7)).toBe('Chủ Nhật (Sunday)');
+  });
+
+  // #352: a cancelled booking was never delivered; an adjusted session was delivered and then
+  // compensated. They must not read the same on the payout screen.
+  it('distinguishes a cancelled booking from an adjusted session', () => {
+    expect(formatMentorPayoutOutcomeLabel('cancelled')).toBe('Cancelled, never delivered');
+    expect(formatMentorPayoutOutcomeLabel('adjusted')).toBe('Adjusted');
+    expect(formatMentorPayoutOutcomeLabel('paid')).toBe('Paid');
+    expect(formatMentorPayoutOutcomeLabel('cancelled'))
+      .not.toBe(formatMentorPayoutOutcomeLabel('adjusted'));
   });
 });
 
@@ -150,34 +160,84 @@ describe('opsHelpers - validation helpers', () => {
     expect(r4.errors).toEqual({});
   });
 
-  it('validates complaint resolve input and grant limits', () => {
+  it('bounds the refund reason at the 400 characters the API accepts (#349)', () => {
+    const base = { userId: 10, method: 'credit' as const, creditCount: 2 };
+
+    expect(validateRefundRequest({ ...base, reason: 'a'.repeat(400) }).valid).toBe(true);
+
+    const tooLong = validateRefundRequest({ ...base, reason: 'a'.repeat(401) });
+    expect(tooLong.valid).toBe(false);
+    expect(tooLong.errors.reason).toContain('400');
+  });
+
+  it('validates complaint resolve input, one ending at a time (#350)', () => {
     // Missing resolution or notes
     const c1 = validateComplaintResolve({
       resolution: '',
       internalNotes: '',
-      grantCredits: 5,
+      compensation: 'none',
     });
     expect(c1.valid).toBe(false);
     expect(c1.errors.resolution).toBeDefined();
     expect(c1.errors.internalNotes).toBeDefined();
 
-    // Grant credits exceeding limit
-    const c2 = validateComplaintResolve({
+    const base = {
       resolution: 'Apologies for the delay.',
       internalNotes: 'Confirmed bug in system.',
-      grantCredits: MAX_COMPLAINT_GRANT_CREDITS + 1,
-    });
-    expect(c2.valid).toBe(false);
-    expect(c2.errors.grantCredits).toContain(`between 0 and ${MAX_COMPLAINT_GRANT_CREDITS}`);
+      creditsSpent: 3,
+      impliedRefundMethod: 'credit' as const,
+    };
 
-    // Valid resolution
-    const c3 = validateComplaintResolve({
-      resolution: 'Apologies for the inconvenience.',
-      internalNotes: 'Customer satisfied.',
-      grantCredits: 10,
+    // The ceiling is what was spent, not a constant: 4 is refused, 3 is accepted.
+    const tooMuch = validateComplaintResolve({ ...base, compensation: 'make_good', grantCredits: 4 });
+    expect(tooMuch.valid).toBe(false);
+    expect(tooMuch.errors.grantCredits).toContain('at most 3 credit');
+
+    const exact = validateComplaintResolve({ ...base, compensation: 'make_good', grantCredits: 3 });
+    expect(exact.valid).toBe(true);
+    expect(exact.errors).toEqual({});
+
+    // A subject that spent nothing offers no make-good at all.
+    const nothingSpent = validateComplaintResolve({
+      ...base,
+      compensation: 'make_good',
+      grantCredits: 1,
+      creditsSpent: 0,
     });
-    expect(c3.valid).toBe(true);
-    expect(c3.errors).toEqual({});
+    expect(nothingSpent.valid).toBe(false);
+    expect(nothingSpent.errors.compensation).toContain('never charged');
+
+    // An order is money: a make-good in credits is the wrong currency.
+    const moneySubject = validateComplaintResolve({
+      ...base,
+      compensation: 'make_good',
+      grantCredits: 1,
+      impliedRefundMethod: 'money',
+      moneyPaid: 199000,
+    });
+    expect(moneySubject.valid).toBe(false);
+    expect(moneySubject.errors.compensation).toContain('money');
+
+    // A credit count under "no compensation" is refused: one ending owns the number.
+    const strayCredits = validateComplaintResolve({
+      ...base,
+      compensation: 'none',
+      grantCredits: 2,
+    });
+    expect(strayCredits.valid).toBe(false);
+    expect(strayCredits.errors.grantCredits).toBeDefined();
+
+    // The refund ending is valid on a charged subject and refused on an uncharged one.
+    expect(validateComplaintResolve({ ...base, compensation: 'refund' }).valid).toBe(true);
+    const uncharged = validateComplaintResolve({
+      resolution: 'Handing to the refund desk.',
+      internalNotes: 'Nothing was charged.',
+      compensation: 'refund',
+      creditsSpent: 0,
+      moneyPaid: null,
+    });
+    expect(uncharged.valid).toBe(false);
+    expect(uncharged.errors.compensation).toContain('Nothing to refund');
   });
 
   it('validates CSV export date range', () => {

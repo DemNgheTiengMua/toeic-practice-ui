@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Alert, Button, Card, Chip, Table } from '@heroui/react';
+import { Alert, Button, Card, Chip, Input, Label, Table, TextField } from '@heroui/react';
 import {
   AlertTriangle,
   ArrowRight,
+  ChevronLeft,
   Clock,
   CreditCard,
   FileCheck2,
@@ -27,6 +28,22 @@ import {
 import { areRevisionsEqual, STAFF_CAPABILITY_CATALOG } from './adminHelpers';
 import { AdminAccessGuard } from './AdminAccessGuard';
 
+/** The month names `ReportingPeriod.MonthLabel` renders, in the order its `MMMM` format produces them. */
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
 export function AdminOverviewPage() {
   const { user } = useAuth();
   const isSuperAdmin = canManageUsers(user);
@@ -38,6 +55,10 @@ export function AdminOverviewPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isLiveConnected, setIsLiveConnected] = useState(true);
 
+  // #351: `YYYY-MM`, or '' for "whatever month the server's clock is in". Kept as the raw month
+  // rather than a date so the client never re-derives a reporting boundary from its own calendar.
+  const [selectedMonth, setSelectedMonth] = useState('');
+
   const revisionRef = useRef<DashboardRevision | null>(null);
 
   useEffect(() => {
@@ -47,12 +68,13 @@ export function AdminOverviewPage() {
     }
 
     let isMounted = true;
+    const month = selectedMonth || undefined;
 
     async function fetchInitial() {
       try {
         setLoading(true);
         const [dashData, revData] = await Promise.all([
-          api.admin.dashboard(),
+          api.admin.dashboard(month),
           api.admin.dashboardRevision().catch(() => null),
         ]);
         if (!isMounted) return;
@@ -71,14 +93,15 @@ export function AdminOverviewPage() {
 
     void fetchInitial();
 
-    // 5-second polling interval for revision changes (ADR-0013)
+    // 5-second polling interval for revision changes (ADR-0013). It refetches the same month the screen
+    // is showing: a poll that quietly asked for the current month would snap a chosen month back.
     const intervalId = setInterval(async () => {
       try {
         const nextRev = await api.admin.dashboardRevision();
         setIsLiveConnected(true);
         if (!areRevisionsEqual(revisionRef.current, nextRev)) {
           revisionRef.current = nextRev;
-          const updatedDash = await api.admin.dashboard();
+          const updatedDash = await api.admin.dashboard(month);
           if (isMounted) {
             setDashboard(updatedDash);
             setLastUpdated(new Date());
@@ -95,7 +118,27 @@ export function AdminOverviewPage() {
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, selectedMonth]);
+
+  /**
+   * #351: steps one month back from the period on screen.
+   * <para>
+   * The month is read from the server's own label - which <c>ReportingPeriod.MonthLabel</c> renders in
+   * invariant English - rather than from the browser's clock. A client that computed "current month"
+   * itself would disagree with the server for the few hours around a month boundary whenever the
+   * browser is not on UTC+7, and "last month" would then mean a different month than the figure it
+   * sits under.
+   * </para>
+   */
+  function goToPreviousMonth() {
+    const [monthName, year] = (dashboard?.periodLabel ?? '').split(' ');
+    const monthIndex = MONTH_NAMES.indexOf(monthName);
+    if (monthIndex < 0 || !year) return;
+    const previous = new Date(Number(year), monthIndex - 1, 1);
+    setSelectedMonth(
+      `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}`,
+    );
+  }
 
   return (
     <AdminAccessGuard>
@@ -127,6 +170,48 @@ export function AdminOverviewPage() {
             </div>
           )}
         </div>
+
+        {/* #351: the period control. It sits above every card it moves, so a reader cannot mistake
+            which figures follow it. Today's two live figures are marked "today" in their own titles
+            and are deliberately not part of it. */}
+        {isSuperAdmin && (
+          <div className="flex flex-wrap items-end gap-3">
+            <TextField className="w-full sm:w-56">
+              <Label>Reporting month</Label>
+              {/* shortcut: `type="month"` renders as a plain text box in Firefox and Safari, which do not
+                  implement it. The two buttons below are the real control there, so the month is still
+                  reachable; build a calendar only if a browser without it ever has to pick by typing. */}
+              <Input
+                type="month"
+                aria-label="Reporting month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+              />
+            </TextField>
+
+            <Button
+              size="sm"
+              variant="secondary"
+              isDisabled={!dashboard?.periodLabel}
+              onPress={goToPreviousMonth}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1.5" />
+              Last month
+            </Button>
+
+            {selectedMonth && (
+              <Button size="sm" variant="ghost" onPress={() => setSelectedMonth('')}>
+                This month
+              </Button>
+            )}
+
+            <p className="text-xs text-muted pb-2">
+              Showing{' '}
+              <span className="font-medium text-foreground">{dashboard?.periodLabel ?? 'the current month'}</span>
+              . Today's figures below stay on today.
+            </p>
+          </div>
+        )}
 
         {/* Non-SystemAdmin Staff Capability Guide */}
         {!isSuperAdmin && (
@@ -273,23 +358,25 @@ export function AdminOverviewPage() {
                 </Card.Content>
               </Card>
 
-              {/* Revenue This Month (UTC+7) */}
+              {/* Revenue in the chosen period (UTC+7) */}
               <Card className="border border-border">
                 <Card.Header className="flex flex-row items-center justify-between pb-2">
-                  <span className="text-xs font-medium text-muted">Revenue this month</span>
+                  <span className="text-xs font-medium text-muted">
+                    Revenue in {dashboard?.periodLabel ?? 'period'}
+                  </span>
                   <TrendingUp className="h-4 w-4 text-muted" />
                 </Card.Header>
                 <Card.Content>
                   <div
-                    data-testid="revenue-month-value"
+                    data-testid="revenue-period-value"
                     className={`text-2xl font-bold font-mono-tabular ${
-                      (dashboard?.revenueThisMonthVnd ?? 0) < 0 ? 'text-danger' : 'text-foreground'
+                      (dashboard?.revenueInPeriodVnd ?? 0) < 0 ? 'text-danger' : 'text-foreground'
                     }`}
                   >
-                    {loading ? '—' : formatSignedVnd(dashboard?.revenueThisMonthVnd ?? 0)}
+                    {loading ? '—' : formatSignedVnd(dashboard?.revenueInPeriodVnd ?? 0)}
                   </div>
                   <p className="text-xs text-muted pt-1">
-                    {loading ? '—' : dashboard?.paidOrdersThisMonthCount} paid orders this month
+                    {loading ? '—' : dashboard?.paidOrdersInPeriodCount} paid orders
                   </p>
                 </Card.Content>
               </Card>
@@ -302,10 +389,10 @@ export function AdminOverviewPage() {
                 </Card.Header>
                 <Card.Content>
                   <div className="text-2xl font-bold font-mono-tabular text-foreground">
-                    {loading ? '—' : `${dashboard?.creditsUsedThisMonth.toLocaleString()} cr`}
+                    {loading ? '—' : `${dashboard?.creditsUsedInPeriod.toLocaleString()} cr`}
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted pt-1">
-                    <span>Refunded: <span className="font-mono-tabular font-medium text-foreground">{loading ? '—' : dashboard?.creditsRefundedThisMonth.toLocaleString()}</span> cr</span>
+                    <span>Refunded: <span className="font-mono-tabular font-medium text-foreground">{loading ? '—' : dashboard?.creditsRefundedInPeriod.toLocaleString()}</span> cr</span>
                     <span>Avg: <span className="font-mono-tabular font-medium text-foreground">{loading ? '—' : dashboard?.creditsPerDayAverage.toFixed(1)}</span>/day</span>
                   </div>
                 </Card.Content>
@@ -375,7 +462,7 @@ export function AdminOverviewPage() {
                     Most attempted exams
                   </Card.Title>
                   <Card.Description className="text-xs text-muted">
-                    Popular exams across all active learners this month.
+                    Popular exams across all active learners in {dashboard?.periodLabel ?? 'the chosen period'}.
                   </Card.Description>
                 </Card.Header>
                 <Card.Content>
@@ -406,7 +493,7 @@ export function AdminOverviewPage() {
                     </div>
                   ) : (
                     <div className="py-8 text-center text-xs text-muted">
-                      No exam attempts recorded in the current period.
+                      No exam attempts recorded in {dashboard?.periodLabel ?? 'the chosen period'}.
                     </div>
                   )}
                 </Card.Content>

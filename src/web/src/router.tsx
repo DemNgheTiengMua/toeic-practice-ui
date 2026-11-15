@@ -572,6 +572,27 @@ const routeTree = rootRoute.addChildren([
     getParentRoute: () => rootRoute,
     path: '/admin/finance',
     component: AdminFinancePage,
+    // #349/#350: the refund desk carries the identifiers it was opened with. Nothing here is a new
+    // authority: the refund route still resolves ownership server-side.
+    validateSearch: (search: Record<string, unknown>) => ({
+      complaintId:
+        search.complaintId == null || search.complaintId === ''
+          ? undefined
+          : Number(search.complaintId),
+      // #350: the learner the complaint belongs to, so the desk opens on the right person rather
+      // than asking staff to search for somebody the complaint already names.
+      userId:
+        search.userId == null || search.userId === '' ? undefined : Number(search.userId),
+      // #345: the subject the complaint already identifies, so the order pick and the pre-filled
+      // amount (or the credit count) land without a figure being transcribed from another screen.
+      // A hint for convenience only: the refund route resolves ownership server-side.
+      orderId:
+        search.orderId == null || search.orderId === '' ? undefined : Number(search.orderId),
+      creditCount:
+        search.creditCount == null || search.creditCount === ''
+          ? undefined
+          : Number(search.creditCount),
+    }),
   }),
   createRoute({
     getParentRoute: () => rootRoute,

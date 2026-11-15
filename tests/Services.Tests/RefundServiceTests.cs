@@ -66,6 +66,27 @@ public sealed class RefundServiceTests(DatabaseFixture database)
         return await db.Orders.Where(o => o.OrderCode == orderCode).Select(o => o.OrderId).SingleAsync();
     }
 
+    /// <summary>#348: an open complaint on the learner's own order - the incident a refund compensates.</summary>
+    private async Task<int> SeedComplaintAsync(int userId, int orderId)
+    {
+        await database.SqlAsync($"""
+            INSERT INTO Complaints (UserId, OrderId, Type, Reason, Status, CreatedAt)
+            VALUES ({userId}, {orderId}, 'payment_issue', N'Charged twice for one order', 'open', SYSDATETIMEOFFSET());
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        return await db.Complaints
+            .Where(c => c.UserId == userId && c.OrderId == orderId)
+            .Select(c => c.ComplaintId)
+            .SingleAsync();
+    }
+
+    private async Task<Complaint> ReadComplaintAsync(int complaintId)
+    {
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        return await db.Complaints.AsNoTracking().SingleAsync(c => c.ComplaintId == complaintId);
+    }
+
     private async Task<int> BalanceAsync(int userId)
     {
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -732,5 +753,297 @@ public sealed class RefundServiceTests(DatabaseFixture database)
             new DateOnly(2001, 1, 1), new DateOnly(2001, 1, 2));
 
         Assert.Empty(rows);
+    }
+
+    // ---- #348: one incident, one compensation ----------------------------------------------
+
+    /// <summary>
+    /// #348: approving the credits is the moment the incident closes, so the complaint the refund
+    /// compensates leaves the triage queue with the refund's reason as both the learner-facing
+    /// resolution and the internal record.
+    /// </summary>
+    [Fact]
+    public async Task Approving_a_credit_refund_resolves_its_linked_complaint()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Complaint Credit Learner");
+        var orderId = await SeedPaidOrderAsync(learner, credits: 5, amount: 199000m);
+        var complaintId = await SeedComplaintAsync(learner, orderId);
+        var service = CreateService();
+
+        var requested = await service.RequestCreditRefundAsync(
+            staff, learner, creditCount: 2, reason: "Double charge refunded", complaintId: complaintId);
+
+        // Recording the promise moves nothing about the incident: only a decision closes it.
+        Assert.Equal(ComplaintStatus.Open.ToCode(), (await ReadComplaintAsync(complaintId)).Status);
+
+        await service.ApproveRefundAsync(staff, requested.RefundId);
+
+        var complaint = await ReadComplaintAsync(complaintId);
+        Assert.Equal(ComplaintStatus.Resolved.ToCode(), complaint.Status);
+        Assert.Equal(staff, complaint.ResolvedByUserId);
+        Assert.NotNull(complaint.ResolvedAt);
+        Assert.Contains("Double charge refunded", complaint.Resolution ?? string.Empty);
+        Assert.Contains("Double charge refunded", complaint.InternalNotes ?? string.Empty);
+        Assert.False(string.IsNullOrWhiteSpace(complaint.Resolution));
+        Assert.False(string.IsNullOrWhiteSpace(complaint.InternalNotes));
+    }
+
+    /// <summary>
+    /// #348: a refund posts ledger reason <c>refund_credit</c>, and the complaint's grant pointer is
+    /// constrained to an <c>admin_grant</c> row (<c>trg_Complaints_GrantMustBeAdminGrant</c>). Setting
+    /// it from a refund would violate that constraint, so the pointer must stay null - which is also
+    /// the proof the refund did not claim to be a make-good grant.
+    /// </summary>
+    [Fact]
+    public async Task A_credit_refund_leaves_the_complaints_grant_pointer_null()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Pointer Null Learner");
+        var orderId = await SeedPaidOrderAsync(learner, credits: 5);
+        var complaintId = await SeedComplaintAsync(learner, orderId);
+        var service = CreateService();
+
+        var requested = await service.RequestCreditRefundAsync(
+            staff, learner, creditCount: 3, reason: "Refunded, not granted", complaintId: complaintId);
+
+        var approved = await service.ApproveRefundAsync(staff, requested.RefundId);
+
+        // The refund itself points at its own refund_credit ledger row...
+        Assert.NotNull(approved.CreditTxnId);
+
+        // ...the incident did close (so this is a proof about the resolution that happened, not about
+        // one that never ran)...
+        var complaint = await ReadComplaintAsync(complaintId);
+        Assert.Equal(ComplaintStatus.Resolved.ToCode(), complaint.Status);
+
+        // ...and the complaint's grant pointer stays null.
+        Assert.Null(complaint.ResolvedByGrantTxnId);
+    }
+
+    /// <summary>
+    /// #348: money leaves on settlement, not on approval, so settlement is when the incident closes.
+    /// An approved-but-unpaid money refund has compensated nobody yet and must not resolve anything.
+    /// </summary>
+    [Fact]
+    public async Task Settling_a_money_refund_resolves_its_linked_complaint()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Complaint Money Learner");
+        var orderId = await SeedPaidOrderAsync(learner, credits: 5, amount: 199000m);
+        var complaintId = await SeedComplaintAsync(learner, orderId);
+        var service = CreateService();
+
+        var requested = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "Order refunded to the bank", OrderId: orderId,
+                ComplaintId: complaintId, Amount: 199000m));
+
+        await service.ApproveRefundAsync(staff, requested.RefundId);
+        Assert.Equal(ComplaintStatus.Open.ToCode(), (await ReadComplaintAsync(complaintId)).Status);
+
+        await service.SettleRefundAsync(staff, requested.RefundId);
+
+        var complaint = await ReadComplaintAsync(complaintId);
+        Assert.Equal(ComplaintStatus.Resolved.ToCode(), complaint.Status);
+        Assert.Contains("Order refunded to the bank", complaint.Resolution ?? string.Empty);
+        Assert.Contains("Order refunded to the bank", complaint.InternalNotes ?? string.Empty);
+        Assert.Null(complaint.ResolvedByGrantTxnId);
+    }
+
+    /// <summary>
+    /// #348: a rejection compensates nobody, so the incident is not closed - it goes back to being
+    /// worked on, and the refusal travels with it so the next person knows why.
+    /// </summary>
+    [Fact]
+    public async Task Rejecting_a_refund_returns_its_complaint_to_reviewing_with_the_reason()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Complaint Reject Learner");
+        var orderId = await SeedPaidOrderAsync(learner, credits: 5, amount: 199000m);
+        var complaintId = await SeedComplaintAsync(learner, orderId);
+        var service = CreateService();
+
+        var requested = await service.RequestRefundAsync(
+            staff,
+            new RequestRefundRequest(learner, RefundMethodDto.Money, CreditCount: 0,
+                Reason: "Asked for cash back", OrderId: orderId,
+                ComplaintId: complaintId, Amount: 50000m));
+
+        const string rejectionReason = "Order was already refunded on the gateway";
+        await service.RejectRefundAsync(staff, requested.RefundId, rejectionReason);
+
+        var complaint = await ReadComplaintAsync(complaintId);
+        Assert.Equal(ComplaintStatus.Reviewing.ToCode(), complaint.Status);
+        Assert.Contains(rejectionReason, complaint.InternalNotes ?? string.Empty);
+        // A rejection is not a resolution: nothing claims the incident is closed.
+        Assert.Null(complaint.Resolution);
+        Assert.Null(complaint.ResolvedAt);
+        Assert.Null(complaint.ResolvedByGrantTxnId);
+    }
+
+    /// <summary>
+    /// #348: a refund can compensate a failure that produced no complaint, and then it must not reach
+    /// sideways into somebody else's. Scoped to this learner's own complaint, since the suite shares
+    /// one database.
+    /// </summary>
+    [Fact]
+    public async Task A_refund_with_no_linked_complaint_leaves_every_complaint_untouched()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("No Complaint Learner");
+        var orderId = await SeedPaidOrderAsync(learner, credits: 5);
+        var complaintId = await SeedComplaintAsync(learner, orderId);
+        var service = CreateService();
+
+        var requested = await service.RequestCreditRefundAsync(
+            staff, learner, creditCount: 1, reason: "Goodwill, no complaint filed");
+        Assert.Null(requested.ComplaintId);
+
+        await service.ApproveRefundAsync(staff, requested.RefundId);
+
+        var complaint = await ReadComplaintAsync(complaintId);
+        Assert.Equal(ComplaintStatus.Open.ToCode(), complaint.Status);
+        Assert.Null(complaint.Resolution);
+        Assert.Null(complaint.ResolvedAt);
+    }
+
+    /// <summary>
+    /// #348: <b>one live refund per complaint.</b> There is deliberately no unique index - a rejected
+    /// refund has to be able to sit beside its successor - so the rule is the service's, enforced in
+    /// the serializable transaction that already wraps the request.
+    /// </summary>
+    [Fact]
+    public async Task A_second_live_refund_on_one_complaint_is_refused_and_a_rejected_one_is_retryable()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Live Refund Learner");
+        var orderId = await SeedPaidOrderAsync(learner, credits: 10, amount: 399000m);
+        var complaintId = await SeedComplaintAsync(learner, orderId);
+        var service = CreateService();
+
+        var first = await service.RequestCreditRefundAsync(
+            staff, learner, creditCount: 1, reason: "First attempt", complaintId: complaintId);
+
+        // While the first is live (requested), a second refund on the same incident is refused even
+        // though the order ceiling would allow it.
+        var refused = await Assert.ThrowsAsync<RefundException>(() =>
+            service.RequestCreditRefundAsync(
+                staff, learner, creditCount: 1, reason: "Second attempt", complaintId: complaintId));
+        Assert.Equal(ApiError.Codes.RefundAlreadyOpenForComplaint, refused.Code);
+
+        // Rejecting it releases the incident so a different resolution can be tried.
+        await service.RejectRefundAsync(staff, first.RefundId, "Wrong amount requested");
+
+        var retried = await service.RequestCreditRefundAsync(
+            staff, learner, creditCount: 2, reason: "Corrected amount", complaintId: complaintId);
+        Assert.Equal(RefundStatusDto.Requested, retried.Status);
+        Assert.Equal(complaintId, retried.ComplaintId);
+
+        // An approved refund is still live, so the incident stays spoken for.
+        await service.ApproveRefundAsync(staff, retried.RefundId);
+        var afterApproval = await Assert.ThrowsAsync<RefundException>(() =>
+            service.RequestCreditRefundAsync(
+                staff, learner, creditCount: 1, reason: "One more", complaintId: complaintId));
+        Assert.Equal(ApiError.Codes.RefundAlreadyOpenForComplaint, afterApproval.Code);
+    }
+
+    /// <summary>
+    /// #345 story 11: the refund an agent created from a complaint must appear on the complaint
+    /// afterwards, so one incident's history is in one place. The complaint detail is the screen that
+    /// carries it, and it must carry the whole life of the refund - a requested one is already a fact
+    /// worth seeing, and the status has to move with it since a rejected refund returned nothing.
+    /// </summary>
+    [Fact]
+    public async Task The_complaint_detail_carries_the_refund_recorded_against_it()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Complaint Refund Learner");
+        var orderId = await SeedPaidOrderAsync(learner, credits: 10, amount: 399000m);
+        var complaintId = await SeedComplaintAsync(learner, orderId);
+        var service = CreateService();
+        var complaints = new ComplaintService(DbContextFactory.Create(database.ConnectionString), _clock);
+
+        // Nothing recorded yet: the complaint says so rather than showing an empty list as a mystery.
+        var before = await complaints.GetAdminComplaintDetailAsync(complaintId);
+        Assert.NotNull(before);
+        Assert.Empty(before.Refunds);
+
+        var refund = await service.RequestRefundAsync(staff, new RequestRefundRequest(
+            UserId: learner,
+            Method: RefundMethodDto.Money,
+            CreditCount: 0,
+            Reason: "Bank statement shows a duplicate deduction",
+            OrderId: orderId,
+            ComplaintId: complaintId,
+            Amount: 399000m));
+
+        var open = await complaints.GetAdminComplaintDetailAsync(complaintId);
+        Assert.NotNull(open);
+        var projected = Assert.Single(open.Refunds);
+        Assert.Equal(refund.RefundId, projected.RefundId);
+        Assert.Equal(RefundMethodDto.Money, projected.Method);
+        Assert.Equal(RefundStatusDto.Requested, projected.Status);
+        Assert.Equal(399000m, projected.Amount);
+        Assert.Null(projected.CreditCount);
+
+        // A rejected refund is still the history of the incident, and its status says what happened.
+        await service.RejectRefundAsync(staff, refund.RefundId, "Duplicate deduction not found on the statement");
+
+        var rejected = await complaints.GetAdminComplaintDetailAsync(complaintId);
+        Assert.NotNull(rejected);
+        var afterRejection = Assert.Single(rejected.Refunds);
+        Assert.Equal(RefundStatusDto.Rejected, afterRejection.Status);
+    }
+
+    /// <summary>
+    /// #345: one complaint can carry a credit refund and nothing else, and the projection must report the
+    /// unit each method actually returns - a credit count for credits, an amount for money. Reporting both
+    /// on both would print a zero beside the figure that matters.
+    /// </summary>
+    [Fact]
+    public async Task The_complaint_refund_projection_reports_the_credits_a_credit_refund_returned()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Credit Refund Learner");
+        var orderId = await SeedPaidOrderAsync(learner, credits: 10);
+        var complaintId = await SeedComplaintAsync(learner, orderId);
+        var service = CreateService();
+        var complaints = new ComplaintService(DbContextFactory.Create(database.ConnectionString), _clock);
+
+        var refund = await service.RequestCreditRefundAsync(
+            staff, learner, creditCount: 3, reason: "Duplicate charge refunded", complaintId: complaintId);
+        await service.ApproveRefundAsync(staff, refund.RefundId);
+
+        var detail = await complaints.GetAdminComplaintDetailAsync(complaintId);
+        Assert.NotNull(detail);
+        var projected = Assert.Single(detail.Refunds);
+        Assert.Equal(RefundMethodDto.Credit, projected.Method);
+        Assert.Equal(RefundStatusDto.Approved, projected.Status);
+        Assert.Equal(3, projected.CreditCount);
+        Assert.Null(projected.Amount);
+    }
+
+    /// <summary>#345: the projection is about one complaint, so it must not collect a refund recorded
+    /// against a different incident - or, worse, against a different learner.</summary>
+    [Fact]
+    public async Task The_complaint_refund_projection_stays_inside_its_own_complaint()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Scoped Refund Learner");
+        var firstOrder = await SeedPaidOrderAsync(learner, credits: 10);
+        var secondOrder = await SeedPaidOrderAsync(learner, credits: 20);
+        var firstComplaint = await SeedComplaintAsync(learner, firstOrder);
+        var secondComplaint = await SeedComplaintAsync(learner, secondOrder);
+        var service = CreateService();
+        var complaints = new ComplaintService(DbContextFactory.Create(database.ConnectionString), _clock);
+
+        await service.RequestCreditRefundAsync(
+            staff, learner, creditCount: 1, reason: "Against the first incident", complaintId: firstComplaint);
+
+        var other = await complaints.GetAdminComplaintDetailAsync(secondComplaint);
+        Assert.NotNull(other);
+        Assert.Empty(other.Refunds);
     }
 }

@@ -3,6 +3,7 @@ using Contracts;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
+using Services.Credits;
 using Xunit;
 
 namespace Services.Tests;
@@ -54,14 +55,14 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
         return await db.Certificates.Where(c => c.Code == code).Select(c => c.CertId).SingleAsync();
     }
 
-    private async Task<(int BookingId, int MentorId)> SeedBookingAsync(int userId)
+    private async Task<(int BookingId, int MentorId)> SeedBookingAsync(int userId, int priceCredits = 1)
     {
         var certId = await EnsureCertAsync();
         var mentorUser = await SeedLearnerAsync("Mentor User");
 
         await database.SqlAsync($"""
             INSERT INTO MentorProfiles (CertId, DisplayName, MeetLink, PriceCredits, SessionMinutes, IsActive)
-            VALUES ({certId}, N'Dr. Tran Minh Khoa', N'https://meet.google.com/abc-defg-hij', 1, 60, 1);
+            VALUES ({certId}, N'Dr. Tran Minh Khoa', N'https://meet.google.com/abc-defg-hij', {priceCredits}, 60, 1);
             DECLARE @mentorId INT = SCOPE_IDENTITY();
 
             INSERT INTO MentorSlots (MentorId, StartAt, EndAt, Status)
@@ -69,7 +70,7 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
             DECLARE @slotId INT = SCOPE_IDENTITY();
 
             INSERT INTO Bookings (UserId, MentorId, SlotId, PriceCredits, Status, MeetLink, CreatedAt)
-            VALUES ({userId}, @mentorId, @slotId, 1, 'done', N'https://meet.google.com/abc-defg-hij', SYSDATETIMEOFFSET());
+            VALUES ({userId}, @mentorId, @slotId, {priceCredits}, 'done', N'https://meet.google.com/abc-defg-hij', SYSDATETIMEOFFSET());
             SELECT @slotId AS SlotId, @mentorId AS MentorId, SCOPE_IDENTITY() AS BookingId;
             """);
 
@@ -109,6 +110,299 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var order = await db.Orders.Where(o => o.UserId == userId).OrderByDescending(o => o.OrderId).FirstAsync();
         return order.OrderId;
+    }
+
+    /// <summary>#347: credits have to exist before a charge can post; the ledger refuses to go negative.</summary>
+    private async Task SeedCreditsAsync(int userId, int amount)
+    {
+        await database.SqlAsync($"""
+            IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'admin')
+              INSERT INTO Roles (Code, Name) VALUES ('admin', N'Admin');
+            INSERT INTO Users (RoleId, Email, PasswordHash, FullName, EmailVerifiedAt)
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'admin'), 'seed-{Guid.NewGuid():N}@test.local', 0x01, N'Seed Admin', SYSDATETIMEOFFSET());
+            INSERT INTO CreditTransactions (UserId, Reason, Delta, AdminUserId, Note)
+            VALUES ({userId}, 'admin_grant', {amount}, SCOPE_IDENTITY(), N'Compensation context fixture');
+            """);
+    }
+
+    [Fact]
+    public async Task Complaint_on_booking_charged_one_credit_reports_one_credit_spent_and_the_credit_method()
+    {
+        var learner = await SeedLearnerAsync();
+        var (bookingId, _) = await SeedBookingAsync(learner);
+        await SeedCreditsAsync(learner, 5);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            await new CreditLedger(db, _clock).ChargeMentorBookingAsync(learner, bookingId, priceCredits: 1);
+        }
+
+        var service = CreateService();
+        var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
+            ComplaintTypeDto.MentorQuality, "Audio kept dropping.", BookingId: bookingId));
+
+        var detail = await service.GetAdminComplaintDetailAsync(complaint.ComplaintId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(1, detail.CreditsSpent);
+        Assert.Null(detail.MoneyPaid);
+        Assert.Equal(RefundMethodDto.Credit, detail.ImpliedRefundMethod);
+    }
+
+    [Fact]
+    public async Task Complaint_on_attempt_charged_twice_reports_both_the_sitting_and_the_grading_charge()
+    {
+        var learner = await SeedLearnerAsync();
+        var attemptId = await SeedExamAttemptAsync(learner);
+        await SeedCreditsAsync(learner, 5);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var ledger = new CreditLedger(db, _clock);
+            await ledger.ChargeMockExamAsync(learner, attemptId, amount: 1);
+            await ledger.ChargeAiGradingAsync(learner, attemptId, amount: 1);
+        }
+
+        var service = CreateService();
+        var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
+            ComplaintTypeDto.GradingIssue, "Speaking answer scored zero.", AttemptId: attemptId));
+
+        var detail = await service.GetAdminComplaintDetailAsync(complaint.ComplaintId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(2, detail.CreditsSpent);
+        Assert.Null(detail.MoneyPaid);
+        Assert.Equal(RefundMethodDto.Credit, detail.ImpliedRefundMethod);
+    }
+
+    [Fact]
+    public async Task Complaint_on_order_reports_the_order_amount_and_the_money_method()
+    {
+        var learner = await SeedLearnerAsync();
+        var orderId = await SeedOrderAsync(learner);
+
+        var service = CreateService();
+        var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
+            ComplaintTypeDto.PaymentIssue, "Charged twice by the bank.", OrderId: orderId));
+
+        var detail = await service.GetAdminComplaintDetailAsync(complaint.ComplaintId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(0, detail.CreditsSpent);
+        Assert.Equal(199000m, detail.MoneyPaid);
+        Assert.Equal(RefundMethodDto.Money, detail.ImpliedRefundMethod);
+    }
+
+    [Fact]
+    public async Task Complaint_on_a_never_charged_subject_reports_zero_credits_spent()
+    {
+        var learner = await SeedLearnerAsync();
+        var attemptId = await SeedExamAttemptAsync(learner);
+
+        var service = CreateService();
+        var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
+            ComplaintTypeDto.TechnicalError, "The timer froze.", AttemptId: attemptId));
+
+        var detail = await service.GetAdminComplaintDetailAsync(complaint.ComplaintId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(0, detail.CreditsSpent);
+        Assert.Null(detail.MoneyPaid);
+    }
+
+    // ============================================================================
+    // #350: one compensation ending, bounded by what the learner actually spent
+    // ============================================================================
+
+    /// <summary>
+    /// The bound is the ledger, not a constant: a subject that legitimately spent 50 credits must be
+    /// able to receive 50, and one that spent 1 must be refused 2. The 20-credit constant this
+    /// replaces was correct for exactly the subjects nobody had overpaid on.
+    /// </summary>
+    [Fact]
+    public async Task Make_good_above_the_credits_spent_is_refused_and_equal_to_it_is_accepted()
+    {
+        var adminId = await SeedAdminAsync();
+        var learner = await SeedLearnerAsync();
+        var (bookingId, _) = await SeedBookingAsync(learner);
+        await SeedCreditsAsync(learner, 60);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            await new CreditLedger(db, _clock).ChargeMentorBookingAsync(learner, bookingId, priceCredits: 1);
+        }
+
+        var service = CreateService();
+        var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
+            ComplaintTypeDto.MentorNoShow, "Mentor never joined.", BookingId: bookingId));
+
+        var refused = await Assert.ThrowsAsync<ComplaintException>(() =>
+            service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
+                Resolution: "Two credits as an apology.",
+                InternalNotes: "Mentor absent, verified against the room log.",
+                Compensation: ComplaintCompensationDto.MakeGood,
+                GrantCredits: 2)));
+
+        Assert.Equal(ApiError.Codes.Validation, refused.Code);
+        Assert.Contains("1 credit", refused.Message, StringComparison.Ordinal);
+
+        // Equal to the spend is accepted, and one admin_grant row lands.
+        var resolved = await service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
+            Resolution: "One credit returned for the missed session.",
+            InternalNotes: "Mentor absent, verified against the room log.",
+            Compensation: ComplaintCompensationDto.MakeGood,
+            GrantCredits: 1));
+
+        Assert.Equal(ComplaintStatusDto.Resolved, resolved.Status);
+        Assert.Equal(1, resolved.GrantedCredits);
+        Assert.NotNull(resolved.ResolvedByGrantTxnId);
+    }
+
+    /// <summary>
+    /// A fifty-credit spend is the case the old constant got wrong: it would have refused the correct
+    /// compensation. This proves the ceiling follows the subject rather than a number in the service.
+    /// </summary>
+    [Fact]
+    public async Task A_make_good_beyond_the_old_twenty_credit_ceiling_is_accepted_when_the_subject_spent_that_much()
+    {
+        var adminId = await SeedAdminAsync();
+        var learner = await SeedLearnerAsync();
+        // A mentor session priced at 51 credits: the subject genuinely cost more than the old ceiling.
+        var (bookingId, _) = await SeedBookingAsync(learner, priceCredits: 51);
+        await SeedCreditsAsync(learner, 60);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            await new CreditLedger(db, _clock).ChargeMentorBookingAsync(learner, bookingId, priceCredits: 51);
+        }
+
+        var service = CreateService();
+        var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
+            ComplaintTypeDto.MentorNoShow, "Mentor never joined.", BookingId: bookingId));
+
+        var resolved = await service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
+            Resolution: "Fifty-one credits returned.",
+            InternalNotes: "Session never delivered; the full booking was charged.",
+            Compensation: ComplaintCompensationDto.MakeGood,
+            GrantCredits: 51));
+
+        Assert.Equal(51, resolved.GrantedCredits);
+        Assert.NotNull(resolved.ResolvedByGrantTxnId);
+    }
+
+    [Fact]
+    public async Task A_subject_that_spent_nothing_offers_no_make_good()
+    {
+        var adminId = await SeedAdminAsync();
+        var learner = await SeedLearnerAsync();
+        var attemptId = await SeedExamAttemptAsync(learner);
+
+        var service = CreateService();
+        var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
+            ComplaintTypeDto.TechnicalError, "The timer froze.", AttemptId: attemptId));
+
+        var refused = await Assert.ThrowsAsync<ComplaintException>(() =>
+            service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
+                Resolution: "One credit as an apology.",
+                InternalNotes: "Free placement, nothing was charged.",
+                Compensation: ComplaintCompensationDto.MakeGood,
+                GrantCredits: 1)));
+
+        Assert.Equal(ApiError.Codes.Validation, refused.Code);
+
+        // Nothing to refund either: the subject never moved value in any currency.
+        var refundRefused = await Assert.ThrowsAsync<ComplaintException>(() =>
+            service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
+                Resolution: "Handing this to the refund desk.",
+                InternalNotes: "Free placement, nothing was charged.",
+                Compensation: ComplaintCompensationDto.Refund)));
+
+        Assert.Equal(ApiError.Codes.ComplaintNothingToRefund, refundRefused.Code);
+    }
+
+    /// <summary>
+    /// An order is money that arrived. A make-good is credits, which would return a currency the
+    /// learner never paid in, so the order subject offers only the money refund.
+    /// </summary>
+    [Fact]
+    public async Task An_order_subject_offers_a_money_refund_and_refuses_a_make_good()
+    {
+        var adminId = await SeedAdminAsync();
+        var learner = await SeedLearnerAsync();
+        var orderId = await SeedOrderAsync(learner);
+
+        var service = CreateService();
+        var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
+            ComplaintTypeDto.PaymentIssue, "Charged twice by the bank.", OrderId: orderId));
+
+        var makeGoodRefused = await Assert.ThrowsAsync<ComplaintException>(() =>
+            service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
+                Resolution: "Five credits as an apology.",
+                InternalNotes: "Verified the duplicate deduction.",
+                Compensation: ComplaintCompensationDto.MakeGood,
+                GrantCredits: 5)));
+
+        Assert.Equal(ApiError.Codes.Validation, makeGoodRefused.Code);
+
+        var handoff = await service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
+            Resolution: "Returning the payment.",
+            InternalNotes: "Verified the duplicate deduction.",
+            Compensation: ComplaintCompensationDto.Refund));
+
+        Assert.Equal(RefundMethodDto.Money, handoff.ImpliedRefundMethod);
+        Assert.Equal(199000m, handoff.MoneyPaid);
+    }
+
+    /// <summary>
+    /// The refund ending records a handoff, not money. Two things must therefore be true: no refund
+    /// row exists afterwards, and the complaint is still open for #348's lifecycle to drive - a
+    /// complaint resolved here would be left resolved by a rejection that compensated nobody.
+    /// </summary>
+    [Fact]
+    public async Task Recording_a_refund_creates_no_refund_and_returns_the_learner_and_complaint()
+    {
+        var adminId = await SeedAdminAsync();
+        var learner = await SeedLearnerAsync();
+        var (bookingId, _) = await SeedBookingAsync(learner);
+        await SeedCreditsAsync(learner, 5);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            await new CreditLedger(db, _clock).ChargeMentorBookingAsync(learner, bookingId, priceCredits: 1);
+        }
+
+        var service = CreateService();
+        var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
+            ComplaintTypeDto.MentorNoShow, "Mentor never joined.", BookingId: bookingId));
+
+        int grantsBefore;
+        await using (var before = DbContextFactory.Create(database.ConnectionString))
+        {
+            grantsBefore = await before.CreditTransactions
+                .CountAsync(t => t.UserId == learner && t.Reason == "admin_grant");
+        }
+
+        var handoff = await service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
+            Resolution: "Opening a refund for the missed session.",
+            InternalNotes: "Refund desk to return the booked credit.",
+            Compensation: ComplaintCompensationDto.Refund));
+
+        // The client navigates on these two values; both are already on the detail.
+        Assert.Equal(learner, handoff.UserId);
+        Assert.Equal(complaint.ComplaintId, handoff.ComplaintId);
+        Assert.Equal(RefundMethodDto.Credit, handoff.ImpliedRefundMethod);
+
+        // Not resolved, and no value moved: the ending promised nothing yet.
+        Assert.Equal(ComplaintStatusDto.Reviewing, handoff.Status);
+        Assert.Null(handoff.ResolvedAt);
+        Assert.Null(handoff.ResolvedByGrantTxnId);
+
+        await using var verify = DbContextFactory.Create(database.ConnectionString);
+        Assert.Equal(0, await verify.Refunds.CountAsync(r => r.ComplaintId == complaint.ComplaintId));
+        // No make-good slipped in beside the promise: the grant count is exactly what the fixture left.
+        Assert.Equal(
+            grantsBefore,
+            await verify.CreditTransactions.CountAsync(t => t.UserId == learner && t.Reason == "admin_grant"));
     }
 
     [Fact]
@@ -258,6 +552,13 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
         var adminId = await SeedAdminAsync();
         var learner = await SeedLearnerAsync();
         var (bookingId, _) = await SeedBookingAsync(learner);
+        // #350: a make-good is bounded by what the subject actually cost, so the booking has to carry a
+        // real charge before one is possible - 1 credit spent, 1 credit returned.
+        await SeedCreditsAsync(learner, 5);
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            await new CreditLedger(db, _clock).ChargeMentorBookingAsync(learner, bookingId, priceCredits: 1);
+        }
         var service = CreateService();
 
         var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
@@ -272,6 +573,7 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
         await service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
             Resolution: publicResolution,
             InternalNotes: secretInternalNote,
+            Compensation: ComplaintCompensationDto.MakeGood,
             GrantCredits: 1));
 
         // Learner queries their complaints
@@ -294,6 +596,11 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
         var adminId = await SeedAdminAsync();
         var learner = await SeedLearnerAsync();
         var (bookingId, _) = await SeedBookingAsync(learner);
+        await SeedCreditsAsync(learner, 5);
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            await new CreditLedger(db, _clock).ChargeMentorBookingAsync(learner, bookingId, priceCredits: 1);
+        }
         var service = CreateService();
 
         var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
@@ -304,6 +611,7 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
         var resolveResult = await service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
             Resolution: "Confirmed mentor absence. 1 credit granted as make-good.",
             InternalNotes: "Admin verified meet room logs.",
+            Compensation: ComplaintCompensationDto.MakeGood,
             GrantCredits: 1));
 
         Assert.Equal(ComplaintStatusDto.Resolved, resolveResult.Status);
@@ -321,12 +629,12 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
             Assert.Equal(adminId, txn.AdminUserId);
             Assert.NotNull(txn.Note);
 
-            // Verify wallet balance is 1
+            // Verify wallet balance is 1: five bought, one spent, one granted back.
             var balance = await db.vw_UserCreditBalances
                 .Where(b => b.UserId == learner)
                 .Select(b => b.Balance)
                 .SingleOrDefaultAsync();
-            Assert.Equal(1, balance);
+            Assert.Equal(5, balance);
         }
     }
 
@@ -388,9 +696,9 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
 
         // Resolve
         var resolved = await service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
-            Resolution: "Reviewed session recording. Granted 1 credit.",
+            Resolution: "Reviewed session recording. No compensation needed.",
             InternalNotes: "Audio issue verified.",
-            GrantCredits: 1));
+            Compensation: ComplaintCompensationDto.None));
         Assert.Equal(ComplaintStatusDto.Resolved, resolved.Status);
 
         // Once resolved, cannot change status back
@@ -402,7 +710,7 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
             service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
                 Resolution: "Again",
                 InternalNotes: "Again",
-                GrantCredits: 1)));
+                Compensation: ComplaintCompensationDto.None)));
     }
 
     [Fact]
@@ -507,16 +815,17 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
         // 2. Resolution too long (> 4000)
         var exRes = await Assert.ThrowsAsync<ComplaintException>(() =>
             service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
-                Resolution: new string('b', 4001), InternalNotes: "Valid note", GrantCredits: 1)));
+                Resolution: new string('b', 4001), InternalNotes: "Valid note")));
         Assert.Equal(ApiError.Codes.Validation, exRes.Code);
 
         // 3. Internal notes too long (> 4000)
         var exNotes = await Assert.ThrowsAsync<ComplaintException>(() =>
             service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
-                Resolution: "Valid resolution", InternalNotes: new string('c', 4001), GrantCredits: 1)));
+                Resolution: "Valid resolution", InternalNotes: new string('c', 4001))));
         Assert.Equal(ApiError.Codes.Validation, exNotes.Code);
 
-        // 4. Grant credits > 20
+        // 4. #350: a credit count under an ending that is not the make-good is refused, because a
+        // number beside "no compensation" is how the old contract moved money by accident.
         var exCredits = await Assert.ThrowsAsync<ComplaintException>(() =>
             service.ResolveComplaintAsync(adminId, complaint.ComplaintId, new ResolveComplaintRequest(
                 Resolution: "Valid resolution", InternalNotes: "Valid note", GrantCredits: 21)));
@@ -525,13 +834,13 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
         // 5. Admin ID <= 0
         var exAdmin = await Assert.ThrowsAsync<ComplaintException>(() =>
             service.ResolveComplaintAsync(0, complaint.ComplaintId, new ResolveComplaintRequest(
-                Resolution: "Valid resolution", InternalNotes: "Valid note", GrantCredits: 1)));
+                Resolution: "Valid resolution", InternalNotes: "Valid note")));
         Assert.Equal(ApiError.Codes.Validation, exAdmin.Code);
 
         // 6. Non-existent complaint ID throws ComplaintNotFoundException
         await Assert.ThrowsAsync<ComplaintNotFoundException>(() =>
             service.ResolveComplaintAsync(adminId, 999999, new ResolveComplaintRequest(
-                Resolution: "Valid resolution", InternalNotes: "Valid note", GrantCredits: 1)));
+                Resolution: "Valid resolution", InternalNotes: "Valid note")));
 
         await Assert.ThrowsAsync<ComplaintNotFoundException>(() =>
             service.SetComplaintStatusAsync(adminId, 999999, ComplaintStatus.Reviewing));

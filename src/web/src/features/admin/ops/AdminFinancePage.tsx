@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Breadcrumbs, Tabs } from '@heroui/react';
+import { useSearch } from '@tanstack/react-router';
 import { FileText, Receipt } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { canManageBilling, canManageUsers, canTriageSupport } from '../../../lib/security';
@@ -13,7 +14,30 @@ export interface AdminFinancePageProps {
 
 export function AdminFinancePage({ initialTab }: AdminFinancePageProps) {
   const { user } = useAuth();
-  const [selectedTab, setSelectedTab] = useState<string | null>(initialTab ?? null);
+  // #349/#350/#345: a complaint's refund arrives with the incident already identified - the complaint,
+  // the learner it belongs to, and the subject's order or credit count. Carried in the URL by the
+  // screen that opened it, never retyped here.
+  const search = useSearch({ strict: false }) as {
+    complaintId?: number | string | null;
+    userId?: number | string | null;
+    orderId?: number | string | null;
+    creditCount?: number | string | null;
+  };
+  const complaintId =
+    search.complaintId != null && String(search.complaintId).trim() !== ''
+      ? Number(search.complaintId)
+      : null;
+  const learnerId =
+    search.userId != null && String(search.userId).trim() !== '' ? Number(search.userId) : null;
+  const subjectOrderId =
+    search.orderId != null && String(search.orderId).trim() !== '' ? Number(search.orderId) : null;
+  const subjectCreditCount =
+    search.creditCount != null && String(search.creditCount).trim() !== ''
+      ? Number(search.creditCount)
+      : null;
+  const [selectedTab, setSelectedTab] = useState<string | null>(
+    complaintId !== null ? 'refunds' : (initialTab ?? null),
+  );
 
   const isBillingAllowed = canManageBilling(user);
   const isSystemAdmin = canManageUsers(user);
@@ -87,7 +111,12 @@ export function AdminFinancePage({ initialTab }: AdminFinancePageProps) {
 
         {(isSupportTriage || isSystemAdmin) && (
           <Tabs.Panel id="refunds" className="pt-6">
-            <RefundsTab />
+            <RefundsTab
+              complaintId={complaintId}
+              learnerId={learnerId}
+              subjectOrderId={subjectOrderId}
+              subjectCreditCount={subjectCreditCount}
+            />
           </Tabs.Panel>
         )}
       </Tabs>

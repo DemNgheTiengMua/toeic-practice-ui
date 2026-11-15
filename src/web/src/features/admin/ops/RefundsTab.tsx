@@ -5,6 +5,8 @@ import {
   Button,
   Card,
   Chip,
+  Description,
+  EmptyState,
   Input,
   Label,
   ListBox,
@@ -17,7 +19,6 @@ import {
   TextField,
 } from '@heroui/react';
 import {
-  AlertCircle,
   ArrowDownToLine,
   CheckCircle2,
   Clock,
@@ -25,17 +26,21 @@ import {
   FileSpreadsheet,
   Plus,
   RefreshCw,
+  User,
   XCircle,
 } from 'lucide-react';
 import { OpsPagination } from './OpsPagination';
 import {
   api,
+  type AdminOrderDto,
   type AdminRefundListItemDto,
   type AdminRefundDetailDto,
+  type AdminUserDto,
   type RefundMethodDto,
 } from '../../../lib/api';
 import { formatVnd } from '../../../lib/security';
 import {
+  formatDateOnly,
   formatDateTime,
   formatRefundMethodLabel,
   formatRefundStatusLabel,
@@ -44,9 +49,29 @@ import {
   validateCsvExportDates,
   validateRefundRequest,
   DEFAULT_ORDERLESS_CEILING,
+  MAX_REFUND_REASON_LENGTH,
 } from './opsHelpers';
 
-export function RefundsTab() {
+export interface RefundsTabProps {
+  /** #350 carries this in from the complaint screen. It is never typed: a refund created from a
+   * complaint must point at that complaint, and a hand-typed identifier is how the two disagree. */
+  complaintId?: number | null;
+  /** #350: the learner the complaint belongs to, so the desk opens on the right person. Also never
+   * typed - the complaint already knows who it is about. */
+  learnerId?: number | null;
+  /** #345: the subject's order, when the complaint has one. The desk picks it from the learner's paid
+   * orders and pre-fills the amount from it, so no figure is transcribed from another screen. */
+  subjectOrderId?: number | null;
+  /** #345: the credits the subject cost, when it is an attempt or a booking. */
+  subjectCreditCount?: number | null;
+}
+
+export function RefundsTab({
+  complaintId = null,
+  learnerId = null,
+  subjectOrderId = null,
+  subjectCreditCount = null,
+}: RefundsTabProps) {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -58,12 +83,12 @@ export function RefundsTab() {
   const [selectedRefundId, setSelectedRefundId] = useState<number | null>(null);
 
   // Create form state
-  const [createUserId, setCreateUserId] = useState('');
+  const [learnerSearch, setLearnerSearch] = useState('');
+  const [selectedLearner, setSelectedLearner] = useState<AdminUserDto | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<AdminOrderDto | null>(null);
   const [createMethod, setCreateMethod] = useState<RefundMethodDto>('credit');
   const [createCreditCount, setCreateCreditCount] = useState('5');
   const [createAmount, setCreateAmount] = useState('100000');
-  const [createOrderId, setCreateOrderId] = useState('');
-  const [createComplaintId, setCreateComplaintId] = useState('');
   const [createReason, setCreateReason] = useState('');
   const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
@@ -96,11 +121,67 @@ export function RefundsTab() {
     enabled: selectedRefundId !== null,
   });
 
+  // #349: the learner picker searches the admin user list the Users screen already pages through,
+  // rather than asking a staff member for a number they have no way to discover.
+  // #345: it reads the desk's own lookup, not `/api/admin/users`, which is gated on system governance
+  // and would 403 a support-only agent - the persona this screen exists for.
+  // shortcut: one request per keystroke, no debounce — the query is indexed and the box is a modal;
+  // add a debounce if a large user table ever makes this lag.
+  const { data: learnerMatches } = useQuery({
+    queryKey: ['admin-refund-learners', learnerSearch],
+    queryFn: () => api.admin.refundLearners({ q: learnerSearch.trim(), pageSize: 20 }),
+    enabled: isCreateOpen && learnerSearch.trim().length > 0,
+  });
+
+  // #349: the order list is that learner's paid orders. Paid only, because a refund against an unpaid
+  // order would return money that never arrived.
+  const { data: learnerOrders } = useQuery({
+    queryKey: ['admin-refund-orders', selectedLearner?.userId],
+    queryFn: () => api.admin.refundLearnerOrders(selectedLearner!.userId, { pageSize: 50 }),
+    enabled: isCreateOpen && selectedLearner !== null,
+  });
+
+  const learners = learnerMatches?.users ?? [];
+
+  // #350: arriving from a complaint, the learner is already known. The desk opens the create form with
+  // that learner selected, so nothing is retyped and the wrong person cannot be picked by mistake.
+  const { data: carriedLearner } = useQuery({
+    queryKey: ['admin-refund-carried-learner', learnerId],
+    queryFn: () => api.admin.refundLearner(learnerId!),
+    enabled: learnerId !== null,
+  });
+
+  React.useEffect(() => {
+    if (learnerId === null || selectedLearner !== null) return;
+    if (!carriedLearner) return;
+    setSelectedLearner(carriedLearner);
+    setLearnerSearch(carriedLearner.email);
+    setIsCreateOpen(true);
+  }, [learnerId, carriedLearner, selectedLearner]);
+
+  // #345: once that learner's paid orders have arrived, the complaint's subject order is picked and its
+  // amount is filled by the same path a manual pick uses. A subject order that is not among them - an
+  // unpaid one, or one belonging to somebody else - is refused rather than selected: the desk must not
+  // pre-fill a refund against an order the API would reject.
+  React.useEffect(() => {
+    if (subjectOrderId === null || selectedOrder !== null) return;
+    const carried = learnerOrders?.orders.find((o) => o.orderId === subjectOrderId);
+    if (carried) pickOrder(carried);
+  }, [subjectOrderId, learnerOrders, selectedOrder]);
+
+  // #345: a credit subject hands over the count it cost, so the desk opens on the loss rather than on
+  // the placeholder five.
+  React.useEffect(() => {
+    if (subjectCreditCount === null || subjectOrderId !== null) return;
+    setCreateCreditCount(String(subjectCreditCount));
+  }, [subjectCreditCount, subjectOrderId]);
+
   const createMutation = useMutation({
     mutationFn: () => {
-      const uId = parseInt(createUserId, 10);
-      const oId = createOrderId.trim() ? parseInt(createOrderId, 10) : null;
-      const cId = createComplaintId.trim() ? parseInt(createComplaintId, 10) : null;
+      const uId = selectedLearner?.userId ?? 0;
+      const oId = selectedOrder?.orderId ?? null;
+      // A money refund cannot carry a credit count: the method owns the value column, and the API
+      // refuses the other one rather than silently dropping it.
       const cCount = createMethod === 'credit' ? parseInt(createCreditCount, 10) : 0;
       const mAmount = createMethod === 'money' ? parseFloat(createAmount) : null;
 
@@ -114,7 +195,10 @@ export function RefundsTab() {
       });
 
       if (!val.valid) {
-        setCreateErrors(val.errors);
+        // The identifier is never typed, so "pick a learner" is the message; the userId key exists
+        // only because the shared validator speaks in terms of the payload.
+        const { userId: _hidden, ...rest } = val.errors;
+        setCreateErrors(selectedLearner ? rest : { learner: 'Select a learner.', ...rest });
         throw new Error('Please resolve form validation issues.');
       }
 
@@ -125,7 +209,7 @@ export function RefundsTab() {
         amount: mAmount,
         reason: createReason.trim(),
         orderId: oId,
-        complaintId: cId,
+        complaintId,
       });
     },
     onSuccess: () => {
@@ -175,15 +259,34 @@ export function RefundsTab() {
   });
 
   function resetCreateForm() {
-    setCreateUserId('');
+    setLearnerSearch('');
+    setSelectedLearner(null);
+    setSelectedOrder(null);
     setCreateMethod('credit');
     setCreateCreditCount('5');
     setCreateAmount('100000');
-    setCreateOrderId('');
-    setCreateComplaintId('');
     setCreateReason('');
     setCreateErrors({});
     setApiError(null);
+  }
+
+  /** #349: picking an order fills both value columns from the order and locks the method to money.
+   * An order is money that arrived, so returning credits for it would return a currency the learner
+   * never paid in. */
+  function pickOrder(order: AdminOrderDto) {
+    setSelectedOrder(order);
+    setCreateMethod('money');
+    setCreateAmount(String(order.amount));
+    setCreateCreditCount(String(order.credits));
+    setCreateErrors((prev) => ({ ...prev, amount: '', creditCount: '', method: '' }));
+  }
+
+  function pickLearner(learner: AdminUserDto) {
+    setSelectedLearner(learner);
+    // A different learner's orders are not this learner's orders, and a refund against the wrong one
+    // is a paid insult to a stranger.
+    setSelectedOrder(null);
+    setCreateErrors((prev) => ({ ...prev, userId: '', learner: '' }));
   }
 
   async function handleExportCsv() {
@@ -488,28 +591,145 @@ export function RefundsTab() {
               <Modal.Body className="space-y-4">
                 {apiError && <Alert status="danger">{apiError}</Alert>}
 
-                <TextField
+                {complaintId !== null && (
+                  <Alert status="accent">
+                    Carried from complaint #{complaintId}. The refund will be recorded against it.
+                  </Alert>
+                )}
+
+                {/* #349: the learner is searched and picked, never typed as an internal identifier. */}
+                <SearchField
                   className="w-full"
-                  name="userId"
-                  isRequired
-                  isInvalid={!!createErrors.userId}
+                  name="learnerSearch"
+                  aria-label="Search learners by name or email"
+                  value={learnerSearch}
+                  onChange={setLearnerSearch}
+                  onClear={() => setLearnerSearch('')}
                 >
-                  <Label>Learner user ID</Label>
-                  <Input
-                    type="number"
-                    placeholder="e.g. 12"
-                    value={createUserId}
-                    onChange={(e) => {
-                      setCreateUserId(e.target.value);
-                      if (createErrors.userId) {
-                        setCreateErrors((prev) => ({ ...prev, userId: '' }));
-                      }
+                  <Label>Learner</Label>
+                  <SearchField.Group>
+                    <SearchField.SearchIcon />
+                    <SearchField.Input placeholder="Search by name or email…" />
+                    <SearchField.ClearButton />
+                  </SearchField.Group>
+                </SearchField>
+
+                {learnerSearch.trim().length > 0 && (
+                  <ListBox
+                    aria-label="Learner matches"
+                    selectionMode="single"
+                    selectedKeys={selectedLearner ? [String(selectedLearner.userId)] : []}
+                    onSelectionChange={(keys) => {
+                      const key = [...keys][0];
+                      if (key == null) return;
+                      const found = learners.find((l) => String(l.userId) === String(key));
+                      if (found) pickLearner(found);
                     }}
-                  />
-                  {createErrors.userId && (
-                    <p className="text-xs text-danger mt-1">{createErrors.userId}</p>
-                  )}
-                </TextField>
+                    renderEmptyState={() => (
+                      <EmptyState>No learner matches that name or email.</EmptyState>
+                    )}
+                  >
+                    {learners.map((learner) => (
+                      <ListBox.Item
+                        key={learner.userId}
+                        id={String(learner.userId)}
+                        textValue={`${learner.fullName} ${learner.email}`}
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{learner.fullName}</p>
+                          <p className="text-xs text-muted font-mono-tabular">{learner.email}</p>
+                        </div>
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                )}
+
+                {createErrors.learner && (
+                  <p className="text-xs text-danger">{createErrors.learner}</p>
+                )}
+
+                {selectedLearner && (
+                  <div
+                    role="group"
+                    aria-label="Selected learner"
+                    className="p-3 rounded bg-surface border border-border flex items-start gap-3"
+                  >
+                    <User className="h-4 w-4 text-accent mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {selectedLearner.fullName}
+                      </p>
+                      <p className="text-xs text-muted font-mono-tabular">
+                        {selectedLearner.email}
+                      </p>
+                      <p className="text-xs text-foreground mt-1">
+                        Current balance:{' '}
+                        <span className="font-mono-tabular font-semibold">
+                          {selectedLearner.creditsLeft}
+                        </span>{' '}
+                        credits
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* #349: the order is picked from that learner's paid orders. */}
+                <Select
+                  aria-label="Paid order"
+                  className="w-full"
+                  placeholder={
+                    selectedLearner
+                      ? learnerOrders?.orders.length === 0
+                        ? 'This learner has no paid order'
+                        : 'Pick a paid order'
+                      : 'Pick a learner first'
+                  }
+                  isDisabled={!selectedLearner || (learnerOrders?.orders.length ?? 0) === 0}
+                  value={selectedOrder ? String(selectedOrder.orderId) : null}
+                  onChange={(key) => {
+                    if (key == null) {
+                      setSelectedOrder(null);
+                      return;
+                    }
+                    const found = learnerOrders?.orders.find(
+                      (o) => String(o.orderId) === String(key),
+                    );
+                    if (found) pickOrder(found);
+                  }}
+                >
+                  <Label>Paid order</Label>
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      {(learnerOrders?.orders ?? []).map((order) => (
+                        <ListBox.Item
+                          key={order.orderId}
+                          id={String(order.orderId)}
+                          textValue={`${order.orderCode} ${order.paidAt ?? order.createdAt} ${order.credits} credits ${order.amount}`}
+                        >
+                          <div>
+                            <p className="text-sm font-mono-tabular font-medium text-foreground">
+                              {order.orderCode}
+                            </p>
+                            <p className="text-xs text-muted">
+                              {formatDateOnly(order.paidAt ?? order.createdAt)} · {order.credits}{' '}
+                              credits · {formatVnd(order.amount)}
+                            </p>
+                          </div>
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                      ))}
+                    </ListBox>
+                  </Select.Popover>
+                  <Description>
+                    Picking an order fills both values from what was paid and locks the method to
+                    money.
+                  </Description>
+                </Select>
 
                 <div>
                   <Label className="text-sm font-medium">Refund method</Label>
@@ -519,6 +739,7 @@ export function RefundsTab() {
                         type="radio"
                         name="method"
                         checked={createMethod === 'credit'}
+                        disabled={selectedOrder !== null}
                         onChange={() => setCreateMethod('credit')}
                       />
                       <span>Credits (Wallet balance)</span>
@@ -528,14 +749,48 @@ export function RefundsTab() {
                         type="radio"
                         name="method"
                         checked={createMethod === 'money'}
+                        disabled={selectedOrder !== null}
                         onChange={() => setCreateMethod('money')}
                       />
                       <span>Money (Cash/Bank transfer)</span>
                     </label>
                   </div>
+                  {selectedOrder && (
+                    <p className="text-xs text-muted mt-1">
+                      Locked to money: an order is money that arrived, so a refund against it returns
+                      money.
+                    </p>
+                  )}
                 </div>
 
-                {createMethod === 'credit' ? (
+                {selectedOrder ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <TextField className="w-full" name="amount" isRequired isInvalid={!!createErrors.amount}>
+                      <Label>Money amount (VND)</Label>
+                      <Input
+                        type="number"
+                        value={createAmount}
+                        onChange={(e) => {
+                          setCreateAmount(e.target.value);
+                          if (createErrors.amount) {
+                            setCreateErrors((prev) => ({ ...prev, amount: '' }));
+                          }
+                        }}
+                      />
+                      {createErrors.amount && (
+                        <p className="text-xs text-danger mt-1">{createErrors.amount}</p>
+                      )}
+                    </TextField>
+
+                    <TextField className="w-full" name="creditCount">
+                      <Label>Credits to refund</Label>
+                      <Input type="number" value={createCreditCount} readOnly />
+                      <Description>
+                        Filled from the order. A money refund carries the amount, not this count.
+                      </Description>
+                    </TextField>
+                  </div>
+                ) : createMethod === 'credit' ? (
                   <TextField
                     className="w-full"
                     name="creditCount"
@@ -583,28 +838,6 @@ export function RefundsTab() {
                   </TextField>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
-                  <TextField className="w-full" name="orderId">
-                    <Label>Linked order ID (optional)</Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g. 101"
-                      value={createOrderId}
-                      onChange={(e) => setCreateOrderId(e.target.value)}
-                    />
-                  </TextField>
-
-                  <TextField className="w-full" name="complaintId">
-                    <Label>Linked complaint ID (optional)</Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g. 42"
-                      value={createComplaintId}
-                      onChange={(e) => setCreateComplaintId(e.target.value)}
-                    />
-                  </TextField>
-                </div>
-
                 <TextField
                   className="w-full"
                   name="reason"
@@ -615,6 +848,7 @@ export function RefundsTab() {
                   <TextArea
                     placeholder="Describe why this refund is being issued..."
                     rows={3}
+                    maxLength={MAX_REFUND_REASON_LENGTH}
                     value={createReason}
                     onChange={(e) => {
                       setCreateReason(e.target.value);
@@ -623,6 +857,10 @@ export function RefundsTab() {
                       }
                     }}
                   />
+                  <Description>
+                    {createReason.trim().length} / {MAX_REFUND_REASON_LENGTH} characters, the same
+                    limit the API accepts.
+                  </Description>
                   {createErrors.reason && (
                     <p className="text-xs text-danger mt-1">{createErrors.reason}</p>
                   )}

@@ -126,6 +126,10 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string ComplaintInvalidSubject = "COMPLAINT_INVALID_SUBJECT";
         public const string ComplaintAlreadyResolved = "COMPLAINT_ALREADY_RESOLVED";
 
+        /// <summary>#350: the complaint's subject was never charged, so no refund could return
+        /// anything. Distinct from a validation slip: the ending itself does not apply.</summary>
+        public const string ComplaintNothingToRefund = "COMPLAINT_NOTHING_TO_REFUND";
+
         /// <summary>#281: a refund that is not there.</summary>
         public const string RefundNotFound = "REFUND_NOT_FOUND";
 
@@ -161,6 +165,11 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
 
         /// <summary>#281: the order or complaint a refund names is not the learner's.</summary>
         public const string RefundInvalidSubject = "REFUND_INVALID_SUBJECT";
+
+        /// <summary>#348: the complaint this refund compensates already has a live refund against it,
+        /// so the incident is already spoken for. A rejected refund releases the claim, so the
+        /// refusal names the open one rather than forbidding a retry.</summary>
+        public const string RefundAlreadyOpenForComplaint = "REFUND_ALREADY_OPEN_FOR_COMPLAINT";
 
         public const string ExamIncomplete = "EXAM_INCOMPLETE";
         public const string ExamHasFinishedAttempts = "EXAM_HAS_FINISHED_ATTEMPTS";

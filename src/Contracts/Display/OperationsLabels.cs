@@ -27,7 +27,8 @@ internal static class OperationsLabels
 
         LabelFamily.Add<ComplaintStatusDto>(families, "Complaint status not reported", [
             ("open", "Open"),
-            ("reviewing", "Under review"),
+            // #348: the stored value stays `reviewing`; only what staff read changed.
+            ("reviewing", "Processing"),
             ("resolved", "Resolved"),
         ]);
 
@@ -37,6 +38,14 @@ internal static class OperationsLabels
             ("grading_issue", "Grading issue"),
             ("technical_error", "Technical error"),
             ("payment_issue", "Payment issue"),
+        ]);
+
+        // #350: the three endings a resolution offers. Each reads as what staff chose, because the
+        // stored code is the decision and the screen must not show it back as `make_good`.
+        LabelFamily.Add<ComplaintCompensationDto>(families, "Compensation ending not reported", [
+            ("none", "No compensation"),
+            ("make_good", "Make-good credits"),
+            ("refund", "Record a refund"),
         ]);
 
         LabelFamily.Add<OrderStatusDto>(families, "Order status not reported", [

@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
 import {
   Alert,
   Button,
   Card,
   Chip,
+  Description,
   Input,
   Label,
   ListBox,
   Modal,
+  Radio,
+  RadioGroup,
   SearchField,
   Select,
   Spinner,
@@ -27,23 +31,28 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { OpsPagination } from './OpsPagination';
+import { formatVnd } from '../../../lib/security';
 import {
   api,
   type AdminComplaintListItemDto,
   type AdminComplaintDetailDto,
+  type ComplaintCompensationDto,
   type ComplaintStatusDto,
 } from '../../../lib/api';
 import {
   formatComplaintStatusLabel,
   formatComplaintTypeLabel,
   formatDateTime,
+  formatRefundMethodLabel,
+  formatRefundStatusLabel,
   getComplaintStatusColor,
+  getRefundStatusColor,
   validateComplaintResolve,
-  MAX_COMPLAINT_GRANT_CREDITS,
 } from './opsHelpers';
 
 export function ComplaintsTab() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -53,6 +62,8 @@ export function ComplaintsTab() {
   const [isResolveOpen, setIsResolveOpen] = useState(false);
   const [resolution, setResolution] = useState('');
   const [internalNotes, setInternalNotes] = useState('');
+  // #350: one ending at a time. The amount is seeded from what the learner spent, never from zero.
+  const [compensation, setCompensation] = useState<ComplaintCompensationDto>('none');
   const [grantCredits, setGrantCredits] = useState('0');
   const [resolveErrors, setResolveErrors] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
@@ -88,12 +99,16 @@ export function ComplaintsTab() {
   });
 
   const resolveMutation = useMutation({
-    mutationFn: () => {
-      const parsedCredits = parseInt(grantCredits, 10) || 0;
+    mutationFn: async () => {
+      const parsedCredits = compensation === 'make_good' ? parseInt(grantCredits, 10) || 0 : 0;
       const val = validateComplaintResolve({
         resolution,
         internalNotes,
+        compensation,
         grantCredits: parsedCredits,
+        creditsSpent: complaintDetail?.creditsSpent ?? 0,
+        impliedRefundMethod: complaintDetail?.impliedRefundMethod ?? null,
+        moneyPaid: complaintDetail?.moneyPaid ?? null,
       });
 
       if (!val.valid) {
@@ -101,11 +116,38 @@ export function ComplaintsTab() {
         throw new Error('Please resolve the validation issues.');
       }
 
-      return api.admin.resolveComplaint(selectedComplaintId!, {
+      const updated = await api.admin.resolveComplaint(selectedComplaintId!, {
         resolution: resolution.trim(),
         internalNotes: internalNotes.trim(),
+        compensation,
         grantCredits: parsedCredits,
       });
+
+      // #350: recording a refund is a promise, not a payment. The desk owns creating it, with its own
+      // permission, so this ending hands the incident over and moves no money.
+      if (compensation === 'refund') {
+        // #345: carry what the complaint already knows about the subject, not only who it is about. The
+        // desk can then land the order pick and the pre-filled amount (or the credit count) without the
+        // agent reading a figure off one screen and retyping it into another. It is convenience, not
+        // authority: the refund route still resolves the subject's ownership server-side. The values come
+        // from the server's post-resolve detail, not from this render's cached copy.
+        const isOrderSubject = updated.subjectType === 'Order';
+        await navigate({
+          to: '/admin/finance',
+          search: {
+            complaintId: updated.complaintId,
+            userId: updated.userId,
+            orderId: isOrderSubject ? updated.subjectId : undefined,
+            // Only a credit subject has a credit count to offer; an order's value is its money amount,
+            // which the desk reads from the order rather than from a number in a URL.
+            creditCount: !isOrderSubject && updated.creditsSpent
+              ? updated.creditsSpent
+              : undefined,
+          } as never,
+        });
+      }
+
+      return updated;
     },
     onSuccess: (updated) => {
       setIsResolveOpen(false);
@@ -121,6 +163,7 @@ export function ComplaintsTab() {
   function resetResolveForm() {
     setResolution('');
     setInternalNotes('');
+    setCompensation('none');
     setGrantCredits('0');
     setResolveErrors({});
     setActionError(null);
@@ -130,6 +173,25 @@ export function ComplaintsTab() {
     resetResolveForm();
     setIsResolveOpen(true);
   }
+
+  /** #350: choosing the make-good ending seeds the amount with what was actually spent, so the
+   * default is the correct figure rather than zero. */
+  function chooseCompensation(next: string) {
+    const ending = next as ComplaintCompensationDto;
+    setCompensation(ending);
+    setResolveErrors({});
+    setGrantCredits(
+      ending === 'make_good' ? String(complaintDetail?.creditsSpent ?? 0) : '0',
+    );
+  }
+
+  // #350: what the subject implies, read from #347's projection rather than re-derived here.
+  const creditsSpent = complaintDetail?.creditsSpent ?? 0;
+  const moneyPaid = complaintDetail?.moneyPaid ?? null;
+  const impliedMethod = complaintDetail?.impliedRefundMethod ?? null;
+  // A make-good is credits, so a money subject has none to offer; nothing charged means neither.
+  const canMakeGood = creditsSpent > 0 && impliedMethod !== 'money';
+  const canRefund = impliedMethod != null && (creditsSpent > 0 || moneyPaid != null);
 
   return (
     <div className="space-y-6">
@@ -236,8 +298,8 @@ export function ComplaintsTab() {
                       Open
                       <ListBox.ItemIndicator />
                     </ListBox.Item>
-                    <ListBox.Item id="reviewing" textValue="Under review">
-                      Under review
+                    <ListBox.Item id="reviewing" textValue="Processing">
+                      Processing
                       <ListBox.ItemIndicator />
                     </ListBox.Item>
                     <ListBox.Item id="resolved" textValue="Resolved">
@@ -416,6 +478,29 @@ export function ComplaintsTab() {
                             {complaintDetail.subjectDetails}
                           </p>
                         )}
+                        {/* #347: what the learner actually spent - read from the ledger, never guessed. */}
+                        <p className="text-xs text-muted mt-1">
+                          {(complaintDetail.creditsSpent ?? 0) > 0 ? (
+                            <>
+                              Learner spent{' '}
+                              <span className="font-mono-tabular text-foreground">
+                                {complaintDetail.creditsSpent} credit
+                                {complaintDetail.creditsSpent === 1 ? '' : 's'}
+                              </span>
+                              {complaintDetail.moneyPaid != null &&
+                                ` (${formatVnd(complaintDetail.moneyPaid)} paid)`}
+                            </>
+                          ) : complaintDetail.moneyPaid != null ? (
+                            <>
+                              Learner paid{' '}
+                              <span className="font-mono-tabular text-foreground">
+                                {formatVnd(complaintDetail.moneyPaid)}
+                              </span>
+                            </>
+                          ) : (
+                            'Nothing to refund on this subject.'
+                          )}
+                        </p>
                       </div>
 
                       <div>
@@ -449,6 +534,49 @@ export function ComplaintsTab() {
                         {complaintDetail.reason}
                       </p>
                     </div>
+
+                    {/* #345 story 11: the refund an agent created from this complaint, so the history
+                        of one incident is in one place. A promise with no refund yet says so rather
+                        than showing an empty box. */}
+                    {complaintDetail.refunds && complaintDetail.refunds.length > 0 && (
+                      <div className="p-4 rounded border border-border bg-surface space-y-2">
+                        <p className="text-xs font-medium text-muted uppercase tracking-wider">
+                          Refunds recorded against this complaint
+                        </p>
+                        {complaintDetail.refunds.map((refund) => (
+                          <div
+                            key={refund.refundId}
+                            className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono-tabular font-semibold text-foreground">
+                                #{refund.refundId}
+                              </span>
+                              <span className="text-foreground">
+                                {formatRefundMethodLabel(refund.method)}
+                              </span>
+                              <Chip
+                                size="sm"
+                                color={getRefundStatusColor(refund.status)}
+                                variant="soft"
+                              >
+                                {formatRefundStatusLabel(refund.status)}
+                              </Chip>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="font-mono-tabular font-medium text-foreground">
+                                {refund.method === 'money'
+                                  ? formatVnd(refund.amount ?? 0)
+                                  : `${refund.creditCount ?? 0} credits`}
+                              </span>
+                              <span className="text-xs text-muted font-mono-tabular">
+                                {formatDateTime(refund.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* If Resolved, display resolution & notes */}
                     {complaintDetail.status === 'resolved' && (
@@ -489,8 +617,8 @@ export function ComplaintsTab() {
                       <div className="p-4 rounded-md border border-border bg-surface flex flex-wrap items-center justify-between gap-3">
                         <div className="text-xs text-muted">
                           {complaintDetail.status === 'open'
-                            ? 'Mark as under review while investigating with mentor or checking grader logs.'
-                            : 'Currently under active investigation.'}
+                            ? 'Start processing while investigating with mentor or checking grader logs.'
+                            : 'Currently being processed.'}
                         </div>
 
                         <div className="flex gap-2">
@@ -506,7 +634,7 @@ export function ComplaintsTab() {
                                 })
                               }
                             >
-                              Mark as under review
+                              Start processing
                             </Button>
                           )}
 
@@ -560,8 +688,8 @@ export function ComplaintsTab() {
               <Modal.Header>
                 <Modal.Heading>Resolve complaint #{selectedComplaintId}</Modal.Heading>
                 <p className="text-xs text-muted mt-1">
-                  Send a response message to the learner, record internal notes for auditing, and
-                  optionally issue make-good credits (capped at {MAX_COMPLAINT_GRANT_CREDITS} credits).
+                  Send a response to the learner, record internal notes for auditing, and choose one
+                  compensation ending.
                 </p>
               </Modal.Header>
 
@@ -614,28 +742,128 @@ export function ComplaintsTab() {
                   )}
                 </TextField>
 
-                <TextField
-                  className="w-full"
-                  name="grantCredits"
-                  isInvalid={!!resolveErrors.grantCredits}
+                {/* #350: one compensation ending, in plain language. What is offered follows the
+                    subject: an order was paid in money so it offers a money refund; an attempt or a
+                    booking was paid in credits so it offers credits; a subject nobody charged offers
+                    neither, and says so. */}
+                <RadioGroup
+                  name="compensation"
+                  value={compensation}
+                  onChange={chooseCompensation}
+                  isInvalid={!!resolveErrors.compensation}
                 >
-                  <Label>Grant make-good credits (optional, 0–{MAX_COMPLAINT_GRANT_CREDITS})</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={MAX_COMPLAINT_GRANT_CREDITS}
-                    value={grantCredits}
-                    onChange={(e) => {
-                      setGrantCredits(e.target.value);
-                      if (resolveErrors.grantCredits) {
-                        setResolveErrors((prev) => ({ ...prev, grantCredits: '' }));
-                      }
-                    }}
-                  />
-                  {resolveErrors.grantCredits && (
-                    <p className="text-xs text-danger mt-1">{resolveErrors.grantCredits}</p>
+                  <Label>Compensation</Label>
+                  <Description>Choose exactly one ending.</Description>
+
+                  <Radio value="none">
+                    <Radio.Content>
+                      <Radio.Control>
+                        <Radio.Indicator />
+                      </Radio.Control>
+                      No compensation
+                    </Radio.Content>
+                    <Description>A reply to the learner, with no value returned.</Description>
+                  </Radio>
+
+                  {creditsSpent > 0 && impliedMethod !== 'money' && (
+                    <Radio value="make_good">
+                      <Radio.Content>
+                        <Radio.Control>
+                          <Radio.Indicator />
+                        </Radio.Control>
+                        Make-good credits
+                      </Radio.Content>
+                      <Description>
+                        Up to {creditsSpent} credit{creditsSpent === 1 ? '' : 's'}, the amount spent
+                        on this subject.
+                      </Description>
+                    </Radio>
                   )}
-                </TextField>
+
+                  {canRefund && (
+                    <Radio value="refund">
+                      <Radio.Content>
+                        <Radio.Control>
+                          <Radio.Indicator />
+                        </Radio.Control>
+                        Record a refund
+                      </Radio.Content>
+                      <Description>
+                        Hands this incident to the refund desk. Creates no refund by itself.
+                      </Description>
+                    </Radio>
+                  )}
+                </RadioGroup>
+
+                {resolveErrors.compensation && (
+                  <p className="text-xs text-danger">{resolveErrors.compensation}</p>
+                )}
+
+                {!canRefund && !canMakeGood && (
+                  <p className="text-xs text-muted">
+                    Nothing to refund: this subject was never charged.
+                  </p>
+                )}
+
+                {compensation === 'make_good' && (
+                  <TextField
+                    className="w-full"
+                    name="grantCredits"
+                    isRequired
+                    isInvalid={!!resolveErrors.grantCredits}
+                  >
+                    <Label>Credits to make good</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={creditsSpent}
+                      value={grantCredits}
+                      onChange={(e) => {
+                        setGrantCredits(e.target.value);
+                        if (resolveErrors.grantCredits) {
+                          setResolveErrors((prev) => ({ ...prev, grantCredits: '' }));
+                        }
+                      }}
+                    />
+                    <Description>
+                      Pre-filled with what the learner spent. At most {creditsSpent} credit
+                      {creditsSpent === 1 ? '' : 's'} — compensation cannot exceed the loss.
+                    </Description>
+                    {resolveErrors.grantCredits && (
+                      <p className="text-xs text-danger mt-1">{resolveErrors.grantCredits}</p>
+                    )}
+                  </TextField>
+                )}
+
+                {compensation === 'refund' && (
+                  <div
+                    role="group"
+                    aria-label="Refund handoff"
+                    className="p-3 rounded bg-surface-secondary border border-border space-y-1"
+                  >
+                    <p className="text-xs text-foreground">
+                      {impliedMethod === 'money' ? (
+                        <>
+                          Money refund, pre-filled with the order amount:{' '}
+                          <span className="font-mono-tabular font-semibold">
+                            {formatVnd(moneyPaid ?? 0)}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          Credit refund, pre-filled with the credits spent:{' '}
+                          <span className="font-mono-tabular font-semibold">
+                            {creditsSpent} credit{creditsSpent === 1 ? '' : 's'}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted">
+                      Record a refund creates no refund. The refund desk opens with this learner and
+                      this complaint already applied, and approval stays a separate decision.
+                    </p>
+                  </div>
+                )}
               </Modal.Body>
 
               <Modal.Footer>

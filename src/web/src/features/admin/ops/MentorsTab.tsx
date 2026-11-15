@@ -38,6 +38,7 @@ import {
 import { creditsToVnd, formatVnd, safeExternalHref, VND_PER_CREDIT } from '../../../lib/security';
 import {
   formatDateTime,
+  formatMentorPayoutOutcomeLabel,
   formatWeekdayLabel,
   getDefaultUtc7MonthRange,
   normalizeWeeklyTime,
@@ -81,6 +82,7 @@ export function MentorsTab() {
   const [payoutTo, setPayoutTo] = useState(defaultMonthRange.to);
   const [payoutError, setPayoutError] = useState<string | null>(null);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [isExportingTotalsCsv, setIsExportingTotalsCsv] = useState(false);
 
   const { data: mentors, isLoading, error } = useQuery({
     queryKey: ['admin-mentors'],
@@ -329,6 +331,30 @@ export function MentorsTab() {
     }
   }
 
+  // #353: the totals file, one row per mentor. Deliberately carries no bank details and no "paid"
+  // marker: accounting keeps both outside the product, so the file must not imply either.
+  async function handleExportPayoutTotalsCsv() {
+    const val = validateCsvExportDates(payoutFrom || undefined, payoutTo || undefined);
+    if (!val.valid) {
+      setPayoutError(val.error || 'Invalid date range.');
+      return;
+    }
+    try {
+      setIsExportingTotalsCsv(true);
+      setPayoutError(null);
+      const { blob, filename } = await api.admin.exportMentorPayoutsCsv(
+        payoutFrom || undefined,
+        payoutTo || undefined,
+        'totals',
+      );
+      triggerBlobDownload(blob, filename);
+    } catch (err: any) {
+      setPayoutError(err?.message || 'Failed to export mentor payout totals CSV.');
+    } finally {
+      setIsExportingTotalsCsv(false);
+    }
+  }
+
   const selectedCert = certOptions?.find((c) => c.certId === selectedCertId);
   const availableSkills = selectedCert?.skills || [];
   const parsedFormCredits = Math.max(0, parseInt(priceCredits, 10) || 0);
@@ -455,6 +481,13 @@ export function MentorsTab() {
                           <p className="text-xs font-mono-tabular text-muted">
                             {formatVnd(m.totalEarnedVnd ?? creditsToVnd(m.totalEarnedCredits ?? 0))}
                           </p>
+                          {/* #352: the sessions the payout rule removed, so a smaller total is explained. */}
+                          {(m.adjustedSessionsCount ?? 0) > 0 && (
+                            <p className="text-xs font-mono-tabular text-warning">
+                              {m.adjustedSessionsCount} {formatMentorPayoutOutcomeLabel('adjusted')} ·{' '}
+                              {m.adjustedCredits} credits deducted
+                            </p>
+                          )}
                         </div>
                       </Table.Cell>
                       <Table.Cell>
@@ -530,8 +563,23 @@ export function MentorsTab() {
                 <Download className="h-4 w-4 mr-1.5" />
                 {isExportingCsv ? 'Exporting...' : 'Export payout CSV'}
               </Button>
+
+              <Button
+                size="sm"
+                variant="secondary"
+                isDisabled={isExportingTotalsCsv}
+                onPress={() => void handleExportPayoutTotalsCsv()}
+              >
+                <Download className="h-4 w-4 mr-1.5" />
+                {isExportingTotalsCsv ? 'Exporting...' : 'Export totals CSV'}
+              </Button>
             </div>
           </div>
+
+          <p className="text-xs text-muted">
+            Totals carry no bank details and no record of transfers already made — accounting keeps both
+            outside the product.
+          </p>
 
           {payoutError && <Alert status="danger">{payoutError}</Alert>}
 

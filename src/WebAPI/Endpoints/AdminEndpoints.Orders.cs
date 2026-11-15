@@ -16,11 +16,12 @@ public static partial class AdminEndpoints
             string? q,
             string? status,
             string? gateway,
+            int? userId,
             [AsParameters] PaginationQuery pagination,
             IAdminOrderService orders,
             CancellationToken cancellationToken) =>
         {
-            var summary = await orders.GetOrdersAsync(q, status, gateway, pagination.PageOrDefault, pagination.PageSizeOrDefault, cancellationToken);
+            var summary = await orders.GetOrdersAsync(q, status, gateway, userId, pagination.PageOrDefault, pagination.PageSizeOrDefault, cancellationToken);
             return Results.Ok(summary);
         }).AddEndpointFilter<RequestValidationFilter<PaginationQuery>>();
 

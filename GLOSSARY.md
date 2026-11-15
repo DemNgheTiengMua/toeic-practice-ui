@@ -126,9 +126,17 @@ _Avoid_: Question group, item set, composite question
 The specification of millisecond offsets (`AudioStartMs`, `AudioEndMs`) against an exam section's master audio track to isolate playback for a specific question cluster.
 _Avoid_: Audio clipping, audio trimming, time stamping
 
+**Compensation**:
+The decision, taken when a learner complaint is resolved, about what value the learner is owed in return. It is the umbrella term, and it has exactly three endings: no compensation, a make-good, or a refund. Choosing a refund is a decision to return value and *not yet* a refund — the refund desk records that separately, with its own permission and its own lifecycle, so a promise can never be mistaken for a payment.
+_Avoid_: Remedy, restitution, goodwill gesture (as the name of the decision)
+
 **Refund**:
-A return of value to a learner, recorded as a decision with a requester, a decider and a reason. It is not the make-good grant on a complaint, which is a bounded apology rather than a return of what was taken.
+A return of value to a learner, recorded as a decision with a requester, a decider and a reason. It is one of the arms a **Compensation** can take, and it is not the make-good grant on a complaint, which is a bounded apology rather than a return of what was taken.
 _Avoid_: Compensation, cashback, reimbursement, payment reversal
+
+**Make-good**:
+A bounded credit grant attached to a resolved complaint: an apology for a failure, capped at what the learner actually spent on the subject, and therefore never more than the loss. It is the third arm of a **Compensation** beside "no compensation" and a **Refund**, and unlike a refund it moves value immediately and has no lifecycle of its own.
+_Avoid_: Compensation, goodwill credits, gift, ex-gratia payment
 
 **Refund method**:
 Which form of value a refund returns: **credit**, posted to the credit ledger the moment it is approved, or **money**, paid by the accountant outside the product. One refund carries exactly one method.

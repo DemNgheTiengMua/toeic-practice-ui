@@ -9,13 +9,21 @@ namespace Services;
 
 public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider clock) : IAdminDashboardService
 {
-    public async Task<AdminDashboardDto> GetDashboardMetricsAsync(CancellationToken cancellationToken = default)
+    public async Task<AdminDashboardDto> GetDashboardMetricsAsync(
+        DateOnly? month = null,
+        CancellationToken cancellationToken = default)
     {
         var now = clock.GetUtcNow();
-        var monthWindow = ReportingPeriod.Month(now);
+        // #351: one window, chosen by the caller or by the clock. Every period-scoped figure below reads
+        // this and nothing else, so the screen can never mix September's revenue with October's credits.
+        var periodWindow = month is { } chosen
+            ? ReportingPeriod.Month(chosen.Year, chosen.Month)
+            : ReportingPeriod.Month(now);
+        // The two live figures keep their own window. A period control has no meaning for "today", and a
+        // today figure that followed a month picker would silently mean "the 15th of September".
         var dayWindow = ReportingPeriod.Day(now);
-        var startOfMonth = monthWindow.Start;
-        var endOfMonth = monthWindow.End;
+        var periodStart = periodWindow.Start;
+        var periodEnd = periodWindow.End;
         var sevenDaysAgo = now.AddDays(-7);
         var thirtyMinutesAgo = now.AddMinutes(-30);
 
@@ -30,13 +38,13 @@ public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider cl
             .Where(u => !u.IsDeleted && u.Role.Code == Roles.Learner && u.CreatedAt >= sevenDaysAgo)
             .CountAsync(cancellationToken);
 
-        // 2. Credits Used (This Month)
+        // 2. Credits Used (in the chosen period)
         // Both halves are bounded on BOTH ends. A start-only filter is correct until the clock crosses into
         // next month, at which point next month's rows silently join this month's figure - and on a dashboard
         // nobody notices a total that is merely too large.
         var debitedDelta = await db.CreditTransactions
             .AsNoTracking()
-            .Where(t => t.CreatedAt >= startOfMonth && t.CreatedAt < endOfMonth && t.Delta < 0 && t.Reason != "admin_revoke")
+            .Where(t => t.CreatedAt >= periodStart && t.CreatedAt < periodEnd && t.Delta < 0 && t.Reason != "admin_revoke")
             .SumAsync(t => (int?)t.Delta, cancellationToken) ?? 0;
         var creditsDebited = -debitedDelta;
 
@@ -48,30 +56,32 @@ public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider cl
         var refundCredit = CreditReason.RefundCredit.ToCode();
         var creditsRefunded = await db.CreditTransactions
             .AsNoTracking()
-            .Where(t => t.CreatedAt >= startOfMonth && t.CreatedAt < endOfMonth
+            .Where(t => t.CreatedAt >= periodStart && t.CreatedAt < periodEnd
                 && (t.Reason == bookingCancel || t.Reason == refundCredit))
             .SumAsync(t => (int?)t.Delta, cancellationToken) ?? 0;
 
-        var creditsUsedThisMonth = Math.Max(0, creditsDebited - creditsRefunded);
+        var creditsUsedInPeriod = Math.Max(0, creditsDebited - creditsRefunded);
 
-        var dayOfMonth = Math.Max(1, ReportingPeriod.LocalInstant(now).Day);
-        var creditsPerDayAverage = Math.Round((decimal)creditsUsedThisMonth / dayOfMonth, 1);
+        // #351: divided by the days the chosen period has lived, not by today's day-of-month. September
+        // read on 15 October is 30 days old; dividing by 15 would report double its average.
+        var elapsedDays = ReportingPeriod.ElapsedDays(periodWindow, now);
+        var creditsPerDayAverage = Math.Round((decimal)creditsUsedInPeriod / elapsedDays, 1);
 
-        // 3. Net Revenue (Today and This Month)
+        // 3. Net Revenue (Today and the chosen period)
         // #284 / ADR-0014: revenue is paid orders minus money refunds settled in the same window, and a
         // negative answer is a fact rather than a defect - a day whose refunds exceed its income is a loss.
         // Both halves ask ReportingPeriod, so the two money figures cannot drift apart from each other or
         // from the orders screen.
         var paidOrdersQuery = db.Orders
             .AsNoTracking()
-            .PaidIn(monthWindow);
+            .PaidIn(periodWindow);
 
-        var paidOrdersThisMonthCount = await paidOrdersQuery.CountAsync(cancellationToken);
-        var paidThisMonthVnd = await paidOrdersQuery.SumAsync(o => (decimal?)o.Amount, cancellationToken) ?? 0m;
+        var paidOrdersInPeriodCount = await paidOrdersQuery.CountAsync(cancellationToken);
+        var paidInPeriodVnd = await paidOrdersQuery.SumAsync(o => (decimal?)o.Amount, cancellationToken) ?? 0m;
 
-        var refundedThisMonthVnd = await db.Refunds
+        var refundedInPeriodVnd = await db.Refunds
             .AsNoTracking()
-            .MoneyRefundedIn(monthWindow)
+            .MoneyRefundedIn(periodWindow)
             .SumAsync(r => (decimal?)r.Amount, cancellationToken) ?? 0m;
 
         var paidTodayVnd = await db.Orders
@@ -84,13 +94,17 @@ public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider cl
             .MoneyRefundedIn(dayWindow)
             .SumAsync(r => (decimal?)r.Amount, cancellationToken) ?? 0m;
 
-        var revenueThisMonthVnd = paidThisMonthVnd - refundedThisMonthVnd;
+        var revenueInPeriodVnd = paidInPeriodVnd - refundedInPeriodVnd;
         var revenueTodayVnd = paidTodayVnd - refundedTodayVnd;
 
-        // 4. Most Attempted Exams (Top 5)
+        // 4. Most Attempted Exams (Top 5, in the chosen period)
+        // #351: bounded by the same window the card's own label claims. An unbounded ranking under a
+        // period selector describes "ever" while the screen says September.
         var topExams = await db.ExamAttempts
             .AsNoTracking()
-            .Where(a => (a.Status == "done" || a.Status == AttemptStatus.Graded.ToCode() || a.Status == AttemptStatus.Submitted.ToCode()) && !a.Exam.IsDeleted)
+            .Where(a => (a.Status == "done" || a.Status == AttemptStatus.Graded.ToCode() || a.Status == AttemptStatus.Submitted.ToCode())
+                && !a.Exam.IsDeleted
+                && a.StartedAt >= periodStart && a.StartedAt < periodEnd)
             .GroupBy(a => new { a.ExamId, a.Exam.Name })
             .Select(g => new
             {
@@ -133,13 +147,14 @@ public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider cl
         return new AdminDashboardDto(
             ActiveLearnersCount: activeLearnersCount,
             NewLearners7DaysCount: newLearners7DaysCount,
-            CreditsUsedThisMonth: creditsUsedThisMonth,
-            CreditsRefundedThisMonth: creditsRefunded,
+            CreditsUsedInPeriod: creditsUsedInPeriod,
+            CreditsRefundedInPeriod: creditsRefunded,
             CreditsPerDayAverage: creditsPerDayAverage,
             RevenueTodayVnd: revenueTodayVnd,
-            RevenueThisMonthVnd: revenueThisMonthVnd,
-            PaidOrdersThisMonthCount: paidOrdersThisMonthCount,
+            RevenueInPeriodVnd: revenueInPeriodVnd,
+            PaidOrdersInPeriodCount: paidOrdersInPeriodCount,
             MostAttemptedExams: mostAttemptedExams,
-            NeedsAttention: needsAttention);
+            NeedsAttention: needsAttention,
+            PeriodLabel: ReportingPeriod.MonthLabel(periodWindow));
     }
 }

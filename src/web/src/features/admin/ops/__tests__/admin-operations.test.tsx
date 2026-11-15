@@ -64,11 +64,35 @@ const SAMPLE_COMPLAINTS_SUMMARY: AdminComplaintsSummaryDto = {
       createdAt: '2026-11-07T10:00:00Z',
       resolvedAt: '2026-11-07T15:00:00Z',
     },
+    {
+      complaintId: 303,
+      userId: 17,
+      learnerName: 'Vũ Thị G',
+      learnerEmail: 'learner17@test.local',
+      type: 'payment_issue',
+      subjectType: 'Order',
+      subjectId: 77,
+      subjectSummary: 'Order DH-ABC123',
+      status: 'open',
+      createdAt: '2026-11-09T09:00:00Z',
+    },
+    {
+      complaintId: 304,
+      userId: 18,
+      learnerName: 'Đỗ Văn H',
+      learnerEmail: 'learner18@test.local',
+      type: 'technical_error',
+      subjectType: 'ExamAttempt',
+      subjectId: 99,
+      subjectSummary: 'Exam #99 (Placement)',
+      status: 'open',
+      createdAt: '2026-11-10T09:00:00Z',
+    },
   ],
-  totalCount: 2,
+  totalCount: 4,
   page: 1,
   pageSize: 25,
-  pendingCount: 1,
+  pendingCount: 2,
   resolvedCount: 1,
   oldestPendingCreatedAt: '2026-11-08T09:00:00Z',
   oldestPendingId: 301,
@@ -88,6 +112,42 @@ const SAMPLE_COMPLAINT_DETAIL_OPEN: AdminComplaintDetailDto = {
   subjectSummary: 'Speaking 1-on-1 with Mentor John',
   subjectDetails: 'Booking ID #55 scheduled on 2026-11-08 08:30 UTC',
   createdAt: '2026-11-08T09:00:00Z',
+  creditsSpent: 1,
+  moneyPaid: null,
+  impliedRefundMethod: 'credit',
+};
+
+const SAMPLE_COMPLAINT_DETAIL_ORDER: AdminComplaintDetailDto = {  complaintId: 303,
+  userId: 17,
+  learnerName: 'Vũ Thị G',
+  learnerEmail: 'learner17@test.local',
+  type: 'payment_issue',
+  reason: 'The bank statement shows two deductions for one order.',
+  status: 'open',
+  subjectType: 'Order',
+  subjectId: 77,
+  subjectSummary: 'Order DH-ABC123',
+  createdAt: '2026-11-09T09:00:00Z',
+  creditsSpent: 0,
+  moneyPaid: 199000,
+  impliedRefundMethod: 'money',
+};
+
+const SAMPLE_COMPLAINT_DETAIL_UNCHARGED: AdminComplaintDetailDto = {
+  complaintId: 304,
+  userId: 18,
+  learnerName: 'Đỗ Văn H',
+  learnerEmail: 'learner18@test.local',
+  type: 'technical_error',
+  reason: 'The timer froze and I lost ten minutes.',
+  status: 'open',
+  subjectType: 'ExamAttempt',
+  subjectId: 99,
+  subjectSummary: 'Exam #99 (Placement)',
+  createdAt: '2026-11-10T09:00:00Z',
+  creditsSpent: 0,
+  moneyPaid: null,
+  impliedRefundMethod: 'credit',
 };
 
 const SAMPLE_COMPLAINT_DETAIL_RESOLVED: AdminComplaintDetailDto = {
@@ -147,6 +207,8 @@ const SAMPLE_MENTORS: AdminMentorListItemDto[] = [
     completedSessionsCount: 4,
     totalEarnedCredits: 20,
     totalEarnedVnd: 400000,
+    adjustedSessionsCount: 1,
+    adjustedCredits: 5,
   },
   {
     mentorId: 11,
@@ -174,6 +236,8 @@ const SAMPLE_MENTORS: AdminMentorListItemDto[] = [
     completedSessionsCount: 2,
     totalEarnedCredits: 6,
     totalEarnedVnd: 120000,
+    adjustedSessionsCount: 0,
+    adjustedCredits: 0,
   },
 ];
 
@@ -305,11 +369,27 @@ describe('AdminOperationsPage (#304)', () => {
       if (url.startsWith('/api/admin/complaints/302')) {
         return jsonResponse(SAMPLE_COMPLAINT_DETAIL_RESOLVED);
       }
+      if (url.startsWith('/api/admin/complaints/303')) {
+        return jsonResponse(SAMPLE_COMPLAINT_DETAIL_ORDER);
+      }
+      if (url.startsWith('/api/admin/complaints/304')) {
+        return jsonResponse(SAMPLE_COMPLAINT_DETAIL_UNCHARGED);
+      }
       if (url.startsWith('/api/admin/complaints')) {
         return jsonResponse(SAMPLE_COMPLAINTS_SUMMARY);
       }
       if (url.startsWith('/api/admin/mentors/options')) {
         return jsonResponse(SAMPLE_MENTOR_OPTIONS);
+      }
+      if (url.startsWith('/api/admin/mentors/payouts/totals/export')) {
+        return new Response('\uFEFF"Mentor ID","Mentor name"\r\n"10","Nguyễn Văn A"\r\n', {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition':
+              'attachment; filename="mentor-payout-totals-2026-11-01-to-2026-11-14.csv"',
+          },
+        });
       }
       if (url.startsWith('/api/admin/mentors/payouts/export')) {
         return new Response('\uFEFF"Booking ID","Mentor name"\r\n"501","Thầy John Smith"\r\n', {
@@ -375,7 +455,7 @@ describe('AdminOperationsPage (#304)', () => {
     expect(await screen.findByText(/access restricted/i)).toBeInTheDocument();
   });
 
-  it('renders complaints triage workspace with status transitions and make-good credit grant validation', async () => {
+  it('renders complaints triage workspace with status transitions', async () => {
     renderRoute('/admin/operations', {
       userId: 2,
       email: 'triage@test.local',
@@ -405,8 +485,8 @@ describe('AdminOperationsPage (#304)', () => {
     expect(await screen.findByText(/complaint details — #301/i)).toBeInTheDocument();
     expect(await screen.findByText(/waited for 20 minutes/i)).toBeInTheDocument();
 
-    // 1. Status transition: Mark as under review
-    const reviewBtn = await screen.findByRole('button', { name: /mark as under review/i });
+    // 1. Status transition: Start processing (#348 renames the `reviewing` label only)
+    const reviewBtn = await screen.findByRole('button', { name: /start processing/i });
     fireEvent.click(reviewBtn);
 
     await waitFor(() => {
@@ -419,33 +499,62 @@ describe('AdminOperationsPage (#304)', () => {
       );
     });
 
-    // 2. Open resolution modal and test make-good credit grant bounds (0..20)
+    // 2. The resolve surface offers the three endings as one exclusive choice (#350)
     const resolveBtn = screen.getByRole('button', { name: /resolve complaint/i });
     fireEvent.click(resolveBtn);
 
     expect(await screen.findByText(/resolve complaint #301/i)).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /no compensation/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /make-good credits/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /record a refund/i })).toBeInTheDocument();
+  });
 
-    // Try resolution with 25 credits (> 20 limit)
+  it('requires exactly one compensation ending and pre-fills the make-good from what was spent (#350)', async () => {
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đặng Thị E');
+    // Complaint 301 is a booking charged exactly one credit.
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0]);
+    fireEvent.click(await screen.findByRole('button', { name: /resolve complaint/i }));
+
+    expect(await screen.findByText(/resolve complaint #301/i)).toBeInTheDocument();
+
+    // The three endings are offered as one choice, in plain language.
+    expect(screen.getByRole('radio', { name: /no compensation/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /make-good credits/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /record a refund/i })).toBeInTheDocument();
+
     fireEvent.change(screen.getByLabelText(/message for learner/i), {
       target: { value: 'Apologies for the mentor no-show.' },
     });
     fireEvent.change(screen.getByLabelText(/internal investigation notes/i), {
       target: { value: 'Mentor verified absent. Added strike to record.' },
     });
-    fireEvent.change(screen.getByLabelText(/grant make-good credits/i), {
-      target: { value: '25' },
-    });
 
-    const confirmResolveBtn = screen.getByRole('button', { name: /confirm resolution/i });
-    fireEvent.click(confirmResolveBtn);
+    // Choosing make-good pre-fills the amount with the one credit actually spent.
+    fireEvent.click(screen.getByRole('radio', { name: /make-good credits/i }));
+    const amount = await screen.findByLabelText(/credits to make good/i);
+    expect(amount).toHaveValue(1);
 
-    expect(await screen.findByText(/grant credits must be between 0 and 20/i)).toBeInTheDocument();
+    // Above the spend is refused here, not only by the server.
+    fireEvent.change(amount, { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: /confirm resolution/i }));
+    expect(await screen.findByText(/at most 1 credit/i)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringContaining('/api/admin/complaints/301/resolve'),
+      expect.anything(),
+    );
 
-    // Change to valid 2 credits and confirm
-    fireEvent.change(screen.getByLabelText(/grant make-good credits/i), {
-      target: { value: '2' },
-    });
-    fireEvent.click(confirmResolveBtn);
+    // Equal to the spend is accepted, and the payload names the ending.
+    fireEvent.change(amount, { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: /confirm resolution/i }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -455,12 +564,271 @@ describe('AdminOperationsPage (#304)', () => {
           body: JSON.stringify({
             resolution: 'Apologies for the mentor no-show.',
             internalNotes: 'Mentor verified absent. Added strike to record.',
-            grantCredits: 2,
+            compensation: 'make_good',
+            grantCredits: 1,
           }),
         }),
       );
     });
   });
+
+  it('hands the learner and complaint to the refund desk without moving money (#350)', async () => {
+    const { history } = renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đặng Thị E');
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0]);
+    fireEvent.click(await screen.findByRole('button', { name: /resolve complaint/i }));
+
+    fireEvent.change(screen.getByLabelText(/message for learner/i), {
+      target: { value: 'Returning the booked credit.' },
+    });
+    fireEvent.change(screen.getByLabelText(/internal investigation notes/i), {
+      target: { value: 'Refund desk to return one credit.' },
+    });
+
+    fireEvent.click(screen.getByRole('radio', { name: /record a refund/i }));
+
+    // The ending says plainly that it creates nothing yet.
+    const handoff = await screen.findByRole('group', { name: /refund handoff/i });
+    expect(within(handoff).getByText(/creates no refund/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /confirm resolution/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/admin/complaints/301/resolve'),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            resolution: 'Returning the booked credit.',
+            internalNotes: 'Refund desk to return one credit.',
+            compensation: 'refund',
+            grantCredits: 0,
+          }),
+        }),
+      );
+    });
+
+    // No refund is created from here: the refund desk owns that route and its own permission.
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/admin/refunds',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    // The desk opens with the learner and the complaint carried in the URL, plus what the complaint
+    // already knows about the subject: #345 carries the credit count so the desk need not be told again.
+    await waitFor(() => {
+      expect(history.location.pathname).toBe('/admin/finance');
+    });
+    expect(history.location.search).toContain('complaintId=301');
+    expect(history.location.search).toContain('userId=15');
+    expect(history.location.search).toContain('creditCount=1');
+    expect(history.location.search).not.toContain('orderId=');
+  }, 20_000);
+
+  it('carries the subject order to the refund desk so the amount lands without transcription (#345)', async () => {
+    const { history } = renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Vũ Thị G');
+    // Complaint 303's subject is the order itself, so the desk is handed that order.
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[2]);
+    fireEvent.click(await screen.findByRole('button', { name: /resolve complaint/i }));
+
+    fireEvent.change(await screen.findByLabelText(/message for learner/i), {
+      target: { value: 'Refunding the duplicate deduction.' },
+    });
+    fireEvent.change(screen.getByLabelText(/internal investigation notes/i), {
+      target: { value: 'Bank statement confirms two deductions for order 77.' },
+    });
+    fireEvent.click(screen.getByRole('radio', { name: /record a refund/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm resolution/i }));
+
+    await waitFor(() => {
+      expect(history.location.pathname).toBe('/admin/finance');
+    });
+    expect(history.location.search).toContain('complaintId=303');
+    expect(history.location.search).toContain('userId=17');
+    expect(history.location.search).toContain('orderId=77');
+  }, 20_000);
+  it('offers only a money refund on an order subject and says nothing is refundable on an uncharged one (#350)', async () => {
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Vũ Thị G');
+    // Complaint 303 is an order: money that arrived.
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[2]);
+    fireEvent.click(await screen.findByRole('button', { name: /resolve complaint/i }));
+
+    expect(await screen.findByText(/resolve complaint #303/i)).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /make-good credits/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: /record a refund/i }));
+    // Pre-filled with the order's own amount, not a guess.
+    const orderHandoff = await screen.findByRole('group', { name: /refund handoff/i });
+    expect(within(orderHandoff).getByText(/199\.000\s*₫/)).toBeInTheDocument();
+
+    cleanup();
+
+    // Complaint 304 was never charged: nothing to refund, and no make-good either.
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đỗ Văn H');
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[3]);
+    fireEvent.click(await screen.findByRole('button', { name: /resolve complaint/i }));
+
+    expect(await screen.findByText(/resolve complaint #304/i)).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /make-good credits/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /record a refund/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/nothing to refund on this subject/i)).toBeInTheDocument();
+  }, 20_000);
+
+  it('shows the credits spent on a complaint subject, read from the ledger (#347)', async () => {
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đặng Thị E');
+
+    // Complaint 301 is on a booking charged one credit.
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0]);
+
+    expect(await screen.findByText(/complaint details — #301/i)).toBeInTheDocument();
+    expect(await screen.findByText(/1 credit\b/i)).toBeInTheDocument();
+  });
+
+  it('shows the money paid for an order subject, not a credit figure (#347)', async () => {
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Vũ Thị G');
+
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[2]);
+
+    expect(await screen.findByText(/complaint details — #303/i)).toBeInTheDocument();
+    expect(await screen.findByText(/199\.000\s*₫/)).toBeInTheDocument();
+  });
+
+  it('says nothing is refundable on a subject that was never charged (#347)', async () => {
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đỗ Văn H');
+
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[3]);
+
+    expect(await screen.findByText(/complaint details — #304/i)).toBeInTheDocument();
+    expect(await screen.findByText(/nothing to refund on this subject/i)).toBeInTheDocument();
+  });
+
+  it('shows the refund recorded against a complaint on its own detail (#345)', async () => {
+    const baseImpl = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (typeof url === 'string' && url.startsWith('/api/admin/complaints/301')) {
+        return jsonResponse({
+          ...SAMPLE_COMPLAINT_DETAIL_OPEN,
+          refunds: [
+            {
+              refundId: 401,
+              method: 'money',
+              status: 'requested',
+              creditCount: null,
+              amount: 199000,
+              createdAt: '2026-11-09T10:00:00Z',
+            },
+            {
+              refundId: 400,
+              method: 'credit',
+              status: 'rejected',
+              creditCount: 2,
+              amount: null,
+              createdAt: '2026-11-08T10:00:00Z',
+            },
+          ],
+        });
+      }
+      return baseImpl(url, init);
+    });
+
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đặng Thị E');
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0]);
+
+    // Story 11: the refund created from this complaint appears on the complaint afterwards, with its
+    // method, its status and the value in the unit that method actually returned.
+    const section = await screen.findByText(/refunds recorded against this complaint/i);
+    const panel = section.parentElement!;
+    expect(within(panel).getByText('#401')).toBeInTheDocument();
+    expect(within(panel).getByText(/199\.000\s*₫/)).toBeInTheDocument();
+    expect(within(panel).getByText('#400')).toBeInTheDocument();
+    expect(within(panel).getByText(/2 credits/)).toBeInTheDocument();
+  }, 20_000);
+
+  it('says nothing about refunds on a complaint that has none (#345)', async () => {
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đặng Thị E');
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0]);
+
+    expect(await screen.findByText(/complaint details — #301/i)).toBeInTheDocument();
+    expect(screen.queryByText(/refunds recorded against this complaint/i)).not.toBeInTheDocument();
+  }, 20_000);
 
   it('manages human mentors with fixed MeetLink, credit pricing, weekly availability schedule, and payout CSV export', async () => {
     window.URL.createObjectURL = vi.fn(() => 'blob:mock-payout-csv');
@@ -558,6 +926,9 @@ describe('AdminOperationsPage (#304)', () => {
     expect(await screen.findByText('Nguyễn Văn A')).toBeInTheDocument();
     expect(screen.getAllByText(/520\.000\s*₫/).length).toBeGreaterThan(0);
 
+    // #352: a mentor whose payout was docked shows the adjustment beside the totals.
+    expect(screen.getByText(/1 Adjusted · 5 credits deducted/i)).toBeInTheDocument();
+
     const exportCsvBtn = screen.getByRole('button', { name: /export payout csv/i });
     fireEvent.click(exportCsvBtn);
 
@@ -567,6 +938,17 @@ describe('AdminOperationsPage (#304)', () => {
         expect.anything(),
       );
       expect(clickSpy).toHaveBeenCalled();
+    });
+
+    // #353: the totals file is its own export, one row per mentor, so a transfer needs no arithmetic.
+    const exportTotalsBtn = screen.getByRole('button', { name: /export totals csv/i });
+    fireEvent.click(exportTotalsBtn);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/admin/mentors/payouts/totals/export'),
+        expect.anything(),
+      );
     });
   }, 15_000);
 

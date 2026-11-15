@@ -1947,6 +1947,26 @@ export interface AdminComplaintDetailDto {
   resolvedAt?: string | null;
   resolvedByGrantTxnId?: number | null;
   grantedCredits?: number | null;
+  /** #347: negative credit-ledger deltas attributable to the subject. */
+  creditsSpent?: number;
+  /** #347: the order's amount, and only when the subject is an order. */
+  moneyPaid?: number | null;
+  /** #347: implied by the subject; null when the complaint carries none. */
+  impliedRefundMethod?: RefundMethodDto | null;
+  /** #345: the refunds recorded against this complaint, newest first. Empty until one is created. */
+  refunds?: AdminComplaintRefundDto[] | null;
+}
+
+/** #345: one refund on a complaint's history. The method owns which value is set. */
+export interface AdminComplaintRefundDto {
+  refundId: number;
+  method: RefundMethodDto;
+  status: RefundStatusDto;
+  /** Credits returned, on a credit refund only. */
+  creditCount?: number | null;
+  /** Money returned, on a money refund only. */
+  amount?: number | null;
+  createdAt: string;
 }
 
 export interface AdminComplaintsSummaryDto {
@@ -1961,9 +1981,13 @@ export interface AdminComplaintsSummaryDto {
   oldestPendingType?: ComplaintTypeDto | null;
 }
 
+export type ComplaintCompensationDto = 'none' | 'make_good' | 'refund';
+
 export interface ResolveComplaintRequest {
   resolution: string;
   internalNotes: string;
+  /** #350: exactly one ending. `refund` records a handoff and moves no value. */
+  compensation: ComplaintCompensationDto;
   grantCredits?: number;
 }
 
@@ -1993,6 +2017,9 @@ export interface AdminMentorListItemDto {
   completedSessionsCount: number;
   totalEarnedCredits: number;
   totalEarnedVnd: number;
+  /** #352: delivered sessions docked because their complaint was resolved with compensation. */
+  adjustedSessionsCount: number;
+  adjustedCredits: number;
   headline?: string | null;
   bio?: string | null;
   expertise?: string | null;
@@ -2095,14 +2122,17 @@ export interface AdminMostAttemptedExamDto {
 export interface AdminDashboardDto {
   activeLearnersCount: number;
   newLearners7DaysCount: number;
-  creditsUsedThisMonth: number;
-  creditsRefundedThisMonth: number;
+  /** #351: follows `periodLabel`, unlike the two `…Today` figures below. */
+  creditsUsedInPeriod: number;
+  creditsRefundedInPeriod: number;
   creditsPerDayAverage: number;
   revenueTodayVnd: number;
-  revenueThisMonthVnd: number;
-  paidOrdersThisMonthCount: number;
+  revenueInPeriodVnd: number;
+  paidOrdersInPeriodCount: number;
   mostAttemptedExams: AdminMostAttemptedExamDto[];
   needsAttention: AdminNeedsAttentionDto;
+  /** #351: the period the `…InPeriod` figures describe, named by the server that computed them. */
+  periodLabel: string;
 }
 
 export interface DashboardRevision {
@@ -2764,7 +2794,11 @@ export const api = {
   },
 
   admin: {
-    dashboard: () => apiFetch<AdminDashboardDto>('/api/admin/dashboard'),
+    /** #351: `month` is `YYYY-MM`. Absent means the current reporting month, as before the parameter. */
+    dashboard: (month?: string) =>
+      apiFetch<AdminDashboardDto>(
+        month ? `/api/admin/dashboard?month=${month}-01` : '/api/admin/dashboard',
+      ),
     dashboardRevision: () => apiFetch<DashboardRevision>('/api/admin/dashboard/revision'),
     discardWorkbenchRecord: (batchId: number, line: number, reason?: string) =>
       apiFetch<void>(`/api/admin/ingestion/${batchId}/records/${line}/discard`, {
@@ -2828,13 +2862,14 @@ export const api = {
           reason: body.reason,
         }),
       }),
-    orders: (params?: { q?: string; status?: string; gateway?: string; page?: number; pageSize?: number }) => {
+    orders: (params?: { q?: string; status?: string; gateway?: string; userId?: number; page?: number; pageSize?: number }) => {
       const sp = new URLSearchParams();
       sp.set('page', String(params?.page ?? 1));
       sp.set('pageSize', String(params?.pageSize ?? 25));
       if (params?.q) sp.set('q', params.q);
       if (params?.status) sp.set('status', params.status);
       if (params?.gateway) sp.set('gateway', params.gateway);
+      if (params?.userId) sp.set('userId', String(params.userId));
       return apiFetch<AdminOrdersSummaryDto>(`/api/admin/orders?${sp.toString()}`);
     },
     orderDetail: (orderId: number) =>
@@ -2848,6 +2883,25 @@ export const api = {
       if (params?.q) sp.set('q', params.q);
       if (params?.status) sp.set('status', params.status);
       return apiFetch<AdminRefundsSummaryDto>(`/api/admin/refunds?${sp.toString()}`);
+    },
+    // #345: the desk's own reads. The governance routes beside them list every learner and carry the
+    // wallet and payment write surface, so a support-only account cannot reach them; these three are the
+    // same questions narrowed to what a refund needs, under the capability that already owns refunds.
+    refundLearners: (params?: { q?: string; page?: number; pageSize?: number }) => {
+      const sp = new URLSearchParams();
+      sp.set('page', String(params?.page ?? 1));
+      sp.set('pageSize', String(params?.pageSize ?? 25));
+      if (params?.q) sp.set('q', params.q);
+      return apiFetch<AdminUsersSummaryDto>(`/api/admin/refunds/lookups/learners?${sp.toString()}`);
+    },
+    refundLearner: (userId: number) =>
+      apiFetch<AdminUserDto>(`/api/admin/refunds/lookups/learners/${userId}`),
+    refundLearnerOrders: (userId: number, params?: { page?: number; pageSize?: number }) => {
+      const sp = new URLSearchParams();
+      sp.set('page', String(params?.page ?? 1));
+      sp.set('pageSize', String(params?.pageSize ?? 25));
+      sp.set('userId', String(userId));
+      return apiFetch<AdminOrdersSummaryDto>(`/api/admin/refunds/lookups/orders?${sp.toString()}`);
     },
     refundDetail: (refundId: number) =>
       apiFetch<AdminRefundDetailDto>(`/api/admin/refunds/${refundId}`),
@@ -2913,25 +2967,16 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ status }),
       }),
-    resolveComplaint: (
-      complaintId: number,
-      body: ResolveComplaintRequest | { resolution: string; adminNotes?: string; internalNotes?: string; grantCredits?: number },
-    ) => {
-      const internalNotes =
-        'internalNotes' in body && body.internalNotes
-          ? body.internalNotes
-          : 'adminNotes' in body && body.adminNotes
-            ? body.adminNotes
-            : '';
-      return apiFetch<AdminComplaintDetailDto>(`/api/admin/complaints/${complaintId}/resolve`, {
+    resolveComplaint: (complaintId: number, body: ResolveComplaintRequest) =>
+      apiFetch<AdminComplaintDetailDto>(`/api/admin/complaints/${complaintId}/resolve`, {
         method: 'POST',
         body: JSON.stringify({
           resolution: body.resolution,
-          internalNotes,
+          internalNotes: body.internalNotes,
+          compensation: body.compensation,
           grantCredits: body.grantCredits ?? 0,
         }),
-      });
-    },
+      }),
     mentors: () => apiFetch<AdminMentorListItemDto[]>('/api/admin/mentors'),
     mentorOptions: () => apiFetch<MentorCertificateOptionDto[]>('/api/admin/mentors/options'),
     mentorDetail: (mentorId: number) => apiFetch<MentorSummaryDto>(`/api/admin/mentors/${mentorId}`),
@@ -2961,22 +3006,31 @@ export const api = {
         `/api/admin/mentors/payouts${q ? `?${q}` : ''}`,
       );
     },
-    mentorPayoutsExportUrl: (from?: string, to?: string) => {
+    mentorPayoutsExportUrl: (from?: string, to?: string, kind: 'sessions' | 'totals' = 'sessions') => {
       const sp = new URLSearchParams();
       if (from) sp.set('from', from);
       if (to) sp.set('to', to);
       const q = sp.toString();
-      return `/api/admin/mentors/payouts/export${q ? `?${q}` : ''}`;
+      const path = kind === 'totals' ? 'totals/export' : 'export';
+      return `/api/admin/mentors/payouts/${path}${q ? `?${q}` : ''}`;
     },
+    // #353: the second accounting file - one row per mentor, so a transfer needs no arithmetic.
+    // One parameterised export for both files: they differ only in the path segment and the default
+    // filename, so a second ~35-line copy would be the same request written twice.
     exportMentorPayoutsCsv: async (
       from?: string,
       to?: string,
+      kind: 'sessions' | 'totals' = 'sessions',
     ): Promise<{ blob: Blob; filename: string }> => {
       const sp = new URLSearchParams();
       if (from) sp.set('from', from);
       if (to) sp.set('to', to);
       const query = sp.toString() ? `?${sp.toString()}` : '';
-      const response = await fetch(`/api/admin/mentors/payouts/export${query}`, {
+      const path =
+        kind === 'totals'
+          ? `/api/admin/mentors/payouts/totals/export${query}`
+          : `/api/admin/mentors/payouts/export${query}`;
+      const response = await fetch(path, {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -2994,7 +3048,11 @@ export const api = {
         throw new ApiClientError(response.status, code, title, detail);
       }
       const disposition = response.headers.get('content-disposition');
-      let filename = `mentor-payouts-${from || 'today'}-to-${to || 'today'}.csv`;
+      const fallback =
+        kind === 'totals'
+          ? `mentor-payout-totals-${from || 'today'}-to-${to || 'today'}.csv`
+          : `mentor-payouts-${from || 'today'}-to-${to || 'today'}.csv`;
+      let filename = fallback;
       if (disposition) {
         const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
         if (match && match[1]) {
