@@ -37,31 +37,6 @@ public sealed partial class LearnerService
             .Select(p => new { Score = p.TotalScore!.Value, BandCode = p.ResultBandCode, p.TakenAt })
             .FirstOrDefaultAsync(cancellationToken);
 
-        string? currentBandCode;
-        int? currentScore;
-        string? currentSource;
-
-        if (latestMock is not null && (latestPlacement is null || latestMock.TakenAt >= latestPlacement.TakenAt))
-        {
-            currentBandCode = latestMock.BandCode;
-            currentScore = latestMock.Score;
-            currentSource = "mock";
-        }
-        else if (latestPlacement is not null)
-        {
-            currentBandCode = latestPlacement.BandCode;
-            currentScore = latestPlacement.Score;
-            currentSource = "placement";
-        }
-        else
-        {
-            // #159: a goal can itself name the starting band (#153 added the column). Filled in
-            // below once the goal row is loaded - see the `target` query.
-            currentBandCode = null;
-            currentScore = null;
-            currentSource = null;
-        }
-
         var target = await db.TargetBands
             .AsNoTracking()
             .Where(t => t.UserId == userId && t.CertId == certId)
@@ -74,6 +49,7 @@ public sealed partial class LearnerService
                 t.TargetDate,
                 t.WeeklyStudyHours,
                 t.FeasibilityStatus,
+                t.SetAt,
                 // #241: D21a's "remaining guided hours" is the stored ΔH, not a fresh calculation.
                 // #234's no-proration rule means a certificate whose bands carry no study hours has
                 // no ΔH at all, so this stays NULL rather than being estimated.
@@ -81,14 +57,45 @@ public sealed partial class LearnerService
             })
             .FirstOrDefaultAsync(cancellationToken);
 
-        // #159: with no mock and no placement, the goal's own starting band is the only statement of
-        // where the learner is. Reading it here keeps the dashboard from saying "Not placed yet"
-        // beside a goal row that says B1 - and the path is built from that B1.
-        if (currentBandCode is null && target?.CurrentBandCode is { } goalBand)
+        // #380: one certificate, one level, one source. The goal row's starting band is the band the
+        // placement-result mapping handed THIS certificate (PlacementService.SetGoalAsync ->
+        // LatestAssessedBandCodeAsync, #311), so it is what "level against target" must print - a mock
+        // band here made the card disagree with the placement page it is judged against. A measurement
+        // taken AFTER the goal was set still wins, so a later mock moves the level as it always did.
+        string? measuredBandCode;
+        int? measuredScore;
+        string? measuredSource;
+        DateTimeOffset measuredAt;
+
+        if (latestMock is not null && (latestPlacement is null || latestMock.TakenAt >= latestPlacement.TakenAt))
         {
-            currentBandCode = goalBand;
-            currentSource = "goal";
+            measuredBandCode = latestMock.BandCode;
+            measuredScore = latestMock.Score;
+            measuredSource = "mock";
+            measuredAt = latestMock.TakenAt;
         }
+        else if (latestPlacement is not null)
+        {
+            measuredBandCode = latestPlacement.BandCode;
+            measuredScore = latestPlacement.Score;
+            measuredSource = "placement";
+            measuredAt = latestPlacement.TakenAt;
+        }
+        else
+        {
+            measuredBandCode = null;
+            measuredScore = null;
+            measuredSource = null;
+            measuredAt = default;
+        }
+
+        var goalBandCode = target?.CurrentBandCode;
+        var useGoalBand = goalBandCode is not null
+            && (measuredBandCode is null || measuredAt <= target!.SetAt);
+
+        var currentBandCode = useGoalBand ? goalBandCode : measuredBandCode;
+        var currentScore = useGoalBand ? null : measuredScore;
+        var currentSource = currentBandCode is null ? null : useGoalBand ? "goal" : measuredSource;
 
         // Band names live in one table for the whole certificate, so the current band's name is read
         // there rather than from whichever attempt happened to carry it.
