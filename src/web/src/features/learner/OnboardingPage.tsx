@@ -6,8 +6,6 @@ import {
   Button,
   Card,
   Chip,
-  FieldError,
-  Form,
   Input,
   Label,
   ListBox,
@@ -41,6 +39,21 @@ import { formatFeasibilityStatus } from './learnerHelpers';
 
 type OobeStep = 1 | 2 | 3 | 4;
 
+// Mirrors GoalFeasibilityCalculator.MaxWeeklyHours (src/BusinessObjects/GuidedLearning/GoalFeasibility.cs).
+// shortcut: duplicated constant, but the server rejects anything above it so a stale copy fails loudly at
+// the next save rather than silently. Ship it in TargetBandViewDto when a second client needs the bound.
+const MIN_WEEKLY_HOURS = 1;
+const MAX_WEEKLY_HOURS = 25;
+const DEFAULT_WEEKLY_HOURS = '7';
+
+function getTodayIsoDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function OnboardingPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -50,8 +63,10 @@ export function OnboardingPage() {
   const [selectedScope, setSelectedScope] = useState<PlacementScopeCode>('listening_and_reading');
   const [targetBandCode, setTargetBandCode] = useState<string>('');
   const [targetDate, setTargetDate] = useState<string>('');
-  const [weeklyHours, setWeeklyHours] = useState<string>('5');
+  const [weeklyHours, setWeeklyHours] = useState<string>(DEFAULT_WEEKLY_HOURS);
   const [formError, setFormError] = useState<string | null>(null);
+  const [targetDateError, setTargetDateError] = useState<string | null>(null);
+  const [weeklyHoursError, setWeeklyHoursError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const derivedStep: OobeStep = !onboardingState
@@ -125,8 +140,10 @@ export function OnboardingPage() {
     mutationFn: async (req: SetGoalRequest) => {
       return await api.placement.setGoal(req);
     },
-    onSuccess: async (updatedView) => {
-      queryClient.setQueryData(['learner', 'target-band', learnerContext?.active?.code], updatedView);
+    onSuccess: async () => {
+      // `setGoal` returns SetGoalResultDto, not the TargetBandViewDto this slot holds. Writing it here
+      // made the next render read `view.activeCert.code` off a payload without that field.
+      await queryClient.invalidateQueries({ queryKey: ['learner', 'target-band'] });
       await queryClient.invalidateQueries({ queryKey: ['learner', 'dashboard'] });
       await refreshOnboardingState();
       setFormError(null);
@@ -170,13 +187,33 @@ export function OnboardingPage() {
   const handleSubmitGoal = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    setTargetDateError(null);
+    setWeeklyHoursError(null);
+
     if (!targetBandCode) {
       setFormError('Please select a target band.');
       return;
     }
+
+    let hasFieldError = false;
+    const todayIso = getTodayIsoDate();
+    if (targetDate && targetDate < todayIso) {
+      setTargetDateError('Exam date must be today or in the future.');
+      hasFieldError = true;
+    }
+
     const parsedHours = weeklyHours ? Number(weeklyHours) : null;
-    if (parsedHours !== null && (Number.isNaN(parsedHours) || parsedHours < 1 || parsedHours > 80)) {
-      setFormError('Weekly study hours must be between 1 and 80.');
+    if (
+      parsedHours !== null &&
+      (Number.isNaN(parsedHours) || parsedHours < MIN_WEEKLY_HOURS || parsedHours > MAX_WEEKLY_HOURS)
+    ) {
+      setWeeklyHoursError(
+        `Weekly study hours must be between ${MIN_WEEKLY_HOURS} and ${MAX_WEEKLY_HOURS}.`,
+      );
+      hasFieldError = true;
+    }
+
+    if (hasFieldError) {
       return;
     }
 
@@ -513,7 +550,7 @@ export function OnboardingPage() {
       )}
 
       <Card className="bg-surface border border-border shadow-sm">
-        <Form onSubmit={handleSubmitGoal}>
+        <form noValidate onSubmit={handleSubmitGoal} className="react-aria-Form">
           <Card.Header className="pb-4 border-b border-separator flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
@@ -560,19 +597,6 @@ export function OnboardingPage() {
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-foreground">Target Band</Label>
-              <div className="flex flex-wrap gap-2">
-                {view.availableBands.map((band) => (
-                  <Button
-                    key={band.code}
-                    type="button"
-                    size="sm"
-                    variant={targetBandCode === band.code ? 'primary' : 'secondary'}
-                    onPress={() => setTargetBandCode(band.code)}
-                  >
-                    {band.code} — {band.name}
-                  </Button>
-                ))}
-              </div>
               <Select
                 selectedKey={targetBandCode || null}
                 onSelectionChange={(key: Key | null) => {
@@ -612,27 +636,49 @@ export function OnboardingPage() {
               <TextField
                 name="targetDate"
                 value={targetDate}
-                onChange={setTargetDate}
+                onChange={(val) => {
+                  setTargetDate(val);
+                  if (targetDateError) setTargetDateError(null);
+                }}
+                isInvalid={Boolean(targetDateError)}
               >
                 <Label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                   <Calendar className="w-4 h-4 text-muted" />
                   Target Exam Date (Optional)
                 </Label>
-                <Input type="date" />
-                <FieldError />
+                <Input type="date" min={getTodayIsoDate()} />
+                {targetDateError && (
+                  <span className="field-error" data-slot="field-error" role="alert">
+                    {targetDateError}
+                  </span>
+                )}
               </TextField>
 
               <TextField
                 name="weeklyHours"
                 value={weeklyHours}
-                onChange={setWeeklyHours}
+                onChange={(val) => {
+                  setWeeklyHours(val);
+                  if (weeklyHoursError) setWeeklyHoursError(null);
+                }}
+                isInvalid={Boolean(weeklyHoursError)}
               >
                 <Label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                   <Clock className="w-4 h-4 text-muted" />
                   Weekly Study Hours (Optional)
                 </Label>
-                <Input type="number" min={1} max={80} step={0.5} placeholder="e.g. 6" />
-                <FieldError />
+                <Input
+                  type="number"
+                  min={MIN_WEEKLY_HOURS}
+                  max={MAX_WEEKLY_HOURS}
+                  step={0.5}
+                  placeholder={`e.g. ${DEFAULT_WEEKLY_HOURS}`}
+                />
+                {weeklyHoursError && (
+                  <span className="field-error" data-slot="field-error" role="alert">
+                    {weeklyHoursError}
+                  </span>
+                )}
               </TextField>
             </div>
 
@@ -673,7 +719,25 @@ export function OnboardingPage() {
                       <span className="font-bold text-foreground">{currentGoal.earliestFeasibleDate}</span>
                     </div>
                   )}
+                  {currentGoal.suggestedWeeklyHours != null && (
+                    <div>
+                      <span className="text-muted block">Suggested pace</span>
+                      <span className="font-bold text-foreground">
+                        {currentGoal.suggestedWeeklyHours > MAX_WEEKLY_HOURS
+                          ? `No sustainable pace (${currentGoal.suggestedWeeklyHours}h needed)`
+                          : `${currentGoal.suggestedWeeklyHours}h/week`}
+                      </span>
+                    </div>
+                  )}
                 </div>
+                {currentGoal.suggestedWeeklyHours != null &&
+                  currentGoal.suggestedWeeklyHours > MAX_WEEKLY_HOURS && (
+                    <p className="text-xs text-muted m-0">
+                      This goal needs {currentGoal.suggestedWeeklyHours}h a week, which no one can keep up.
+                      Move the exam date back or pick a closer target band so the plan fits under{' '}
+                      {MAX_WEEKLY_HOURS}h a week.
+                    </p>
+                  )}
               </div>
             )}
 
@@ -708,7 +772,7 @@ export function OnboardingPage() {
               </div>
             </div>
           </Card.Content>
-        </Form>
+        </form>
       </Card>
     </div>
   );
