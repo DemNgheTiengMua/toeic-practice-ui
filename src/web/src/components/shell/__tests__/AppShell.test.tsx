@@ -244,7 +244,7 @@ describe('AppShell layout and domain copy', () => {
     const header = screen.getByRole('banner');
     expect(within(header).queryByText('Admin')).not.toBeInTheDocument();
     expect(within(header).queryByText('Staff')).not.toBeInTheDocument();
-    expect(screen.getByText(/not verified yet/i)).toBeInTheDocument();
+    expect(screen.queryByText(/not verified yet/i)).not.toBeInTheDocument();
 
     await waitFor(() => {
       const walletLink = within(header).getByRole('link', { name: /25 credits/i });

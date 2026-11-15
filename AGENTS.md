@@ -45,6 +45,12 @@ The backend is a .NET 10 solution (`ExtraEfficiency.slnx`) structured in strict 
    - There is no stored wallet balance column.
    - Invariant: "Block before you charge" — check all preconditions before creating a debit transaction.
    - Practice, weakness analysis, and the first placement test per certificate per learner are free and never write a ledger row; subsequent placement retakes charge configured credits by scope (`placement_retake`).
+3a. **Email Verification Gates Sign-In (`docs/adr/0018-email-verification-gates-sign-in.md`)**:
+   - A verified mailbox is a precondition of holding a session, not a limitation on what a session may do. Unverified accounts cannot sign in, and `CheckSessionAsync` ends a session whose address is unverified.
+   - The check runs **after** password verification, so a wrong password never reveals whether an address is registered.
+   - `POST /api/auth/register` returns 201 with no token. `POST /api/auth/resend-activation` is unauthenticated and takes an address (an unverified account has no session to prove ownership with), always answering 204.
+   - `POST /api/admin/users/{id}/verify-email` is the required escape route: without it a misconfigured relay locks every new account out.
+   - `Email:Transport` selects `smtp` (real mail, `SmtpEmailSender`, BCL `SmtpClient`, no package) or `dropfolder` (writes `.eml`, used by tests and as the safe default).
 4. **Certificate Isolation (`PRODUCT.md`)**:
    - Composite foreign keys carry `CertId` down through exams, sections, attempts, and learning paths.
    - One certificate's content, scoring, or rubric can never leak into another.

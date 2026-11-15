@@ -93,6 +93,18 @@ _Avoid_: Admin role, staff role, permission level, user type
 A grant of one permission namespace to one role, carried by `RolePermissions(RoleId, PermissionCode)`. Read live on each sign-in and re-validation, so a revoked grant takes effect on the next request.
 _Avoid_: Role assignment, capability flag
 
+**Email verification**:
+The one-time act of proving control of the address an account registered with, completed by opening an activation link. A precondition of holding a session, not a limitation on what a session may do (ADR-0018).
+_Avoid_: Email confirmation, email activation, account activation
+
+**Activation link**:
+A single-use URL carrying a 24-hour token, stored only as a hash, that completes Email verification. Only the newest link for an account works; a password change retires it.
+_Avoid_: Verify link, confirmation email, activation email
+
+**Unverified account**:
+An account whose Email verification has not been completed. It exists and holds credits, but cannot sign in, so the only actions available to it are opening an Activation link or asking for a new one.
+_Avoid_: Pending account, inactive account, unconfirmed user
+
 
 **Certificate Wizard**:
 The streamlined admin workflow for creating or editing a certificate from a 2-skill (`Listening & Reading`) or 4-skill (`Listening, Reading, Speaking, Writing`) template, requiring only certificate identity, scale range (`MinScaledScore`, `MaxScaledScore`, `ScoreStep`, `ScoreAggregationRule`), 3-field sections (`Code`, `Name`, `ExpectedQuestionCount` with automatic modality defaults), `ScoreBands`, and flat `GradingCriteria` (automatically generating linear `ScoreScales` and working immediately with the platform's single Universal Placement Exam).

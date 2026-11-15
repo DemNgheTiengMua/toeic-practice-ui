@@ -216,20 +216,11 @@ describe('Auth flows (#295)', () => {
     });
   });
 
-  it('honors valid local returnUrl on register and preserves inputs on 400 validation error', async () => {
+  it('hides invalid returnUrl pitfalls on register and routes to check-email after success', async () => {
     let attempts = 0;
-    let registered = false;
     installFetchMock((url, init) => {
       if (url === '/api/auth/me') {
-        if (!registered) return jsonResponse({ code: 'AUTH_REQUIRED' }, 401);
-        return jsonResponse({
-          userId: 7,
-          email: 'new@demo.local',
-          fullName: 'New Learner',
-          role: 'learner',
-          emailVerified: false,
-          permissions: [],
-        });
+        return jsonResponse({ code: 'AUTH_REQUIRED' }, 401);
       }
       if (url === '/api/auth/register' && init?.method === 'POST') {
         attempts += 1;
@@ -243,19 +234,8 @@ describe('Auth flows (#295)', () => {
             409,
           );
         }
-        registered = true;
-        return jsonResponse({
-          token: 'cookie-issued',
-          expiresAt: '2026-12-01T00:00:00Z',
-          user: {
-            userId: 7,
-            email: 'new@demo.local',
-            fullName: 'New Learner',
-            role: 'learner',
-            emailVerified: false,
-            permissions: [],
-          },
-        });
+        // ADR-0018: registration returns 201 with no session — the account cannot sign in yet.
+        return jsonResponse({ userId: 7, email: 'new@demo.local' }, 201);
       }
       return jsonResponse({}, 404);
     });
@@ -282,7 +262,7 @@ describe('Auth flows (#295)', () => {
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/placement');
+      expect(router.state.location.pathname).toBe('/auth/check-email');
     });
   });
 

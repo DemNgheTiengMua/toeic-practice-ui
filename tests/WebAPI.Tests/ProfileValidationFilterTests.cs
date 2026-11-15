@@ -193,7 +193,7 @@ public sealed class ProfileValidationFilterTests
             => Task.FromResult(new ProfileInfo("Nguyễn Văn A", "0901234567", "Asia/Ho_Chi_Minh"));
         public Task ChangePasswordAsync(int userId, ChangePasswordInput input, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task VerifyEmailAsync(string token, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task ResendActivationAsync(int userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task ResendActivationAsync(string email, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task RequestPasswordResetAsync(ForgotPasswordInput input, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task ResetPasswordAsync(ResetPasswordInput input, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }

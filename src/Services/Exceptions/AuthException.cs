@@ -22,5 +22,9 @@ public sealed class AuthException(string code, string message) : Exception(messa
     public const string Locked = AuthErrorCodes.Locked;
     public const string TokenInvalid = AuthErrorCodes.TokenInvalid;
 
+    /// <summary>Correct credentials, but the mailbox was never proven. ADR-0018: verification gates
+    /// sign-in itself, so this refuses the token rather than limiting what the token can do.</summary>
+    public const string EmailUnverified = AuthErrorCodes.EmailUnverified;
+
     public string Code { get; } = code;
 }

@@ -170,31 +170,21 @@ describe('Profile feature (#301)', () => {
     });
   });
 
-  it('renders unverified email warning with resend activation button', async () => {
-    let resendCalled = false;
-    installFetchMock((url, init) => {
+  it('never renders a verification banner, because an unverified account cannot hold a session', async () => {
+    // ADR-0018: verification gates sign-in, so this state is unreachable in the app. The banner that
+    // used to live here described the old "sign in first, verify later" model and was deleted.
+    installFetchMock((url) => {
       if (url === '/api/auth/me') return jsonResponse({ ...MOCK_USER, emailVerified: false });
       if (url === '/api/learner/context') return jsonResponse(MOCK_LEARNER_CONTEXT);
       if (url === '/api/profile') return jsonResponse(MOCK_PROFILE);
-      if (url === '/api/auth/resend-activation' && init?.method === 'POST') {
-        resendCalled = true;
-        return new Response(null, { status: 204 });
-      }
       return jsonResponse({}, 404);
     });
 
     renderRoute('/profile');
 
-    expect(await screen.findByText(/email verification pending/i)).toBeInTheDocument();
-
-    const resendBtn = screen.getByRole('button', { name: /resend verification email/i });
-    fireEvent.click(resendBtn);
-
-    await waitFor(() => {
-      expect(resendCalled).toBe(true);
-      const toastEl = screen.getByText(/verification email sent/i);
-      expect(toastEl.closest('[data-slot="toast-region"]')).toBeInTheDocument();
-    });
+    expect(await screen.findByDisplayValue(MOCK_PROFILE.fullName)).toBeInTheDocument();
+    expect(screen.queryByText(/email verification pending/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /resend verification email/i })).not.toBeInTheDocument();
   });
 
   it('signs out and navigates to /sign-in?reset=1 upon successful password change', async () => {

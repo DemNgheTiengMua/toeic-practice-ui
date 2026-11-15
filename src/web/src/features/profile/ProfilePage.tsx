@@ -26,9 +26,7 @@ import {
   KeyRound,
   Lock,
   Mail,
-  MailWarning,
   RefreshCw,
-  Send,
   ShieldCheck,
   Sparkles,
   User,
@@ -60,9 +58,6 @@ export function ProfilePage() {
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
-
-  // Email verification resend feedback
-  const [resendError, setResendError] = useState<string | null>(null);
 
   const profileQuery = useQuery({
     queryKey: ['learner', 'profile'],
@@ -110,21 +105,6 @@ export function ProfilePage() {
     },
   });
 
-  const resendActivationMutation = useMutation({
-    mutationFn: () => api.auth.resendActivation(),
-    onSuccess: () => {
-      setResendError(null);
-      toast.success('Verification email sent. Please check your inbox.');
-    },
-    onError: (err) => {
-      if (err instanceof ApiClientError) {
-        setResendError(err.title || err.detail || 'Failed to resend verification email.');
-      } else {
-        setResendError((err as Error).message || 'Failed to send verification email.');
-      }
-    },
-  });
-
   const changePasswordMutation = useMutation({
     mutationFn: () =>
       api.learner.changePassword({
@@ -168,8 +148,6 @@ export function ProfilePage() {
     changePasswordMutation.mutate();
   };
 
-  const isEmailVerified = user?.emailVerified !== false;
-
   // Timezones list, ensuring user's current timezone is available
   const availableTimezones = Array.from(
     new Set([timeZoneId, ...TIME_ZONE_IDS]),
@@ -204,41 +182,6 @@ export function ProfilePage() {
           </Link>
         </div>
       </div>
-
-      {/* Unverified Email Alert Banner */}
-      {!isEmailVerified && (
-        <Alert status="warning">
-          <Alert.Indicator>
-            <MailWarning className="w-5 h-5 text-warning" />
-          </Alert.Indicator>
-          <Alert.Content>
-            <Alert.Title>Email verification pending</Alert.Title>
-            <Alert.Description className="space-y-2">
-              <p className="m-0 text-sm break-words">
-                Your account email (
-                <span className="inline-block max-w-[240px] truncate align-bottom font-medium" title={user?.email}>
-                  {user?.email}
-                </span>
-                ) is not yet verified. Please verify your email to unlock credit purchases and exams.
-              </p>
-              {resendError && (
-                <p className="text-xs text-danger font-semibold m-0">{resendError}</p>
-              )}
-              <div className="pt-1">
-                <Button
-                  size="sm"
-                  variant="primary"
-                  isPending={resendActivationMutation.isPending}
-                  onPress={() => resendActivationMutation.mutate()}
-                >
-                  <Send className="w-3.5 h-3.5 mr-1" />
-                  Resend verification email
-                </Button>
-              </div>
-            </Alert.Description>
-          </Alert.Content>
-        </Alert>
-      )}
 
       {/* Profile Loading State */}
       {profileQuery.isLoading ? (

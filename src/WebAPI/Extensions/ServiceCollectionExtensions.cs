@@ -43,10 +43,37 @@ public static class ServiceCollectionExtensions
             configuration.GetSection(AuthLinkOptions.SectionName).Get<AuthLinkOptions>() ?? new AuthLinkOptions());
 
         var emailOptions = configuration.GetSection(EmailOptions.SectionName).Get<EmailOptions>() ?? new EmailOptions();
-        services.AddSingleton<IEmailSender>(sp => new DropFolderEmailSender(
-            Path.GetFullPath(emailOptions.DropFolder, environment.ContentRootPath),
-            emailOptions.From,
-            sp.GetRequiredService<ILogger<DropFolderEmailSender>>()));
+        if (emailOptions.UsesSmtp)
+        {
+            // ADR-0018: a transport chosen without credentials would fail at every registration,
+            // which is the one moment a learner cannot work around it. Refuse the boot instead.
+            var smtp = configuration.GetSection(SmtpEmailOptions.SectionName).Get<SmtpEmailOptions>()
+                       ?? new SmtpEmailOptions();
+            if (!smtp.IsConfigured)
+            {
+                throw new InvalidOperationException(
+                    "Email:Transport is 'smtp' but Email:Smtp is incomplete. Set Email__Smtp__Host, " +
+                    "Email__Smtp__UserName and Email__Smtp__Password, or set Email__Transport=dropfolder.");
+            }
+
+            // SmtpClient speaks STARTTLS only (RFC 3207). Port 465 expects implicit TLS and would fail
+            // as an opaque timeout on every send, so refuse the boot and name the working port.
+            if (smtp.UsesUnsupportedPort)
+            {
+                throw new InvalidOperationException(
+                    "Email__Smtp__Port=465 cannot work: System.Net.Mail.SmtpClient supports STARTTLS only, " +
+                    "not implicit TLS. Use port 587 with Email__Smtp__UseStartTls=true.");
+            }
+
+            services.AddSingleton<IEmailSender>(new SmtpEmailSender(smtp, emailOptions.From));
+        }
+        else
+        {
+            services.AddSingleton<IEmailSender>(sp => new DropFolderEmailSender(
+                Path.GetFullPath(emailOptions.DropFolder, environment.ContentRootPath),
+                emailOptions.From,
+                sp.GetRequiredService<ILogger<DropFolderEmailSender>>()));
+        }
 
         services.AddScoped<ILearnerService, LearnerService>();
         services.AddScoped<ICreditLedger, CreditLedger>();

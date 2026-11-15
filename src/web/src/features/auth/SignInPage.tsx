@@ -149,6 +149,14 @@ export function SignInPage() {
       if (err instanceof ApiClientError) {
         if (err.status === 429 || err.code === 'TOO_MANY_REQUESTS') {
           setFormError('Too many attempts. Please wait a moment before trying again.');
+        } else if (err.code === 'AUTH_EMAIL_UNVERIFIED') {
+          // ADR-0018: correct credentials on an unverified account. Verification gates sign-in, so
+          // there is no session to grant; send the person to the screen that can send a fresh link.
+          await navigate({
+            to: '/auth/check-email',
+            search: { email: trimmedEmail } as never,
+          });
+          return;
         } else {
           setFormError(err.detail || err.title || 'Sign-in failed. Please try again.');
         }

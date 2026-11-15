@@ -60,6 +60,17 @@ public sealed partial class AuthService
             throw new AuthException(AuthException.InvalidCredentials, "Incorrect email or password.");
         }
 
+        // ADR-0018: a verified mailbox is a precondition of holding a session, not a limitation on
+        // what the session may do. Checked AFTER the password so an attacker cannot use this to
+        // learn which addresses exist; a wrong password still answers identically either way.
+        // LastLoginAt is deliberately not written: nothing was logged in.
+        if (user.EmailVerifiedAt is null)
+        {
+            throw new AuthException(
+                AuthException.EmailUnverified,
+                "Verify your email address before signing in. Open the activation link we sent, or request a new one.");
+        }
+
         user.FailedAttempts = 0;
         user.LockoutEnd = null;
         user.LastLoginAt = now;
@@ -75,9 +86,17 @@ public sealed partial class AuthService
         var row = await db.Users
             .AsNoTracking()
             .Where(u => u.UserId == userId && !u.IsDeleted)
-            .Select(u => new { u.IsLocked, u.SecurityStamp })
+            .Select(u => new { u.IsLocked, u.SecurityStamp, u.EmailVerifiedAt })
             .SingleOrDefaultAsync(cancellationToken);
         if (row is null)
+        {
+            return SessionStatus.Ended;
+        }
+
+        // ADR-0018: a session is only good while the mailbox is verified. Without this, a token
+        // issued before the gate existed keeps working for its full 8 hours, and the gate would be
+        // "cannot sign in again" rather than "cannot be signed in".
+        if (row.EmailVerifiedAt is null)
         {
             return SessionStatus.Ended;
         }

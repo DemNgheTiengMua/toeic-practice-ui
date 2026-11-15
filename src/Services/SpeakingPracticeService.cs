@@ -671,10 +671,6 @@ public sealed class SpeakingPracticeService(
             ? reviewPositions.IndexOf(pos) + 1
             : 0;
 
-        int ReviewSectionOf(FreeResponse fr) => reviewPositionByExamItemId.TryGetValue(fr.ExamItemId, out var pos)
-            ? pos.SectionId
-            : 0;
-
         freeResponses = freeResponses.OrderBy(ReviewOrderOf).ToList();
 
         var totalExamQuestions = reviewPositions
@@ -688,17 +684,29 @@ public sealed class SpeakingPracticeService(
 
         foreach (var fr in freeResponses)
         {
+            // A placement paper carries Writing and Speaking on one attempt, and this page is the
+            // SPEAKING result. Without this filter it showed the writing task too, under a heading that
+            // says "Pronunciation & rubric criteria", and the header read "2 of 1 tasks answered"
+            // because totalExamQuestions counts speaking positions while this loop counted every
+            // response on the paper.
+            if (!reviewPositionByExamItemId.TryGetValue(fr.ExamItemId, out var reviewPosition)
+                || !string.Equals(
+                    reviewPosition.Section.Modality,
+                    Modality.Speaking.ToCode(),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             var grading = fr.AiGradingFreeResponse;
             var scores = grading?.AiGradingScores ?? (IEnumerable<AiGradingScore>)Array.Empty<AiGradingScore>();
 
             // Load applicable SectionCriteria to know the maximums
-            var reviewSectionId = ReviewSectionOf(fr);
-            var sectionCriteria = reviewSectionId == 0
-                ? []
-                : await db.SectionCriteria
-                    .AsNoTracking()
-                    .Where(sc => sc.SectionId == reviewSectionId)
-                    .ToListAsync(cancellationToken);
+            var reviewSectionId = reviewPosition.SectionId;
+            var sectionCriteria = await db.SectionCriteria
+                .AsNoTracking()
+                .Where(sc => sc.SectionId == reviewSectionId)
+                .ToListAsync(cancellationToken);
 
             var criteriaItems = new List<SpeakingCriterionScoreItem>();
             decimal qTotal = 0m;
@@ -801,7 +809,10 @@ public sealed class SpeakingPracticeService(
             attempt.Cert.Code,
             attempt.SubmittedAt,
             totalExamQuestions,
-            freeResponses.Count,
+            // Answered, counted over the speaking tasks this page shows - not over every free response
+            // on the paper. A placement attempt also holds the writing task, and counting it here made
+            // the header read "2 of 1 tasks answered" on a speaking result.
+            questionItems.Count,
             overallTotalScore,
             overallMaxScore,
             scaledScore,

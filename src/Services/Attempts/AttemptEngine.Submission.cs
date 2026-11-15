@@ -756,6 +756,18 @@ public sealed partial class AttemptEngine
             .Select(g => new { SkillId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.SkillId, x => x.Count, cancellationToken);
 
+        // The denominator an AI-graded skill is measured against. `AttemptSkillScores.RawScore` for such
+        // a skill is a rubric total (e.g. 25 out of 36), not a percentage, so a percentage cannot be read
+        // off it. The scale band looks like the natural divisor but is NULL on seeded certificates (IELTS
+        // seeds no Min/MaxScaledScore for WRIT and SPEA), which made every placement report
+        // writingPct/speakingPct = 0 for answers the grader had scored normally.
+        var rubricMaxBySkill = await db.GradingCriteria
+            .AsNoTracking()
+            .Where(c => c.CertId == attempt.CertId)
+            .GroupBy(c => c.SkillId)
+            .Select(g => new { SkillId = g.Key, Max = g.Sum(c => c.MaxScore) })
+            .ToDictionaryAsync(x => x.SkillId, x => x.Max, cancellationToken);
+
         var aiGradingStatuses = await db.AiGradings
             .AsNoTracking()
             .Where(g => g.FreeResponse.AttemptId == attemptId)
@@ -784,11 +796,14 @@ public sealed partial class AttemptEngine
             }
             else
             {
-                var minS = skill.MinScaledScore ?? 0;
-                var maxS = skill.MaxScaledScore ?? 0;
-                var range = (decimal)(maxS - minS);
-                skillPct = range > 0m
-                    ? Math.Clamp(Math.Round(100m * (score.ScaledScore - minS) / range, 2), 0m, 100m)
+                // An AI-graded skill's RawScore is a rubric total (e.g. 25 of 36), not a percentage, so
+                // it is divided by the rubric's own maximum. The scale band used to be the divisor, and
+                // it is NULL on seeded certificates (IELTS seeds no Min/MaxScaledScore for WRIT and
+                // SPEA) — that made the range 0 and every placement reported writingPct/speakingPct = 0
+                // for answers the grader had scored: writing 25/36 and speaking 13.30 came back as 0.00.
+                var rubricMax = rubricMaxBySkill.GetValueOrDefault(skill.SkillId);
+                skillPct = rubricMax > 0m
+                    ? Math.Clamp(Math.Round(100m * score.RawScore / rubricMax, 2), 0m, 100m)
                     : 0m;
             }
             pctByModality[skill.Modality] = skillPct;

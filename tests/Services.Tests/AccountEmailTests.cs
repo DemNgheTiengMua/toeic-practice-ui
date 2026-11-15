@@ -32,6 +32,12 @@ public sealed class AccountEmailTests(DatabaseFixture database)
         return await CreateService().RegisterAsync(new RegisterInput("Learner", email, null, password, true));
     }
 
+    /// <summary>ADR-0018: verification gates sign-in, so a test that wants a working session must mark
+    /// the address verified first. Done in SQL because these tests are about reset and activation
+    /// links, not about the act of verifying.</summary>
+    private Task MarkEmailVerifiedAsync(int userId) =>
+        database.SqlAsync($"UPDATE Users SET EmailVerifiedAt = SYSDATETIMEOFFSET() WHERE UserId = {userId}");
+
     [Fact]
     public async Task Register_emails_an_activation_link_and_leaves_the_account_unverified()
     {
@@ -43,13 +49,40 @@ public sealed class AccountEmailTests(DatabaseFixture database)
     }
 
     [Fact]
-    public async Task Unverified_learner_can_sign_in()
+    public async Task Unverified_learner_cannot_sign_in()
     {
+        // ADR-0018: verification gates the session itself. Before this, an unverified learner signed
+        // in fine and only checkout was blocked; that is the behaviour this test now forbids.
         await RegisterAsync("unverified@example.com", "right-password");
 
-        var user = await CreateService().SignInAsync(new SignInInput("unverified@example.com", "right-password"));
+        var ex = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService().SignInAsync(new SignInInput("unverified@example.com", "right-password")));
 
-        Assert.False(user.EmailVerified);
+        Assert.Equal(AuthException.EmailUnverified, ex.Code);
+    }
+
+    [Fact]
+    public async Task Verified_learner_can_sign_in()
+    {
+        await RegisterAsync("verified@example.com", "right-password");
+        await CreateService().VerifyEmailAsync(mail.LastToken("verified@example.com", VerifyPath));
+
+        var user = await CreateService().SignInAsync(new SignInInput("verified@example.com", "right-password"));
+
+        Assert.True(user.EmailVerified);
+    }
+
+    [Fact]
+    public async Task Wrong_password_on_an_unverified_account_still_reports_bad_credentials()
+    {
+        // The gate must sit behind the password check, or it becomes an oracle for which addresses
+        // have accounts: a wrong password would answer "unverified" instead of "incorrect".
+        await RegisterAsync("oracle@example.com", "right-password");
+
+        var ex = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService().SignInAsync(new SignInInput("oracle@example.com", "wrong-password")));
+
+        Assert.Equal(AuthException.InvalidCredentials, ex.Code);
     }
 
     [Fact]
@@ -79,12 +112,22 @@ public sealed class AccountEmailTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task Resend_for_an_unknown_address_sends_nothing_and_does_not_fail()
+    {
+        // ADR-0018: this endpoint is reachable without a session, so its answer must not distinguish
+        // "no such account" from "already verified" from "sent" — otherwise it enumerates users.
+        await CreateService().ResendActivationAsync("nobody-here@example.com");
+
+        Assert.Empty(mail.To("nobody-here@example.com"));
+    }
+
+    [Fact]
     public async Task Resending_activation_retires_the_earlier_link()
     {
         var user = await RegisterAsync("resend@example.com");
         var first = mail.LastToken("resend@example.com", VerifyPath);
 
-        await CreateService().ResendActivationAsync(user.UserId);
+        await CreateService().ResendActivationAsync("resend@example.com");
         var second = mail.LastToken("resend@example.com", VerifyPath);
 
         Assert.NotEqual(first, second);
@@ -99,7 +142,7 @@ public sealed class AccountEmailTests(DatabaseFixture database)
         var user = await RegisterAsync("already@example.com");
         await CreateService().VerifyEmailAsync(mail.LastToken("already@example.com", VerifyPath));
 
-        await CreateService().ResendActivationAsync(user.UserId);
+        await CreateService().ResendActivationAsync("already@example.com");
 
         Assert.Single(mail.To("already@example.com"));
     }
@@ -129,12 +172,16 @@ public sealed class AccountEmailTests(DatabaseFixture database)
     }
 
     [Fact]
-    public async Task Resending_activation_reports_a_failed_send()
+    public async Task Resending_activation_swallows_a_failed_send()
     {
         var user = await RegisterAsync("loud@example.com");
         mail.Fail = true;
 
-        await Assert.ThrowsAsync<EmailDeliveryException>(() => CreateService().ResendActivationAsync(user.UserId));
+        // ADR-0018: the caller is signed out and may not own the address, so a delivery failure must
+        // not be reported — that would tell an attacker the account exists and is unverified.
+        await CreateService().ResendActivationAsync("loud@example.com");
+
+        Assert.False((await CreateService().GetUserAsync(user.UserId))!.EmailVerified);
     }
 
     [Fact]
@@ -169,6 +216,8 @@ public sealed class AccountEmailTests(DatabaseFixture database)
         var ex = await Assert.ThrowsAsync<AuthException>(() =>
             CreateService().ResetPasswordAsync(new ResetPasswordInput(stolen, "attacker-password")));
         Assert.Equal(AuthException.TokenInvalid, ex.Code);
+        // The activation link was retired by the password change too, so verify out of band.
+        await MarkEmailVerifiedAsync(user.UserId);
         await CreateService().SignInAsync(new SignInInput("race@example.com", "owner-password"));
     }
 
@@ -185,7 +234,7 @@ public sealed class AccountEmailTests(DatabaseFixture database)
         var ex = await Assert.ThrowsAsync<AuthException>(() => CreateService().VerifyEmailAsync(pending));
         Assert.Equal(AuthException.TokenInvalid, ex.Code);
         // The owner can still verify: a fresh link works.
-        await CreateService().ResendActivationAsync(user.UserId);
+        await CreateService().ResendActivationAsync("activate-race@example.com");
         await CreateService().VerifyEmailAsync(mail.LastToken("activate-race@example.com", VerifyPath));
         Assert.True((await CreateService().GetUserAsync(user.UserId))!.EmailVerified);
     }
@@ -239,6 +288,7 @@ public sealed class AccountEmailTests(DatabaseFixture database)
         var ex = await Assert.ThrowsAsync<AuthException>(() =>
             CreateService().ResetPasswordAsync(new ResetPasswordInput(token, "new-password")));
         Assert.Equal(AuthException.TokenInvalid, ex.Code);
+        await CreateService().VerifyEmailAsync(mail.LastToken("slow@example.com", VerifyPath));
         await CreateService().SignInAsync(new SignInInput("slow@example.com", "old-password"));
     }
 
@@ -266,6 +316,7 @@ public sealed class AccountEmailTests(DatabaseFixture database)
     public async Task Password_reset_ends_sessions_issued_under_the_old_password()
     {
         await RegisterAsync("sessions@example.com", "old-password");
+        await CreateService().VerifyEmailAsync(mail.LastToken("sessions@example.com", VerifyPath));
         var before = await CreateService().SignInAsync(new SignInInput("sessions@example.com", "old-password"));
         Assert.Equal(SessionStatus.Active, await CreateService().CheckSessionAsync(before.UserId, before.SessionStamp));
 
@@ -302,7 +353,7 @@ public sealed class AccountEmailTests(DatabaseFixture database)
         var token = mail.LastToken("locked-verify@example.com", VerifyPath);
         await database.SqlAsync($"UPDATE Users SET IsLocked = 1 WHERE UserId = {user.UserId}");
 
-        await CreateService().ResendActivationAsync(user.UserId);
+        await CreateService().ResendActivationAsync("locked-verify@example.com");
 
         Assert.Single(mail.To("locked-verify@example.com"));
         await Assert.ThrowsAsync<AuthException>(() => CreateService().VerifyEmailAsync(token));

@@ -678,6 +678,18 @@ public sealed class WritingPracticeService(
 
         foreach (var fr in freeResponses)
         {
+            // A placement paper carries Writing and Speaking on one attempt, and this page is the
+            // WRITING result. Without this filter it showed the speaking task too, and the header
+            // counted it — the mirror of the same defect on the speaking review page.
+            if (!reviewPositionByExamItemId.TryGetValue(fr.ExamItemId, out var reviewPosition)
+                || !string.Equals(
+                    reviewPosition.Section.Modality,
+                    Modality.Writing.ToCode(),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             var text = fr.ResponseText ?? string.Empty;
             // #239: the same rule the composer and the save path use, so the review page's word count
             // and the one the learner watched cannot disagree.
@@ -766,7 +778,9 @@ public sealed class WritingPracticeService(
             attempt.Exam.Name,
             attempt.Cert.Code,
             attempt.SubmittedAt,
-            freeResponses.Count,
+            // The writing tasks on this paper, matching the filtered questionItems below. Counting every
+            // free response made a placement's writing result claim a task it does not show.
+            questionItems.Count,
             answeredCount,
             overallTotalScore,
             overallMaxScore,

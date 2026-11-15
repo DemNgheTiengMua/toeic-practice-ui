@@ -426,19 +426,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {isAuthenticated && user && !user.emailVerified && !isStaff && (
-        <div className="bg-warning/15 border-b border-warning/40 text-foreground px-4 sm:px-6 py-2 text-xs">
-          <div className="w-full flex items-center justify-between gap-4">
-            <span className="font-medium">
-              Your email address ({user.email}) is not verified yet. Verify your email before purchasing credit packages.
-            </span>
-            <Link to="/profile" className="font-semibold underline text-accent min-h-11 sm:min-h-0 inline-flex items-center">
-              Verify or resend link
-            </Link>
-          </div>
-        </div>
-      )}
-
       <div className="flex-1 flex flex-col lg:flex-row w-full min-w-0">
         {navItems.length > 0 && (
           <aside className="hidden sm:block w-full lg:w-56 xl:w-60 bg-surface border-b lg:border-b-0 lg:border-r border-border shrink-0 lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto">

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   Button,
@@ -17,11 +17,9 @@ import {
   ArrowRight,
   BookOpen,
   Calendar,
-  CheckCircle2,
   Clock,
   ExternalLink,
   Flame,
-  Mail,
   RotateCw,
   Sparkles,
   Target,
@@ -39,23 +37,9 @@ export function DashboardPage() {
   const queryClient = useQueryClient();
   const { user, learnerContext, switchCertificate } = useAuth();
 
-  const [activationFeedback, setActivationFeedback] = useState<string | null>(null);
-
   const { data: dashboard, isLoading, error, refetch } = useQuery<LearnerDashboardDto>({
     queryKey: ['learner', 'dashboard', learnerContext?.active?.code],
     queryFn: () => api.learner.dashboard(),
-  });
-
-  const resendEmailMutation = useMutation({
-    mutationFn: () => api.auth.resendActivation(),
-    onSuccess: () => {
-      setActivationFeedback(
-        `A new activation link has been sent to ${user?.email ?? 'your email'}. It expires in 24 hours.`,
-      );
-    },
-    onError: () => {
-      setActivationFeedback('Could not send the activation email. Please try again in a few minutes.');
-    },
   });
 
   if (isLoading) {
@@ -164,47 +148,6 @@ export function DashboardPage() {
 
   return (
     <div className="max-w-5xl mx-auto py-6 space-y-6">
-      {/* Email Verification Reminder if needed */}
-      {user && !user.emailVerified && (
-        <Alert status="warning" className="border-warning/40">
-          <Alert.Indicator>
-            <Mail className="w-4 h-4" />
-          </Alert.Indicator>
-          <Alert.Content className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 w-full">
-            <div>
-              <Alert.Title>Verify your email address</Alert.Title>
-              <Alert.Description>
-                Check your inbox for a verification link to ensure account recovery and notifications.
-              </Alert.Description>
-            </div>
-            <Button
-              size="sm"
-              variant="secondary"
-              isDisabled={resendEmailMutation.isPending}
-              onPress={() => resendEmailMutation.mutate()}
-              className="shrink-0"
-            >
-              {resendEmailMutation.isPending ? 'Sending…' : 'Resend email'}
-            </Button>
-          </Alert.Content>
-        </Alert>
-      )}
-
-      {activationFeedback && (
-        <Alert status={activationFeedback.includes('Could not') ? 'danger' : 'success'}>
-          <Alert.Indicator>
-            {activationFeedback.includes('Could not') ? (
-              <AlertCircle className="w-4 h-4" />
-            ) : (
-              <CheckCircle2 className="w-4 h-4" />
-            )}
-          </Alert.Indicator>
-          <Alert.Content>
-            <Alert.Description>{activationFeedback}</Alert.Description>
-          </Alert.Content>
-        </Alert>
-      )}
-
       {/* Unfinished Activity Banner */}
       {unfinishedAttempt && (
         <Alert status="accent" className="border-accent/30 bg-accent/5">

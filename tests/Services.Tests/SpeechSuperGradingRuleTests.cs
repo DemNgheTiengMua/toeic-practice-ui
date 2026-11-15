@@ -92,7 +92,8 @@ public sealed class SpeechSuperGradingRuleTests
         string? referenceText,
         bool describesImage = false,
         IReadOnlyList<GradingCriterionDetail>? criteria = null,
-        string stem = "Describe your favourite hobby.")
+        string stem = "Describe your favourite hobby.",
+        string audioPath = "audio/q.wav")
         => new(
             FreeResponseId: 1,
             SkillId: 1,
@@ -102,7 +103,7 @@ public sealed class SpeechSuperGradingRuleTests
             MaxWords: null,
             ResponseText: "",
             Criteria: criteria ?? ToeicCriteria,
-            AudioPath: "audio/q.wav",
+            AudioPath: audioPath,
             ReferenceText: referenceText,
             ReferenceDescribesImage: describesImage);
 
@@ -127,7 +128,6 @@ public sealed class SpeechSuperGradingRuleTests
     public async Task An_unscripted_question_sends_an_empty_refText_and_the_prompt_as_questionPrompt()
     {
         var (grader, handler) = Build();
-
         var result = await grader.GradeAsync(Request(
             referenceText: null,
             stem: "Do you work or are you a student?"));
@@ -139,9 +139,22 @@ public sealed class SpeechSuperGradingRuleTests
     }
 
     [Fact]
-    public async Task The_payload_names_no_certificate_its_test_type_or_its_task_type()
+    public async Task A_webm_recording_is_labelled_opus_because_that_is_the_name_the_provider_accepts()
     {
-        var (grader, handler) = Build();
+        // Verified against the live provider: the identical webm file answers errId 41002 "The audio
+        // type is not supported" when labelled `webm`, and grades normally when labelled `opus`.
+        var (grader, handler) = Build(path: "audio/q.webm");
+
+        await grader.GradeAsync(Request(referenceText: null, audioPath: "audio/q.webm"));
+
+        Assert.NotNull(handler.LastBody);
+        Assert.Contains("\"audioType\":\"opus\"", handler.LastBody);
+        Assert.DoesNotContain("\"audioType\":\"webm\"", handler.LastBody);
+    }
+
+    [Fact]
+    public async Task The_payload_names_no_certificate_its_test_type_or_its_task_type()
+    {        var (grader, handler) = Build();
 
         await grader.GradeAsync(Request(referenceText: null));
         await grader.GradeAsync(Request(referenceText: "Read this sentence aloud."));

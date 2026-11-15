@@ -154,6 +154,37 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         Assert.True(durExact);
     }
 
+    // Chrome's MediaRecorder reports "audio/webm;codecs=opus" and Safari's "audio/mp4;codecs=mp4a.40.2".
+    // The media type is the part before the semicolon; comparing the whole header rejected every real
+    // browser recording with "Invalid audio file format or MIME type".
+    [Theory]
+    [InlineData("audio/webm;codecs=opus", "q.webm")]
+    [InlineData("audio/webm; codecs=opus", "q.webm")]
+    [InlineData("audio/mp4;codecs=mp4a.40.2", "q.m4a")]
+    [InlineData("audio/ogg;codecs=opus", "q.ogg")]
+    public void AudioValidation_accepts_the_parameterised_mime_type_a_browser_recorder_sends(string contentType, string fileName)
+    {
+        var (isValid, error) = AudioValidation.Validate(1024, contentType, fileName);
+        Assert.True(isValid, error);
+    }
+
+    [Fact]
+    public void AudioValidation_still_rejects_an_unknown_media_type_behind_parameters()
+    {
+        var (isValid, error) = AudioValidation.Validate(1024, "application/octet-stream;codecs=opus", "q.webm");
+        Assert.False(isValid);
+        Assert.Contains("MIME type", error);
+    }
+
+    [Theory]
+    [InlineData("audio/webm;codecs=opus", ".webm")]
+    [InlineData("audio/mp4;codecs=mp4a.40.2", ".mp4")]
+    [InlineData("audio/webm", ".webm")]
+    public void GetExtensionFromContentType_ignores_mime_parameters(string contentType, string expected)
+    {
+        Assert.Equal(expected, LocalFileStore.GetExtensionFromContentType(contentType));
+    }
+
     [Fact]
     public async Task StartAttempt_when_insufficient_credits_throws_before_charging()
     {

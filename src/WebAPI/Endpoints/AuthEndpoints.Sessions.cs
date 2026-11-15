@@ -35,6 +35,15 @@ public static partial class AuthEndpoints
             {
                 return Problem(StatusCodes.Status401Unauthorized, "Account locked", ApiError.Codes.Locked, ex.Message);
             }
+            catch (AuthException ex) when (ex.Code == AuthException.EmailUnverified)
+            {
+                // ADR-0018: 403, not 401. The credentials were right; what is missing is proof of the
+                // mailbox. A distinct status is what lets the SPA route to "check your email" instead
+                // of showing a bad-password message.
+                return Problem(
+                    StatusCodes.Status403Forbidden, "Email verification required",
+                    ApiError.Codes.EmailNotVerified, ex.Message);
+            }
 
             return ToTokenResponse(user, tokens, http);
         }).RequireRateLimiting("auth");

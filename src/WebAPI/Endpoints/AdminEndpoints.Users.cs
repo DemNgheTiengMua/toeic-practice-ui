@@ -91,8 +91,26 @@ public static partial class AdminEndpoints
             }
         });
 
-        admin.MapPost("/users/{userId:int}/adjust-credits", async (
+        // ADR-0018: the escape route out of the verification gate. If the relay is misconfigured the
+        // activation mail never arrives, and a learner who cannot verify cannot sign in — so without
+        // this an admin's only fix would be editing the database.
+        admin.MapPost("/users/{userId:int}/verify-email", async (
             int userId,
+            IAdminUserService users,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                await users.VerifyEmailAsync(userId, cancellationToken);
+                return Results.NoContent();
+            }
+            catch (AdminUserException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code);
+            }
+        });
+
+        admin.MapPost("/users/{userId:int}/adjust-credits", async (            int userId,
             AdjustCreditsRequest request,
             HttpContext http,
             IAdminUserService users,

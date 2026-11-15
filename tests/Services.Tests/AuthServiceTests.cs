@@ -28,6 +28,12 @@ public sealed class AuthServiceTests(DatabaseFixture database)
             db, new RecordingEmailSender(), clock ?? TimeProvider.System, new AuthLinkOptions(), NullLogger<AuthService>.Instance);
     }
 
+    /// <summary>ADR-0018: verification gates sign-in, so a test that wants a working session must
+    /// mark the address verified first. Done in SQL rather than through the activation link because
+    /// these tests are about sign-in mechanics, not about the link.</summary>
+    private Task MarkEmailVerifiedAsync(int userId) =>
+        database.SqlAsync($"UPDATE Users SET EmailVerifiedAt = SYSDATETIMEOFFSET() WHERE UserId = {userId}");
+
     private sealed class MutableTimeProvider(DateTimeOffset initial) : TimeProvider
     {
         public DateTimeOffset UtcNow { get; set; } = initial;
@@ -91,7 +97,8 @@ public sealed class AuthServiceTests(DatabaseFixture database)
     public async Task SignIn_returns_the_user_and_stamps_last_login()
     {
         await SeedRolesAsync();
-        await CreateService().RegisterAsync(new RegisterInput("Learner", "signin@example.com", null, "right-password", true));
+        var registered = await CreateService().RegisterAsync(new RegisterInput("Learner", "signin@example.com", null, "right-password", true));
+        await MarkEmailVerifiedAsync(registered.UserId);
 
         var user = await CreateService().SignInAsync(new SignInInput("SIGNIN@example.com", "right-password"));
 
@@ -150,6 +157,7 @@ public sealed class AuthServiceTests(DatabaseFixture database)
     {
         await SeedRolesAsync();
         var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "flip@example.com", null, "password-ok", true));
+        await MarkEmailVerifiedAsync(user.UserId);
 
         Assert.Equal(SessionStatus.Active, await CreateService().CheckSessionAsync(user.UserId, user.SessionStamp));
 
@@ -219,6 +227,7 @@ public sealed class AuthServiceTests(DatabaseFixture database)
     {
         await SeedRolesAsync();
         var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "pw@example.com", null, "old-password", true));
+        await MarkEmailVerifiedAsync(user.UserId);
 
         var ex = await Assert.ThrowsAsync<AuthException>(() =>
             CreateService().ChangePasswordAsync(user.UserId, new ChangePasswordInput("not-the-password", "new-password-1")));
@@ -233,6 +242,7 @@ public sealed class AuthServiceTests(DatabaseFixture database)
     {
         await SeedRolesAsync();
         var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "swap@example.com", null, "old-password", true));
+        await MarkEmailVerifiedAsync(user.UserId);
 
         await CreateService().ChangePasswordAsync(user.UserId, new ChangePasswordInput("old-password", "new-password-1"));
 
@@ -256,6 +266,7 @@ public sealed class AuthServiceTests(DatabaseFixture database)
     {
         await SeedRolesAsync();
         var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "revokestamp@example.com", null, "old-password", true));
+        await MarkEmailVerifiedAsync(user.UserId);
         var initialStamp = user.SessionStamp;
 
         Assert.Equal(SessionStatus.Active, await CreateService().CheckSessionAsync(user.UserId, initialStamp));
@@ -278,6 +289,7 @@ public sealed class AuthServiceTests(DatabaseFixture database)
         await SeedRolesAsync();
         var clock = new MutableTimeProvider(DateTimeOffset.UtcNow);
         var user = await CreateService(clock).RegisterAsync(new RegisterInput("Learner", "bruteforce@example.com", null, "correct-password", true));
+        await MarkEmailVerifiedAsync(user.UserId);
 
         // 4 failed attempts
         for (var i = 1; i <= 4; i++)
@@ -453,10 +465,26 @@ public sealed class AuthServiceTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task CheckSession_ends_when_the_email_is_no_longer_verified()
+    {
+        // ADR-0018: a session is only good while the mailbox is verified. Without this a token minted
+        // before the gate existed would keep working for its full 8 hours.
+        await SeedRolesAsync();
+        var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "unverify@example.com", null, "password-ok", true));
+        await MarkEmailVerifiedAsync(user.UserId);
+        Assert.Equal(SessionStatus.Active, await CreateService().CheckSessionAsync(user.UserId, user.SessionStamp));
+
+        await database.SqlAsync($"UPDATE Users SET EmailVerifiedAt = NULL WHERE UserId = {user.UserId}");
+
+        Assert.Equal(SessionStatus.Ended, await CreateService().CheckSessionAsync(user.UserId, user.SessionStamp));
+    }
+
+    [Fact]
     public async Task CheckSession_with_invalid_or_oversized_stamp_returns_ended()
     {
         await SeedRolesAsync();
         var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "stamps@example.com", null, "secure-pass-123", true));
+        await MarkEmailVerifiedAsync(user.UserId);
 
         // Null stamp
         Assert.Equal(SessionStatus.Ended, await CreateService().CheckSessionAsync(user.UserId, null));

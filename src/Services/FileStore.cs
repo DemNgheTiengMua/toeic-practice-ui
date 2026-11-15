@@ -56,8 +56,12 @@ public static class AudioValidation
         var hasExt = !string.IsNullOrEmpty(ext);
         var extValid = hasExt && AllowedExtensions.Contains(ext);
 
-        var hasMime = !string.IsNullOrEmpty(contentType);
-        var mimeValid = hasMime && AllowedContentTypes.Contains(contentType!);
+        // Browsers send the recording's full MIME type, e.g. "audio/webm;codecs=opus" (Chrome) or
+        // "audio/mp4;codecs=mp4a.40.2" (Safari). The parameters are not part of the media type and
+        // were rejecting every real recording made by MediaRecorder.
+        var mediaType = contentType?.Split(';')[0].Trim();
+        var hasMime = !string.IsNullOrEmpty(mediaType);
+        var mimeValid = hasMime && AllowedContentTypes.Contains(mediaType!);
 
         if (hasExt && !extValid)
         {
@@ -261,6 +265,8 @@ public class LocalFileStore : IFileStore
     public static string? GetExtensionFromContentType(string? contentType)
     {
         if (string.IsNullOrWhiteSpace(contentType)) return null;
-        return AudioValidation.MimeToExtension.TryGetValue(contentType, out var ext) ? ext : null;
+        // Same parameter stripping as Validate: "audio/webm;codecs=opus" maps to .webm.
+        var mediaType = contentType.Split(';')[0].Trim();
+        return AudioValidation.MimeToExtension.TryGetValue(mediaType, out var ext) ? ext : null;
     }
 }

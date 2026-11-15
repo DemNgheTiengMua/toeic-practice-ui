@@ -2955,6 +2955,10 @@ END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
+-- The two demo orders above carry explicit PaymentNo 1 and 2, inserted behind SEQ_PaymentNo's back.
+-- Reseed the sequence past them or the first real checkout reuses 1, violates UQ_Orders_PaymentNo,
+-- and reaches the learner as the misleading 409 "Order already open".
+ALTER SEQUENCE [SEQ_PaymentNo] RESTART WITH 3;
 SET IDENTITY_INSERT [Orders] OFF;
 
 -- ---- PaymentEvents (2 rows)

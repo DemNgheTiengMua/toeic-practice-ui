@@ -251,8 +251,10 @@ the resolver is recorded. A resolution may issue an `admin_grant` credit
 make-good; every admin grant or revoke requires a reason and names the admin.
 
 **Accounts.** Registration takes full name, phone, and terms acceptance; email
-must be verified (activation tokens stored hashed, re-sendable by admin);
-admin can lock an account; last sign-in is recorded.
+must be verified before the account can sign in at all - the activation tokens
+are stored hashed, re-sendable without a session, and an admin can verify on the
+learner's behalf when delivery fails (ADR-0018); admin can lock an account; last
+sign-in is recorded.
 
 **Target-system constraints that shape the UI:**
 1. The timer is **server-authoritative** — the server returns an absolute
