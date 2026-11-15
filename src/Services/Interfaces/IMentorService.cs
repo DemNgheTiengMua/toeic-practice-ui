@@ -14,6 +14,8 @@ public interface IMentorService
     Task<MentorBookingDto> GetBookingDetailAsync(int bookingId, int userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(int userId, CancellationToken cancellationToken = default);
     Task<MentorReviewDto> RateBookingAsync(int bookingId, int userId, RateMentorRequest request, CancellationToken cancellationToken = default);
+    /// <summary>#381: staff read of bookings in any status, optionally filtered by mentor and status.</summary>
+    Task<IReadOnlyList<AdminMentorBookingDto>> GetAdminBookingsAsync(int? mentorId, string? status, CancellationToken cancellationToken = default);
 
     // Admin management & payouts
     Task<IReadOnlyList<AdminMentorListItemDto>> GetAdminMentorsAsync(CancellationToken cancellationToken = default);

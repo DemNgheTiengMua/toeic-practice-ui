@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Modal, Spinner } from '@heroui/react';
@@ -13,7 +13,6 @@ export interface PayOsEmbeddedModalProps {
   checkoutUrl: string;
   amount?: number;
   credits?: number;
-  returnUrl?: string;
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -24,7 +23,6 @@ export function PayOsEmbeddedModal({
   checkoutUrl,
   amount,
   credits,
-  returnUrl,
   onClose,
   onSuccess,
 }: PayOsEmbeddedModalProps) {
@@ -32,13 +30,18 @@ export function PayOsEmbeddedModal({
   const queryClient = useQueryClient();
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  // payOS fires onExit during teardown as well as on a real cancel; without this flag the cleanup
+  // that follows our own navigation cancels the order and redirects again.
+  const hasLeft = useRef(false);
 
-  const safeReturnUrl =
-    returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')
-      ? returnUrl
-      : '/pricing';
+  // #381: both paying and cancelling land on the receipt for this order. The checkout page's
+  // returnUrl sent a paid learner to /pricing, where nothing said the order had settled.
+  // The receipt reads ?orderCode=, so one helper serves both destinations.
+  const receipt = { to: '/payment/result', search: { orderCode } } as any;
 
   const handleCancelAndClose = async () => {
+    if (hasLeft.current) return;
+    hasLeft.current = true;
     setIsCancelling(true);
     try {
       exit();
@@ -54,6 +57,7 @@ export function PayOsEmbeddedModal({
     } finally {
       setIsCancelling(false);
       onClose();
+      void navigate(receipt);
     }
   };
 
@@ -73,6 +77,8 @@ export function PayOsEmbeddedModal({
     embedded: true,
     onSuccess: (_event) => {
       setIsSuccess(true);
+      // A paid order must never be cancelled by the teardown onExit that follows our navigation.
+      hasLeft.current = true;
       void queryClient.invalidateQueries({ queryKey: ['learner', 'context'] });
       void queryClient.invalidateQueries({ queryKey: ['finance', 'wallet'] });
       void queryClient.invalidateQueries({ queryKey: ['finance', 'checkout-preview'] });
@@ -86,7 +92,7 @@ export function PayOsEmbeddedModal({
           // ignore
         }
         onClose();
-        void navigate({ to: safeReturnUrl });
+        void navigate(receipt);
       }, 1500);
     },
     onCancel: (_event) => {
