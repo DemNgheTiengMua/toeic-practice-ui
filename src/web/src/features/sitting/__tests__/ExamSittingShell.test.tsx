@@ -337,4 +337,129 @@ describe('ExamSittingShell', () => {
       expect(onSubmit).toHaveBeenCalledWith(false);
     });
   });
+
+  it('renders placement deadline as a quiet session expiry when >= 1 hour remains', () => {
+    const take = makeTake();
+    take.remainingSeconds = 48 * 3600; // 48 hours
+
+    render(
+      <ExamSittingShell
+        sittingKind="placement"
+        sittingId={77}
+        attemptId={500}
+        examName={take.examName}
+        certCode={take.certCode}
+        initialTake={take}
+        basePath="/placement/take/77"
+        onFetchQuestion={vi.fn(async () => take)}
+        onSaveAnswer={vi.fn()}
+        onSubmit={vi.fn(async () => {})}
+      />,
+    );
+
+    const expiryEl = screen.getByLabelText('Session expiry');
+    expect(expiryEl).toBeInTheDocument();
+    expect(expiryEl).toHaveTextContent(/Session expires in 48h/i);
+    expect(expiryEl.className).not.toContain('text-danger');
+    expect(screen.queryByLabelText('Time remaining')).not.toBeInTheDocument();
+    expect(screen.queryByText('48:00:00')).not.toBeInTheDocument();
+  });
+
+  it('escalates placement session expiry only when under an hour', () => {
+    const take = makeTake();
+    take.remainingSeconds = 1800; // 30 minutes
+
+    render(
+      <ExamSittingShell
+        sittingKind="placement"
+        sittingId={77}
+        attemptId={500}
+        examName={take.examName}
+        certCode={take.certCode}
+        initialTake={take}
+        basePath="/placement/take/77"
+        onFetchQuestion={vi.fn(async () => take)}
+        onSaveAnswer={vi.fn()}
+        onSubmit={vi.fn(async () => {})}
+      />,
+    );
+
+    const expiryEl = screen.getByLabelText('Session expiry');
+    expect(expiryEl).toHaveTextContent(/Session expires in 30:00/i);
+    expect(expiryEl.className).toContain('text-danger');
+  });
+
+  it('auto-submits a placement sitting when expiry reaches zero', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const take = makeTake();
+    take.remainingSeconds = 2;
+    const onSubmit = vi.fn(async () => {});
+
+    render(
+      <ExamSittingShell
+        sittingKind="placement"
+        sittingId={77}
+        attemptId={500}
+        examName={take.examName}
+        certCode={take.certCode}
+        initialTake={take}
+        basePath="/placement/take/77"
+        onFetchQuestion={vi.fn(async () => take)}
+        onSaveAnswer={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(onSubmit).toHaveBeenCalledWith(true);
+    vi.useRealTimers();
+  });
+
+  it('keeps mock exam countdown unchanged and escalates only at <= 60s', () => {
+    const take = makeTake();
+    take.remainingSeconds = 1800; // 30 minutes
+
+    const { unmount } = render(
+      <ExamSittingShell
+        sittingKind="mock"
+        sittingId={77}
+        attemptId={500}
+        examName={take.examName}
+        certCode={take.certCode}
+        initialTake={take}
+        basePath="/exams/mock/77"
+        onFetchQuestion={vi.fn(async () => take)}
+        onSaveAnswer={vi.fn()}
+        onSubmit={vi.fn(async () => {})}
+      />,
+    );
+
+    const timerEl = screen.getByLabelText('Time remaining');
+    expect(timerEl).toHaveTextContent('30:00');
+    expect(timerEl.className).not.toContain('text-danger');
+    expect(screen.queryByLabelText('Session expiry')).not.toBeInTheDocument();
+
+    unmount();
+
+    const urgentTake = makeTake();
+    urgentTake.remainingSeconds = 45;
+    render(
+      <ExamSittingShell
+        sittingKind="mock"
+        sittingId={78}
+        attemptId={501}
+        examName={urgentTake.examName}
+        certCode={urgentTake.certCode}
+        initialTake={urgentTake}
+        basePath="/exams/mock/78"
+        onFetchQuestion={vi.fn(async () => urgentTake)}
+        onSaveAnswer={vi.fn()}
+        onSubmit={vi.fn(async () => {})}
+      />,
+    );
+
+    const urgentTimerEl = screen.getByLabelText('Time remaining');
+    expect(urgentTimerEl).toHaveTextContent('00:45');
+    expect(urgentTimerEl.className).toContain('text-danger');
+  });
 });

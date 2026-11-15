@@ -5,6 +5,7 @@ import type {
   PlacementPreflightViewDto,
   PlacementScopeCode,
 } from '@/lib/api';
+import { formatTimerSeconds } from '@/lib/security';
 
 export interface QuestionOrderReconciliation {
   resolvedOrder: number;
@@ -275,4 +276,20 @@ export function computePlacementScopeOffers(
   }
 
   return result;
+}
+
+/**
+ * Format a clock-free placement sitting deadline as a quiet session expiry
+ * when >= 1 hour remains, or with mm:ss precision when under an hour.
+ */
+export function formatSessionExpiry(totalSeconds: number): string {
+  const clamped = Math.max(0, Math.floor(totalSeconds));
+  if (clamped >= 3600) {
+    const hours = Math.floor(clamped / 3600);
+    const minutes = Math.floor((clamped % 3600) / 60);
+    return minutes > 0
+      ? `Session expires in ${hours}h ${minutes}m`
+      : `Session expires in ${hours}h`;
+  }
+  return `Session expires in ${formatTimerSeconds(clamped)}`;
 }

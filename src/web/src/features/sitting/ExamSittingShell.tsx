@@ -54,6 +54,7 @@ import {
   buildSectionSubmitSummary,
   canNavigateBackInSitting,
   classifyQuestionKind,
+  formatSessionExpiry,
   needsLockBoundaryServerFetch,
   reconcileRequestedQuestionOrder,
 } from './sitting-helpers';
@@ -787,17 +788,31 @@ export function ExamSittingShell({
               {placard.text}
             </Chip>
 
-            <div
-              className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-mono-tabular font-semibold ${
-                remainingSeconds <= 60
-                  ? 'border-danger/40 bg-danger/10 text-danger'
-                  : 'border-border bg-surface-secondary text-foreground'
-              }`}
-              aria-label="Time remaining"
-            >
-              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>{formatTimerSeconds(remainingSeconds)}</span>
-            </div>
+            {sittingKind === 'placement' ? (
+              <div
+                className={
+                  remainingSeconds < 3600
+                    ? 'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium border-danger/40 bg-danger/10 text-danger'
+                    : 'inline-flex items-center gap-1.5 px-2 py-1 text-xs text-muted'
+                }
+                aria-label="Session expiry"
+              >
+                <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>{formatSessionExpiry(remainingSeconds)}</span>
+              </div>
+            ) : (
+              <div
+                className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-mono-tabular font-semibold ${
+                  remainingSeconds <= 60
+                    ? 'border-danger/40 bg-danger/10 text-danger'
+                    : 'border-border bg-surface-secondary text-foreground'
+                }`}
+                aria-label="Time remaining"
+              >
+                <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>{formatTimerSeconds(remainingSeconds)}</span>
+              </div>
+            )}
 
             {onSaveExit && (
               <Button size="sm" variant="outline" onPress={onSaveExit}>
