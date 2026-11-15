@@ -120,7 +120,7 @@ export function formatStandingStatus(status?: string | null): StatusDisplay {
 
 export const COMPLAINT_STATUS_MAP: Record<string, StatusDisplay> = {
   open: { label: 'Open', tone: 'warning' },
-  reviewing: { label: 'Under review', tone: 'accent' },
+  reviewing: { label: 'Processing', tone: 'accent' },
   resolved: { label: 'Resolved', tone: 'success' },
 };
 

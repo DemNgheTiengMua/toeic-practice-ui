@@ -27,7 +27,8 @@ internal static class OperationsLabels
 
         LabelFamily.Add<ComplaintStatusDto>(families, "Complaint status not reported", [
             ("open", "Open"),
-            ("reviewing", "Under review"),
+            // #348: the stored value stays `reviewing`; only what staff read changed.
+            ("reviewing", "Processing"),
             ("resolved", "Resolved"),
         ]);
 

@@ -405,8 +405,8 @@ describe('AdminOperationsPage (#304)', () => {
     expect(await screen.findByText(/complaint details — #301/i)).toBeInTheDocument();
     expect(await screen.findByText(/waited for 20 minutes/i)).toBeInTheDocument();
 
-    // 1. Status transition: Mark as under review
-    const reviewBtn = await screen.findByRole('button', { name: /mark as under review/i });
+    // 1. Status transition: Start processing (#348 renames the `reviewing` label only)
+    const reviewBtn = await screen.findByRole('button', { name: /start processing/i });
     fireEvent.click(reviewBtn);
 
     await waitFor(() => {
