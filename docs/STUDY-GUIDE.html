@@ -164,6 +164,7 @@
   <h2>Luồng end-to-end</h2>
   <a href="#tao-de">Tạo đề: admin → học viên</a>
   <a href="#placement-flow">Luồng placement</a>
+  <a href="#placement-review">Xem lại bài viết/nói</a>
   <a href="#auth">Auth chi tiết</a>
   <a href="#thanh-toan">Thanh toán</a>
 
@@ -611,6 +612,32 @@ Set-Cookie: ee_access_token=eyJ...; HttpOnly; SameSite=Lax; path=/
     <tr><td>Phần này ai làm?</td><td>Nói đúng phần mình làm. Bảng phân công ở đầu tài liệu.</td></tr>
   </tbody>
 </table>
+
+<h2 id="placement-review">Xem lại bài viết và bài nói sau khi thi</h2><p>Sau khi placement nộp xong, trang kết quả có nút <strong>"Review every answer"</strong> → mở <code>/placement/review/{placementId}</code>. Trang này hiện <em>đầy đủ</em> cả bốn thứ:</p>
+<table>
+  <thead><tr><th>Thứ</th><th>Hiện gì</th></tr></thead>
+  <tbody>
+    <tr><td>Câu trắc nghiệm</td><td>Từng câu, đáp án bạn chọn, đáp án đúng, và giải thích</td></tr>
+    <tr><td>Bài viết</td><td>Nguyên văn bài viết, điểm AI, nhận xét, và <strong>từng tiêu chí rubric</strong> kèm điểm + lời bình</td></tr>
+    <tr><td>Bài nói</td><td>Transcript, trình phát audio nghe lại được, điểm AI, và 4 tiêu chí rubric</td></tr>
+    <tr><td>Bài bị từ chối</td><td>Chip <strong>"Not graded"</strong> + <em>lý do nguyên văn của grader</em></td></tr>
+  </tbody>
+</table>
+<p>Ba trạng thái của một bài tự luận, phân biệt được bằng chip:</p>
+<ul>
+  <li><strong>Graded</strong> — đã chấm, có điểm</li>
+  <li><strong>Not graded</strong> — grader từ chối, lý do hiện bên dưới</li>
+  <li><strong>Awaiting grading</strong> — còn trong hàng đợi</li>
+</ul>
+
+<div class="callout warn">
+  <p><strong>Đừng nhầm:</strong> review chỉ mở được khi <code>isGraded = true</code>, nghĩa là <em>mọi</em> bài tự luận đã có kết luận (chấm xong hoặc bị từ chối). Nếu còn một bài đang chờ, API trả <code>400 placement_not_finished</code>. Cứ chờ và tải lại — worker chấm khoảng vài giây.</p>
+</div>
+
+<div class="callout danger">
+  <p><strong>Ba lỗi tôi đã sửa ở trang này (#385).</strong> Trước đó: mọi bài tự luận bị gắn nhãn <strong>"Left blank"</strong> dù có nội dung (vì code đọc "đã trả lời" từ bảng <code>AttemptAnswers</code>, mà bài viết/nói nằm ở <code>FreeResponses</code>); bài bị grader từ chối thì hiện điểm trống không kèm lý do; và bài đã chấm với bài đang chờ trông giống nhau.</p>
+  <p>Đây là ví dụ tốt để kể khi bảo vệ: <em>"một cột điểm NULL không phải là không có dữ liệu — nó là một sự kiện cần giải thích"</em>.</p>
+</div>
 
 <h2 id="bom-no">Bẫy tôi đã gặp — biết trước để không mất thời gian</h2>
 
