@@ -368,37 +368,39 @@ export function MockExamConfirmPage() {
       <div className="space-y-3">
         <h2 className="text-base font-semibold text-foreground">Exam structure</h2>
         <Card className="bg-surface border-border overflow-hidden">
-          <Table.ScrollContainer>
-            <Table.Content aria-label="Exam structure sections">
-              <Table.Header>
-                <Table.Column isRowHeader>Skill</Table.Column>
-                <Table.Column>Section</Table.Column>
-                <Table.Column>Questions</Table.Column>
-                <Table.Column>Duration</Table.Column>
-              </Table.Header>
-              <Table.Body>
-                {instructions.sections.map((section: MockExamSectionInfoDto) => (
-                  <Table.Row key={section.sectionId}>
-                    <Table.Cell className="font-medium text-foreground text-sm">
-                      {section.skillName}
-                    </Table.Cell>
-                    <Table.Cell className="text-sm text-muted">
-                      <span className="font-semibold text-foreground mr-1.5">
-                        {section.sectionCode}
-                      </span>
-                      {section.sectionName}
-                    </Table.Cell>
-                    <Table.Cell className="font-mono-tabular text-sm text-muted">
-                      {section.questionCount || section.expectedQuestionCount}
-                    </Table.Cell>
-                    <Table.Cell className="font-mono-tabular text-sm text-muted">
-                      {section.durationMinutes > 0 ? `${section.durationMinutes} mins` : '--'}
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-            </Table.Content>
-          </Table.ScrollContainer>
+          <Table>
+            <Table.ScrollContainer>
+              <Table.Content aria-label="Exam structure sections">
+                <Table.Header>
+                  <Table.Column isRowHeader>Skill</Table.Column>
+                  <Table.Column>Section</Table.Column>
+                  <Table.Column>Questions</Table.Column>
+                  <Table.Column>Duration</Table.Column>
+                </Table.Header>
+                <Table.Body>
+                  {instructions.sections.map((section: MockExamSectionInfoDto) => (
+                    <Table.Row key={section.sectionId}>
+                      <Table.Cell className="font-medium text-foreground text-sm">
+                        {section.skillName}
+                      </Table.Cell>
+                      <Table.Cell className="text-sm text-muted">
+                        <span className="font-semibold text-foreground mr-1.5">
+                          {section.sectionCode}
+                        </span>{' '}
+                        {section.sectionName}
+                      </Table.Cell>
+                      <Table.Cell className="font-mono-tabular text-sm text-muted">
+                        {section.questionCount || section.expectedQuestionCount}
+                      </Table.Cell>
+                      <Table.Cell className="font-mono-tabular text-sm text-muted">
+                        {section.durationMinutes > 0 ? `${section.durationMinutes} mins` : '--'}
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table.Content>
+            </Table.ScrollContainer>
+          </Table>
         </Card>
       </div>
 

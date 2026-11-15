@@ -279,6 +279,8 @@ describe('MockExamReviewPage & MockExamHistoryPage', () => {
     await waitFor(() => {
       expect(screen.getByText('TOEIC Full Mock Test 1')).toBeInTheDocument();
     });
+    const historyGrid = screen.getByRole('grid', { name: 'Mock exam attempts history' });
+    expect(historyGrid.closest('[data-slot="table"]')).toBeInTheDocument();
     expect(screen.getByText('listening: 430')).toBeInTheDocument();
     expect(screen.getByText('reading: 410')).toBeInTheDocument();
 
@@ -291,5 +293,36 @@ describe('MockExamReviewPage & MockExamHistoryPage', () => {
       to: '/exams/review/$attemptId',
       params: { attemptId: '99' },
     });
+  });
+
+  it('explains absence of skill scores in exam history when an attempt has no per-skill rows', async () => {
+    vi.mocked(api.exams.history).mockResolvedValue(
+      makeHistory({
+        attempts: [
+          {
+            attemptId: 100,
+            examId: 101,
+            examName: 'ETS 2024 — Test 1',
+            certId: 1,
+            certCode: 'TOEIC',
+            startedAt: '2026-11-08T01:44:01Z',
+            submittedAt: '2026-11-08T03:29:01Z',
+            totalScore: 720,
+            bandCode: 'B1',
+            bandName: 'B1',
+            skillScores: [],
+            status: 'graded',
+          },
+        ],
+      }),
+    );
+
+    render(<MockExamHistoryPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('ETS 2024 — Test 1')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/no per-skill breakdown/i)).toBeInTheDocument();
   });
 });

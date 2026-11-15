@@ -217,80 +217,86 @@ export function MockExamHistoryPage() {
             </h2>
 
             <Card className="bg-surface border-border overflow-hidden">
-              <Table.ScrollContainer>
-                <Table.Content aria-label="Mock exam attempts history">
-                  <Table.Header>
-                    <Table.Column isRowHeader>Date</Table.Column>
-                    <Table.Column>Exam</Table.Column>
-                    <Table.Column>Score</Table.Column>
-                    <Table.Column>Band</Table.Column>
-                    <Table.Column>Skills</Table.Column>
-                    <Table.Column>Actions</Table.Column>
-                  </Table.Header>
-                  <Table.Body>
-                    {history.attempts.map((attempt: ExamHistoryItemDto) => (
-                      <Table.Row key={attempt.attemptId}>
-                        <Table.Cell className="text-xs text-muted font-mono-tabular whitespace-nowrap">
-                          {formatDate(attempt.submittedAt)}
-                        </Table.Cell>
-                        <Table.Cell className="font-medium text-foreground text-sm">
-                          {attempt.examName}
-                        </Table.Cell>
-                        <Table.Cell className="font-mono-tabular font-bold text-accent text-sm">
-                          {attempt.totalScore}
-                        </Table.Cell>
-                        <Table.Cell className="text-xs text-muted">
-                          {attempt.bandName || attempt.bandCode || '--'}
-                        </Table.Cell>
-                        <Table.Cell className="text-xs">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {attempt.skillScores.map((s: AttemptSkillScoreDto) => (
-                              <Chip
-                                key={s.skillId}
+              <Table>
+                <Table.ScrollContainer>
+                  <Table.Content aria-label="Mock exam attempts history">
+                    <Table.Header>
+                      <Table.Column isRowHeader>Date</Table.Column>
+                      <Table.Column>Exam</Table.Column>
+                      <Table.Column>Score</Table.Column>
+                      <Table.Column>Band</Table.Column>
+                      <Table.Column>Skills</Table.Column>
+                      <Table.Column>Actions</Table.Column>
+                    </Table.Header>
+                    <Table.Body>
+                      {history.attempts.map((attempt: ExamHistoryItemDto) => (
+                        <Table.Row key={attempt.attemptId}>
+                          <Table.Cell className="text-xs text-muted font-mono-tabular whitespace-nowrap">
+                            {formatDate(attempt.submittedAt)}
+                          </Table.Cell>
+                          <Table.Cell className="font-medium text-foreground text-sm whitespace-normal">
+                            {attempt.examName}
+                          </Table.Cell>
+                          <Table.Cell className="font-mono-tabular font-bold text-accent text-sm">
+                            {attempt.totalScore}
+                          </Table.Cell>
+                          <Table.Cell className="text-xs text-muted">
+                            {attempt.bandName || attempt.bandCode || '--'}
+                          </Table.Cell>
+                          <Table.Cell className="text-xs">
+                            {(attempt.skillScores?.length ?? 0) > 0 ? (
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {attempt.skillScores.map((s: AttemptSkillScoreDto) => (
+                                  <Chip
+                                    key={s.skillId}
+                                    size="sm"
+                                    variant="secondary"
+                                    className="text-[11px] font-mono-tabular py-0"
+                                  >
+                                    {s.skillCode}: {s.scaledScore}
+                                  </Chip>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-muted">No per-skill breakdown</span>
+                            )}
+                          </Table.Cell>
+                          <Table.Cell>
+                            <div className="flex items-center gap-2">
+                              <Button
                                 size="sm"
                                 variant="secondary"
-                                className="text-[11px] font-mono-tabular py-0"
+                                onClick={() =>
+                                  void navigate({
+                                    to: '/exams/result/$attemptId',
+                                    params: { attemptId: String(attempt.attemptId) },
+                                  })
+                                }
+                                className="text-xs h-7 px-2.5"
                               >
-                                {s.skillCode}: {s.scaledScore}
-                              </Chip>
-                            ))}
-                          </div>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() =>
-                                void navigate({
-                                  to: '/exams/result/$attemptId',
-                                  params: { attemptId: String(attempt.attemptId) },
-                                })
-                              }
-                              className="text-xs h-7 px-2.5"
-                            >
-                              Result
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() =>
-                                void navigate({
-                                  to: '/exams/review/$attemptId',
-                                  params: { attemptId: String(attempt.attemptId) },
-                                })
-                              }
-                              className="text-xs h-7 px-2.5 text-muted hover:text-foreground"
-                            >
-                              Review
-                            </Button>
-                          </div>
-                        </Table.Cell>
-                      </Table.Row>
-                    ))}
-                  </Table.Body>
-                </Table.Content>
-              </Table.ScrollContainer>
+                                Result
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() =>
+                                  void navigate({
+                                    to: '/exams/review/$attemptId',
+                                    params: { attemptId: String(attempt.attemptId) },
+                                  })
+                                }
+                                className="text-xs h-7 px-2.5 text-muted hover:text-foreground"
+                              >
+                                Review
+                              </Button>
+                            </div>
+                          </Table.Cell>
+                        </Table.Row>
+                      ))}
+                    </Table.Body>
+                  </Table.Content>
+                </Table.ScrollContainer>
+              </Table>
             </Card>
           </div>
         </>

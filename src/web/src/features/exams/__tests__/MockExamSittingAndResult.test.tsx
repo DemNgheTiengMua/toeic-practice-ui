@@ -326,5 +326,25 @@ describe('MockExamTakePage & MockExamResultPage', () => {
     expect(screen.getByText('430 pts')).toBeInTheDocument();
     expect(screen.getByText('Reading')).toBeInTheDocument();
     expect(screen.getByText('410 pts')).toBeInTheDocument();
+    expect(screen.getAllByRole('progressbar')).toHaveLength(2);
+  });
+
+  it('renders an explicit empty state when an attempt has no per-skill scores', async () => {
+    vi.mocked(api.exams.result).mockResolvedValue(
+      makeAttemptResult({
+        skillScores: [],
+      }),
+    );
+
+    render(<MockExamResultPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Section & skill breakdown')).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText(/no per-skill scores were recorded for this attempt/i),
+    ).toBeInTheDocument();
+    expect(screen.queryAllByRole('progressbar')).toHaveLength(0);
   });
 });

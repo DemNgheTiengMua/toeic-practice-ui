@@ -3435,6 +3435,18 @@ END CATCH
 SET IDENTITY_INSERT [ExamAttempts] OFF;
 
 
+-- ---- AttemptSkillScores (2 rows for seeded graded mock attempt AttemptId=2)
+BEGIN TRY
+  INSERT INTO [AttemptSkillScores] ([AttemptId], [SkillId], [CertId], [RawScore], [ScaledScore])
+  VALUES
+    (2, 1, 1, 3, 380),
+    (2, 2, 1, 2, 340);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH;
+
+
 -- ---- ExamItems (116 rows)
 SET IDENTITY_INSERT [ExamItems] ON;
 BEGIN TRY
