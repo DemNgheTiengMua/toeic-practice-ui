@@ -26,14 +26,14 @@ Ký hiệu: ✅ PASS · ❌ FAIL · ⚠️ PASS nhưng có lỗi · ⬜ chưa te
 | 11 | Catalog placement ghi sai chứng chỉ | Nhãn lấy từ learner's active certificate thay vì từ exam | ✅ #369 |
 | 12 | `/auth/register` + `/sign-in` ghi learning path "Free" | Thực tế trừ 5 credit | ✅ #370 |
 
-### Chưa sửa (2)
+### Chưa sửa (0)
 
-| # | Lỗi | Nguyên nhân gốc | Mức độ |
-|---|---|---|---|
-| 13 | **Huỷ trên payOS không đóng order** | `GetPaymentResultAsync` chỉ settle khi gateway báo `Paid`; nhánh `failed`/`cancelled`/`expired` chỉ ghi `PaymentEvents` với `WasApplied=false`, không đổi status. Order kẹt `pending` → `UX_Orders_OnePendingPerUser` chặn order mới → **409, không mua được 15 phút** | 🔴 chặn demo |
-| 14 | Huỷ trên payOS về trang mất ngữ cảnh | `cancelUrl` = `/checkout?credits=N`, thiếu `orderCode`, nên về form trống không biết chuyện gì xảy ra | 🟠 nên sửa |
+Không còn. Hai lỗi cuối cùng (#13 huỷ payOS không đóng order, #14 mất ngữ cảnh khi huỷ) đã sửa
+cùng đợt: gateway báo `failed`/`cancelled`/`expired` giờ đóng order, và `cancelUrl` mang `orderCode`
+để trang kết quả nói rõ order nào bị huỷ. Kiểm chứng bằng hành vi thật sau `down -v`: huỷ order →
+tạo order mới **thành công ngay**, không còn 409 trong 15 phút.
 
-### Sai thông tin trên màn hình (3)
+### Sai thông tin trên màn hình (3 — đã sửa)
 
 | # | Lỗi | Ở đâu | Mức độ |
 |---|---|---|---|
@@ -41,11 +41,11 @@ Ký hiệu: ✅ PASS · ❌ FAIL · ⚠️ PASS nhưng có lỗi · ⬜ chưa te
 | 16 | TOEIC quảng cáo có Speaking/Writing | `/` và `/certificates/toeic` ghi "Practice speaking and writing separately"; bảng ngay dưới chỉ có Listening + Reading | 🟡 copy |
 | 17 | Order `failed` vẫn ghi "Credits granted: +5" | `/orders/DH-…` trang order thất bại | 🟡 copy |
 
-### UI mock gateway (1)
+### UI mock gateway (1 — đã sửa)
 
 | # | Lỗi | Nguyên nhân gốc | Mức độ |
 |---|---|---|---|
-| 18 | Bấm Simulate failed/expired/Reconcile không phản hồi | `mockActionMutation.onSuccess` chỉ có nhánh `if (action === 'success')`; các action khác không set state, không thông báo. Server làm đúng (DB ghi `failed` mã 24), chỉ UI im lặng | 🟡 mock only |
+| 18 | Bấm Simulate failed/expired/Reconcile không phản hồi | `mockActionMutation.onSuccess` chỉ có nhánh `if (action === 'success')`; các action khác không set state, không thông báo. Server làm đúng (DB ghi `failed` mã 24), chỉ UI im lặng. Giờ mọi action báo kết quả và xoá order đã đóng | 🟡 mock only |
 
 ### Không phải lỗi (1)
 
@@ -53,7 +53,10 @@ Ký hiệu: ✅ PASS · ❌ FAIL · ⚠️ PASS nhưng có lỗi · ⬜ chưa te
 |---|---|---|
 | 19 | Dashboard soft-lock với tài khoản seed | Thiết kế: seed không chứa PlacementTests/TargetBands/LearnerPaths. Phải đi hết OOBE trước khi demo `/dashboard`, `/practice`, `/weakness`, `/speaking`, `/writing` |
 
-**Tổng: 19 mục — 12 đã sửa, 6 chưa sửa, 1 không phải lỗi.**
+**Tổng: 19 mục — 18 đã sửa, 0 chưa sửa, 1 không phải lỗi.**
+
+Mọi lỗi đã sửa đều có test đỏ-trước-xanh-sau, trừ ba lỗi copy (#15, #16, #17) chỉ có assert render
+hoặc seed check, và #19 là thiết kế.
 
 ---
 
