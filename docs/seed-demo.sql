@@ -2958,7 +2958,12 @@ END CATCH
 -- The two demo orders above carry explicit PaymentNo 1 and 2, inserted behind SEQ_PaymentNo's back.
 -- Reseed the sequence past them or the first real checkout reuses 1, violates UQ_Orders_PaymentNo,
 -- and reaches the learner as the misleading 409 "Order already open".
-ALTER SEQUENCE [SEQ_PaymentNo] RESTART WITH 3;
+--
+-- The restart lands well above the demo rows on purpose. payOS remembers every orderCode it has seen
+-- and refuses a repeat with "Đơn thanh toán đã tồn tại" (payment already exists) — a database reset
+-- rewinds this sequence, so a small restart value makes the next real checkout collide with a link
+-- this merchant created before the reset. A fresh local database has never used 1000.
+ALTER SEQUENCE [SEQ_PaymentNo] RESTART WITH 1000;
 SET IDENTITY_INSERT [Orders] OFF;
 
 -- ---- PaymentEvents (2 rows)
