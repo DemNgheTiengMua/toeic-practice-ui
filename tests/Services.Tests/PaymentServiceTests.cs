@@ -363,6 +363,91 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         Assert.Contains(events, e => e.Source == "status_query" && e.ReportedStatus == "pending");
     }
 
+    /// <summary>
+    /// A learner who cancels on the gateway's own page must be able to buy again immediately.
+    /// <para>
+    /// <b>What shipped instead, reproduced by hand on 2026-11-15:</b> cancelling on the payOS page left
+    /// the order <c>pending</c> — the status query saw <c>failed</c> and only wrote a PaymentEvents row
+    /// with <c>WasApplied = false</c>. Because <c>UX_Orders_OnePendingPerUser</c> allows one open order,
+    /// the next purchase was refused with 409 "Order already open" for the full fifteen-minute expiry
+    /// window. Mock-gateway users never saw it: the mock has its own Cancel button that closes the row.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task A_gateway_declined_payment_closes_the_order_so_the_learner_can_buy_again()
+    {
+        var mockGateway = new MockPaymentGateway();
+        var service = CreateService(mockGateway);
+
+        var userId = await SeedUserAsync(isVerified: true);
+        var order = await service.CreateOrderAsync(userId, 5, "http://localhost:5000");
+
+        // The gateway reports the payment as declined — what payOS says after the learner cancels.
+        mockGateway.SetOutcome(order.PaymentNo, GatewayStatus.Failed, "24");
+
+        var refreshed = await service.GetPaymentResultAsync(userId, order.OrderCode);
+        Assert.Equal(OrderStatusDto.Failed, refreshed.Status);
+
+        // The invariant the learner feels: a new order can be created straight away.
+        var replacement = await service.CreateOrderAsync(userId, 5, "http://localhost:5000");
+        Assert.NotEqual(order.OrderCode, replacement.OrderCode);
+
+        // And the closure is recorded as applied, not merely observed.
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var applied = await db.PaymentEvents
+            .Where(e => e.OrderId == order.OrderId && e.Source == "status_query")
+            .OrderByDescending(e => e.EventId)
+            .FirstAsync();
+        Assert.True(applied.WasApplied, "the closure must be applied, not just logged");
+        Assert.Equal("failed", applied.ReportedStatus);
+
+        var stored = await db.Orders.AsNoTracking().SingleAsync(o => o.OrderId == order.OrderId);
+        Assert.Equal("failed", stored.Status);
+    }
+
+    /// <summary>
+    /// A gateway that reports the link expired closes the order as expired, so the price shown and the
+    /// status stored agree, and the learner is not blocked either.
+    /// </summary>
+    [Fact]
+    public async Task A_gateway_expired_link_closes_the_order_as_expired()
+    {
+        var mockGateway = new MockPaymentGateway();
+        var service = CreateService(mockGateway);
+
+        var userId = await SeedUserAsync(isVerified: true);
+        var order = await service.CreateOrderAsync(userId, 5, "http://localhost:5000");
+
+        mockGateway.SetOutcome(order.PaymentNo, GatewayStatus.Expired, null);
+
+        var refreshed = await service.GetPaymentResultAsync(userId, order.OrderCode);
+        Assert.Equal(OrderStatusDto.Expired, refreshed.Status);
+
+        // No second open order is blocked.
+        var replacement = await service.CreateOrderAsync(userId, 5, "http://localhost:5000");
+        Assert.NotEqual(order.OrderCode, replacement.OrderCode);
+    }
+
+    /// <summary>
+    /// Cancelling on the gateway returns the learner to a page that names the order they cancelled,
+    /// instead of an empty checkout form that disagrees with the banner above it.
+    /// </summary>
+    [Fact]
+    public async Task The_cancel_url_carries_the_order_code_so_the_result_page_can_name_it()
+    {
+        var mockGateway = new MockPaymentGateway();
+        var service = CreateService(mockGateway);
+        var userId = await SeedUserAsync(isVerified: true);
+
+        var order = await service.CreateOrderAsync(userId, 5, "http://localhost:5000");
+
+        // The URL the gateway is handed is the one a learner lands on after cancelling. It must name
+        // the order, because the page behind it reports that order's status.
+        var mine = Assert.Single(mockGateway.CancelUrls.Where(u => u.Contains(order.OrderCode, StringComparison.Ordinal)));
+        Assert.Contains("/payment/result?orderCode=", mine);
+        Assert.DoesNotContain("/checkout?credits=", mine);
+    }
+
     [Fact]
     public async Task ExpireStaleOrdersAsync_cancels_payment_link_at_gateway_and_logs_cancel_event()
     {
