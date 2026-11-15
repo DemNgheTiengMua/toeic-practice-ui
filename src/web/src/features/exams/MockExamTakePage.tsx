@@ -254,6 +254,9 @@ export function MockExamTakePage() {
       initialRequestedOrder={initialRequestedOrder}
       basePath={`/exams/take/${take.attemptId}`}
       onFetchQuestion={(order) => api.exams.take(id, order)}
+      onTransitionSection={async () => {
+        await api.exams.transitionSkill(id);
+      }}
       onSaveAnswer={(questionId, payload) => api.exams.saveAnswer(id, questionId, payload)}
       onSaveDraft={(questionId, responseText) =>
         api.exams.saveDraft(id, { questionId, responseText })

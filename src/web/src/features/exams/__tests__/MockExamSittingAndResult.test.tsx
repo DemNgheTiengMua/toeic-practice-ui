@@ -56,6 +56,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
         take: vi.fn(),
         saveAnswer: vi.fn(),
         saveDraft: vi.fn(),
+        transitionSkill: vi.fn(),
         submit: vi.fn(),
         result: vi.fn(),
         preflightStatus: vi.fn(),
@@ -297,6 +298,157 @@ describe('MockExamTakePage & MockExamResultPage', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('calls transition/skill and loads next section when clicking "Continue to next section"', async () => {
+    const listeningTake = makeAttemptTake({
+      totalQuestions: 2,
+      currentQuestion: {
+        questionId: 1001,
+        displayOrder: 1,
+        sectionId: 1,
+        sectionCode: 'Part 1',
+        sectionName: 'Listening',
+        skillCode: 'listening',
+        skillName: 'Listening',
+        modality: 'listening',
+        stem: 'Listening question 1',
+        options: [{ optionId: 1, label: 'A', text: 'Option A' }],
+        selectedOptionId: null,
+        isFlagged: false,
+      },
+      navigator: [
+        {
+          questionId: 1001,
+          displayOrder: 1,
+          sectionId: 1,
+          sectionCode: 'Part 1',
+          modality: 'listening',
+          isAnswered: false,
+          isFlagged: false,
+          isCurrent: true,
+          isLocked: false,
+        },
+        {
+          questionId: 1002,
+          displayOrder: 2,
+          sectionId: 2,
+          sectionCode: 'Part 5',
+          modality: 'reading',
+          isAnswered: false,
+          isFlagged: false,
+          isCurrent: false,
+          isLocked: true,
+        },
+      ],
+      questions: [
+        {
+          questionId: 1001,
+          displayOrder: 1,
+          sectionId: 1,
+          sectionCode: 'Part 1',
+          sectionName: 'Listening',
+          skillCode: 'listening',
+          skillName: 'Listening',
+          modality: 'listening',
+          stem: 'Listening question 1',
+          options: [{ optionId: 1, label: 'A', text: 'Option A' }],
+          selectedOptionId: null,
+          isFlagged: false,
+        },
+      ],
+    });
+
+    const readingTake = makeAttemptTake({
+      totalQuestions: 2,
+      currentQuestion: {
+        questionId: 1002,
+        displayOrder: 2,
+        sectionId: 2,
+        sectionCode: 'Part 5',
+        sectionName: 'Reading',
+        skillCode: 'reading',
+        skillName: 'Reading',
+        modality: 'reading',
+        stem: 'Reading question 2',
+        options: [{ optionId: 2, label: 'A', text: 'Reading Option A' }],
+        selectedOptionId: null,
+        isFlagged: false,
+      },
+      navigator: [
+        {
+          questionId: 1001,
+          displayOrder: 1,
+          sectionId: 1,
+          sectionCode: 'Part 1',
+          modality: 'listening',
+          isAnswered: false,
+          isFlagged: false,
+          isCurrent: false,
+          isLocked: true,
+        },
+        {
+          questionId: 1002,
+          displayOrder: 2,
+          sectionId: 2,
+          sectionCode: 'Part 5',
+          modality: 'reading',
+          isAnswered: false,
+          isFlagged: false,
+          isCurrent: true,
+          isLocked: false,
+        },
+      ],
+      questions: [
+        {
+          questionId: 1002,
+          displayOrder: 2,
+          sectionId: 2,
+          sectionCode: 'Part 5',
+          sectionName: 'Reading',
+          skillCode: 'reading',
+          skillName: 'Reading',
+          modality: 'reading',
+          stem: 'Reading question 2',
+          options: [{ optionId: 2, label: 'A', text: 'Reading Option A' }],
+          selectedOptionId: null,
+          isFlagged: false,
+        },
+      ],
+    });
+
+    vi.mocked(api.exams.take)
+      .mockResolvedValueOnce(listeningTake)
+      .mockResolvedValueOnce(readingTake);
+    vi.mocked(api.exams.transitionSkill).mockResolvedValue({
+      attemptId: 88,
+      activeSkillId: 2,
+      remainingSeconds: 3500,
+      status: 'in_progress',
+    });
+
+    render(<MockExamTakePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Listening question 1')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^Next$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Advance to next locked section?')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Continue to next section/i }));
+
+    await waitFor(() => {
+      expect(api.exams.transitionSkill).toHaveBeenCalledWith(88);
+    });
+
+    await waitFor(() => {
+      expect(api.exams.take).toHaveBeenCalledWith(88, 2);
+      expect(screen.getByText('Reading question 2')).toBeInTheDocument();
+    });
   });
 
   it('renders score report, CEFR band, negative delta with minus sign, and skill breakdown', async () => {

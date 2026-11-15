@@ -79,6 +79,7 @@ export interface ExamSittingShellProps {
   initialRequestedOrder?: number | null;
   basePath: string;
   onFetchQuestion: (displayOrder: number) => Promise<UnifiedTakeView>;
+  onTransitionSection?: (targetOrder: number) => Promise<void>;
   onSaveAnswer: (
     questionId: number,
     payload: {
@@ -164,6 +165,7 @@ export function ExamSittingShell({
   initialRequestedOrder,
   basePath,
   onFetchQuestion,
+  onTransitionSection,
   onSaveAnswer,
   onSaveDraft,
   onUploadAudio,
@@ -607,7 +609,7 @@ export function ExamSittingShell({
   }, []);
 
   const executeNavigation = useCallback(
-    async (targetOrder: number, requireServerFetch: boolean) => {
+    async (targetOrder: number, requireServerFetch: boolean, transitionSection = false) => {
       if (!currentQuestion) return;
 
       // Flush pending draft timer immediately when leaving a writing question
@@ -629,6 +631,9 @@ export function ExamSittingShell({
         setIsLoadingQuestion(true);
         setActionError(null);
         try {
+          if (transitionSection && onTransitionSection) {
+            await onTransitionSection(targetOrder);
+          }
           const updatedTake = await onFetchQuestion(targetOrder);
           mergeTakeResponse(updatedTake, targetOrder);
         } catch (err) {
@@ -689,6 +694,7 @@ export function ExamSittingShell({
       saveWritingDraft,
       flushOfflineQueue,
       onFetchQuestion,
+      onTransitionSection,
       mergeTakeResponse,
     ],
   );
@@ -1571,7 +1577,7 @@ export function ExamSittingShell({
                     const target = pendingBoundaryOrder;
                     setPendingBoundaryOrder(null);
                     if (target != null) {
-                      void executeNavigation(target, true);
+                      void executeNavigation(target, true, true);
                     }
                   }}
                 >
