@@ -424,7 +424,7 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
             INSERT INTO Roles (Code, Name) SELECT 'learner', N'Learner'
               WHERE NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner');
             INSERT INTO Users (RoleId, Email, PasswordHash, FullName, ActiveCertId)
-            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{Guid.NewGuid():N}@test.local', 0x01, N'L', {certId});
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{Guid.NewGuid():N}@test.local', 0x01, N'Learner', {certId});
             DECLARE @u INT = SCOPE_IDENTITY();
 
             INSERT INTO LearnerPaths (UserId, CertId, Status) VALUES (@u, {certId}, 'active');

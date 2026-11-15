@@ -118,8 +118,8 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         var writingService = new WritingPracticeService(db, learners);
 
         var info = await writingService.StartAttemptAsync(userId, examId);
-        await writingService.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book.");
-        await writingService.SaveDraftAsync(userId, info.AttemptId, q2Id, "Working from home provides flexibility.");
+        await writingService.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a very interesting book in the park today.");
+        await writingService.SaveDraftAsync(userId, info.AttemptId, q2Id, "Working from home provides great flexibility and helps many employees save commuting time.");
         await writingService.SubmitAttemptAsync(userId, info.AttemptId);
 
         // Create a custom grader that returns overly high scores (e.g. 10.0 on a 3.0 max criterion)
@@ -158,8 +158,8 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         var writingService = new WritingPracticeService(db, learners);
 
         var info = await writingService.StartAttemptAsync(userId, examId);
-        await writingService.SaveDraftAsync(userId, info.AttemptId, q1Id, "Answer for question 1.");
-        await writingService.SaveDraftAsync(userId, info.AttemptId, q2Id, "Answer for question 2.");
+        await writingService.SaveDraftAsync(userId, info.AttemptId, q1Id, "This is a complete sample answer for the first writing question.");
+        await writingService.SaveDraftAsync(userId, info.AttemptId, q2Id, "This is a complete sample answer for the second writing question.");
         await writingService.SubmitAttemptAsync(userId, info.AttemptId);
 
         var freeResponses = await db.FreeResponses.Where(fr => fr.AttemptId == info.AttemptId).ToListAsync();
@@ -206,8 +206,8 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
 
         var info = await writingService.StartAttemptAsync(userId, examId);
         // Put simulate_fail marker in q1
-        await writingService.SaveDraftAsync(userId, info.AttemptId, q1Id, "Answer with [simulate_fail] marker.");
-        await writingService.SaveDraftAsync(userId, info.AttemptId, q2Id, "Valid normal answer.");
+        await writingService.SaveDraftAsync(userId, info.AttemptId, q1Id, "This is a sample answer with [simulate_fail] marker to test error handling.");
+        await writingService.SaveDraftAsync(userId, info.AttemptId, q2Id, "This is a valid normal answer that contains more than ten words.");
         await writingService.SubmitAttemptAsync(userId, info.AttemptId);
 
         var processor = new AiGradingProcessor(db, new FakeAiGrader());
@@ -241,8 +241,8 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var writing = new WritingPracticeService(db, new LearnerService(db));
         var info = await writing.StartAttemptAsync(userId, examId);
-        await writing.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book on a train.");
-        await writing.SaveDraftAsync(userId, info.AttemptId, q2Id, "Working from home provides flexibility to many employees.");
+        await writing.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a good book on a quiet morning train.");
+        await writing.SaveDraftAsync(userId, info.AttemptId, q2Id, "Working from home provides valuable flexibility to many employees across different industries.");
         await writing.SubmitAttemptAsync(userId, info.AttemptId);
 
         await new AiGradingProcessor(db, grader).ProcessPendingGradingsAsync(10);
@@ -319,8 +319,8 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var writing = new WritingPracticeService(db, new LearnerService(db));
         var info = await writing.StartAttemptAsync(userId, examId);
-        await writing.SaveDraftAsync(userId, info.AttemptId, q1Id, "dog run fast");
-        await writing.SaveDraftAsync(userId, info.AttemptId, q2Id, "dog run fast");
+        await writing.SaveDraftAsync(userId, info.AttemptId, q1Id, "The brown dog runs very fast across the green field every single morning.");
+        await writing.SaveDraftAsync(userId, info.AttemptId, q2Id, "The brown dog runs very fast across the green field every single morning.");
         await writing.SubmitAttemptAsync(userId, info.AttemptId);
 
         await new AiGradingProcessor(db, new DropsOneCriterionGrader()).ProcessPendingGradingsAsync(10);
@@ -362,8 +362,8 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var writing = new WritingPracticeService(db, new LearnerService(db));
         var info = await writing.StartAttemptAsync(userId, examId);
-        await writing.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman read a book.");
-        await writing.SaveDraftAsync(userId, info.AttemptId, q2Id, "I think remote work is good.");
+        await writing.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman read a book in the quiet library yesterday afternoon.");
+        await writing.SaveDraftAsync(userId, info.AttemptId, q2Id, "I think remote work is good for productivity and work life balance.");
         await writing.SubmitAttemptAsync(userId, info.AttemptId);
         await new AiGradingProcessor(db, new FeedbackGrader()).ProcessPendingGradingsAsync(10);
 
@@ -436,8 +436,8 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
     /// gradings carry. <paramref name="grader"/> decides the rubric scores.</summary>
     private async Task<(int attemptId, List<string?> gradingBands)> GradeWritingPracticeAsync(
         string certCode, int examId, int q1Id, int q2Id, IAiGrader grader,
-        string q1Answer = "A woman is reading a book on a train.",
-        string q2Answer = "Working from home provides flexibility to many employees.")
+        string q1Answer = "A woman is reading a good book on a quiet morning train.",
+        string q2Answer = "Working from home provides valuable flexibility to many employees across different industries.")
     {
         var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
 
@@ -526,7 +526,7 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         await SeedBandsAsync(certId, ("B1", 40, 50), ("B2", 55, 65), ("C1", 70, 80), ("C2", 85, 90));
 
         var (attemptId, gradingBands) = await GradeWritingPracticeAsync(
-            certCode, examId, q1Id, q2Id, new FakeAiGrader(), q1Answer: "", q2Answer: "");
+            certCode, examId, q1Id, q2Id, new CustomScoreGrader(0m));
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         Assert.Equal(2, gradingBands.Count);
