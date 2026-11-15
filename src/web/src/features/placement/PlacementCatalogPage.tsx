@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Alert, Button, Card, Chip, Radio, RadioGroup, Label, Spinner } from '@heroui/react';
-import { Award, Clock, Play, RotateCcw, Sparkles, Wallet } from 'lucide-react';
+import { Alert, Button, Card, Chip, Radio, RadioGroup, Label, Spinner, buttonVariants } from '@heroui/react';
+import { Award, AlertCircle, Clock, Play, RotateCcw, Sparkles, Wallet } from 'lucide-react';
 import {
   api,
   ApiClientError,
@@ -97,6 +97,11 @@ export function PlacementCatalogPage() {
   }
 
   if (!catalog) return null;
+
+  // #378: the retake action lives outside the exam list. `exams` can be empty (the active
+  // certificate has no published paper, and none exists on any other certificate either), and a
+  // learner who has been placed must still see the way to retake.
+  const retakeCertId = String(catalog.exams[0]?.certId ?? catalog.activeCert.code);
 
   return (
     <div className="mx-auto max-w-5xl p-4 md:p-6 space-y-6">
@@ -231,6 +236,68 @@ export function PlacementCatalogPage() {
         </Card>
       )}
 
+      {catalog.isRetake && (
+        <Card>
+          <Card.Header>
+            <Card.Title className="font-display text-lg flex items-center gap-2">
+              <RotateCcw className="h-4 w-4 text-accent" aria-hidden="true" />
+              Retake your placement
+            </Card.Title>
+            <Card.Description>
+              You already have an assessed band, so a first sitting is no longer free. Choose how
+              much of {catalog.activeCert.code} to re-measure and confirm the credit cost before
+              starting.
+            </Card.Description>
+          </Card.Header>
+          <Card.Footer className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs text-muted font-mono-tabular">
+              All 4 skills: {catalog.allSkillsRetakeCredits ?? 5} cr · Listening + Reading:{' '}
+              {catalog.listeningAndReadingRetakeCredits ?? 3} cr
+            </span>
+            <Link
+              to="/placement/retake/$certId"
+              params={{ certId: retakeCertId }}
+              className="button button--sm button--primary"
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+              Retake options
+            </Link>
+          </Card.Footer>
+        </Card>
+      )}
+
+      {catalog.exams.length === 0 && (
+        <Card variant="secondary">
+          <Card.Header>
+            <Card.Title className="font-display text-base flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-warning" aria-hidden="true" />
+              No placement paper is published
+            </Card.Title>
+            <Card.Description>
+              Nothing can be started for {catalog.activeCert.code}: no placement exam is published
+              on this certificate, and none is published on any other certificate either. A retake
+              opens as soon as a paper is published.
+            </Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                to="/certificates"
+                className={buttonVariants({ size: 'sm', variant: 'outline', className: 'no-underline' })}
+              >
+                Browse certificates
+              </Link>
+              <Link
+                to="/support"
+                className={buttonVariants({ size: 'sm', variant: 'outline', className: 'no-underline' })}
+              >
+                Contact support
+              </Link>
+            </div>
+          </Card.Content>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {catalog.exams.map((exam) => (
           <Card key={exam.examId}>
@@ -261,37 +328,20 @@ export function PlacementCatalogPage() {
             </Card.Content>
 
             <Card.Footer className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-separator">
-              {catalog.isRetake ? (
-                <>
-                  <span className="text-xs text-muted font-mono-tabular">
-                    Full: {catalog.allSkillsRetakeCredits ?? 5} cr · L+R:{' '}
-                    {catalog.listeningAndReadingRetakeCredits ?? 3} cr
-                  </span>
-                  <Link
-                    to="/placement/retake/$certId"
-                    params={{ certId: String(catalog.exams[0]?.certId ?? catalog.activeCert.code) }}
-                    className="button button--sm button--primary"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
-                    Retake options
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link to="/placement/preflight" className="text-xs text-accent hover:underline">
-                    Check audio &amp; reuse options
-                  </Link>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    isDisabled={Boolean(catalog.activePlacementId)}
-                    isPending={startingExamId === exam.examId}
-                    onPress={() => void handleStartFirstPlacement(exam.examId)}
-                  >
-                    <Play className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
-                    Start free placement
-                  </Button>
-                </>
+              <Link to="/placement/preflight" className="text-xs text-accent hover:underline">
+                Check audio &amp; reuse options
+              </Link>
+              {!catalog.isRetake && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  isDisabled={Boolean(catalog.activePlacementId)}
+                  isPending={startingExamId === exam.examId}
+                  onPress={() => void handleStartFirstPlacement(exam.examId)}
+                >
+                  <Play className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+                  Start free placement
+                </Button>
               )}
             </Card.Footer>
           </Card>
