@@ -8,6 +8,7 @@ import {
   Chip,
   Radio,
   RadioGroup,
+  Skeleton,
   Spinner,
 } from '@heroui/react';
 import {
@@ -123,9 +124,33 @@ export function LessonReaderPage() {
 
   if (isLessonLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-3">
-        <Spinner size="lg" />
-        <p className="text-sm text-muted font-mono">Loading micro-lesson…</p>
+      <div
+        className="max-w-3xl mx-auto py-6 space-y-6"
+        aria-busy="true"
+        aria-label="Loading lesson"
+      >
+        <Skeleton className="h-4 w-56 rounded-md" />
+        <div className="p-4 rounded-xl border border-border bg-surface-secondary flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-32 rounded-md" />
+            <Skeleton className="h-7 w-64 rounded-md" />
+            <Skeleton className="h-5 w-28 rounded-md" />
+          </div>
+          <div className="flex sm:flex-col gap-3">
+            <Skeleton className="h-8 w-20 rounded-md" />
+            <Skeleton className="h-8 w-24 rounded-md" />
+          </div>
+        </div>
+        <Card className="border-border">
+          <Card.Header className="border-b border-border pb-3">
+            <Skeleton className="h-5 w-48 rounded-md" />
+          </Card.Header>
+          <Card.Content className="p-6 space-y-3">
+            <Skeleton className="h-4 w-full rounded-md" />
+            <Skeleton className="h-4 w-5/6 rounded-md" />
+            <Skeleton className="h-4 w-4/6 rounded-md" />
+          </Card.Content>
+        </Card>
       </div>
     );
   }

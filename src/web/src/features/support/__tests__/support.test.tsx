@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
+import { Toast, toast } from '@heroui/react';
 import { AuthProvider } from '../../../context/AuthContext';
 import { createAppRouter } from '../../../router';
 import type {
@@ -42,6 +43,7 @@ function renderRoute(initialUrl: string) {
   const view = render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <Toast.Provider />
         <RouterProvider router={router} />
       </AuthProvider>
     </QueryClientProvider>,
@@ -132,6 +134,7 @@ describe('Support & complaints feature (#301)', () => {
   });
 
   afterEach(() => {
+    toast.clear();
     cleanup();
     vi.unstubAllGlobals();
   });
@@ -239,7 +242,8 @@ describe('Support & complaints feature (#301)', () => {
         attemptId: null,
         orderId: null,
       });
-      expect(screen.getByText(/report submitted successfully/i)).toBeInTheDocument();
+      const toastEl = screen.getByText(/report submitted successfully/i);
+      expect(toastEl.closest('[data-slot="toast-region"]')).toBeInTheDocument();
     });
   });
 });

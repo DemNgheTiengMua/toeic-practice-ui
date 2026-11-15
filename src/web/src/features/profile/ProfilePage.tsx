@@ -10,6 +10,7 @@ import {
   ListBox,
   Select,
   Spinner,
+  toast,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -39,7 +40,6 @@ export function ProfilePage() {
   const [fullName, setFullName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [timeZoneId, setTimeZoneId] = useState<string>('Asia/Ho_Chi_Minh');
-  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
   // Password fields
@@ -49,7 +49,6 @@ export function ProfilePage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
   // Email verification resend feedback
-  const [resendSuccess, setResendSuccess] = useState<string | null>(null);
   const [resendError, setResendError] = useState<string | null>(null);
 
   const profileQuery = useQuery({
@@ -77,12 +76,11 @@ export function ProfilePage() {
       }),
     onSuccess: (data) => {
       setProfileError(null);
-      setProfileSuccess('Profile updated successfully.');
+      toast.success('Profile updated successfully.');
       queryClient.setQueryData(['learner', 'profile'], data);
       void queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
     },
     onError: (err) => {
-      setProfileSuccess(null);
       if (err instanceof ApiClientError) {
         setProfileError(err.title || err.detail || 'Could not update profile.');
       } else {
@@ -95,10 +93,9 @@ export function ProfilePage() {
     mutationFn: () => api.auth.resendActivation(),
     onSuccess: () => {
       setResendError(null);
-      setResendSuccess('Verification email sent. Please check your inbox.');
+      toast.success('Verification email sent. Please check your inbox.');
     },
     onError: (err) => {
-      setResendSuccess(null);
       if (err instanceof ApiClientError) {
         setResendError(err.title || err.detail || 'Failed to resend verification email.');
       } else {
@@ -198,9 +195,6 @@ export function ProfilePage() {
               <p className="m-0 text-sm">
                 Your account email ({user?.email}) is not yet verified. Please verify your email to unlock credit purchases and exams.
               </p>
-              {resendSuccess && (
-                <p className="text-xs text-success font-semibold m-0">{resendSuccess}</p>
-              )}
               {resendError && (
                 <p className="text-xs text-danger font-semibold m-0">{resendError}</p>
               )}
@@ -263,18 +257,6 @@ export function ProfilePage() {
             </Card.Header>
 
             <Card.Content className="space-y-5">
-              {profileSuccess && (
-                <Alert status="success">
-                  <Alert.Indicator>
-                    <CheckCircle2 className="w-4 h-4 text-success" />
-                  </Alert.Indicator>
-                  <Alert.Content>
-                    <Alert.Title>Success</Alert.Title>
-                    <Alert.Description>{profileSuccess}</Alert.Description>
-                  </Alert.Content>
-                </Alert>
-              )}
-
               {profileError && (
                 <Alert status="danger">
                   <Alert.Indicator>

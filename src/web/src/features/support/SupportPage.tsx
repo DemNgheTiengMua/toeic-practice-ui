@@ -12,6 +12,7 @@ import {
   Spinner,
   Table,
   Tabs,
+  toast,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -52,7 +53,6 @@ export function SupportPage() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
   const [reason, setReason] = useState<string>('');
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
   const complaintsQuery = useQuery({
     queryKey: ['support', 'complaints'],
@@ -78,14 +78,13 @@ export function SupportPage() {
     }) => api.support.fileComplaint(payload),
     onSuccess: () => {
       setSubmitError(null);
-      setSubmitSuccess('Report submitted successfully. Our operations team will review it shortly.');
+      toast.success('Report submitted successfully. Our operations team will review it shortly.');
       setReason('');
       setSelectedSubjectId('');
       void queryClient.invalidateQueries({ queryKey: ['support', 'complaints'] });
       setActiveTab('history');
     },
     onError: (err) => {
-      setSubmitSuccess(null);
       if (err instanceof ApiClientError) {
         setSubmitError(err.title || err.detail || 'Could not submit support ticket.');
       } else {
@@ -179,18 +178,6 @@ export function SupportPage() {
           </Button>
         </div>
       </div>
-
-      {submitSuccess && (
-        <Alert status="success">
-          <Alert.Indicator>
-            <CheckCircle2 className="w-5 h-5 text-success" />
-          </Alert.Indicator>
-          <Alert.Content>
-            <Alert.Title>Ticket created</Alert.Title>
-            <Alert.Description>{submitSuccess}</Alert.Description>
-          </Alert.Content>
-        </Alert>
-      )}
 
       {/* Tabs */}
       <Tabs
