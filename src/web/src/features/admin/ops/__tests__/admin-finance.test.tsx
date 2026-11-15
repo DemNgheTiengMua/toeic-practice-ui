@@ -259,6 +259,20 @@ describe('AdminFinancePage (#304)', () => {
       if (url.startsWith('/api/admin/users')) {
         return jsonResponse(SAMPLE_USERS_SUMMARY);
       }
+      // #345: the desk's own lookups, gated on the support capability rather than system governance.
+      if (url.startsWith('/api/admin/refunds/lookups/learners/')) {
+        const id = Number(url.split('/').pop());
+        const known = SAMPLE_USERS_SUMMARY.users.find((u) => u.userId === id);
+        return jsonResponse(
+          known ?? { ...SAMPLE_USERS_SUMMARY.users[0], userId: id, fullName: 'Đặng Thị E' },
+        );
+      }
+      if (url.startsWith('/api/admin/refunds/lookups/learners')) {
+        return jsonResponse(SAMPLE_USERS_SUMMARY);
+      }
+      if (url.startsWith('/api/admin/refunds/lookups/orders')) {
+        return jsonResponse(SAMPLE_LEARNER_PAID_ORDERS);
+      }
       if (url.startsWith('/api/admin/orders/102/reconcile')) {
         return jsonResponse({
           ...SAMPLE_ORDERS_SUMMARY.orders[1],
@@ -530,25 +544,16 @@ describe('AdminFinancePage (#304)', () => {
     expect(screen.queryByRole('tab', { name: /credit packages/i })).not.toBeInTheDocument();
   });
 
-  it('picks the learner and the order on the refund desk and never types an identifier (#349)', async () => {
-    const baseImpl = fetchMock.getMockImplementation()!;
-    fetchMock.mockImplementation(async (url, init) => {
-      if (typeof url === 'string' && url.startsWith('/api/admin/users')) {
-        return jsonResponse(SAMPLE_USERS_SUMMARY);
-      }
-      if (typeof url === 'string' && url.startsWith('/api/admin/orders')) {
-        return jsonResponse(SAMPLE_LEARNER_PAID_ORDERS);
-      }
-      return baseImpl(url, init);
-    });
-
+  it('picks the learner and the order on the refund desk and never types an identifier (#349, #345)', async () => {
+    // #345: support only. The desk used to 403 on the picker, the balance and the order list for this
+    // persona, because all three read the governance routes; this account holds no other namespace.
     renderRoute('/admin/finance', {
       userId: 1,
-      email: 'admin@test.local',
-      fullName: 'Super Admin',
-      role: 'administrator',
+      email: 'support@test.local',
+      fullName: 'Support Agent',
+      role: 'Staff',
       emailVerified: true,
-      permissions: [STAFF_PERMISSIONS.SystemAdmin, STAFF_PERMISSIONS.SupportTriage],
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
     });
 
     fireEvent.click(await screen.findByRole('tab', { name: /refunds desk/i }));
@@ -561,16 +566,22 @@ describe('AdminFinancePage (#304)', () => {
     expect(screen.queryByLabelText(/linked order id/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/linked complaint id/i)).not.toBeInTheDocument();
 
-    // 1. Learner is a search over the admin user list, answered by the server.
+    // 1. Learner is a search over the desk's own lookup, answered by the server.
     const learnerSearch = screen.getByRole('searchbox', { name: /search learners/i });
     fireEvent.change(learnerSearch, { target: { value: 'Nguyễn' } });
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('/api/admin/users?'),
+        expect.stringContaining('/api/admin/refunds/lookups/learners?'),
         expect.anything(),
       );
     });
+
+    // #345: and NOT the governance route, which a support-only account is still refused.
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringContaining('/api/admin/users?'),
+      expect.anything(),
+    );
 
     fireEvent.click(await screen.findByRole('option', { name: /Nguyễn Văn A/ }));
 
@@ -583,7 +594,7 @@ describe('AdminFinancePage (#304)', () => {
     // 3. Order is a pick from that learner's paid orders, listing code, date, credits and amount.
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('userId=5'),
+        expect.stringContaining('/api/admin/refunds/lookups/orders?'),
         expect.anything(),
       );
     });
@@ -633,31 +644,16 @@ describe('AdminFinancePage (#304)', () => {
     });
   }, 20_000);
 
-  it('opens with the learner and complaint carried from a resolved complaint (#350)', async () => {
-    const baseImpl = fetchMock.getMockImplementation()!;
-    fetchMock.mockImplementation(async (url, init) => {
-      if (typeof url === 'string' && url === '/api/admin/users/15') {
-        return jsonResponse({
-          user: { ...SAMPLE_USERS_SUMMARY.users[0], userId: 15, fullName: 'Đặng Thị E' },
-          placements: [],
-        });
-      }
-      if (typeof url === 'string' && url.startsWith('/api/admin/users')) {
-        return jsonResponse(SAMPLE_USERS_SUMMARY);
-      }
-      if (typeof url === 'string' && url.startsWith('/api/admin/orders')) {
-        return jsonResponse(SAMPLE_LEARNER_PAID_ORDERS);
-      }
-      return baseImpl(url, init);
-    });
-
+  it('opens with the learner and complaint carried from a resolved complaint (#350, #345)', async () => {
+    // #345: support only, and the carried learner arrives through the desk's own lookup. This is the
+    // autofill that silently no-opped for the persona the ticket is about.
     renderRoute('/admin/finance?complaintId=301&userId=15', {
       userId: 1,
-      email: 'admin@test.local',
-      fullName: 'Super Admin',
-      role: 'administrator',
+      email: 'support@test.local',
+      fullName: 'Support Agent',
+      role: 'Staff',
       emailVerified: true,
-      permissions: [STAFF_PERMISSIONS.SystemAdmin, STAFF_PERMISSIONS.SupportTriage],
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
     });
 
     // The desk opens the create form with the learner already selected, and the complaint applied.
@@ -666,25 +662,14 @@ describe('AdminFinancePage (#304)', () => {
     expect(within(selectedCard).getByText('Đặng Thị E')).toBeInTheDocument();
   }, 20_000);
 
-  it('carries the complaint identifier into the refund payload instead of asking for it (#349)', async () => {
-    const baseImpl = fetchMock.getMockImplementation()!;
-    fetchMock.mockImplementation(async (url, init) => {
-      if (typeof url === 'string' && url.startsWith('/api/admin/users')) {
-        return jsonResponse(SAMPLE_USERS_SUMMARY);
-      }
-      if (typeof url === 'string' && url.startsWith('/api/admin/orders')) {
-        return jsonResponse(SAMPLE_LEARNER_PAID_ORDERS);
-      }
-      return baseImpl(url, init);
-    });
-
+  it('carries the complaint identifier into the refund payload instead of asking for it (#349, #345)', async () => {
     renderRoute('/admin/finance?complaintId=301', {
       userId: 1,
-      email: 'admin@test.local',
-      fullName: 'Super Admin',
-      role: 'administrator',
+      email: 'support@test.local',
+      fullName: 'Support Agent',
+      role: 'Staff',
       emailVerified: true,
-      permissions: [STAFF_PERMISSIONS.SystemAdmin, STAFF_PERMISSIONS.SupportTriage],
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
     });
 
     // The desk opens on the refunds tab, already knowing which incident it is compensating.

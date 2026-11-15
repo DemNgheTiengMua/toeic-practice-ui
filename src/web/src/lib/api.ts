@@ -2870,6 +2870,25 @@ export const api = {
       if (params?.status) sp.set('status', params.status);
       return apiFetch<AdminRefundsSummaryDto>(`/api/admin/refunds?${sp.toString()}`);
     },
+    // #345: the desk's own reads. The governance routes beside them list every learner and carry the
+    // wallet and payment write surface, so a support-only account cannot reach them; these three are the
+    // same questions narrowed to what a refund needs, under the capability that already owns refunds.
+    refundLearners: (params?: { q?: string; page?: number; pageSize?: number }) => {
+      const sp = new URLSearchParams();
+      sp.set('page', String(params?.page ?? 1));
+      sp.set('pageSize', String(params?.pageSize ?? 25));
+      if (params?.q) sp.set('q', params.q);
+      return apiFetch<AdminUsersSummaryDto>(`/api/admin/refunds/lookups/learners?${sp.toString()}`);
+    },
+    refundLearner: (userId: number) =>
+      apiFetch<AdminUserDto>(`/api/admin/refunds/lookups/learners/${userId}`),
+    refundLearnerOrders: (userId: number, params?: { page?: number; pageSize?: number }) => {
+      const sp = new URLSearchParams();
+      sp.set('page', String(params?.page ?? 1));
+      sp.set('pageSize', String(params?.pageSize ?? 25));
+      sp.set('userId', String(userId));
+      return apiFetch<AdminOrdersSummaryDto>(`/api/admin/refunds/lookups/orders?${sp.toString()}`);
+    },
     refundDetail: (refundId: number) =>
       apiFetch<AdminRefundDetailDto>(`/api/admin/refunds/${refundId}`),
     requestRefund: (body: RequestRefundRequest) =>

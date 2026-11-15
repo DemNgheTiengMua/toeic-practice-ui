@@ -113,11 +113,13 @@ export function RefundsTab({ complaintId = null, learnerId = null }: RefundsTabP
 
   // #349: the learner picker searches the admin user list the Users screen already pages through,
   // rather than asking a staff member for a number they have no way to discover.
+  // #345: it reads the desk's own lookup, not `/api/admin/users`, which is gated on system governance
+  // and would 403 a support-only agent - the persona this screen exists for.
   // shortcut: one request per keystroke, no debounce — the query is indexed and the box is a modal;
   // add a debounce if a large user table ever makes this lag.
   const { data: learnerMatches } = useQuery({
     queryKey: ['admin-refund-learners', learnerSearch],
-    queryFn: () => api.admin.users({ q: learnerSearch.trim(), pageSize: 20 }),
+    queryFn: () => api.admin.refundLearners({ q: learnerSearch.trim(), pageSize: 20 }),
     enabled: isCreateOpen && learnerSearch.trim().length > 0,
   });
 
@@ -125,8 +127,7 @@ export function RefundsTab({ complaintId = null, learnerId = null }: RefundsTabP
   // order would return money that never arrived.
   const { data: learnerOrders } = useQuery({
     queryKey: ['admin-refund-orders', selectedLearner?.userId],
-    queryFn: () =>
-      api.admin.orders({ userId: selectedLearner!.userId, status: 'paid', pageSize: 50 }),
+    queryFn: () => api.admin.refundLearnerOrders(selectedLearner!.userId, { pageSize: 50 }),
     enabled: isCreateOpen && selectedLearner !== null,
   });
 
@@ -136,16 +137,15 @@ export function RefundsTab({ complaintId = null, learnerId = null }: RefundsTabP
   // that learner selected, so nothing is retyped and the wrong person cannot be picked by mistake.
   const { data: carriedLearner } = useQuery({
     queryKey: ['admin-refund-carried-learner', learnerId],
-    queryFn: () => api.admin.userDetail(learnerId!),
+    queryFn: () => api.admin.refundLearner(learnerId!),
     enabled: learnerId !== null,
   });
 
   React.useEffect(() => {
     if (learnerId === null || selectedLearner !== null) return;
-    const carried = carriedLearner?.user;
-    if (!carried) return;
-    setSelectedLearner(carried);
-    setLearnerSearch(carried.email);
+    if (!carriedLearner) return;
+    setSelectedLearner(carriedLearner);
+    setLearnerSearch(carriedLearner.email);
     setIsCreateOpen(true);
   }, [learnerId, carriedLearner, selectedLearner]);
 
