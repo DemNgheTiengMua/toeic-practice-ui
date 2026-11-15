@@ -8,20 +8,22 @@ interface CostRow {
   isFree?: boolean;
 }
 
+// Every entry mirrors a charge in src/Services/Credits/CreditLedger.cs. Practice by section and
+// weakness analysis never write a ledger row, and the first placement per certificate is free (#289).
 const SIGN_IN_ROWS: CostRow[] = [
   { id: 'placement', action: 'Placement exam (first per certificate)', cost: 'Free', isFree: true },
   { id: 'practice', action: 'Practice by section, any skill', cost: 'Free', isFree: true },
-  { id: 'path', action: 'Learning path', cost: 'Free', isFree: true },
   { id: 'weakness', action: 'Weakness analysis', cost: 'Free', isFree: true },
   { id: 'mock', action: 'Start a mock exam', cost: '1 credit' },
   { id: 'grading', action: 'AI grading of speaking or writing', cost: '1 credit' },
   { id: 'mentor', action: 'Book a mentor session', cost: '1 credit' },
   { id: 'retake', action: 'Placement retake (4 skills / L+R)', cost: '5 / 3 credits' },
+  { id: 'path', action: 'Learning path', cost: '5 credits' },
 ];
 
 export function AuthCostSummaryCard({
   title = 'What is free and what costs credits',
-  footerNote = 'Credits do not expire. Start with the free tools and buy credits only when you want a mock exam or a graded answer.',
+  footerNote = 'Credits do not expire. Your first placement exam per certificate, practice by section, and weakness analysis are free; buy credits for mock exams, AI grading, mentor sessions, placement retakes, and learning paths.',
 }: {
   title?: string;
   footerNote?: string;

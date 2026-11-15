@@ -123,7 +123,7 @@ export function RegisterPage() {
               Sign up
             </h1>
             <p className="text-sm text-muted mt-1 mb-0">
-              Free placement exam, practice drills, and a learning path that follows your certificate.
+              Free placement exam and practice drills, plus a learning path that follows your certificate.
             </p>
           </div>
 
@@ -266,7 +266,7 @@ export function RegisterPage() {
         <div className="lg:col-span-5 min-w-0">
           <AuthCostSummaryCard
             title="What you get on day one"
-            footerNote="Credits do not expire once bought. Start with your free placement exam and learning path."
+            footerNote="Credits do not expire once bought. Your first placement exam is free; every other action is priced in the table above."
           />
         </div>
       </div>
