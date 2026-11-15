@@ -429,6 +429,11 @@ export function LessonReaderPage() {
                             <span id="microCheckReasonText">{microCheckResult.explanation}</span>
                           </p>
                         )}
+                        {microCheckResult.alreadyGraded && (
+                          <p className="text-xs m-0 text-muted" id="microCheckAlreadyGraded">
+                            You already answered this card. Only your first answer counts toward mastery.
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
