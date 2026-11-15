@@ -7,6 +7,7 @@ import {
   Card,
   Chip,
   Spinner,
+  buttonVariants,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -117,11 +118,12 @@ export function MentorDetailPage() {
           </Alert.Content>
         </Alert>
         <div>
-          <Link to="/mentors" className="no-underline">
-            <Button variant="secondary">
-              <ArrowLeft className="w-4 h-4 mr-1.5" />
-              Back to mentors catalog
-            </Button>
+          <Link
+            to="/mentors"
+            className={buttonVariants({ variant: 'secondary', className: 'no-underline' })}
+          >
+            <ArrowLeft className="w-4 h-4 mr-1.5" />
+            Back to mentors catalog
           </Link>
         </div>
       </div>
@@ -393,12 +395,15 @@ export function MentorDetailPage() {
                         <Link
                           to="/checkout"
                           search={{ credits: mentor.priceCredits, returnUrl: `/mentors/${mentorId}` } as any}
-                          className="no-underline block"
+                          className={buttonVariants({
+                            size: 'sm',
+                            variant: 'primary',
+                            fullWidth: true,
+                            className: 'no-underline justify-center',
+                          })}
                         >
-                          <Button size="sm" variant="primary" className="w-full justify-center">
-                            <Sparkles className="w-3.5 h-3.5 mr-1 text-warning" />
-                            Buy credits & top up
-                          </Button>
+                          <Sparkles className="w-3.5 h-3.5 mr-1 text-warning" />
+                          Buy credits & top up
                         </Link>
                       </div>
                     </Alert.Description>

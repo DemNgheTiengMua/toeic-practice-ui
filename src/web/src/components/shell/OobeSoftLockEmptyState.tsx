@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { Button, Card, Chip } from '@heroui/react';
+import { Card, Chip, buttonVariants } from '@heroui/react';
 import { Compass, Sparkles, ArrowRight, Users } from 'lucide-react';
 
 export function OobeSoftLockEmptyState() {
@@ -21,18 +21,20 @@ export function OobeSoftLockEmptyState() {
           </Card.Description>
         </Card.Header>
         <Card.Content className="flex flex-wrap items-center gap-3 pt-2">
-          <Link to="/onboarding" className="inline-flex">
-            <Button variant="primary">
-              <Compass className="h-4 w-4" />
-              Continue OOBE setup
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+          <Link
+            to="/onboarding"
+            className={buttonVariants({ variant: 'primary', className: 'no-underline' })}
+          >
+            <Compass className="h-4 w-4" />
+            Continue OOBE setup
+            <ArrowRight className="h-4 w-4" />
           </Link>
-          <Link to="/mentors" className="inline-flex">
-            <Button variant="secondary">
-              <Users className="h-4 w-4" />
-              Explore Mentors
-            </Button>
+          <Link
+            to="/mentors"
+            className={buttonVariants({ variant: 'secondary', className: 'no-underline' })}
+          >
+            <Users className="h-4 w-4" />
+            Explore Mentors
           </Link>
         </Card.Content>
       </Card>

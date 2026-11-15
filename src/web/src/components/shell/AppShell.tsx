@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
-import { Button, Chip, Drawer, ListBox, Select } from '@heroui/react';
+import { Button, Chip, Drawer, ListBox, Select, buttonVariants } from '@heroui/react';
 import type { Key } from '@heroui/react';
 import {
   Award,
@@ -379,15 +379,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Link to="/sign-in" className="no-underline">
-                  <Button size="sm" variant="secondary" className="min-h-11 sm:min-h-8">
-                    Sign in
-                  </Button>
+                <Link
+                  to="/sign-in"
+                  className={buttonVariants({
+                    size: 'sm',
+                    variant: 'secondary',
+                    className: 'no-underline min-h-11 sm:min-h-8',
+                  })}
+                >
+                  Sign in
                 </Link>
-                <Link to="/register" className="no-underline">
-                  <Button size="sm" variant="primary" className="min-h-11 sm:min-h-8">
-                    Register
-                  </Button>
+                <Link
+                  to="/register"
+                  className={buttonVariants({
+                    size: 'sm',
+                    variant: 'primary',
+                    className: 'no-underline min-h-11 sm:min-h-8',
+                  })}
+                >
+                  Register
                 </Link>
               </div>
             )}

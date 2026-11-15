@@ -243,6 +243,14 @@ describe('PracticeBuilderPage', () => {
     // Speaking sections must navigate to /speaking, never call startSession
     const speakingLink = screen.getByRole('link', { name: /speaking practice/i });
     expect(speakingLink.getAttribute('href')).toContain('/speaking');
+    expect(speakingLink.classList.contains('button')).toBe(true);
+    expect(speakingLink.classList.contains('button--secondary')).toBe(true);
+    const savedQuestionsLink = screen.getByRole('link', { name: /saved questions/i });
+    expect(savedQuestionsLink.classList.contains('button')).toBe(true);
+    expect(savedQuestionsLink.classList.contains('button--secondary')).toBe(true);
+    for (const link of document.querySelectorAll('a')) {
+      expect(link.querySelector('button, [role="button"]')).toBeNull();
+    }
 
     const startButtons = screen.getAllByRole('button', { name: /start section drill/i });
     fireEvent.click(startButtons[0]);

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Card, Chip, Spinner, Table } from '@heroui/react';
+import { Alert, Button, Card, Chip, Spinner, Table, buttonVariants } from '@heroui/react';
 import {
   ArrowLeft,
   Bookmark,
@@ -95,10 +95,11 @@ export function PracticeResultPage() {
             {getPracticeErrorMessage(summaryQuery.error, 'Summary not available.')}
           </Alert.Description>
           <div className="mt-3">
-            <Link to="/practice" className="no-underline">
-              <Button size="sm" variant="secondary">
-                Back to practice drills
-              </Button>
+            <Link
+              to="/practice"
+              className={buttonVariants({ size: 'sm', variant: 'secondary', className: 'no-underline' })}
+            >
+              Back to practice drills
             </Link>
           </div>
         </Alert.Content>
@@ -116,11 +117,12 @@ export function PracticeResultPage() {
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-separator pb-4">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Link to="/practice" className="no-underline">
-              <Button size="sm" variant="ghost">
-                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                <span>Practice drills</span>
-              </Button>
+            <Link
+              to="/practice"
+              className={buttonVariants({ size: 'sm', variant: 'ghost', className: 'no-underline' })}
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              <span>Practice drills</span>
             </Link>
             <h1 className="font-display text-2xl font-bold text-foreground">
               {summary.sectionName}
@@ -137,17 +139,19 @@ export function PracticeResultPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Link to="/saved-questions" className="no-underline">
-            <Button size="sm" variant="secondary">
-              <Bookmark className="h-4 w-4" aria-hidden="true" />
-              <span>Saved questions</span>
-            </Button>
+          <Link
+            to="/saved-questions"
+            className={buttonVariants({ size: 'sm', variant: 'secondary', className: 'no-underline' })}
+          >
+            <Bookmark className="h-4 w-4" aria-hidden="true" />
+            <span>Saved questions</span>
           </Link>
-          <Link to="/practice" className="no-underline">
-            <Button size="sm" variant="primary">
-              <RotateCcw className="h-4 w-4" aria-hidden="true" />
-              <span>Practice again</span>
-            </Button>
+          <Link
+            to="/practice"
+            className={buttonVariants({ size: 'sm', variant: 'primary', className: 'no-underline' })}
+          >
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
+            <span>Practice again</span>
           </Link>
         </div>
       </header>

@@ -426,4 +426,27 @@ describe('AppShell layout and domain copy', () => {
       window.sessionStorage.removeItem('ee_oobe_skip_session');
     }
   });
+
+  it('renders unauthenticated Sign in and Register header links as single controls without nested buttons (#340)', async () => {
+    installFetchMock((url) => {
+      if (url.endsWith('/api/auth/me')) {
+        return jsonResponse({ code: 'AUTH_REQUIRED' }, 401);
+      }
+      if (url.endsWith('/api/certificates')) {
+        return jsonResponse([]);
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/pricing');
+
+    const [header] = await screen.findAllByRole('banner');
+    const signInLink = within(header).getByRole('link', { name: /^sign in$/i });
+    const registerLink = within(header).getByRole('link', { name: /^register$/i });
+    expect(signInLink).toHaveClass('button', 'button--secondary');
+    expect(registerLink).toHaveClass('button', 'button--primary');
+    for (const link of header.querySelectorAll('a')) {
+      expect(link.querySelector('button, [role="button"]')).toBeNull();
+    }
+  });
 });

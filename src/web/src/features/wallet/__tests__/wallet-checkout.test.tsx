@@ -374,7 +374,11 @@ describe('Wallet & Checkout feature (#301)', () => {
     })) as HTMLAnchorElement;
 
     expect(paymentLink).toBeInTheDocument();
+    expect(paymentLink).toHaveClass('button', 'button--primary');
     expect(paymentLink.href).toBe('https://pay.payos.vn/web/test-checkout-123');
     expect(paymentLink.target).toBe('_blank');
+    for (const link of document.querySelectorAll('a')) {
+      expect(link.querySelector('button, [role="button"]')).toBeNull();
+    }
   });
 });
