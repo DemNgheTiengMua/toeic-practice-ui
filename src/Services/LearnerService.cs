@@ -233,13 +233,19 @@ public sealed partial class LearnerService(
             .Select(p => new { p.PlacementId, p.AttemptId })
             .FirstOrDefaultAsync(cancellationToken);
 
+        // #379: a goal and a path belong to ONE certificate, so "does this learner have a goal" is
+        // only answerable for the certificate being studied. Reading them unscoped made a TOEIC goal
+        // satisfy the wizard for an IELTS learner, who then skipped the certificate step and was
+        // handed a path for the wrong certificate.
+        var activeCertId = await GetActiveCertIdAsync(userId, cancellationToken);
+
         var hasTargetGoal = await db.TargetBands
             .AsNoTracking()
-            .AnyAsync(t => t.UserId == userId, cancellationToken);
+            .AnyAsync(t => t.UserId == userId && t.CertId == activeCertId, cancellationToken);
 
         var hasActiveLearningPath = await db.LearnerPaths
             .AsNoTracking()
-            .AnyAsync(p => p.UserId == userId && p.Status == LearnerPathStatus.Active.ToCode(), cancellationToken);
+            .AnyAsync(p => p.UserId == userId && p.CertId == activeCertId && p.Status == LearnerPathStatus.Active.ToCode(), cancellationToken);
 
         var hasCompletedPlacement = donePlacementId.HasValue;
         var isOobeComplete = hasCompletedPlacement && hasTargetGoal && hasActiveLearningPath;

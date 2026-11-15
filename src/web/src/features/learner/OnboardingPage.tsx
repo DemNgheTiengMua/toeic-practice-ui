@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -55,7 +55,9 @@ function getTodayIsoDate(): string {
   return `${year}-${month}-${day}`;
 }
 
-export function OnboardingPage() {
+/// <summary>`standalone` renders the goal editor alone (route `/goal`, reached from the dashboard's
+/// "Adjust goal"). The wizard chrome and the step-4 hand-off only make sense inside onboarding.</summary>
+export function OnboardingPage({ standalone = false }: { standalone?: boolean } = {}) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { learnerContext, onboardingState, refreshOnboardingState, switchCertificate } = useAuth();
@@ -68,7 +70,16 @@ export function OnboardingPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [targetDateError, setTargetDateError] = useState<string | null>(null);
   const [weeklyHoursError, setWeeklyHoursError] = useState<string | null>(null);
+  // #379: the certificate the goal and the path will be written against. It is a form field, not a
+  // side effect, so it is applied (and awaited) BEFORE `setGoal` — otherwise the goal and the path
+  // land on whatever certificate happened to be active, which is how an IELTS placement produced a
+  // TOEIC path.
+  const [selectedCertCode, setSelectedCertCode] = useState<string | null>(null);
 
+  // #379: step 3 is the certificate-and-goal editor, and it is no longer "the step that is already
+  // done": it is where a learner chooses which certificate to study, so a finished learner who
+  // reopens the wizard still lands on something they can change. The route no longer redirects them
+  // to the dashboard, because that made the certificate impossible to revisit.
   const derivedStep: OobeStep = !onboardingState
     ? 3
     : !onboardingState.hasCompletedPlacement
@@ -79,7 +90,9 @@ export function OnboardingPage() {
           ? 4
           : 3;
 
-  const activeStep: OobeStep = stepOverride ?? derivedStep;
+  // The standalone editor is always the goal step: "Adjust goal" must open an editor even when the
+  // wizard itself would show a placement or a path hand-off.
+  const activeStep: OobeStep = standalone ? 3 : (stepOverride ?? derivedStep);
 
   const { data: catalog } = useQuery({
     queryKey: ['learner', 'placement-catalog'],
@@ -91,23 +104,57 @@ export function OnboardingPage() {
   const { data: placementResult, isLoading: resultLoading } = useQuery({
     queryKey: ['learner', 'placement-result', placementIdForResult],
     queryFn: () => api.placement.result(placementIdForResult!),
-    enabled: activeStep === 2 && placementIdForResult != null,
+    enabled: (activeStep === 2 || activeStep === 3) && placementIdForResult != null,
     refetchInterval: (q) => (q.state.data && !q.state.data.isGraded ? 3000 : false),
   });
+
+  // #379: the placement names the certificate it measured, so the GOAL STEP of the wizard opens on
+  // that certificate rather than on whichever one happens to be active. The standalone editor does
+  // not: it edits the goal of the certificate the learner is studying right now.
+  const placementCertCode = standalone ? null : (placementResult?.certCode ?? null);
+  useEffect(() => {
+    if (placementCertCode && !selectedCertCode) {
+      setSelectedCertCode(placementCertCode);
+    }
+  }, [placementCertCode, selectedCertCode]);
+
+  useEffect(() => {
+    // Only the standalone editor seeds from the active certificate. In the wizard the placement is the
+    // anchor, and seeding here first would win the race against `placementCertCode` below (#379).
+    if (standalone && !selectedCertCode && learnerContext?.active?.code) {
+      setSelectedCertCode(learnerContext.active.code);
+    }
+  }, [standalone, learnerContext?.active?.code, selectedCertCode]);
+
+  // The band list, the assessed level and the goal row are all read for the ACTIVE certificate, so
+  // entering the goal step with a placement for another certificate has to move the active one first,
+  // or the dropdown offers TOEIC bands while the goal is written for IELTS. Switching invalidates
+  // every query, so `syncedCertRef` keeps this to once per placement (#379).
+  const syncedCertRef = useRef<string | null>(null);
+  const activeCertCode = learnerContext?.active?.code ?? null;
+  useEffect(() => {
+    if (activeStep !== 3 || !placementCertCode || !activeCertCode) return;
+    if (placementCertCode === activeCertCode || syncedCertRef.current === placementCertCode) return;
+    syncedCertRef.current = placementCertCode;
+    void switchCertificate(placementCertCode);
+  }, [activeStep, placementCertCode, activeCertCode, switchCertificate]);
 
   const { data: targetBandView, isLoading, error } = useQuery({
     queryKey: ['learner', 'target-band', learnerContext?.active?.code],
     queryFn: () => api.placement.targetBand(),
-    enabled: activeStep === 3 || activeStep === 4 || !onboardingState,
+    enabled: activeStep === 3 || activeStep === 4 || !onboardingState || standalone,
   });
 
   useEffect(() => {
     if (targetBandView) {
-      if (targetBandView.targetBandCode) {
-        setTargetBandCode(targetBandView.targetBandCode);
-      } else if (targetBandView.goal?.targetBandCode) {
-        setTargetBandCode(targetBandView.goal.targetBandCode);
-      }
+      const saved =
+        targetBandView.targetBandCode ?? targetBandView.goal?.targetBandCode ?? null;
+      // A band is a band of ONE certificate, so a persisted code that the incoming certificate does
+      // not offer is cleared rather than sent back as an invalid goal (#379).
+      setTargetBandCode((prev) => {
+        const candidate = saved ?? prev;
+        return targetBandView.availableBands.some((b) => b.code === candidate) ? candidate : '';
+      });
       if (targetBandView.goal?.targetDate) {
         setTargetDate(targetBandView.goal.targetDate);
       }
@@ -138,16 +185,23 @@ export function OnboardingPage() {
 
   const saveGoalMutation = useMutation({
     mutationFn: async (req: SetGoalRequest) => {
+      // #379: the certificate is confirmed FIRST. `setGoal` and `generatePath` both resolve the
+      // learner's active certificate server-side, so saving the goal before the switch is how one
+      // learner ended up with an IELTS placement, a TOEIC goal and a TOEIC path.
+      if (selectedCertCode && selectedCertCode !== targetBandView?.activeCert.code) {
+        await switchCertificate(selectedCertCode);
+      }
       return await api.placement.setGoal(req);
     },
     onSuccess: async () => {
       // `setGoal` returns SetGoalResultDto, not the TargetBandViewDto this slot holds. Writing it here
       // made the next render read `view.activeCert.code` off a payload without that field.
-      await queryClient.invalidateQueries({ queryKey: ['learner', 'target-band'] });
-      await queryClient.invalidateQueries({ queryKey: ['learner', 'dashboard'] });
-      await refreshOnboardingState();
+      await queryClient.invalidateQueries();
       setFormError(null);
-      if (onboardingState) {
+      if (standalone) {
+        toast.success('Study goal saved.');
+        void navigate({ to: '/dashboard' });
+      } else if (onboardingState) {
         setStepOverride(4);
       } else {
         toast.success('Study goal saved! Redirecting to your dashboard...');
@@ -217,16 +271,19 @@ export function OnboardingPage() {
       return;
     }
 
+    // A goal carries both or neither (the server enforces it, #153). The weekly-hours input defaults to
+    // 7, so with no exam date the form would otherwise send a pace with no deadline and be refused.
+    const hasDate = Boolean(targetDate);
     saveGoalMutation.mutate({
       targetBandCode,
       currentBandCode: targetBandView?.currentBandCode ?? undefined,
       targetDate: targetDate || null,
-      weeklyStudyHours: parsedHours,
+      weeklyStudyHours: hasDate ? parsedHours : null,
     });
   };
 
   const renderStepHeader = () => {
-    if (!onboardingState) return null;
+    if (!onboardingState || standalone) return null;
     const steps = [
       { num: 1, label: 'Universal Placement' },
       { num: 2, label: 'Diagnostic Result' },
@@ -527,10 +584,12 @@ export function OnboardingPage() {
       {renderStepHeader()}
       <div className="mb-8">
         <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-          Set your study goal · {view.activeCert.code}
+          {standalone ? 'Adjust your study goal' : 'Set your study goal'} · {view.activeCert.code}
         </h1>
         <p className="text-muted">
-          Choose your target proficiency band and pacing schedule so we can build a tailored 4-week study plan.
+          {standalone
+            ? `Change the target band, exam date or weekly pace for ${view.activeCert.name}. Your learning path keeps its certificate; only the goal is rewritten.`
+            : 'Choose the certificate you want to study, then your target band and pacing so we can build a tailored 4-week study plan.'}
         </p>
       </div>
 
@@ -541,10 +600,14 @@ export function OnboardingPage() {
             <Button
               key={cert.code}
               size="sm"
-              variant={cert.code === view.activeCert.code ? 'primary' : 'secondary'}
+              variant={cert.code === (selectedCertCode ?? view.activeCert.code) ? 'primary' : 'secondary'}
               type="button"
+              isDisabled={saveGoalMutation.isPending}
               onPress={() => {
+                setSelectedCertCode(cert.code);
                 if (cert.code !== view.activeCert.code) {
+                  // Switch now rather than at save: the band list, the assessed level and the goal
+                  // row all belong to one certificate, so they must move together (#379).
                   void switchCertificate(cert.code);
                 }
               }}
@@ -749,7 +812,7 @@ export function OnboardingPage() {
                 Cancel
               </Button>
               <div className="flex items-center gap-2">
-                {onboardingState && (
+                {!standalone && onboardingState && (
                   <Button
                     variant="secondary"
                     type="button"
@@ -766,7 +829,7 @@ export function OnboardingPage() {
                   className="gap-2"
                 >
                   {saveGoalMutation.isPending ? <Spinner size="sm" /> : <ArrowRight className="w-4 h-4" />}
-                  Save goal &amp; continue
+                  {standalone ? 'Save goal' : 'Save goal & continue'}
                 </Button>
               </div>
             </div>
