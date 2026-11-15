@@ -194,7 +194,10 @@ describe('PayOS Embedded Checkout & Interactive Credit Slider (#317)', () => {
     expect(await screen.findByRole('heading', { name: /vietqr \/ payos checkout/i })).toBeInTheDocument();
     const embeddedContainer = document.getElementById('payos-embedded-container');
     expect(embeddedContainer).toBeInTheDocument();
-    expect(embeddedContainer?.style.minHeight).toBe('350px');
+    // The frame needs room for payOS's whole panel (QR plus bank details and instructions); a short
+    // container clipped it and left two nested scrollbars, which is what a learner saw.
+    expect(embeddedContainer?.style.height).toBe('560px');
+    expect(embeddedContainer?.className).not.toMatch(/overflow-auto|overflow-scroll/);
   });
 
   it('handles PayOS onSuccess: displays positive confirmation, invalidates wallet, and navigates to returnUrl', async () => {

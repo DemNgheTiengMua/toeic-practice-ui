@@ -129,7 +129,7 @@ export function PayOsEmbeddedModal({
       }}
     >
       <Modal.Container placement="center">
-        <Modal.Dialog className="sm:max-w-lg w-full">
+        <Modal.Dialog className="sm:max-w-2xl w-full">
           {!isSuccess && (
             <Modal.CloseTrigger
               aria-label="Close PayOS Modal"
@@ -171,10 +171,17 @@ export function PayOsEmbeddedModal({
                   )}
                 </div>
 
+                {/*
+                  payOS renders a full payment panel (QR + bank details + instructions) and sizes its
+                  own document. A fixed minHeight with overflow-hidden clipped it and produced two
+                  nested scrollbars. Giving the iframe a tall, scroll-free area lets the frame draw at
+                  its own height, and the class list stays minimal so nothing competes with payOS's
+                  own layout.
+                */}
                 <div
                   id="payos-embedded-container"
-                  style={{ minHeight: '350px', width: '100%' }}
-                  className="flex items-center justify-center rounded-lg border border-border bg-surface-secondary overflow-hidden"
+                  style={{ height: '560px', width: '100%' }}
+                  className="overflow-hidden rounded-lg border border-border"
                 />
               </>
             )}
