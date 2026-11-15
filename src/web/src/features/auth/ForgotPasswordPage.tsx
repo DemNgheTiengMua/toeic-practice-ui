@@ -9,6 +9,7 @@ import {
   Input,
   Label,
   TextField,
+  buttonVariants,
 } from '@heroui/react';
 import { Mail, Send, ShieldAlert } from 'lucide-react';
 import { ApiClientError, api } from '../../lib/api';
@@ -79,8 +80,11 @@ export function ForgotPasswordPage() {
                   </Alert.Content>
                 </Alert>
                 <div className="flex gap-2">
-                  <Link to="/sign-in" className="no-underline">
-                    <Button variant="secondary">Back to sign in</Button>
+                  <Link
+                    to="/sign-in"
+                    className={buttonVariants({ variant: 'secondary', className: 'no-underline' })}
+                  >
+                    Back to sign in
                   </Link>
                 </div>
               </Card.Content>
