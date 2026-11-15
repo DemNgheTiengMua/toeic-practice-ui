@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useSearch } from '@tanstack/react-router';
-import { Alert, Button, Card, Form } from '@heroui/react';
+import { Alert, Button, Card, Form, buttonVariants } from '@heroui/react';
 import { CheckCircle2, MailCheck, ShieldAlert } from 'lucide-react';
 import { ApiClientError, api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
@@ -66,10 +66,11 @@ export function VerifyEmailPage() {
                     </Alert.Content>
                   </Alert>
                   <div className="flex flex-wrap gap-2">
-                    <Link to={isAuthenticated ? '/dashboard' : '/sign-in'} className="no-underline">
-                      <Button variant="primary">
-                        {isAuthenticated ? 'Go to your dashboard' : 'Sign in to continue'}
-                      </Button>
+                    <Link
+                      to={isAuthenticated ? '/dashboard' : '/sign-in'}
+                      className={buttonVariants({ variant: 'primary', className: 'no-underline' })}
+                    >
+                      {isAuthenticated ? 'Go to your dashboard' : 'Sign in to continue'}
                     </Link>
                   </div>
                 </>
@@ -88,10 +89,11 @@ export function VerifyEmailPage() {
                     </Alert.Content>
                   </Alert>
                   <div className="flex flex-wrap gap-2">
-                    <Link to={isAuthenticated ? '/dashboard' : '/sign-in'} className="no-underline">
-                      <Button variant="secondary">
-                        {isAuthenticated ? 'Go to your dashboard' : 'Back to sign in'}
-                      </Button>
+                    <Link
+                      to={isAuthenticated ? '/dashboard' : '/sign-in'}
+                      className={buttonVariants({ variant: 'secondary', className: 'no-underline' })}
+                    >
+                      {isAuthenticated ? 'Go to your dashboard' : 'Back to sign in'}
                     </Link>
                   </div>
                 </>

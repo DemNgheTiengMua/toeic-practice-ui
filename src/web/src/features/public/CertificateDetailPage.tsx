@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Breadcrumbs, Button, Card, Chip, Spinner, Table, Tabs } from '@heroui/react';
+import { Alert, Breadcrumbs, Button, Card, Chip, Spinner, Table, Tabs, buttonVariants } from '@heroui/react';
 import { ArrowRight, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
@@ -59,8 +59,11 @@ export function CertificateDetailPage() {
           </Alert.Content>
         </Alert>
         <div>
-          <Link to="/certificates" className="no-underline">
-            <Button variant="secondary">Back to certificates</Button>
+          <Link
+            to="/certificates"
+            className={buttonVariants({ variant: 'secondary', className: 'no-underline' })}
+          >
+            Back to certificates
           </Link>
         </div>
       </div>
@@ -154,11 +157,12 @@ export function CertificateDetailPage() {
                   <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
                   Current certificate
                 </Chip>
-                <Link to="/placement" className="no-underline">
-                  <Button variant="primary">
-                    Placement & mock exams
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
+                <Link
+                  to="/placement"
+                  className={buttonVariants({ variant: 'primary', className: 'no-underline' })}
+                >
+                  Placement & mock exams
+                  <ArrowRight className="w-4 h-4" />
                 </Link>
               </>
             ) : (
@@ -172,11 +176,12 @@ export function CertificateDetailPage() {
               </Button>
             )
           ) : !isAuthenticated ? (
-            <Link to="/register" className="no-underline">
-              <Button variant="primary">
-                Start free with {cert.code}
-                <ArrowRight className="w-4 h-4" />
-              </Button>
+            <Link
+              to="/register"
+              className={buttonVariants({ variant: 'primary', className: 'no-underline' })}
+            >
+              Start free with {cert.code}
+              <ArrowRight className="w-4 h-4" />
             </Link>
           ) : null}
         </div>

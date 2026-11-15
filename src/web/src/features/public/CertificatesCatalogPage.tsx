@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Breadcrumbs, Button, Card, Chip, Spinner } from '@heroui/react';
+import { Alert, Breadcrumbs, Button, Card, Chip, Spinner, buttonVariants } from '@heroui/react';
 import { ArrowRight, CheckCircle2, RefreshCw, ShieldAlert } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
@@ -203,8 +203,11 @@ export function CertificatesCatalogPage() {
                           </Button>
                         )
                       ) : !isAuthenticated ? (
-                        <Link to="/register" className="no-underline">
-                          <Button variant="primary">Start with {cert.code}</Button>
+                        <Link
+                          to="/register"
+                          className={buttonVariants({ variant: 'primary', className: 'no-underline' })}
+                        >
+                          Start with {cert.code}
                         </Link>
                       ) : null}
                     </div>
@@ -212,12 +215,14 @@ export function CertificatesCatalogPage() {
                     <Link
                       to="/certificates/$slug"
                       params={{ slug: cert.code.toLowerCase() }}
-                      className="no-underline"
+                      className={buttonVariants({
+                        variant: 'secondary',
+                        size: 'sm',
+                        className: 'no-underline',
+                      })}
                     >
-                      <Button variant="secondary" size="sm">
-                        Inspect structure & bands
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Button>
+                      Inspect structure & bands
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </Card.Footer>
                 </Card>
@@ -238,12 +243,18 @@ export function CertificatesCatalogPage() {
             </p>
           </div>
           {isAuthenticated && !isStaff ? (
-            <Link to="/placement" className="no-underline">
-              <Button variant="primary">Take placement test</Button>
+            <Link
+              to="/placement"
+              className={buttonVariants({ variant: 'primary', className: 'no-underline' })}
+            >
+              Take placement test
             </Link>
           ) : !isAuthenticated ? (
-            <Link to="/register" className="no-underline">
-              <Button variant="primary">Start for free</Button>
+            <Link
+              to="/register"
+              className={buttonVariants({ variant: 'primary', className: 'no-underline' })}
+            >
+              Start for free
             </Link>
           ) : null}
         </Card.Content>
