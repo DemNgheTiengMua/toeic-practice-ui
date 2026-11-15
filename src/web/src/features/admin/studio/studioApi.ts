@@ -15,6 +15,7 @@ import type {
   CreateAdminExamRequest,
   UpdateAdminExamRequest,
   SaveExamSectionAudioRequest,
+  AdminExamMediaUploadResultDto,
   ExamAuditResultDto,
   AdminPublishExamResultDto,
   ExamStudioDetailDto,
@@ -110,6 +111,19 @@ export const studioApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  /**
+   * #359: one file to the exam's own media directory. The server names the file and answers the path
+   * to store, so nothing here composes a path. Images and audio share this door; there is no video
+   * door, because the schema has no column for one.
+   */
+  uploadExamMedia: async (examId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiFetch<AdminExamMediaUploadResultDto>(`/api/admin/exams/${examId}/media`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
   getExamAudit: (examId: number) => apiFetch<ExamAuditResultDto>(`/api/admin/exams/${examId}/audit`),
   getExamStudio: (examId: number) =>
     apiFetch<ExamStudioDetailDto>(`/api/admin/exams/${examId}/studio`),

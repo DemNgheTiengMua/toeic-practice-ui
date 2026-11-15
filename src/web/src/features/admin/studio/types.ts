@@ -492,6 +492,29 @@ export interface SaveExamSectionAudioRequest {
   sizeBytes: number;
 }
 
+/**
+ * #359: what `POST /exams/{id}/media` answers. `path` is what belongs on the exam row; `url` is what
+ * a browser can play. The server chooses both, so an author never types a path.
+ */
+export interface AdminExamMediaUploadResultDto {
+  url: string;
+  path: string;
+  fileName: string;
+}
+
+/** The extensions `POST /exams/{id}/media` accepts, mirrored for a refusal before the upload starts. */
+export const EXAM_MEDIA_EXTENSIONS = [
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.svg',
+  '.webp',
+  '.mp3',
+  '.wav',
+  '.ogg',
+  '.m4a',
+] as const;
+
 export interface ExamAuditIssueDto {
   code: string;
   severity: 'error' | 'warning';
