@@ -1,6 +1,7 @@
 using Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Services;
+using WebAPI.Filters;
 using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
@@ -100,7 +101,7 @@ public static partial class PlacementEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Question not available yet", ApiError.Codes.AttemptNotActive, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<SaveAnswerRequest>>();
 
         learner.MapPost("/placement/take/{placementId:int}/draft", async Task<IResult> (
             int placementId,
@@ -136,6 +137,6 @@ public static partial class PlacementEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Question not available yet", ApiError.Codes.AttemptNotActive, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<SavePlacementDraftRequestDto>>();
     }
 }

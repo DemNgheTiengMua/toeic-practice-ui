@@ -22,6 +22,7 @@ public class WritingPracticeException(string code, string message) : Exception(m
     public const string QuestionNotFound = "question_not_found";
     public const string AttemptNotFinished = "attempt_not_finished";
     public const string RetryNotAllowed = "retry_not_allowed";
+    public const string InvalidResponse = "invalid_response";
 
     public string Code { get; } = code;
 }

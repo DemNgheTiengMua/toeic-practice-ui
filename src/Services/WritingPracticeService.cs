@@ -323,6 +323,12 @@ public sealed class WritingPracticeService(
 
     public async Task<SaveDraftResult> SaveDraftAsync(int userId, int attemptId, int questionId, string? responseText, CancellationToken cancellationToken = default)
     {
+        var upperBoundError = FreeResponseBounds.ValidateWritingUpperBounds(responseText);
+        if (upperBoundError is not null)
+        {
+            throw new WritingPracticeException(WritingPracticeException.InvalidResponse, upperBoundError);
+        }
+
         var attempt = await db.ExamAttempts
             .Where(a => a.AttemptId == attemptId && a.UserId == userId)
             .SingleOrDefaultAsync(cancellationToken)
@@ -402,6 +408,34 @@ public sealed class WritingPracticeService(
 
         var isFreeDiagnostic = IsFreeDiagnostic(attempt.Exam);
         var pathStep = await ResolveActivePathStepAsync(userId, learnerPathStepId, cancellationToken);
+
+        var freeResponsesPreview = await db.FreeResponses
+            .AsNoTracking()
+            .Where(fr => fr.AttemptId == attemptId)
+            .Select(fr => fr.ResponseText)
+            .ToListAsync(cancellationToken);
+
+        var hasSubstantiveResponse = false;
+        foreach (var text in freeResponsesPreview)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                continue;
+            }
+            hasSubstantiveResponse = true;
+            var validationError = FreeResponseBounds.ValidateWritingSubmission(text);
+            if (validationError is not null)
+            {
+                throw new WritingPracticeException(WritingPracticeException.InvalidResponse, validationError);
+            }
+        }
+
+        if (!hasSubstantiveResponse)
+        {
+            throw new WritingPracticeException(
+                WritingPracticeException.InvalidResponse,
+                $"Response must be at least {FreeResponseBounds.MinWritingWords} words.");
+        }
 
         // Verify credit balance before charge (block before you charge)
         if (!isFreeDiagnostic && pathStep is null

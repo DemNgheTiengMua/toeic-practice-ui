@@ -1,5 +1,6 @@
 using Contracts;
 using Services;
+using WebAPI.Filters;
 using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
@@ -47,7 +48,7 @@ public static partial class ExamEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Preflight verification required", ApiError.Codes.PreflightRequired, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<SaveAttemptDraftRequest>>();
 
         learner.MapPost("/attempts/{attemptId:int}/answers/{questionId:int}", async Task<IResult> (
             int attemptId,
@@ -97,6 +98,6 @@ public static partial class ExamEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Preflight verification required", ApiError.Codes.PreflightRequired, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<SaveAnswerRequest>>();
     }
 }

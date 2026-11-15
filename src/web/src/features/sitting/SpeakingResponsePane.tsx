@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Button, Chip, ProgressBar, Spinner } from '@heroui/react';
 import { Mic, RotateCcw, Square, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { api, type AttemptQuestionDto } from '@/lib/api';
-import { formatTimerSeconds, toBrowserMediaUrl } from '@/lib/security';
+import { formatTimerSeconds, MAX_SPEAKING_SECONDS, toBrowserMediaUrl } from '@/lib/security';
 
 export interface SpeakingResponsePaneProps {
   question: AttemptQuestionDto;
@@ -54,7 +54,10 @@ export function SpeakingResponsePane({
   onRecordInterruption,
 }: SpeakingResponsePaneProps) {
   const prepDuration = Math.max(0, question.prepSeconds ?? 0);
-  const maxRecordDuration = Math.max(15, question.responseSeconds ?? 60);
+  const maxRecordDuration = Math.min(
+    MAX_SPEAKING_SECONDS,
+    Math.max(15, question.responseSeconds ?? 60),
+  );
 
   const [phase, setPhase] = useState<RecorderPhase>(() =>
     question.responseAudioPath ? 'recorded' : 'idle',

@@ -32,9 +32,30 @@ public static partial class SpeakingEndpoints
                 return Problem(StatusCodes.Status400BadRequest, "Audio file is required.", ApiError.Codes.Validation, "Audio file cannot be empty.");
             }
 
-            int? durationMs = null;
-            if (form.TryGetValue("durationMs", out var durationValue) && int.TryParse(durationValue, out int parsedDuration))
+            if (file.Length > AudioValidation.MaxAudioSizeBytes)
             {
+                return Problem(
+                    StatusCodes.Status400BadRequest,
+                    "Invalid audio file",
+                    ApiError.Codes.Validation,
+                    $"Audio file size exceeds limit of {AudioValidation.MaxAudioSizeBytes / (1024 * 1024)} MB.");
+            }
+
+            int? durationMs = null;
+            if (form.TryGetValue("durationMs", out var durationValue))
+            {
+                if (!int.TryParse(durationValue, out int parsedDuration) || parsedDuration < 0)
+                {
+                    return Problem(StatusCodes.Status400BadRequest, "Invalid audio duration", ApiError.Codes.Validation, "Audio duration must be a non-negative integer.");
+                }
+                if (parsedDuration > FreeResponseBounds.MaxSpeakingDurationMs)
+                {
+                    return Problem(
+                        StatusCodes.Status400BadRequest,
+                        "Recording too long",
+                        ApiError.Codes.Validation,
+                        $"Recording duration cannot exceed {FreeResponseBounds.MaxSpeakingDurationSeconds} seconds.");
+                }
                 durationMs = parsedDuration;
             }
 

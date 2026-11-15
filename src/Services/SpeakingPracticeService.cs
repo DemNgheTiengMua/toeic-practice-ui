@@ -358,23 +358,12 @@ public sealed class SpeakingPracticeService(
             ?? throw new SpeakingPracticeException(SpeakingPracticeException.QuestionNotFound, $"Speaking question {questionId} not found in this exam.");
 
         var responseSeconds = position.ResponseSeconds;
-
-        // #239: the recording window is the TASK'S OWN declaration, and the server enforces it. The
-        // composer stops the recorder at this second, but a client that ignores the countdown would
-        // otherwise store a longer take and the window would exist only in JavaScript. A question that
-        // declares no window is not refused: the column is nullable, and refusing an undeclared window
-        // would invent a limit no author wrote. The boundary is inclusive, because a recorder that
-        // stops ON the last second saves exactly the window.
-        //
-        // shortcut: the duration is the recorder's own report, so a modified client can understate it.
-        // Closing that needs the audio decoded server-side (ffprobe or an audio library), which is a
-        // dependency this ticket does not add; upgrade when a stored take's length becomes a scored fact.
-        var windowMs = responseSeconds is int declared ? declared * 1000 : (int?)null;
-        if (windowMs is int limit && durationMs is int recorded && recorded > limit)
+        var (durationValid, isTooLong, durationError) = AudioValidation.ValidateDuration(durationMs, responseSeconds);
+        if (!durationValid)
         {
             throw new SpeakingPracticeException(
-                SpeakingPracticeException.AudioTooLong,
-                $"This task records for {responseSeconds}s; the take is {recorded / 1000.0:0.#}s. It was not saved.");
+                isTooLong ? SpeakingPracticeException.AudioTooLong : SpeakingPracticeException.InvalidAudio,
+                durationError ?? "Invalid audio duration.");
         }
 
         var ext = Path.GetExtension(fileName) ?? ".webm";

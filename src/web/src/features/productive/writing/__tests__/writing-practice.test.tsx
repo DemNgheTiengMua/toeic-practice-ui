@@ -127,10 +127,11 @@ describe('WritingPracticePage (/writing/practice/$questionId)', () => {
     const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     expect(textarea.getAttribute('spellcheck')).toBe('false');
 
-    fireEvent.change(textarea, { target: { value: 'Solar output rose sharply' } });
+    const validEssay = 'Solar output rose sharply across every measured region during the final quarter';
+    fireEvent.change(textarea, { target: { value: validEssay } });
 
-    expect(screen.getByText(/4 words/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: /#1 \(4w\)/i })).toBeTruthy();
+    expect(screen.getByText(/12 \/ 1,000 words/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /#1 \(12w\)/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /#2 Open/i })).toBeTruthy();
 
     await act(async () => {
@@ -140,7 +141,7 @@ describe('WritingPracticePage (/writing/practice/$questionId)', () => {
     await waitFor(() => {
       expect(api.writing.saveDraft).toHaveBeenCalledWith(505, {
         questionId: 1001,
-        responseText: 'Solar output rose sharply',
+        responseText: validEssay,
       });
     });
 
@@ -156,5 +157,38 @@ describe('WritingPracticePage (/writing/practice/$questionId)', () => {
         params: { attemptId: '505' },
       });
     });
+  });
+
+  it('displays live word/character bounds errors and disables submit when out of bounds', async () => {
+    vi.mocked(api.writing.take).mockResolvedValue(makeWritingTake(''));
+
+    render(<WritingPracticePage attemptId={505} />);
+    await screen.findByText('Summarize the main trends shown in the energy consumption chart.');
+
+    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+    const submitBtn = screen.getByRole('button', { name: /Submit attempt/i });
+
+    const isDisabled = (el: HTMLElement) =>
+      (el as HTMLButtonElement).disabled || el.getAttribute('aria-disabled') === 'true';
+
+    // Empty -> submit disabled
+    expect(isDisabled(submitBtn)).toBe(true);
+
+    // < 10 words -> warning/error message + submit disabled
+    fireEvent.change(textarea, { target: { value: 'Only four words here' } });
+    expect(screen.getByText(/4 \/ 1,000 words/i)).toBeTruthy();
+    expect(screen.getByText(/Response must be at least 10 words/i)).toBeTruthy();
+    expect(isDisabled(submitBtn)).toBe(true);
+
+    // > 5,000 characters -> error message + submit disabled
+    fireEvent.change(textarea, { target: { value: 'word '.repeat(1001).trim() } });
+    expect(screen.getByText(/cannot exceed/i)).toBeTruthy();
+    expect(isDisabled(submitBtn)).toBe(true);
+
+    // Valid (10+ words, <= 5,000 chars) -> submit enabled
+    fireEvent.change(textarea, {
+      target: { value: 'One two three four five six seven eight nine ten eleven.' },
+    });
+    expect(isDisabled(submitBtn)).toBe(false);
   });
 });

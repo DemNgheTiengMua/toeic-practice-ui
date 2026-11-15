@@ -248,7 +248,7 @@ describe('ExamSittingShell', () => {
     const textarea = screen.getByRole('textbox');
     fireEvent.change(textarea, { target: { value: 'The chart illustrates growth' } });
 
-    expect(screen.getByText(/4 words/i)).toBeInTheDocument();
+    expect(screen.getByText(/4 \/ 1,000 words/i)).toBeInTheDocument();
 
     await act(async () => {
       vi.advanceTimersByTime(1300);

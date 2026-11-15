@@ -116,8 +116,8 @@ public sealed class ProductivePracticeTests(DatabaseFixture database)
         var attempt = await service.StartAttemptAsync(userId, examId);
         // Both late answers carry the fail marker, so the whole attempt's grading fails and there is no
         // "one task succeeded" noise in the middle of what this test is about.
-        await service.SaveDraftAsync(userId, attempt.AttemptId, q1Id, "Here is text with [simulate_fail] in it.");
-        await service.SaveDraftAsync(userId, attempt.AttemptId, q2Id, "Here is more text with [simulate_fail] too.");
+        await service.SaveDraftAsync(userId, attempt.AttemptId, q1Id, "Here is a sample essay text with [simulate_fail] included in it.");
+        await service.SaveDraftAsync(userId, attempt.AttemptId, q2Id, "Here is more sample essay text with [simulate_fail] included in it too.");
 
         var chargesAfterSubmit = 0;
         await service.SubmitAttemptAsync(userId, attempt.AttemptId);
@@ -184,7 +184,7 @@ public sealed class ProductivePracticeTests(DatabaseFixture database)
         var (service, _, processor, _) = CreateWritingServices();
 
         var attempt = await service.StartAttemptAsync(userId, examId);
-        await service.SaveDraftAsync(userId, attempt.AttemptId, q1Id, "A woman is reading a book near the window.");
+        await service.SaveDraftAsync(userId, attempt.AttemptId, q1Id, "A woman is reading a book near the sunny window in the library.");
         await service.SubmitAttemptAsync(userId, attempt.AttemptId);
         await processor.ProcessPendingGradingsAsync();
 
@@ -193,7 +193,7 @@ public sealed class ProductivePracticeTests(DatabaseFixture database)
         Assert.True(oneTask.IsEstimatedFromOneTask, "a single graded task must be labelled as such");
 
         var second = await service.StartAttemptAsync(userId, examId);
-        await service.SaveDraftAsync(userId, second.AttemptId, q1Id, "A woman is reading a book near the window.");
+        await service.SaveDraftAsync(userId, second.AttemptId, q1Id, "A woman is reading a book near the sunny window in the library.");
         await service.SaveDraftAsync(userId, second.AttemptId, q2Id, "In my opinion, working from home provides greater flexibility and boosts personal productivity significantly.");
         await service.SubmitAttemptAsync(userId, second.AttemptId);
         await processor.ProcessPendingGradingsAsync();
@@ -220,7 +220,7 @@ public sealed class ProductivePracticeTests(DatabaseFixture database)
         var (service, _, processor, _) = CreateWritingServices();
 
         var first = await service.StartAttemptAsync(userId, examId);
-        await service.SaveDraftAsync(userId, first.AttemptId, q1Id, "A woman is reading a book near the window.");
+        await service.SaveDraftAsync(userId, first.AttemptId, q1Id, "A woman is reading a book near the sunny window in the library.");
         await service.SubmitAttemptAsync(userId, first.AttemptId);
         await processor.ProcessPendingGradingsAsync();
 

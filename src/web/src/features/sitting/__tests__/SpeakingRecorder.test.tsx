@@ -230,4 +230,42 @@ describe('SpeakingResponsePane & ExamSittingShell Speaking Integration', () => {
       expect(screen.getByText(/microphone access/i)).toBeInTheDocument();
     });
   });
+
+  it('auto-stops recording at 180 seconds even when responseSeconds exceeds 180', async () => {
+    vi.useFakeTimers();
+    const onUploadAudio = vi.fn(async () => ({
+      audioPath: '/speaking/attempts/999/201.webm',
+      durationMs: 180000,
+      savedAt: new Date().toISOString(),
+    }));
+
+    render(
+      <SpeakingResponsePane
+        question={makeSpeakingQuestion({ prepSeconds: 0, responseSeconds: 240 })}
+        attemptId={999}
+        onAudioSaved={vi.fn()}
+        onNextQuestion={vi.fn()}
+        onUploadAudio={onUploadAudio}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /start recording/i }));
+      await Promise.resolve();
+    });
+
+    expect(MockMediaRecorder.lastInstance?.state).toBe('recording');
+
+    // Advance 180 seconds one tick at a time so React's 1s setTimeout chain progresses to 180s
+    for (let s = 0; s < 181; s++) {
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+        await Promise.resolve();
+      });
+    }
+
+    expect(MockMediaRecorder.lastInstance?.state).toBe('inactive');
+    expect(onUploadAudio).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
 });

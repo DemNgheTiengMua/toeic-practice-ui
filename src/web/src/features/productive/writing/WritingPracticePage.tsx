@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Alert, Button, Card, Chip, Label, Meter, Modal, Spinner, TextArea, TextField } from '@heroui/react';
+import { Alert, Button, Card, Chip, FieldError, Label, Meter, Modal, Spinner, TextArea, TextField } from '@heroui/react';
 import { AlertTriangle, CheckCircle2, Clock, Save, Send } from 'lucide-react';
 import { api } from '@/lib/api';
-import { countWords, formatTimerSeconds, toBrowserMediaUrl } from '@/lib/security';
+import {
+  formatTimerSeconds,
+  MAX_WRITING_CHARS,
+  MAX_WRITING_WORDS,
+  toBrowserMediaUrl,
+  validateWritingBounds,
+} from '@/lib/security';
 import type { WritingTake } from './types';
 
 interface WritingPracticePageProps {
@@ -191,8 +197,9 @@ export function WritingPracticePage({ attemptId, initialQuestionId }: WritingPra
   if (!take) return null;
 
   const q = take.question;
-  const currentWords = countWords(draftText);
-  const currentChars = draftText.length;
+  const bounds = validateWritingBounds(draftText);
+  const currentWords = bounds.words;
+  const currentChars = bounds.chars;
   const imageUrl = toBrowserMediaUrl(q.groupImagePath);
   const minTarget = q.minWords ?? null;
   const maxTarget = q.maxWords ?? null;
@@ -241,7 +248,12 @@ export function WritingPracticePage({ attemptId, initialQuestionId }: WritingPra
               <Save className="size-3.5" aria-hidden="true" />
               Save draft
             </Button>
-            <Button variant="primary" size="sm" onPress={() => void handleOpenSubmitModal()}>
+            <Button
+              variant="primary"
+              size="sm"
+              isDisabled={!bounds.canSubmit}
+              onPress={() => void handleOpenSubmitModal()}
+            >
               <Send className="size-3.5" aria-hidden="true" />
               Submit attempt
             </Button>
@@ -362,8 +374,20 @@ export function WritingPracticePage({ attemptId, initialQuestionId }: WritingPra
               <Card.Header className="flex flex-wrap items-center justify-between gap-2">
                 <Card.Title className="text-base">Your written response</Card.Title>
                 <div className="flex items-center gap-3 font-mono-tabular text-xs text-muted">
-                  <span className="font-semibold text-foreground">{currentWords} words</span>
-                  <span>{currentChars} characters</span>
+                  <span
+                    className={
+                      bounds.overMaxWords
+                        ? 'font-semibold text-danger'
+                        : bounds.belowMinWords
+                          ? 'font-semibold text-warning'
+                          : 'font-semibold text-foreground'
+                    }
+                  >
+                    {currentWords} / {MAX_WRITING_WORDS.toLocaleString()} words
+                  </span>
+                  <span className={bounds.overMaxChars ? 'font-semibold text-danger' : undefined}>
+                    {currentChars.toLocaleString()} / {MAX_WRITING_CHARS.toLocaleString()} characters
+                  </span>
                 </div>
               </Card.Header>
               <Card.Content className="space-y-4">
@@ -392,14 +416,21 @@ export function WritingPracticePage({ attemptId, initialQuestionId }: WritingPra
                   </Meter.Track>
                 </Meter>
 
-                <TextField className="w-full" value={draftText} onChange={handleDraftChange}>
+                <TextField
+                  className="w-full"
+                  value={draftText}
+                  onChange={handleDraftChange}
+                  isInvalid={bounds.hasError}
+                >
                   <Label>Essay / response editor</Label>
                   <TextArea
                     rows={16}
+                    maxLength={MAX_WRITING_CHARS}
                     spellCheck={false}
-                    placeholder="Write your response here. Drafts auto-save while you type..."
+                    placeholder="Write your response here (10–1,000 words, max 5,000 characters). Drafts auto-save while you type..."
                     className="w-full font-sans text-sm leading-relaxed"
                   />
+                  {bounds.errorMessage && <FieldError>{bounds.errorMessage}</FieldError>}
                 </TextField>
               </Card.Content>
             </Card>

@@ -1,5 +1,12 @@
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+
 namespace Contracts;
 
 public sealed record SaveAttemptDraftRequest(
     int QuestionId,
-    string? ResponseText);
+    string? ResponseText) : IValidatableObject
+{
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
+        FreeResponseBounds.ValidateDraftRequest(ResponseText);
+}
