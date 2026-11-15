@@ -12,6 +12,7 @@ Ký hiệu: ✅ PASS · ❌ FAIL · ⚠️ PASS nhưng có lỗi · ⬜ chưa te
 | Nhóm | Nội dung | Số luồng | ✅ | ⚠️ | ❌ | ⬜ |
 |---|---|---|---|---|---|---|
 | A | Khách vãng lai | 7 | 5 | 2 | 0 | 0 |
+| H | Học / thương mại / hỗ trợ | 16 | 6 | 3 | 0 | 7 |
 | B | Xác thực & tài khoản | 12 | **12** | 0 | 0 | 0 |
 | C | Chứng chỉ & OOBE | 4 | 1 | 0 | 0 | 3 |
 | D | Placement | 10 | 0 | 0 | 0 | 10 |
@@ -20,7 +21,78 @@ Ký hiệu: ✅ PASS · ❌ FAIL · ⚠️ PASS nhưng có lỗi · ⬜ chưa te
 | G | Writing / Speaking | 8 | 0 | 0 | 0 | 8 |
 | H | Học / thương mại / hỗ trợ | 16 | 0 | 0 | 0 | 16 |
 | I | Quản trị | 17 | 0 | 0 | 0 | 17 |
-| | **Tổng** | **89** | **18** | **2** | **0** | **69** |
+| | **Tổng** | **89** | **24** | **5** | **0** | **60** |
+
+---
+
+## Nhóm A — Khách vãng lai ✅ HOÀN TẤT
+
+| # | Luồng | Kiểm chứng bằng mắt | Kết quả |
+|---|---|---|---|
+| A1 | Trang chủ | Hero "Know where you stand. Know what's next.", 2 chứng chỉ, sample path, 3 bước | ✅ PASS |
+| A2 | Danh sách chứng chỉ | TOEIC (P1–P7 kèm số câu), IELTS (REC/PAS/W/S), band riêng từng cert | ✅ PASS |
+| A3 | Chi tiết chứng chỉ | `/certificates/toeic` → mô tả, bảng code/section/questions, band | ✅ PASS |
+| A3− | Slug không tồn tại | `/certificates/not-a-real-cert` → thông báo + "Back to certificates" | ✅ PASS |
+| A4 | Bảng giá | Slider, "1 Credit = 20,000 VND", 3 preset, 4 FAQ | ⚠️ LỖI-04 |
+| A5 | Điều khoản / Riêng tư | `/terms` 924 ký tự, `/privacy` 897 ký tự | ✅ PASS |
+| A6 | Chặn route bảo vệ | `/dashboard`, `/wallet`, `/admin`, `/profile`, `/practice` → `/sign-in?returnUrl=…` đúng | ✅ PASS |
+
+### LỖI-04 ⚠️ Trang `/pricing` xếp learning path vào "Always free"
+
+Khối "Always free" ghi: *"Skill & section practice sessions, learning paths, and accuracy
+diagnostics."* — nhưng learning path trừ **5 credit**. Cùng lỗi với LỖI-01, ở **trang thứ ba**
+(`/auth/register` và `/sign-in` đã sửa ở #370, `/pricing` bị bỏ sót). Trớ trêu: cùng trang, khối
+"Uses credits" liệt kê AI grading và placement retake nhưng **không có** learning path.
+
+### LỖI-05 ⚠️ Trang chủ và trang chứng chỉ quảng cáo TOEIC có Speaking/Writing
+
+`/` và `/certificates/toeic` ghi: *"Practice speaking and writing separately with AI-graded tasks."*
+Nhưng TOEIC chỉ có 2 kỹ năng — bảng "Skills & sections" **ngay bên dưới** chỉ liệt kê Listening và
+Reading. Tự mâu thuẫn trên cùng một trang.
+
+---
+
+## Nhóm H — Thương mại (mock payment)
+
+| # | Luồng | Kiểm chứng bằng mắt | Kết quả |
+|---|---|---|---|
+| H6 | Ví credit + ledger | `/wallet` 0 credit, "No credit transactions recorded yet" | ✅ PASS |
+| H7 | Checkout tạo order | Slider, preset 5/10/20, 100.000 ₫, "Balance after purchase: 5" | ✅ PASS |
+| H8a | Mock success | `DH-…-0003` → `paid`; balance **0 → 5** | ⚠️ LỖI-06 |
+| H8b | Mock failed | `DH-…-0004` → `failed`, error **24**, không cộng credit | ⚠️ LỖI-06 |
+| H8c | Mock expired | `DH-…-0005` → `expired`, không cộng credit | ⚠️ LỖI-06 |
+| H9 | Trang order `paid` | "Payment settled successfully", +5 credits, có thời điểm | ✅ PASS |
+| H9 | Trang order `failed` | "Payment was not completed… Error code: 24" | ⚠️ LỖI-07 |
+| H10 | `/payment/result?orderCode=…` | Đúng cho cả `paid` và `failed` | ✅ PASS |
+| H10− | Thiếu mã order | "Missing order reference" + đường về ví | ✅ PASS |
+
+**Ledger xác nhận:** 3 order, chỉ **1 dòng** `purchase +5` (từ order `paid`). `failed` và `expired`
+không ghi gì. Balance = SUM = 5. Đúng invariant "block before you charge".
+
+### LỖI-06 ⚠️ Bấm trên mock gateway không có phản hồi trên màn hình
+
+Ở `/checkout`, bấm **Simulate failed** hoặc **Simulate expired** → **không có gì thay đổi**. Panel
+vẫn còn, không thông báo, không đổi trạng thái (so sánh trước/sau: `changed: false`).
+
+Server làm đúng (DB ghi `failed` mã 24, `expired`) — chỉ **UI im lặng**. Người thao tác sẽ bấm lại
+nhiều lần, và mỗi lần bấm lại là **một order mới**. Đây là lỗi UX nghiêm trọng trong luồng demo
+payment.
+
+Chỉ nhánh `success` có phản hồi (thông báo rồi tự chuyển trang sau 1.5s).
+
+### LỖI-07 ⚠️ Order `failed` vẫn ghi "Credits granted: +5 credits"
+
+`/orders/DH-20261115-0004` (order thất bại):
+
+```
+Failed
+Total amount: 100.000 ₫
+Credits granted: +5 credits        ← SAI
+Current credit balance: 5 credits
+Payment was not completed
+```
+
+Dòng "Credits granted" hiện +5 cho một order không cấp credit nào.
 
 ---
 
