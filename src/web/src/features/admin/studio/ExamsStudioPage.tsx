@@ -1460,14 +1460,37 @@ export function ExamsStudioPage() {
                                     <TextArea rows={2} className="text-xs" />
                                   </TextField>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    <TextField
-                                      name="imagePath"
-                                      value={bundleDraft.imagePath}
-                                      onChange={(v) => setBundleDraft({ ...bundleDraft, imagePath: v })}
-                                    >
-                                      <Label className="text-xs">Image path</Label>
-                                      <Input className="text-xs font-mono" />
-                                    </TextField>
+                                    <div className="space-y-1">
+                                      <span className="block text-xs font-semibold text-foreground">
+                                        Bundle image
+                                      </span>
+                                      <input
+                                        aria-label="Upload bundle image"
+                                        type="file"
+                                        accept=".jpg,.jpeg,.png,.svg,.webp"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          e.target.value = '';
+                                          if (!file || !selectedExamId) return;
+                                          void studioApi
+                                            .uploadExamMedia(selectedExamId, file)
+                                            .then((uploaded) =>
+                                              setBundleDraft({ ...bundleDraft, imagePath: uploaded.path }),
+                                            )
+                                            .catch((err: unknown) =>
+                                              setBundleNotice({
+                                                sectionId: bundleDraft.sectionId,
+                                                isError: true,
+                                                text: extractErrorMessage(err, 'Image upload failed.'),
+                                              }),
+                                            );
+                                        }}
+                                        className="block w-full text-xs text-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border file:border-border file:bg-surface file:text-xs file:text-foreground"
+                                      />
+                                      <p className="text-xs text-muted font-mono">
+                                        {bundleDraft.imagePath || 'no image'}
+                                      </p>
+                                    </div>
                                     <TextField
                                       name="imageAlt"
                                       value={bundleDraft.imageAlt}
@@ -1477,14 +1500,37 @@ export function ExamsStudioPage() {
                                       <Input className="text-xs" />
                                     </TextField>
                                   </div>
-                                  <TextField
-                                    name="audioPath"
-                                    value={bundleDraft.audioPath}
-                                    onChange={(v) => setBundleDraft({ ...bundleDraft, audioPath: v })}
-                                  >
-                                    <Label className="text-xs">Audio path</Label>
-                                    <Input className="text-xs font-mono" />
-                                  </TextField>
+                                  <div className="space-y-1">
+                                    <span className="block text-xs font-semibold text-foreground">
+                                      Bundle audio
+                                    </span>
+                                    <input
+                                      aria-label="Upload bundle audio"
+                                      type="file"
+                                      accept=".mp3,.wav,.ogg,.m4a"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        e.target.value = '';
+                                        if (!file || !selectedExamId) return;
+                                        void studioApi
+                                          .uploadExamMedia(selectedExamId, file)
+                                          .then((uploaded) =>
+                                            setBundleDraft({ ...bundleDraft, audioPath: uploaded.path }),
+                                          )
+                                          .catch((err: unknown) =>
+                                            setBundleNotice({
+                                              sectionId: bundleDraft.sectionId,
+                                              isError: true,
+                                              text: extractErrorMessage(err, 'Audio upload failed.'),
+                                            }),
+                                          );
+                                      }}
+                                      className="block w-full text-xs text-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border file:border-border file:bg-surface file:text-xs file:text-foreground"
+                                    />
+                                    <p className="text-xs text-muted font-mono">
+                                      {bundleDraft.audioPath || 'no audio'}
+                                    </p>
+                                  </div>
                                   <div className="flex gap-2 pt-1">
                                     <Button
                                       size="sm"
