@@ -126,6 +126,10 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string ComplaintInvalidSubject = "COMPLAINT_INVALID_SUBJECT";
         public const string ComplaintAlreadyResolved = "COMPLAINT_ALREADY_RESOLVED";
 
+        /// <summary>#350: the complaint's subject was never charged, so no refund could return
+        /// anything. Distinct from a validation slip: the ending itself does not apply.</summary>
+        public const string ComplaintNothingToRefund = "COMPLAINT_NOTHING_TO_REFUND";
+
         /// <summary>#281: a refund that is not there.</summary>
         public const string RefundNotFound = "REFUND_NOT_FOUND";
 

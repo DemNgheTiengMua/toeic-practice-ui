@@ -445,7 +445,7 @@ describe('AdminOperationsPage (#304)', () => {
     expect(await screen.findByText(/access restricted/i)).toBeInTheDocument();
   });
 
-  it('renders complaints triage workspace with status transitions and make-good credit grant validation', async () => {
+  it('renders complaints triage workspace with status transitions', async () => {
     renderRoute('/admin/operations', {
       userId: 2,
       email: 'triage@test.local',
@@ -489,33 +489,62 @@ describe('AdminOperationsPage (#304)', () => {
       );
     });
 
-    // 2. Open resolution modal and test make-good credit grant bounds (0..20)
+    // 2. The resolve surface offers the three endings as one exclusive choice (#350)
     const resolveBtn = screen.getByRole('button', { name: /resolve complaint/i });
     fireEvent.click(resolveBtn);
 
     expect(await screen.findByText(/resolve complaint #301/i)).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /no compensation/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /make-good credits/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /record a refund/i })).toBeInTheDocument();
+  });
 
-    // Try resolution with 25 credits (> 20 limit)
+  it('requires exactly one compensation ending and pre-fills the make-good from what was spent (#350)', async () => {
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đặng Thị E');
+    // Complaint 301 is a booking charged exactly one credit.
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0]);
+    fireEvent.click(await screen.findByRole('button', { name: /resolve complaint/i }));
+
+    expect(await screen.findByText(/resolve complaint #301/i)).toBeInTheDocument();
+
+    // The three endings are offered as one choice, in plain language.
+    expect(screen.getByRole('radio', { name: /no compensation/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /make-good credits/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /record a refund/i })).toBeInTheDocument();
+
     fireEvent.change(screen.getByLabelText(/message for learner/i), {
       target: { value: 'Apologies for the mentor no-show.' },
     });
     fireEvent.change(screen.getByLabelText(/internal investigation notes/i), {
       target: { value: 'Mentor verified absent. Added strike to record.' },
     });
-    fireEvent.change(screen.getByLabelText(/grant make-good credits/i), {
-      target: { value: '25' },
-    });
 
-    const confirmResolveBtn = screen.getByRole('button', { name: /confirm resolution/i });
-    fireEvent.click(confirmResolveBtn);
+    // Choosing make-good pre-fills the amount with the one credit actually spent.
+    fireEvent.click(screen.getByRole('radio', { name: /make-good credits/i }));
+    const amount = await screen.findByLabelText(/credits to make good/i);
+    expect(amount).toHaveValue(1);
 
-    expect(await screen.findByText(/grant credits must be between 0 and 20/i)).toBeInTheDocument();
+    // Above the spend is refused here, not only by the server.
+    fireEvent.change(amount, { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: /confirm resolution/i }));
+    expect(await screen.findByText(/at most 1 credit/i)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringContaining('/api/admin/complaints/301/resolve'),
+      expect.anything(),
+    );
 
-    // Change to valid 2 credits and confirm
-    fireEvent.change(screen.getByLabelText(/grant make-good credits/i), {
-      target: { value: '2' },
-    });
-    fireEvent.click(confirmResolveBtn);
+    // Equal to the spend is accepted, and the payload names the ending.
+    fireEvent.change(amount, { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: /confirm resolution/i }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -525,12 +554,113 @@ describe('AdminOperationsPage (#304)', () => {
           body: JSON.stringify({
             resolution: 'Apologies for the mentor no-show.',
             internalNotes: 'Mentor verified absent. Added strike to record.',
-            grantCredits: 2,
+            compensation: 'make_good',
+            grantCredits: 1,
           }),
         }),
       );
     });
   });
+
+  it('hands the learner and complaint to the refund desk without moving money (#350)', async () => {
+    const { history } = renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đặng Thị E');
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0]);
+    fireEvent.click(await screen.findByRole('button', { name: /resolve complaint/i }));
+
+    fireEvent.change(screen.getByLabelText(/message for learner/i), {
+      target: { value: 'Returning the booked credit.' },
+    });
+    fireEvent.change(screen.getByLabelText(/internal investigation notes/i), {
+      target: { value: 'Refund desk to return one credit.' },
+    });
+
+    fireEvent.click(screen.getByRole('radio', { name: /record a refund/i }));
+
+    // The ending says plainly that it creates nothing yet.
+    const handoff = await screen.findByRole('group', { name: /refund handoff/i });
+    expect(within(handoff).getByText(/creates no refund/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /confirm resolution/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/admin/complaints/301/resolve'),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            resolution: 'Returning the booked credit.',
+            internalNotes: 'Refund desk to return one credit.',
+            compensation: 'refund',
+            grantCredits: 0,
+          }),
+        }),
+      );
+    });
+
+    // No refund is created from here: the refund desk owns that route and its own permission.
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/admin/refunds',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    // The desk opens with the learner and the complaint carried in the URL.
+    await waitFor(() => {
+      expect(history.location.pathname).toBe('/admin/finance');
+    });
+    expect(history.location.search).toContain('complaintId=301');
+    expect(history.location.search).toContain('userId=15');
+  }, 20_000);
+  it('offers only a money refund on an order subject and says nothing is refundable on an uncharged one (#350)', async () => {
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Vũ Thị G');
+    // Complaint 303 is an order: money that arrived.
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[2]);
+    fireEvent.click(await screen.findByRole('button', { name: /resolve complaint/i }));
+
+    expect(await screen.findByText(/resolve complaint #303/i)).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /make-good credits/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: /record a refund/i }));
+    // Pre-filled with the order's own amount, not a guess.
+    const orderHandoff = await screen.findByRole('group', { name: /refund handoff/i });
+    expect(within(orderHandoff).getByText(/199\.000\s*₫/)).toBeInTheDocument();
+
+    cleanup();
+
+    // Complaint 304 was never charged: nothing to refund, and no make-good either.
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đỗ Văn H');
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[3]);
+    fireEvent.click(await screen.findByRole('button', { name: /resolve complaint/i }));
+
+    expect(await screen.findByText(/resolve complaint #304/i)).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /make-good credits/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /record a refund/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/nothing to refund on this subject/i)).toBeInTheDocument();
+  }, 20_000);
 
   it('shows the credits spent on a complaint subject, read from the ledger (#347)', async () => {
     renderRoute('/admin/operations', {

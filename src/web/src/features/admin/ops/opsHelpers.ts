@@ -7,6 +7,7 @@ import type {
   RefundStatusDto,
   ComplaintTypeDto,
   ComplaintStatusDto,
+  ComplaintCompensationDto,
   SlotStatusDto,
   MentorWeeklySlotInputDto,
 } from '../../../lib/api';
@@ -294,7 +295,6 @@ export function formatDateOnly(isoString?: string | null): string {
 // ============================================================================
 
 export const DEFAULT_ORDERLESS_CEILING = 200;
-export const MAX_COMPLAINT_GRANT_CREDITS = 20;
 /** The API boundary refuses a longer reason (`RequestRefundRequest.Reason` is `MaxLength(400)`), so the
  * form refuses it too: a 4000-character bound let a long explanation pass here and fail on submit. */
 export const MAX_REFUND_REASON_LENGTH = 400;
@@ -362,7 +362,17 @@ export function validateRefundRequest(input: RefundValidationInput): ValidationR
 export interface ComplaintResolveInput {
   resolution: string;
   internalNotes: string;
+  compensation: ComplaintCompensationDto;
   grantCredits?: number;
+  /** #347/#350: what the learner actually spent on this subject, read from the ledger. It is the
+   * make-good's ceiling - a constant here would refuse the correct compensation for a subject that
+   * spent more, and pay out for one that spent nothing. */
+  creditsSpent?: number;
+  /** #350: the method the subject implies. Money subjects offer no make-good, because credits are
+   * not the currency that arrived. */
+  impliedRefundMethod?: RefundMethodDto | null;
+  /** #350: the order's amount when the subject is an order, and nothing otherwise. */
+  moneyPaid?: number | null;
 }
 
 export function validateComplaintResolve(input: ComplaintResolveInput): ValidationResult {
@@ -382,9 +392,40 @@ export function validateComplaintResolve(input: ComplaintResolveInput): Validati
     errors.internalNotes = 'Internal notes cannot exceed 4000 characters.';
   }
 
+  const creditsSpent = input.creditsSpent ?? 0;
   const credits = input.grantCredits ?? 0;
-  if (isNaN(credits) || credits < 0 || credits > MAX_COMPLAINT_GRANT_CREDITS) {
-    errors.grantCredits = `Grant credits must be between 0 and ${MAX_COMPLAINT_GRANT_CREDITS}.`;
+
+  switch (input.compensation) {
+    case 'none':
+      // A credit count beside "no compensation" is the shape that used to move money by accident.
+      if (credits > 0) {
+        errors.grantCredits = 'Choose the make-good ending to grant credits.';
+      }
+      break;
+
+    case 'make_good':
+      if (input.impliedRefundMethod === 'money') {
+        errors.compensation =
+          'This subject was paid in money. Record a refund instead of granting credits.';
+      } else if (creditsSpent <= 0) {
+        errors.compensation = 'This subject was never charged, so there are no credits to make good.';
+      } else if (isNaN(credits) || credits <= 0) {
+        errors.grantCredits = 'A make-good must grant at least one credit.';
+      } else if (credits > creditsSpent) {
+        errors.grantCredits = `A make-good may return at most ${creditsSpent} credit${
+          creditsSpent === 1 ? '' : 's'
+        }, the amount spent on this subject.`;
+      }
+      break;
+
+    case 'refund':
+      if (input.impliedRefundMethod == null || (creditsSpent <= 0 && input.moneyPaid == null)) {
+        errors.compensation = 'Nothing to refund on this subject: nothing was charged for it.';
+      }
+      break;
+
+    default:
+      errors.compensation = 'Choose one compensation ending.';
   }
 
   return {

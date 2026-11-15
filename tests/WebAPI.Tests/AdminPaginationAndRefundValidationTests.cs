@@ -191,7 +191,10 @@ public sealed class AdminPaginationAndRefundValidationTests
         }
     }
 
-    private static async Task<(HttpClient Client, WebApplication App)> AdminAppAsync(CallTracker tracker, IAdminOrderService? orders = null)
+    private static async Task<(HttpClient Client, WebApplication App)> AdminAppAsync(
+        CallTracker tracker,
+        IAdminOrderService? orders = null,
+        IComplaintService? complaints = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
@@ -201,7 +204,7 @@ public sealed class AdminPaginationAndRefundValidationTests
         builder.Services.AddSingleton(CreateTrackingStub<IQuestionImportService>(tracker));
         builder.Services.AddSingleton(orders ?? CreateTrackingStub<IAdminOrderService>(tracker));
         builder.Services.AddSingleton(CreateTrackingStub<IAdminUserService>(tracker));
-        builder.Services.AddSingleton(CreateTrackingStub<IComplaintService>(tracker));
+        builder.Services.AddSingleton(complaints ?? CreateTrackingStub<IComplaintService>(tracker));
         builder.Services.AddSingleton(CreateTrackingStub<IRefundService>(tracker));
 
         builder.Services.AddProblemDetails();
@@ -255,9 +258,98 @@ public sealed class AdminPaginationAndRefundValidationTests
         }
     }
 
+    /// <summary>
+    /// #350: the resolve route must carry the chosen ending through unchanged. The important half is
+    /// the refund arm: it reaches the complaints route only, so a promise can never arrive at the
+    /// refunds route as a created refund.
+    /// </summary>
+    [Theory]
+    [InlineData("none", 0)]
+    [InlineData("make_good", 1)]
+    [InlineData("refund", 0)]
+    public async Task Post_resolve_forwards_the_chosen_compensation_ending_and_never_creates_a_refund(
+        string compensation, int grantCredits)
+    {
+        var tracker = new CallTracker();
+        var complaints = new CapturingComplaintService();
+        var (client, app) = await AdminAppAsync(tracker, complaints: complaints);
+        await using (app)
+        {
+            var response = await client.PostAsJsonAsync(
+                "/api/admin/complaints/301/resolve",
+                new
+                {
+                    resolution = "Verified and answered.",
+                    internalNotes = "Checked the room log.",
+                    compensation,
+                    grantCredits,
+                });
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.NotNull(complaints.LastRequest);
+            Assert.Equal(compensation, complaints.LastRequest!.Compensation.ToWireCode());
+            Assert.Equal(grantCredits, complaints.LastRequest.GrantCredits);
+
+            // The refund desk was not called: recording a promise moves no money.
+            Assert.DoesNotContain(tracker.Calls, call => call.Service == typeof(IRefundService));
+        }
+    }
+
+    /// <summary>Records what the route bound and forwarded, so the assertion is about the route rather
+    /// than about a stub that reimplements it.</summary>
+    private sealed class CapturingComplaintService : IComplaintService
+    {
+        public ResolveComplaintRequest? LastRequest { get; private set; }
+
+        public Task<AdminComplaintDetailDto> ResolveComplaintAsync(
+            int adminUserId,
+            int complaintId,
+            ResolveComplaintRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            LastRequest = request;
+            return Task.FromResult(new AdminComplaintDetailDto(
+                complaintId, 15, "Learner", "learner@test.local",
+                ComplaintTypeDto.MentorNoShow, "Reason", ComplaintStatusDto.Reviewing,
+                "Booking", 55, "Booking #55", null, DateTimeOffset.UtcNow,
+                Resolution: null, InternalNotes: null, ResolvedByUserId: null,
+                ResolvedByUserName: null, ResolvedAt: null, ResolvedByGrantTxnId: null,
+                GrantedCredits: null));
+        }
+
+        public Task<IReadOnlyList<LearnerComplaintDto>> GetLearnerComplaintsAsync(
+            int userId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<EligibleSubjectsDto> GetEligibleSubjectsAsync(
+            int userId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<LearnerComplaintDto> FileComplaintAsync(
+            int userId, FileComplaintRequest request, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<AdminComplaintsSummaryDto> GetAdminComplaintsAsync(
+            string? q = null, string? status = null, int page = 1, int pageSize = 20,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<AdminComplaintDetailDto?> GetAdminComplaintDetailAsync(
+            int complaintId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<AdminComplaintDetailDto> SetComplaintStatusAsync(
+            int adminUserId, int complaintId, ComplaintStatus status,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+    }
+
     public sealed class CallTracker
     {
         public bool AnyServiceCalled { get; set; }
+
+        /// <summary>The services the proxy saw called, so a test can prove one route was untouched.</summary>
+        public List<(Type Service, string Method)> Calls { get; } = [];
     }
 
     /// <summary>Records what the route bound and forwarded, so the assertion is about the route rather
@@ -292,7 +384,9 @@ public sealed class AdminPaginationAndRefundValidationTests
     private static T CreateTrackingStub<T>(CallTracker tracker) where T : class
     {
         var proxy = DispatchProxy.Create<T, RecordingProxy<T>>();
-        ((RecordingProxy<T>)(object)proxy).Tracker = tracker;
+        var recording = (RecordingProxy<T>)(object)proxy;
+        recording.Tracker = tracker;
+        recording.ServiceType = typeof(T);
         return proxy;
     }
 
@@ -300,11 +394,17 @@ public sealed class AdminPaginationAndRefundValidationTests
     {
         internal CallTracker? Tracker { get; set; }
 
+        internal Type? ServiceType { get; set; }
+
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             if (Tracker is not null)
             {
                 Tracker.AnyServiceCalled = true;
+                if (ServiceType is not null && targetMethod is not null)
+                {
+                    Tracker.Calls.Add((ServiceType, targetMethod.Name));
+                }
             }
 
             var returnType = targetMethod!.ReturnType;
