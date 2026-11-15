@@ -163,4 +163,59 @@ public sealed class ReportingPeriodTests
         Assert.Single(Refunds(Settled(settled)).MoneyRefundedIn(ReportingPeriod.Month(settled)));
         Assert.Empty(Refunds(Settled(settled)).MoneyRefundedIn(ReportingPeriod.Day(settled.AddDays(1))));
     }
+
+    /// <summary>
+    /// #351: a named month cuts the same window as the month a clock falls in, so a dashboard asked for
+    /// September builds September's boundaries from the same rule and cannot drift from the one every
+    /// other admin report uses.
+    /// </summary>
+    [Fact]
+    public void A_named_month_is_the_same_window_as_the_month_containing_an_instant_inside_it()
+    {
+        var inSeptember = new DateTimeOffset(2026, 9, 15, 12, 0, 0, Vn);
+
+        Assert.Equal(ReportingPeriod.Month(inSeptember), ReportingPeriod.Month(2026, 9));
+        Assert.Equal(new DateTimeOffset(2026, 9, 1, 0, 0, 0, Vn), ReportingPeriod.Month(2026, 9).Start);
+        Assert.Equal(new DateTimeOffset(2026, 10, 1, 0, 0, 0, Vn), ReportingPeriod.Month(2026, 9).End);
+
+        // December rolls into the next January rather than a thirteenth month.
+        Assert.Equal(new DateTimeOffset(2027, 1, 1, 0, 0, 0, Vn), ReportingPeriod.Month(2026, 12).End);
+    }
+
+    /// <summary>
+    /// #351: the average divides by the days the period has lived. A closed previous month is a whole
+    /// month however early in the following one it is read; that is the defect this exists to prevent.
+    /// </summary>
+    [Fact]
+    public void A_previous_month_has_lived_all_of_its_days_when_read_from_the_month_after_it()
+    {
+        var readOn = new DateTimeOffset(2026, 10, 15, 12, 0, 0, Vn);
+
+        Assert.Equal(30, ReportingPeriod.ElapsedDays(ReportingPeriod.Month(2026, 9), readOn));
+        // The month containing the clock is only as old as today.
+        Assert.Equal(15, ReportingPeriod.ElapsedDays(ReportingPeriod.Month(readOn), readOn));
+        // A leap February is 29 days, so a leap year cannot be averaged over 28.
+        var readAfterLeapFebruary = new DateTimeOffset(2028, 3, 10, 12, 0, 0, Vn);
+        Assert.Equal(29, ReportingPeriod.ElapsedDays(ReportingPeriod.Month(2028, 2), readAfterLeapFebruary));
+    }
+
+    /// <summary>
+    /// A period that has not begun reports one elapsed day rather than zero. Nothing in it can exist, so
+    /// the average is zero either way - but a denominator of zero would be a division by it.
+    /// </summary>
+    [Fact]
+    public void A_period_that_has_not_begun_reports_one_day_rather_than_zero()
+    {
+        var readOn = new DateTimeOffset(2026, 10, 15, 12, 0, 0, Vn);
+
+        Assert.Equal(1, ReportingPeriod.ElapsedDays(ReportingPeriod.Month(2026, 12), readOn));
+    }
+
+    /// <summary>#351: the label names the window it was cut from, so a screen cannot mislabel a figure.</summary>
+    [Fact]
+    public void The_label_names_the_window_it_was_cut_from()
+    {
+        Assert.Equal("September 2026", ReportingPeriod.MonthLabel(ReportingPeriod.Month(2026, 9)));
+        Assert.Equal("December 2026", ReportingPeriod.MonthLabel(ReportingPeriod.Month(2026, 12)));
+    }
 }
