@@ -194,11 +194,9 @@ export function CertificatesStudioPage() {
     }));
     setWizardSkills(mappedSkills);
 
-    setWizardBands((prev) =>
-      prev.length > 0
-        ? prev
-        : deriveDefaultBands(rule, mappedSkills.length, wizardMinScore, wizardMaxScore),
-    );
+    // A preset brings its own skills and rule, so the bands must follow them; keeping the previous
+    // tile would leave the validator a gap at the top when the skill count changed.
+    setWizardBands(deriveDefaultBands(rule, mappedSkills.length, wizardMinScore, wizardMaxScore));
 
     const productiveSkills = mappedSkills.filter(
       (s) => s.modality === 'speaking' || s.modality === 'writing',
@@ -308,7 +306,17 @@ export function CertificatesStudioPage() {
             ],
           },
         ],
-        bands: wizardBands,
+        // A save that never touched the template still needs bands that tile the range, or the
+        // validator refuses it on the first press.
+        bands:
+          wizardBands.length > 0
+            ? wizardBands
+            : deriveDefaultBands(
+                wizardRule,
+                Math.max(wizardSkills.length, 1),
+                wizardMinScore,
+                wizardMaxScore,
+              ),
         criteria: wizardCriteria,
         minScaledScore: wizardMinScore,
         maxScaledScore: wizardMaxScore,
@@ -321,7 +329,14 @@ export function CertificatesStudioPage() {
     } catch (err: unknown) {
       const fieldErrs = extractFieldErrors(err);
       setWizardFieldErrors(fieldErrs);
-      if (fieldErrs.code || fieldErrs.name || fieldErrs.description) {
+      if (
+        fieldErrs.code ||
+        fieldErrs.name ||
+        fieldErrs.description ||
+        fieldErrs.minScaledScore ||
+        fieldErrs.maxScaledScore ||
+        fieldErrs.scoreStep
+      ) {
         setWizardStep(1);
       }
       setWizardError(extractErrorMessage(err, 'Failed to save certificate blueprint.'));
@@ -599,8 +614,7 @@ export function CertificatesStudioPage() {
                         if (key == null) return;
                         const rule = normaliseAggregationRule(String(key));
                         setWizardRule(rule);
-                        // Bands already follow the old range; re-derive only when untouched is
-                        // impossible to know, so re-tile to the new rule and skill count.
+                        // The bands tile a range the rule just changed, so stale ones would gap.
                         setWizardBands((prev) =>
                           prev.length === 0
                             ? prev
@@ -653,6 +667,12 @@ export function CertificatesStudioPage() {
                       value={wizardMinScore}
                       onChange={(value) => {
                         setWizardMinScore(value);
+                        // The bands tile the total range, so a new scale invalidates them.
+                        setWizardBands((prev) =>
+                          prev.length === 0
+                            ? prev
+                            : deriveDefaultBands(wizardRule, wizardSkills.length, value, wizardMaxScore),
+                        );
                         setWizardFieldErrors((prev) => ({ ...prev, minScaledScore: '' }));
                       }}
                       isInvalid={Boolean(wizardFieldErrors.minScaledScore)}
@@ -675,6 +695,11 @@ export function CertificatesStudioPage() {
                       value={wizardMaxScore}
                       onChange={(value) => {
                         setWizardMaxScore(value);
+                        setWizardBands((prev) =>
+                          prev.length === 0
+                            ? prev
+                            : deriveDefaultBands(wizardRule, wizardSkills.length, wizardMinScore, value),
+                        );
                         setWizardFieldErrors((prev) => ({ ...prev, maxScaledScore: '' }));
                       }}
                       isInvalid={Boolean(wizardFieldErrors.maxScaledScore)}

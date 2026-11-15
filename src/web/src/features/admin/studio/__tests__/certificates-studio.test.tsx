@@ -400,6 +400,13 @@ describe('Certificates Studio (/admin/certificates) (#303)', () => {
       expect(savedRequest.minScaledScore).toBe(0);
       expect(savedRequest.maxScaledScore).toBe(100);
       expect(savedRequest.scoreStep).toBe(1);
+      // Two skills summed reach 200, so the posted bands must tile 0..200, not 0..100.
+      const bands = savedRequest.bands as Array<{ minTotal: number; maxTotal: number }>;
+      expect(bands[0].minTotal).toBe(0);
+      expect(bands[bands.length - 1].maxTotal).toBe(200);
+      for (let i = 1; i < bands.length; i++) {
+        expect(bands[i].minTotal).toBe(bands[i - 1].maxTotal + 1);
+      }
     });
   });
 
@@ -488,6 +495,21 @@ describe('Certificates Studio (/admin/certificates) (#303)', () => {
     assertTiles('avg_whole', 4, 0, 100);
     // A sum over two skills reaches 200, which the old hardcoded 0-100 bands never covered.
     expect(deriveDefaultBands('sum', 2, 0, 100).at(-1)!.maxTotal).toBe(200);
+
+    // Pinned because CertificateWizardValidationTests.DerivedBands posts these same numbers
+    // through the real validator; if this algorithm changes, that test's shape drifts too.
+    expect(deriveDefaultBands('sum', 2, 0, 100).map((b) => [b.minTotal, b.maxTotal])).toEqual([
+      [0, 50],
+      [51, 101],
+      [102, 152],
+      [153, 200],
+    ]);
+    expect(deriveDefaultBands('avg_half_step', 4, 0, 100).map((b) => [b.minTotal, b.maxTotal])).toEqual([
+      [0, 25],
+      [26, 51],
+      [52, 77],
+      [78, 100],
+    ]);
   });
 
   it('binds backend RFC 7807 field errors to HeroUI FieldError controls in the certificate wizard', async () => {
