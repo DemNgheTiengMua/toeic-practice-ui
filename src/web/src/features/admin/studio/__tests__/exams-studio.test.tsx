@@ -58,7 +58,7 @@ const mockExamList = {
       certName: 'TOEIC Listening and Reading',
       name: 'TOEIC Official Practice Test 1',
       status: 'draft',
-      purpose: 'full_mock',
+      purpose: 'mock',
       durationMinutes: 120,
       questionCount: 200,
       actualQuestionCount: 195,
@@ -72,9 +72,9 @@ const mockExamList = {
       certId: 1,
       certCode: 'TOEIC',
       certName: 'TOEIC Listening and Reading',
-      name: 'TOEIC Mini Mock 1',
+      name: 'TOEIC Placement Test 1',
       status: 'published',
-      purpose: 'mini_mock',
+      purpose: 'placement',
       durationMinutes: 60,
       questionCount: 100,
       actualQuestionCount: 100,
@@ -90,6 +90,33 @@ const mockExamList = {
   certificates: [{ certId: 1, code: 'TOEIC', name: 'TOEIC Listening and Reading' }],
 };
 
+const mockCertificates = [
+  {
+    certId: 1,
+    code: 'TOEIC',
+    name: 'TOEIC Listening and Reading',
+    description: null,
+    scoreAggregationRule: 'SUM',
+    presetCode: null,
+    isActive: true,
+    skillsCount: 2,
+    sectionsCount: 7,
+    examsCount: 3,
+  },
+  {
+    certId: 2,
+    code: 'IELTS',
+    name: 'IELTS Academic',
+    description: null,
+    scoreAggregationRule: 'AVERAGE',
+    presetCode: null,
+    isActive: true,
+    skillsCount: 4,
+    sectionsCount: 7,
+    examsCount: 1,
+  },
+];
+
 const mockExamDetail = {
   examId: 101,
   certId: 1,
@@ -98,7 +125,7 @@ const mockExamDetail = {
   name: 'TOEIC Official Practice Test 1',
   status: 'draft',
   durationMinutes: 120,
-  purpose: 'full_mock',
+  purpose: 'mock',
   description: 'Full official mock paper with 200 questions.',
   sourceName: 'ETS Official 2026',
   internalNote: 'Needs review on Part 7 passage length.',
@@ -286,7 +313,14 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
 
     expect(await screen.findByRole('heading', { name: /exams authoring studio/i })).toBeInTheDocument();
     expect(screen.getByText('TOEIC Official Practice Test 1')).toBeInTheDocument();
-    expect(screen.getByText('TOEIC Mini Mock 1')).toBeInTheDocument();
+    expect(screen.getByText('TOEIC Placement Test 1')).toBeInTheDocument();
+
+    // Purpose labels come from the four real codes only (#357).
+    expect(screen.getAllByText('Mock exam').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Placement test').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Full mock exam')).toBeNull();
+    expect(screen.queryByText('Mini mock exam')).toBeNull();
+    expect(screen.queryByText('Diagnostic')).toBeNull();
 
     // Select Exam 101 to open tabbed workspace
     const editBtn = screen.getByRole('button', { name: /open studio for toeic official practice test 1/i });
@@ -496,6 +530,9 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
       if (url.startsWith('/api/admin/exams?')) {
         return jsonResponse(mockExamList);
       }
+      if (url === '/api/admin/certificates') {
+        return jsonResponse(mockCertificates);
+      }
       if (url === '/api/admin/exams' && init?.method === 'POST') {
         return jsonResponse(
           {
@@ -518,10 +555,64 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
     fireEvent.click(await screen.findByRole('button', { name: /new exam/i }));
     expect(await screen.findByRole('heading', { name: /create new exam/i })).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole('button', { name: /certificate/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /toeic listening and reading/i }));
+
     fireEvent.click(screen.getByRole('button', { name: /create draft exam/i }));
 
     expect(await screen.findByText('Exam name is required.')).toBeInTheDocument();
     expect(screen.getByText('Duration must be between 1 and 600 minutes.')).toBeInTheDocument();
+  });
+
+  it('creates an exam with the chosen Certificate and the default mock purpose (#357)', async () => {
+    let createBody: any = null;
+
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          id: 1,
+          email: 'author@demo.local',
+          fullName: 'Exam Author',
+          role: 'staff',
+          permissions: [STAFF_PERMISSIONS.ContentAuthor, STAFF_PERMISSIONS.BlueprintDesign],
+        });
+      }
+      if (url === '/api/admin/certificates') {
+        return jsonResponse(mockCertificates);
+      }
+      if (url.startsWith('/api/admin/exams?')) {
+        return jsonResponse(mockExamList);
+      }
+      if (url === '/api/admin/exams' && init?.method === 'POST') {
+        createBody = JSON.parse(init.body as string);
+        return jsonResponse({ examId: 999 }, 201);
+      }
+      if (url === '/api/admin/exams/999') {
+        return jsonResponse({ ...mockExamDetail, examId: 999 });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin/exams');
+
+    fireEvent.click(await screen.findByRole('button', { name: /new exam/i }));
+    expect(await screen.findByRole('heading', { name: /create new exam/i })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText(/toeic official mock exam 2/i), {
+      target: { value: 'IELTS Academic Mock 1' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /certificate/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /ielts academic/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /create draft exam/i }));
+
+    await waitFor(() => {
+      expect(createBody).not.toBeNull();
+    });
+    expect(createBody.purpose).toBe('mock');
+    expect(createBody.certId).toBe(2);
+    expect(createBody.name).toBe('IELTS Academic Mock 1');
   });
 
   it('uses platform SearchField and Select filters on exam catalog (#338)', async () => {
@@ -545,8 +636,8 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
     expect(await screen.findByText('TOEIC Official Practice Test 1')).toBeInTheDocument();
 
     const searchBox = screen.getByRole('searchbox', { name: /search exams/i });
-    fireEvent.change(searchBox, { target: { value: 'Mini' } });
-    expect(searchBox).toHaveValue('Mini');
+    fireEvent.change(searchBox, { target: { value: 'Placement' } });
+    expect(searchBox).toHaveValue('Placement');
     fireEvent.click(screen.getByRole('button', { name: /clear/i }));
     expect(searchBox).toHaveValue('');
 
@@ -554,6 +645,6 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
     fireEvent.click(await screen.findByRole('option', { name: /^published$/i }));
 
     fireEvent.click(screen.getByRole('button', { name: /filter purpose/i }));
-    fireEvent.click(await screen.findByRole('option', { name: /mini mock exam/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /placement test/i }));
   });
 });

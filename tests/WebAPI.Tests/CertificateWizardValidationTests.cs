@@ -52,6 +52,135 @@ public sealed class CertificateWizardValidationTests
         ],
         Criteria: []);
 
+    /// <summary>
+    /// #356: the wizard now derives its default bands from the rule and the skill count, so a
+    /// two-skill <c>sum</c> certificate is tiled 0-200 rather than 0-100. Each case posts the four
+    /// bands <c>deriveDefaultBands</c> produces and expects the real validator to accept them.
+    /// </summary>
+    [Theory]
+    [InlineData("sum", 2)]
+    [InlineData("sum", 4)]
+    [InlineData("avg_half_step", 2)]
+    [InlineData("avg_half_step", 4)]
+    [InlineData("avg_whole", 4)]
+    public async Task The_wizards_derived_bands_are_accepted_for_every_rule_it_offers(
+        string rule, int skillCount)
+    {
+        var (client, app) = await WizardAppAsync(new AcceptingCertificateService());
+        await using (app)
+        {
+            var skills = Enumerable.Range(1, skillCount)
+                .Select(i => new SaveSkillWizardDto(
+                    null, $"SKILL{i}", $"Skill {i}", ModalityDto.Listening, i, 30,
+                    [new SaveSectionWizardDto("PART1", "Part 1", 10)]))
+                .ToList();
+
+            var request = new SaveCertificateWizardRequest(
+                CertId: null, Code: "OK", Name: "Accepted", Description: null,
+                ScoreAggregationRule: rule, PresetCode: "custom", IsActive: true,
+                Skills: skills,
+                MinScaledScore: 0, MaxScaledScore: 100, ScoreStep: 1,
+                Bands: DerivedBands(rule, skillCount),
+                Criteria: []);
+
+            var response = await client.PostAsJsonAsync("/api/admin/certificates/wizard", request);
+            var body = await response.Content.ReadAsStringAsync();
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Contains("\"code\":\"OK\"", body, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>
+    /// Mirrors <c>deriveDefaultBands</c> in CertificatesStudioPage.tsx: the same total-range rule the
+    /// validator applies, split into four contiguous bands. If the two disagree the theory above
+    /// fails, which is the point.
+    /// </summary>
+    private static List<SaveScoreBandWizardDto> DerivedBands(string rule, int skillCount)
+    {
+        var (low, high) = rule == "sum" ? (0, 100 * skillCount) : (0, 100);
+        var span = high - low + 1;
+        var count = Math.Min(4, span);
+        var size = (int)Math.Ceiling(span / (double)count);
+        var labels = new[] { ("A2", "Elementary"), ("B1", "Intermediate"), ("B2", "Upper"), ("C1", "Advanced") };
+
+        return Enumerable.Range(0, count)
+            .Select(i => new SaveScoreBandWizardDto(
+                null, labels[i].Item1, labels[i].Item2,
+                low + i * size,
+                i == count - 1 ? high : Math.Min(low + (i + 1) * size - 1, high),
+                i + 1))
+            .ToList();
+    }
+
+    /// <summary>
+    /// The defect #356 reports: the wizard's old hardcoded 0-40/41-65/66-85/86-100 bands were never
+    /// rescaled for a <c>sum</c> over two skills, so the save was refused with a gap at the top.
+    /// </summary>
+    [Fact]
+    public async Task The_old_hardcoded_bands_still_leave_a_gap_at_the_top_for_a_two_skill_sum()
+    {
+        var (client, app) = await WizardAppAsync(new GappedBandCertificateService());
+        await using (app)
+        {
+            var request = new SaveCertificateWizardRequest(
+                CertId: null, Code: "GAPTOP", Name: "Gap top", Description: null,
+                ScoreAggregationRule: "sum", PresetCode: "two_skill", IsActive: true,
+                Skills:
+                [
+                    new SaveSkillWizardDto(null, "LISTENING", "Listening", ModalityDto.Listening, 1, 45,
+                        [new SaveSectionWizardDto("PART1", "Part 1", 25)]),
+                    new SaveSkillWizardDto(null, "READING", "Reading", ModalityDto.Reading, 2, 60,
+                        [new SaveSectionWizardDto("PART5", "Part 1", 25)]),
+                ],
+                MinScaledScore: 0, MaxScaledScore: 100, ScoreStep: 1,
+                Bands:
+                [
+                    new SaveScoreBandWizardDto(null, "A2", "Elementary", 0, 40, 1),
+                    new SaveScoreBandWizardDto(null, "B1", "Intermediate", 41, 65, 2),
+                    new SaveScoreBandWizardDto(null, "B2", "Upper", 66, 85, 3),
+                    new SaveScoreBandWizardDto(null, "C1", "Advanced", 86, 100, 4),
+                ],
+                Criteria: []);
+
+            var response = await client.PostAsJsonAsync("/api/admin/certificates/wizard", request);
+            var body = await response.Content.ReadAsStringAsync();
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Contains("gap at the top", body, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>Runs the real validator, then answers success — the wizard's happy path.</summary>
+    private sealed class AcceptingCertificateService : ICertificateService
+    {
+        public Task<SaveCertificateWizardResultDto> SaveCertificateWizardAsync(
+            SaveCertificateWizardRequest request, CancellationToken cancellationToken = default)
+        {
+            CertificateConfigurationValidator.Validate(request);
+            return Task.FromResult(new SaveCertificateWizardResultDto(
+                1, request.Code, request.Name, request.Skills.Count, 1));
+        }
+
+        public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetSummariesAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<BusinessObjects.CertificateCatalog>> GetCatalogAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public IReadOnlyList<CertificateBlueprintPresetDto> GetOfficialPresets() =>
+            throw new NotSupportedException();
+
+        public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(int certId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(string code, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+    }
+
     private static async Task<(HttpClient Client, WebApplication App)> WizardAppAsync(ICertificateService service)
     {
         var builder = WebApplication.CreateBuilder();

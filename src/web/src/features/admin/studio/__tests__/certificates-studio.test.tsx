@@ -7,6 +7,7 @@ import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
 import { AuthProvider } from '../../../../context/AuthContext';
 import { createAppRouter } from '../../../../router';
 import { STAFF_PERMISSIONS } from '../../../../lib/security';
+import { SCORE_AGGREGATION_RULES, deriveDefaultBands } from '../CertificatesStudioPage';
 
 type FetchMock = ReturnType<typeof vi.fn>;
 
@@ -55,7 +56,7 @@ const mockCertificates = [
     code: 'TOEIC',
     name: 'TOEIC Listening and Reading',
     description: 'Test of English for International Communication',
-    scoreAggregationRule: 'SUM',
+    scoreAggregationRule: 'sum',
     presetCode: 'TOEIC_LR_DEFAULT',
     isActive: true,
     skillsCount: 2,
@@ -67,7 +68,7 @@ const mockCertificates = [
     code: 'IELTS',
     name: 'IELTS Academic',
     description: 'International English Language Testing System',
-    scoreAggregationRule: 'AVERAGE',
+    scoreAggregationRule: 'avg_half_step',
     presetCode: 'IELTS_AC_DEFAULT',
     isActive: true,
     skillsCount: 4,
@@ -81,7 +82,7 @@ const mockPresets = [
     presetCode: 'two_skill',
     name: '2-Skill (Listening & Reading)',
     description: 'Listening and Reading template',
-    scoreAggregationRule: 'SUM',
+    scoreAggregationRule: 'sum',
     skills: [
       {
         code: 'LISTENING',
@@ -147,7 +148,7 @@ const mockPresets = [
     presetCode: 'four_skill',
     name: '4-Skill (Listening, Reading, Speaking, Writing)',
     description: 'Full 4-skill template',
-    scoreAggregationRule: 'AVERAGE',
+    scoreAggregationRule: 'avg_half_step',
     skills: [
       {
         code: 'LISTENING',
@@ -394,7 +395,121 @@ describe('Certificates Studio (/admin/certificates) (#303)', () => {
       expect(savedRequest.code).toBe('TOEFL');
       expect(savedRequest.name).toBe('TOEFL iBT');
       expect(savedRequest.skills[0].sections[0].expectedQuestionCount).toBe(30);
+      // #356: the payload carries the three codes the API accepts and the scale it requires.
+      expect(savedRequest.scoreAggregationRule).toBe('sum');
+      expect(savedRequest.minScaledScore).toBe(0);
+      expect(savedRequest.maxScaledScore).toBe(100);
+      expect(savedRequest.scoreStep).toBe(1);
+      // Two skills summed reach 200, so the posted bands must tile 0..200, not 0..100.
+      const bands = savedRequest.bands as Array<{ minTotal: number; maxTotal: number }>;
+      expect(bands[0].minTotal).toBe(0);
+      expect(bands[bands.length - 1].maxTotal).toBe(200);
+      for (let i = 1; i < bands.length; i++) {
+        expect(bands[i].minTotal).toBe(bands[i - 1].maxTotal + 1);
+      }
     });
+  });
+
+  it('offers exactly the three aggregation rules the API accepts (#356)', async () => {
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          id: 1,
+          email: 'author@demo.local',
+          fullName: 'Content Author',
+          role: 'staff',
+          permissions: [STAFF_PERMISSIONS.BlueprintDesign],
+        });
+      }
+      if (url === '/api/admin/certificates') return jsonResponse(mockCertificates);
+      if (url === '/api/admin/certificates/presets') return jsonResponse(mockPresets);
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin/certificates');
+    fireEvent.click(await screen.findByRole('button', { name: /new certificate/i }));
+    await screen.findByRole('heading', { name: /certificate blueprint wizard/i });
+
+    fireEvent.click(screen.getByRole('button', { name: /score aggregation rule/i }));
+    const options = await screen.findAllByRole('option');
+    const shown = options.map((o) => (o.textContent ?? '').trim());
+    const expectedLabels = SCORE_AGGREGATION_RULES.map((r) => r.label);
+
+    // CertificateService.Wizard.cs accepts these three codes and refuses anything else.
+    expect(shown.sort()).toEqual([...expectedLabels].sort());
+    expect(SCORE_AGGREGATION_RULES.map((r) => r.id).sort()).toEqual([
+      'avg_half_step',
+      'avg_whole',
+      'sum',
+    ]);
+    expect(screen.queryByText(/AVERAGE/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/BAND_CEFR/)).not.toBeInTheDocument();
+  });
+
+  it('selects and displays the template of a chosen preset (#356)', async () => {
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          id: 1,
+          email: 'author@demo.local',
+          fullName: 'Content Author',
+          role: 'staff',
+          permissions: [STAFF_PERMISSIONS.BlueprintDesign],
+        });
+      }
+      if (url === '/api/admin/certificates') return jsonResponse(mockCertificates);
+      if (url === '/api/admin/certificates/presets') return jsonResponse(mockPresets);
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin/certificates');
+    fireEvent.click(await screen.findByRole('button', { name: /new certificate/i }));
+    await screen.findByRole('heading', { name: /certificate blueprint wizard/i });
+
+    fireEvent.click(screen.getByRole('button', { name: /template/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /four_skill/i }));
+
+    // The preset's own rule is `avg_half_step`; the control must show it, not render empty.
+    const ruleTrigger = screen.getByRole('button', { name: /score aggregation rule/i });
+    expect(within(ruleTrigger).getByText(/average, rounded to nearest 0\.5/i)).toBeInTheDocument();
+  });
+
+  it('derives default bands that tile the total range for both rules and 2/4 skills (#356)', () => {
+    // The validator checks exactly this: contiguous, no gap at either end, no overlap.
+    const assertTiles = (rule: string, skillCount: number, min: number, max: number) => {
+      const bands = deriveDefaultBands(rule, skillCount, min, max);
+      const expectedMax = rule === 'sum' ? max * skillCount : max;
+      const expectedMin = rule === 'sum' ? min * skillCount : min;
+
+      expect(bands[0].minTotal).toBeLessThanOrEqual(expectedMin);
+      expect(bands[bands.length - 1].maxTotal).toBeGreaterThanOrEqual(expectedMax);
+      for (let i = 1; i < bands.length; i++) {
+        expect(bands[i].minTotal).toBe(bands[i - 1].maxTotal + 1);
+      }
+      expect(bands.length).toBe(4);
+    };
+
+    assertTiles('sum', 2, 0, 100);
+    assertTiles('sum', 4, 0, 100);
+    assertTiles('avg_half_step', 2, 0, 100);
+    assertTiles('avg_whole', 4, 0, 100);
+    // A sum over two skills reaches 200, which the old hardcoded 0-100 bands never covered.
+    expect(deriveDefaultBands('sum', 2, 0, 100).at(-1)!.maxTotal).toBe(200);
+
+    // Pinned because CertificateWizardValidationTests.DerivedBands posts these same numbers
+    // through the real validator; if this algorithm changes, that test's shape drifts too.
+    expect(deriveDefaultBands('sum', 2, 0, 100).map((b) => [b.minTotal, b.maxTotal])).toEqual([
+      [0, 50],
+      [51, 101],
+      [102, 152],
+      [153, 200],
+    ]);
+    expect(deriveDefaultBands('avg_half_step', 4, 0, 100).map((b) => [b.minTotal, b.maxTotal])).toEqual([
+      [0, 25],
+      [26, 51],
+      [52, 77],
+      [78, 100],
+    ]);
   });
 
   it('binds backend RFC 7807 field errors to HeroUI FieldError controls in the certificate wizard', async () => {

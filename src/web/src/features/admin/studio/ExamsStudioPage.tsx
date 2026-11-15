@@ -45,6 +45,7 @@ import {
   formatQuestionTypeLabel,
 } from './studioLabels';
 import type {
+  AdminCertificateSummaryDto,
   AdminExamListItemDto,
   AdminExamDetailDto,
   ExamAuditResultDto,
@@ -53,9 +54,21 @@ import type {
   CreateAdminExamRequest,
 } from './types';
 
+// The only purposes CK_Exams_Purpose accepts. Every purpose control draws from this list so the
+// filter, the metadata editor and the create modal can never drift apart again (#357).
+const EXAM_PURPOSES = [
+  { id: 'mock', label: 'Mock exam' },
+  { id: 'placement', label: 'Placement test' },
+  { id: 'speaking_practice', label: 'Speaking practice' },
+  { id: 'writing_practice', label: 'Writing practice' },
+] as const;
+
 export function ExamsStudioPage() {
   const { user } = useAuth();
   const isCatalogManager = canManageCatalog(user);
+
+  // Certificate options for the create modal
+  const [certificates, setCertificates] = useState<AdminCertificateSummaryDto[]>([]);
 
   // Exam list state
   const [exams, setExams] = useState<AdminExamListItemDto[]>([]);
@@ -72,10 +85,10 @@ export function ExamsStudioPage() {
 
   // New Exam Modal
   const [isNewExamOpen, setIsNewExamOpen] = useState(false);
-  const [newCertId, setNewCertId] = useState<number>(1);
+  const [newCertId, setNewCertId] = useState<string>('');
   const [newName, setNewName] = useState('');
   const [newDuration, setNewDuration] = useState<number>(120);
-  const [newPurpose, setNewPurpose] = useState('full_mock');
+  const [newPurpose, setNewPurpose] = useState('mock');
   const [newDescription, setNewDescription] = useState('');
   const [isCreatingExam, setIsCreatingExam] = useState(false);
   const [newExamError, setNewExamError] = useState<string | null>(null);
@@ -84,7 +97,7 @@ export function ExamsStudioPage() {
   // Edit Metadata state
   const [editName, setEditName] = useState('');
   const [editDuration, setEditDuration] = useState<number>(120);
-  const [editPurpose, setEditPurpose] = useState('full_mock');
+  const [editPurpose, setEditPurpose] = useState('mock');
   const [editDescription, setEditDescription] = useState('');
   const [editSourceName, setEditSourceName] = useState('');
   const [editInternalNote, setEditInternalNote] = useState('');
@@ -125,6 +138,20 @@ export function ExamsStudioPage() {
     if (!isCatalogManager) return;
     loadExamList();
   }, [isCatalogManager, examSearch, examStatusFilter, examPurposeFilter]);
+
+  // Load Certificate options for the create modal
+  useEffect(() => {
+    if (!isCatalogManager) return;
+    loadCertificates();
+  }, [isCatalogManager]);
+
+  const loadCertificates = async () => {
+    try {
+      setCertificates(await studioApi.getCertificates());
+    } catch {
+      // The modal's Certificate selector stays empty; the create button refuses to submit.
+    }
+  };
 
   const loadExamList = async () => {
     setIsLoadingExams(true);
@@ -206,16 +233,24 @@ export function ExamsStudioPage() {
   const handleCreateExam = async () => {
     setNewExamError(null);
     setNewExamFieldErrors({});
+    if (!newCertId) {
+      setNewExamFieldErrors({ certId: 'Choose the Certificate this exam belongs to.' });
+      return;
+    }
     setIsCreatingExam(true);
     try {
       const res = await studioApi.createExam({
-        certId: newCertId,
+        certId: Number(newCertId),
         name: newName.trim(),
         durationMinutes: newDuration,
         purpose: newPurpose,
         description: newDescription.trim() || null,
       });
       setIsNewExamOpen(false);
+      setNewCertId('');
+      setNewName('');
+      setNewPurpose('mock');
+      setNewDescription('');
       loadExamList();
       setSelectedExamId(res.examId);
     } catch (err: unknown) {
@@ -464,22 +499,12 @@ export function ExamsStudioPage() {
                     All purposes
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
-                  <ListBox.Item id="full_mock" textValue="Full mock exam">
-                    Full mock exam
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
-                  <ListBox.Item id="mini_mock" textValue="Mini mock exam">
-                    Mini mock exam
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
-                  <ListBox.Item id="placement" textValue="Placement test">
-                    Placement test
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
-                  <ListBox.Item id="diagnostic" textValue="Diagnostic">
-                    Diagnostic
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
+                  {EXAM_PURPOSES.map((p) => (
+                    <ListBox.Item key={p.id} id={p.id} textValue={p.label}>
+                      {p.label}
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
                 </ListBox>
               </Select.Popover>
             </Select>
@@ -710,26 +735,12 @@ export function ExamsStudioPage() {
                         </Select.Trigger>
                         <Select.Popover>
                           <ListBox>
-                            <ListBox.Item id="full_mock" textValue="Full mock exam">
-                              Full mock exam
-                              <ListBox.ItemIndicator />
-                            </ListBox.Item>
-                            <ListBox.Item id="mini_mock" textValue="Mini mock exam">
-                              Mini mock exam
-                              <ListBox.ItemIndicator />
-                            </ListBox.Item>
-                            <ListBox.Item id="placement" textValue="Placement test">
-                              Placement test
-                              <ListBox.ItemIndicator />
-                            </ListBox.Item>
-                            <ListBox.Item id="diagnostic" textValue="Diagnostic">
-                              Diagnostic
-                              <ListBox.ItemIndicator />
-                            </ListBox.Item>
-                            <ListBox.Item id="practice" textValue="Practice drill">
-                              Practice drill
-                              <ListBox.ItemIndicator />
-                            </ListBox.Item>
+                            {EXAM_PURPOSES.map((p) => (
+                              <ListBox.Item key={p.id} id={p.id} textValue={p.label}>
+                                {p.label}
+                                <ListBox.ItemIndicator />
+                              </ListBox.Item>
+                            ))}
                           </ListBox>
                         </Select.Popover>
                       </Select>
@@ -1211,6 +1222,42 @@ export function ExamsStudioPage() {
               )}
 
               <Form validationBehavior="aria" className="space-y-4">
+                <Select
+                  isRequired
+                  aria-label="Certificate"
+                  className="w-full"
+                  placeholder="Choose a certificate"
+                  value={newCertId}
+                  onChange={(key) => {
+                    setNewCertId(key == null ? '' : String(key));
+                    setNewExamFieldErrors((prev) => ({ ...prev, certId: '' }));
+                  }}
+                  isInvalid={Boolean(newExamFieldErrors.certId)}
+                >
+                  <Label className="text-xs font-semibold text-foreground">Certificate</Label>
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      {certificates.map((cert) => (
+                        <ListBox.Item
+                          key={cert.certId}
+                          id={String(cert.certId)}
+                          textValue={`${cert.code} — ${cert.name}`}
+                        >
+                          {cert.code} — {cert.name}
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                      ))}
+                    </ListBox>
+                  </Select.Popover>
+                  {newExamFieldErrors.certId && (
+                    <FieldError>{newExamFieldErrors.certId}</FieldError>
+                  )}
+                </Select>
+
                 <TextField
                   isRequired
                   name="name"
@@ -1266,22 +1313,12 @@ export function ExamsStudioPage() {
                     </Select.Trigger>
                     <Select.Popover>
                       <ListBox>
-                        <ListBox.Item id="full_mock" textValue="Full mock exam">
-                          Full mock exam
-                          <ListBox.ItemIndicator />
-                        </ListBox.Item>
-                        <ListBox.Item id="mini_mock" textValue="Mini mock exam">
-                          Mini mock exam
-                          <ListBox.ItemIndicator />
-                        </ListBox.Item>
-                        <ListBox.Item id="placement" textValue="Placement test">
-                          Placement test
-                          <ListBox.ItemIndicator />
-                        </ListBox.Item>
-                        <ListBox.Item id="diagnostic" textValue="Diagnostic">
-                          Diagnostic
-                          <ListBox.ItemIndicator />
-                        </ListBox.Item>
+                        {EXAM_PURPOSES.map((p) => (
+                          <ListBox.Item key={p.id} id={p.id} textValue={p.label}>
+                            {p.label}
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        ))}
                       </ListBox>
                     </Select.Popover>
                   </Select>
