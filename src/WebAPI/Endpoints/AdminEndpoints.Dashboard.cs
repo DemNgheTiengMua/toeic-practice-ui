@@ -11,9 +11,14 @@ public static partial class AdminEndpoints
     private static void MapDashboard(RouteGroupBuilder admin)
     {
 
-        admin.MapGet("/dashboard", async (IAdminDashboardService dashboard, CancellationToken cancellationToken) =>
+        // #351: `month` is any day of the month to report on; its day is ignored. Absent, it means the
+        // month the clock is in, so every caller that predates the parameter reads exactly what it did.
+        admin.MapGet("/dashboard", async (
+            DateOnly? month,
+            IAdminDashboardService dashboard,
+            CancellationToken cancellationToken) =>
         {
-            var metrics = await dashboard.GetDashboardMetricsAsync(cancellationToken);
+            var metrics = await dashboard.GetDashboardMetricsAsync(month, cancellationToken);
             return Results.Ok(metrics);
         });
 
