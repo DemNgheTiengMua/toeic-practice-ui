@@ -9,6 +9,7 @@ import {
   formatComplaintTypeLabel,
   formatComplaintStatusLabel,
   formatMentorSlotStatusLabel,
+  formatMentorPayoutOutcomeLabel,
   formatWeekdayLabel,
   validateWeeklySlots,
   getDefaultUtc7MonthRange,
@@ -80,6 +81,16 @@ describe('opsHelpers - sentence-case label mappers', () => {
 
     expect(formatWeekdayLabel(1)).toBe('Thứ 2 (Monday)');
     expect(formatWeekdayLabel(7)).toBe('Chủ Nhật (Sunday)');
+  });
+
+  // #352: a cancelled booking was never delivered; an adjusted session was delivered and then
+  // compensated. They must not read the same on the payout screen.
+  it('distinguishes a cancelled booking from an adjusted session', () => {
+    expect(formatMentorPayoutOutcomeLabel('cancelled')).toBe('Cancelled, never delivered');
+    expect(formatMentorPayoutOutcomeLabel('adjusted')).toBe('Adjusted');
+    expect(formatMentorPayoutOutcomeLabel('paid')).toBe('Paid');
+    expect(formatMentorPayoutOutcomeLabel('cancelled'))
+      .not.toBe(formatMentorPayoutOutcomeLabel('adjusted'));
   });
 });
 

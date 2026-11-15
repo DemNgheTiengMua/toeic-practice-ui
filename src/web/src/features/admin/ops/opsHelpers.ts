@@ -173,6 +173,25 @@ export function formatMentorSlotStatusLabel(status?: SlotStatusDto | string | nu
   }
 }
 
+/**
+ * #352: how a booking stood for payout. A cancelled booking was never delivered; an adjusted session
+ * was delivered and then compensated. The two must not read the same.
+ */
+export type MentorPayoutOutcome = 'paid' | 'adjusted' | 'cancelled';
+
+export function formatMentorPayoutOutcomeLabel(outcome?: MentorPayoutOutcome | string | null): string {
+  switch (outcome) {
+    case 'paid':
+      return 'Paid';
+    case 'adjusted':
+      return 'Adjusted';
+    case 'cancelled':
+      return 'Cancelled, never delivered';
+    default:
+      return 'Not reported';
+  }
+}
+
 // ============================================================================
 // Semantic Chip Status Colors (DESIGN.md hierarchy)
 // ============================================================================

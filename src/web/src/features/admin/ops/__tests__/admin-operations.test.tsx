@@ -147,6 +147,8 @@ const SAMPLE_MENTORS: AdminMentorListItemDto[] = [
     completedSessionsCount: 4,
     totalEarnedCredits: 20,
     totalEarnedVnd: 400000,
+    adjustedSessionsCount: 1,
+    adjustedCredits: 5,
   },
   {
     mentorId: 11,
@@ -174,6 +176,8 @@ const SAMPLE_MENTORS: AdminMentorListItemDto[] = [
     completedSessionsCount: 2,
     totalEarnedCredits: 6,
     totalEarnedVnd: 120000,
+    adjustedSessionsCount: 0,
+    adjustedCredits: 0,
   },
 ];
 
@@ -557,6 +561,9 @@ describe('AdminOperationsPage (#304)', () => {
     expect(screen.getByText(/mentor payouts & completed sessions/i)).toBeInTheDocument();
     expect(await screen.findByText('Nguyễn Văn A')).toBeInTheDocument();
     expect(screen.getAllByText(/520\.000\s*₫/).length).toBeGreaterThan(0);
+
+    // #352: a mentor whose payout was docked shows the adjustment beside the totals.
+    expect(screen.getByText(/1 Adjusted · 5 credits deducted/i)).toBeInTheDocument();
 
     const exportCsvBtn = screen.getByRole('button', { name: /export payout csv/i });
     fireEvent.click(exportCsvBtn);
