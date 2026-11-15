@@ -23,6 +23,16 @@ public static partial class MentorEndpoints
             return Results.Ok(options);
         });
 
+        admin.MapGet("/bookings", async (
+            int? mentorId,
+            string? status,
+            IMentorService mentorService,
+            CancellationToken cancellationToken) =>
+        {
+            var bookings = await mentorService.GetAdminBookingsAsync(mentorId, status, cancellationToken);
+            return Results.Ok(bookings);
+        });
+
         admin.MapGet("/{mentorId:int}", async (int mentorId, IMentorService mentorService, CancellationToken cancellationToken) =>
         {
             try

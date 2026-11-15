@@ -69,4 +69,16 @@ public sealed partial class CompanionApiClient
 
     public Task<AdminMentorPayoutsReportDto> GetAdminMentorPayoutsAsync(DateOnly? from = null, DateOnly? to = null, CancellationToken cancellationToken = default) =>
         GetAdminMentorPayoutsAsync(from, to, string.Empty, cancellationToken);
+
+    public Task<IReadOnlyList<AdminMentorBookingDto>> GetAdminMentorBookingsAsync(int? mentorId, string? status, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var query = new List<string>();
+        if (mentorId.HasValue) query.Add($"mentorId={mentorId.Value}");
+        if (!string.IsNullOrWhiteSpace(status)) query.Add($"status={status}");
+        var uri = "api/admin/mentors/bookings" + (query.Count > 0 ? "?" + string.Join("&", query) : "");
+        return GetAuthorizedAsync<IReadOnlyList<AdminMentorBookingDto>>(uri, bearerToken, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<AdminMentorBookingDto>> GetAdminMentorBookingsAsync(int? mentorId = null, string? status = null, CancellationToken cancellationToken = default) =>
+        GetAdminMentorBookingsAsync(mentorId, status, string.Empty, cancellationToken);
 }
