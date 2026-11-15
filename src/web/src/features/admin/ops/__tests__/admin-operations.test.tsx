@@ -64,11 +64,23 @@ const SAMPLE_COMPLAINTS_SUMMARY: AdminComplaintsSummaryDto = {
       createdAt: '2026-11-07T10:00:00Z',
       resolvedAt: '2026-11-07T15:00:00Z',
     },
+    {
+      complaintId: 303,
+      userId: 17,
+      learnerName: 'Vũ Thị G',
+      learnerEmail: 'learner17@test.local',
+      type: 'payment_issue',
+      subjectType: 'Order',
+      subjectId: 77,
+      subjectSummary: 'Order DH-ABC123',
+      status: 'open',
+      createdAt: '2026-11-09T09:00:00Z',
+    },
   ],
-  totalCount: 2,
+  totalCount: 3,
   page: 1,
   pageSize: 25,
-  pendingCount: 1,
+  pendingCount: 2,
   resolvedCount: 1,
   oldestPendingCreatedAt: '2026-11-08T09:00:00Z',
   oldestPendingId: 301,
@@ -88,6 +100,25 @@ const SAMPLE_COMPLAINT_DETAIL_OPEN: AdminComplaintDetailDto = {
   subjectSummary: 'Speaking 1-on-1 with Mentor John',
   subjectDetails: 'Booking ID #55 scheduled on 2026-11-08 08:30 UTC',
   createdAt: '2026-11-08T09:00:00Z',
+  creditsSpent: 1,
+  moneyPaid: null,
+  impliedRefundMethod: 'credit',
+};
+
+const SAMPLE_COMPLAINT_DETAIL_ORDER: AdminComplaintDetailDto = {  complaintId: 303,
+  userId: 17,
+  learnerName: 'Vũ Thị G',
+  learnerEmail: 'learner17@test.local',
+  type: 'payment_issue',
+  reason: 'The bank statement shows two deductions for one order.',
+  status: 'open',
+  subjectType: 'Order',
+  subjectId: 77,
+  subjectSummary: 'Order DH-ABC123',
+  createdAt: '2026-11-09T09:00:00Z',
+  creditsSpent: 0,
+  moneyPaid: 199000,
+  impliedRefundMethod: 'money',
 };
 
 const SAMPLE_COMPLAINT_DETAIL_RESOLVED: AdminComplaintDetailDto = {
@@ -305,6 +336,9 @@ describe('AdminOperationsPage (#304)', () => {
       if (url.startsWith('/api/admin/complaints/302')) {
         return jsonResponse(SAMPLE_COMPLAINT_DETAIL_RESOLVED);
       }
+      if (url.startsWith('/api/admin/complaints/303')) {
+        return jsonResponse(SAMPLE_COMPLAINT_DETAIL_ORDER);
+      }
       if (url.startsWith('/api/admin/complaints')) {
         return jsonResponse(SAMPLE_COMPLAINTS_SUMMARY);
       }
@@ -460,6 +494,43 @@ describe('AdminOperationsPage (#304)', () => {
         }),
       );
     });
+  });
+
+  it('shows the credits spent on a complaint subject, read from the ledger (#347)', async () => {
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đặng Thị E');
+
+    // Complaint 301 is on a booking charged one credit.
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0]);
+
+    expect(await screen.findByText(/complaint details — #301/i)).toBeInTheDocument();
+    expect(await screen.findByText(/1 credit\b/i)).toBeInTheDocument();
+  });
+
+  it('shows the money paid for an order subject, not a credit figure (#347)', async () => {
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Vũ Thị G');
+
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[2]);
+
+    expect(await screen.findByText(/complaint details — #303/i)).toBeInTheDocument();
+    expect(await screen.findByText(/199\.000\s*₫/)).toBeInTheDocument();
   });
 
   it('manages human mentors with fixed MeetLink, credit pricing, weekly availability schedule, and payout CSV export', async () => {

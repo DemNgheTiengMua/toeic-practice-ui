@@ -1947,6 +1947,12 @@ export interface AdminComplaintDetailDto {
   resolvedAt?: string | null;
   resolvedByGrantTxnId?: number | null;
   grantedCredits?: number | null;
+  /** #347: negative credit-ledger deltas attributable to the subject. */
+  creditsSpent?: number;
+  /** #347: the order's amount, and only when the subject is an order. */
+  moneyPaid?: number | null;
+  /** #347: implied by the subject; null when the complaint carries none. */
+  impliedRefundMethod?: RefundMethodDto | null;
 }
 
 export interface AdminComplaintsSummaryDto {

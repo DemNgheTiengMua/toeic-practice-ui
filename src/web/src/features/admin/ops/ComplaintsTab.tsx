@@ -27,6 +27,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { OpsPagination } from './OpsPagination';
+import { formatVnd } from '../../../lib/security';
 import {
   api,
   type AdminComplaintListItemDto,
@@ -416,6 +417,29 @@ export function ComplaintsTab() {
                             {complaintDetail.subjectDetails}
                           </p>
                         )}
+                        {/* #347: what the learner actually spent - read from the ledger, never guessed. */}
+                        <p className="text-xs text-muted mt-1">
+                          {(complaintDetail.creditsSpent ?? 0) > 0 ? (
+                            <>
+                              Learner spent{' '}
+                              <span className="font-mono-tabular text-foreground">
+                                {complaintDetail.creditsSpent} credit
+                                {complaintDetail.creditsSpent === 1 ? '' : 's'}
+                              </span>
+                              {complaintDetail.moneyPaid != null &&
+                                ` (${formatVnd(complaintDetail.moneyPaid)} paid)`}
+                            </>
+                          ) : complaintDetail.moneyPaid != null ? (
+                            <>
+                              Learner paid{' '}
+                              <span className="font-mono-tabular text-foreground">
+                                {formatVnd(complaintDetail.moneyPaid)}
+                              </span>
+                            </>
+                          ) : (
+                            'Nothing to refund on this subject.'
+                          )}
+                        </p>
                       </div>
 
                       <div>
