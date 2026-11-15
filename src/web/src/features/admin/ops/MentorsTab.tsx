@@ -82,6 +82,7 @@ export function MentorsTab() {
   const [payoutTo, setPayoutTo] = useState(defaultMonthRange.to);
   const [payoutError, setPayoutError] = useState<string | null>(null);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [isExportingTotalsCsv, setIsExportingTotalsCsv] = useState(false);
 
   const { data: mentors, isLoading, error } = useQuery({
     queryKey: ['admin-mentors'],
@@ -330,8 +331,30 @@ export function MentorsTab() {
     }
   }
 
-  const selectedCert = certOptions?.find((c) => c.certId === selectedCertId);
-  const availableSkills = selectedCert?.skills || [];
+  // #353: the totals file, one row per mentor. Deliberately carries no bank details and no "paid"
+  // marker: accounting keeps both outside the product, so the file must not imply either.
+  async function handleExportPayoutTotalsCsv() {
+    const val = validateCsvExportDates(payoutFrom || undefined, payoutTo || undefined);
+    if (!val.valid) {
+      setPayoutError(val.error || 'Invalid date range.');
+      return;
+    }
+    try {
+      setIsExportingTotalsCsv(true);
+      setPayoutError(null);
+      const { blob, filename } = await api.admin.exportMentorPayoutTotalsCsv(
+        payoutFrom || undefined,
+        payoutTo || undefined,
+      );
+      triggerBlobDownload(blob, filename);
+    } catch (err: any) {
+      setPayoutError(err?.message || 'Failed to export mentor payout totals CSV.');
+    } finally {
+      setIsExportingTotalsCsv(false);
+    }
+  }
+
+  const selectedCert = certOptions?.find((c) => c.certId === selectedCertId);  const availableSkills = selectedCert?.skills || [];
   const parsedFormCredits = Math.max(0, parseInt(priceCredits, 10) || 0);
   const liveVndEquivalent = creditsToVnd(parsedFormCredits);
 
@@ -538,8 +561,23 @@ export function MentorsTab() {
                 <Download className="h-4 w-4 mr-1.5" />
                 {isExportingCsv ? 'Exporting...' : 'Export payout CSV'}
               </Button>
+
+              <Button
+                size="sm"
+                variant="secondary"
+                isDisabled={isExportingTotalsCsv}
+                onPress={() => void handleExportPayoutTotalsCsv()}
+              >
+                <Download className="h-4 w-4 mr-1.5" />
+                {isExportingTotalsCsv ? 'Exporting...' : 'Export totals CSV'}
+              </Button>
             </div>
           </div>
+
+          <p className="text-xs text-muted">
+            Totals carry no bank details and no record of transfers already made — accounting keeps both
+            outside the product.
+          </p>
 
           {payoutError && <Alert status="danger">{payoutError}</Alert>}
 

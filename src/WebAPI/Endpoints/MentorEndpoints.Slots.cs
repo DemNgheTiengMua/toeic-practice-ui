@@ -91,6 +91,37 @@ public static partial class MentorEndpoints
             }
         });
 
+        // #353: the second file. One row per mentor, one transfer per row. Kept separate from the
+        // per-session export because mixing two row shapes in one CSV breaks both Excel and importers.
+        admin.MapGet("/payouts/totals/export", async (
+            DateOnly? from,
+            DateOnly? to,
+            IMentorService mentorService,
+            TimeProvider clock,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                // No range means the current month, so an accidental unbounded export cannot happen.
+                var now = ReportingPeriod.LocalInstant(clock.GetUtcNow());
+                var today = DateOnly.FromDateTime(now.DateTime);
+                var toDay = to ?? today;
+                var fromDay = from ?? new DateOnly(toDay.Year, toDay.Month, 1);
+
+                var rows = await mentorService.GetMentorPayoutTotalsAsync(fromDay, toDay, cancellationToken);
+                var bytes = MentorPayoutTotalsCsv.Format(rows, now);
+
+                return Results.File(
+                    bytes,
+                    MentorPayoutTotalsCsv.ContentType,
+                    $"mentor-payout-totals-{fromDay:yyyy-MM-dd}-to-{toDay:yyyy-MM-dd}.csv");
+            }
+            catch (ValidationException ex)
+            {
+                return ValidationProblem(ex);
+            }
+        });
+
         admin.MapGet("/payouts/export", async (
             DateOnly? from,
             DateOnly? to,

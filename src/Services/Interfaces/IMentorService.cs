@@ -24,5 +24,6 @@ public interface IMentorService
     Task<IReadOnlyList<MentorWeeklySlotDto>> ReplaceMentorWeeklySlotsAsync(int mentorId, IReadOnlyList<MentorWeeklySlotInputDto> weeklySlots, CancellationToken cancellationToken = default);
     Task<AdminMentorPayoutsReportDto> GetAdminMentorPayoutsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MentorPayoutExportRow>> GetMentorPayoutExportRowsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<MentorPayoutTotalsRow>> GetMentorPayoutTotalsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MentorCertificateOptionDto>> GetCertificateOptionsAsync(CancellationToken cancellationToken = default);
 }

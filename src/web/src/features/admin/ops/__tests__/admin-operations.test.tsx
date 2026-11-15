@@ -381,6 +381,16 @@ describe('AdminOperationsPage (#304)', () => {
       if (url.startsWith('/api/admin/mentors/options')) {
         return jsonResponse(SAMPLE_MENTOR_OPTIONS);
       }
+      if (url.startsWith('/api/admin/mentors/payouts/totals/export')) {
+        return new Response('\uFEFF"Mentor ID","Mentor name"\r\n"10","Nguyễn Văn A"\r\n', {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition':
+              'attachment; filename="mentor-payout-totals-2026-11-01-to-2026-11-14.csv"',
+          },
+        });
+      }
       if (url.startsWith('/api/admin/mentors/payouts/export')) {
         return new Response('\uFEFF"Booking ID","Mentor name"\r\n"501","Thầy John Smith"\r\n', {
           status: 200,
@@ -825,6 +835,17 @@ describe('AdminOperationsPage (#304)', () => {
         expect.anything(),
       );
       expect(clickSpy).toHaveBeenCalled();
+    });
+
+    // #353: the totals file is its own export, one row per mentor, so a transfer needs no arithmetic.
+    const exportTotalsBtn = screen.getByRole('button', { name: /export totals csv/i });
+    fireEvent.click(exportTotalsBtn);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/admin/mentors/payouts/totals/export'),
+        expect.anything(),
+      );
     });
   }, 15_000);
 

@@ -981,6 +981,150 @@ public sealed class MentorServiceTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task GetMentorPayoutTotalsAsync_ReconcilesWithTheSessionExportRows_ForTheSamePeriod()
+    {
+        // #353: two files, one number. An accountant transferring from the totals file and auditing
+        // against the session file must find the same figures, so the two are asserted against each
+        // other rather than each against a hand-written constant.
+        var clock = new ManualTimeProvider(new DateTimeOffset(2026, 11, 14, 12, 0, 0, TimeSpan.Zero));
+        var service = CreateService(clock);
+        var (certId, skillId, certCode) = await SeedCertAndSkillAsync();
+        var learnerUserId = await SeedLearnerWithCreditsAsync(startingCredits: 20, activeCertCode: certCode);
+
+        var mentorA = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            $"Dr. Totals A {Guid.NewGuid():N}",
+            "Bio",
+            certId,
+            skillId,
+            "https://meet.google.com/tot-als-a001",
+            2,
+            "Headline",
+            "Expertise",
+            60,
+            true));
+
+        var mentorB = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            $"Dr. Totals B {Guid.NewGuid():N}",
+            "Bio",
+            certId,
+            skillId,
+            "https://meet.google.com/tot-als-b001",
+            3,
+            "Headline",
+            "Expertise",
+            60,
+            true));
+
+        // Mentor A: two paid sessions (2 + 2 credits) and one compensated (2 credits, docked).
+        // Mentor B: one paid session (3 credits) and one cancelled booking in the window.
+        await database.SqlAsync($"""
+            DECLARE @adminId INT = (SELECT TOP 1 UserId FROM Users WHERE RoleId = (SELECT RoleId FROM Roles WHERE Code = 'admin'));
+
+            INSERT INTO MentorSlots (MentorId, StartAt, EndAt, Status)
+            VALUES ({mentorA.MentorId}, '2026-11-10T02:00:00Z', '2026-11-10T03:00:00Z', 'booked');
+            DECLARE @a1 INT = SCOPE_IDENTITY();
+            INSERT INTO Bookings (UserId, MentorId, SlotId, Status, MeetLink, PriceCredits, CreatedAt)
+            VALUES ({learnerUserId}, {mentorA.MentorId}, @a1, 'confirmed', N'https://meet.google.com/tot-als-a001', 2, '2026-11-09T02:00:00Z');
+
+            INSERT INTO MentorSlots (MentorId, StartAt, EndAt, Status)
+            VALUES ({mentorA.MentorId}, '2026-11-11T02:00:00Z', '2026-11-11T03:00:00Z', 'booked');
+            DECLARE @a2 INT = SCOPE_IDENTITY();
+            INSERT INTO Bookings (UserId, MentorId, SlotId, Status, MeetLink, PriceCredits, CreatedAt)
+            VALUES ({learnerUserId}, {mentorA.MentorId}, @a2, 'confirmed', N'https://meet.google.com/tot-als-a001', 2, '2026-11-10T02:00:00Z');
+
+            -- Compensated: a resolved mentor_quality complaint with an approved credit refund.
+            INSERT INTO MentorSlots (MentorId, StartAt, EndAt, Status)
+            VALUES ({mentorA.MentorId}, '2026-11-12T02:00:00Z', '2026-11-12T03:00:00Z', 'booked');
+            DECLARE @a3 INT = SCOPE_IDENTITY();
+            INSERT INTO Bookings (UserId, MentorId, SlotId, Status, MeetLink, PriceCredits, CreatedAt)
+            VALUES ({learnerUserId}, {mentorA.MentorId}, @a3, 'confirmed', N'https://meet.google.com/tot-als-a001', 2, '2026-11-11T02:00:00Z');
+            DECLARE @ba3 INT = SCOPE_IDENTITY();
+
+            INSERT INTO Complaints (UserId, Type, Status, Reason, BookingId, ResolvedByUserId, Resolution, CreatedAt, ResolvedAt)
+            VALUES ({learnerUserId}, 'mentor_quality', 'resolved', N'Rushed', @ba3, @adminId, N'Credits returned', '2026-11-12T04:00:00Z', '2026-11-12T05:00:00Z');
+            DECLARE @ca3 INT = SCOPE_IDENTITY();
+
+            INSERT INTO CreditTransactions (UserId, Reason, Delta, AdminUserId, Note)
+            VALUES ({learnerUserId}, 'refund_credit', 2, @adminId, N'Quality compensation');
+            DECLARE @refundTxn INT = SCOPE_IDENTITY();
+
+            INSERT INTO Refunds (UserId, ComplaintId, Method, Reason, Status, CreditCount, RequestedByUserId, DecidedByUserId, DecidedAt, CreditTxnId, CreatedAt)
+            VALUES ({learnerUserId}, @ca3, 'credit', N'Rushed', 'approved', 2, @adminId, @adminId, '2026-11-12T05:00:00Z', @refundTxn, '2026-11-12T04:30:00Z');
+
+            -- Mentor B: one paid session.
+            INSERT INTO MentorSlots (MentorId, StartAt, EndAt, Status)
+            VALUES ({mentorB.MentorId}, '2026-11-13T02:00:00Z', '2026-11-13T03:00:00Z', 'booked');
+            DECLARE @b1 INT = SCOPE_IDENTITY();
+            INSERT INTO Bookings (UserId, MentorId, SlotId, Status, MeetLink, PriceCredits, CreatedAt)
+            VALUES ({learnerUserId}, {mentorB.MentorId}, @b1, 'confirmed', N'https://meet.google.com/tot-als-b001', 3, '2026-11-12T02:00:00Z');
+
+            -- Mentor B: a cancelled booking in the window, which was never delivered.
+            INSERT INTO MentorSlots (MentorId, StartAt, EndAt, Status)
+            VALUES ({mentorB.MentorId}, '2026-11-09T02:00:00Z', '2026-11-09T03:00:00Z', 'open');
+            DECLARE @b2 INT = SCOPE_IDENTITY();
+            INSERT INTO Bookings (UserId, MentorId, SlotId, Status, MeetLink, PriceCredits, CancelledAt, CreatedAt)
+            VALUES ({learnerUserId}, {mentorB.MentorId}, @b2, 'cancelled', N'https://meet.google.com/tot-als-b001', 3, '2026-11-08T02:00:00Z', '2026-11-07T02:00:00Z');
+            """);
+
+        var from = new DateOnly(2026, 11, 1);
+        var to = new DateOnly(2026, 11, 14);
+
+        var sessionRows = await service.GetMentorPayoutExportRowsAsync(from, to);
+        var totals = await service.GetMentorPayoutTotalsAsync(from, to);
+
+        // Every mentor with a delivered session appears exactly once, and no mentor without one does.
+        var expected = sessionRows
+            .GroupBy(r => r.MentorId)
+            .OrderBy(g => g.Key)
+            .ToList();
+        Assert.Equal(expected.Select(g => g.Key), totals.Select(t => t.MentorId).OrderBy(id => id));
+
+        foreach (var group in expected)
+        {
+            var total = Assert.Single(totals, t => t.MentorId == group.Key);
+            Assert.Equal(group.Count(), total.SessionCount);
+            Assert.Equal(group.Sum(r => r.PriceCredits), total.TotalCredits);
+            Assert.Equal(group.Sum(r => r.AmountVnd), total.TotalAmountVnd);
+            Assert.Equal(group.First().MentorName, total.MentorName);
+            Assert.Equal(group.First().CertCode, total.CertCode);
+        }
+
+        // The compensated session is docked in both views, so neither counts it.
+        var mentorATotal = Assert.Single(totals, t => t.MentorId == mentorA.MentorId);
+        Assert.Equal(2, mentorATotal.SessionCount);
+        Assert.Equal(4, mentorATotal.TotalCredits);
+        Assert.Equal(80_000m, mentorATotal.TotalAmountVnd);
+
+        var mentorBTotal = Assert.Single(totals, t => t.MentorId == mentorB.MentorId);
+        Assert.Equal(1, mentorBTotal.SessionCount);
+        Assert.Equal(3, mentorBTotal.TotalCredits);
+
+        // The file's own column totals equal the sums the per-session file implies.
+        Assert.Equal(sessionRows.Count, totals.Sum(t => t.SessionCount));
+        Assert.Equal(sessionRows.Sum(r => r.PriceCredits), totals.Sum(t => t.TotalCredits));
+        Assert.Equal(sessionRows.Sum(r => r.AmountVnd), totals.Sum(t => t.TotalAmountVnd));
+    }
+
+    [Fact]
+    public async Task GetMentorPayoutTotalsAsync_WithNoDeliveredSessions_ReturnsAnEmptyList_NotAnError()
+    {
+        var service = CreateService();
+
+        var totals = await service.GetMentorPayoutTotalsAsync(new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 14));
+
+        Assert.Empty(totals);
+    }
+
+    [Fact]
+    public async Task GetMentorPayoutTotalsAsync_RejectsAnInvertedRange_LikeTheSessionExport()
+    {
+        var service = CreateService();
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            service.GetMentorPayoutTotalsAsync(new DateOnly(2026, 11, 14), new DateOnly(2026, 11, 1)));
+    }
+
+    [Fact]
     public async Task RateBookingAsync_FinishedBooking_CreatesReview_AndValidatesRules()
     {
         var service = CreateService();
