@@ -81,8 +81,12 @@ public sealed partial class PlacementService(
         }
 
         // #311: Single Universal Placement Exam across the platform (preferred for active cert if present, otherwise universal).
+        // #369: the certificate named for an exam comes from the exam, never from the learner's
+        // active certificate - the Universal Placement Exam is hosted on one certificate and sat
+        // by learners of every certificate.
         var certExams = await db.Exams
             .AsNoTracking()
+            .Include(e => e.Cert)
             .Where(e => e.CertId == certId && e.Purpose == ExamPurpose.Placement.ToCode() && e.Status == ExamStatus.Published.ToCode() && !e.IsDeleted)
             .OrderBy(e => e.ExamId)
             .ToListAsync(cancellationToken);
@@ -91,6 +95,7 @@ public sealed partial class PlacementService(
             ? certExams
             : await db.Exams
                 .AsNoTracking()
+                .Include(e => e.Cert)
                 .Where(e => e.Purpose == ExamPurpose.Placement.ToCode() && e.Status == ExamStatus.Published.ToCode() && !e.IsDeleted)
                 .OrderByDescending(e => e.Name.Contains("Universal"))
                 .ThenByDescending(e => e.ExamId)
@@ -109,7 +114,7 @@ public sealed partial class PlacementService(
             items.Add(new PlacementCatalogItem(
                 exam.ExamId,
                 exam.CertId,
-                cert.Code,
+                exam.Cert.Code,
                 exam.Name,
                 exam.Description,
                 exam.DurationMinutes,
