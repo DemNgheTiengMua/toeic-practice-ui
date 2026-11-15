@@ -236,8 +236,8 @@ export function ComplaintsTab() {
                       Open
                       <ListBox.ItemIndicator />
                     </ListBox.Item>
-                    <ListBox.Item id="reviewing" textValue="Under review">
-                      Under review
+                    <ListBox.Item id="reviewing" textValue="Processing">
+                      Processing
                       <ListBox.ItemIndicator />
                     </ListBox.Item>
                     <ListBox.Item id="resolved" textValue="Resolved">
@@ -489,8 +489,8 @@ export function ComplaintsTab() {
                       <div className="p-4 rounded-md border border-border bg-surface flex flex-wrap items-center justify-between gap-3">
                         <div className="text-xs text-muted">
                           {complaintDetail.status === 'open'
-                            ? 'Mark as under review while investigating with mentor or checking grader logs.'
-                            : 'Currently under active investigation.'}
+                            ? 'Start processing while investigating with mentor or checking grader logs.'
+                            : 'Currently being processed.'}
                         </div>
 
                         <div className="flex gap-2">
@@ -506,7 +506,7 @@ export function ComplaintsTab() {
                                 })
                               }
                             >
-                              Mark as under review
+                              Start processing
                             </Button>
                           )}
 

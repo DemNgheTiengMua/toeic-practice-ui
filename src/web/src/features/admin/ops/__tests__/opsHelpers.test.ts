@@ -69,7 +69,7 @@ describe('opsHelpers - sentence-case label mappers', () => {
     expect(formatComplaintTypeLabel('payment_issue')).toBe('Payment issue');
 
     expect(formatComplaintStatusLabel('open')).toBe('Open');
-    expect(formatComplaintStatusLabel('reviewing')).toBe('Under review');
+    expect(formatComplaintStatusLabel('reviewing')).toBe('Processing');
     expect(formatComplaintStatusLabel('resolved')).toBe('Resolved');
   });
 

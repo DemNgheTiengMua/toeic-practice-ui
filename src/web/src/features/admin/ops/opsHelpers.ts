@@ -125,7 +125,8 @@ export function formatComplaintStatusLabel(status?: ComplaintStatusDto | string 
     case 'open':
       return 'Open';
     case 'reviewing':
-      return 'Under review';
+      // #348: label only - the stored value is still `reviewing`.
+      return 'Processing';
     case 'resolved':
       return 'Resolved';
     default:
