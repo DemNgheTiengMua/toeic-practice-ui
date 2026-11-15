@@ -194,6 +194,25 @@ export function PlacementRetakePage() {
         </div>
       </div>
 
+      {!preflight.examId && (
+        <Alert status="warning">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>No placement paper is published</Alert.Title>
+            <Alert.Description>
+              {preflight.certCode} has no published placement paper, so there is nothing to sit
+              right now. Your band and skill history are unchanged; a retake opens as soon as a
+              paper is published.
+            </Alert.Description>
+          </Alert.Content>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link to="/certificates" className={buttonVariants({ size: 'sm', variant: 'outline', className: 'no-underline' })}>
+              Browse certificates
+            </Link>
+          </div>
+        </Alert>
+      )}
+
       {!preflight.isStartable && preflight.cooldownUntil && (
         <Alert status="warning">
           <Alert.Indicator />
