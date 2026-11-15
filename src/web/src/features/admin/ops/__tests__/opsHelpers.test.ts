@@ -150,6 +150,16 @@ describe('opsHelpers - validation helpers', () => {
     expect(r4.errors).toEqual({});
   });
 
+  it('bounds the refund reason at the 400 characters the API accepts (#349)', () => {
+    const base = { userId: 10, method: 'credit' as const, creditCount: 2 };
+
+    expect(validateRefundRequest({ ...base, reason: 'a'.repeat(400) }).valid).toBe(true);
+
+    const tooLong = validateRefundRequest({ ...base, reason: 'a'.repeat(401) });
+    expect(tooLong.valid).toBe(false);
+    expect(tooLong.errors.reason).toContain('400');
+  });
+
   it('validates complaint resolve input and grant limits', () => {
     // Missing resolution or notes
     const c1 = validateComplaintResolve({

@@ -74,11 +74,42 @@ public sealed class AdminPaginationAndRefundValidationTests
         }
     }
 
+    [Fact]
+    public async Task Admin_orders_route_forwards_the_learner_filter_to_the_service()
+    {
+        // #349: the refund desk lists one learner's paid orders through this route, so `userId` has to
+        // survive binding and reach the service. A route that silently dropped it would answer with
+        // every learner's orders, which is how a refund gets recorded against a stranger.
+        var orders = new CapturingAdminOrderService();
+        var (client, app) = await AdminAppAsync(new CallTracker(), orders);
+        await using (app)
+        {
+            var response = await client.GetAsync("/api/admin/orders?userId=42&status=paid&page=1&pageSize=20");
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal(42, orders.LastUserId);
+            Assert.Equal("paid", orders.LastStatus);
+        }
+    }
+
+    [Fact]
+    public async Task Admin_orders_route_omits_the_learner_filter_when_it_is_absent()
+    {
+        var orders = new CapturingAdminOrderService();
+        var (client, app) = await AdminAppAsync(new CallTracker(), orders);
+        await using (app)
+        {
+            var response = await client.GetAsync("/api/admin/orders");
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Null(orders.LastUserId);
+        }
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public async Task Post_refund_rejects_empty_reason_with_400_and_field_error(string badReason)
-    {
+    public async Task Post_refund_rejects_empty_reason_with_400_and_field_error(string badReason)    {
         var tracker = new CallTracker();
         var (client, app) = await AdminAppAsync(tracker);
         await using (app)
@@ -160,7 +191,7 @@ public sealed class AdminPaginationAndRefundValidationTests
         }
     }
 
-    private static async Task<(HttpClient Client, WebApplication App)> AdminAppAsync(CallTracker tracker)
+    private static async Task<(HttpClient Client, WebApplication App)> AdminAppAsync(CallTracker tracker, IAdminOrderService? orders = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
@@ -168,7 +199,7 @@ public sealed class AdminPaginationAndRefundValidationTests
 
         builder.Services.AddSingleton(CreateTrackingStub<IAdminExamService>(tracker));
         builder.Services.AddSingleton(CreateTrackingStub<IQuestionImportService>(tracker));
-        builder.Services.AddSingleton(CreateTrackingStub<IAdminOrderService>(tracker));
+        builder.Services.AddSingleton(orders ?? CreateTrackingStub<IAdminOrderService>(tracker));
         builder.Services.AddSingleton(CreateTrackingStub<IAdminUserService>(tracker));
         builder.Services.AddSingleton(CreateTrackingStub<IComplaintService>(tracker));
         builder.Services.AddSingleton(CreateTrackingStub<IRefundService>(tracker));
@@ -227,6 +258,35 @@ public sealed class AdminPaginationAndRefundValidationTests
     public sealed class CallTracker
     {
         public bool AnyServiceCalled { get; set; }
+    }
+
+    /// <summary>Records what the route bound and forwarded, so the assertion is about the route rather
+    /// than about a stub that reimplements it.</summary>
+    private sealed class CapturingAdminOrderService : IAdminOrderService
+    {
+        public int? LastUserId { get; private set; }
+
+        public string? LastStatus { get; private set; }
+
+        public Task<AdminOrdersSummaryDto> GetOrdersAsync(
+            string? q = null,
+            string? status = null,
+            string? gateway = null,
+            int? userId = null,
+            int page = 1,
+            int pageSize = 20,
+            CancellationToken cancellationToken = default)
+        {
+            LastUserId = userId;
+            LastStatus = status;
+            return Task.FromResult(new AdminOrdersSummaryDto([], 0, page, pageSize, 0, 0m, 0, 0));
+        }
+
+        public Task<AdminOrderDetailDto?> GetOrderDetailAsync(int orderId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<AdminOrderDetailDto?>(null);
+
+        public Task<PaymentResultDto> ReconcileOrderAsync(int orderId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     private static T CreateTrackingStub<T>(CallTracker tracker) where T : class

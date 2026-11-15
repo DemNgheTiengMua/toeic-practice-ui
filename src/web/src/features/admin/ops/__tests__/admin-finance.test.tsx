@@ -12,6 +12,7 @@ import type {
   AdminOrderDetailDto,
   AdminRefundsSummaryDto,
   AdminRefundDetailDto,
+  AdminUsersSummaryDto,
   AuthUserDto,
 } from '../../../../lib/api';
 
@@ -93,6 +94,37 @@ const SAMPLE_ORDER_DETAIL: AdminOrderDetailDto = {
       createdAt: '2026-11-02T14:31:00Z',
     },
   ],
+};
+
+const SAMPLE_USERS_SUMMARY: AdminUsersSummaryDto = {
+  users: [
+    {
+      userId: 5,
+      email: 'learner1@test.local',
+      fullName: 'Nguyễn Văn A',
+      creditsLeft: 7,
+      examsTaken: 2,
+      isLocked: false,
+      createdAt: '2026-10-01T10:00:00Z',
+    },
+  ],
+  totalCount: 1,
+  page: 1,
+  pageSize: 25,
+  activeCount: 1,
+  lockedCount: 0,
+  notActivatedCount: 0,
+};
+
+const SAMPLE_LEARNER_PAID_ORDERS: AdminOrdersSummaryDto = {
+  orders: [SAMPLE_ORDERS_SUMMARY.orders[0]],
+  totalCount: 1,
+  page: 1,
+  pageSize: 25,
+  paidThisMonthCount: 1,
+  paidThisMonthAmount: 199000,
+  reconcilingCount: 0,
+  failedOrExpiredCount: 0,
 };
 
 const SAMPLE_REFUNDS_SUMMARY: AdminRefundsSummaryDto = {
@@ -223,6 +255,9 @@ describe('AdminFinancePage (#304)', () => {
       }
       if (url === '/api/learner/context') {
         return jsonResponse({}, 404);
+      }
+      if (url.startsWith('/api/admin/users')) {
+        return jsonResponse(SAMPLE_USERS_SUMMARY);
       }
       if (url.startsWith('/api/admin/orders/102/reconcile')) {
         return jsonResponse({
@@ -395,12 +430,16 @@ describe('AdminFinancePage (#304)', () => {
     const submitBtn = screen.getByRole('button', { name: /submit refund request/i });
     fireEvent.click(submitBtn);
 
-    expect(await screen.findByText(/valid learner user id is required/i)).toBeInTheDocument();
+    expect(await screen.findByText(/select a learner/i)).toBeInTheDocument();
 
-    // Fill valid data and submit
-    fireEvent.change(screen.getByLabelText(/learner user id/i), { target: { value: '12' } });
-    fireEvent.change(screen.getByLabelText(/reason/i), { target: { value: 'Technical disconnection during test' } });
-    fireEvent.change(screen.getByLabelText(/credits to refund/i), { target: { value: '5' } });
+    // #349: pick the learner by search, then the credits, then submit.
+    const learnerSearch = screen.getByRole('searchbox', { name: /search learners/i });
+    fireEvent.change(learnerSearch, { target: { value: 'Nguyễn' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Nguyễn Văn A/ }));
+
+    const creditsInput = await screen.findByLabelText(/credits to refund/i);
+    fireEvent.change(creditsInput, { target: { value: '5' } });
+    fireEvent.change(screen.getByLabelText(/^reason/i), { target: { value: 'Technical disconnection during test' } });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -490,6 +529,156 @@ describe('AdminFinancePage (#304)', () => {
     expect(screen.getByRole('tab', { name: /refunds desk/i })).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: /credit packages/i })).not.toBeInTheDocument();
   });
+
+  it('picks the learner and the order on the refund desk and never types an identifier (#349)', async () => {
+    const baseImpl = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (typeof url === 'string' && url.startsWith('/api/admin/users')) {
+        return jsonResponse(SAMPLE_USERS_SUMMARY);
+      }
+      if (typeof url === 'string' && url.startsWith('/api/admin/orders')) {
+        return jsonResponse(SAMPLE_LEARNER_PAID_ORDERS);
+      }
+      return baseImpl(url, init);
+    });
+
+    renderRoute('/admin/finance', {
+      userId: 1,
+      email: 'admin@test.local',
+      fullName: 'Super Admin',
+      role: 'administrator',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SystemAdmin, STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    fireEvent.click(await screen.findByRole('tab', { name: /refunds desk/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /new refund request/i }));
+
+    expect(await screen.findByText(/create refund request/i)).toBeInTheDocument();
+
+    // No internal identifier is an input anywhere on the form.
+    expect(screen.queryByLabelText(/learner user id/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/linked order id/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/linked complaint id/i)).not.toBeInTheDocument();
+
+    // 1. Learner is a search over the admin user list, answered by the server.
+    const learnerSearch = screen.getByRole('searchbox', { name: /search learners/i });
+    fireEvent.change(learnerSearch, { target: { value: 'Nguyễn' } });
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/admin/users?'),
+        expect.anything(),
+      );
+    });
+
+    fireEvent.click(await screen.findByRole('option', { name: /Nguyễn Văn A/ }));
+
+    // 2. The selection shows who it is and what the wallet holds, before money moves.
+    const selectedCard = await screen.findByRole('group', { name: /selected learner/i });
+    expect(within(selectedCard).getByText('learner1@test.local')).toBeInTheDocument();
+    expect(within(selectedCard).getByText(/current balance/i)).toBeInTheDocument();
+    expect(within(selectedCard).getByText('7')).toBeInTheDocument();
+
+    // 3. Order is a pick from that learner's paid orders, listing code, date, credits and amount.
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('userId=5'),
+        expect.anything(),
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /paid order/i }));
+    const orderOption = await screen.findByRole('option', { name: /DH-1001/ });
+    expect(orderOption).toHaveTextContent(/5 credits/i);
+    expect(orderOption).toHaveTextContent(/199\.000/);
+    fireEvent.click(orderOption);
+
+    // 4. Picking the order fills both value columns and locks the method to money.
+    expect(screen.getByLabelText(/money amount/i)).toHaveValue(199000);
+    expect(screen.getByLabelText(/credits to refund/i)).toHaveValue(5);
+    expect(screen.getByRole('radio', { name: /money/i })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /^credits/i })).toBeDisabled();
+
+    // 5. The reason bound matches the API: 401 characters are refused by the form.
+    const reason = screen.getByLabelText(/^reason/i);
+    fireEvent.change(reason, { target: { value: 'a'.repeat(401) } });
+    fireEvent.click(screen.getByRole('button', { name: /submit refund request/i }));
+    expect(await screen.findByText(/400 characters/i)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/admin/refunds',
+      expect.objectContaining({ method: 'POST' }),
+    );
+
+    // 6. 400 characters pass, and the payload carries the picked identifiers, not typed ones.
+    fireEvent.change(reason, { target: { value: 'b'.repeat(400) } });
+    fireEvent.click(screen.getByRole('button', { name: /submit refund request/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/admin/refunds',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            userId: 5,
+            method: 'money',
+            creditCount: 0,
+            amount: 199000,
+            reason: 'b'.repeat(400),
+            orderId: 101,
+            complaintId: null,
+          }),
+        }),
+      );
+    });
+  }, 20_000);
+
+  it('carries the complaint identifier into the refund payload instead of asking for it (#349)', async () => {
+    const baseImpl = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (typeof url === 'string' && url.startsWith('/api/admin/users')) {
+        return jsonResponse(SAMPLE_USERS_SUMMARY);
+      }
+      if (typeof url === 'string' && url.startsWith('/api/admin/orders')) {
+        return jsonResponse(SAMPLE_LEARNER_PAID_ORDERS);
+      }
+      return baseImpl(url, init);
+    });
+
+    renderRoute('/admin/finance?complaintId=301', {
+      userId: 1,
+      email: 'admin@test.local',
+      fullName: 'Super Admin',
+      role: 'administrator',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SystemAdmin, STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    // The desk opens on the refunds tab, already knowing which incident it is compensating.
+    fireEvent.click(await screen.findByRole('button', { name: /new refund request/i }));
+    expect(await screen.findByText(/carried from complaint #301/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/linked complaint id/i)).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('searchbox', { name: /search learners/i }), {
+      target: { value: 'Nguyễn' },
+    });
+    fireEvent.click(await screen.findByRole('option', { name: /Nguyễn Văn A/ }));
+    fireEvent.change(screen.getByLabelText(/credits to refund/i), { target: { value: '2' } });
+    fireEvent.change(screen.getByLabelText(/^reason/i), { target: { value: 'Mentor absent' } });
+    fireEvent.click(screen.getByRole('button', { name: /submit refund request/i }));
+
+    await waitFor(() => {
+      const post = (fetchMock.mock.calls as Array<[string, RequestInit?]>).find(
+        ([url, init]) =>
+          String(url) === '/api/admin/refunds' && init?.method === 'POST',
+      );
+      expect(post).toBeDefined();
+      expect(JSON.parse(String(post![1]!.body))).toMatchObject({
+        userId: 5,
+        complaintId: 301,
+      });
+    });
+  }, 20_000);
 
   it('uses platform SearchField, Select, and Pagination in OrdersTab and RefundsTab (#338)', async () => {
     const baseImpl = fetchMock.getMockImplementation()!;
