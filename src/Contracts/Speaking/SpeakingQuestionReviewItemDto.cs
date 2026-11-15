@@ -16,6 +16,8 @@ public record SpeakingQuestionReviewItemDto(
     IReadOnlyList<SpeakingCriterionScoreItemDto> Criteria,
     IReadOnlyList<WritingErrorSpanDto>? ErrorSpans = null,
     string? PriorityFix = null,
-    string? ModelRewrite = null
+    string? ModelRewrite = null,
+    // #376: the grader's refusal, when it refused this task.
+    string? FailureReason = null
 );
 

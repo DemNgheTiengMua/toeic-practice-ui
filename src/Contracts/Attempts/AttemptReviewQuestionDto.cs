@@ -24,4 +24,11 @@ public sealed record AttemptReviewQuestionDto(
     IReadOnlyList<AttemptReviewOptionDto> Options,
     int? SelectedOptionId,
     bool? IsCorrect,
-    bool IsFlagged);
+    bool IsFlagged,
+    // #375: the free-response half of a review, so a placement review shows the written answer with
+    // its rubric marks and the spoken answer with its transcript. Null on an objective position.
+    string? ResponseText = null,
+    string? ResponseAudioPath = null,
+    decimal? AiScore = null,
+    string? AiFeedback = null,
+    IReadOnlyList<AttemptReviewRubricScoreDto>? RubricScores = null);

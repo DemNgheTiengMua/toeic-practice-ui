@@ -298,8 +298,24 @@ public sealed class AiGradingProcessor(
                 // record the honest `not_measured` PLC-35 asks for and the learner would wait for a
                 // result that never arrives. The distinction that matters is carried on the AiGrading
                 // row (`failed` + its reason), which is what the placement writer and the retry read.
+                // #384: a failed grading settles its TASK but must also settle its ATTEMPT, or the
+                // sitting stays `submitted` forever. Measured on the seeded 4-skill placement: the
+                // writing task came back `failed` (the grader refused it) and the speaking task had no
+                // grading row at all (no audio), so nothing ever called the finalizer - the attempt
+                // stayed `submitted`, the result page polled "Evaluating grammar structure..."
+                // indefinitely, and the review page answered 400 "Placement test not finished" for a
+                // sitting the learner had already submitted. The success path already finalizes; the
+                // failure path is the same fact and needs the same writer.
                 await SettleFreeResponseAsync(fr.FreeResponseId, cancellationToken);
                 await db.SaveChangesAsync(cancellationToken);
+
+                // #384: the refusal path needs the same finalize as a fault, and for the same reason:
+                // measured on the seeded 4-skill placement, the writing task was refused and the
+                // speaking task had no audio (so no grading row at all), nothing called the finalizer,
+                // the attempt stayed `submitted`, and the review page answered 400 for a sitting the
+                // learner had already submitted.
+                await TryFinalizeAttemptAsync(fr.AttemptId, cancellationToken);
+
                 return false;
             }
         }
@@ -323,7 +339,41 @@ public sealed class AiGradingProcessor(
             {
                 logger?.LogError(saveEx, "Failed to persist failure status for GradingId {GradingId}", grading.GradingId);
             }
+
+            // #384: the same finalize the refusal path needs. A fault is how a REAL grader most often
+            // ends (network, timeout, model refusal surfaced as an exception), so leaving the attempt
+            // `submitted` here strands the sitting on the path that actually happens in production.
+            await TryFinalizeAttemptAsync(fr.AttemptId, cancellationToken);
             return false;
+        }
+    }
+
+    /// <summary>
+    /// #384: closes a mock or placement attempt whose free responses have all settled, whatever the
+    /// verdict was. Failures are logged, never rethrown: the grading row already carries the reason a
+    /// learner needs, and a throw here would only re-queue work that will fail again.
+    /// </summary>
+    private async Task TryFinalizeAttemptAsync(int attemptId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var stillPending = await db.FreeResponses
+                .AnyAsync(r => r.AttemptId == attemptId && r.Status != FreeResponseStatus.Graded.ToCode(), cancellationToken);
+            if (stillPending) return;
+
+            var purpose = await db.ExamAttempts
+                .Where(a => a.AttemptId == attemptId)
+                .Select(a => a.Exam.Purpose)
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if (purpose == ExamPurpose.Mock.ToCode() || purpose == ExamPurpose.Placement.ToCode())
+            {
+                await _attemptEngine.FinalizeAiGradedAttemptAsync(attemptId, cancellationToken);
+            }
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger?.LogError(ex, "Could not finalize attempt {AttemptId} after a failed grading", attemptId);
         }
     }
 

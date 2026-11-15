@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Extra Efficiency — Sổ tay bảo vệ đồ án</title>
+<style>
+  :root {
+    --bg: #14181d;
+    --surface: #1c2229;
+    --surface-2: #232b34;
+    --border: #2f3945;
+    --fg: #e8edf2;
+    --muted: #9aa7b4;
+    --accent: #4d9fff;
+    --success: #3ecf8e;
+    --warning: #f2b705;
+    --danger: #ff6b6b;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+    --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  .shell { display: flex; min-height: 100vh; }
+  nav {
+    width: 260px;
+    flex: 0 0 260px;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    padding: 24px 16px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  nav h2 {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 22px 0 8px;
+  }
+  nav h2:first-child { margin-top: 0; }
+  nav a {
+    display: block;
+    padding: 6px 10px;
+    color: var(--fg);
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 14px;
+    border-left: 2px solid transparent;
+  }
+  nav a:hover { background: var(--surface-2); border-left-color: var(--accent); }
+  main { flex: 1; padding: 40px 48px 120px; max-width: 1040px; }
+  h1 { font-size: 32px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin: 0 0 40px; font-size: 16px; }
+  h2 {
+    font-size: 24px;
+    margin: 56px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: -0.01em;
+  }
+  h3 { font-size: 18px; margin: 32px 0 10px; }
+  h4 { font-size: 15px; margin: 22px 0 8px; color: var(--accent); }
+  p { margin: 10px 0; }
+  ul, ol { margin: 10px 0; padding-left: 24px; }
+  li { margin: 5px 0; }
+  code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--surface-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #9ed0ff;
+  }
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; color: var(--fg); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
+  tbody tr:hover { background: var(--surface); }
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    padding: 14px 18px;
+    margin: 18px 0;
+    border-radius: 0 6px 6px 0;
+  }
+  .callout.warn { border-left-color: var(--warning); }
+  .callout.danger { border-left-color: var(--danger); }
+  .callout.ok { border-left-color: var(--success); }
+  .callout > :first-child { margin-top: 0; }
+  .callout > :last-child { margin-bottom: 0; }
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .pill.pass { background: rgba(62,207,142,.15); color: var(--success); }
+  .pill.fail { background: rgba(255,107,107,.15); color: var(--danger); }
+  .pill.ask { background: rgba(77,159,255,.15); color: var(--accent); }
+  .qa { border: 1px solid var(--border); border-radius: 8px; margin: 14px 0; overflow: hidden; }
+  .qa > summary {
+    cursor: pointer;
+    padding: 12px 16px;
+    background: var(--surface);
+    font-weight: 600;
+    list-style: none;
+  }
+  .qa > summary::-webkit-details-marker { display: none; }
+  .qa > summary::before { content: "▸ "; color: var(--accent); }
+  .qa[open] > summary::before { content: "▾ "; }
+  .qa > div { padding: 4px 16px 16px; border-top: 1px solid var(--border); }
+  .flow { font-family: var(--mono); font-size: 13px; white-space: pre; overflow-x: auto; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 1100px) { .grid2 { grid-template-columns: 1fr; } nav { display: none; } main { padding: 24px; } }
+  hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+  .num { color: var(--muted); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="shell">
+<nav>
+  <h2>Bắt đầu</h2>
+  <a href="#ten-phut">Đọc trong 10 phút</a>
+  <a href="#kien-truc">Kiến trúc 5 tầng</a>
+
+  <h2>Dữ liệu đi đâu</h2>
+  <a href="#data-flow">Một câu trả lời đi qua đâu</a>
+  <a href="#exam-anatomy">Một đề gồm những gì</a>
+  <a href="#practice-vs-mock">Practice vs Mock vs Placement</a>
+
+  <h2>Luồng end-to-end</h2>
+  <a href="#tao-de">Tạo đề: admin → học viên</a>
+  <a href="#placement-flow">Luồng placement</a>
+  <a href="#auth">Auth chi tiết</a>
+  <a href="#thanh-toan">Thanh toán</a>
+
+  <h2>Bảo vệ đồ án</h2>
+  <a href="#cau-hoi-gv">Câu hỏi giáo viên hay hỏi</a>
+  <a href="#quy-luat-demo">Quy luật khi demo</a>
+  <a href="#bom-no">Bẫy tôi đã gặp</a>
+  <a href="#lenh">Lệnh cần nhớ</a>
+</nav>
+
+<main>
+
+<h1>Sổ tay bảo vệ đồ án</h1>
+<p class="sub">Extra Efficiency — mọi thứ đi từ file nào tới file nào, và cách trả lời khi bị hỏi.</p>
+
+<div class="callout">
+  <p><strong>Đọc mục này trước, phần còn lại là chi tiết.</strong> Hệ thống có 5 tầng xếp chồng, mỗi tầng chỉ nói chuyện với tầng kề nó. Nếu bạn nhớ được một câu — <em>"Contract định nghĩa hình dạng, Service quyết định luật, DataAccess chạm database, WebAPI mở cửa, web vẽ ra"</em> — thì bạn trả lời được 80% câu hỏi.</p>
+</div>
+
+<h2 id="ten-phut">Đọc trong 10 phút</h2>
+
+<h3>Hệ thống này làm gì</h3>
+<p>Một nền tảng luyện thi chứng chỉ (TOEIC, IELTS): học viên làm bài placement để biết trình độ, nhận lộ trình học, luyện từng kỹ năng, thi thử, và được AI chấm bài nói/viết. Giáo viên (admin) tự soạn đề trong studio.</p>
+
+<h3>Ba loại "bài" khác nhau — đây là chỗ hay bị hỏi nhất</h3>
+<table>
+  <thead><tr><th>Loại</th><th>Mục đích</th><th>Trả tiền?</th><th>Bảng dữ liệu</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Placement</strong></td>
+      <td>Đo trình độ lần đầu. Một bài cắt ngang 4 kỹ năng.</td>
+      <td>Miễn phí lần đầu mỗi chứng chỉ; làm lại thì tính credit</td>
+      <td><code>PlacementTests</code> → <code>ExamAttempts</code></td>
+    </tr>
+    <tr>
+      <td><strong>Mock exam</strong></td>
+      <td>Thi thử nguyên form, có đồng hồ đếm ngược, theo phase từng kỹ năng.</td>
+      <td>1 credit mỗi lần</td>
+      <td><code>ExamAttempts</code></td>
+    </tr>
+    <tr>
+      <td><strong>Practice</strong></td>
+      <td>Luyện tự do: theo section (pool drill), hoặc bài nói/viết tự do.</td>
+      <td>Miễn phí; AI chấm thì 1 credit</td>
+      <td><code>PracticeSessions</code> / <code>FreeResponses</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <p><strong>"Practice nằm ở đâu?"</strong> Đây là câu hỏi bạn đã hỏi. Có <em>ba</em> chỗ khác nhau, và chúng không dùng chung bảng:</p>
+  <ul>
+    <li><code>/practice</code> — luyện theo section, gọi là <em>practice session</em>. Bảng <code>PracticeSessions</code> + <code>PracticeAnswers</code>. Miễn phí, giữ 20 session gần nhất mỗi chứng chỉ.</li>
+    <li><code>/writing</code> và <code>/speaking</code> — luyện một bài tự luận/nói. Bảng <code>FreeResponses</code> + <code>AiGradings</code>. Đây là chỗ AI chấm.</li>
+    <li><code>/learning-path</code> — bài học có hướng dẫn. Bảng <code>Lessons</code>, <code>LearnerLessonProgress</code>, <code>LearnerPathSteps</code>.</li>
+  </ul>
+  <p>Cả ba đều là "practice" với người dùng, nhưng là ba đường code riêng biệt.</p>
+</div>
+
+<h2 id="kien-truc">Kiến trúc 5 tầng</h2>
+
+<div class="flow">src/BusinessObjects   ← domain model, enum, hằng số. Không biết gì về database.
+      ↓
+src/DataAccess        ← EF Core DbContext, cấu hình bảng, trigger. Database-first.
+      ↓
+src/Services          ← toàn bộ luật nghiệp vụ. Đây là nơi đồ án "có giá trị".
+      ↓
+src/Contracts         ← DTO đi qua dây (JSON). Không có logic.
+      ↓
+src/WebAPI            ← minimal API, mở endpoint, xác thực JWT
+src/web               ← React 19 + HeroUI v3, gọi /api/* qua proxy
+</div>
+
+<h3>Tại sao chia như vậy — câu trả lời để bảo vệ</h3>
+<ul>
+  <li><strong>BusinessObjects không tham chiếu ai.</strong> Nên đổi database không phải sửa domain.</li>
+  <li><strong>Services không biết HTTP.</strong> Nên cùng một luật dùng được cho WebAPI, cho test, cho companion client.</li>
+  <li><strong>Contracts là hình dạng JSON.</strong> Đổi DTO không làm vỡ service; đó là lý do <code>AdminExamDetailDto</code> nằm ở Contracts chứ không phải entity.</li>
+  <li><strong>web không đọc database.</strong> Mọi thứ qua <code>/api/*</code>, cùng origin, không CORS.</li>
+</ul>
+
+<h3>Các file then chốt bạn nên biết tên</h3>
+<table>
+  <thead><tr><th>File</th><th>Vai trò</th></tr></thead>
+  <tbody>
+    <tr><td><code>docs/database-schema.sql</code></td><td>Nguồn sự thật duy nhất của schema. Sửa đây trước, rồi mới scaffold lại EF.</td></tr>
+    <tr><td><code>docs/seed-demo.sql</code></td><td>Dữ liệu demo. Chạy sau schema.</td></tr>
+    <tr><td><code>src/Services/AttemptEngine*.cs</code></td><td>Toàn bộ cơ chế ngồi thi: đồng hồ, nộp bài, chấm điểm, đổi thang điểm. Chia thành 12 file partial.</td></tr>
+    <tr><td><code>src/Services/PlacementService.cs</code></td><td>Luật riêng của placement, mỏng — gọi AttemptEngine cho phần ngồi thi.</td></tr>
+    <tr><td><code>src/Services/AiGradingProcessor.cs</code></td><td>Chủ sở hữu duy nhất của hàng đợi chấm AI.</td></tr>
+    <tr><td><code>src/Services/CreditLedger.cs</code></td><td>Số dư credit luôn là <code>SUM(Amount)</code> trên ledger. Không có cột balance.</td></tr>
+    <tr><td><code>src/Services/Admin/Exams/AdminExamService.Audit.cs</code></td><td>~26 kiểm tra trước khi cho publish đề.</td></tr>
+    <tr><td><code>src/Services/Admin/Exams/AdminExamService.Invariants.cs</code></td><td>6 bất biến publish, mỗi cái một dòng trên UI.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="data-flow">Một câu trả lời đi qua đâu</h2>
+<p>Đây là câu hỏi "data đi từ đâu tới đâu" — trả lời bằng đúng đường đi này:</p>
+
+<div class="flow">Học viên bấm chọn đáp án
+   │
+   ▼ src/web/src/features/sitting/*.tsx
+     POST /api/learner/placement/take/{placementId}/answers/{questionId}
+     body: { selectedOptionId: 431, isFlagged: false }
+   │
+   ▼ src/WebAPI/Endpoints/PlacementEndpoints.Sitting.cs   ← chỉ parse + bắt lỗi
+     PlacementService.SaveAnswerAsync(userId, placementId, ...)
+   │
+   ▼ src/Services/PlacementService.cs:501
+     → xác nhận placement thuộc user, đang in_progress
+     → gọi AttemptEngine.SaveAnswerAsync  (src/Services/Attempts/AttemptEngine.Answers.cs)
+         → ValidateQuestionSittingStateAsync  ← luật "câu này có được trả lời không"
+         → ghi AttemptAnswers
+   │
+   ▼ src/DataAccess/CompanionDbContext.*.cs  ← EF Core sinh SQL
+     INSERT/UPDATE [AttemptAnswers]
+   │
+   ▼ SQL Server: trigger kiểm tra bất biến (ví dụ không sửa điểm đã chốt)
+   │
+   ▲ trả về JSON: { questionId, selectedOptionId, remainingSeconds }
+   ▲ src/web cập nhật state, đổi màu nút
+</div>
+
+<h3>Khi nộp bài</h3>
+<div class="flow">POST .../submit
+   ▼ PlacementService.SubmitPlacementTestAsync:728
+     ▼ AttemptEngine.SubmitAsync (Attempts/AttemptEngine.Submission.cs)
+         → chấm trắc nghiệm (so key)
+         → tạo FreeResponses cho câu tự luận/nói
+         → tạo AiGradings rows (status=pending)   ← hàng đợi
+         → đổi ExamAttempts.Status = submitted
+         → AttemptSkillScores
+     ▼ PlacementTests: ghi TotalScore, các *Pct, ResultBandCode
+   ─── kết thúc request ───
+   ▼ nền: AiGradingBackgroundService poll IX_AiGradings_Queue
+     → AiGradingProcessor chấm
+     → ghi AiGradings overall + rubric
+     → khi hết pending → PlacementTests.Status = done
+</div>
+
+<div class="callout">
+  <p><strong>Điểm mấu chốt để bảo vệ:</strong> nộp bài KHÔNG chờ AI chấm xong. Request trả về ngay; một worker nền hoàn tất phần tự luận. Đó là lý do trang kết quả có trạng thái <code>grading</code> và tự poll.</p>
+</div>
+
+<h2 id="exam-anatomy">Một đề gồm những gì</h2>
+
+<p>Đây là phần bạn hỏi rõ nhất — "1 đề có những gì". Câu trả lời có 4 tầng lồng nhau:</p>
+
+<div class="flow">Exams                    ← cái "đề". Có CertId, Purpose, DurationMinutes, Status
+ └── ExamItems           ← VỊ TRÍ trên đề (roster). Chính là "câu số 1, số 2...".
+      │                     Mỗi dòng trỏ tới một ItemVersion và một Section.
+      ├── Sections       ← kỹ năng + phần. Thuộc CHỨNG CHỈ, không thuộc đề.
+      │                    (nên nhiều đề dùng chung section)
+      └── Items          ← ngân hàng câu hỏi. Thuộc chứng chỉ.
+           └── ItemVersions  ← NỘI DUNG thật: stem, options, key, rubric windows.
+                                Bất biến khi đã dùng (copy-on-write).
+           └── Stimuli        ← đoạn văn / file audio / ảnh dùng chung cho nhiều câu.
+</div>
+
+<h3>Bảng chi tiết</h3>
+<table>
+  <thead><tr><th>Bảng</th><th>Chứa gì</th><th>Ghi chú để trả lời</th></tr></thead>
+  <tbody>
+    <tr><td><code>Exams</code></td><td>Tên đề, chứng chỉ, thời lượng, <code>Status</code> (draft/published/hidden), <code>Purpose</code></td><td><code>Purpose</code> chỉ nhận 4 giá trị: <code>mock</code>, <code>placement</code>, <code>speaking_practice</code>, <code>writing_practice</code></td></tr>
+    <tr><td><code>Sections</code></td><td>Phần thi: P1–P7 của TOEIC, REC/PAS/T1/T2/INT của IELTS. Có <code>Modality</code> (listening/reading/speaking/writing), <code>ExpectedQuestionCount</code></td><td>Thuộc <strong>chứng chỉ</strong>, không thuộc đề — đó là cách nhiều đề dùng chung</td></tr>
+    <tr><td><code>Stimuli</code></td><td>Passage (đoạn văn), <code>AudioPath</code>, <code>ImagePath</code> + <code>AudioStartMs/AudioEndMs</code></td><td>Audio cắt theo mili-giây, nên một file dài phục vụ nhiều câu</td></tr>
+    <tr><td><code>Items</code></td><td>Một câu trong ngân hàng. Có <code>Modality</code>, <code>CefrLevel</code>, <code>ItemType</code>, <code>RenderFormat</code>, <code>LifecycleStatus</code></td><td><code>LifecycleStatus = active</code> mới được đưa vào đề</td></tr>
+    <tr><td><code>ItemVersions</code></td><td>Nội dung: <code>Stem</code>, OptionA–D, <code>KeyLabel</code>, <code>MinWords</code>/<code>MaxWords</code>, <code>PrepSeconds</code>/<code>ResponseSeconds</code></td><td><strong>Bất biến</strong> — sửa điểm là tạo version mới (trigger chặn)</td></tr>
+    <tr><td><code>ExamItems</code></td><td>Cầu nối: (ExamId, SectionId, ItemVersionId, DisplayOrder)</td><td>Đây chính là "câu số N của đề"</td></tr>
+    <tr><td><code>GradingCriteria</code></td><td>Tiêu chí chấm cho kỹ năng nói/viết (TR, CC, LR, GRA cho Writing)</td><td>Theo <code>SkillId</code>, không theo đề</td></tr>
+    <tr><td><code>SectionCriteria</code></td><td>Section này chấm theo tiêu chí nào, trần điểm bao nhiêu</td><td>Phải có, nếu không thì không publish được bài tự luận</td></tr>
+    <tr><td><code>ScoreScales</code> / <code>ScoreBands</code></td><td>Đổi raw score → scaled score → band CEFR</td><td>Hai bước, không phải một</td></tr>
+    <tr><td><code>ExamSectionAudio</code></td><td>File audio chính của một section</td><td>Một file mỗi section, cắt bằng slice ở Stimuli</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <p><strong>Câu hỏi bẫy:</strong> "Vậy sửa một câu hỏi trong đề thì sửa ở đâu?"</p>
+  <p>Không sửa <code>ExamItems</code>. Mà sửa <code>ItemVersions</code> bằng cách <strong>tạo version mới</strong>, rồi trỏ <code>ExamItems.ItemVersionId</code> sang version mới. Lý do: đề đã có người thi thì lịch sử phải giữ nguyên nội dung họ đã thi. Trigger <code>trg_ItemVersions_ScoredFieldsImmutable</code> chặn sửa trực tiếp — đây là chủ ý, không phải lỗi.</p>
+</div>
+
+<h2 id="practice-vs-mock">Practice vs Mock vs Placement — cùng một engine, khác luật</h2>
+
+<p>Đây là chỗ dễ bị hỏi "sao lại có ba cái giống nhau". Trả lời:</p>
+
+<table>
+  <thead><tr><th></th><th>Placement</th><th>Mock</th><th>Practice</th></tr></thead>
+  <tbody>
+    <tr><td>Ai điều khiển</td><td><code>PlacementService</code></td><td><code>MockExamService</code></td><td><code>PracticeService</code></td></tr>
+    <tr><td>Dùng chung engine?</td><td colspan="2" style="text-align:center"><code>IAttemptEngine</code> — cùng đồng hồ, cùng chấm điểm</td><td>Không. Luồng riêng, đơn giản hơn</td></tr>
+    <tr><td>Khoá theo kỹ năng?</td><td>Không — một sitting đi qua mọi kỹ năng</td><td>Có — <code>ActiveSkillId</code> là phase thật</td><td>Không áp dụng</td></tr>
+    <tr><td>Credit</td><td>Lần đầu free, làm lại tính</td><td>1 credit/lần</td><td>Free; AI chấm 1 credit</td></tr>
+    <tr><td>Nộp xong</td><td><code>PlacementTests.Status</code></td><td><code>ExamAttempts.Status</code></td><td><code>PracticeSessions</code></td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <p><strong>Câu trả lời mẫu:</strong> "Placement, mock và practice dùng chung <code>IAttemptEngine</code> cho phần ngồi thi — đồng hồ, khoá câu, chấm trắc nghiệm, đổi thang điểm. Mỗi service chỉ giữ luật riêng của nó: Placement quản credit lần đầu và band mục tiêu, Mock quản credit và phase kỹ năng, Practice thì không dùng engine vì không có đồng hồ."</p>
+</div>
+
+<h2 id="tao-de">Tạo đề: admin → học viên (end-to-end)</h2>
+
+<p>Đây là luồng bạn hỏi. Có <strong>7 bước</strong>, và bước 5 là cái cổng hay bị bỏ qua.</p>
+
+<h3>Đường đi trên màn hình</h3>
+<div class="flow">/admin/exams  ← "Exams Authoring Studio"
+  │
+  ├─ Bấm "New exam" → chọn chứng chỉ, tên, thời lượng, purpose
+  │    POST /api/admin/exams   → Status luôn là 'draft' (cố ý, không cho tạo thẳng published)
+  │
+  ├─ Tab "Sections & Audio"   → upload audio cho từng section nghe
+  │    POST /api/admin/exams/{id}/media   → lưu file
+  │    POST /api/admin/exams/{id}/audio   → gắn vào section
+  │
+  ├─ Tab "Roster & Assembly"  → gắn câu từ ngân hàng vào vị trí
+  │    POST /api/admin/exams/{id}/bindings
+  │
+  ├─ Tab "Studio & Quick Ingest" → dán text, parser tách thành câu
+  │    POST /api/admin/exams/{id}/quick-ingest/parse  → xem trước
+  │    POST /api/admin/exams/{id}/quick-ingest/commit → ghi thật
+  │
+  ├─ Tab "Publish Readiness"  ← CỔNG
+  │    GET  /api/admin/exams/{id}/audit    → xem 6 bất biến + ~26 kiểm tra
+  │    POST /api/admin/exams/{id}/publish  → nếu pass thì Status='published'
+  │
+  └─ Học viên: /exams hoặc /placement  ← chỉ thấy đề Status='published'
+</div>
+
+<h3>Bước 5 — cái cổng, và nó kiểm gì</h3>
+
+<p>Ba mươi mấy kiểm tra, chia 2 nhóm. Nhóm 1 là <strong>nội dung</strong> (trong <code>AdminExamService.Audit.cs</code>):</p>
+<ul>
+  <li>Đề phải có ít nhất một câu.</li>
+  <li>Mỗi section phải đủ số câu nó khai (<code>ExpectedQuestionCount</code>) — trừ đề placement và đề demo-tier, vì đó là lát cắt.</li>
+  <li>Câu mcq phải có ≥2 lựa chọn và <strong>đúng 1</strong> đáp án đúng.</li>
+  <li>Section nghe phải có audio (file chính hoặc file từng nhóm câu).</li>
+  <li>Câu tự luận phải có rubric criteria ở section, và <code>ResponseSeconds &gt; 0</code>.</li>
+  <li>Câu viết phải có <code>MinWords</code>/<code>MaxWords</code> hợp lệ; câu nói phải có <code>PrepSeconds</code>.</li>
+  <li>Stimulus có ảnh thì phải có alt text (accessibility).</li>
+</ul>
+
+<p>Nhóm 2 là <strong>6 bất biến</strong> (trong <code>AdminExamService.Invariants.cs</code>) — mỗi cái hiện một dòng trên UI:</p>
+<table>
+  <thead><tr><th>Mã</th><th>Nghĩa</th></tr></thead>
+  <tbody>
+    <tr><td><code>inv1.skill_coverage</code></td><td>Mỗi kỹ năng bật phải có section; mỗi section phải chứa đúng số nó khai</td></tr>
+    <tr><td><code>inv2.stimulus_group</code></td><td>Câu nào dùng stimulus thì stimulus đó phải đủ nhóm con</td></tr>
+    <tr><td><code>inv3.item_clearance</code></td><td>Mọi câu gắn vào đề phải ở trạng thái <code>active</code></td></tr>
+    <tr><td><code>inv4.rubric_ready</code></td><td>Kỹ năng nói/viết phải có rubric đã khoá, mỗi tiêu chí đủ 3 mốc neo</td></tr>
+    <tr><td><code>inv5.timers_projection</code></td><td>Thời lượng các kỹ năng cộng lại phải bằng thời lượng đề khai</td></tr>
+    <tr><td><code>inv6.tier_isolation</code></td><td>Đề production không được chứa câu demo</td></tr>
+  </tbody>
+</table>
+
+<div class="callout danger">
+  <p><strong>Đây là lỗi bạn phát hiện, và tôi đã sửa.</strong> Trước đây seed ghi thẳng <code>Status='published'</code>, bỏ qua cổng — nên 5 đề đang chạy đều <em>fail chính audit của mình</em> (đề 1 có 9/200 câu, đề 5 có 1/40). Cổng publish thì từ chối đề writing vì nó đòi 80 câu nghe/đọc mà bài viết không hề khai. Và màn admin còn <strong>bịa</strong> thêm 2 dòng lỗi không tồn tại vào mọi lần từ chối.</p>
+  <p>Đã sửa: đề demo-tier và đề placement được coi là <em>lát cắt</em> (đúng bản chất), cổng chỉ đòi blueprint đầy đủ với đề production. Cả 5 đề giờ <code>canPublish=true</code>; đề rỗng vẫn bị chặn với <code>EXAM_EMPTY</code>. Kiểm chứng được bằng <code>GET /api/admin/exams/{id}/audit</code>.</p>
+</div>
+
+<h3>Làm sao chứng minh "đề tạo ra thì học viên thấy"</h3>
+<p>Đây là yêu cầu "phải có đầu có đuôi" của bạn. Chuỗi kiểm chứng:</p>
+<ol>
+  <li><code>POST /api/admin/exams</code> → nhận <code>examId</code>, status <code>draft</code>.</li>
+  <li><code>GET /api/learner/exams</code> → <strong>không</strong> thấy đề đó (vì draft).</li>
+  <li><code>POST /api/admin/exams/{id}/publish</code> → thành công.</li>
+  <li><code>GET /api/learner/exams</code> → <strong>thấy</strong> đề đó.</li>
+  <li><code>POST /api/learner/exams/{id}/start</code> → có <code>attemptId</code>.</li>
+  <li>Trả lời câu đầu → 200.</li>
+</ol>
+<p>Đó là chuỗi phải chỉ ra được khi bị hỏi "sao biết đề tạo ra dùng được".</p>
+
+<h2 id="placement-flow">Luồng placement — thứ tự bắt buộc</h2>
+
+<div class="flow">1. GET  /api/learner/placement                   → danh sách đề + isRetake
+2. POST /api/learner/placement/start { examId }  → placementId + attemptId
+3. POST /api/learner/attempts/{attemptId}/preflight/verify
+                                                 → BẮT BUỘC, nếu không thì "preflight_required"
+4. GET  /api/learner/placement/take/{placementId} → 12 câu + options (có optionId)
+5. POST /api/learner/placement/take/{pid}/answers/{qid}
+       body { selectedOptionId: <số>, isFlagged: false }
+6. POST /api/learner/placement/take/{pid}/draft
+       body { questionId: <số>, responseText: "..." }   ← cho câu tự luận
+7. POST /api/learner/placement/take/{pid}/submit
+                                                 → totalScore, skillScores
+8. GET  /api/learner/placement/result/{pid}      → band + preview mọi chứng chỉ
+9. GET  /api/learner/placement/result/{pid}/review
+                                                 → chỉ khi isGraded = true
+</div>
+
+<div class="callout warn">
+  <p><strong>Đừng bỏ bước 3.</strong> Đây là chỗ tôi mất thời gian: <code>/take</code> trả 400 "Preflight verification required" chứ không phải lỗi. Đó là thiết kế — kiểm tra micro/loa trước khi vào thi.</p>
+  <p><strong>Đừng bỏ qua trường <code>selectedOptionId</code>.</strong> Nó là <em>số</em> (<code>431</code>), không phải nhãn <code>"A"</code>. Gửi nhãn thì API trả 200 nhưng lưu <code>null</code> — điểm sẽ bằng 0 mà không báo lỗi.</p>
+</div>
+
+<h3>Band tính thế nào — hai bước</h3>
+<div class="flow">raw score (số câu đúng)
+   ↓ ScoreScales        ← thang riêng từng chứng chỉ
+scaled score
+   ↓ ScoreBands         ← khoảng band: 40–50 = B1, 55–65 = B2...
+band (B1, B2, C1...)
+</div>
+<p>Placement còn trả <code>certificatePreviews</code>: cùng một bài làm, quy đổi sang band của <em>mọi</em> chứng chỉ. Đó là lý do một bài IELTS lại hiện được "TOEIC 206 / A1" — không phải bug.</p>
+
+<h2 id="auth">Auth chi tiết</h2>
+
+<h3>Đăng nhập trả gì</h3>
+<pre><code>POST /api/auth/sign-in
+{ "email": "admin@demo.local", "password": "Demo1234!" }
+
+200 OK
+Set-Cookie: ee_access_token=eyJ...; HttpOnly; SameSite=Lax; path=/
+{ "token": "eyJ...", "expiresAt": "...", "user": { ... } }</code></pre>
+
+<div class="callout warn">
+  <p>Trường là <code>token</code>, <strong>không phải</strong> <code>accessToken</code>. Route là <code>/api/auth/sign-in</code>, <strong>không phải</strong> <code>/login</code>. Hai chỗ này làm tôi mất thời gian.</p>
+</div>
+
+<h3>Hai đường xác thực cùng lúc</h3>
+<table>
+  <thead><tr><th></th><th>Cookie</th><th>Bearer</th></tr></thead>
+  <tbody>
+    <tr><td>Cho ai</td><td>SPA (trình duyệt)</td><td>Test, Swagger, companion client</td></tr>
+    <tr><td>Tên</td><td><code>ee_access_token</code></td><td><code>Authorization: Bearer &lt;token&gt;</code></td></tr>
+    <tr><td>Vì sao</td><td>Script không đọc được → an toàn hơn localStorage</td><td>Không cần cookie jar</td></tr>
+  </tbody>
+</table>
+
+<h3>Email phải xác minh mới đăng nhập được</h3>
+<p>Đăng ký trả 201 <strong>không kèm token</strong>. Sai mật khẩu → 401. Đúng mật khẩu nhưng chưa xác minh → <strong>403</strong> (khác 401, để UI biết đường dẫn tới "kiểm tra email"). Đường thoát khi mail không tới: <code>POST /api/admin/users/{id}/verify-email</code>.</p>
+
+<h3>Phân quyền — không dựa vào tên role</h3>
+<table>
+  <thead><tr><th>Capability</th><th>Được làm gì</th></tr></thead>
+  <tbody>
+    <tr><td><code>pool.content.author</code></td><td>Đề, câu hỏi, quick ingest, studio, import</td></tr>
+    <tr><td><code>pool.content.review</code></td><td>Duyệt nội dung</td></tr>
+    <tr><td><code>assessment.blueprint.design</code></td><td>Chứng chỉ, đổi thang điểm</td></tr>
+    <tr><td><code>operations.support.triage</code></td><td>Khiếu nại, mentor</td></tr>
+    <tr><td><code>system.governance.admin</code></td><td>Tổng quan, dashboard, đơn hàng, users</td></tr>
+  </tbody>
+</table>
+<p>Mỗi capability là một <em>route group riêng</em>, không phải một group với nhiều yêu cầu. Lý do: hai <code>RequireAuthorization</code> trên cùng group sẽ AND lại và từ chối tất cả.</p>
+
+<h2 id="thanh-toan">Thanh toán</h2>
+<div class="flow">/checkout
+  → POST /api/checkout/orders          → tạo Order (status pending)
+  → payOS trả link
+  → thanh toán xong
+  → quay về /payment/result?orderCode=...
+  → webhook (nếu có tunnel) HOẶC poll trạng thái
+  → POST .../settle → ghi CreditTransactions (delta +N)
+  → số dư = SUM(mọi dòng ledger)</div>
+
+<div class="callout">
+  <p><strong>Không có cột "balance" ở đâu cả.</strong> Số dư credit <em>luôn</em> tính bằng <code>SUM(Amount)</code> trên <code>CreditTransactions</code>. Ledger chỉ ghi thêm, không sửa, không xóa. Đó là lý do khi cần hoàn tiền, người ta ghi một dòng âm chứ không xoá dòng cũ.</p>
+</div>
+
+<h3>Ba cổng thanh toán</h3>
+<p><code>Payment__Gateway</code> chọn một trong ba: <code>payos</code> (thật), <code>mock</code> (giả lập, có nút bấm), <code>vnpay</code>. Khi demo nên dùng <code>mock</code> để không phụ thuộc mạng — đổi trong <code>.env.docker</code> rồi restart api.</p>
+
+<h2 id="cau-hoi-gv">Câu hỏi giáo viên hay hỏi</h2>
+
+<details class="qa"><summary>Tại sao dùng database-first chứ không phải code-first?</summary>
+<div>
+<p>Vì đồ án này coi <code>docs/database-schema.sql</code> là nguồn sự thật duy nhất. Toàn bộ trigger, constraint, view, composite foreign key được viết bằng SQL — những thứ EF migration không diễn đạt được gọn. Quy trình: sửa file SQL → chạy <code>docs/schema-tests/run-all.sh</code> → scaffold lại EF.</p>
+<p>Đánh đổi: không dùng được <code>dotnet ef migrations</code>. Bù lại, schema luôn là thứ review được bằng mắt và test được độc lập.</p>
+</div></details>
+
+<details class="qa"><summary>Vì sao số dư credit không lưu trong bảng?</summary>
+<div>
+<p>Vì một con số lưu sẵn có thể lệch với lịch sử. Nếu có cột <code>Balance</code>, sẽ có ngày nó khác <code>SUM(Amount)</code> — và không ai biết cái nào đúng. Tính từ ledger thì không thể lệch, và mọi thay đổi đều có dòng chứng từ.</p>
+<p>Đánh đổi: mỗi lần đọc số dư là một aggregate. Với quy mô đồ án thì không đáng kể; nếu lớn thì thêm bảng cache có version.</p>
+</div></details>
+
+<details class="qa"><summary>Sửa một câu hỏi trong đề đã có người thi thì làm sao?</summary>
+<div>
+<p>Tạo <code>ItemVersions</code> mới, rồi trỏ <code>ExamItems.ItemVersionId</code> sang. Version cũ giữ nguyên.</p>
+<p>Lý do: bài đã nộp phải chấm lại được đúng nội dung người ta đã đọc. Nếu sửa tại chỗ, một học viên khiếu nại "tôi chọn đáp án B" mà đề đã đổi thì không đối chứng được. Trigger <code>trg_ItemVersions_ScoredFieldsImmutable</code> chặn sửa điểm trực tiếp — đây là bảo vệ, không phải phiền toái.</p>
+</div></details>
+
+<details class="qa"><summary>AI chấm bài thế nào? Có chặn được gian lận không?</summary>
+<div>
+<p>Nộp bài tạo <code>AiGradings</code> status <code>pending</code>, một background service poll hàng đợi rồi gọi model. Rubric lấy từ <code>SectionCriteria</code>, mỗi tiêu chí có thang điểm và mô tả mốc.</p>
+<p>Model có quyền <strong>từ chối chấm</strong> — ví dụ bài không trả lời đề. Khi đó status <code>failed</code> và lưu <code>FailureReason</code>. Điểm kỹ năng đó thành NULL, và UI <em>phải</em> hiện lý do chứ không im lặng (đó là một lỗi tôi đã sửa).</p>
+<p>Chống gian lận thật sự thì đồ án chưa làm: không phát hiện copy, không kiểm tra thời gian gõ. Nên trả lời thẳng là giới hạn đã biết.</p>
+</div></details>
+
+<details class="qa"><summary>Tại sao placement lần đầu miễn phí nhưng lần sau tính tiền?</summary>
+<div>
+<p>Vì placement là <em>công cụ đo</em>, không phải nội dung tiêu thụ. Học viên cần nó để biết xuất phát điểm — chặn nó bằng tiền thì sản phẩm vô dụng với người mới. Làm lại thì là nhu cầu thật (muốn đo tiến bộ) nên tính theo scope.</p>
+<p>Luật này ở <code>PlacementService.StartPlacementInternalAsync</code>, chỗ <code>isRetake</code>: nếu đã có placement không ở trạng thái in_progress thì tính tiền.</p>
+</div></details>
+
+<details class="qa"><summary>Làm sao biết một đề publish được?</summary>
+<div>
+<p><code>GET /api/admin/exams/{id}/audit</code> trả <code>canPublish</code> và 6 bất biến. Nếu false, trả về danh sách thiếu cái gì, có cả <code>ElementTarget</code> để UI nhảy tới đúng chỗ.</p>
+<p>Điều đáng nói: cổng này chạy cả khi bấm publish, không chỉ khi xem. Publish không có đường tắt.</p>
+</div></details>
+
+<details class="qa"><summary>Nếu database chết giữa lúc nộp bài thì sao?</summary>
+<div>
+<p>Nộp bài chạy trong transaction: đổi status attempt, ghi điểm, tạo free responses, tạo grading rows — hoặc tất cả, hoặc không gì. Nếu request đứt, attempt vẫn <code>in_progress</code> và học viên nộp lại được.</p>
+<p>Đồng hồ cũng chạy phía server (<code>ExpiresAt</code>), nên tắt trình duyệt không ăn gian được thời gian.</p>
+</div></details>
+
+<details class="qa"><summary>Test thế nào? Có bao nhiêu test?</summary>
+<div>
+<p>Có ba tầng: <code>tests/Services.Tests</code> (dựng database thật từ schema mỗi test — nên chậm, ~20 phút), <code>tests/WebAPI.Tests</code> (HTTP), và Vitest cho React.</p>
+<p>Điểm đáng nói khi bảo vệ: test dựng <strong>database thật từ file schema</strong>, không dùng InMemory provider. Nghĩa là trigger, constraint, view đều được kiểm — thứ mà mock không bắt được.</p>
+</div></details>
+
+<details class="qa"><summary>Vì sao React chứ không phải Razor?</summary>
+<div>
+<p>Đang chuyển dần (strangler pattern). <code>src/WebMVC</code> là Razor cũ, <code>src/web</code> là SPA mới thay từng phần. Lý do chuyển: UI thi dùng nhiều state phức tạp (đồng hồ, audio, autosave) — React hợp hơn Razor cho việc đó.</p>
+</div></details>
+
+<h2 id="quy-luat-demo">Quy luật khi demo</h2>
+
+<h3>Chuẩn bị trước khi vào phòng</h3>
+<ol>
+  <li><strong>Kiểm tra stack sống:</strong> <code>docker compose ps</code> — phải thấy db, api, web đều Up.</li>
+  <li><strong>Chọn sẵn tài khoản:</strong> <code>learner@demo.local</code> (đã làm OOBE, 7 credit) hoặc <code>learner.fresh@demo.local</code> (0 credit, để demo luồng mua).</li>
+  <li><strong>Chọn sẵn chứng chỉ:</strong> TOEIC chỉ có nghe/đọc nên <code>/writing</code> và <code>/speaking</code> <em>sẽ rỗng</em>. Muốn demo viết/nói thì đổi sang IELTS ở góc trên phải.</li>
+  <li><strong>Mở sẵn 2 tab:</strong> một tab admin, một tab learner (dùng cửa sổ ẩn danh cho tab thứ hai, để đăng nhập độc lập).</li>
+</ol>
+
+<h3>Thứ tự demo nên đi</h3>
+<div class="flow">1. Admin: /admin/exams → mở một đề → tab "Publish Readiness"
+      → chỉ 6 bất biến đều xanh, bấm Publish
+2. Admin: /admin/operations → tab Mentors → bảng bookings
+3. Learner: /dashboard → thẻ Goal Standing
+4. Learner: /placement → làm bài → xem kết quả → bấm "Review every answer"
+5. Learner: /writing → mở bài → viết → nộp → AI chấm
+6. Learner: /checkout → thanh toán mock → về trang đơn hàng
+</div>
+
+<h3>Năm câu nên nói khi bị hỏi khó</h3>
+<table>
+  <thead><tr><th>Tình huống</th><th>Câu trả lời</th></tr></thead>
+  <tbody>
+    <tr><td>Màn hình trắng / lỗi</td><td>"Cái này đang lỗi, tôi có log — đây là chỗ tôi biết nó hỏng." Đừng bịa là đang tải.</td></tr>
+    <tr><td>Tính năng chưa có</td><td>"Chưa làm. Nằm ngoài scope vì [lý do]." Nói rõ scope, đừng nói "sẽ làm".</td></tr>
+    <tr><td>Sao chậm</td><td>"Vì test dựng database thật mỗi lần. Đổi lại, trigger và constraint được kiểm thật."</td></tr>
+    <tr><td>Sao không dùng thư viện X</td><td>Nêu đánh đổi cụ thể, không nói "tôi không biết".</td></tr>
+    <tr><td>Phần này ai làm?</td><td>Nói đúng phần mình làm. Bảng phân công ở đầu tài liệu.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="bom-no">Bẫy tôi đã gặp — biết trước để không mất thời gian</h2>
+
+<table>
+  <thead><tr><th>Triệu chứng</th><th>Nguyên nhân thật</th><th>Cách xử lý</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Sign-in trả 400 VALIDATION</td>
+      <td>PowerShell gửi body bị escape sai</td>
+      <td>Ghi body ra file rồi <code>curl --data-binary @file</code></td>
+    </tr>
+    <tr>
+      <td>Sign-in 200 nhưng token rỗng</td>
+      <td>Đọc <code>accessToken</code>, thực tế là <code>token</code></td>
+      <td>Đọc đúng field</td>
+    </tr>
+    <tr>
+      <td><code>/placement/take</code> trả 400 "not active"</td>
+      <td>Placement đã submit; hoặc chưa preflight</td>
+      <td>Gọi <code>/attempts/{id}/preflight/verify</code> trước</td>
+    </tr>
+    <tr>
+      <td>Trả lời câu 4+ bị 400 "not in active exam skill"</td>
+      <td>Placement bị khoá theo <code>ActiveSkillId</code></td>
+      <td>Đã sửa: placement đi qua mọi skill trong một sitting</td>
+    </tr>
+    <tr>
+      <td>Điểm luôn bằng 0 dù đã trả lời</td>
+      <td>Gửi nhãn <code>"A"</code> thay vì <code>selectedOptionId: 431</code></td>
+      <td>Đọc <code>options[].optionId</code> rồi gửi số</td>
+    </tr>
+    <tr>
+      <td>Review trả 400 "not finished"</td>
+      <td>AI chưa chấm xong, <code>isGraded=false</code></td>
+      <td>Đúng thiết kế. Poll <code>/result/{id}/status</code></td>
+    </tr>
+    <tr>
+      <td>Publish bị từ chối, không rõ vì sao</td>
+      <td>Đọc <code>detail</code> trong lỗi 400 — nó liệt kê từng deficit</td>
+      <td>Hoặc mở tab Publish Readiness để xem 6 dòng</td>
+    </tr>
+    <tr>
+      <td>Sửa <code>ItemVersions</code> bị trigger chặn</td>
+      <td>Scored fields là bất biến</td>
+      <td>Tạo version mới (copy-on-write)</td>
+    </tr>
+    <tr>
+      <td>Sửa <code>Exams</code>/<code>ExamItems</code> bị chặn "must declare LastWrittenBy"</td>
+      <td>Trigger audit đòi khai người ghi</td>
+      <td>Thêm <code>LastWrittenBy = 1</code></td>
+    </tr>
+    <tr>
+      <td><code>UPDATE</code> báo lỗi QUOTED_IDENTIFIER</td>
+      <td>SQLCMD mặc định OFF cho bảng có filtered index</td>
+      <td><code>SET QUOTED_IDENTIFIER ON;</code></td>
+    </tr>
+    <tr>
+      <td>Docker chết liên tục (exit 137)</td>
+      <td>Nhiều build song song hết RAM</td>
+      <td><code>scripts/docker-keepalive.ps1</code>; build tuần tự</td>
+    </tr>
+    <tr>
+      <td>Web hiện bản cũ dù đã sửa</td>
+      <td>Container giữ bundle cũ</td>
+      <td><code>docker compose up -d --build web</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="lenh">Lệnh cần nhớ</h2>
+
+<h3>Chạy toàn bộ</h3>
+<pre><code># Bật Docker nếu đã chết
+. .\scripts\docker-keepalive.ps1; Assert-Docker
+
+# Dựng lại stack
+docker compose up -d --build
+
+# Xem trạng thái
+docker compose ps
+docker compose logs api --tail 40</code></pre>
+
+<h3>Build</h3>
+<pre><code>dotnet build ExtraEfficiency.slnx          # backend, phải 0 error
+npm --prefix src/web run build             # frontend, tsc + vite</code></pre>
+
+<h3>Test (theo vùng, đừng chạy hết giữa lúc làm)</h3>
+<pre><code>dotnet test tests/Services.Tests --filter "FullyQualifiedName~PlacementSubmissionTests" --nologo
+npm --prefix src/web test</code></pre>
+
+<h3>Database</h3>
+<pre><code># Nạp schema
+Get-Content docs/database-schema.sql -Raw | docker compose exec -T db /opt/mssql-tools18/bin/sqlcmd `
+  -S localhost -U sa -P 'Str0ng!Passw0rd' -C -d ExtraEfficiency -f 65001
+
+# Nạp seed
+Get-Content docs/seed-demo.sql -Raw | docker compose exec -T db /opt/mssql-tools18/bin/sqlcmd `
+  -S localhost -U sa -P 'Str0ng!Passw0rd' -C -d ExtraEfficiency -f 65001
+
+# Xoá sạch làm lại (mất tài khoản thật)
+docker compose down -v && docker compose up -d</code></pre>
+
+<h3>Kiểm chứng luồng</h3>
+<pre><code># Lấy token
+$tok = & .\scripts\ee-token.ps1                                    # admin
+$tok = & .\scripts\ee-token.ps1 -Email learner@demo.local          # learner
+
+# Audit một đề
+curl.exe -s "http://localhost:5001/api/admin/exams/7/audit" -H "Authorization: Bearer $tok"
+
+# Chạy hết luồng placement
+powershell -NoProfile -File scripts/walk-placement.ps1</code></pre>
+
+<h3>Tài khoản demo (mật khẩu đều là <code>Demo1234!</code>)</h3>
+<table>
+  <thead><tr><th>Email</th><th>Là gì</th></tr></thead>
+  <tbody>
+    <tr><td><code>admin@demo.local</code></td><td>Admin — 5 capability</td></tr>
+    <tr><td><code>learner@demo.local</code></td><td>Đã làm OOBE, 7 credit, có lộ trình</td></tr>
+    <tr><td><code>learner.fresh@demo.local</code></td><td>0 credit, để demo mua</td></tr>
+    <tr><td><code>mentor.khoa@demo.local</code></td><td>Giáo viên — có booking</td></tr>
+  </tbody>
+</table>
+
+<hr>
+<p style="color:var(--muted);font-size:13px">Cập nhật 2026-11-16. Mọi con số trong tài liệu này đo trên stack đang chạy, không phải chép từ code.</p>
+
+</main>
+</div>
+</body>
+</html>

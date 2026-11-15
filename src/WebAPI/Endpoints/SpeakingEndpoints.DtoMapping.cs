@@ -127,7 +127,8 @@ public static partial class SpeakingEndpoints
                     s.Category,
                     s.ExplanationVi)).ToList(),
                 l.PriorityFix,
-                l.ModelRewrite);
+                l.ModelRewrite,
+                l.FailureReason);
         }
 
         return new SpeakingReviewDto(
@@ -164,7 +165,8 @@ public static partial class SpeakingEndpoints
                     s.Category,
                     s.ExplanationVi)).ToList(),
                 q.PriorityFix,
-                q.ModelRewrite)).ToList(),
+                q.ModelRewrite,
+                q.FailureReason)).ToList(),
             lowestDto,
             review.EstimatedBandCode,
             review.EstimatedBandName,

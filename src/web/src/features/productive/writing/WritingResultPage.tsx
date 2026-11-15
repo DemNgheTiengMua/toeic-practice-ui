@@ -73,6 +73,9 @@ export function WritingResultPage({ attemptId, pollIntervalMs = 2500 }: WritingR
     setError(null);
     try {
       await api.writing.retry(attemptId);
+      // The re-queued task has no result any more, so the review must not stay on screen reading the
+      // refusal it was just retried away from.
+      setReview(null);
       await fetchStatus();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to retry writing grading.');
@@ -273,14 +276,43 @@ export function WritingResultPage({ attemptId, pollIntervalMs = 2500 }: WritingR
                 </div>
                 <Card.Title className="text-base">{question.stem}</Card.Title>
               </div>
-              <Chip color="success" variant="soft" size="md">
-                <span className="font-mono-tabular">
-                  {question.totalScore} / {question.maxScore}
-                </span>
-              </Chip>
+              {question.failureReason ? (
+                <Chip color="warning" variant="soft" size="md">
+                  Not graded
+                </Chip>
+              ) : (
+                <Chip color="success" variant="soft" size="md">
+                  <span className="font-mono-tabular">
+                    {question.totalScore} / {question.maxScore}
+                  </span>
+                </Chip>
+              )}
             </Card.Header>
 
             <Card.Content className="space-y-5">
+              {/* #376: a refused task has no marks, and silence is what made the skill vanish from
+                  the placement result. The grader's own reason is the task's explanation. */}
+              {question.failureReason && (
+                <Alert status="warning" role="alert">
+                  <Alert.Indicator />
+                  <Alert.Content>
+                    <Alert.Title>This task was not graded</Alert.Title>
+                    <Alert.Description className="space-y-3">
+                      <p>{question.failureReason}</p>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        isPending={retrying}
+                        onPress={() => void handleRetry()}
+                      >
+                        <RefreshCw className="size-3.5" aria-hidden="true" />
+                        Retry grading (free)
+                      </Button>
+                    </Alert.Description>
+                  </Alert.Content>
+                </Alert>
+              )}
+
               <ProductiveAiFeedback
                 text={question.responseText}
                 textLabel="Your submitted text"

@@ -745,7 +745,8 @@ public sealed class WritingPracticeService(
                 criteriaScores,
                 AiErrorSpan.Deserialize(fr.AiGradingFreeResponse?.ErrorSpansJson),
                 fr.AiGradingFreeResponse?.PriorityFix,
-                fr.AiGradingFreeResponse?.ModelRewrite));
+                fr.AiGradingFreeResponse?.ModelRewrite,
+                fr.AiGradingFreeResponse?.FailureReason));
 
             overallTotalScore += qScore;
             overallMaxScore += qMax;

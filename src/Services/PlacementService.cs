@@ -242,14 +242,27 @@ public sealed partial class PlacementService(
 
                 if (existingPlacement is not null)
                 {
+                    // #383: a placement stays 'in_progress' while its free responses are graded, but its
+                    // ATTEMPT is already submitted by then. Resuming that one handed the learner a
+                    // sitting whose every answer is refused ("Exam attempt is not in progress"), and
+                    // replaced the only control that works (the grading status / result page).
+                    // Only a placement whose attempt is still open can be resumed.
+                    var attemptOpen = existingPlacement.ExamAttempt is not null
+                        && existingPlacement.ExamAttempt.Status == AttemptStatus.InProgress.ToCode();
+
                     if (existingPlacement.ExamAttempt is not null && DateTimeOffset.UtcNow >= existingPlacement.ExamAttempt.ExpiresAt)
                     {
                         await SubmitPlacementInternalAsync(existingPlacement.PlacementId, userId, isAutoSubmit: true, cancellationToken);
                     }
-                    else
+                    else if (attemptOpen)
                     {
                         await tx.CommitAsync(cancellationToken);
                         return ToPlacementTestInfo(existingPlacement, examId, creditsCharged: 0);
+                    }
+                    else
+                    {
+                        // Submitted and awaiting grading: not a sitting to resume, and not a reason to
+                        // refuse a new one either. Leave it alone and fall through.
                     }
                 }
 
@@ -775,6 +788,34 @@ public sealed partial class PlacementService(
         return await BuildPlacementResultViewAsync(placement, cancellationToken);
     }
 
+    /// <summary>
+    /// #375: a submitted placement reopened as a full review. The placement is addressed by its own id
+    /// because that is the id the result page holds; the reader is the attempt engine's, so the review
+    /// renders exactly what a mock-exam review renders rather than a second projection that can drift.
+    /// </summary>
+    public async Task<AttemptReviewView> GetPlacementReviewAsync(int userId, int placementId, CancellationToken cancellationToken = default)
+    {
+        var attemptId = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.PlacementId == placementId && p.UserId == userId)
+            .Select(p => p.AttemptId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (attemptId is not int id)
+        {
+            throw new PlacementException(PlacementException.PlacementNotFound, $"Placement test {placementId} not found.");
+        }
+
+        try
+        {
+            return await _attemptEngine.GetAttemptReviewAsync(id, userId, cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapPlacementException(ex);
+        }
+    }
+
     public async Task<TargetBandView> GetTargetBandViewAsync(int userId, CancellationToken cancellationToken = default)
     {
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
@@ -1292,6 +1333,20 @@ public sealed partial class PlacementService(
             .Distinct()
             .ToListAsync(cancellationToken);
 
+        // #376: a grading the grader REFUSED is settled (`failed`) and leaves the skill with no score
+        // row, which used to fall through to "you did not attempt this skill" - the one thing that was
+        // certainly untrue. The row's own message is what the learner needs, so read it here.
+        var failedGradingReasonBySkill = await db.AiGradings
+            .AsNoTracking()
+            .Where(g => g.FreeResponse.AttemptId == attempt.AttemptId
+                && g.Status == AiGradingStatus.Failed.ToCode())
+            .Select(g => new { g.FreeResponse.SkillId, g.FailureReason })
+            .ToListAsync(cancellationToken);
+        var failedGradingReasonBySkillId = failedGradingReasonBySkill
+            .GroupBy(x => x.SkillId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.FailureReason)
+                .FirstOrDefault(r => !string.IsNullOrWhiteSpace(r)));
+
         var answeredAnswerIds = await db.AttemptAnswers
             .AsNoTracking()
             .Where(a => a.AttemptId == attempt.AttemptId && (a.SelectedOptionId != null || a.SelectedLabel != null || a.ResponseText != null || a.SelectedOptionIdsJson != null))
@@ -1368,6 +1423,10 @@ public sealed partial class PlacementService(
             }
             else
             {
+                // #376: the answer WAS attempted and its grading was refused. Saying
+                // "candidate_skipped" there told the learner they never wrote it, and dropped the
+                // grader's actual reason on the floor.
+                var wasRefused = failedGradingReasonBySkillId.TryGetValue(skill.SkillId, out var refusal);
                 skillResults.Add(new PlacementSkillResultInfo(
                     skill.SkillId,
                     skill.Code,
@@ -1377,7 +1436,8 @@ public sealed partial class PlacementService(
                     null,
                     null,
                     false,
-                    PlacementFailureReason.CandidateSkipped));
+                    wasRefused ? PlacementFailureReason.AiGradingFailed : PlacementFailureReason.CandidateSkipped,
+                    wasRefused ? refusal : null));
             }
         }
 
@@ -1542,16 +1602,24 @@ public sealed partial class PlacementService(
         string attemptStatus,
         CancellationToken cancellationToken)
     {
-        var gradingStates = await db.AiGradings
+        // #384: `total` used to count every free response, while `graded + failed` could only count the
+        // ones that have a grading ROW. A speaking task submitted with no audio produces no row at all
+        // (there is nothing to grade), so the two counts could never meet and IsGraded stayed false
+        // forever - measured on the seeded 4-skill placement: 1 done + 1 failed against 2 responses,
+        // so the result page polled "Evaluating grammar structure..." indefinitely and the review page
+        // answered 400 "Placement test not finished" for a sitting that was finished.
+        //
+        // What this question actually means is "has every free response that was sent to the grader
+        // come back?". A response with no grading row was never sent, so it is not outstanding work.
+        var gradedFreeResponseIds = await db.AiGradings
             .AsNoTracking()
             .Where(g => g.FreeResponse.AttemptId == attemptId)
-            .Select(g => g.Status)
+            .Select(g => new { g.FreeResponseId, g.Status })
             .ToListAsync(cancellationToken);
 
-        var total = await db.FreeResponses
-            .CountAsync(fr => fr.AttemptId == attemptId, cancellationToken);
-        var graded = gradingStates.Count(s => s == AiGradingStatus.Done.ToCode());
-        var failed = gradingStates.Count(s => s == AiGradingStatus.Failed.ToCode());
+        var total = gradedFreeResponseIds.Count;
+        var graded = gradedFreeResponseIds.Count(s => s.Status == AiGradingStatus.Done.ToCode());
+        var failed = gradedFreeResponseIds.Count(s => s.Status == AiGradingStatus.Failed.ToCode());
         var isGraded = attemptStatus == AttemptStatus.Graded.ToCode()
             || total == 0
             || (graded + failed >= total && total > 0);

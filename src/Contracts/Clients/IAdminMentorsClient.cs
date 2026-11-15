@@ -16,6 +16,8 @@ public interface IAdminMentorsClient
     Task<IReadOnlyList<MentorWeeklySlotDto>> ReplaceMentorWeeklySlotsAsync(int mentorId, IReadOnlyList<MentorWeeklySlotInputDto> weeklySlots, string bearerToken, CancellationToken cancellationToken = default) => ReplaceMentorWeeklySlotsAsync(mentorId, weeklySlots, cancellationToken);
     Task<AdminMentorPayoutsReportDto> GetAdminMentorPayoutsAsync(DateOnly? from = null, DateOnly? to = null, CancellationToken cancellationToken = default);
     Task<AdminMentorPayoutsReportDto> GetAdminMentorPayoutsAsync(DateOnly? from, DateOnly? to, string bearerToken, CancellationToken cancellationToken = default) => GetAdminMentorPayoutsAsync(from, to, cancellationToken);
+    Task<IReadOnlyList<AdminMentorBookingDto>> GetAdminMentorBookingsAsync(int? mentorId = null, string? status = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AdminMentorBookingDto>> GetAdminMentorBookingsAsync(int? mentorId, string? status, string bearerToken, CancellationToken cancellationToken = default) => GetAdminMentorBookingsAsync(mentorId, status, cancellationToken);
     Task<IReadOnlyList<MentorCertificateOptionDto>> GetMentorCertificateOptionsAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MentorCertificateOptionDto>> GetMentorCertificateOptionsAsync(string bearerToken, CancellationToken cancellationToken = default) => GetMentorCertificateOptionsAsync(cancellationToken);
     Task<AdminUsersSummaryDto> GetAdminUsersAsync(string? q, string? status, int page, int pageSize, CancellationToken cancellationToken = default);

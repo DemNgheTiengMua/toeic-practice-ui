@@ -164,20 +164,16 @@ function OobeGate({ children }: { children: React.ReactNode }) {
 }
 
 function OnboardingRouteView() {
-  const { isAuthenticated, isStaff, onboardingState } = useAuth();
-  const navigate = useNavigate();
-
-  React.useEffect(() => {
-    if (!isStaff && isAuthenticated && onboardingState?.isOobeComplete) {
-      void navigate({ to: '/dashboard', replace: true });
-    }
-  }, [isAuthenticated, isStaff, navigate, onboardingState?.isOobeComplete]);
-
-  if (!isStaff && isAuthenticated && onboardingState?.isOobeComplete) {
-    return null;
-  }
-
+  // #379: this used to bounce a finished learner straight to /dashboard, which made the certificate
+  // step unreachable once the wizard was done and turned the dashboard's "Adjust goal" link into a
+  // loop. The wizard now stays reachable; when everything is done it lands on the certificate-and-goal
+  // step, which is the part a learner actually revisits.
   return <OnboardingPage />;
+}
+
+function GoalEditorRouteView() {
+  // #379: "Adjust goal" needs a destination that edits the goal, never the wizard's step machine.
+  return <OnboardingPage standalone />;
 }
 
 const speakingRoute = createRoute({
@@ -370,6 +366,13 @@ const routeTree = rootRoute.addChildren([
     path: '/placement/result/$attemptId',
     component: PlacementResultPage,
   }),
+  // #375: the placement reopened as a full review, addressed by the placement id the result holds so
+  // the URL survives a reload.
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/placement/review/$placementId',
+    component: () => <MockExamReviewPage sittingKind="placement" />,
+  }),
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/exams',
@@ -451,6 +454,11 @@ const routeTree = rootRoute.addChildren([
     getParentRoute: () => rootRoute,
     path: '/onboarding',
     component: OnboardingRouteView,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/goal',
+    component: GoalEditorRouteView,
   }),
   createRoute({
     getParentRoute: () => rootRoute,
