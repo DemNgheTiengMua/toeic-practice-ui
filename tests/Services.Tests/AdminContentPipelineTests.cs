@@ -49,14 +49,17 @@ public sealed class AdminContentPipelineTests(DatabaseFixture database)
     /// authors the two it needs and every test shares them. Guarded, because the class shares one
     /// catalog with the rest of the suite.
     /// </summary>
-    // INSERT ... VALUES, not INSERT ... SELECT: the schema-tests fixture guard injects an
-    // ExpectFixtureRows check after every line-leading INSERT ... SELECT, so a deduplicating SELECT
-    // form is the one shape this suite refuses. A fresh database per test makes the WHERE NOT EXISTS
-    // unnecessary anyway.
+    // MERGE rather than INSERT ... SELECT: the schema fixture guard injects an ExpectFixtureRows check
+    // after every line-leading INSERT ... SELECT, so that shape is refused here. Two tests in this
+    // class share a seeded catalog, so the insert must also be idempotent.
     private Task EnsureTopicsAsync() => database.SqlAsync("""
-        INSERT INTO Topics (Modality, Code, Name) VALUES
+        MERGE Topics AS t
+        USING (VALUES
           ('listening','L-DET',N'Listening for detail'),
-          ('reading','R-DET',N'Reading for detail');
+          ('reading','R-DET',N'Reading for detail')
+        ) v(Modality, Code, Name)
+        ON t.Modality = v.Modality AND t.Code = v.Code
+        WHEN NOT MATCHED THEN INSERT (Modality, Code, Name) VALUES (v.Modality, v.Code, v.Name);
         """);
 
     /// <summary>
