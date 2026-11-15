@@ -56,7 +56,30 @@ public sealed partial class PracticeService
                 alreadyGraded.IsCorrect, card.CorrectOption, card.Explanation, card.Lesson.CategoryId);
         }
 
-        var session = await LoadOrStartLessonSittingAsync(userId, certId, card.Lesson, cancellationToken);
+        PracticeSession? session = null;
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            session = await LoadOrStartLessonSittingAsync(userId, certId, card.Lesson, cancellationToken);
+            if (session is not null)
+            {
+                break;
+            }
+
+            var gradedWhileWaiting = await db.LearnerLessonMicroChecks
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.UserId == userId && m.CardId == cardId, cancellationToken);
+            if (gradedWhileWaiting is not null)
+            {
+                return new LessonMicroCheckAnswer(
+                    gradedWhileWaiting.IsCorrect, card.CorrectOption, card.Explanation, card.Lesson.CategoryId);
+            }
+        }
+
+        if (session is null)
+        {
+            throw new InvalidOperationException(
+                $"Could not load or start a lesson sitting for user {userId} and lesson {lessonId}.");
+        }
 
         var now = _clock.GetUtcNow();
         var answer = new PracticeAnswer
@@ -69,17 +92,36 @@ public sealed partial class PracticeService
             DisplayOrder = await NextDisplayOrderAsync(session.SessionId, cancellationToken),
             AnsweredAt = now.UtcDateTime,
         };
-        db.PracticeAnswers.Add(answer);
-
-        db.LearnerLessonMicroChecks.Add(new LearnerLessonMicroCheck
+        var microCheck = new LearnerLessonMicroCheck
         {
             UserId = userId,
             CardId = cardId,
             IsCorrect = isCorrect,
             AnsweredAt = now,
-        });
+        };
+        db.PracticeAnswers.Add(answer);
+        db.LearnerLessonMicroChecks.Add(microCheck);
 
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            db.Entry(answer).State = EntityState.Detached;
+            db.Entry(microCheck).State = EntityState.Detached;
+
+            var concurrent = await db.LearnerLessonMicroChecks
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.UserId == userId && m.CardId == cardId, cancellationToken);
+            if (concurrent is not null)
+            {
+                return new LessonMicroCheckAnswer(
+                    concurrent.IsCorrect, card.CorrectOption, card.Explanation, card.Lesson.CategoryId);
+            }
+
+            throw;
+        }
 
         // #155: the same two writers a drill answer goes through, by category. #237 re-keys mastery
         // to the cell; until then the category axis is the one that exists, and a lesson without one
@@ -100,7 +142,7 @@ public sealed partial class PracticeService
     /// pool-shaped session: its cell is the lesson's own, so the answer it holds is attributable to
     /// (topic, level) exactly as a drill answer is.
     /// </summary>
-    private async Task<PracticeSession> LoadOrStartLessonSittingAsync(
+    private async Task<PracticeSession?> LoadOrStartLessonSittingAsync(
         int userId, int certId, Lesson lesson, CancellationToken cancellationToken)
     {
         var open = await db.PracticeSessions
@@ -130,9 +172,23 @@ public sealed partial class PracticeService
         };
 
         db.PracticeSessions.Add(session);
-        await db.SaveChangesAsync(cancellationToken);
-        return session;
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return session;
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            db.Entry(session).State = EntityState.Detached;
+            return await db.PracticeSessions
+                .FirstOrDefaultAsync(s => s.UserId == userId
+                    && s.LessonId == lesson.LessonId
+                    && s.Status == PracticeStatus.InProgress.ToCode(), cancellationToken);
+        }
     }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+        => ex.GetBaseException() is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 };
 
     private async Task<int> NextDisplayOrderAsync(int sessionId, CancellationToken cancellationToken)
     {

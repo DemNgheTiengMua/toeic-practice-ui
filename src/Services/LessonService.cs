@@ -193,34 +193,35 @@ public sealed class LessonService(CompanionDbContext db) : ILessonService
                 UpdatedAt = now,
             };
             db.LearnerLessonProgresses.Add(progress);
+            if (progress.CardsCompleted >= totalCards)
+            {
+                progress.IsCompleted = true;
+                progress.CompletedAt ??= now;
+            }
+
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (ex.GetBaseException() is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 })
+            {
+                db.Entry(progress).State = EntityState.Detached;
+                progress = await db.LearnerLessonProgresses
+                    .FirstOrDefaultAsync(p => p.UserId == userId && p.LessonId == lessonId && p.Module == card.Module);
+                if (progress is null)
+                {
+                    throw;
+                }
+
+                ApplyCardView(progress, moduleCards, cardId, totalCards, now);
+                await db.SaveChangesAsync();
+            }
         }
         else
         {
-            // Counted against the highest position already reached IN THIS MODULE, not against the
-            // previously viewed card's order. Re-reading an earlier card then returning forward must
-            // not double-count, and a jump to the last card completes the module once.
-            var reachedIndex = progress.LastViewedCardId is { } previous
-                ? moduleCards.IndexOf(previous)
-                : -1;
-            var currentIndex = moduleCards.IndexOf(cardId);
-
-            if (currentIndex > reachedIndex)
-            {
-                progress.CardsCompleted = Math.Min(totalCards, progress.CardsCompleted + (currentIndex - reachedIndex));
-            }
-
-            progress.LastViewedCardId = cardId;
-            progress.TotalCards = totalCards;
-            progress.UpdatedAt = now;
+            ApplyCardView(progress, moduleCards, cardId, totalCards, now);
+            await db.SaveChangesAsync();
         }
-
-        if (progress.CardsCompleted >= totalCards)
-        {
-            progress.IsCompleted = true;
-            progress.CompletedAt ??= now;
-        }
-
-        await db.SaveChangesAsync();
 
         // #154 / #240: finishing the module the step opened closes the step. A step that closed on the
         // first card view would mark a lesson done that the learner has not read.
@@ -234,6 +235,37 @@ public sealed class LessonService(CompanionDbContext db) : ILessonService
                 score: null,
                 accuracyPct: null,
                 lessonModule: progress.Module);
+        }
+    }
+
+    private static void ApplyCardView(
+        LearnerLessonProgress progress,
+        List<int> moduleCards,
+        int cardId,
+        int totalCards,
+        DateTimeOffset now)
+    {
+        // Counted against the highest position already reached IN THIS MODULE, not against the
+        // previously viewed card's order. Re-reading an earlier card then returning forward must
+        // not double-count, and a jump to the last card completes the module once.
+        var reachedIndex = progress.LastViewedCardId is { } previous
+            ? moduleCards.IndexOf(previous)
+            : -1;
+        var currentIndex = moduleCards.IndexOf(cardId);
+
+        if (currentIndex > reachedIndex)
+        {
+            progress.CardsCompleted = Math.Min(totalCards, progress.CardsCompleted + (currentIndex - reachedIndex));
+        }
+
+        progress.LastViewedCardId = cardId;
+        progress.TotalCards = totalCards;
+        progress.UpdatedAt = now;
+
+        if (progress.CardsCompleted >= totalCards)
+        {
+            progress.IsCompleted = true;
+            progress.CompletedAt ??= now;
         }
     }
 

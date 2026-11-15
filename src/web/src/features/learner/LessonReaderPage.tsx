@@ -201,7 +201,7 @@ export function LessonReaderPage() {
   };
 
   const handleCheckAnswer = () => {
-    if (!currentCard || !selectedOption) return;
+    if (!currentCard || !selectedOption || microCheckMutation.isPending) return;
     setMicroCheckError(null);
     microCheckMutation.mutate({ cardId: currentCard.cardId, option: selectedOption });
   };
@@ -395,7 +395,6 @@ export function LessonReaderPage() {
                         size="sm"
                         isDisabled={microCheckMutation.isPending || !selectedOption}
                         onPress={handleCheckAnswer}
-                        onClick={handleCheckAnswer}
                       >
                         {microCheckMutation.isPending ? <Spinner size="sm" /> : 'Check answer'}
                       </Button>
@@ -446,7 +445,6 @@ export function LessonReaderPage() {
               size="sm"
               isDisabled={isFirstCard}
               onPress={handlePrev}
-              onClick={handlePrev}
             >
               Previous card
             </Button>
@@ -458,7 +456,6 @@ export function LessonReaderPage() {
                   variant="primary"
                   size="sm"
                   onPress={handleNext}
-                  onClick={handleNext}
                 >
                   Next card
                 </Button>
