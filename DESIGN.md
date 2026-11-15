@@ -29,6 +29,7 @@ Install `@heroui/react` and import HeroUI after Tailwind CSS, overriding the fou
   --success-foreground: #ffffff;
   --warning: #f2b705;
   --warning-foreground: #14181d;
+  --warning-text: #8a6200;
   --danger: #b31217;
   --danger-foreground: #ffffff;
   --focus: var(--accent);
@@ -36,14 +37,16 @@ Install `@heroui/react` and import HeroUI after Tailwind CSS, overriding the fou
 
 .dark,
 [data-theme="dark"] {
-  --accent: #0b4ea2;
-  --accent-foreground: #ffffff;
-  --success: #0a6b3c;
-  --success-foreground: #ffffff;
+  /* Dark mode: preserve each semantic role's hue while raising lightness for >= 4.5:1 contrast */
+  --accent: #6ea8fe;
+  --accent-foreground: #091426;
+  --success: #3dd68c;
+  --success-foreground: #071f13;
   --warning: #f2b705;
   --warning-foreground: #14181d;
-  --danger: #b31217;
-  --danger-foreground: #ffffff;
+  --warning-text: #f2b705;
+  --danger: #ff6b6e;
+  --danger-foreground: #1c0506;
   --focus: var(--accent);
 }
 ```
@@ -64,6 +67,7 @@ Use `class="light"` or `data-theme="light"` for light mode and `class="dark"` or
 - Compose interfaces from HeroUI components before creating custom primitives.
 - Keep interactions accessible, keyboard friendly, and visibly focused.
 - Let semantic tokens adapt the interface between light and dark modes.
+- Use **English** as the canonical UI chrome language across navigation, buttons, labels, empty states, and system messages (never mix Vietnamese and English in UI chrome).
 
 ## Colors
 
@@ -79,10 +83,11 @@ Use semantic HeroUI tokens and Tailwind utilities in product code. Raw values ar
 | Backdrop | `bg-backdrop` | `--backdrop` | black at 50% | black at 60% | Content dimming behind overlays |
 | Muted content | `text-muted` | `--muted` | `oklch(0.5517 0.0138 285.94)` | `oklch(70.5% 0.015 286.067)` | Supporting text and secondary icons |
 | Neutral action | `bg-default text-default-foreground` | `--default`, `--default-foreground` | `oklch(94% 0.001 286.375)`, eclipse | `oklch(27.4% 0.006 286.033)`, snow | Neutral controls and selected states |
-| Accent (Sign Blue) | `bg-accent text-accent-foreground` | `--accent`, `--accent-foreground` | `#0b4ea2`, `#ffffff` | same as light | Primary actions, focus, reached CEFR band, and emphasis |
-| Success (Sign Green) | `bg-success text-success-foreground` | `--success`, `--success-foreground` | `#0a6b3c`, `#ffffff` | same as light | Positive outcomes, open conditions, and correct answers |
+| Accent (Sign Blue) | `bg-accent text-accent-foreground` | `--accent`, `--accent-foreground` | `#0b4ea2`, `#ffffff` | `#6ea8fe`, `#091426` | Primary actions, focus, reached CEFR band, and emphasis |
+| Success (Sign Green) | `bg-success text-success-foreground` | `--success`, `--success-foreground` | `#0a6b3c`, `#ffffff` | `#3dd68c`, `#071f13` | Positive outcomes, open conditions, and correct answers |
 | Warning (Sign Gold) | `bg-warning text-warning-foreground` | `--warning`, `--warning-foreground` | `#f2b705`, `#14181d` | same as light | Caution, flagged questions, text highlights, and attention |
-| Danger (Sign Red) | `bg-danger text-danger-foreground` | `--danger`, `--danger-foreground` | `#b31217`, `#ffffff` | same as light | Errors, refusal, negative net revenue, and destructive actions |
+| Warning text | `text-warning-text` | `--warning-text` | `#8a6200` | `#f2b705` | Accessible warning copy on light and dark surfaces |
+| Danger (Sign Red) | `bg-danger text-danger-foreground` | `--danger`, `--danger-foreground` | `#b31217`, `#ffffff` | `#ff6b6e`, `#1c0506` | Errors, refusal, negative net revenue, and destructive actions |
 | Field | `bg-field text-field-foreground` | `--field-background`, `--field-foreground` | white, eclipse | eclipse, foreground | Inputs and interactive fields |
 | Border | `border-border` | `--border` | `oklch(90% 0.004 286.32)` | `oklch(28% 0.006 286.033)` | Component boundaries |
 | Separator | `border-separator` | `--separator` | `oklch(92% 0.004 286.32)` | `oklch(25% 0.006 286.033)` | Quiet structural dividers |

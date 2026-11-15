@@ -544,7 +544,7 @@ export function LearningPathPage() {
                     {showTrackBadge && (
                       <span
                         className={`text-xs px-2 py-0.5 rounded font-mono font-semibold ${
-                          week.isOnTrack ? 'bg-success text-white' : 'bg-warning text-foreground'
+                          week.isOnTrack ? 'bg-success text-success-foreground' : 'bg-warning text-warning-foreground'
                         }`}
                       >
                         {week.isOnTrack ? 'On track' : 'Off track'}

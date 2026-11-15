@@ -3829,7 +3829,9 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["AttemptResultDto"];
+                    };
                 };
             };
         };
@@ -3862,7 +3864,9 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["ExamHistoryDto"];
+                    };
                 };
             };
         };
@@ -3897,7 +3901,9 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["AttemptReviewDto"];
+                    };
                 };
             };
         };
@@ -7689,6 +7695,145 @@ export interface components {
             /** @default ALL */
             targetBands: string;
         };
+        AttemptResultDto: {
+            /** Format: int32 */
+            attemptId: number | string;
+            /** Format: int32 */
+            examId: number | string;
+            examName: string;
+            /** Format: int32 */
+            certId: number | string;
+            certCode: string;
+            certName: string;
+            status: components["schemas"]["AttemptStatusDto"];
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            submittedAt: string;
+            /** Format: int32 */
+            durationSeconds: number | string;
+            isAutoSubmitted: boolean;
+            /** Format: int32 */
+            totalScore: number | string;
+            bandCode: null | string;
+            bandName: null | string;
+            skillScores: components["schemas"]["AttemptSkillScoreDto"][];
+            /** Format: int32 */
+            previousAttemptScore: null | number | string;
+            /** Format: int32 */
+            scoreDelta: null | number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            freeResponseCount: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            gradedFreeResponseCount: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            failedFreeResponseCount: number | string;
+            /**
+             * Format: int32
+             * @default 1
+             */
+            scoreDisplayFactor: number | string;
+        };
+        AttemptReviewDto: {
+            /** Format: int32 */
+            attemptId: number | string;
+            /** Format: int32 */
+            examId: number | string;
+            examName: string;
+            /** Format: int32 */
+            certId: number | string;
+            certCode: string;
+            certName: string;
+            status: components["schemas"]["AttemptStatusDto"];
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            submittedAt: string;
+            /** Format: int32 */
+            durationSeconds: number | string;
+            /** Format: int32 */
+            totalScore: number | string;
+            bandCode: null | string;
+            bandName: null | string;
+            skillScores: components["schemas"]["AttemptSkillScoreDto"][];
+            /** Format: int32 */
+            totalQuestions: number | string;
+            /** Format: int32 */
+            answeredCount: number | string;
+            /** Format: int32 */
+            correctCount: number | string;
+            /** Format: int32 */
+            incorrectCount: number | string;
+            /** Format: int32 */
+            blankCount: number | string;
+            /** Format: int32 */
+            flaggedCount: number | string;
+            questions: components["schemas"]["AttemptReviewQuestionDto"][];
+            navigator: components["schemas"]["ReviewNavigatorItemDto"][];
+        };
+        AttemptReviewOptionDto: {
+            /** Format: int32 */
+            optionId: number | string;
+            label: string;
+            text: string;
+            isCorrect: boolean;
+            rationale: null | string;
+        };
+        AttemptReviewQuestionDto: {
+            /** Format: int32 */
+            questionId: number | string;
+            /** Format: int32 */
+            displayOrder: number | string;
+            /** Format: int32 */
+            totalQuestions: number | string;
+            /** Format: int32 */
+            sectionId: number | string;
+            sectionCode: string;
+            sectionName: string;
+            skillCode: string;
+            skillName: string;
+            modality: components["schemas"]["ModalityDto"];
+            stem: string;
+            imagePath: null | string;
+            imageAlt: null | string;
+            audioPath: null | string;
+            /** Format: int32 */
+            audioStartMs: null | number | string;
+            /** Format: int32 */
+            audioEndMs: null | number | string;
+            transcript: null | string;
+            passage: null | string;
+            explanation: null | string;
+            options: components["schemas"]["AttemptReviewOptionDto"][];
+            /** Format: int32 */
+            selectedOptionId: null | number | string;
+            isCorrect: null | boolean;
+            isFlagged: boolean;
+        };
+        AttemptSkillScoreDto: {
+            /** Format: int32 */
+            skillId: number | string;
+            skillCode: string;
+            skillName: string;
+            modality: components["schemas"]["ModalityDto"];
+            /** Format: int32 */
+            rawScore: number | string;
+            /** Format: int32 */
+            scaledScore: number | string;
+            /** Format: int32 */
+            totalQuestions: number | string;
+        };
+        /** @enum {unknown} */
+        AttemptStatusDto: "in_progress" | "submitted" | "graded" | "abandoned";
         BatchAnswerItemDto: {
             /** Format: int32 */
             questionId: number | string;
@@ -7838,6 +7983,39 @@ export interface components {
             prepSeconds?: null | number | string;
             /** Format: int32 */
             responseSeconds?: null | number | string;
+        };
+        ExamHistoryDto: {
+            certificate: components["schemas"]["CertificateOptionDto"];
+            /** Format: int32 */
+            totalAttempts: number | string;
+            /** Format: int32 */
+            bestScore: null | number | string;
+            /** Format: int32 */
+            averageScore: null | number | string;
+            bestScoreBandCode: null | string;
+            bestScoreBandName: null | string;
+            cefrBands: components["schemas"]["ScoreBandItemDto"][];
+            attempts: components["schemas"]["ExamHistoryItemDto"][];
+        };
+        ExamHistoryItemDto: {
+            /** Format: int32 */
+            attemptId: number | string;
+            /** Format: int32 */
+            examId: number | string;
+            examName: string;
+            /** Format: int32 */
+            certId: number | string;
+            certCode: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            submittedAt: string;
+            /** Format: int32 */
+            totalScore: number | string;
+            bandCode: null | string;
+            bandName: null | string;
+            skillScores: components["schemas"]["AttemptSkillScoreDto"][];
+            status: components["schemas"]["AttemptStatusDto"];
         };
         /** @enum {unknown} */
         ExamPurposeDto: "mock" | "placement" | "speaking_practice" | "writing_practice";
@@ -8049,6 +8227,19 @@ export interface components {
         ResumeAttemptRequest: {
             authorizationCode: string;
         };
+        ReviewNavigatorItemDto: {
+            /** Format: int32 */
+            questionId: number | string;
+            /** Format: int32 */
+            displayOrder: number | string;
+            /** Format: int32 */
+            sectionId: number | string;
+            sectionCode: string;
+            modality: components["schemas"]["ModalityDto"];
+            isAnswered: boolean;
+            isFlagged: boolean;
+            isCorrect: null | boolean;
+        };
         SaveAnswerRequest: {
             /** Format: int32 */
             selectedOptionId: null | number | string;
@@ -8182,6 +8373,16 @@ export interface components {
             /** Format: int32 */
             questionId: number | string;
             responseText: null | string;
+        };
+        ScoreBandItemDto: {
+            code: string;
+            name: string;
+            /** Format: int32 */
+            minTotal: number | string;
+            /** Format: int32 */
+            maxTotal: number | string;
+            /** Format: int32 */
+            displayOrder: number | string;
         };
         ScorePreviewRequestDto: {
             /** Format: int32 */

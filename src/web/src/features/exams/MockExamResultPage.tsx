@@ -309,9 +309,11 @@ export function MockExamResultPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {result.skillScores.map((skill: AttemptSkillScoreDto) => {
+              const totalQuestions = Number(skill.totalQuestions);
+              const rawScore = Number(skill.rawScore);
               const accuracyPct =
-                skill.totalQuestions > 0
-                  ? Math.round((skill.rawScore / skill.totalQuestions) * 100)
+                totalQuestions > 0
+                  ? Math.round((rawScore / totalQuestions) * 100)
                   : 0;
 
               return (

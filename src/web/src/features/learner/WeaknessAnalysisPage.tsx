@@ -8,6 +8,7 @@ import {
   Chip,
   ProgressBar,
   Skeleton,
+  buttonVariants,
   toast,
 } from '@heroui/react';
 import {
@@ -218,7 +219,7 @@ export function WeaknessAnalysisPage() {
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <Link
                 to="/practice"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-white font-semibold text-sm no-underline hover:bg-accent/90"
+                className={buttonVariants({ variant: 'primary', size: 'sm', className: 'no-underline' })}
               >
                 <span>Practice a section</span>
                 <ArrowRight className="w-4 h-4" />
@@ -263,7 +264,7 @@ export function WeaknessAnalysisPage() {
                         {rankedWeakestTopic.levelCode}
                       </span>
                     )}
-                    <span className="text-xs px-2 py-0.5 rounded bg-danger text-white font-mono font-semibold">
+                    <span className="text-xs px-2 py-0.5 rounded bg-danger text-danger-foreground font-mono font-semibold">
                       Weakest
                     </span>
                   </div>
@@ -304,7 +305,7 @@ export function WeaknessAnalysisPage() {
                             <td className="py-2.5 pr-3 font-medium text-foreground">
                               <strong>{t.topicCode}</strong> {t.topicName}
                               {showWeakestBadge && (
-                                <span className="ml-1.5 px-1.5 py-0.5 rounded bg-danger text-white text-[10px]">
+                                <span className="ml-1.5 px-1.5 py-0.5 rounded bg-danger text-danger-foreground text-[10px]">
                                   Weakest
                                 </span>
                               )}
@@ -356,12 +357,12 @@ export function WeaknessAnalysisPage() {
                             {sec.code} — {sec.name}
                           </span>
                           {isWeakest && (
-                            <span className="px-1.5 py-0.5 rounded bg-danger text-white text-[10px] font-mono">
+                            <span className="px-1.5 py-0.5 rounded bg-danger text-danger-foreground text-[10px] font-mono">
                               Weakest
                             </span>
                           )}
                           {isStrongest && (
-                            <span className="px-1.5 py-0.5 rounded bg-success text-white text-[10px] font-mono">
+                            <span className="px-1.5 py-0.5 rounded bg-success text-success-foreground text-[10px] font-mono">
                               Strongest
                             </span>
                           )}
@@ -417,7 +418,7 @@ export function WeaknessAnalysisPage() {
                     <div className="pt-2">
                       <Link
                         to="/practice"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent text-white text-xs font-semibold no-underline"
+                        className={buttonVariants({ variant: 'primary', size: 'sm', className: 'no-underline' })}
                       >
                         Practice {priorityPracticeSection.code} now <ArrowRight className="w-3.5 h-3.5" />
                       </Link>
@@ -431,7 +432,7 @@ export function WeaknessAnalysisPage() {
                     <div className="pt-2">
                       <Link
                         to="/practice"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent text-white text-xs font-semibold no-underline"
+                        className={buttonVariants({ variant: 'primary', size: 'sm', className: 'no-underline' })}
                       >
                         Practice now <ArrowRight className="w-3.5 h-3.5" />
                       </Link>

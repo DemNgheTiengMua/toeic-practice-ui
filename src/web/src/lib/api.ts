@@ -977,15 +977,7 @@ export interface SubmitAttemptResponseDto {
   isAutoSubmitted: boolean;
 }
 
-export interface AttemptSkillScoreDto {
-  skillId: number;
-  skillCode: string;
-  skillName: string;
-  modality: ModalityCode | string;
-  rawScore: number;
-  scaledScore: number;
-  totalQuestions: number;
-}
+export type AttemptSkillScoreDto = components['schemas']['AttemptSkillScoreDto'];
 
 export interface AttemptResultDto {
   attemptId: number;

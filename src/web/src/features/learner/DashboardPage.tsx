@@ -222,7 +222,7 @@ export function DashboardPage() {
               to={`/exams/take/${unfinishedAttempt.attemptId}`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent text-accent-foreground font-medium text-xs no-underline hover:opacity-90"
             >
-              Resume sitting <ArrowRight className="w-3.5 h-3.5" />
+              Resume attempt <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </Alert.Content>
         </Alert>

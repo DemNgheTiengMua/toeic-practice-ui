@@ -288,7 +288,18 @@ export function MockExamReviewPage() {
               aria-label="Status"
               className="w-48"
               value={selectedStatusFilter}
-              onChange={(key) => setSelectedStatusFilter((key != null ? String(key) : 'all') as any)}
+              onChange={(key) => {
+                const next = key != null ? String(key) : 'all';
+                if (
+                  next === 'all' ||
+                  next === 'incorrect' ||
+                  next === 'blank' ||
+                  next === 'flagged' ||
+                  next === 'correct'
+                ) {
+                  setSelectedStatusFilter(next);
+                }
+              }}
             >
               <Label className="text-xs font-medium text-muted">Status</Label>
               <Select.Trigger>

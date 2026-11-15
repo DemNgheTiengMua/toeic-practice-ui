@@ -27,7 +27,8 @@ public static partial class ExamEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
             }
-        });
+        })
+        .Produces<AttemptResultDto>(StatusCodes.Status200OK);
 
         learner.MapGet("/exams/history", async (
             HttpContext http,
@@ -36,7 +37,8 @@ public static partial class ExamEndpoints
         {
             var history = await mockExamService.GetExamHistoryAsync(CurrentUserId(http), cancellationToken);
             return Results.Ok(ToExamHistoryDto(history));
-        });
+        })
+        .Produces<ExamHistoryDto>(StatusCodes.Status200OK);
 
         learner.MapGet("/attempts/{attemptId:int}/review", async Task<IResult> (
             int attemptId,
@@ -57,6 +59,7 @@ public static partial class ExamEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Attempt not finished", ApiError.Codes.AttemptNotFinished, ex.Message);
             }
-        });
+        })
+        .Produces<AttemptReviewDto>(StatusCodes.Status200OK);
     }
 }
