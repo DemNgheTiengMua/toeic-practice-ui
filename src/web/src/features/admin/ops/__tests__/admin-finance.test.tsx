@@ -490,5 +490,68 @@ describe('AdminFinancePage (#304)', () => {
     expect(screen.getByRole('tab', { name: /refunds desk/i })).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: /credit packages/i })).not.toBeInTheDocument();
   });
+
+  it('uses platform SearchField, Select, and Pagination in OrdersTab and RefundsTab (#338)', async () => {
+    const baseImpl = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (typeof url === 'string' && url.startsWith('/api/admin/orders')) {
+        return jsonResponse({ ...SAMPLE_ORDERS_SUMMARY, totalCount: 50, pageSize: 25, page: 1 });
+      }
+      if (typeof url === 'string' && url.startsWith('/api/admin/refunds')) {
+        return jsonResponse({ ...SAMPLE_REFUNDS_SUMMARY, totalCount: 50, pageSize: 25, page: 1 });
+      }
+      return baseImpl(url, init);
+    });
+
+    renderRoute('/admin/finance', {
+      userId: 1,
+      email: 'admin@test.local',
+      fullName: 'Super Admin',
+      role: 'administrator',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SystemAdmin],
+    });
+
+    // OrdersTab SearchField + Clear
+    const ordersSearch = await screen.findByRole('searchbox', { name: /search orders/i });
+    fireEvent.change(ordersSearch, { target: { value: 'DH-1001' } });
+    expect(ordersSearch).toHaveValue('DH-1001');
+    fireEvent.click(screen.getByRole('button', { name: /clear/i }));
+    expect(ordersSearch).toHaveValue('');
+
+    // OrdersTab Select filters
+    fireEvent.click(screen.getByRole('button', { name: /filter status/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /^paid$/i }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('status=paid'), expect.anything());
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /filter gateway/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /payos/i }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('gateway=payos'), expect.anything());
+    });
+
+    // OrdersTab Pagination
+    expect(await screen.findByText(/showing 1–25 of 50 orders/i)).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: /orders pagination/i })).toBeInTheDocument();
+
+    // Switch to Refunds Desk tab
+    fireEvent.click(screen.getByRole('tab', { name: /refunds desk/i }));
+    const refundsSearch = await screen.findByRole('searchbox', { name: /search refunds/i });
+    fireEvent.change(refundsSearch, { target: { value: 'learner3' } });
+    expect(refundsSearch).toHaveValue('learner3');
+    fireEvent.click(screen.getByRole('button', { name: /clear/i }));
+    expect(refundsSearch).toHaveValue('');
+
+    fireEvent.click(screen.getByRole('button', { name: /filter status/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /^settled$/i }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('status=settled'), expect.anything());
+    });
+
+    expect(await screen.findByText(/showing 1–25 of 50 refunds/i)).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: /refunds pagination/i })).toBeInTheDocument();
+  });
 });
 

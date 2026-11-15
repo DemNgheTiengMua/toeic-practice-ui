@@ -6,6 +6,9 @@ import {
   Button,
   Card,
   Chip,
+  Label,
+  ListBox,
+  Select,
   Spinner,
 } from '@heroui/react';
 import {
@@ -336,21 +339,32 @@ export function ProfilePage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="timeZoneId" className="text-xs font-semibold text-foreground block">
-                    Timezone
-                  </label>
-                  <select
-                    id="timeZoneId"
+                  <Select
+                    aria-label="Timezone"
+                    className="w-full"
                     value={timeZoneId}
-                    onChange={(e) => setTimeZoneId(e.target.value)}
-                    className="w-full text-sm p-2.5 rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                    onChange={(key) => {
+                      if (key != null) setTimeZoneId(String(key));
+                    }}
                   >
-                    {availableTimezones.map((tz) => (
-                      <option key={tz} value={tz}>
-                        {tz}
-                      </option>
-                    ))}
-                  </select>
+                    <Label className="text-xs font-semibold text-foreground block">
+                      Timezone
+                    </Label>
+                    <Select.Trigger>
+                      <Select.Value />
+                      <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        {availableTimezones.map((tz) => (
+                          <ListBox.Item key={tz} id={tz} textValue={tz}>
+                            {tz}
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
                   <span className="text-xs text-muted block">
                     All mentor sessions and exam countdowns are synchronized to this timezone.
                   </span>

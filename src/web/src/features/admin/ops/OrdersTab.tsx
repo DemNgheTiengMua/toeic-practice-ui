@@ -5,12 +5,12 @@ import {
   Button,
   Card,
   Chip,
-  Input,
-  Label,
+  ListBox,
   Modal,
+  SearchField,
+  Select,
   Spinner,
   Table,
-  TextField,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -19,9 +19,9 @@ import {
   Clock,
   Filter,
   RefreshCw,
-  Search,
   ShieldAlert,
 } from 'lucide-react';
+import { OpsPagination } from './OpsPagination';
 import { api, type AdminOrderDto, type AdminOrderDetailDto } from '../../../lib/api';
 import { formatVnd } from '../../../lib/security';
 import {
@@ -128,57 +128,100 @@ export function OrdersTab() {
       <Card className="border border-border">
         <Card.Content className="p-4 flex flex-wrap gap-4 items-center justify-between">
           <div className="flex flex-wrap gap-3 items-center flex-1">
-            <TextField className="w-64" name="search" aria-label="Search orders">
-              <div className="relative flex items-center">
-                <Search className="absolute left-2.5 h-4 w-4 text-muted pointer-events-none" />
-                <Input
-                  className="pl-9"
-                  placeholder="Order code or email..."
-                  value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                    setPage(1);
-                  }}
-                />
-              </div>
-            </TextField>
+            <SearchField
+              className="w-64"
+              name="search"
+              aria-label="Search orders"
+              value={query}
+              onChange={(val) => {
+                setQuery(val);
+                setPage(1);
+              }}
+              onClear={() => {
+                setQuery('');
+                setPage(1);
+              }}
+            >
+              <SearchField.Group>
+                <SearchField.SearchIcon />
+                <SearchField.Input placeholder="Order code or email..." />
+                <SearchField.ClearButton />
+              </SearchField.Group>
+            </SearchField>
 
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted whitespace-nowrap">Status:</Label>
-              <select
-                aria-label="Filter status"
-                className="h-9 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-focus"
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="">All statuses</option>
-                <option value="pending">Pending</option>
-                <option value="reconciling">Confirming with the gateway</option>
-                <option value="paid">Paid</option>
-                <option value="failed">Failed</option>
-                <option value="expired">Expired</option>
-              </select>
-            </div>
+            <Select
+              aria-label="Filter status"
+              className="w-52"
+              value={statusFilter || 'all'}
+              onChange={(key) => {
+                setStatusFilter(key === 'all' || key == null ? '' : String(key));
+                setPage(1);
+              }}
+            >
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id="all" textValue="All statuses">
+                    All statuses
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="pending" textValue="Pending">
+                    Pending
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="reconciling" textValue="Confirming with the gateway">
+                    Confirming with the gateway
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="paid" textValue="Paid">
+                    Paid
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="failed" textValue="Failed">
+                    Failed
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="expired" textValue="Expired">
+                    Expired
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                </ListBox>
+              </Select.Popover>
+            </Select>
 
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted whitespace-nowrap">Gateway:</Label>
-              <select
-                aria-label="Filter gateway"
-                className="h-9 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-focus"
-                value={gatewayFilter}
-                onChange={(e) => {
-                  setGatewayFilter(e.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="">All gateways</option>
-                <option value="payos">payOS</option>
-                <option value="mock">Mock gateway</option>
-              </select>
-            </div>
+            <Select
+              aria-label="Filter gateway"
+              className="w-44"
+              value={gatewayFilter || 'all'}
+              onChange={(key) => {
+                setGatewayFilter(key === 'all' || key == null ? '' : String(key));
+                setPage(1);
+              }}
+            >
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id="all" textValue="All gateways">
+                    All gateways
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="payos" textValue="payOS">
+                    payOS
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="mock" textValue="Mock gateway">
+                    Mock gateway
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                </ListBox>
+              </Select.Popover>
+            </Select>
           </div>
 
           <Button
@@ -288,31 +331,14 @@ export function OrdersTab() {
           </Table>
 
           {/* Pagination */}
-          {summary && summary.totalCount > summary.pageSize && (
-            <div className="flex items-center justify-between text-xs text-muted px-2">
-              <span>
-                Showing {(summary.page - 1) * summary.pageSize + 1}–
-                {Math.min(summary.page * summary.pageSize, summary.totalCount)} of {summary.totalCount} orders
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  isDisabled={page <= 1}
-                  onPress={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Previous
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  isDisabled={page * summary.pageSize >= summary.totalCount}
-                  onPress={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+          {summary && (
+            <OpsPagination
+              page={summary.page}
+              pageSize={summary.pageSize}
+              totalCount={summary.totalCount}
+              itemLabel="orders"
+              onPageChange={setPage}
+            />
           )}
         </div>
       )}
