@@ -49,9 +49,10 @@ public sealed class AdminContentPipelineTests(DatabaseFixture database)
     /// authors the two it needs and every test shares them. Guarded, because the class shares one
     /// catalog with the rest of the suite.
     /// </summary>
-    // MERGE rather than INSERT ... SELECT: the schema fixture guard injects an ExpectFixtureRows check
-    // after every line-leading INSERT ... SELECT, so that shape is refused here. Two tests in this
-    // class share a seeded catalog, so the insert must also be idempotent.
+    // MERGE, not a plain INSERT: this class is a [Collection(DatabaseCollection.Name)] member, so both
+    // tests share one seeded catalog rather than getting a fresh database each. A second INSERT then
+    // hits UQ_Topics_Modality_Code - proved by reverting to a plain INSERT, which fails 1 of 2 with a
+    // duplicate key. Idempotence is the whole point of the MERGE.
     private Task EnsureTopicsAsync() => database.SqlAsync("""
         MERGE Topics AS t
         USING (VALUES

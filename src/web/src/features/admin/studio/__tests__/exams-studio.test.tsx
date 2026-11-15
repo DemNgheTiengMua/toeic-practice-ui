@@ -839,7 +839,14 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
     // A rejected format is refused before the bytes leave the browser.
     const badFile = new File(['x'], 'clip.mp4', { type: 'video/mp4' });
     fireEvent.change(audioInput, { target: { files: [badFile] } });
-    expect(await screen.findByText(/'\.mp4' is not accepted/i)).toBeInTheDocument();
+    expect(await screen.findByText(/'\.mp4' is not audio/i)).toBeInTheDocument();
+    expect(uploadCalls).toHaveLength(0);
+
+    // An image is media the route accepts, but it is not an audio track. A shared allow-list let a
+    // .png be saved as a Section's audio; the audio control now refuses it by name.
+    const imageFile = new File(['png'], 'diagram.png', { type: 'image/png' });
+    fireEvent.change(audioInput, { target: { files: [imageFile] } });
+    expect(await screen.findByText(/'\.png' is not audio/i)).toBeInTheDocument();
     expect(uploadCalls).toHaveLength(0);
 
     // An accepted file uploads, and the path the server answered is what gets recorded.

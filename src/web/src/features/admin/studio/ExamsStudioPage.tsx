@@ -58,7 +58,7 @@ import type {
   CreateAdminExamRequest,
   ExamStudioDetailDto,
 } from './types';
-import { EXAM_MEDIA_EXTENSIONS } from './types';
+import { AUDIO_MEDIA_EXTENSIONS, IMAGE_MEDIA_EXTENSIONS } from './types';
 
 /**
  * #359: the file's own duration, measured in the browser before it is recorded. A Listening Section
@@ -73,7 +73,15 @@ import { EXAM_MEDIA_EXTENSIONS } from './types';
 function readAudioDurationSec(file: File): Promise<number> {
   return new Promise((resolve) => {
     let url: string | null = null;
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    // Resolve exactly once: the timeout and the load event race, and a second call would resolve a
+    // promise already settled and revoke a URL already revoked.
     const done = (seconds: number) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
       if (url) URL.revokeObjectURL(url);
       resolve(Number.isFinite(seconds) && seconds > 0 ? seconds : 0);
     };
@@ -88,7 +96,7 @@ function readAudioDurationSec(file: File): Promise<number> {
       audio.addEventListener('loadedmetadata', () => done(audio.duration));
       audio.addEventListener('error', () => done(0));
       // A source that never loads must not strand the upload control.
-      setTimeout(() => done(0), 5000);
+      timer = setTimeout(() => done(0), 5000);
       audio.src = url;
     } catch {
       done(0);
@@ -401,8 +409,14 @@ export function ExamsStudioPage() {
   const handleUploadSectionAudio = async (sectionId: number, file: File) => {
     if (!selectedExamId) return;
     const ext = `.${file.name.split('.').pop()?.toLowerCase() ?? ''}`;
-    if (!(EXAM_MEDIA_EXTENSIONS as readonly string[]).includes(ext)) {
-      setSectionMediaNotice({ sectionId, isError: true, text: `'${ext}' is not accepted. Choose ${EXAM_MEDIA_EXTENSIONS.join(', ')}.` });
+    // The audio control accepts only audio: the route's allow-list also holds images, so checking the
+    // union here let a .png be saved as a section's audio track.
+    if (!(AUDIO_MEDIA_EXTENSIONS as readonly string[]).includes(ext)) {
+      setSectionMediaNotice({
+        sectionId,
+        isError: true,
+        text: `'${ext}' is not audio. Choose ${AUDIO_MEDIA_EXTENSIONS.join(', ')}.`,
+      });
       return;
     }
 
@@ -1128,7 +1142,7 @@ export function ExamsStudioPage() {
                             <input
                               id={`section-audio-${sec.sectionId}`}
                               type="file"
-                              accept=".mp3,.wav,.ogg,.m4a"
+                              accept={AUDIO_MEDIA_EXTENSIONS.join(",")}
                               disabled={uploadingSectionId === sec.sectionId}
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
@@ -1150,7 +1164,7 @@ export function ExamsStudioPage() {
                           <input
                             id={`section-image-${sec.sectionId}`}
                             type="file"
-                            accept=".jpg,.jpeg,.png,.svg,.webp"
+                            accept={IMAGE_MEDIA_EXTENSIONS.join(",")}
                             disabled={uploadingSectionId === sec.sectionId}
                             onChange={(e) => {
                               const file = e.target.files?.[0];
@@ -1243,7 +1257,7 @@ export function ExamsStudioPage() {
                 <h3 className="text-base font-bold text-foreground">Sections</h3>
                 <p className="text-xs text-muted">
                   Pick a Section, paste its questions, and the stock is written to the pool and bound
-                  to this paper.
+                  to this Exam.
                 </p>
               </div>
 
@@ -1318,7 +1332,7 @@ export function ExamsStudioPage() {
                 <h3 className="text-base font-bold text-foreground">Section content</h3>
                 <p className="text-xs text-muted">
                   A Section is Bundles. Each Bundle is its shared passage, audio track, image and
-                  transcript, plus the questions that refer to it — the shape a real paper has.
+                  transcript, plus the questions that refer to it — the shape a real Exam has.
                 </p>
               </div>
 
@@ -1467,7 +1481,7 @@ export function ExamsStudioPage() {
                                       <input
                                         aria-label="Upload bundle image"
                                         type="file"
-                                        accept=".jpg,.jpeg,.png,.svg,.webp"
+                                        accept={IMAGE_MEDIA_EXTENSIONS.join(",")}
                                         onChange={(e) => {
                                           const file = e.target.files?.[0];
                                           e.target.value = '';
@@ -1507,7 +1521,7 @@ export function ExamsStudioPage() {
                                     <input
                                       aria-label="Upload bundle audio"
                                       type="file"
-                                      accept=".mp3,.wav,.ogg,.m4a"
+                                      accept={AUDIO_MEDIA_EXTENSIONS.join(",")}
                                       onChange={(e) => {
                                         const file = e.target.files?.[0];
                                         e.target.value = '';

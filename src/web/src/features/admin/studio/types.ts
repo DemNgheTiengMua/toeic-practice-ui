@@ -502,17 +502,17 @@ export interface AdminExamMediaUploadResultDto {
   fileName: string;
 }
 
-/** The extensions `POST /exams/{id}/media` accepts, mirrored for a refusal before the upload starts. */
+/** The extensions each media control accepts. Split, because a shared list let a .png be saved as audio. */
+export const AUDIO_MEDIA_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.m4a'] as const;
+export const IMAGE_MEDIA_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.svg', '.webp'] as const;
+
+/**
+ * What the server's allow-list holds. Kept as the union so a caller that only wants "is this even
+ * media" has one answer, while the two controls above refuse the wrong kind before it is sent.
+ */
 export const EXAM_MEDIA_EXTENSIONS = [
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.svg',
-  '.webp',
-  '.mp3',
-  '.wav',
-  '.ogg',
-  '.m4a',
+  ...IMAGE_MEDIA_EXTENSIONS,
+  ...AUDIO_MEDIA_EXTENSIONS,
 ] as const;
 
 export interface ExamAuditIssueDto {
