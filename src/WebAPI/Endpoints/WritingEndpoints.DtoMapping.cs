@@ -127,7 +127,8 @@ public static partial class WritingEndpoints
                     s.Category,
                     s.ExplanationVi)).ToList(),
                 q.PriorityFix,
-                q.ModelRewrite)).ToList(),
+                q.ModelRewrite,
+                q.FailureReason)).ToList(),
             review.EstimatedBandCode,
             review.EstimatedBandName,
             review.GradedQuestions);

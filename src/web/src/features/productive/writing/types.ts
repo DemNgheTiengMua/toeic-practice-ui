@@ -154,6 +154,8 @@ export interface WritingQuestionReviewItem {
   priorityFix?: string | null;
   modelRewrite?: string | null;
   annotatedFeedback?: string | null;
+  // #376: the grader's refusal, when it refused this task.
+  failureReason?: string | null;
 }
 
 export interface WritingReview {

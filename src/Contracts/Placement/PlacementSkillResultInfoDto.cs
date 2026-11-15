@@ -16,6 +16,7 @@ namespace Contracts;
 /// <param name="MeasuredAt">When this number was measured — the original sitting for a carried result.</param>
 /// <param name="ReusedFromPrior">True when this result was carried over from an earlier sitting.</param>
 /// <param name="FailureReason">Why this skill was not measured, when that is its status.</param>
+/// <param name="FailureDetail">#376: the grader's own refusal message, when one refused this skill.</param>
 public sealed record PlacementSkillResultInfoDto(
     int SkillId,
     string SkillCode,
@@ -25,4 +26,5 @@ public sealed record PlacementSkillResultInfoDto(
     int? PositionInBand,
     DateTimeOffset? MeasuredAt,
     bool ReusedFromPrior,
-    string? FailureReason);
+    string? FailureReason,
+    string? FailureDetail = null);

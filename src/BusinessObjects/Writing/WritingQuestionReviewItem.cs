@@ -16,5 +16,7 @@ public record WritingQuestionReviewItem(
     // E2.1 (#151): what the learner can act on. Empty when the grading stored nothing to fix.
     IReadOnlyList<AiErrorSpan>? ErrorSpans = null,
     string? PriorityFix = null,
-    string? ModelRewrite = null
+    string? ModelRewrite = null,
+    // #376: why this task has no marks, in the grader's own words. Retrying costs no credit.
+    string? FailureReason = null
 );

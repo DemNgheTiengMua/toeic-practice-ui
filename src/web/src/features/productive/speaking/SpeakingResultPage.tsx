@@ -75,6 +75,7 @@ export function SpeakingResultPage({ attemptId, pollIntervalMs = 2500 }: Speakin
     setError(null);
     try {
       await api.speaking.retry(attemptId);
+      setReview(null);
       await fetchStatus();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to retry speaking grading.');
@@ -308,14 +309,42 @@ export function SpeakingResultPage({ attemptId, pollIntervalMs = 2500 }: Speakin
                   </div>
                   <Card.Title className="text-base">{question.stem}</Card.Title>
                 </div>
-                <Chip color="success" variant="soft" size="md">
-                  <span className="font-mono-tabular">
-                    {question.totalScore} / {question.maxScore}
-                  </span>
-                </Chip>
+                {question.failureReason ? (
+                  <Chip color="warning" variant="soft" size="md">
+                    Not graded
+                  </Chip>
+                ) : (
+                  <Chip color="success" variant="soft" size="md">
+                    <span className="font-mono-tabular">
+                      {question.totalScore} / {question.maxScore}
+                    </span>
+                  </Chip>
+                )}
               </Card.Header>
 
               <Card.Content className="space-y-4">
+                {/* #376: a refused task has no marks; the grader's reason is the explanation. */}
+                {question.failureReason && (
+                  <Alert status="warning" role="alert">
+                    <Alert.Indicator />
+                    <Alert.Content>
+                      <Alert.Title>This task was not graded</Alert.Title>
+                      <Alert.Description className="space-y-3">
+                        <p>{question.failureReason}</p>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          isPending={retrying}
+                          onPress={() => void handleRetry()}
+                        >
+                          <RefreshCw className="size-3.5" aria-hidden="true" />
+                          Retry grading (free)
+                        </Button>
+                      </Alert.Description>
+                    </Alert.Content>
+                  </Alert>
+                )}
+
                 {audioUrl && (
                   <div className="space-y-1">
                     <div className="text-xs font-medium text-muted">Your spoken recording</div>

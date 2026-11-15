@@ -1292,6 +1292,20 @@ public sealed partial class PlacementService(
             .Distinct()
             .ToListAsync(cancellationToken);
 
+        // #376: a grading the grader REFUSED is settled (`failed`) and leaves the skill with no score
+        // row, which used to fall through to "you did not attempt this skill" - the one thing that was
+        // certainly untrue. The row's own message is what the learner needs, so read it here.
+        var failedGradingReasonBySkill = await db.AiGradings
+            .AsNoTracking()
+            .Where(g => g.FreeResponse.AttemptId == attempt.AttemptId
+                && g.Status == AiGradingStatus.Failed.ToCode())
+            .Select(g => new { g.FreeResponse.SkillId, g.FailureReason })
+            .ToListAsync(cancellationToken);
+        var failedGradingReasonBySkillId = failedGradingReasonBySkill
+            .GroupBy(x => x.SkillId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.FailureReason)
+                .FirstOrDefault(r => !string.IsNullOrWhiteSpace(r)));
+
         var answeredAnswerIds = await db.AttemptAnswers
             .AsNoTracking()
             .Where(a => a.AttemptId == attempt.AttemptId && (a.SelectedOptionId != null || a.SelectedLabel != null || a.ResponseText != null || a.SelectedOptionIdsJson != null))
@@ -1368,6 +1382,10 @@ public sealed partial class PlacementService(
             }
             else
             {
+                // #376: the answer WAS attempted and its grading was refused. Saying
+                // "candidate_skipped" there told the learner they never wrote it, and dropped the
+                // grader's actual reason on the floor.
+                var wasRefused = failedGradingReasonBySkillId.TryGetValue(skill.SkillId, out var refusal);
                 skillResults.Add(new PlacementSkillResultInfo(
                     skill.SkillId,
                     skill.Code,
@@ -1377,7 +1395,8 @@ public sealed partial class PlacementService(
                     null,
                     null,
                     false,
-                    PlacementFailureReason.CandidateSkipped));
+                    wasRefused ? PlacementFailureReason.AiGradingFailed : PlacementFailureReason.CandidateSkipped,
+                    wasRefused ? refusal : null));
             }
         }
 
