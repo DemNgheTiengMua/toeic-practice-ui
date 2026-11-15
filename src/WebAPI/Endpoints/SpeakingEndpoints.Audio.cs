@@ -27,7 +27,11 @@ public static partial class SpeakingEndpoints
                     return Problem(StatusCodes.Status404NotFound, "Audio file not found", ApiError.Codes.AttemptNotFound, "The audio file could not be found.");
                 }
 
-                return Results.Stream(fileInfo.Stream, fileInfo.ContentType, fileInfo.FileName, enableRangeProcessing: true);
+                // #365: no file name here — Results.Stream turns a file name into
+                // "Content-Disposition: attachment", which makes the browser download the take instead of
+                // playing it in the result page's <audio>. ContentType already maps every stored take
+                // extension to a playable audio/* type (FileStore.GetContentTypeFromFileName).
+                return Results.Stream(fileInfo.Stream, fileInfo.ContentType, enableRangeProcessing: true);
             }
             catch (SpeakingPracticeException ex) when (ex.Code == SpeakingPracticeException.Forbidden)
             {
