@@ -227,6 +227,10 @@ public sealed class DisplayLabelDriftTests
         Assert.Equal("Free response", DisplayLabels.LabelFor(QuestionTypeDto.FreeResponse, logger));
         Assert.Equal("Not examined by this certificate",
             DisplayLabels.LabelFor(MentorSkillStandingStatus.NotExamined, logger));
+
+        // #348: the complaint state machine is unchanged - `reviewing` stays the stored value - and
+        // only the label staff read changed to "Processing".
+        Assert.Equal("Processing", DisplayLabels.LabelFor(ComplaintStatusDto.Reviewing, logger));
         Assert.Empty(logger.Errors);
         Assert.Empty(logger.Warnings);
     }

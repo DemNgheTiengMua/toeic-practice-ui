@@ -216,6 +216,7 @@ public sealed class RefundService : IRefundService
         await AssertCeilingAsync(
             request.UserId, request.OrderId, request.Method, amount ?? 0m, creditCount, cancellationToken);
         await AssertSubjectBelongsToLearnerAsync(request.UserId, request.OrderId, request.ComplaintId, cancellationToken);
+        await AssertComplaintHasNoLiveRefundAsync(request.ComplaintId, cancellationToken);
 
         var refund = new Refund
         {
@@ -284,6 +285,13 @@ public sealed class RefundService : IRefundService
         refund.DecidedByUserId = staffUserId;
         refund.DecidedAt = _clock.GetUtcNow();
 
+        // #348: approving a credit refund is the moment its incident closes. A money refund has moved
+        // nothing yet, so it waits for settlement.
+        if (refund.Method == RefundMethod.Credit.ToCode())
+        {
+            await DriveComplaintAsync(refund, staffUserId, rejectionReason: null, cancellationToken);
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
 
@@ -313,12 +321,18 @@ public sealed class RefundService : IRefundService
 
         AssertUndecided(refund);
 
-        // The refusal is on record: the original reason stays, the rejection reason is appended, so
-        // "why was this refused" survives without a second column the schema does not have.
-        refund.Reason = $"{refund.Reason} | Rejected: {rejectionReason}";
         refund.Status = RefundStatus.Rejected.ToCode();
         refund.DecidedByUserId = staffUserId;
         refund.DecidedAt = _clock.GetUtcNow();
+
+        // #348: a rejection compensated nobody, so the incident goes back to `reviewing` and carries
+        // the refusal with it. Driven before the reason is suffixed, so the complaint records the
+        // refusal once rather than the refund row's own combined text.
+        await DriveComplaintAsync(refund, staffUserId, rejectionReason, cancellationToken);
+
+        // The refusal is on record: the original reason stays, the rejection reason is appended, so
+        // "why was this refused" survives without a second column the schema does not have.
+        refund.Reason = $"{refund.Reason} | Rejected: {rejectionReason}";
 
         await _db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
@@ -372,6 +386,10 @@ public sealed class RefundService : IRefundService
         refund.Status = RefundStatus.Settled.ToCode();
         refund.SettledByUserId = staffUserId;
         refund.SettledAt = _clock.GetUtcNow();
+
+        // #348: settlement is the moment money leaves, so it is when the incident closes. The staff
+        // member who settled is the one recorded as resolving the complaint.
+        await DriveComplaintAsync(refund, staffUserId, rejectionReason: null, cancellationToken);
 
         await _db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
@@ -479,6 +497,94 @@ public sealed class RefundService : IRefundService
         return method == RefundMethodDto.Money
             ? live.SumAsync(r => r.Amount ?? 0m, cancellationToken)
             : live.SumAsync(r => (decimal)(r.CreditCount ?? 0), cancellationToken);
+    }
+
+    /// <summary>#348: the refund a complaint produced is the incident's compensation, so a second live
+    /// one is refused. <b>Not a unique index</b>: a rejected refund must be able to sit beside its
+    /// successor, so the rule is checked inside the serializable transaction that already holds the
+    /// rows - two requests racing each other either serialize or lose to the deadlock victim.
+    /// </summary>
+    private async Task AssertComplaintHasNoLiveRefundAsync(
+        int? complaintId,
+        CancellationToken cancellationToken)
+    {
+        if (complaintId is null)
+        {
+            return;
+        }
+
+        var live = await _db.Refunds
+            .AsNoTracking()
+            .Where(r => r.ComplaintId == complaintId.Value && LiveStatuses.Contains(r.Status))
+            .Select(r => (int?)r.RefundId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (live is { } liveRefundId)
+        {
+            throw new RefundException(
+                ApiError.Codes.RefundAlreadyOpenForComplaint,
+                $"Complaint {complaintId} is already compensated by refund {liveRefundId}; "
+                    + "decide that one, or reject it, before recording another.",
+                400);
+        }
+    }
+
+    /// <summary>#348: the lifecycle drives the complaint, so one incident is compensated once and a
+    /// resolved incident stops lingering in the triage queue.
+    /// <para>
+    /// <b>Resolved on a credit refund's approval or a money refund's settlement</b> - the two moments
+    /// value actually moves. <b>A rejection reopens instead</b>: it compensated nobody, so the incident
+    /// returns to <c>reviewing</c> with the refusal recorded, which is what makes a retry informed.
+    /// </para>
+    /// <para>
+    /// <b>The grant pointer is deliberately never set.</b> A credit refund posts <c>refund_credit</c>,
+    /// and <c>trg_Complaints_GrantMustBeAdminGrant</c> only accepts an <c>admin_grant</c> row; pointing
+    /// it at a refund would abort the whole transaction.
+    /// </para>
+    /// <para>
+    /// The complaint's own resolve contract requires both texts, so both are synthesised from the
+    /// refund rather than passed through as empty strings.
+    /// </para>
+    /// </summary>
+    private async Task DriveComplaintAsync(
+        Refund refund,
+        int staffUserId,
+        string? rejectionReason,
+        CancellationToken cancellationToken)
+    {
+        if (refund.ComplaintId is not { } complaintId)
+        {
+            return;
+        }
+
+        var complaint = await _db.Complaints
+            .SingleOrDefaultAsync(c => c.ComplaintId == complaintId, cancellationToken);
+        if (complaint is null || complaint.Status == ComplaintStatus.Resolved.ToCode())
+        {
+            return;
+        }
+
+        if (refund.Status == RefundStatus.Rejected.ToCode())
+        {
+            var note = $"Refund #{refund.RefundId} rejected: {rejectionReason}";
+            complaint.Status = ComplaintStatus.Reviewing.ToCode();
+            complaint.InternalNotes = string.IsNullOrWhiteSpace(complaint.InternalNotes)
+                ? note
+                : $"{complaint.InternalNotes} | {note}";
+            return;
+        }
+
+        var summary = refund.Method == RefundMethod.Money.ToCode()
+            ? $"{refund.Amount:N0} dong"
+            : $"{refund.CreditCount} credits";
+
+        complaint.Status = ComplaintStatus.Resolved.ToCode();
+        complaint.Resolution = $"Refund #{refund.RefundId} returned {summary}: {refund.Reason}";
+        complaint.InternalNotes =
+            $"Compensated by refund #{refund.RefundId} ({refund.Method}, {summary}), "
+            + $"settled by staff user {staffUserId}. Reason: {refund.Reason}";
+        complaint.ResolvedByUserId = staffUserId;
+        complaint.ResolvedAt = _clock.GetUtcNow();
     }
 
     /// <summary>The composite FKs prove ownership in the database; this states it as a domain refusal

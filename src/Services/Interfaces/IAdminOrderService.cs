@@ -14,6 +14,7 @@ public interface IAdminOrderService
         string? q = null,
         string? status = null,
         string? gateway = null,
+        int? userId = null,
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default);

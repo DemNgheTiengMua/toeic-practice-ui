@@ -17,6 +17,7 @@ public sealed class AdminOrderService(
         string? q = null,
         string? status = null,
         string? gateway = null,
+        int? userId = null,
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default)
@@ -48,6 +49,13 @@ public sealed class AdminOrderService(
         IQueryable<Order> query = db.Orders
             .AsNoTracking()
             .Include(o => o.User);
+
+        // #349: the refund desk lists one learner's paid orders. It narrows this same query rather than
+        // asking Orders a second question, so the picker and the orders screen can never disagree.
+        if (userId is > 0)
+        {
+            query = query.Where(o => o.UserId == userId.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(q))
         {

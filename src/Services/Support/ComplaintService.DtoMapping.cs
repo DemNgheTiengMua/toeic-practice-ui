@@ -1,4 +1,5 @@
 using System.Data;
+using System.Linq.Expressions;
 using BusinessObjects;
 using Contracts;
 using DataAccess;
@@ -33,6 +34,52 @@ public sealed partial class ComplaintService
             c.AttemptId,
             c.OrderId,
             summary);
+    }
+
+    /// <summary>
+    /// #347: what the learner actually spent on the complaint's subject, so a compensation amount is
+    /// read rather than guessed. Credits come from the ledger and nowhere else - an attempt can carry
+    /// both a sitting charge and an AI-grading charge, so a cost constant would be correct for exactly
+    /// one of the two subjects and silently wrong for the other. Money is the order's own amount,
+    /// because an order is money that arrived.
+    /// </summary>
+    private async Task<(int CreditsSpent, decimal? MoneyPaid, RefundMethodDto? ImpliedMethod)>
+        DescribeCompensationContextAsync(Complaint c, CancellationToken cancellationToken)
+    {
+        if (c.BookingId.HasValue)
+        {
+            var bookingId = c.BookingId.Value;
+            return (await DebitsForSubjectAsync(t => t.BookingId == bookingId, cancellationToken), null, RefundMethodDto.Credit);
+        }
+
+        if (c.AttemptId.HasValue)
+        {
+            var attemptId = c.AttemptId.Value;
+            return (await DebitsForSubjectAsync(t => t.AttemptId == attemptId, cancellationToken), null, RefundMethodDto.Credit);
+        }
+
+        if (c.OrderId.HasValue)
+        {
+            return (0, c.Order?.Amount, RefundMethodDto.Money);
+        }
+
+        return (0, null, null);
+    }
+
+    // shortcut: only debits are summed, so a cancelled-then-refunded booking still reports the charge
+    // it originally paid. Netting the cancellation row in would hide a real charge behind a refund
+    // that has its own record; revisit if the compensation figure ever drives money automatically.
+    private async Task<int> DebitsForSubjectAsync(
+        Expression<Func<CreditTransaction, bool>> subject,
+        CancellationToken cancellationToken)
+    {
+        var debits = await db.CreditTransactions
+            .AsNoTracking()
+            .Where(subject)
+            .Where(t => t.Delta < 0)
+            .SumAsync(t => (int?)t.Delta, cancellationToken);
+
+        return -(debits ?? 0);
     }
 
     private static (string SubjectType, int SubjectId, string Summary) DescribeSubject(Complaint c)

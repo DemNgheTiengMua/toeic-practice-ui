@@ -1947,6 +1947,12 @@ export interface AdminComplaintDetailDto {
   resolvedAt?: string | null;
   resolvedByGrantTxnId?: number | null;
   grantedCredits?: number | null;
+  /** #347: negative credit-ledger deltas attributable to the subject. */
+  creditsSpent?: number;
+  /** #347: the order's amount, and only when the subject is an order. */
+  moneyPaid?: number | null;
+  /** #347: implied by the subject; null when the complaint carries none. */
+  impliedRefundMethod?: RefundMethodDto | null;
 }
 
 export interface AdminComplaintsSummaryDto {
@@ -2835,13 +2841,14 @@ export const api = {
           reason: body.reason,
         }),
       }),
-    orders: (params?: { q?: string; status?: string; gateway?: string; page?: number; pageSize?: number }) => {
+    orders: (params?: { q?: string; status?: string; gateway?: string; userId?: number; page?: number; pageSize?: number }) => {
       const sp = new URLSearchParams();
       sp.set('page', String(params?.page ?? 1));
       sp.set('pageSize', String(params?.pageSize ?? 25));
       if (params?.q) sp.set('q', params.q);
       if (params?.status) sp.set('status', params.status);
       if (params?.gateway) sp.set('gateway', params.gateway);
+      if (params?.userId) sp.set('userId', String(params.userId));
       return apiFetch<AdminOrdersSummaryDto>(`/api/admin/orders?${sp.toString()}`);
     },
     orderDetail: (orderId: number) =>
