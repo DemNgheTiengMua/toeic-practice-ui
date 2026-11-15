@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
-import { Button, Chip, ListBox, Select } from '@heroui/react';
+import { Button, Chip, Drawer, ListBox, Select } from '@heroui/react';
 import type { Key } from '@heroui/react';
 import {
   Award,
@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   LogOut,
+  Menu,
   Mic,
   Moon,
   PenTool,
@@ -86,6 +87,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
   const [skipRevision, setSkipRevision] = useState(0);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const onSkipChanged = () => setSkipRevision((n) => n + 1);
@@ -181,6 +187,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const staffRoleLabel = canManageUsers(user) ? 'Admin' : 'Staff';
 
+  const primaryNavItems: Array<{ to: string; label: string }> = [
+    { to: '/certificates', label: 'Certificates' },
+    { to: '/pricing', label: 'Pricing' },
+    ...(isAuthenticated && !isStaff ? [{ to: '/saved-questions', label: 'Saved questions' }] : []),
+  ];
+
+  const isNavItemActive = (to: string) =>
+    to === '/admin'
+      ? location.pathname === '/admin'
+      : location.pathname === to || location.pathname.startsWith(`${to}/`);
+
   const handleSignOut = async () => {
     await signOut();
     navigate({ to: '/' });
@@ -190,10 +207,73 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <header className="bg-surface border-b border-border sticky top-0 z-30">
         <div className="w-full px-3 sm:px-6 min-h-14 py-2 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-2 sm:gap-4">
-          <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-6 min-w-0">
+            <Drawer isOpen={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+              <Drawer.Trigger
+                aria-label="Open navigation menu"
+                className="sm:hidden inline-flex items-center justify-center min-h-11 min-w-11 shrink-0 rounded-lg text-foreground hover:bg-surface-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Menu className="w-5 h-5" />
+              </Drawer.Trigger>
+              <Drawer.Backdrop isDismissable>
+                <Drawer.Content placement="left">
+                  <Drawer.Dialog aria-label="Navigation menu">
+                    <Drawer.Header className="flex items-center justify-between gap-2 border-b border-separator pb-3">
+                      <Drawer.Heading className="font-display font-bold text-base">
+                        {isStaff ? 'Staff Studio' : isAuthenticated ? 'Learner workspace' : 'Extra Efficiency'}
+                      </Drawer.Heading>
+                      <Drawer.CloseTrigger className="min-h-11 min-w-11" aria-label="Close navigation menu" />
+                    </Drawer.Header>
+                    <Drawer.Body className="p-3">
+                      <nav aria-label="Mobile navigation" className="flex flex-col gap-1">
+                        {navItems.map((item) => {
+                          const isActive = isNavItemActive(item.to);
+                          return (
+                            <Link
+                              key={item.to}
+                              to={item.to}
+                              aria-current={isActive ? 'page' : undefined}
+                              onClick={() => setMobileNavOpen(false)}
+                              className={`flex items-center gap-3 px-3 min-h-11 rounded-lg text-sm font-medium no-underline transition-colors ${
+                                isActive
+                                  ? 'bg-accent text-accent-foreground'
+                                  : 'text-foreground hover:bg-surface-secondary'
+                              }`}
+                            >
+                              {item.icon}
+                              <span>{item.label}</span>
+                            </Link>
+                          );
+                        })}
+                        {navItems.length > 0 && <div className="my-2 border-t border-separator" />}
+                        {primaryNavItems.map((item) => {
+                          const isActive = isNavItemActive(item.to);
+                          return (
+                            <Link
+                              key={item.to}
+                              to={item.to}
+                              aria-current={isActive ? 'page' : undefined}
+                              onClick={() => setMobileNavOpen(false)}
+                              className={`flex items-center gap-3 px-3 min-h-11 rounded-lg text-sm font-medium no-underline transition-colors ${
+                                isActive
+                                  ? 'bg-accent text-accent-foreground'
+                                  : 'text-muted hover:text-foreground hover:bg-surface-secondary'
+                              }`}
+                            >
+                              <span>{item.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </nav>
+                    </Drawer.Body>
+                  </Drawer.Dialog>
+                </Drawer.Content>
+              </Drawer.Backdrop>
+            </Drawer>
+
             <Link
               to={isStaff ? '/admin' : isAuthenticated ? '/dashboard' : '/'}
-              className="font-display font-bold tracking-tight text-base sm:text-lg text-foreground no-underline flex items-center gap-2 sm:gap-2.5 shrink-0 whitespace-nowrap"
+              className="font-display font-bold tracking-tight text-base sm:text-lg text-foreground no-underline flex items-center gap-2 sm:gap-2.5 shrink-0 whitespace-nowrap min-h-11 sm:min-h-0"
             >
               <span className="bg-accent text-accent-foreground px-2 py-0.5 rounded-md font-mono-tabular text-xs font-semibold">
                 EE
@@ -202,35 +282,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
 
             <nav aria-label="Primary" className="hidden md:flex items-center gap-4 text-sm font-medium">
-              <Link
-                to="/certificates"
-                className="text-muted hover:text-foreground no-underline px-2 py-1 transition-colors"
-              >
-                Certificates
-              </Link>
-              <Link
-                to="/pricing"
-                className="text-muted hover:text-foreground no-underline px-2 py-1 transition-colors"
-              >
-                Pricing
-              </Link>
-              {isAuthenticated && !isStaff && (
+              {primaryNavItems.map((item) => (
                 <Link
-                  to="/saved-questions"
+                  key={item.to}
+                  to={item.to}
                   className="text-muted hover:text-foreground no-underline px-2 py-1 transition-colors"
                 >
-                  Saved questions
+                  {item.label}
                 </Link>
-              )}
+              ))}
             </nav>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2.5 max-w-full">
+          <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2.5 max-w-full min-w-0">
             {isAuthenticated && !isStaff && learnerContext && (
-              <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                 <Select
                   aria-label="Active certificate"
-                  className="w-[108px] sm:w-[190px]"
+                  className="w-auto min-w-[84px] max-w-[120px] sm:w-[140px] shrink-0"
                   value={learnerContext.active.code as Key}
                   onChange={(value) => {
                     if (typeof value === 'string' && value !== learnerContext.active.code) {
@@ -238,9 +307,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     }
                   }}
                 >
-                  <Select.Trigger className="h-8 text-xs">
-                    <Select.Value />
-                    <Select.Indicator />
+                  <Select.Trigger className="min-h-11 sm:min-h-8 h-11 sm:h-8 text-xs truncate whitespace-nowrap">
+                    <Select.Value className="truncate whitespace-nowrap">
+                      {() => learnerContext.active.code}
+                    </Select.Value>
+                    <Select.Indicator className="shrink-0" />
                   </Select.Trigger>
                   <Select.Popover>
                     <ListBox>
@@ -261,14 +332,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="inline-flex items-center rounded-md bg-surface-secondary border border-border text-foreground font-mono-tabular text-[11px] sm:text-xs font-semibold overflow-hidden whitespace-nowrap">
                   <Link
                     to="/wallet"
-                    className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-foreground no-underline hover:bg-surface-tertiary transition-colors whitespace-nowrap"
+                    className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 min-h-11 sm:min-h-8 text-foreground no-underline hover:bg-surface-tertiary transition-colors whitespace-nowrap"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-warning" />
                     <span>{learnerContext.creditBalance} credits</span>
                   </Link>
                   <Link
                     to="/checkout"
-                    className="inline-flex items-center px-1.5 sm:px-2 py-1 text-accent font-sans hover:bg-surface-tertiary transition-colors border-l border-border no-underline whitespace-nowrap"
+                    className="inline-flex items-center px-1.5 sm:px-2 min-h-11 sm:min-h-8 text-accent font-sans hover:bg-surface-tertiary transition-colors border-l border-border no-underline whitespace-nowrap"
                   >
                     + Top up
                   </Link>
@@ -280,6 +351,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               isIconOnly
               size="sm"
               variant="ghost"
+              className="min-h-11 min-w-11 sm:min-h-8 sm:min-w-8"
               aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
               onPress={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
             >
@@ -290,7 +362,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <Link
                   to="/profile"
-                  className="text-xs text-muted hover:text-foreground no-underline font-medium flex items-center gap-1.5 px-1.5 sm:px-2 py-1"
+                  className="text-xs text-muted hover:text-foreground no-underline font-medium flex items-center gap-1.5 px-1.5 sm:px-2 min-h-11 sm:min-h-8"
                 >
                   <Settings className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{user.fullName || user.email}</span>
@@ -300,7 +372,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     {staffRoleLabel}
                   </Chip>
                 )}
-                <Button size="sm" variant="secondary" className="px-2.5 sm:px-3" onPress={handleSignOut}>
+                <Button size="sm" variant="secondary" className="px-2.5 sm:px-3 min-h-11 sm:min-h-8" onPress={handleSignOut}>
                   <LogOut className="w-3.5 h-3.5 sm:mr-1" />
                   Sign out
                 </Button>
@@ -308,12 +380,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ) : (
               <div className="flex items-center gap-2">
                 <Link to="/sign-in" className="no-underline">
-                  <Button size="sm" variant="secondary">
+                  <Button size="sm" variant="secondary" className="min-h-11 sm:min-h-8">
                     Sign in
                   </Button>
                 </Link>
                 <Link to="/register" className="no-underline">
-                  <Button size="sm" variant="primary">
+                  <Button size="sm" variant="primary" className="min-h-11 sm:min-h-8">
                     Register
                   </Button>
                 </Link>
@@ -330,10 +402,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           <div className="w-full flex items-center justify-between gap-4">
             <span className="font-medium">
-              Bạn chưa hoàn tất thiết lập lộ trình học — Tiếp tục thiết lập (OOBE)
+              You haven&apos;t finished setting up your learning path yet.
             </span>
-            <Link to="/onboarding" className="font-semibold underline text-accent">
-              Tiếp tục thiết lập (OOBE)
+            <Link to="/onboarding" className="font-semibold underline text-accent min-h-11 sm:min-h-0 inline-flex items-center">
+              Continue setup
             </Link>
           </div>
         </div>
@@ -345,7 +417,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="font-medium">
               Your email address ({user.email}) is not verified yet. Verify your email before purchasing credit packages.
             </span>
-            <Link to="/profile" className="font-semibold underline text-accent">
+            <Link to="/profile" className="font-semibold underline text-accent min-h-11 sm:min-h-0 inline-flex items-center">
               Verify or resend link
             </Link>
           </div>
@@ -354,7 +426,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex-1 flex flex-col lg:flex-row w-full min-w-0">
         {navItems.length > 0 && (
-          <aside className="w-full lg:w-56 xl:w-60 bg-surface border-b lg:border-b-0 lg:border-r border-border shrink-0 lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto">
+          <aside className="hidden sm:block w-full lg:w-56 xl:w-60 bg-surface border-b lg:border-b-0 lg:border-r border-border shrink-0 lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto">
             <div className="px-4 py-3 border-b border-separator">
               <span className="text-xs font-medium text-muted">
                 {isStaff ? 'Staff Studio' : 'Learner workspace'}
@@ -365,16 +437,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className="p-2 flex lg:flex-col gap-1 overflow-x-auto"
             >
               {navItems.map((item) => {
-                const isActive =
-                  item.to === '/admin'
-                    ? location.pathname === '/admin'
-                    : location.pathname === item.to ||
-                      location.pathname.startsWith(`${item.to}/`);
+                const isActive = isNavItemActive(item.to);
                 return (
                   <Link
                     key={item.to}
                     to={item.to}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium no-underline whitespace-nowrap transition-colors ${
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`flex items-center gap-2.5 px-3 py-2 min-h-11 lg:min-h-0 rounded-lg text-sm font-medium no-underline whitespace-nowrap transition-colors ${
                       isActive
                         ? 'bg-accent text-accent-foreground'
                         : 'text-foreground hover:bg-surface-secondary'
