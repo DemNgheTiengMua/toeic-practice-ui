@@ -1137,16 +1137,13 @@ export function ExamSittingShell({
                       className="space-y-2"
                     >
                       {currentQuestion.options.map((opt) => (
-                        <Radio
-                          key={opt.optionId}
-                          value={String(opt.optionId)}
-                          className="rounded-lg border border-border bg-surface-secondary/50 px-4 py-3 hover:border-accent/60 transition-colors"
-                        >
-                          <Radio.Control>
-                            <Radio.Indicator />
-                          </Radio.Control>
-                          <Radio.Content className="flex-1">
-                            <Label className="cursor-pointer font-normal text-foreground">
+                        <Radio key={opt.optionId} value={String(opt.optionId)} className="w-full">
+                          {/* The bordered box is Radio.Content so the whole row is the hit area. */}
+                          <Radio.Content className="w-full rounded-lg border border-border bg-surface-secondary/50 px-4 py-3 hover:border-accent/60 transition-colors">
+                            <Radio.Control>
+                              <Radio.Indicator />
+                            </Radio.Control>
+                            <Label className="flex-1 cursor-pointer font-normal text-foreground">
                               <span className="font-mono-tabular font-semibold mr-2">
                                 {opt.label}.
                               </span>
