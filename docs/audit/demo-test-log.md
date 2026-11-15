@@ -11,7 +11,7 @@ Ký hiệu: ✅ PASS · ❌ FAIL · ⚠️ PASS nhưng có lỗi · ⬜ chưa te
 
 | Nhóm | Nội dung | Số luồng | ✅ | ⚠️ | ❌ | ⬜ |
 |---|---|---|---|---|---|---|
-| A | Khách vãng lai | 6 | 0 | 0 | 0 | 6 |
+| A | Khách vãng lai | 7 | 5 | 2 | 0 | 0 |
 | B | Xác thực & tài khoản | 12 | **12** | 0 | 0 | 0 |
 | C | Chứng chỉ & OOBE | 4 | 1 | 0 | 0 | 3 |
 | D | Placement | 10 | 0 | 0 | 0 | 10 |
@@ -20,7 +20,7 @@ Ký hiệu: ✅ PASS · ❌ FAIL · ⚠️ PASS nhưng có lỗi · ⬜ chưa te
 | G | Writing / Speaking | 8 | 0 | 0 | 0 | 8 |
 | H | Học / thương mại / hỗ trợ | 16 | 0 | 0 | 0 | 16 |
 | I | Quản trị | 17 | 0 | 0 | 0 | 17 |
-| | **Tổng** | **88** | **13** | **0** | **0** | **75** |
+| | **Tổng** | **89** | **18** | **2** | **0** | **69** |
 
 ---
 
