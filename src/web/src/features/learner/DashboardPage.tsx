@@ -8,7 +8,7 @@ import {
   Chip,
   ListBox,
   Select,
-  Spinner,
+  Skeleton,
 } from '@heroui/react';
 import type { Key } from '@heroui/react';
 import {
@@ -60,9 +60,47 @@ export function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-3">
-        <Spinner size="lg" />
-        <p className="text-sm text-muted font-mono">Loading your dashboard…</p>
+      <div
+        className="max-w-5xl mx-auto py-6 space-y-6"
+        aria-busy="true"
+        aria-label="Loading dashboard"
+      >
+        {/* Hero Next Action skeleton */}
+        <div className="rounded-xl border border-border p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-28 rounded-md" />
+            <Skeleton className="h-5 w-16 rounded-md" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-80 rounded-md" />
+            <Skeleton className="h-4 w-full max-w-xl rounded-md" />
+          </div>
+          <Skeleton className="h-10 w-44 rounded-lg" />
+        </div>
+        {/* Goal summary skeleton */}
+        <Card>
+          <Card.Header className="border-b border-border pb-3">
+            <Skeleton className="h-5 w-40 rounded-md" />
+          </Card.Header>
+          <Card.Content className="p-4 sm:p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Skeleton className="h-14 w-full rounded-md" />
+              <Skeleton className="h-14 w-full rounded-md" />
+              <Skeleton className="h-14 w-full rounded-md" />
+              <Skeleton className="h-14 w-full rounded-md" />
+            </div>
+          </Card.Content>
+        </Card>
+        {/* Per-skill table skeleton */}
+        <Card>
+          <Card.Header className="border-b border-border pb-3">
+            <Skeleton className="h-5 w-44 rounded-md" />
+          </Card.Header>
+          <Card.Content className="p-4 sm:p-6 space-y-3">
+            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </Card.Content>
+        </Card>
       </div>
     );
   }

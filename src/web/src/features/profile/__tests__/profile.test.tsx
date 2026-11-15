@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
+import { Toast, toast } from '@heroui/react';
 import { AuthProvider } from '../../../context/AuthContext';
 import { createAppRouter } from '../../../router';
 import type { ProfileDto } from '../../../lib/api';
@@ -39,6 +40,7 @@ function renderRoute(initialUrl: string) {
   const view = render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <Toast.Provider />
         <RouterProvider router={router} />
       </AuthProvider>
     </QueryClientProvider>,
@@ -92,6 +94,7 @@ describe('Profile feature (#301)', () => {
   });
 
   afterEach(() => {
+    toast.clear();
     cleanup();
     vi.unstubAllGlobals();
   });
@@ -162,7 +165,8 @@ describe('Profile feature (#301)', () => {
         phone: '0901234567',
         timeZoneId: 'Asia/Ho_Chi_Minh',
       });
-      expect(screen.getByText(/profile updated successfully/i)).toBeInTheDocument();
+      const toastEl = screen.getByText(/profile updated successfully/i);
+      expect(toastEl.closest('[data-slot="toast-region"]')).toBeInTheDocument();
     });
   });
 
@@ -188,7 +192,8 @@ describe('Profile feature (#301)', () => {
 
     await waitFor(() => {
       expect(resendCalled).toBe(true);
-      expect(screen.getByText(/verification email sent/i)).toBeInTheDocument();
+      const toastEl = screen.getByText(/verification email sent/i);
+      expect(toastEl.closest('[data-slot="toast-region"]')).toBeInTheDocument();
     });
   });
 

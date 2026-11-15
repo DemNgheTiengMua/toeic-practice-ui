@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
+import { Toast, toast } from '@heroui/react';
 import { AuthProvider } from '../../../context/AuthContext';
 import { createAppRouter } from '../../../router';
 import type {
@@ -52,6 +53,7 @@ function renderRoute(initialUrl: string) {
   const view = render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <Toast.Provider />
         <RouterProvider router={router} />
       </AuthProvider>
     </QueryClientProvider>,
@@ -83,14 +85,39 @@ describe('Learner Hub (#300)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     window.scrollTo = vi.fn();
+    globalThis.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as any;
+    if (!Element.prototype.getAnimations) {
+      Element.prototype.getAnimations = () => [];
+    }
   });
 
   afterEach(() => {
+    toast.clear();
     cleanup();
     vi.unstubAllGlobals();
   });
 
   describe('Dashboard (/dashboard)', () => {
+    it('renders skeleton loading placeholder instead of centered spinner while loading', async () => {
+      installFetchMock((url) => {
+        if (url === '/api/auth/me') return jsonResponse(DEMO_USER);
+        if (url === '/api/learner/context') return jsonResponse(DEMO_CONTEXT);
+        if (url === '/api/learner/dashboard') return new Promise(() => {});
+        return jsonResponse({}, 404);
+      });
+
+      renderRoute('/dashboard');
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/loading dashboard/i)).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/loading your dashboard…/i)).not.toBeInTheDocument();
+    });
+
     it('renders 3 blocks for a placed learner (hero, 4-cell goal table, per-skill table)', async () => {
       const placedDashboard: LearnerDashboardDto = {
         certificate: { code: 'DEMO', name: 'DEMO - Custom Assessment' },
@@ -415,6 +442,8 @@ describe('Learner Hub (#300)', () => {
         expect(submittedGoal.targetBandCode).toBe('B2');
         expect(submittedGoal.currentBandCode).toBe('B1');
         expect(submittedGoal.weeklyStudyHours).toBe(7);
+        const toastEl = screen.getByText('Study goal saved! Redirecting to your dashboard...');
+        expect(toastEl.closest('[data-slot="toast-region"]')).toBeInTheDocument();
       });
     });
 
@@ -585,6 +614,56 @@ describe('Learner Hub (#300)', () => {
   });
 
   describe('Learning Path (/learning-path)', () => {
+    it('renders skeleton loading placeholder instead of centered spinner while loading', async () => {
+      installFetchMock((url) => {
+        if (url === '/api/auth/me') return jsonResponse(DEMO_USER);
+        if (url === '/api/learner/context') return jsonResponse(DEMO_CONTEXT);
+        if (url === '/api/learner/learning-path') return new Promise(() => {});
+        return jsonResponse({}, 404);
+      });
+
+      renderRoute('/learning-path');
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/loading learning path/i)).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/loading your learning path…/i)).not.toBeInTheDocument();
+    });
+
+    it('shows transient toast when generating learning path succeeds', async () => {
+      const emptySummary: LearningPathSummaryDto = {
+        hasActivePath: false,
+        activeCert: { code: 'DEMO', name: 'DEMO' },
+        totalSteps: 0,
+        completedSteps: 0,
+        totalEstimatedMinutes: 0,
+        remainingMinutes: 0,
+        cefrBands: [],
+        openSteps: [],
+      };
+
+      installFetchMock((url, init) => {
+        if (url === '/api/auth/me') return jsonResponse(DEMO_USER);
+        if (url === '/api/learner/context') return jsonResponse(DEMO_CONTEXT);
+        if (url === '/api/learner/learning-path') return jsonResponse(emptySummary);
+        if (url === '/api/learner/learning-path/generate' && init?.method === 'POST') {
+          return jsonResponse({ pathId: 1 });
+        }
+        return jsonResponse({}, 404);
+      });
+
+      renderRoute('/learning-path');
+
+      expect(await screen.findByRole('heading', { name: /no learning path yet/i })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /generate 4-week path \(5 credits\)/i }));
+      fireEvent.click(await screen.findByRole('button', { name: /confirm \(5 credits\)/i }));
+
+      await waitFor(() => {
+        const toastEl = screen.getByText('Learning path generated successfully.');
+        expect(toastEl.closest('[data-slot="toast-region"]')).toBeInTheDocument();
+      });
+    });
+
     it('renders empty state and allows generating path, surfacing 422 errors if unrealistic', async () => {
       const emptySummary: LearningPathSummaryDto = {
         hasActivePath: false,
@@ -823,6 +902,22 @@ describe('Learner Hub (#300)', () => {
   });
 
   describe('Micro-Lesson Reader (/lessons/$lessonId)', () => {
+    it('renders skeleton loading placeholder instead of centered spinner while loading', async () => {
+      installFetchMock((url) => {
+        if (url === '/api/auth/me') return jsonResponse(DEMO_USER);
+        if (url === '/api/learner/context') return jsonResponse(DEMO_CONTEXT);
+        if (url.startsWith('/api/learner/lessons/')) return new Promise(() => {});
+        return jsonResponse({}, 404);
+      });
+
+      renderRoute('/lessons/42');
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/loading lesson/i)).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/loading micro-lesson…/i)).not.toBeInTheDocument();
+    });
+
     it('renders deck cards, tracks card view on Next, and grades micro-check via server POST', async () => {
       const lessonDetail: LessonDetailDto = {
         lessonId: 701,
@@ -1116,7 +1211,26 @@ describe('Learner Hub (#300)', () => {
 
       await waitFor(() => {
         expect(resolvedRecId).toBe(77);
+        const toastEl = screen.getByText('Recommendation marked as resolved.');
+        expect(toastEl.closest('[data-slot="toast-region"]')).toBeInTheDocument();
       });
+    });
+
+    it('renders skeleton loading placeholder instead of centered spinner while loading', async () => {
+      installFetchMock((url) => {
+        if (url === '/api/auth/me') return jsonResponse(DEMO_USER);
+        if (url === '/api/learner/context') return jsonResponse(DEMO_CONTEXT);
+        if (url === '/api/learner/weakness-analysis') return new Promise(() => {});
+        if (url.startsWith('/api/learner/insights/dashboard')) return new Promise(() => {});
+        return jsonResponse({}, 404);
+      });
+
+      renderRoute('/weakness');
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/loading weakness analysis/i)).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/loading weakness analysis…/i)).not.toBeInTheDocument();
     });
 
     it('shows floor notice and suppresses Weakest badge when all topics are below observation floor', async () => {

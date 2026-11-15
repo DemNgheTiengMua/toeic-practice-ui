@@ -7,7 +7,9 @@ import {
   Card,
   Chip,
   ProgressBar,
+  Skeleton,
   Spinner,
+  toast,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -47,7 +49,6 @@ export function LearningPathPage() {
   const { learnerContext } = useAuth();
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false);
 
@@ -70,7 +71,7 @@ export function LearningPathPage() {
       return await api.learningPath.generate();
     },
     onSuccess: () => {
-      setSuccessMessage('Learning path generated successfully.');
+      toast.success('Learning path generated successfully.');
       queryClient.invalidateQueries({ queryKey: ['learner', 'learning-path'] });
     },
     onError: (err) => {
@@ -111,7 +112,7 @@ export function LearningPathPage() {
     },
     onSuccess: () => {
       setIsResetConfirmOpen(false);
-      setSuccessMessage('Learning path progress has been reset. Placement result was kept.');
+      toast.success('Learning path progress has been reset. Placement result was kept.');
       queryClient.invalidateQueries({ queryKey: ['learner', 'learning-path'] });
     },
     onError: (err) => {
@@ -135,9 +136,38 @@ export function LearningPathPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-3">
-        <Spinner size="lg" />
-        <p className="text-sm text-muted font-mono">Loading your learning path…</p>
+      <div
+        className="max-w-4xl mx-auto py-6 space-y-6"
+        aria-busy="true"
+        aria-label="Loading learning path"
+      >
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-72 rounded-md" />
+          <Skeleton className="h-4 w-96 rounded-md" />
+        </div>
+        <Card>
+          <Card.Content className="p-6 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <Skeleton className="h-5 w-44 rounded-md" />
+              <Skeleton className="h-5 w-20 rounded-md" />
+            </div>
+            <Skeleton className="h-3 w-full rounded-full" />
+            <div className="flex gap-3">
+              <Skeleton className="h-4 w-28 rounded-md" />
+              <Skeleton className="h-4 w-28 rounded-md" />
+            </div>
+          </Card.Content>
+        </Card>
+        <Card>
+          <Card.Header className="border-b border-border pb-3">
+            <Skeleton className="h-5 w-36 rounded-md" />
+          </Card.Header>
+          <Card.Content className="p-4 space-y-3">
+            <Skeleton className="h-14 w-full rounded-lg" />
+            <Skeleton className="h-14 w-full rounded-lg" />
+            <Skeleton className="h-14 w-full rounded-lg" />
+          </Card.Content>
+        </Card>
       </div>
     );
   }
@@ -278,17 +308,6 @@ export function LearningPathPage() {
           </p>
         </div>
       </div>
-
-      {successMessage && (
-        <Alert status="success">
-          <Alert.Indicator>
-            <CheckCircle2 className="w-4 h-4" />
-          </Alert.Indicator>
-          <Alert.Content>
-            <Alert.Description>{successMessage}</Alert.Description>
-          </Alert.Content>
-        </Alert>
-      )}
 
       {errorMessage && (
         <Alert status="danger">

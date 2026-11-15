@@ -14,6 +14,7 @@ import {
   Select,
   Spinner,
   TextField,
+  toast,
 } from '@heroui/react';
 import type { Key } from '@heroui/react';
 import {
@@ -67,7 +68,6 @@ export function OnboardingPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [targetDateError, setTargetDateError] = useState<string | null>(null);
   const [weeklyHoursError, setWeeklyHoursError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const derivedStep: OobeStep = !onboardingState
     ? 3
@@ -150,7 +150,7 @@ export function OnboardingPage() {
       if (onboardingState) {
         setStepOverride(4);
       } else {
-        setSuccessMessage('Study goal saved! Redirecting to your dashboard...');
+        toast.success('Study goal saved! Redirecting to your dashboard...');
         setTimeout(() => {
           void navigate({ to: '/dashboard' });
         }, 800);
@@ -585,13 +585,6 @@ export function OnboardingPage() {
               <Alert status="danger">
                 <AlertCircle className="w-4 h-4" />
                 <Alert.Description>{formError}</Alert.Description>
-              </Alert>
-            )}
-
-            {successMessage && (
-              <Alert status="success">
-                <CheckCircle2 className="w-4 h-4" />
-                <Alert.Description>{successMessage}</Alert.Description>
               </Alert>
             )}
 

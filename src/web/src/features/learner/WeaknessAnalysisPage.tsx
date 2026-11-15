@@ -7,14 +7,14 @@ import {
   Card,
   Chip,
   ProgressBar,
-  Spinner,
+  Skeleton,
+  toast,
 } from '@heroui/react';
 import {
   AlertCircle,
   ArrowRight,
   BarChart3,
   BookOpen,
-  CheckCircle2,
   HelpCircle,
   RotateCw,
   Sparkles,
@@ -35,7 +35,6 @@ export function WeaknessAnalysisPage() {
   const queryClient = useQueryClient();
   const { learnerContext } = useAuth();
 
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 1. Weakness data
@@ -65,7 +64,7 @@ export function WeaknessAnalysisPage() {
       return await api.learningPath.resolveRecommendation(recId);
     },
     onSuccess: () => {
-      setSuccessMessage('Recommendation marked as resolved.');
+      toast.success('Recommendation marked as resolved.');
       queryClient.invalidateQueries({
         queryKey: ['learner', 'weakness-analysis'],
       });
@@ -87,9 +86,37 @@ export function WeaknessAnalysisPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-3">
-        <Spinner size="lg" />
-        <p className="text-sm text-muted font-mono">Loading weakness analysis…</p>
+      <div
+        className="max-w-5xl mx-auto py-6 space-y-6"
+        aria-busy="true"
+        aria-label="Loading weakness analysis"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64 rounded-md" />
+            <Skeleton className="h-4 w-80 rounded-md" />
+          </div>
+          <Skeleton className="h-6 w-24 rounded-md" />
+        </div>
+        <Card>
+          <Card.Header className="border-b border-border pb-3">
+            <Skeleton className="h-5 w-48 rounded-md" />
+          </Card.Header>
+          <Card.Content className="p-4 sm:p-6 space-y-3">
+            <Skeleton className="h-20 w-full rounded-lg" />
+            <Skeleton className="h-4 w-56 rounded-md" />
+          </Card.Content>
+        </Card>
+        <Card>
+          <Card.Header className="border-b border-border pb-3">
+            <Skeleton className="h-5 w-44 rounded-md" />
+          </Card.Header>
+          <Card.Content className="p-4 sm:p-6 space-y-3">
+            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </Card.Content>
+        </Card>
       </div>
     );
   }
@@ -151,17 +178,6 @@ export function WeaknessAnalysisPage() {
           Free analysis
         </span>
       </div>
-
-      {successMessage && (
-        <Alert status="success">
-          <Alert.Indicator>
-            <CheckCircle2 className="w-4 h-4" />
-          </Alert.Indicator>
-          <Alert.Content>
-            <Alert.Description>{successMessage}</Alert.Description>
-          </Alert.Content>
-        </Alert>
-      )}
 
       {errorMessage && (
         <Alert status="danger">
