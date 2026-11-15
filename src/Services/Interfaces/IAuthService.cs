@@ -42,10 +42,10 @@ public interface IAuthService
     /// expired tokens all fail with <see cref="AuthException.TokenInvalid"/>.</summary>
     Task VerifyEmailAsync(string token, CancellationToken cancellationToken = default);
 
-    /// <summary>Issues a fresh activation link, retiring any earlier one. A no-op for an already
-    /// verified or missing account. A failed send raises <see cref="EmailDeliveryException"/> so the
-    /// signed-in learner can be told to retry (no enumeration risk: they own the account).</summary>
-    Task ResendActivationAsync(int userId, CancellationToken cancellationToken = default);
+    /// <summary>Issues a fresh activation link, retiring any earlier one. A no-op for an unknown,
+    /// already-verified, or locked address, and a failed send is only logged: the caller has no
+    /// session to prove ownership with, so the outcome must not reveal whether the account exists.</summary>
+    Task ResendActivationAsync(string email, CancellationToken cancellationToken = default);
 
     /// <summary>Emails a reset link if the address has a live account. Unknown address and failed
     /// send both complete normally (the failure is logged), so the outcome can't enumerate accounts.</summary>

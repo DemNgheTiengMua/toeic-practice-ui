@@ -2228,7 +2228,9 @@ export const api = {
       password: string;
       termsAccepted: boolean;
     }) =>
-      apiFetch<AuthTokenResponse>('/api/auth/register', {
+      // ADR-0018: no token comes back. The account cannot sign in until the activation link is
+      // opened, so the caller is sent to the "check your mail" screen instead of a session.
+      apiFetch<void>('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify(body),
       }),
@@ -2241,9 +2243,12 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ token }),
       }),
-    resendActivation: () =>
+    // ADR-0018: takes the address, not the session. An unverified account cannot sign in, so it has
+    // no token to prove ownership with — this must work for a signed-out visitor.
+    resendActivation: (email: string) =>
       apiFetch<void>('/api/auth/resend-activation', {
         method: 'POST',
+        body: JSON.stringify({ email }),
       }),
     forgotPassword: (email: string) =>
       apiFetch<void>('/api/auth/forgot-password', {
@@ -2854,6 +2859,9 @@ export const api = {
       apiFetch<void>(`/api/admin/users/${userId}/unlock`, { method: 'POST' }),
     resendUserActivation: (userId: number) =>
       apiFetch<void>(`/api/admin/users/${userId}/resend-activation`, { method: 'POST' }),
+    // ADR-0018: verification gates sign-in, so this is the only recovery when the relay is down.
+    verifyUserEmail: (userId: number) =>
+      apiFetch<void>(`/api/admin/users/${userId}/verify-email`, { method: 'POST' }),
     adjustCredits: (userId: number, body: AdjustCreditsRequest) =>
       apiFetch<AdjustCreditsResultDto>(`/api/admin/users/${userId}/adjust-credits`, {
         method: 'POST',

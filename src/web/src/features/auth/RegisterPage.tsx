@@ -14,26 +14,12 @@ import {
 } from '@heroui/react';
 import { ShieldAlert, UserPlus } from 'lucide-react';
 import { ApiClientError, api } from '../../lib/api';
-import { isLocalPath, resolveSafeReturnUrl } from '../../lib/security';
-import { useAuth } from '../../context/AuthContext';
+import { isLocalPath } from '../../lib/security';
 import { AuthCostSummaryCard } from './AuthCostSummaryCard';
-
-function parseLocalDestination(localPath: string): {
-  pathname: string;
-  search?: Record<string, string>;
-} {
-  const url = new URL(localPath, 'http://localhost');
-  const entries = Array.from(url.searchParams.entries());
-  return {
-    pathname: url.pathname,
-    search: entries.length > 0 ? Object.fromEntries(entries) : undefined,
-  };
-}
 
 export function RegisterPage() {
   const search = useSearch({ strict: false }) as { returnUrl?: string };
   const navigate = useNavigate();
-  const { refreshSession } = useAuth();
 
   const rawReturnUrl =
     typeof search?.returnUrl === 'string' ? search.returnUrl : undefined;
@@ -107,13 +93,11 @@ export function RegisterPage() {
         password,
         termsAccepted,
       });
-      await refreshSession();
-
-      const destination = resolveSafeReturnUrl(rawReturnUrl, '/dashboard');
-      const parsed = parseLocalDestination(destination);
+      // ADR-0018: registration returns no session. Verification gates sign-in, so the account is not
+      // usable yet and pretending it is (calling refreshSession) would bounce off the API anyway.
       await navigate({
-        to: parsed.pathname as never,
-        ...(parsed.search ? { search: parsed.search as never } : {}),
+        to: '/auth/check-email',
+        search: { email: email.trim() } as never,
       });
     } catch (err) {
       if (err instanceof ApiClientError) {

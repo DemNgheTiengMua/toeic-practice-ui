@@ -206,7 +206,31 @@ public sealed class AdminUserService(
             throw new AdminUserException(ApiError.Codes.Validation, "Account is already verified.", 400);
         }
 
-        await authService.ResendActivationAsync(targetUserId, cancellationToken);
+        await authService.ResendActivationAsync(user.Email, cancellationToken);
+    }
+
+    /// <summary>ADR-0018: the escape route out of the verification gate. Reports an already-verified
+    /// account as a validation error rather than silently succeeding, so a double click in the admin
+    /// console does not look like it changed something.</summary>
+    public async Task VerifyEmailAsync(int targetUserId, CancellationToken cancellationToken = default)
+    {
+        var user = await db.Users
+            .SingleOrDefaultAsync(u => u.UserId == targetUserId && !u.IsDeleted, cancellationToken);
+
+        if (user is null)
+        {
+            throw new UserNotFoundException(targetUserId);
+        }
+
+        if (user.EmailVerifiedAt != null)
+        {
+            throw new AdminUserException(ApiError.Codes.Validation, "Account is already verified.", 400);
+        }
+
+        user.EmailVerifiedAt = clock.GetUtcNow();
+        // Retire any outstanding links: the address is proven by the admin now, and a link that
+        // still works afterwards would be a second, unlogged way in.
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<AdminUserDetailDto> GetUserDetailAsync(

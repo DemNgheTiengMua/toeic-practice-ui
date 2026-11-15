@@ -47,6 +47,40 @@ public sealed class AdminUserServiceTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task Admin_can_verify_an_email_the_relay_never_delivered()
+    {
+        var adminId = await SeedAdminAsync();
+        var email = $"relay-broken-{Guid.NewGuid():N}@test.local";
+        var password = "PassWord@123";
+        var learner = await RegisterLearnerAsync(email, password);
+        var userService = CreateUserService();
+
+        // ADR-0018: the gate would make this account unreachable — no link arrives, and it cannot
+        // sign in to request another. The admin endpoint is the only way out.
+        var blocked = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateAuthService().SignInAsync(new SignInInput(email, password)));
+        Assert.Equal(AuthException.EmailUnverified, blocked.Code);
+
+        await userService.VerifyEmailAsync(learner.UserId);
+
+        var session = await CreateAuthService().SignInAsync(new SignInInput(email, password));
+        Assert.True(session.EmailVerified);
+    }
+
+    [Fact]
+    public async Task Admin_verifying_twice_is_a_validation_error()
+    {
+        await SeedAdminAsync();
+        var learner = await RegisterLearnerAsync($"twice-{Guid.NewGuid():N}@test.local");
+        var userService = CreateUserService();
+
+        await userService.VerifyEmailAsync(learner.UserId);
+
+        var ex = await Assert.ThrowsAsync<AdminUserException>(() => userService.VerifyEmailAsync(learner.UserId));
+        Assert.Equal(ApiError.Codes.Validation, ex.Code);
+    }
+
+    [Fact]
     public async Task Credit_adjustments_require_a_reason_and_write_a_ledger_row()
     {
         var adminId = await SeedAdminAsync();
@@ -115,6 +149,8 @@ public sealed class AdminUserServiceTests(DatabaseFixture database)
         var email = $"lock-{Guid.NewGuid():N}@test.local";
         var password = "PassWord@123";
         var learner = await RegisterLearnerAsync(email, password);
+        // ADR-0018: an unverified account cannot sign in, and this test needs a live session first.
+        await database.SqlAsync($"UPDATE Users SET EmailVerifiedAt = SYSDATETIMEOFFSET() WHERE UserId = {learner.UserId}");
 
         var authService = CreateAuthService();
         var userService = CreateUserService(authService);

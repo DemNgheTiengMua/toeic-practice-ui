@@ -282,20 +282,26 @@ export function OnboardingPage() {
               aria-label="Placement exam scope"
             >
               <Radio value="listening_and_reading">
-                <div className="flex flex-col">
-                  <span className="font-semibold text-foreground">2 skills — Listening &amp; Reading</span>
+                <Radio.Control>
+                  <Radio.Indicator />
+                </Radio.Control>
+                <Radio.Content>
+                  <Label className="font-semibold text-foreground">2 skills — Listening &amp; Reading</Label>
                   <span className="text-xs text-muted">
                     Instant automatic score and cross-certificate band estimate.
                   </span>
-                </div>
+                </Radio.Content>
               </Radio>
               <Radio value="all_skills">
-                <div className="flex flex-col">
-                  <span className="font-semibold text-foreground">4 skills — Listening, Reading, Speaking &amp; Writing</span>
+                <Radio.Control>
+                  <Radio.Indicator />
+                </Radio.Control>
+                <Radio.Content>
+                  <Label className="font-semibold text-foreground">4 skills — Listening, Reading, Speaking &amp; Writing</Label>
                   <span className="text-xs text-muted">
                     Includes AI-graded Speaking &amp; Writing tasks for complete CEFR placement.
                   </span>
-                </div>
+                </Radio.Content>
               </Radio>
             </RadioGroup>
 

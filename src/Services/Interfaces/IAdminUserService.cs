@@ -37,4 +37,11 @@ public interface IAdminUserService
     Task ResendActivationAsync(
         int targetUserId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>ADR-0018: marks the address verified on the learner's behalf. The escape route when
+    /// the relay is misconfigured or the mail never arrives — without it a verification gate with a
+    /// broken mailer locks every new account out with no fix short of editing the database.</summary>
+    Task VerifyEmailAsync(
+        int targetUserId,
+        CancellationToken cancellationToken = default);
 }

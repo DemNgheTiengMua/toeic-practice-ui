@@ -59,6 +59,9 @@ graphify-out/
 .env
 .env.*
 !.env.example
+# Team setup guide fills .env.docker with the shared dev keys, so it holds live
+# secrets. Distribute it directly; this repository is public.
+docs/DOCKER-SETUP-VI.md
 # #287: compose reads .env.docker; the committed template is .env.docker.example only.
 !.env.docker.example
 # Some tooling writes the key file as `env` (no dot); it holds the same live keys
@@ -87,3 +90,6 @@ TestResults/
 node_modules/
 src/web/dist/
 *.tsbuildinfo
+
+# Contributor-graph demo artifacts (local only, see docs/commit/)
+docs/commit/

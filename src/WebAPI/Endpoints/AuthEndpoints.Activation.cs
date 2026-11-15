@@ -29,21 +29,22 @@ public static partial class AuthEndpoints
             return Results.NoContent();
         });
 
+        // ADR-0018: unauthenticated on purpose. An unverified account cannot sign in, so requiring a
+        // token here would make a lost activation mail unrecoverable without an admin. Always 204:
+        // the answer must not reveal whether the address has an account, exactly like forgot-password.
         app.MapPost("/api/auth/resend-activation", async Task<IResult> (
-            HttpContext http, IAuthService auth, CancellationToken cancellationToken) =>
+            ResendActivationRequest request, IAuthService auth, CancellationToken cancellationToken) =>
         {
-            var userId = CurrentUserId(http);
             try
             {
-                await auth.ResendActivationAsync(userId, cancellationToken);
+                await auth.ResendActivationAsync(request.Email, cancellationToken);
             }
-            catch (EmailDeliveryException)
+            catch (ValidationException ex)
             {
-                // Safe to surface here: the caller is signed in and owns the account.
-                return Problem(StatusCodes.Status503ServiceUnavailable, "Could not send the email", ApiError.Codes.MailUnavailable);
+                return Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, ex.Message);
             }
 
             return Results.NoContent();
-        }).RequireAuthorization();
+        }).RequireRateLimiting("mail");
     }
 }

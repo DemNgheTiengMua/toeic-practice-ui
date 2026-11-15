@@ -1,0 +1,4 @@
+  docker compose down -v         # -v discards stale DB volumes to reload fresh schema & seed
+    docker compose up -d --build
+
+docker compose down -v && docker compose up -d --build

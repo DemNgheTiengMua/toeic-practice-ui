@@ -17,6 +17,7 @@ import { RegisterPage } from './features/auth/RegisterPage';
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './features/auth/ResetPasswordPage';
 import { VerifyEmailPage } from './features/auth/VerifyEmailPage';
+import { CheckEmailPage } from './features/auth/CheckEmailPage';
 import { LandingPage } from './features/public/LandingPage';
 import { CertificatesCatalogPage } from './features/public/CertificatesCatalogPage';
 import { CertificateDetailPage } from './features/public/CertificateDetailPage';
@@ -325,6 +326,16 @@ const routeTree = rootRoute.addChildren([
     getParentRoute: () => rootRoute,
     path: '/auth/verify-email',
     component: VerifyEmailPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/check-email',
+    component: CheckEmailPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/auth/check-email',
+    component: CheckEmailPage,
   }),
   createRoute({
     getParentRoute: () => rootRoute,

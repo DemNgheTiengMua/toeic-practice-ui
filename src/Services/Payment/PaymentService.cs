@@ -163,12 +163,21 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         }
         catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627))
         {
-            throw new OrderAlreadyOpenException(
-                order.OrderCode,
-                order.Credits,
-                order.Amount,
-                order.CreatedAt,
-                OrderStatus.Pending);
+            // Only the one-open-order filtered index means "order already open". A unique violation on
+            // PaymentNo or OrderCode means the sequence is behind the table (a seeded row with an
+            // explicit value), which is a setup fault — reporting it as a duplicate order sends the
+            // learner to cancel an order that does not exist.
+            if (sqlEx.Message.Contains("UX_Orders_OnePendingPerUser", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new OrderAlreadyOpenException(
+                    order.OrderCode,
+                    order.Credits,
+                    order.Amount,
+                    order.CreatedAt,
+                    OrderStatus.Pending);
+            }
+
+            throw;
         }
 
         return new CreateOrderResponse(

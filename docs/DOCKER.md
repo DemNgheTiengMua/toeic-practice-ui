@@ -32,7 +32,10 @@ openssl rand -base64 32                    # Linux, macOS, Git Bash
 ```
 
 ```powershell
-[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))   # PowerShell
+# Windows PowerShell 5.1 has no RandomNumberGenerator.GetBytes(int) overload, so build the buffer first.
+$b = New-Object byte[] 32
+[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+[Convert]::ToBase64String($b)
 ```
 
 Then:
@@ -160,5 +163,8 @@ done
   flag defaults to `true`, so a non-container run behaves exactly as before.
 - **`AI_PROVIDER=fake` in the template.** Grading and insights come from deterministic offline fakes:
   no key, no quota. Set `AI_PROVIDER=real` and supply the keys to use the real providers.
-- **Email is written to a folder,** not sent. `DropFolderEmailSender` writes `.eml` files inside the
-  `api` container; `docker compose exec api ls /app/mail-drop` finds activation and reset links.
+- **Email has two transports** (ADR-0018). `Email__Transport=dropfolder` (the default)
+  makes `DropFolderEmailSender` write `.eml` files inside the `api` container;
+  `docker compose exec api ls /app/mail-drop` finds activation and reset links. Set
+  `Email__Transport=smtp` and fill `Email__Smtp__*` to send real mail instead — necessary if a teammate
+  must register with their own address, because verification now gates sign-in.

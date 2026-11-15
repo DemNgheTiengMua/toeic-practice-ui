@@ -383,6 +383,47 @@ describe('OOBE 4-Step Wizard & Soft-Lock (#311)', () => {
     });
   });
 
+  it('sends the scope the learner selected, not the default (#345)', async () => {
+    const startState: OnboardingStateDto = {
+      hasCompletedPlacement: false,
+      activePlacementAttemptId: null,
+      activePlacementId: null,
+      latestPlacementId: null,
+      hasTargetGoal: false,
+      hasActiveLearningPath: false,
+      isOobeComplete: false,
+    };
+
+    let postedBody: { scope?: string } | null = null;
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') return jsonResponse(LEARNER_USER);
+      if (url === '/api/learner/context') return jsonResponse(LEARNER_CONTEXT);
+      if (url === '/api/learner/onboarding-state') return jsonResponse(startState);
+      if (url === '/api/learner/placement') return jsonResponse(CATALOG);
+      if (url === '/api/learner/placement/start' && init?.method === 'POST') {
+        postedBody = JSON.parse(String(init.body));
+        return jsonResponse({
+          placementId: 88,
+          attemptId: 99,
+          examId: 6,
+          status: 'in_progress',
+          startedAt: '2026-11-15T00:00:00Z',
+          expiresAt: '2026-11-15T01:00:00Z',
+        });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/onboarding');
+    const allSkills = await screen.findByRole('radio', { name: /4 skills/i });
+    fireEvent.click(allSkills);
+    fireEvent.click(screen.getByRole('button', { name: /start universal placement/i }));
+
+    await waitFor(() => {
+      expect(postedBody?.scope).toBe('all_skills');
+    });
+  });
+
   it('navigates to /placement/take/$attemptId when resuming active placement (#342)', async () => {
     const resumeState: OnboardingStateDto = {
       hasCompletedPlacement: false,

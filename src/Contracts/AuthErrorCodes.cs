@@ -17,4 +17,8 @@ public static class AuthErrorCodes
 
     /// <summary>An activation or reset link that is unknown, already used, or expired.</summary>
     public const string TokenInvalid = "AUTH_TOKEN_INVALID";
+
+    /// <summary>A correct email and password on an account whose address has never been verified.
+    /// Sign-in is refused: the only way in is the activation link.</summary>
+    public const string EmailUnverified = "AUTH_EMAIL_UNVERIFIED";
 }

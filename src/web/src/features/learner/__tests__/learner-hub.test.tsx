@@ -268,14 +268,15 @@ describe('Learner Hub (#300)', () => {
       expect(screen.queryByText(/this week:/i)).not.toBeInTheDocument();
     });
 
-    it('shows email verification warning with working resend email when unverified', async () => {
+    it('never renders a verification banner on the dashboard, because an unverified account cannot sign in', async () => {
+      // ADR-0018: this state is unreachable — the gate refuses the session. The reminder banner and
+      // its resend button described the old model and were deleted with it.
       const unverifiedUser: AuthUserDto = {
         ...DEMO_USER,
         emailVerified: false,
       };
 
-      let resendCalled = false;
-      installFetchMock((url, init) => {
+      installFetchMock((url) => {
         if (url === '/api/auth/me') return jsonResponse(unverifiedUser);
         if (url === '/api/learner/context') return jsonResponse(DEMO_CONTEXT);
         if (url === '/api/learner/dashboard') {
@@ -296,24 +297,14 @@ describe('Learner Hub (#300)', () => {
             practiceCount: 0,
           });
         }
-        if (url === '/api/auth/resend-activation' && init?.method === 'POST') {
-          resendCalled = true;
-          return jsonResponse({ sent: true });
-        }
         return jsonResponse({}, 404);
       });
 
       renderRoute('/dashboard');
 
-      const resendButton = await screen.findByRole('button', { name: /resend email/i });
-      expect(resendButton).toBeInTheDocument();
-
-      fireEvent.click(resendButton);
-
-      await waitFor(() => {
-        expect(resendCalled).toBe(true);
-        expect(screen.getByText(/a new activation link has been sent to learner@demo\.local/i)).toBeInTheDocument();
-      });
+      expect(await screen.findByText('Continue')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /resend email/i })).not.toBeInTheDocument();
+      expect(screen.queryByText(/verify your email address/i)).not.toBeInTheDocument();
     });
 
     it('renders upcoming mentor session reminder banner with Join Meet link and booking detail link', async () => {

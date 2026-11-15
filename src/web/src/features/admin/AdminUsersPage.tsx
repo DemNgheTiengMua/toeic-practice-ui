@@ -63,6 +63,7 @@ export function AdminUsersPage() {
   const [selectedUserDetail, setSelectedUserDetail] = useState<AdminUserDetailDto | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [verifyEmailPending, setVerifyEmailPending] = useState(false);
 
   const [adjustTargetUser, setAdjustTargetUser] = useState<AdminUserDto | null>(null);
   const [adjustDelta, setAdjustDelta] = useState<string>('');
@@ -123,6 +124,23 @@ export function AdminUsersPage() {
       setActionSuccess('Activation email resent successfully.');
     } catch (err: any) {
       setActionError(err.detail || err.message || 'Failed to resend activation email.');
+    }
+  }
+
+  // ADR-0018: the escape route out of the verification gate. Verification gates sign-in, so when the
+  // relay is misconfigured this is the only way to make the account usable.
+  async function handleVerifyEmail(userId: number) {
+    setVerifyEmailPending(true);
+    try {
+      setActionError(null);
+      await api.admin.verifyUserEmail(userId);
+      setActionSuccess('Email marked as verified. The account can sign in now.');
+      const detail = await api.admin.userDetail(userId);
+      setSelectedUserDetail(detail);
+    } catch (err: any) {
+      setActionError(err.detail || err.message || 'Failed to verify the email.');
+    } finally {
+      setVerifyEmailPending(false);
     }
   }
 
@@ -554,13 +572,21 @@ export function AdminUsersPage() {
                       </span>
                     </div>
                     {!selectedUserDetail.user.emailVerifiedAt && (
-                      <div className="flex items-center">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Button
                           size="sm"
                           variant="secondary"
                           onPress={() => void handleResendActivation(selectedUserDetail.user.userId)}
                         >
                           Resend activation
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          isPending={verifyEmailPending}
+                          onPress={() => void handleVerifyEmail(selectedUserDetail.user.userId)}
+                        >
+                          Verify email
                         </Button>
                       </div>
                     )}

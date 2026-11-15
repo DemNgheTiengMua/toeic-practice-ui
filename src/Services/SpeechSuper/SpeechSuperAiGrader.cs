@@ -64,6 +64,12 @@ public sealed class SpeechSuperAiGrader : IAiGrader
             request.QuestionStem, request.ReferenceText, request.ReferenceDescribesImage);
         var refText = SpeakingTask.PronunciationReference(request.ReferenceText, request.ReferenceDescribesImage);
 
+        // SpeechSuper's allow-list is wav/mp3/opus/ogg/amr — "webm" answers errId 41002 "The audio type
+        // is not supported". The browser recording is a webm container of Opus, which the provider does
+        // accept under that name: verified by sending one byte-identical file as both `webm` (41002) and
+        // `opus` (graded, same transcript and scores as the mp3 baseline). No transcode is needed.
+        var audioType = string.Equals(ext, "webm", StringComparison.OrdinalIgnoreCase) ? "opus" : ext;
+
         SpeechSuperAssessmentResult? assessment = null;
         string? lastReason = null;
 
@@ -73,7 +79,7 @@ public sealed class SpeechSuperAiGrader : IAiGrader
 
             assessment = await _speechSuperClient.AssessAsync(
                 audioInfo.Stream,
-                ext,
+                audioType,
                 questionPrompt: prompt,
                 refText: refText,
                 cancellationToken: cancellationToken);
