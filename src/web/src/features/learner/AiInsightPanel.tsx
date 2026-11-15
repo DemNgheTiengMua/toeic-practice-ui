@@ -92,7 +92,7 @@ export function AiInsightPanel({
         {isPending && (
           <div id="ai-insight-loading" className="py-6 flex flex-col items-center text-center space-y-3">
             <div className="flex items-center justify-between w-full font-mono text-xs text-muted">
-              <span className="font-bold text-warning uppercase">AI MENTOR // ANALYZING PROGRESS…</span>
+              <span className="font-bold text-warning-text uppercase">AI MENTOR // ANALYZING PROGRESS…</span>
               <span id="ai-insight-elapsed" aria-live="polite">
                 ELAPSED: {elapsed.toFixed(1)}s
               </span>
@@ -169,7 +169,7 @@ export function AiInsightPanel({
                 )}
                 {insight?.weaknesses && insight.weaknesses.length > 0 && (
                   <div className="rounded-lg border border-border bg-surface-secondary p-3 space-y-1.5">
-                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-warning">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-warning-text">
                       <AlertCircle className="size-3.5" aria-hidden="true" />
                       Weaknesses
                     </div>

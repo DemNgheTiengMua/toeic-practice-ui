@@ -88,9 +88,9 @@ describe('Security & Link-Injection Guards (Q12)', () => {
     expect(formatTimerSeconds(3661)).toBe('01:01:01');
     expect(countWords('what the fuck')).toBe(3);
     expect(countWords('   ')).toBe(0);
-    expect(formatVnd(199000)).toContain('199.000');
-    expect(formatSignedVnd(-250000)).toBe('\u2212250.000 \u20ab');
-    expect(formatSignedVnd(250000)).toContain('250.000');
+    expect(formatVnd(199000)).toBe('199.000\u00a0\u20ab');
+    expect(formatSignedVnd(-250000)).toBe('\u2212250.000\u00a0\u20ab');
+    expect(formatSignedVnd(250000)).toBe('250.000\u00a0\u20ab');
   });
 
   it('grants staff navigation solely from held capabilities (SEC-05)', () => {

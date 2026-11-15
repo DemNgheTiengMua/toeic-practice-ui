@@ -182,7 +182,7 @@ export function DashboardPage() {
             </div>
             <Link
               to={`/exams/take/${unfinishedAttempt.attemptId}`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent text-white font-medium text-xs no-underline hover:opacity-90"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent text-accent-foreground font-medium text-xs no-underline hover:opacity-90"
             >
               Resume sitting <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -289,7 +289,7 @@ export function DashboardPage() {
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <a
               href={nextAction.actionUrl}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-white font-semibold text-sm shadow hover:bg-accent/90 transition-colors no-underline"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-accent-foreground font-semibold text-sm shadow hover:bg-accent/90 transition-colors no-underline"
             >
               <span>{nextAction.actionLabel}</span>
               <ArrowRight className="w-4 h-4" />
@@ -378,7 +378,7 @@ export function DashboardPage() {
                           id="exam-date"
                           className={`font-mono text-xs px-2 py-0.5 rounded ${
                             isCountdown
-                              ? 'bg-warning/20 text-warning font-bold border border-warning/40'
+                              ? 'bg-warning/20 text-warning-text font-bold border border-warning/40'
                               : 'text-muted'
                           }`}
                         >
@@ -388,11 +388,11 @@ export function DashboardPage() {
                           id="feasibility-verdict"
                           className={`font-mono text-xs px-2.5 py-0.5 rounded font-bold ${
                             goal.status === 'feasible'
-                              ? 'bg-success text-white'
+                              ? 'bg-success text-success-foreground'
                               : goal.status === 'stretch'
-                              ? 'bg-warning text-foreground'
+                              ? 'bg-warning text-warning-foreground'
                               : goal.status === 'unrealistic'
-                              ? 'bg-danger text-white'
+                              ? 'bg-danger text-danger-foreground'
                               : 'bg-surface-secondary text-muted'
                           }`}
                         >
@@ -475,7 +475,7 @@ export function DashboardPage() {
                             </div>
                           ) : (
                             <div className="space-y-2">
-                              <span className="text-xs text-warning font-semibold block">Not measured yet</span>
+                              <span className="text-xs text-warning-text font-semibold block">Not measured yet</span>
                               <Link
                                 to="/placement"
                                 className="inline-block text-xs font-semibold text-accent hover:underline"

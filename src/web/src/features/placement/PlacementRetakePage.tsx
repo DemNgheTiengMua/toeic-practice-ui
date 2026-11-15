@@ -283,7 +283,7 @@ export function PlacementRetakePage() {
                       {offer.includedSkills.join(', ')}
                     </p>
                     {offer.excludedSkills.length > 0 && (
-                      <p className="text-warning font-medium">
+                      <p className="text-warning-text font-medium">
                         Left unmeasured: {offer.excludedSkills.join(', ')}
                       </p>
                     )}
