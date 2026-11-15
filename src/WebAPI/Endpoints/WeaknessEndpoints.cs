@@ -19,7 +19,8 @@ public static partial class WeaknessEndpoints
             var view = await weaknessService.GetWeaknessAnalysisAsync(CurrentUserId(http), cancellationToken);
             var dto = ToDto(view);
             return Results.Ok(dto);
-        });
+        })
+        .Produces<WeaknessAnalysisDto>(StatusCodes.Status200OK);
 
         weakness.MapPost("/recommendations/{recId:int}/resolve", async (
             int recId,

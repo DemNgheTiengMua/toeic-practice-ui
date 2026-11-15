@@ -933,7 +933,7 @@ describe('Learner Hub (#300)', () => {
   describe('Weakness Analysis (/weakness)', () => {
     it('renders empty state when learner has no data', async () => {
       const emptyWeakness: WeaknessAnalysisDto = {
-        certificate: { code: 'DEMO', name: 'DEMO' },
+        certificate: { code: 'DEMO', name: 'DEMO', sectionNoun: 'Section' },
         hasData: false,
         gradedExamCount: 0,
         completedPracticeCount: 0,
@@ -943,6 +943,7 @@ describe('Learner Hub (#300)', () => {
         sections: [],
         frequentlyMissedTopics: [],
         recommendations: [],
+        priorityPracticeSection: null,
         topics: [],
         weakestTopic: null,
       };
@@ -961,69 +962,98 @@ describe('Learner Hub (#300)', () => {
       expect(screen.getByRole('link', { name: /practice a section/i })).toBeInTheDocument();
     });
 
-    it('renders sections, weakest topic floor note, and allows resolving recommendations', async () => {
+    it('renders sections, suppresses weakest badge below observation floor and on unattempted sections, and allows resolving recommendations', async () => {
+      const subFloorTopic = {
+        topicId: 11,
+        topicCode: 'R-INF',
+        topicName: 'Inference',
+        modality: 'reading' as const,
+        levelCode: 'B2',
+        answered: 4,
+        correct: 1,
+        accuracyPercent: 25,
+        isWeakest: false,
+        observationFloor: 12,
+        lessonId: null,
+      };
+      const rankedTopic = {
+        topicId: 10,
+        topicCode: 'L-DET',
+        topicName: 'Key details',
+        modality: 'listening' as const,
+        levelCode: 'B1',
+        answered: 15,
+        correct: 8,
+        accuracyPercent: 53,
+        isWeakest: true,
+        observationFloor: 12,
+        lessonId: null,
+      };
+
       const weaknessWithData: WeaknessAnalysisDto = {
-        certificate: { code: 'DEMO', name: 'DEMO' },
+        certificate: { code: 'DEMO', name: 'DEMO', sectionNoun: 'Section' },
         hasData: true,
         gradedExamCount: 1,
         completedPracticeCount: 3,
-        totalAnswered: 50,
-        totalCorrect: 35,
-        overallAccuracyPercentage: 70,
+        totalAnswered: 44,
+        totalCorrect: 25,
+        overallAccuracyPercentage: 57,
         sections: [
           {
             sectionId: 1,
-            sectionCode: 'U1',
-            sectionName: 'Short dialogs',
-            skillCode: 'CMP',
-            skillName: 'Comprehension',
-            answeredCount: 30,
-            correctCount: 18,
+            code: 'U1',
+            name: 'Short dialogs',
+            answered: 30,
+            correct: 18,
             accuracyPercentage: 60,
-          },
-        ],
-        frequentlyMissedTopics: [
-          {
-            categoryId: 10,
-            topicCode: 'L-DET',
-            topicName: 'Key details',
-            skillCode: 'CMP',
-            skillName: 'Comprehension',
-            answeredCount: 15,
-            correctCount: 8,
-            accuracyPercentage: 53,
-            levelCode: 'B1',
-            meetsFloor: true,
             isWeakest: true,
+            isStrongest: false,
+          },
+          {
+            sectionId: 2,
+            code: 'U2',
+            name: 'Long talks',
+            answered: 14,
+            correct: 12,
+            accuracyPercentage: 86,
+            isWeakest: false,
+            isStrongest: true,
+          },
+          {
+            sectionId: 3,
+            code: 'U3',
+            name: 'Reading passages',
+            answered: 0,
+            correct: 0,
+            accuracyPercentage: 0,
+            isWeakest: false,
+            isStrongest: false,
           },
         ],
+        frequentlyMissedTopics: [subFloorTopic, rankedTopic],
         recommendations: [
           {
             recId: 77,
             text: 'Review time markers in short conversations.',
             severity: 'major',
             targetBandCode: 'B2',
-            skillName: 'Comprehension',
+            skillName: 'Listening',
             createdAt: '2026-11-13T00:00:00Z',
             isResolved: false,
           },
         ],
-        topics: [
-          {
-            categoryId: 10,
-            topicCode: 'L-DET',
-            topicName: 'Key details',
-            skillCode: 'CMP',
-            skillName: 'Comprehension',
-            answeredCount: 15,
-            correctCount: 8,
-            accuracyPercentage: 53,
-            levelCode: 'B1',
-            meetsFloor: true,
-            isWeakest: true,
-          },
-        ],
-        weakestTopic: null, // Sub-floor -> shows floor note
+        priorityPracticeSection: {
+          sectionId: 1,
+          code: 'U1',
+          name: 'Short dialogs',
+          answered: 30,
+          correct: 18,
+          accuracyPercentage: 60,
+          isWeakest: true,
+          isStrongest: false,
+        },
+        topics: [rankedTopic, subFloorTopic],
+        weakestTopic: rankedTopic,
       };
 
       let resolvedRecId: number | null = null;
@@ -1044,15 +1074,40 @@ describe('Learner Hub (#300)', () => {
 
       expect(await screen.findByRole('heading', { name: /weakness analysis · demo/i })).toBeInTheDocument();
 
-      // Floor notice verification (#243)
-      expect(screen.getByText(/no topic holds enough answers to be called a weakness yet/i)).toBeInTheDocument();
+      // Weakest topic summary renders real percentage and answer count
+      expect(screen.getAllByText(/53%/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/8\/15 answered/i).length).toBeGreaterThanOrEqual(1);
 
-      // Section accuracy
+      // Topic table rows render skill, percentage, answer count, and evidence note below floor
+      const rankedRow = screen.getAllByText('Key details').find((el) => el.closest('tr'))!.closest('tr')!;
+      expect(rankedRow).toHaveTextContent('Listening');
+      expect(rankedRow).toHaveTextContent('53%');
+      expect(rankedRow).toHaveTextContent('8/15 answered');
+      expect(rankedRow).toHaveTextContent('Weakest');
+
+      const subFloorRow = screen.getAllByText('Inference').find((el) => el.closest('tr'))!.closest('tr')!;
+      expect(subFloorRow).toHaveTextContent('Reading');
+      expect(subFloorRow).toHaveTextContent('25%');
+      expect(subFloorRow).toHaveTextContent('1/4 answered');
+      expect(subFloorRow).toHaveTextContent(/not enough evidence \(12 needed\)/i);
+      expect(subFloorRow).not.toHaveTextContent('Weakest');
+
+      // Section accuracy: attempted sections show names and %, unattempted section never carries Weakest badge
       expect(screen.getByText('U1 — Short dialogs')).toBeInTheDocument();
       expect(screen.getByText(/60% · 18\/30 answered/i)).toBeInTheDocument();
+      expect(screen.getByText('U2 — Long talks')).toBeInTheDocument();
+      expect(screen.getByText(/86% · 12\/14 answered/i)).toBeInTheDocument();
 
-      // Frequently missed topics
-      expect(screen.getAllByText('Key details')[0]).toBeInTheDocument();
+      const unattemptedHeader = screen.getByText('U3 — Reading passages').closest('div')!;
+      expect(unattemptedHeader).not.toHaveTextContent('Weakest');
+      expect(screen.getByText('Not attempted yet')).toBeInTheDocument();
+
+      // Frequently missed topics render name, level, percentage, and count
+      expect(screen.getByText(/8\/15 correct/i)).toBeInTheDocument();
+      expect(screen.getByText(/1\/4 correct/i)).toBeInTheDocument();
+
+      // Priority practice section uses real code
+      expect(screen.getByText(/Practice U1 now/i)).toBeInTheDocument();
 
       // Resolve recommendation
       expect(screen.getByText('Review time markers in short conversations.')).toBeInTheDocument();
@@ -1062,6 +1117,53 @@ describe('Learner Hub (#300)', () => {
       await waitFor(() => {
         expect(resolvedRecId).toBe(77);
       });
+    });
+
+    it('shows floor notice and suppresses Weakest badge when all topics are below observation floor', async () => {
+      const subFloorTopic = {
+        topicId: 11,
+        topicCode: 'R-INF',
+        topicName: 'Inference',
+        modality: 'reading' as const,
+        levelCode: 'B2',
+        answered: 4,
+        correct: 1,
+        accuracyPercent: 25,
+        isWeakest: true, // even if mistakenly flagged, UI suppresses below floor
+        observationFloor: 12,
+        lessonId: null,
+      };
+
+      const subFloorOnly: WeaknessAnalysisDto = {
+        certificate: { code: 'DEMO', name: 'DEMO', sectionNoun: 'Section' },
+        hasData: true,
+        gradedExamCount: 0,
+        completedPracticeCount: 1,
+        totalAnswered: 4,
+        totalCorrect: 1,
+        overallAccuracyPercentage: 25,
+        sections: [],
+        frequentlyMissedTopics: [subFloorTopic],
+        recommendations: [],
+        priorityPracticeSection: null,
+        topics: [subFloorTopic],
+        weakestTopic: null,
+      };
+
+      installFetchMock((url) => {
+        if (url === '/api/auth/me') return jsonResponse(DEMO_USER);
+        if (url === '/api/learner/context') return jsonResponse(DEMO_CONTEXT);
+        if (url === '/api/learner/weakness-analysis') return jsonResponse(subFloorOnly);
+        if (url.startsWith('/api/learner/insights/dashboard')) return jsonResponse(null, 404);
+        return jsonResponse({}, 404);
+      });
+
+      renderRoute('/weakness');
+
+      expect(await screen.findByText(/no topic holds enough answers to be called a weakness yet/i)).toBeInTheDocument();
+      const row = screen.getAllByText('Inference').find((el) => el.closest('tr'))!.closest('tr')!;
+      expect(row).not.toHaveTextContent('Weakest');
+      expect(row).toHaveTextContent(/not enough evidence \(12 needed\)/i);
     });
   });
 });
