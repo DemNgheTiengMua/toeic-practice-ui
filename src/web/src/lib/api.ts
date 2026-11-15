@@ -480,6 +480,7 @@ export interface MicroCheckResultDto {
   correctOption: string;
   explanation?: string | null;
   categoryId?: number | null;
+  alreadyGraded?: boolean;
 }
 
 export type SectionAccuracyDto = components['schemas']['SectionAccuracyDto'];
