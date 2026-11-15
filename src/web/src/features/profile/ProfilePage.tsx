@@ -11,6 +11,7 @@ import {
   Select,
   Spinner,
   toast,
+  buttonVariants,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -174,11 +175,12 @@ export function ProfilePage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link to="/checkout" className="no-underline">
-            <Button variant="secondary" size="sm">
-              <Wallet className="w-4 h-4 mr-1.5" />
-              Top up credits
-            </Button>
+          <Link
+            to="/checkout"
+            className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'no-underline' })}
+          >
+            <Wallet className="w-4 h-4 mr-1.5" />
+            Top up credits
           </Link>
         </div>
       </div>

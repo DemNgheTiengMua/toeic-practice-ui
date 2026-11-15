@@ -10,6 +10,7 @@ import {
   NumberField,
   Slider,
   Spinner,
+  buttonVariants,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -180,11 +181,17 @@ export function CheckoutPage() {
           </Alert>
 
           <div className="flex items-center gap-3">
-            <Link to="/profile" className="no-underline">
-              <Button variant="primary">Go to profile</Button>
+            <Link
+              to="/profile"
+              className={buttonVariants({ variant: 'primary', className: 'no-underline' })}
+            >
+              Go to profile
             </Link>
-            <Link to="/wallet" className="no-underline">
-              <Button variant="secondary">Return to wallet</Button>
+            <Link
+              to="/wallet"
+              className={buttonVariants({ variant: 'secondary', className: 'no-underline' })}
+            >
+              Return to wallet
             </Link>
           </div>
         </div>
@@ -248,10 +255,11 @@ export function CheckoutPage() {
                 awaiting completion or cancellation.
               </p>
               <div className="flex flex-wrap items-center gap-3 pt-1">
-                <Link to={`/orders/${preview.openOrder.orderCode}`} className="no-underline">
-                  <Button size="sm" variant="primary">
-                    Resume payment ({preview.openOrder.orderCode})
-                  </Button>
+                <Link
+                  to={`/orders/${preview.openOrder.orderCode}`}
+                  className={buttonVariants({ size: 'sm', variant: 'primary', className: 'no-underline' })}
+                >
+                  Resume payment ({preview.openOrder.orderCode})
                 </Link>
                 <Button
                   size="sm"
@@ -474,11 +482,15 @@ export function CheckoutPage() {
 
           {/* Action Footer */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <Link to="/wallet" className="no-underline order-2 sm:order-1">
-              <Button variant="ghost">
-                <ArrowLeft className="w-4 h-4 mr-1.5" />
-                Return to wallet
-              </Button>
+            <Link
+              to="/wallet"
+              className={buttonVariants({
+                variant: 'ghost',
+                className: 'no-underline order-2 sm:order-1',
+              })}
+            >
+              <ArrowLeft className="w-4 h-4 mr-1.5" />
+              Return to wallet
             </Link>
 
             <Button

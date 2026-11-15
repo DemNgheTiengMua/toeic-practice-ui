@@ -344,9 +344,13 @@ describe('Mentor bookings & standing feature (#301)', () => {
     expect(screen.getByText(/insufficient credits/i)).toBeInTheDocument();
     const topUpLink = screen.getByRole('link', { name: /buy credits|top up/i });
     expect(topUpLink).toBeInTheDocument();
+    expect(topUpLink).toHaveClass('button', 'button--primary');
     expect(topUpLink).toHaveAttribute('href', expect.stringContaining('/checkout'));
     expect(topUpLink).toHaveAttribute('href', expect.stringContaining('credits=5'));
     expect(topUpLink).toHaveAttribute('href', expect.stringContaining('returnUrl=%2Fmentors%2F1'));
+    for (const link of document.querySelectorAll('a')) {
+      expect(link.querySelector('button, [role="button"]')).toBeNull();
+    }
   });
 
   it('safely renders https meet link as clickable external link and sanitizes javascript: meetLink into inert text', async () => {

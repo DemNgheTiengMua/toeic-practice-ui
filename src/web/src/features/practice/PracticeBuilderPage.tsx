@@ -11,6 +11,7 @@ import {
   Select,
   Spinner,
   Table,
+  buttonVariants,
 } from '@heroui/react';
 import {
   ArrowRight,
@@ -129,11 +130,12 @@ function SectionCard({
             <span>Start section drill</span>
           </Button>
         ) : showUnlockCta ? (
-          <Link to="/learning-path" className="no-underline">
-            <Button size="sm" variant="secondary">
-              <Lock className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Unlock in Learning Path</span>
-            </Button>
+          <Link
+            to="/learning-path"
+            className={buttonVariants({ size: 'sm', variant: 'secondary', className: 'no-underline' })}
+          >
+            <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Unlock in Learning Path</span>
           </Link>
         ) : (
           <span className="inline-flex items-center gap-1 text-xs font-medium text-muted">
@@ -309,11 +311,12 @@ export function PracticeBuilderPage() {
               </Select.Popover>
             </Select>
           )}
-          <Link to="/saved-questions" className="no-underline">
-            <Button variant="secondary" size="sm">
-              <Bookmark className="h-4 w-4" aria-hidden="true" />
-              <span>Saved questions</span>
-            </Button>
+          <Link
+            to="/saved-questions"
+            className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'no-underline' })}
+          >
+            <Bookmark className="h-4 w-4" aria-hidden="true" />
+            <span>Saved questions</span>
           </Link>
         </div>
       </header>
@@ -496,11 +499,12 @@ export function PracticeBuilderPage() {
                       </div>
                     </div>
                   </div>
-                  <Link to="/learning-path" className="no-underline">
-                    <Button size="sm" variant="secondary">
-                      <Lock className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>Unlock in Learning Path</span>
-                    </Button>
+                  <Link
+                    to="/learning-path"
+                    className={buttonVariants({ size: 'sm', variant: 'secondary', className: 'no-underline' })}
+                  >
+                    <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>Unlock in Learning Path</span>
                   </Link>
                 </Card.Content>
               </Card>
@@ -590,11 +594,12 @@ export function PracticeBuilderPage() {
                       ))}
                     </div>
                   </div>
-                  <Link to="/speaking" className="no-underline">
-                    <Button variant="secondary" size="sm">
-                      <span>Open speaking practice</span>
-                      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                    </Button>
+                  <Link
+                    to="/speaking"
+                    className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'no-underline' })}
+                  >
+                    <span>Open speaking practice</span>
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                   </Link>
                 </Card.Content>
               </Card>

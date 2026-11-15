@@ -7,6 +7,7 @@ import {
   Card,
   Chip,
   Spinner,
+  buttonVariants,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -62,21 +63,20 @@ export function MentorsCatalogPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link to="/mentors/bookings" className="no-underline">
-            <Button variant="secondary" size="sm">
-              <CalendarCheck className="w-4 h-4 mr-1.5" />
-              My bookings
-            </Button>
+          <Link
+            to="/mentors/bookings"
+            className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'no-underline' })}
+          >
+            <CalendarCheck className="w-4 h-4 mr-1.5" />
+            My bookings
           </Link>
           <Link
             to="/checkout"
             search={{ returnUrl: '/mentors' } as any}
-            className="no-underline"
+            className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'no-underline' })}
           >
-            <Button variant="ghost" size="sm">
-              <Sparkles className="w-4 h-4 mr-1.5 text-warning" />
-              Wallet: {learnerContext ? `${learnerContext.creditBalance} credits` : 'Credits'}
-            </Button>
+            <Sparkles className="w-4 h-4 mr-1.5 text-warning" />
+            Wallet: {learnerContext ? `${learnerContext.creditBalance} credits` : 'Credits'}
           </Link>
         </div>
       </div>
@@ -180,15 +180,14 @@ export function MentorsCatalogPage() {
 
                   <Link
                     to={`/mentors/${mentor.mentorId}`}
-                    className="no-underline w-full block"
+                    className={buttonVariants({
+                      variant: 'secondary',
+                      fullWidth: true,
+                      className: 'no-underline justify-center',
+                    })}
                   >
-                    <Button
-                      variant="secondary"
-                      className="w-full justify-center"
-                    >
-                      Book session
-                      <ArrowRight className="w-4 h-4 ml-1.5" />
-                    </Button>
+                    Book session
+                    <ArrowRight className="w-4 h-4 ml-1.5" />
                   </Link>
                 </div>
               </Card.Content>

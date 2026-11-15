@@ -11,6 +11,7 @@ import {
   Spinner,
   TextArea,
   TextField,
+  buttonVariants,
 } from '@heroui/react';
 import { AlertTriangle, ArrowLeft, Check, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -90,10 +91,11 @@ export function SavedQuestionDetailPage() {
             {getPracticeErrorMessage(detailQuery.error, 'This bookmark may have been removed.')}
           </Alert.Description>
           <div className="mt-3">
-            <Link to="/saved-questions" className="no-underline">
-              <Button size="sm" variant="secondary">
-                Back to saved questions
-              </Button>
+            <Link
+              to="/saved-questions"
+              className={buttonVariants({ size: 'sm', variant: 'secondary', className: 'no-underline' })}
+            >
+              Back to saved questions
             </Link>
           </div>
         </Alert.Content>
@@ -121,11 +123,12 @@ export function SavedQuestionDetailPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-separator pb-4">
         <div className="flex flex-wrap items-center gap-2">
-          <Link to="/saved-questions" className="no-underline">
-            <Button size="sm" variant="ghost">
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              <span>Saved questions</span>
-            </Button>
+          <Link
+            to="/saved-questions"
+            className={buttonVariants({ size: 'sm', variant: 'ghost', className: 'no-underline' })}
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            <span>Saved questions</span>
           </Link>
           <h1 className="font-display text-xl font-bold text-foreground">
             {item.scopeName || item.sectionName || item.topicName || 'Saved question review'}

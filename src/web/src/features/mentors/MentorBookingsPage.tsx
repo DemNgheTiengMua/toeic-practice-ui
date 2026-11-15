@@ -3,11 +3,11 @@ import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import {
   Alert,
-  Button,
   Card,
   Chip,
   Spinner,
   Table,
+  buttonVariants,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -55,11 +55,12 @@ export function MentorBookingsPage() {
         </div>
 
         <div>
-          <Link to="/mentors" className="no-underline">
-            <Button variant="primary" size="sm">
-              <GraduationCap className="w-4 h-4 mr-1.5" />
-              Browse mentors
-            </Button>
+          <Link
+            to="/mentors"
+            className={buttonVariants({ variant: 'primary', size: 'sm', className: 'no-underline' })}
+          >
+            <GraduationCap className="w-4 h-4 mr-1.5" />
+            Browse mentors
           </Link>
         </div>
       </div>
@@ -94,10 +95,11 @@ export function MentorBookingsPage() {
                 You have not booked any mentor sessions yet.
               </p>
               <div className="pt-2">
-                <Link to="/mentors" className="no-underline">
-                  <Button variant="secondary" size="sm">
-                    Find a mentor
-                  </Button>
+                <Link
+                  to="/mentors"
+                  className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'no-underline' })}
+                >
+                  Find a mentor
                 </Link>
               </div>
             </div>
@@ -157,11 +159,9 @@ export function MentorBookingsPage() {
                           <Table.Cell className="text-right">
                             <Link
                               to={`/mentors/bookings/${booking.bookingId}`}
-                              className="no-underline"
+                              className={buttonVariants({ size: 'sm', variant: 'ghost', className: 'no-underline' })}
                             >
-                              <Button size="sm" variant="ghost">
-                                View
-                              </Button>
+                              View
                             </Link>
                           </Table.Cell>
                         </Table.Row>
