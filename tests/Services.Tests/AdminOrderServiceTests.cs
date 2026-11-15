@@ -221,12 +221,12 @@ public sealed class AdminOrderServiceTests(DatabaseFixture database)
             var orders = await new AdminOrderService(ordersDb, new PaymentService(ordersDb, new MockPaymentGateway()), clock)
                 .GetOrdersAsync();
 
-            Assert.Equal(2, dashboard.PaidOrdersThisMonthCount);
-            Assert.Equal(dashboard.PaidOrdersThisMonthCount, orders.PaidThisMonthCount);
+            Assert.Equal(2, dashboard.PaidOrdersInPeriodCount);
+            Assert.Equal(dashboard.PaidOrdersInPeriodCount, orders.PaidThisMonthCount);
 
             // Gross: the gateway took 298,000. Net: 100,000 of it went back, so October kept 198,000.
             Assert.Equal(199000m + 99000m, orders.PaidThisMonthAmount);
-            Assert.Equal(199000m + 99000m - 100000m, dashboard.RevenueThisMonthVnd);
+            Assert.Equal(199000m + 99000m - 100000m, dashboard.RevenueInPeriodVnd);
         }
         finally
         {

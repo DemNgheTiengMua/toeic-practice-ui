@@ -38,24 +38,26 @@ public sealed partial class MentorService
             .ToDictionaryAsync(r => r.MentorId, cancellationToken);
 
         var nowUtc = clock.GetUtcNow();
-        var cancelledCode = BookingStatus.Cancelled.ToCode();
-        var noShowType = ComplaintType.MentorNoShow.ToCode();
-        var resolvedStatus = ComplaintStatus.Resolved.ToCode();
 
-        var completedBookings = await db.Bookings
-            .AsNoTracking()
-            .Where(b =>
-                mentorIds.Contains(b.MentorId) &&
-                b.Status != cancelledCode &&
-                b.Slot.EndAt <= nowUtc &&
-                !b.Complaints.Any(c =>
-                    c.Type == noShowType &&
-                    c.Status == resolvedStatus &&
-                    c.ResolvedByGrantTxnId != null))
+        var completedBookings = await DeliveredInWindow(windowStart: null, windowEnd: null, mentorIds)
+            .Where(IsNotCompensatedSession)
+            .Select(b => new { b.MentorId, b.PriceCredits })
+            .ToListAsync(cancellationToken);
+
+        // #352: the sessions the rule above removed, counted rather than silently missing, so a mentor's
+        // smaller earnings total is explained on the same screen.
+        var adjustedBookings = await DeliveredInWindow(windowStart: null, windowEnd: null, mentorIds)
+            .Where(IsCompensatedSession)
             .Select(b => new { b.MentorId, b.PriceCredits })
             .ToListAsync(cancellationToken);
 
         var earningsByMentor = completedBookings
+            .GroupBy(b => b.MentorId)
+            .ToDictionary(
+                g => g.Key,
+                g => (Count: g.Count(), Credits: g.Sum(x => x.PriceCredits)));
+
+        var adjustedByMentor = adjustedBookings
             .GroupBy(b => b.MentorId)
             .ToDictionary(
                 g => g.Key,
@@ -67,6 +69,7 @@ public sealed partial class MentorService
         {
             ratings.TryGetValue(m.MentorId, out var rating);
             earningsByMentor.TryGetValue(m.MentorId, out var earned);
+            adjustedByMentor.TryGetValue(m.MentorId, out var adjusted);
             var totalSlots = m.MentorSlots.Count;
             var openSlots = m.MentorSlots.Count(s => s.Status == openCode && s.StartAt > nowUtc);
             var weeklyDtos = ToWeeklySlotDtos(m.MentorWeeklySlots);
@@ -89,6 +92,8 @@ public sealed partial class MentorService
                 earned.Count,
                 earned.Credits,
                 CreditExchangeRate.ToVnd(earned.Credits),
+                adjusted.Count,
+                adjusted.Credits,
                 weeklyDtos,
                 m.IsActive);
         }).ToList();
@@ -288,6 +293,65 @@ public sealed partial class MentorService
             r.AmountVnd)).ToList();
     }
 
+    private static readonly string ResolvedComplaintCode = ComplaintStatus.Resolved.ToCode();
+    private static readonly string CreditRefundMethodCode = RefundMethod.Credit.ToCode();
+    private static readonly string ApprovedRefundStatusCode = RefundStatus.Approved.ToCode();
+
+    /// <summary>
+    /// #352: a delivered session leaves the payout when its booking carries a <b>resolved</b> complaint
+    /// that <b>compensated</b> the learner - either a make-good grant pointer or an approved credit
+    /// refund. The old rule also demanded the type <c>mentor_no_show</c>, which a <c>mentor_quality</c>
+    /// complaint can never satisfy, so refunding one paid the mentor twice for one failure.
+    /// <para>
+    /// An unresolved complaint excludes nothing: an open investigation must not dock anybody before it
+    /// concludes. A money refund is not compensation for a session - it returns money an order took and
+    /// never touches the credits a session cost - so it does not dock the mentor either.
+    /// </para>
+    /// </summary>
+    private static readonly System.Linq.Expressions.Expression<Func<Booking, bool>> IsCompensatedSession =
+        b => b.Complaints.Any(c =>
+            c.Status == ResolvedComplaintCode &&
+            (c.ResolvedByGrantTxnId != null ||
+             c.Refunds.Any(r => r.Method == CreditRefundMethodCode && r.Status == ApprovedRefundStatusCode)));
+
+    /// <summary>The same rule, negated once, so no query can restate the compensation test and drift.</summary>
+    private static readonly System.Linq.Expressions.Expression<Func<Booking, bool>> IsNotCompensatedSession =
+        System.Linq.Expressions.Expression.Lambda<Func<Booking, bool>>(
+            System.Linq.Expressions.Expression.Not(IsCompensatedSession.Body),
+            IsCompensatedSession.Parameters);
+
+    /// <summary>Bookings whose session has ended inside the window and was not cancelled - the only
+    /// sessions "paid" and "adjusted" are both drawn from.</summary>
+    private IQueryable<Booking> DeliveredInWindow(
+        DateTimeOffset? windowStart,
+        DateTimeOffset? windowEnd,
+        IReadOnlyList<int>? mentorIds)
+    {
+        var nowUtc = clock.GetUtcNow();
+        var cancelledCode = BookingStatus.Cancelled.ToCode();
+
+        var query = db.Bookings
+            .AsNoTracking()
+            .Where(b => b.Status != cancelledCode && b.Slot.EndAt <= nowUtc);
+
+        if (windowStart is { } start)
+        {
+            query = query.Where(b => b.Slot.EndAt >= start);
+        }
+
+        if (windowEnd is { } end)
+        {
+            query = query.Where(b => b.Slot.EndAt < end);
+        }
+
+        if (mentorIds is not null)
+        {
+            query = query.Where(b => mentorIds.Contains(b.MentorId));
+        }
+
+        return query;
+    }
+
     private sealed record PayoutBookingProjection(
         int BookingId,
         DateOnly SessionDate,
@@ -311,23 +375,9 @@ public sealed partial class MentorService
     {
         var windowStart = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue), ReportingPeriod.UtcOffset);
         var windowEnd = new DateTimeOffset(to.AddDays(1).ToDateTime(TimeOnly.MinValue), ReportingPeriod.UtcOffset);
-        var nowUtc = clock.GetUtcNow();
 
-        var cancelledCode = BookingStatus.Cancelled.ToCode();
-        var noShowType = ComplaintType.MentorNoShow.ToCode();
-        var resolvedStatus = ComplaintStatus.Resolved.ToCode();
-
-        var raw = await db.Bookings
-            .AsNoTracking()
-            .Where(b =>
-                b.Status != cancelledCode &&
-                b.Slot.EndAt <= nowUtc &&
-                b.Slot.EndAt >= windowStart &&
-                b.Slot.EndAt < windowEnd &&
-                !b.Complaints.Any(c =>
-                    c.Type == noShowType &&
-                    c.Status == resolvedStatus &&
-                    c.ResolvedByGrantTxnId != null))
+        var raw = await DeliveredInWindow(windowStart, windowEnd, mentorIds: null)
+            .Where(IsNotCompensatedSession)
             .OrderByDescending(b => b.Slot.EndAt)
             .ThenByDescending(b => b.BookingId)
             .Select(b => new

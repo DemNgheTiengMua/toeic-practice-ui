@@ -2003,6 +2003,9 @@ export interface AdminMentorListItemDto {
   completedSessionsCount: number;
   totalEarnedCredits: number;
   totalEarnedVnd: number;
+  /** #352: delivered sessions docked because their complaint was resolved with compensation. */
+  adjustedSessionsCount: number;
+  adjustedCredits: number;
   headline?: string | null;
   bio?: string | null;
   expertise?: string | null;
@@ -2105,14 +2108,17 @@ export interface AdminMostAttemptedExamDto {
 export interface AdminDashboardDto {
   activeLearnersCount: number;
   newLearners7DaysCount: number;
-  creditsUsedThisMonth: number;
-  creditsRefundedThisMonth: number;
+  /** #351: follows `periodLabel`, unlike the two `…Today` figures below. */
+  creditsUsedInPeriod: number;
+  creditsRefundedInPeriod: number;
   creditsPerDayAverage: number;
   revenueTodayVnd: number;
-  revenueThisMonthVnd: number;
-  paidOrdersThisMonthCount: number;
+  revenueInPeriodVnd: number;
+  paidOrdersInPeriodCount: number;
   mostAttemptedExams: AdminMostAttemptedExamDto[];
   needsAttention: AdminNeedsAttentionDto;
+  /** #351: the period the `…InPeriod` figures describe, named by the server that computed them. */
+  periodLabel: string;
 }
 
 export interface DashboardRevision {
@@ -2774,7 +2780,11 @@ export const api = {
   },
 
   admin: {
-    dashboard: () => apiFetch<AdminDashboardDto>('/api/admin/dashboard'),
+    /** #351: `month` is `YYYY-MM`. Absent means the current reporting month, as before the parameter. */
+    dashboard: (month?: string) =>
+      apiFetch<AdminDashboardDto>(
+        month ? `/api/admin/dashboard?month=${month}-01` : '/api/admin/dashboard',
+      ),
     dashboardRevision: () => apiFetch<DashboardRevision>('/api/admin/dashboard/revision'),
     discardWorkbenchRecord: (batchId: number, line: number, reason?: string) =>
       apiFetch<void>(`/api/admin/ingestion/${batchId}/records/${line}/discard`, {

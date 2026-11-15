@@ -38,6 +38,7 @@ import {
 import { creditsToVnd, formatVnd, safeExternalHref, VND_PER_CREDIT } from '../../../lib/security';
 import {
   formatDateTime,
+  formatMentorPayoutOutcomeLabel,
   formatWeekdayLabel,
   getDefaultUtc7MonthRange,
   normalizeWeeklyTime,
@@ -455,6 +456,13 @@ export function MentorsTab() {
                           <p className="text-xs font-mono-tabular text-muted">
                             {formatVnd(m.totalEarnedVnd ?? creditsToVnd(m.totalEarnedCredits ?? 0))}
                           </p>
+                          {/* #352: the sessions the payout rule removed, so a smaller total is explained. */}
+                          {(m.adjustedSessionsCount ?? 0) > 0 && (
+                            <p className="text-xs font-mono-tabular text-warning">
+                              {m.adjustedSessionsCount} {formatMentorPayoutOutcomeLabel('adjusted')} ·{' '}
+                              {m.adjustedCredits} credits deducted
+                            </p>
+                          )}
                         </div>
                       </Table.Cell>
                       <Table.Cell>

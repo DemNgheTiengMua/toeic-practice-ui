@@ -77,12 +77,13 @@ function makeDashboard(overrides?: Record<string, unknown>) {
   return {
     activeLearnersCount: 42,
     newLearners7DaysCount: 7,
-    creditsUsedThisMonth: 1200,
-    creditsRefundedThisMonth: 150,
+    creditsUsedInPeriod: 1200,
+    creditsRefundedInPeriod: 150,
     creditsPerDayAverage: 40.5,
     revenueTodayVnd: 500000,
-    revenueThisMonthVnd: 3250000,
-    paidOrdersThisMonthCount: 14,
+    revenueInPeriodVnd: 3250000,
+    paidOrdersInPeriodCount: 14,
+    periodLabel: 'October 2026',
     mostAttemptedExams: [
       { examId: 101, examName: 'TOEIC Full Diagnostic 1', attemptsCount: 18, averageScore: 715 },
     ],
@@ -275,9 +276,9 @@ describe('Admin Overview, Users, Roles, Credit Grants & Audit Queue (#302)', () 
           return jsonResponse(
             makeDashboard({
               revenueTodayVnd: -500000,
-              revenueThisMonthVnd: -1200000,
-              creditsUsedThisMonth: 1200,
-              creditsRefundedThisMonth: 150,
+              revenueInPeriodVnd: -1200000,
+              creditsUsedInPeriod: 1200,
+              creditsRefundedInPeriod: 150,
             }),
           );
         }
@@ -285,8 +286,8 @@ describe('Admin Overview, Users, Roles, Credit Grants & Audit Queue (#302)', () 
           makeDashboard({
             activeLearnersCount: 43,
             revenueTodayVnd: 500000,
-            revenueThisMonthVnd: 3750000,
-            paidOrdersThisMonthCount: 15,
+            revenueInPeriodVnd: 3750000,
+            paidOrdersInPeriodCount: 15,
           }),
         );
       }
@@ -300,7 +301,7 @@ describe('Admin Overview, Users, Roles, Credit Grants & Audit Queue (#302)', () 
     });
 
     const todayEl = screen.getByTestId('revenue-today-value');
-    const monthEl = screen.getByTestId('revenue-month-value');
+    const monthEl = screen.getByTestId('revenue-period-value');
     expect(todayEl.textContent).toContain('\u2212');
     expect(todayEl.textContent).toContain('500');
     expect(todayEl.className).toContain('text-danger');
@@ -312,7 +313,6 @@ describe('Admin Overview, Users, Roles, Credit Grants & Audit Queue (#302)', () 
     expect(screen.getByText(/150/)).toBeInTheDocument();
     expect(screen.getByText('Revenue today (UTC+7)')).toBeInTheDocument();
     expect(screen.getByText('TOEIC Full Diagnostic 1')).toBeInTheDocument();
-
     // First 5s tick returns SAME revision -> no extra /api/admin/dashboard call
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);
@@ -330,6 +330,61 @@ describe('Admin Overview, Users, Roles, Credit Grants & Audit Queue (#302)', () 
       expect(screen.getByTestId('revenue-today-value').className).not.toContain('text-danger');
       expect(screen.getByTestId('revenue-today-value').textContent).not.toContain('\u2212');
     });
+  });
+
+  it('relabels every period figure when a previous month is chosen, and leaves today fixed', async () => {
+    const dashboardUrls: string[] = [];
+
+    installFetchMock((url) => {
+      if (url.endsWith('/api/auth/me')) return jsonResponse(makeMe());
+      if (url.endsWith('/api/admin/dashboard/revision')) return jsonResponse(makeRevision());
+      if (url.startsWith('/api/admin/dashboard')) {
+        dashboardUrls.push(url);
+        if (url.includes('month=2026-09-01')) {
+          return jsonResponse(
+            makeDashboard({
+              periodLabel: 'September 2026',
+              revenueInPeriodVnd: -1200000,
+              paidOrdersInPeriodCount: 4,
+              creditsUsedInPeriod: 90,
+              creditsRefundedInPeriod: 5,
+              creditsPerDayAverage: 3,
+              mostAttemptedExams: [
+                { examId: 202, examName: 'September Paper', attemptsCount: 6, averageScore: 640 },
+              ],
+            }),
+          );
+        }
+        return jsonResponse(makeDashboard());
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin');
+
+    // The default period is named by the payload, so no card can claim "this month" while showing another.
+    expect(await screen.findByText(/Popular exams across all active learners in October 2026/)).toBeInTheDocument();
+    expect(screen.getByText('TOEIC Full Diagnostic 1')).toBeInTheDocument();
+
+    // Last month is a one-press shortcut, and it must actually ask the server for September.
+    fireEvent.click(screen.getByRole('button', { name: /last month/i }));
+
+    await waitFor(() => {
+      expect(dashboardUrls.some((u) => u.includes('month=2026-09-01'))).toBe(true);
+    });
+    expect(
+      await screen.findByText(/Popular exams across all active learners in September 2026/),
+    ).toBeInTheDocument();
+
+    // Every period figure followed the control...
+    expect(screen.getByTestId('revenue-period-value').textContent).toContain('\u2212');
+    expect(screen.getByTestId('revenue-period-value').className).toContain('text-danger');
+    expect(screen.getByText(/4 paid orders/)).toBeInTheDocument();
+    expect(screen.getByText('September Paper')).toBeInTheDocument();
+
+    // ...and today did not. The live snapshot keeps its own window whatever month is selected.
+    expect(screen.getByTestId('revenue-today-value').textContent).not.toContain('\u2212');
+    expect(screen.getByText('Revenue today (UTC+7)')).toBeInTheDocument();
   });
 
   it('filters users, renders human-readable placement history, handles lock/resend errors, and sends exact { delta, reason } on credit grants', async () => {
@@ -675,3 +730,4 @@ describe('Single-control navigational links across admin surfaces (#341)', () =>
     opsView.unmount();
   });
 });
+
