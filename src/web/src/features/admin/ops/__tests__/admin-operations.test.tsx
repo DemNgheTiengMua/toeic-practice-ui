@@ -76,8 +76,20 @@ const SAMPLE_COMPLAINTS_SUMMARY: AdminComplaintsSummaryDto = {
       status: 'open',
       createdAt: '2026-11-09T09:00:00Z',
     },
+    {
+      complaintId: 304,
+      userId: 18,
+      learnerName: 'Đỗ Văn H',
+      learnerEmail: 'learner18@test.local',
+      type: 'technical_error',
+      subjectType: 'ExamAttempt',
+      subjectId: 99,
+      subjectSummary: 'Exam #99 (Placement)',
+      status: 'open',
+      createdAt: '2026-11-10T09:00:00Z',
+    },
   ],
-  totalCount: 3,
+  totalCount: 4,
   page: 1,
   pageSize: 25,
   pendingCount: 2,
@@ -119,6 +131,23 @@ const SAMPLE_COMPLAINT_DETAIL_ORDER: AdminComplaintDetailDto = {  complaintId: 3
   creditsSpent: 0,
   moneyPaid: 199000,
   impliedRefundMethod: 'money',
+};
+
+const SAMPLE_COMPLAINT_DETAIL_UNCHARGED: AdminComplaintDetailDto = {
+  complaintId: 304,
+  userId: 18,
+  learnerName: 'Đỗ Văn H',
+  learnerEmail: 'learner18@test.local',
+  type: 'technical_error',
+  reason: 'The timer froze and I lost ten minutes.',
+  status: 'open',
+  subjectType: 'ExamAttempt',
+  subjectId: 99,
+  subjectSummary: 'Exam #99 (Placement)',
+  createdAt: '2026-11-10T09:00:00Z',
+  creditsSpent: 0,
+  moneyPaid: null,
+  impliedRefundMethod: 'credit',
 };
 
 const SAMPLE_COMPLAINT_DETAIL_RESOLVED: AdminComplaintDetailDto = {
@@ -339,6 +368,9 @@ describe('AdminOperationsPage (#304)', () => {
       if (url.startsWith('/api/admin/complaints/303')) {
         return jsonResponse(SAMPLE_COMPLAINT_DETAIL_ORDER);
       }
+      if (url.startsWith('/api/admin/complaints/304')) {
+        return jsonResponse(SAMPLE_COMPLAINT_DETAIL_UNCHARGED);
+      }
       if (url.startsWith('/api/admin/complaints')) {
         return jsonResponse(SAMPLE_COMPLAINTS_SUMMARY);
       }
@@ -531,6 +563,24 @@ describe('AdminOperationsPage (#304)', () => {
 
     expect(await screen.findByText(/complaint details — #303/i)).toBeInTheDocument();
     expect(await screen.findByText(/199\.000\s*₫/)).toBeInTheDocument();
+  });
+
+  it('says nothing is refundable on a subject that was never charged (#347)', async () => {
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đỗ Văn H');
+
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[3]);
+
+    expect(await screen.findByText(/complaint details — #304/i)).toBeInTheDocument();
+    expect(await screen.findByText(/nothing to refund on this subject/i)).toBeInTheDocument();
   });
 
   it('manages human mentors with fixed MeetLink, credit pricing, weekly availability schedule, and payout CSV export', async () => {
