@@ -3,6 +3,7 @@ using BusinessObjects;
 using Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Services;
+using WebAPI.Filters;
 using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
@@ -41,7 +42,7 @@ public static partial class AdminEndpoints
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<CreateAdminExamRequest>>();
 
         admin.MapGet("/exams/{examId:int}", async (
             int examId,
@@ -74,7 +75,7 @@ public static partial class AdminEndpoints
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<UpdateAdminExamRequest>>();
 
         admin.MapPost("/exams/{examId:int}/publish", async (
             int examId,

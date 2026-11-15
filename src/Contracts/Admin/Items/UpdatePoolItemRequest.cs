@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace Contracts;
 
@@ -9,13 +11,13 @@ namespace Contracts;
 /// were decided when the item was authored and moving an item between cells is a different act.
 /// </summary>
 public sealed record UpdatePoolItemRequest(
-    string Stem,
+    [property: Required(AllowEmptyStrings = false, ErrorMessage = "Question stem is required.")] string Stem,
     string? OptionA = null,
     string? OptionB = null,
     string? OptionC = null,
     string? OptionD = null,
     string? KeyLabel = null,
-    string? Explanation = null,
+    [property: Required(AllowEmptyStrings = false, ErrorMessage = "Explanation is required.")] string? Explanation = null,
     int? EvidenceStart = null,
     int? EvidenceEnd = null,
     string? EvidenceUnit = null,
@@ -28,4 +30,10 @@ public sealed record UpdatePoolItemRequest(
     string? RationaleB = null,
     string? RationaleC = null,
     string? RationaleD = null,
-    string? TargetBands = null);
+    string? TargetBands = null) : IValidatableObject
+{
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
+        PoolItemValidation.ValidateItemFields(
+            Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel, Explanation,
+            EvidenceStart, EvidenceEnd, EvidenceUnit);
+}

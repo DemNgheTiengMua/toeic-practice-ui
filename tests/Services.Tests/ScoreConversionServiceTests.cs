@@ -363,4 +363,35 @@ public sealed class ScoreConversionServiceTests(DatabaseFixture database)
         Assert.True(result.TotalScore > 0);
         Assert.NotNull(result.BandCode);
     }
+
+    [Fact]
+    public async Task UpdateScoreConversion_ExamOverride_Rejects_ScaledScore_Outside_Skill_Bounds()
+    {
+        var certCode = Unique("BND");
+        var (certId, skillId) = await SeedCertificateAndSkillAsync(certCode);
+
+        await database.SqlAsync($"""
+            INSERT INTO Exams (CertId, Name, Status, Purpose, DurationMinutes)
+            VALUES ({certId}, N'Override Exam', 'draft', 'mock', 60);
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var examId = await db.Exams.Where(e => e.CertId == certId).Select(e => e.ExamId).SingleAsync();
+
+        var service = CreateService();
+        // Skill seeded with MinScaledScore = 100, MaxScaledScore = 200
+        var command = new UpdateScoreConversionCommand(
+            ExamId: examId,
+            Scales:
+            [
+                new UpdateScoreScaleEntry(skillId, RawScore: 0, ScaledScore: 50),
+                new UpdateScoreScaleEntry(skillId, RawScore: 1, ScaledScore: 250),
+            ],
+            Bands: []);
+
+        var ex = await Assert.ThrowsAsync<ScoreConversionException>(
+            () => service.UpdateScoreConversionAsync(certId, command));
+
+        Assert.Equal(ScoreConversionException.InvalidBandRange, ex.Code);
+    }
 }

@@ -50,7 +50,7 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
         var level = RequireAuthoredLevel(request.CefrLevelCode);
         ValidateVersionShape(
             request.Stem, request.OptionA, request.OptionB, request.OptionC, request.OptionD, request.KeyLabel,
-            request.EvidenceStart, request.EvidenceEnd, request.EvidenceUnit, request.ReferenceText, request.ReferenceKind);
+            request.Explanation, request.EvidenceStart, request.EvidenceEnd, request.EvidenceUnit, request.ReferenceText, request.ReferenceKind);
 
         // The composite key pins the item's modality to its topic's own. A listening item on a
         // reading topic is the defect it exists to stop, so it is refused here with a sentence the
@@ -142,7 +142,7 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
     {
         ValidateVersionShape(
             request.Stem, request.OptionA, request.OptionB, request.OptionC, request.OptionD, request.KeyLabel,
-            request.EvidenceStart, request.EvidenceEnd, request.EvidenceUnit, request.ReferenceText, request.ReferenceKind);
+            request.Explanation, request.EvidenceStart, request.EvidenceEnd, request.EvidenceUnit, request.ReferenceText, request.ReferenceKind);
 
         var item = await db.Items
             .Include(i => i.Topic)
@@ -285,6 +285,7 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
         string? optionC,
         string? optionD,
         string? keyLabel,
+        string? explanation,
         int? evidenceStart,
         int? evidenceEnd,
         string? evidenceUnit,
@@ -310,6 +311,11 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
         if (key is not null && key is not ("A" or "B" or "C" or "D"))
         {
             throw new AdminItemException(ApiError.Codes.Validation, "The key must be one of A, B, C or D.");
+        }
+
+        if (string.IsNullOrWhiteSpace(explanation))
+        {
+            throw new AdminItemException(ApiError.Codes.Validation, "An item version needs an explanation.");
         }
 
         var hasUnit = Normalize(evidenceUnit) is not null;

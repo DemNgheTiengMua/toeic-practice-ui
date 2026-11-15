@@ -481,4 +481,46 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
       expect(committedRequest.questions.length).toBe(1);
     });
   });
+
+  it('binds backend RFC 7807 field errors to HeroUI FieldError controls in the create exam modal', async () => {
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          id: 1,
+          email: 'author@demo.local',
+          fullName: 'Exam Author',
+          role: 'staff',
+          permissions: [STAFF_PERMISSIONS.ContentAuthor, STAFF_PERMISSIONS.BlueprintDesign],
+        });
+      }
+      if (url.startsWith('/api/admin/exams?')) {
+        return jsonResponse(mockExamList);
+      }
+      if (url === '/api/admin/exams' && init?.method === 'POST') {
+        return jsonResponse(
+          {
+            title: 'Validation failed',
+            status: 400,
+            code: 'VALIDATION_ERROR',
+            errors: {
+              name: ['Exam name is required.'],
+              durationMinutes: ['Duration must be between 1 and 600 minutes.'],
+            },
+          },
+          400,
+        );
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin/exams');
+
+    fireEvent.click(await screen.findByRole('button', { name: /new exam/i }));
+    expect(await screen.findByRole('heading', { name: /create new exam/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /create draft exam/i }));
+
+    expect(await screen.findByText('Exam name is required.')).toBeInTheDocument();
+    expect(screen.getByText('Duration must be between 1 and 600 minutes.')).toBeInTheDocument();
+  });
 });

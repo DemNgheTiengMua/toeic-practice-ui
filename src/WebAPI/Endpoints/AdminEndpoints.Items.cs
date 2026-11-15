@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BusinessObjects;
 using Contracts;
 using Services;
+using WebAPI.Filters;
 using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
@@ -29,7 +30,7 @@ public static partial class AdminEndpoints
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<CreatePoolItemRequest>>();
 
         admin.MapPut("/items/{itemId:int}", async (
             int itemId,
@@ -46,7 +47,7 @@ public static partial class AdminEndpoints
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<UpdatePoolItemRequest>>();
 
         admin.MapPost("/exams/{examId:int}/bindings", async (
             int examId,
@@ -67,6 +68,6 @@ public static partial class AdminEndpoints
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<BindPoolItemRequest>>();
     }
 }

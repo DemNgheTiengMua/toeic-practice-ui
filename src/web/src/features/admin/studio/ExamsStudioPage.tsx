@@ -7,7 +7,15 @@ import {
   Modal,
   Table,
   Alert,
+  Form,
+  TextField,
+  Label,
+  Input,
+  TextArea,
+  NumberField,
+  FieldError,
 } from '@heroui/react';
+import { extractErrorMessage, extractFieldErrors } from './validationErrors';
 import {
   BookOpen,
   Plus,
@@ -69,6 +77,7 @@ export function ExamsStudioPage() {
   const [newDescription, setNewDescription] = useState('');
   const [isCreatingExam, setIsCreatingExam] = useState(false);
   const [newExamError, setNewExamError] = useState<string | null>(null);
+  const [newExamFieldErrors, setNewExamFieldErrors] = useState<Record<string, string>>({});
 
   // Edit Metadata state
   const [editName, setEditName] = useState('');
@@ -79,6 +88,7 @@ export function ExamsStudioPage() {
   const [editInternalNote, setEditInternalNote] = useState('');
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [metadataNotice, setMetadataNotice] = useState<string | null>(null);
+  const [metadataFieldErrors, setMetadataFieldErrors] = useState<Record<string, string>>({});
 
   // Sections & Audio state
   const [selectedAudioSectionId, setSelectedAudioSectionId] = useState<number>(1);
@@ -193,10 +203,7 @@ export function ExamsStudioPage() {
   // Create Exam
   const handleCreateExam = async () => {
     setNewExamError(null);
-    if (!newName.trim()) {
-      setNewExamError('Exam name is required.');
-      return;
-    }
+    setNewExamFieldErrors({});
     setIsCreatingExam(true);
     try {
       const res = await studioApi.createExam({
@@ -209,8 +216,9 @@ export function ExamsStudioPage() {
       setIsNewExamOpen(false);
       loadExamList();
       setSelectedExamId(res.examId);
-    } catch (err: any) {
-      setNewExamError(err?.detail || err?.title || 'Failed to create exam.');
+    } catch (err: unknown) {
+      setNewExamFieldErrors(extractFieldErrors(err));
+      setNewExamError(extractErrorMessage(err, 'Failed to create exam.'));
     } finally {
       setIsCreatingExam(false);
     }
@@ -221,6 +229,7 @@ export function ExamsStudioPage() {
     if (!selectedExamId || !examDetail) return;
     setIsSavingMetadata(true);
     setMetadataNotice(null);
+    setMetadataFieldErrors({});
     try {
       await studioApi.updateExam(selectedExamId, {
         certId: examDetail.certId,
@@ -233,8 +242,9 @@ export function ExamsStudioPage() {
       });
       setMetadataNotice('Exam metadata saved successfully.');
       loadExamDetail(selectedExamId);
-    } catch (err: any) {
-      setMetadataNotice(err?.detail || err?.title || 'Failed to update metadata.');
+    } catch (err: unknown) {
+      setMetadataFieldErrors(extractFieldErrors(err));
+      setMetadataNotice(extractErrorMessage(err, 'Failed to update metadata.'));
     } finally {
       setIsSavingMetadata(false);
     }
@@ -597,74 +607,112 @@ export function ExamsStudioPage() {
                     </Alert>
                   )}
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-foreground">Exam name</label>
-                    <input
-                      type="text"
+                  <Form validationBehavior="aria" className="space-y-4">
+                    <TextField
+                      isRequired
+                      name="name"
                       value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                    />
-                  </div>
+                      onChange={(value) => {
+                        setEditName(value);
+                        setMetadataFieldErrors((prev) => ({ ...prev, name: '' }));
+                      }}
+                      isInvalid={Boolean(metadataFieldErrors.name)}
+                    >
+                      <Label>Exam name</Label>
+                      <Input className="text-sm" />
+                      {metadataFieldErrors.name && (
+                        <FieldError>{metadataFieldErrors.name}</FieldError>
+                      )}
+                    </TextField>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-foreground">Duration (minutes)</label>
-                      <input
-                        type="number"
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <NumberField
+                        minValue={1}
+                        maxValue={600}
+                        step={1}
+                        name="durationMinutes"
                         value={editDuration}
-                        onChange={(e) => setEditDuration(Number(e.target.value))}
-                        className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground font-mono-tabular text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-foreground">Purpose</label>
-                      <select
-                        value={editPurpose}
-                        onChange={(e) => setEditPurpose(e.target.value)}
-                        className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
+                        onChange={(value) => {
+                          setEditDuration(value);
+                          setMetadataFieldErrors((prev) => ({ ...prev, durationMinutes: '' }));
+                        }}
+                        isInvalid={Boolean(metadataFieldErrors.durationMinutes)}
                       >
-                        <option value="full_mock">Full mock exam</option>
-                        <option value="mini_mock">Mini mock exam</option>
-                        <option value="placement">Placement test</option>
-                        <option value="diagnostic">Diagnostic</option>
-                        <option value="practice">Practice drill</option>
-                      </select>
+                        <Label>Duration (minutes)</Label>
+                        <NumberField.Group>
+                          <NumberField.DecrementButton />
+                          <NumberField.Input className="font-mono-tabular text-sm" />
+                          <NumberField.IncrementButton />
+                        </NumberField.Group>
+                        {metadataFieldErrors.durationMinutes && (
+                          <FieldError>{metadataFieldErrors.durationMinutes}</FieldError>
+                        )}
+                      </NumberField>
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-foreground">Purpose</label>
+                        <select
+                          value={editPurpose}
+                          onChange={(e) => setEditPurpose(e.target.value)}
+                          className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
+                        >
+                          <option value="full_mock">Full mock exam</option>
+                          <option value="mini_mock">Mini mock exam</option>
+                          <option value="placement">Placement test</option>
+                          <option value="diagnostic">Diagnostic</option>
+                          <option value="practice">Practice drill</option>
+                        </select>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-foreground">Description</label>
-                    <textarea
-                      rows={2}
+                    <TextField
+                      name="description"
                       value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                    />
-                  </div>
+                      onChange={(value) => {
+                        setEditDescription(value);
+                        setMetadataFieldErrors((prev) => ({ ...prev, description: '' }));
+                      }}
+                      isInvalid={Boolean(metadataFieldErrors.description)}
+                    >
+                      <Label>Description</Label>
+                      <TextArea rows={2} className="text-sm" />
+                      {metadataFieldErrors.description && (
+                        <FieldError>{metadataFieldErrors.description}</FieldError>
+                      )}
+                    </TextField>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-foreground">Source name</label>
-                      <input
-                        type="text"
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <TextField
+                        name="sourceName"
                         value={editSourceName}
-                        onChange={(e) => setEditSourceName(e.target.value)}
-                        placeholder="e.g. Official Practice Set 1"
-                        className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-foreground">Internal note</label>
-                      <input
-                        type="text"
+                        onChange={(value) => {
+                          setEditSourceName(value);
+                          setMetadataFieldErrors((prev) => ({ ...prev, sourceName: '' }));
+                        }}
+                        isInvalid={Boolean(metadataFieldErrors.sourceName)}
+                      >
+                        <Label>Source name</Label>
+                        <Input placeholder="e.g. Official Practice Set 1" className="text-sm" />
+                        {metadataFieldErrors.sourceName && (
+                          <FieldError>{metadataFieldErrors.sourceName}</FieldError>
+                        )}
+                      </TextField>
+                      <TextField
+                        name="internalNote"
                         value={editInternalNote}
-                        onChange={(e) => setEditInternalNote(e.target.value)}
-                        placeholder="Author review note"
-                        className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                      />
+                        onChange={(value) => {
+                          setEditInternalNote(value);
+                          setMetadataFieldErrors((prev) => ({ ...prev, internalNote: '' }));
+                        }}
+                        isInvalid={Boolean(metadataFieldErrors.internalNote)}
+                      >
+                        <Label>Internal note</Label>
+                        <Input placeholder="Author review note" className="text-sm" />
+                        {metadataFieldErrors.internalNote && (
+                          <FieldError>{metadataFieldErrors.internalNote}</FieldError>
+                        )}
+                      </TextField>
                     </div>
-                  </div>
+                  </Form>
 
                   <div className="pt-2">
                     <Button
@@ -1074,51 +1122,78 @@ export function ExamsStudioPage() {
                 </Alert>
               )}
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground">Exam name</label>
-                <input
-                  type="text"
+              <Form validationBehavior="aria" className="space-y-4">
+                <TextField
+                  isRequired
+                  name="name"
                   value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="e.g. TOEIC Official Mock Test 2"
-                  className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                />
-              </div>
+                  onChange={(value) => {
+                    setNewName(value);
+                    setNewExamFieldErrors((prev) => ({ ...prev, name: '' }));
+                  }}
+                  isInvalid={Boolean(newExamFieldErrors.name)}
+                >
+                  <Label>Exam name</Label>
+                  <Input placeholder="e.g. TOEIC Official Mock Test 2" className="text-sm" />
+                  {newExamFieldErrors.name && (
+                    <FieldError>{newExamFieldErrors.name}</FieldError>
+                  )}
+                </TextField>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-foreground">Duration (mins)</label>
-                  <input
-                    type="number"
+                <div className="grid grid-cols-2 gap-3">
+                  <NumberField
+                    minValue={1}
+                    maxValue={600}
+                    step={1}
+                    name="durationMinutes"
                     value={newDuration}
-                    onChange={(e) => setNewDuration(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground font-mono-tabular text-sm"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-foreground">Purpose</label>
-                  <select
-                    value={newPurpose}
-                    onChange={(e) => setNewPurpose(e.target.value)}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
+                    onChange={(value) => {
+                      setNewDuration(value);
+                      setNewExamFieldErrors((prev) => ({ ...prev, durationMinutes: '' }));
+                    }}
+                    isInvalid={Boolean(newExamFieldErrors.durationMinutes)}
                   >
-                    <option value="full_mock">Full mock exam</option>
-                    <option value="mini_mock">Mini mock exam</option>
-                    <option value="placement">Placement test</option>
-                    <option value="diagnostic">Diagnostic</option>
-                  </select>
+                    <Label>Duration (mins)</Label>
+                    <NumberField.Group>
+                      <NumberField.DecrementButton />
+                      <NumberField.Input className="font-mono-tabular text-sm" />
+                      <NumberField.IncrementButton />
+                    </NumberField.Group>
+                    {newExamFieldErrors.durationMinutes && (
+                      <FieldError>{newExamFieldErrors.durationMinutes}</FieldError>
+                    )}
+                  </NumberField>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-foreground">Purpose</label>
+                    <select
+                      value={newPurpose}
+                      onChange={(e) => setNewPurpose(e.target.value)}
+                      className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
+                    >
+                      <option value="full_mock">Full mock exam</option>
+                      <option value="mini_mock">Mini mock exam</option>
+                      <option value="placement">Placement test</option>
+                      <option value="diagnostic">Diagnostic</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground">Description</label>
-                <textarea
-                  rows={2}
+                <TextField
+                  name="description"
                   value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
-                  className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                />
-              </div>
+                  onChange={(value) => {
+                    setNewDescription(value);
+                    setNewExamFieldErrors((prev) => ({ ...prev, description: '' }));
+                  }}
+                  isInvalid={Boolean(newExamFieldErrors.description)}
+                >
+                  <Label>Description</Label>
+                  <TextArea rows={2} className="text-sm" />
+                  {newExamFieldErrors.description && (
+                    <FieldError>{newExamFieldErrors.description}</FieldError>
+                  )}
+                </TextField>
+              </Form>
             </Modal.Body>
             <Modal.Footer>
               <Button size="sm" variant="secondary" onPress={() => setIsNewExamOpen(false)}>

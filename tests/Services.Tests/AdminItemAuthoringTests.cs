@@ -121,6 +121,7 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
             "East window.",
             "West window.",
             "A",
+            Explanation: "North window is the depot's window.",
             TargetBands: "b1, b2, 5.5"));
 
         Assert.Equal("active", created.LifecycleStatus);
@@ -402,6 +403,18 @@ public sealed class AdminItemAuthoringTests(DatabaseFixture database)
 
         Assert.Equal(ApiError.Codes.Validation, refused.Code);
         Assert.Contains("A1-C2", refused.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task An_item_with_empty_explanation_is_refused_with_a_validation_error()
+    {
+        var topicId = await ReadingTopicAsync();
+
+        var refused = await Assert.ThrowsAsync<AdminItemException>(() =>
+            CreateService().CreateAsync(ReadingItem(topicId, "Which window is open?") with { Explanation = "   " }));
+
+        Assert.Equal(ApiError.Codes.Validation, refused.Code);
+        Assert.Contains("explanation", refused.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

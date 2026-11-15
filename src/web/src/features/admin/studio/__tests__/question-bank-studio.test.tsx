@@ -391,4 +391,46 @@ describe('Question Bank Studio (/admin/question-bank) (#303)', () => {
     expect(await screen.findByText('Skimming & Scanning Mastery')).toBeInTheDocument();
     expect(screen.getByText('B1,B2')).toBeInTheDocument();
   });
+
+  it('binds backend RFC 7807 field errors to HeroUI FieldError controls in the create pool item modal', async () => {
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          id: 1,
+          email: 'author@demo.local',
+          fullName: 'Content Author',
+          role: 'staff',
+          permissions: [STAFF_PERMISSIONS.ContentAuthor],
+        });
+      }
+      if (url === '/api/admin/coverage') {
+        return jsonResponse(mockCoverage);
+      }
+      if (url === '/api/admin/items' && init?.method === 'POST') {
+        return jsonResponse(
+          {
+            title: 'Validation failed',
+            status: 400,
+            code: 'VALIDATION_ERROR',
+            errors: {
+              stem: ['Question stem is required.'],
+              explanation: ['Explanation is required.'],
+            },
+          },
+          400,
+        );
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin/question-bank');
+
+    fireEvent.click(await screen.findByRole('button', { name: /new pool item/i }));
+    expect(await screen.findByRole('heading', { name: /create pool item/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /create item/i }));
+
+    expect(await screen.findByText('Question stem is required.')).toBeInTheDocument();
+    expect(screen.getByText('Explanation is required.')).toBeInTheDocument();
+  });
 });

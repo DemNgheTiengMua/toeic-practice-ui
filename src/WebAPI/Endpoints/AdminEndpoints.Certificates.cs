@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BusinessObjects;
 using Contracts;
 using Services;
+using WebAPI.Filters;
 using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
@@ -61,6 +62,6 @@ public static partial class AdminEndpoints
                     new { code = ApiError.Codes.ScoreConversionInvalid, title = "Certificate configuration invalid", status = 400, detail = ex.Message },
                     statusCode: StatusCodes.Status400BadRequest);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<SaveCertificateWizardRequest>>();
     }
 }
