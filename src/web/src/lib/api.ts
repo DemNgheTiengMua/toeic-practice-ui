@@ -1953,6 +1953,20 @@ export interface AdminComplaintDetailDto {
   moneyPaid?: number | null;
   /** #347: implied by the subject; null when the complaint carries none. */
   impliedRefundMethod?: RefundMethodDto | null;
+  /** #345: the refunds recorded against this complaint, newest first. Empty until one is created. */
+  refunds?: AdminComplaintRefundDto[] | null;
+}
+
+/** #345: one refund on a complaint's history. The method owns which value is set. */
+export interface AdminComplaintRefundDto {
+  refundId: number;
+  method: RefundMethodDto;
+  status: RefundStatusDto;
+  /** Credits returned, on a credit refund only. */
+  creditCount?: number | null;
+  /** Money returned, on a money refund only. */
+  amount?: number | null;
+  createdAt: string;
 }
 
 export interface AdminComplaintsSummaryDto {

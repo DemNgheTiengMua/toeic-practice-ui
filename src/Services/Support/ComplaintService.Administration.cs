@@ -131,6 +131,7 @@ public sealed partial class ComplaintService
             .Include(c => c.Booking).ThenInclude(b => b!.Slot)
             .Include(c => c.ExamAttempt).ThenInclude(a => a!.Exam)
             .Include(c => c.Order)
+            .Include(c => c.Refunds)
             .SingleOrDefaultAsync(c => c.ComplaintId == complaintId, cancellationToken);
 
         if (complaint is null) return null;
@@ -140,6 +141,21 @@ public sealed partial class ComplaintService
         var (subjectType, subjectId, summary) = DescribeSubject(complaint);
         var details = DescribeSubjectDetailed(complaint);
         var (creditsSpent, moneyPaid, impliedMethod) = await DescribeCompensationContextAsync(complaint, cancellationToken);
+
+        // #345: the refund the agent created from this complaint, so the incident's history is in one
+        // place. It reads the rows the FK already scopes to this complaint and learner; the method owns
+        // which value is reported, so a money refund shows dong and a credit refund shows credits.
+        var refunds = complaint.Refunds
+            .OrderByDescending(r => r.CreatedAt)
+            .ThenByDescending(r => r.RefundId)
+            .Select(r => new AdminComplaintRefundDto(
+                r.RefundId,
+                ParseWireCode<RefundMethodDto>(r.Method),
+                ParseWireCode<RefundStatusDto>(r.Status),
+                r.CreditCount,
+                r.Amount,
+                r.CreatedAt))
+            .ToList();
 
         return new AdminComplaintDetailDto(
             complaint.ComplaintId,
@@ -163,7 +179,8 @@ public sealed partial class ComplaintService
             complaint.CreditTransaction?.Delta,
             creditsSpent,
             moneyPaid,
-            impliedMethod);
+            impliedMethod,
+            refunds);
     }
 
     public async Task<AdminComplaintDetailDto> SetComplaintStatusAsync(

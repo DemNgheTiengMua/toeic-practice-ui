@@ -762,6 +762,74 @@ describe('AdminOperationsPage (#304)', () => {
     expect(await screen.findByText(/nothing to refund on this subject/i)).toBeInTheDocument();
   });
 
+  it('shows the refund recorded against a complaint on its own detail (#345)', async () => {
+    const baseImpl = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (typeof url === 'string' && url.startsWith('/api/admin/complaints/301')) {
+        return jsonResponse({
+          ...SAMPLE_COMPLAINT_DETAIL_OPEN,
+          refunds: [
+            {
+              refundId: 401,
+              method: 'money',
+              status: 'requested',
+              creditCount: null,
+              amount: 199000,
+              createdAt: '2026-11-09T10:00:00Z',
+            },
+            {
+              refundId: 400,
+              method: 'credit',
+              status: 'rejected',
+              creditCount: 2,
+              amount: null,
+              createdAt: '2026-11-08T10:00:00Z',
+            },
+          ],
+        });
+      }
+      return baseImpl(url, init);
+    });
+
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đặng Thị E');
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0]);
+
+    // Story 11: the refund created from this complaint appears on the complaint afterwards, with its
+    // method, its status and the value in the unit that method actually returned.
+    const section = await screen.findByText(/refunds recorded against this complaint/i);
+    const panel = section.parentElement!;
+    expect(within(panel).getByText('#401')).toBeInTheDocument();
+    expect(within(panel).getByText(/199\.000\s*₫/)).toBeInTheDocument();
+    expect(within(panel).getByText('#400')).toBeInTheDocument();
+    expect(within(panel).getByText(/2 credits/)).toBeInTheDocument();
+  }, 20_000);
+
+  it('says nothing about refunds on a complaint that has none (#345)', async () => {
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Đặng Thị E');
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0]);
+
+    expect(await screen.findByText(/complaint details — #301/i)).toBeInTheDocument();
+    expect(screen.queryByText(/refunds recorded against this complaint/i)).not.toBeInTheDocument();
+  }, 20_000);
+
   it('manages human mentors with fixed MeetLink, credit pricing, weekly availability schedule, and payout CSV export', async () => {
     window.URL.createObjectURL = vi.fn(() => 'blob:mock-payout-csv');
     window.URL.revokeObjectURL = vi.fn();

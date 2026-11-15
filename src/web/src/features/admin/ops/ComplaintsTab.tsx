@@ -43,7 +43,10 @@ import {
   formatComplaintStatusLabel,
   formatComplaintTypeLabel,
   formatDateTime,
+  formatRefundMethodLabel,
+  formatRefundStatusLabel,
   getComplaintStatusColor,
+  getRefundStatusColor,
   validateComplaintResolve,
 } from './opsHelpers';
 
@@ -531,6 +534,49 @@ export function ComplaintsTab() {
                         {complaintDetail.reason}
                       </p>
                     </div>
+
+                    {/* #345 story 11: the refund an agent created from this complaint, so the history
+                        of one incident is in one place. A promise with no refund yet says so rather
+                        than showing an empty box. */}
+                    {complaintDetail.refunds && complaintDetail.refunds.length > 0 && (
+                      <div className="p-4 rounded border border-border bg-surface space-y-2">
+                        <p className="text-xs font-medium text-muted uppercase tracking-wider">
+                          Refunds recorded against this complaint
+                        </p>
+                        {complaintDetail.refunds.map((refund) => (
+                          <div
+                            key={refund.refundId}
+                            className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono-tabular font-semibold text-foreground">
+                                #{refund.refundId}
+                              </span>
+                              <span className="text-foreground">
+                                {formatRefundMethodLabel(refund.method)}
+                              </span>
+                              <Chip
+                                size="sm"
+                                color={getRefundStatusColor(refund.status)}
+                                variant="soft"
+                              >
+                                {formatRefundStatusLabel(refund.status)}
+                              </Chip>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="font-mono-tabular font-medium text-foreground">
+                                {refund.method === 'money'
+                                  ? formatVnd(refund.amount ?? 0)
+                                  : `${refund.creditCount ?? 0} credits`}
+                              </span>
+                              <span className="text-xs text-muted font-mono-tabular">
+                                {formatDateTime(refund.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* If Resolved, display resolution & notes */}
                     {complaintDetail.status === 'resolved' && (

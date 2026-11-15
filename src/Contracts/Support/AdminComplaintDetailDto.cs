@@ -1,6 +1,23 @@
 
 namespace Contracts;
 
+/// <summary>
+/// #345 story 11: one refund recorded against a complaint, as the complaint detail shows it. The
+/// method owns which value is reported - a credit refund returned credits, a money refund returned
+/// dong - so exactly one of <paramref name="CreditCount"/> and <paramref name="Amount"/> is set.
+/// <para>
+/// Read-only, and deliberately not the whole <c>AdminRefundDetailDto</c>: the complaint's history needs
+/// to say what was returned and what became of it, while the refund's own screen owns the decision trail.
+/// </para>
+/// </summary>
+public sealed record AdminComplaintRefundDto(
+    int RefundId,
+    RefundMethodDto Method,
+    RefundStatusDto Status,
+    int? CreditCount,
+    decimal? Amount,
+    DateTimeOffset CreatedAt);
+
 public sealed record AdminComplaintDetailDto(
     int ComplaintId,
     int UserId,
@@ -29,4 +46,7 @@ public sealed record AdminComplaintDetailDto(
     decimal? MoneyPaid = null,
     /// <summary>#347: the method the subject implies, so a compensation cannot return the wrong
     /// currency. Null when the complaint carries no subject at all.</summary>
-    RefundMethodDto? ImpliedRefundMethod = null);
+    RefundMethodDto? ImpliedRefundMethod = null,
+    /// <summary>#345: the refunds recorded against this complaint, newest first. A promise with no refund
+    /// yet is an empty list; a rejected one stays, because a refusal is part of the incident's history.</summary>
+    IReadOnlyList<AdminComplaintRefundDto>? Refunds = null);

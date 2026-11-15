@@ -948,4 +948,102 @@ public sealed class RefundServiceTests(DatabaseFixture database)
                 staff, learner, creditCount: 1, reason: "One more", complaintId: complaintId));
         Assert.Equal(ApiError.Codes.RefundAlreadyOpenForComplaint, afterApproval.Code);
     }
+
+    /// <summary>
+    /// #345 story 11: the refund an agent created from a complaint must appear on the complaint
+    /// afterwards, so one incident's history is in one place. The complaint detail is the screen that
+    /// carries it, and it must carry the whole life of the refund - a requested one is already a fact
+    /// worth seeing, and the status has to move with it since a rejected refund returned nothing.
+    /// </summary>
+    [Fact]
+    public async Task The_complaint_detail_carries_the_refund_recorded_against_it()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Complaint Refund Learner");
+        var orderId = await SeedPaidOrderAsync(learner, credits: 10, amount: 399000m);
+        var complaintId = await SeedComplaintAsync(learner, orderId);
+        var service = CreateService();
+        var complaints = new ComplaintService(DbContextFactory.Create(database.ConnectionString), _clock);
+
+        // Nothing recorded yet: the complaint says so rather than showing an empty list as a mystery.
+        var before = await complaints.GetAdminComplaintDetailAsync(complaintId);
+        Assert.NotNull(before);
+        Assert.Empty(before.Refunds);
+
+        var refund = await service.RequestRefundAsync(staff, new RequestRefundRequest(
+            UserId: learner,
+            Method: RefundMethodDto.Money,
+            CreditCount: 0,
+            Reason: "Bank statement shows a duplicate deduction",
+            OrderId: orderId,
+            ComplaintId: complaintId,
+            Amount: 399000m));
+
+        var open = await complaints.GetAdminComplaintDetailAsync(complaintId);
+        Assert.NotNull(open);
+        var projected = Assert.Single(open.Refunds);
+        Assert.Equal(refund.RefundId, projected.RefundId);
+        Assert.Equal(RefundMethodDto.Money, projected.Method);
+        Assert.Equal(RefundStatusDto.Requested, projected.Status);
+        Assert.Equal(399000m, projected.Amount);
+        Assert.Null(projected.CreditCount);
+
+        // A rejected refund is still the history of the incident, and its status says what happened.
+        await service.RejectRefundAsync(staff, refund.RefundId, "Duplicate deduction not found on the statement");
+
+        var rejected = await complaints.GetAdminComplaintDetailAsync(complaintId);
+        Assert.NotNull(rejected);
+        var afterRejection = Assert.Single(rejected.Refunds);
+        Assert.Equal(RefundStatusDto.Rejected, afterRejection.Status);
+    }
+
+    /// <summary>
+    /// #345: one complaint can carry a credit refund and nothing else, and the projection must report the
+    /// unit each method actually returns - a credit count for credits, an amount for money. Reporting both
+    /// on both would print a zero beside the figure that matters.
+    /// </summary>
+    [Fact]
+    public async Task The_complaint_refund_projection_reports_the_credits_a_credit_refund_returned()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Credit Refund Learner");
+        var orderId = await SeedPaidOrderAsync(learner, credits: 10);
+        var complaintId = await SeedComplaintAsync(learner, orderId);
+        var service = CreateService();
+        var complaints = new ComplaintService(DbContextFactory.Create(database.ConnectionString), _clock);
+
+        var refund = await service.RequestCreditRefundAsync(
+            staff, learner, creditCount: 3, reason: "Duplicate charge refunded", complaintId: complaintId);
+        await service.ApproveRefundAsync(staff, refund.RefundId);
+
+        var detail = await complaints.GetAdminComplaintDetailAsync(complaintId);
+        Assert.NotNull(detail);
+        var projected = Assert.Single(detail.Refunds);
+        Assert.Equal(RefundMethodDto.Credit, projected.Method);
+        Assert.Equal(RefundStatusDto.Approved, projected.Status);
+        Assert.Equal(3, projected.CreditCount);
+        Assert.Null(projected.Amount);
+    }
+
+    /// <summary>#345: the projection is about one complaint, so it must not collect a refund recorded
+    /// against a different incident - or, worse, against a different learner.</summary>
+    [Fact]
+    public async Task The_complaint_refund_projection_stays_inside_its_own_complaint()
+    {
+        var staff = await SeedStaffAsync();
+        var learner = await SeedLearnerAsync("Scoped Refund Learner");
+        var firstOrder = await SeedPaidOrderAsync(learner, credits: 10);
+        var secondOrder = await SeedPaidOrderAsync(learner, credits: 20);
+        var firstComplaint = await SeedComplaintAsync(learner, firstOrder);
+        var secondComplaint = await SeedComplaintAsync(learner, secondOrder);
+        var service = CreateService();
+        var complaints = new ComplaintService(DbContextFactory.Create(database.ConnectionString), _clock);
+
+        await service.RequestCreditRefundAsync(
+            staff, learner, creditCount: 1, reason: "Against the first incident", complaintId: firstComplaint);
+
+        var other = await complaints.GetAdminComplaintDetailAsync(secondComplaint);
+        Assert.NotNull(other);
+        Assert.Empty(other.Refunds);
+    }
 }
