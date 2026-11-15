@@ -56,9 +56,12 @@ export interface RefundsTabProps {
   /** #350 carries this in from the complaint screen. It is never typed: a refund created from a
    * complaint must point at that complaint, and a hand-typed identifier is how the two disagree. */
   complaintId?: number | null;
+  /** #350: the learner the complaint belongs to, so the desk opens on the right person. Also never
+   * typed - the complaint already knows who it is about. */
+  learnerId?: number | null;
 }
 
-export function RefundsTab({ complaintId = null }: RefundsTabProps) {
+export function RefundsTab({ complaintId = null, learnerId = null }: RefundsTabProps) {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -128,6 +131,23 @@ export function RefundsTab({ complaintId = null }: RefundsTabProps) {
   });
 
   const learners = learnerMatches?.users ?? [];
+
+  // #350: arriving from a complaint, the learner is already known. The desk opens the create form with
+  // that learner selected, so nothing is retyped and the wrong person cannot be picked by mistake.
+  const { data: carriedLearner } = useQuery({
+    queryKey: ['admin-refund-carried-learner', learnerId],
+    queryFn: () => api.admin.userDetail(learnerId!),
+    enabled: learnerId !== null,
+  });
+
+  React.useEffect(() => {
+    if (learnerId === null || selectedLearner !== null) return;
+    const carried = carriedLearner?.user;
+    if (!carried) return;
+    setSelectedLearner(carried);
+    setLearnerSearch(carried.email);
+    setIsCreateOpen(true);
+  }, [learnerId, carriedLearner, selectedLearner]);
 
   const createMutation = useMutation({
     mutationFn: () => {

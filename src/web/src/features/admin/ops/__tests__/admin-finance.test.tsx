@@ -633,6 +633,39 @@ describe('AdminFinancePage (#304)', () => {
     });
   }, 20_000);
 
+  it('opens with the learner and complaint carried from a resolved complaint (#350)', async () => {
+    const baseImpl = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (typeof url === 'string' && url === '/api/admin/users/15') {
+        return jsonResponse({
+          user: { ...SAMPLE_USERS_SUMMARY.users[0], userId: 15, fullName: 'Đặng Thị E' },
+          placements: [],
+        });
+      }
+      if (typeof url === 'string' && url.startsWith('/api/admin/users')) {
+        return jsonResponse(SAMPLE_USERS_SUMMARY);
+      }
+      if (typeof url === 'string' && url.startsWith('/api/admin/orders')) {
+        return jsonResponse(SAMPLE_LEARNER_PAID_ORDERS);
+      }
+      return baseImpl(url, init);
+    });
+
+    renderRoute('/admin/finance?complaintId=301&userId=15', {
+      userId: 1,
+      email: 'admin@test.local',
+      fullName: 'Super Admin',
+      role: 'administrator',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SystemAdmin, STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    // The desk opens the create form with the learner already selected, and the complaint applied.
+    expect(await screen.findByText(/carried from complaint #301/i)).toBeInTheDocument();
+    const selectedCard = await screen.findByRole('group', { name: /selected learner/i });
+    expect(within(selectedCard).getByText('Đặng Thị E')).toBeInTheDocument();
+  }, 20_000);
+
   it('carries the complaint identifier into the refund payload instead of asking for it (#349)', async () => {
     const baseImpl = fetchMock.getMockImplementation()!;
     fetchMock.mockImplementation(async (url, init) => {
