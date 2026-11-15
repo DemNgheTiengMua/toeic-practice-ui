@@ -3,6 +3,159 @@
 > Tiêu chuẩn PASS: **chạy được VÀ nhìn thấy kết quả trên màn hình**. Chấm bằng mắt, không chấm code.
 > Ngày bắt đầu: 2026-11-15. Người test: agent qua Playwright trên `localhost:5000`.
 
+## Phiên 2026-11-15 (đêm trước demo 07:00)
+**Trạng thái phát hiện lúc 19:20:**
+
+| Mục | Giá trị | Đánh giá |
+|---|---|---|
+| `learner@demo.local` OOBE | xong (`isOobeComplete: true`) | ✅ vào được mọi cửa |
+| Learning path | 22 steps, status `active` | ✅ |
+| Practice | listening 4 section, reading 3 | ✅ |
+| **Writing practice** | **0 exams** | ❌ LỖI-20 |
+| **Speaking practice** | **0 exams** | ❌ LỖI-20 |
+| Credit `learner@` | **7** (baseline 13) | ⚠️ đã tiêu khi test |
+| Order đang mở | **1** | ⚠️ chặn mua credit |
+| Tài khoản lạ | `vanhuydo44@gmail.com` | ⚠️ rác từ phiên khác |
+
+### LỖI-20 🔴 `/writing` và `/speaking` trống — không có exam nào
+
+Seed **không chứa** exam với `Purpose` là `writing_practice` hay `speaking_practice`. Chỉ có 3 exam:
+2 `mock` (TOEIC, IELTS) và 1 `placement`.
+
+**Ảnh hưởng:** hai cửa demo chính (`/writing`, `/speaking`) luôn hiện danh sách rỗng với mọi tài
+khoản, dù OOBE đã xong. Không thể demo Writing/Speaking practice theo đường riêng.
+
+**Nội dung đã có sẵn:** pool có **8 item speaking** + **14 item writing** với stem thật, chỉ chưa
+được gắn vào exam nào. Đây là việc nối dây, không phải soạn nội dung.
+
+**Kế hoạch sửa:** thêm 1 exam `speaking_practice` + 1 exam `writing_practice` cho IELTS vào seed,
+gắn các item đã có trong pool.
+
+### LỖI-21 🔴 `/onboarding` không bao giờ hiện bước chọn chứng chỉ
+
+`OnboardingPage.derivedStep` trả **3** khi mọi điều kiện đã xong, mà step 3 là "Certificate & Goal" —
+đã hoàn thành rồi. Không có bước nào cho phép **chọn chứng chỉ sau placement**.
+
+Thêm nữa `OnboardingRouteView` **redirect sang `/dashboard`** ngay khi `isOobeComplete === true`, nên
+người dùng không bao giờ mở lại được OOBE để xem/sửa lựa chọn của mình.
+
+**Ảnh hưởng:** trải nghiệm OOBE gãy đúng chỗ quan trọng nhất — sau khi thi xong, người học không được
+hỏi muốn học chứng chỉ nào.
+
+### LỖI-22 🔴 Placement gắn một chứng chỉ, TargetBand và Path gắn chứng chỉ khác
+
+Đo trên DB thật:
+
+```
+PlacementTests:  cert=2 (IELTS)  band=B1  W=NULL  S=38.89
+TargetBands:     cert=1 (TOEIC)  target=B2
+LearnerPaths:    cert=1 (TOEIC)  active
+```
+
+Placement tạo theo `activeCertId` **tại thời điểm bấm Start**, không theo chứng chỉ người dùng chọn
+sau đó. Nên kết quả placement thuộc IELTS trong khi lộ trình học thuộc TOEIC.
+
+**Ảnh hưởng:** đúng như mô tả — "kết quả chỉ hiện cho chứng chỉ đã chọn, không tạo path cho chứng
+chỉ còn lại". Hai chứng chỉ không thể cùng tồn tại trên một lần đo.
+
+### LỖI-23 🔴 `WritingPct` NULL dù scope `all_skills`
+
+Cùng placement trên: Listening 40%, Reading 40%, Speaking 38.89%, **Writing NULL**. Bài Writing
+không được chấm hoặc không được gửi. Công thức phần trăm đã sửa (#5) nhưng ở đây thiếu dữ liệu đầu vào.
+
+### LỖI-24 🔴 Không có chỗ xem lại kết quả placement chi tiết
+
+Placement result chỉ hiện bảng phần trăm tổng. **Không** xem được:
+
+- từng câu trắc nghiệm đã chọn gì, đúng/sai
+- transcript bài nói
+- bài viết + rubric từng tiêu chí
+- điểm từng tiêu chí kèm nhận xét
+
+`/exams/review/{attemptId}` chỉ phục vụ mock exam; placement không có route review tương ứng.
+
+### LỖI-25 🔴 Audio "tự complete" vì localStorage nhớ trạng thái
+
+`ExamAudioPlayer` lưu `completed: true` vào localStorage theo khoá
+`audioPath::segment::questionId`. Một lần phát xong — hoặc một lần reload giữa chừng — là lần sau
+vào thấy "Played once" dù chưa nghe gì. Câu 4 "tự nhiên play được" vì khoá của nó chưa có trong
+localStorage.
+
+Thêm nữa stimulus đầu của placement không khai báo `AudioStartMs`/`AudioEndMs`, nên đoạn phát là
+**toàn bộ file 175 giây** thay vì 30 giây như các câu sau.
+
+### LỖI-26 🟡 Chọn chứng chỉ hiện trước khi làm gì
+
+Header hiện `IELTS` + số credit ngay từ màn đầu, trước khi người dùng chọn gì. Về kỹ thuật không sai
+nhưng trái với ý đồ OOBE: chứng chỉ lẽ ra được chọn **sau** placement, không phải có sẵn từ đầu.
+
+### LỖI-28 🔴 Nút "Adjust goal" trên dashboard là vòng lặp chết
+
+`DashboardPage` render link `Adjust goal` trỏ tới `/onboarding`. Nhưng `/onboarding` **redirect về
+`/dashboard`** ngay khi `isOobeComplete === true` (LỖI-21). Bấm nút → nháy một cái → về đúng chỗ cũ.
+
+Không có phản hồi, không thông báo. Người dùng tưởng nút hỏng.
+
+**Cần:** một route riêng để sửa goal (`/goals` hoặc `/placement/target-band`), không dùng lại
+`/onboarding` — vì onboarding đã hoàn thành thì không mở lại được.
+
+### LỖI-29 🔴 Trang `/placement` trắng trơn khi `exams` rỗng
+
+API trả `exams: []` nhưng `isRetake: true`. Trang chỉ render danh sách exam và nút retake **bên trong**
+`exams.map` — mảng rỗng thì không render gì. Kết quả: chỉ còn 2 ô "B1" và "7 cr", phần còn lại trắng.
+
+Không fallback, không thông báo "không có bài placement cho chứng chỉ này".
+
+Nguyên nhân `exams` rỗng: exam placement thuộc IELTS (cert 2), learner đang ở TOEIC (cert 1) — lọc
+theo chứng chỉ nên loại sạch (cùng gốc với LỖI-22).
+
+**Cần:** trạng thái rỗng có lời giải thích + đường đi tiếp.
+
+### LỖI-30 🟡 Dữ liệu goal mâu thuẫn trên dashboard
+
+Ảnh chụp dashboard cho thấy:
+
+```
+Goal Standing · IELTS        ← tiêu đề ghi IELTS
+OVERALL A1 · Speaking
+Level against target:  B1 → None
+Remaining guided hours: Cannot judge
+Pacing: No weekly pace set · 0m / 0m this week
+Verdict: Cannot judge
+```
+
+Nhưng DB thật:
+
+```
+learner@demo.local activeCert = 1 (TOEIC)
+TargetBands: cert=1 current=A2 target=B2 date=NULL hours=NULL feas=NULL
+```
+
+Ba mâu thuẫn: tiêu đề ghi IELTS trong khi cert đang hoạt động là TOEIC; `B1` hiển thị trong khi DB ghi
+`A2`; và `→ None` vì `target` đọc sai chỗ.
+
+**Cần:** một nguồn dữ liệu duy nhất cho goal, đọc theo `activeCertId`.
+
+---
+
+
+`/admin/operations` tab Mentors có hai thứ: cấu hình **lịch rảnh** (weekly windows) và **payout
+report** — mà payout chỉ liệt kê buổi **đã hoàn thành**.
+
+Không có chỗ nào cho admin thấy:
+
+- learner đã đặt lịch nào
+- lịch hẹn sắp tới của một mentor
+- booking đang chờ, đã huỷ
+
+Backend cũng không có endpoint: `MentorEndpoints.Administration` chỉ có list/options/detail/create/
+update, không có bookings. Chỉ mentor tự xem được booking của mình qua `/api/mentors/bookings`.
+
+**Ảnh hưởng:** có người đặt lịch mà không ai biết, cho tới khi buổi học đã xong.
+
+### LỖI-27 🔴 Admin không xem được lịch hẹn của mentor
+
+
 Ký hiệu: ✅ PASS · ❌ FAIL · ⚠️ PASS nhưng có lỗi · ⬜ chưa test
 
 ---

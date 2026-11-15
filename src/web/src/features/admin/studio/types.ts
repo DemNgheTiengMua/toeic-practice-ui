@@ -126,13 +126,16 @@ export interface CertificateBlueprintPresetDto {
 }
 
 export interface SaveSectionWizardDto {
-  sectionId?: number;
+  // The server DTO is a positional record, so every member must be present on the wire or JSON
+  // binding rejects the body with a 400 that names no field. These are required here for that reason,
+  // not because the value is meaningful: null means "create a new one".
+  sectionId: number | null;
   code: string;
   name: string;
   displayOrder: number;
   scoreWeight: number;
   navigationMode: string;
-  timerPolicyJson?: string | null;
+  timerPolicyJson: string | null;
   layoutType: string;
   optionCount: number;
   clusterSize: number;
@@ -143,22 +146,22 @@ export interface SaveSectionWizardDto {
   requireImage: boolean;
   requiredKeywordCount: number;
   expectedQuestionCount: number;
-  allowedComponentTypesJson?: string | null;
-  toolsConfigJson?: string | null;
+  allowedComponentTypesJson: string | null;
+  toolsConfigJson: string | null;
 }
 
 export interface SaveSkillWizardDto {
-  skillId?: number;
+  skillId: number | null;
   code: string;
   name: string;
   modality: string;
   displayOrder: number;
-  durationMinutes?: number | null;
+  durationMinutes: number | null;
   sections: SaveSectionWizardDto[];
 }
 
 export interface SaveScoreBandWizardDto {
-  bandId?: number | null;
+  bandId: number | null;
   code: string;
   name: string;
   minTotal: number;

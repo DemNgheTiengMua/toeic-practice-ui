@@ -49,6 +49,11 @@ public static class ProblemDetailsExtensions
                 {
                     Title = badRequest is null ? "An unexpected error occurred." : "The request is not valid.",
                     Status = context.Response.StatusCode,
+                    // The binding failure's own message names the field and the reason ("The JSON value
+                    // could not be converted..." / "required properties are missing"). Without it, a 400
+                    // from model binding was indistinguishable from a validation 400, and the admin
+                    // screen could only say "the request is not valid" - which is unactionable.
+                    Detail = badRequest?.Message,
                 };
                 problem.Extensions["code"] = badRequest is null ? ApiError.Codes.Unexpected : ApiError.Codes.Validation;
                 await context.Response.WriteAsJsonAsync(problem);

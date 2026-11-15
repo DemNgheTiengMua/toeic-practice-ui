@@ -21,7 +21,6 @@ public sealed class RequestValidationFilter<TRequest> : IEndpointFilter where TR
                 title: "Validation failed",
                 extensions: new Dictionary<string, object?> { ["code"] = ApiError.Codes.Validation });
         }
-
         var validationResults = new List<ValidationResult>();
         var validationContext = new ValidationContext(request);
         if (!Validator.TryValidateObject(request, validationContext, validationResults, validateAllProperties: true))

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Alert,
   Button,
@@ -89,6 +89,9 @@ export function deriveDefaultBands(
   const size = Math.ceil(span / count);
 
   return DEFAULT_BAND_LABELS.slice(0, count).map((label, index) => ({
+    // The band DTO is a positional record too: a missing bandId fails JSON binding for the whole
+    // request, which surfaced as "the request is not valid" with no field named.
+    bandId: null,
     code: label.code,
     name: label.name,
     minTotal: low + index * size,
@@ -167,17 +170,20 @@ export function CertificatesStudioPage() {
     const rule = normaliseAggregationRule(found.scoreAggregationRule);
     setWizardRule(rule);
     const mappedSkills: SaveSkillWizardDto[] = found.skills.map((s) => ({
+      skillId: null,
       code: s.code,
       name: s.name,
       modality: s.modality,
       displayOrder: s.displayOrder,
       durationMinutes: s.durationMinutes,
       sections: s.sections.map((sec) => ({
+        sectionId: null,
         code: sec.code,
         name: sec.name,
         displayOrder: sec.displayOrder,
         scoreWeight: sec.scoreWeight,
         navigationMode: sec.navigationMode,
+        timerPolicyJson: sec.timerPolicyJson ?? null,
         layoutType: sec.layoutType,
         optionCount: sec.optionCount,
         clusterSize: sec.clusterSize,
@@ -244,12 +250,14 @@ export function CertificatesStudioPage() {
           sections: [
             ...sk.sections,
             {
+              sectionId: null,
               code: `${sk.code.slice(0, 1)}P${nextOrder}`,
               name: `${sk.name} Part ${nextOrder}`,
               displayOrder: nextOrder,
               scoreWeight: 1,
-              navigationMode: sk.modality === 'listening' ? 'audio_driven' : 'full_sandbox',
-              layoutType: 'standard_vertical',
+              navigationMode: sk.modality === 'listening' ? 'AUDIO_DRIVEN' : 'FULL_SANDBOX',
+              timerPolicyJson: null,
+              layoutType: 'STANDARD_VERTICAL',
               optionCount: 4,
               clusterSize: 1,
               unitCount: 1,
@@ -259,6 +267,8 @@ export function CertificatesStudioPage() {
               requireImage: false,
               requiredKeywordCount: 0,
               expectedQuestionCount: 10,
+              allowedComponentTypesJson: null,
+              toolsConfigJson: null,
             },
           ],
         };
@@ -285,14 +295,21 @@ export function CertificatesStudioPage() {
             name: 'Listening',
             modality: 'listening',
             displayOrder: 1,
+            // The request DTO is a positional record, so every member must be present or JSON binding
+            // rejects the whole body with a 400 that names nothing. skillId/timeCost were omitted here
+            // and that is what made "New certificate" impossible to save.
+            skillId: null,
+            durationMinutes: 45,
             sections: [
               {
+                sectionId: null,
                 code: 'PART1',
                 name: 'Section 1',
                 displayOrder: 1,
                 scoreWeight: 1,
-                navigationMode: 'full_sandbox',
-                layoutType: 'standard_vertical',
+                navigationMode: 'FULL_SANDBOX',
+                timerPolicyJson: null,
+                layoutType: 'STANDARD_VERTICAL',
                 optionCount: 4,
                 clusterSize: 1,
                 unitCount: 1,
@@ -302,6 +319,8 @@ export function CertificatesStudioPage() {
                 requireImage: false,
                 requiredKeywordCount: 0,
                 expectedQuestionCount: 10,
+                allowedComponentTypesJson: null,
+                toolsConfigJson: null,
               },
             ],
           },
@@ -666,12 +685,18 @@ export function CertificatesStudioPage() {
                       minValue={0}
                       value={wizardMinScore}
                       onChange={(value) => {
-                        setWizardMinScore(value);
+                        // HeroUI v3 hands back `undefined` while the field is empty, and the payload
+                        // must always carry a scale: the server refuses a certificate without
+                        // Min/Max/Step. The previous value therefore survives an empty box rather
+                        // than being replaced by undefined, which JSON.stringify would then drop
+                        // from the request entirely.
+                        const next = value ?? wizardMinScore;
+                        setWizardMinScore(next);
                         // The bands tile the total range, so a new scale invalidates them.
                         setWizardBands((prev) =>
                           prev.length === 0
                             ? prev
-                            : deriveDefaultBands(wizardRule, wizardSkills.length, value, wizardMaxScore),
+                            : deriveDefaultBands(wizardRule, wizardSkills.length, next, wizardMaxScore),
                         );
                         setWizardFieldErrors((prev) => ({ ...prev, minScaledScore: '' }));
                       }}
@@ -694,11 +719,14 @@ export function CertificatesStudioPage() {
                       minValue={1}
                       value={wizardMaxScore}
                       onChange={(value) => {
-                        setWizardMaxScore(value);
+                        // Same guard as the minimum: an empty box must not erase the scale the payload
+                        // has to carry.
+                        const next = value ?? wizardMaxScore;
+                        setWizardMaxScore(next);
                         setWizardBands((prev) =>
                           prev.length === 0
                             ? prev
-                            : deriveDefaultBands(wizardRule, wizardSkills.length, wizardMinScore, value),
+                            : deriveDefaultBands(wizardRule, wizardSkills.length, wizardMinScore, next),
                         );
                         setWizardFieldErrors((prev) => ({ ...prev, maxScaledScore: '' }));
                       }}
@@ -721,7 +749,7 @@ export function CertificatesStudioPage() {
                       minValue={1}
                       value={wizardScoreStep}
                       onChange={(value) => {
-                        setWizardScoreStep(value);
+                        setWizardScoreStep(value ?? wizardScoreStep);
                         setWizardFieldErrors((prev) => ({ ...prev, scoreStep: '' }));
                       }}
                       isInvalid={Boolean(wizardFieldErrors.scoreStep)}
@@ -810,6 +838,7 @@ export function CertificatesStudioPage() {
                           setWizardBands((prev) => [
                             ...prev,
                             {
+                              bandId: null,
                               code: `BAND_${prev.length + 1}`,
                               name: `Band ${prev.length + 1}`,
                               minTotal: 0,
