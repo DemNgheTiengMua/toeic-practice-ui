@@ -400,9 +400,11 @@ describe('Learner Hub (#300)', () => {
       expect(await screen.findByRole('heading', { name: /set your study goal · demo/i })).toBeInTheDocument();
       expect(screen.getByText('Band B1 (Independent)')).toBeInTheDocument();
 
-      // Select target band B2
-      const b2Button = screen.getByRole('button', { name: /b2/i });
-      fireEvent.click(b2Button);
+      // Select target band B2 via the single Select control (no duplicate band buttons)
+      expect(screen.queryByRole('button', { name: /b2 — vantage/i })).not.toBeInTheDocument();
+      const hiddenSelect = document.querySelector('[data-testid="hidden-select-container"] select') as HTMLSelectElement;
+      expect(hiddenSelect).not.toBeNull();
+      fireEvent.change(hiddenSelect, { target: { value: 'B2' } });
 
       // Submit form
       const submitButton = screen.getByRole('button', { name: /save goal & continue/i });
@@ -412,7 +414,173 @@ describe('Learner Hub (#300)', () => {
         expect(submittedGoal).not.toBeNull();
         expect(submittedGoal.targetBandCode).toBe('B2');
         expect(submittedGoal.currentBandCode).toBe('B1');
+        expect(submittedGoal.weeklyStudyHours).toBe(7);
       });
+    });
+
+    it('advances to the learning-path step after saving a goal in OOBE without throwing', async () => {
+      const targetBandView: TargetBandViewDto = {
+        activeCert: { code: 'DEMO', name: 'DEMO - Custom Assessment' },
+        currentBandCode: 'B1',
+        currentTotalScore: 280,
+        currentBandName: 'Independent',
+        targetBandCode: 'B2',
+        cefrBands: [
+          { code: 'B1', name: 'Independent', minTotal: 200, maxTotal: 299, isReached: true, isCurrent: true },
+          { code: 'B2', name: 'Vantage', minTotal: 300, maxTotal: 399, isReached: false, isCurrent: false },
+        ],
+        availableBands: [
+          { code: 'B1', name: 'Independent', minTotal: 200, maxTotal: 299, description: 'Intermediate proficiency', isCurrent: true, isTarget: false },
+          { code: 'B2', name: 'Vantage', minTotal: 300, maxTotal: 399, description: 'Upper intermediate proficiency', isCurrent: false, isTarget: false },
+        ],
+        goal: null,
+      };
+
+      let hasTargetGoal = false;
+      installFetchMock((url, init) => {
+        if (url === '/api/auth/me') return jsonResponse(DEMO_USER);
+        if (url === '/api/learner/context') return jsonResponse(DEMO_CONTEXT);
+        if (url === '/api/learner/onboarding-state') {
+          return jsonResponse({
+            hasCompletedPlacement: true,
+            hasTargetGoal,
+            hasActiveLearningPath: false,
+            latestPlacementId: 10,
+            activePlacementId: null,
+          });
+        }
+        if (url === '/api/learner/placement/result/10') {
+          return jsonResponse({
+            placementId: 10,
+            scope: 'listening_and_reading',
+            isGraded: true,
+            overallPct: 72,
+            listeningPct: 75,
+            readingPct: 69,
+            certificatePreviews: [],
+          });
+        }
+        if (url === '/api/learner/target-band') return jsonResponse(targetBandView);
+        if (url === '/api/learner/goal' && init?.method === 'POST') {
+          hasTargetGoal = true;
+          return jsonResponse({
+            userId: 42,
+            certId: 1,
+            targetBandCode: 'B2',
+            setAt: '2026-11-15T00:00:00Z',
+            goal: {
+              targetBandCode: 'B2',
+              targetDate: '2026-12-31',
+              weeklyStudyHours: 7,
+              requiredHours: 40,
+              availableHours: 49,
+              status: 'feasible',
+            },
+          });
+        }
+        return jsonResponse({}, 404);
+      });
+
+      renderRoute('/onboarding');
+
+      // Step 2 -> Continue to goal setup (Step 3)
+      const continueToGoalBtn = await screen.findByRole('button', { name: /continue to goal setup/i });
+      fireEvent.click(continueToGoalBtn);
+
+      expect(await screen.findByRole('heading', { name: /set your study goal · demo/i })).toBeInTheDocument();
+
+      const submitButton = screen.getByRole('button', { name: /save goal & continue/i });
+      fireEvent.click(submitButton);
+
+      expect(await screen.findByRole('heading', { name: /generate your personalized learning path/i })).toBeInTheDocument();
+    });
+
+    it('refuses weekly hours above 25 and past exam dates at the field without calling the API', async () => {
+      const targetBandView: TargetBandViewDto = {
+        activeCert: { code: 'DEMO', name: 'DEMO - Custom Assessment' },
+        currentBandCode: 'B1',
+        currentTotalScore: 280,
+        currentBandName: 'Independent',
+        targetBandCode: 'B2',
+        cefrBands: [],
+        availableBands: [
+          { code: 'B2', name: 'Vantage', minTotal: 300, maxTotal: 399, description: 'Upper intermediate', isCurrent: false, isTarget: true },
+        ],
+        goal: null,
+      };
+
+      let goalPostCount = 0;
+      installFetchMock((url, init) => {
+        if (url === '/api/auth/me') return jsonResponse(DEMO_USER);
+        if (url === '/api/learner/context') return jsonResponse(DEMO_CONTEXT);
+        if (url === '/api/learner/target-band') return jsonResponse(targetBandView);
+        if (url === '/api/learner/goal' && init?.method === 'POST') {
+          goalPostCount += 1;
+          return jsonResponse({}, 400);
+        }
+        return jsonResponse({}, 404);
+      });
+
+      renderRoute('/onboarding');
+
+      expect(await screen.findByRole('heading', { name: /set your study goal · demo/i })).toBeInTheDocument();
+
+      const hoursInput = screen.getByLabelText(/weekly study hours/i) as HTMLInputElement;
+      const dateInput = screen.getByLabelText(/target exam date/i) as HTMLInputElement;
+      const form = hoursInput.closest('form');
+      expect(form).toHaveAttribute('novalidate');
+      expect(hoursInput).toHaveAttribute('min', '1');
+      expect(hoursInput).toHaveAttribute('max', '25');
+
+      // Enter pace above ceiling (26) and past date
+      fireEvent.change(hoursInput, { target: { value: '26' } });
+      fireEvent.change(dateInput, { target: { value: '2020-01-01' } });
+      expect(hoursInput.value).toBe('26');
+      expect(dateInput.value).toBe('2020-01-01');
+      fireEvent.submit(form!);
+
+      await waitFor(() => {
+        expect(form!.textContent).toMatch(/between 1 and 25/i);
+        expect(form!.textContent).toMatch(/today or in the future/i);
+      });
+      expect(goalPostCount).toBe(0);
+    });
+
+    it('renders no sustainable pace with earliest feasible date when suggested pace exceeds 25h/week', async () => {
+      const targetBandView: TargetBandViewDto = {
+        activeCert: { code: 'DEMO', name: 'DEMO - Custom Assessment' },
+        currentBandCode: 'B1',
+        currentTotalScore: 280,
+        currentBandName: 'Independent',
+        targetBandCode: 'B2',
+        cefrBands: [],
+        availableBands: [
+          { code: 'B2', name: 'Vantage', minTotal: 300, maxTotal: 399, description: 'Upper intermediate', isCurrent: false, isTarget: true },
+        ],
+        goal: {
+          targetBandCode: 'B2',
+          targetDate: '2026-11-22',
+          weeklyStudyHours: 7,
+          requiredHours: 60,
+          availableHours: 7,
+          status: 'unrealistic',
+          suggestedWeeklyHours: 60,
+          earliestFeasibleDate: '2027-01-17',
+        },
+      };
+
+      installFetchMock((url) => {
+        if (url === '/api/auth/me') return jsonResponse(DEMO_USER);
+        if (url === '/api/learner/context') return jsonResponse(DEMO_CONTEXT);
+        if (url === '/api/learner/target-band') return jsonResponse(targetBandView);
+        return jsonResponse({}, 404);
+      });
+
+      renderRoute('/onboarding');
+
+      expect(await screen.findByText(/no sustainable pace/i)).toBeInTheDocument();
+      expect(screen.getByText('2027-01-17')).toBeInTheDocument();
+      expect(screen.queryByText('60h/week')).not.toBeInTheDocument();
     });
   });
 
