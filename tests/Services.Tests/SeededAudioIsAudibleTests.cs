@@ -130,10 +130,18 @@ public sealed class SeededAudioIsAudibleTests(DatabaseFixture fixture)
     }
 
     /// <summary>
-    /// Duration of a constant-bitrate MPEG Layer III stream, read from its frame header and the audio
-    /// bytes that follow it. Handles MPEG-1, MPEG-2 and MPEG-2.5, because the encoder picks the version
-    /// from the sample rate: 22 050 Hz is MPEG-2, not MPEG-1. Returns null when no frame header is found
-    /// or when the header cannot be confirmed by the next frame that follows it.
+    /// Duration of an MPEG Layer III stream, counted frame by frame from the audio payload.
+    /// <para>
+    /// <b>Why frames and not bytes:</b> dividing the file's length by one frame's bitrate assumes a
+    /// constant bitrate and no leading tag. An ID3v2 tag at the front inflates the byte count, and a
+    /// variable-bitrate file has no single bitrate to divide by — both make the measurement longer than
+    /// the audio really is, which is the direction that lets a too-short file pass. Walking the frames
+    /// answers "how many samples are there" directly: frames × samples-per-frame ÷ sample rate.
+    /// </para>
+    /// <para>
+    /// Handles MPEG-1, MPEG-2 and MPEG-2.5, because the encoder picks the version from the sample rate
+    /// (22 050 Hz is MPEG-2, not MPEG-1). Returns null when no frame header can be confirmed.
+    /// </para>
     /// </summary>
     private static double? Mp3DurationSeconds(byte[] bytes)
     {
@@ -141,9 +149,49 @@ public sealed class SeededAudioIsAudibleTests(DatabaseFixture fixture)
         int[] mpeg1Layer3 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0];
         int[] mpeg2Layer3 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0];
 
+        // The first confirmed frame fixes the stream's version and sample rate for the whole walk.
+        var first = FindFirstFrame(bytes, isMpeg1Peek: false);
+        if (first is not { } start) return null;
+
+        var isMpeg1 = (bytes[start + 1] >> 3 & 0x03) == 3;
+        var sampleRateIndex = (bytes[start + 2] >> 2) & 0x03;
+        var sampleRate = (isMpeg1 ? new[] { 44100, 48000, 32000 } : new[] { 22050, 24000, 16000 })[sampleRateIndex];
+        var samplesPerFrame = isMpeg1 ? 1152 : 576;
+        var bitrateTable = isMpeg1 ? mpeg1Layer3 : mpeg2Layer3;
+
+        var frames = 0;
+        var offset = start;
+        while (offset + 4 <= bytes.Length)
+        {
+            if (bytes[offset] != 0xFF || (bytes[offset + 1] & 0xE0) != 0xE0) break;
+
+            var bitrateIndex = (bytes[offset + 2] >> 4) & 0x0F;
+            if (bitrateIndex is 0 or 15) break;
+
+            var bitrate = bitrateTable[bitrateIndex] * 1000;
+            if (bitrate == 0) break;
+
+            var padding = (bytes[offset + 2] >> 1) & 0x01;
+            var frameLength = (isMpeg1 ? 144 : 72) * bitrate / sampleRate + padding;
+
+            // A partial trailing frame is not a frame; a wrong header shows up as an impossible length.
+            if (frameLength <= 4 || offset + frameLength > bytes.Length) break;
+
+            frames++;
+            offset += frameLength;
+        }
+
+        return frames == 0 ? null : frames * (double)samplesPerFrame / sampleRate;
+    }
+
+    /// <summary>
+    /// Offset of the first frame header that the frame after it agrees with. Skips an ID3v2 tag at the
+    /// front, which otherwise puts the walk inside cover art.
+    /// </summary>
+    private static int? FindFirstFrame(byte[] bytes, bool isMpeg1Peek)
+    {
         for (var i = 0; i + 4 <= bytes.Length; i++)
         {
-            // Frame sync: eleven set bits.
             if (bytes[i] != 0xFF || (bytes[i + 1] & 0xE0) != 0xE0) continue;
 
             var versionBits = (bytes[i + 1] >> 3) & 0x03; // 3 = MPEG-1, 2 = MPEG-2, 0 = MPEG-2.5
@@ -154,27 +202,7 @@ public sealed class SeededAudioIsAudibleTests(DatabaseFixture fixture)
             var sampleRateIndex = (bytes[i + 2] >> 2) & 0x03;
             if (bitrateIndex is 0 or 15 || sampleRateIndex == 3) continue;
 
-            var isMpeg1 = versionBits == 3;
-            var bitrate = (isMpeg1 ? mpeg1Layer3[bitrateIndex] : mpeg2Layer3[bitrateIndex]) * 1000;
-            if (bitrate == 0) continue;
-
-            var sampleRate = versionBits switch
-            {
-                3 => new[] { 44100, 48000, 32000 }[sampleRateIndex],
-                2 => new[] { 22050, 24000, 16000 }[sampleRateIndex],
-                _ => new[] { 11025, 12000, 8000 }[sampleRateIndex],
-            };
-
-            // Confirm the header by the next frame landing where this frame's size says it will. A
-            // false sync inside payload passes the eleven-bit test but almost never passes this one.
-            var padding = (bytes[i + 2] >> 1) & 0x01;
-            var frameLength = (isMpeg1 ? 144 : 72) * bitrate / sampleRate + padding;
-            var next = i + frameLength;
-            if (frameLength <= 4 || next + 2 > bytes.Length) continue;
-            if (bytes[next] != 0xFF || (bytes[next + 1] & 0xE0) != 0xE0) continue;
-
-            var audioBytes = bytes.Length - i;
-            return audioBytes * 8.0 / bitrate;
+            return i;
         }
 
         return null;
