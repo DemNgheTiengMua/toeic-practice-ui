@@ -346,6 +346,12 @@ describe('Question Bank Studio (/admin/question-bank) (#303)', () => {
     const stemInput = await screen.findByPlaceholderText(/enter clear, concise question prompt/i);
     fireEvent.change(stemInput, { target: { value: 'What is the main idea of the memo?' } });
 
+    // Select Modality and Correct key via HeroUI Select
+    fireEvent.click(screen.getByRole('button', { name: /modality/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /^listening$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /correct key/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /^B$/i }));
+
     // Select multi-band TargetBands (uncheck ALL or click B1, B2)
     const bandB1 = screen.getByRole('checkbox', { name: /^B1$/i });
     const bandB2 = screen.getByRole('checkbox', { name: /^B2$/i });
@@ -357,6 +363,8 @@ describe('Question Bank Studio (/admin/question-bank) (#303)', () => {
 
     await waitFor(() => {
       expect(savedBody).not.toBeNull();
+      expect(savedBody.modality).toBe('listening');
+      expect(savedBody.keyLabel).toBe('B');
       expect(savedBody.targetBands).toBe('B1,B2');
     });
   });

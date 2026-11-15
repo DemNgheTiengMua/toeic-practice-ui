@@ -7,7 +7,10 @@ import {
   Chip,
   Input,
   Label,
+  ListBox,
   Modal,
+  SearchField,
+  Select,
   Spinner,
   Table,
   TextArea,
@@ -22,9 +25,9 @@ import {
   FileSpreadsheet,
   Plus,
   RefreshCw,
-  Search,
   XCircle,
 } from 'lucide-react';
+import { OpsPagination } from './OpsPagination';
 import {
   api,
   type AdminRefundListItemDto,
@@ -275,39 +278,65 @@ export function RefundsTab() {
       <Card className="border border-border">
         <Card.Content className="p-4 flex flex-wrap gap-4 items-center justify-between">
           <div className="flex flex-wrap gap-3 items-center flex-1">
-            <TextField className="w-64" name="search" aria-label="Search refunds">
-              <div className="relative flex items-center">
-                <Search className="absolute left-2.5 h-4 w-4 text-muted pointer-events-none" />
-                <Input
-                  className="pl-9"
-                  placeholder="Learner name, email, or order..."
-                  value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                    setPage(1);
-                  }}
-                />
-              </div>
-            </TextField>
+            <SearchField
+              className="w-64"
+              name="search"
+              aria-label="Search refunds"
+              value={query}
+              onChange={(val) => {
+                setQuery(val);
+                setPage(1);
+              }}
+              onClear={() => {
+                setQuery('');
+                setPage(1);
+              }}
+            >
+              <SearchField.Group>
+                <SearchField.SearchIcon />
+                <SearchField.Input placeholder="Learner name, email, or order..." />
+                <SearchField.ClearButton />
+              </SearchField.Group>
+            </SearchField>
 
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted whitespace-nowrap">Status:</Label>
-              <select
-                aria-label="Filter status"
-                className="h-9 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-focus"
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="">All statuses</option>
-                <option value="requested">Requested</option>
-                <option value="approved">Approved</option>
-                <option value="settled">Settled</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
+            <Select
+              aria-label="Filter status"
+              className="w-44"
+              value={statusFilter || 'all'}
+              onChange={(key) => {
+                setStatusFilter(key === 'all' || key == null ? '' : String(key));
+                setPage(1);
+              }}
+            >
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id="all" textValue="All statuses">
+                    All statuses
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="requested" textValue="Requested">
+                    Requested
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="approved" textValue="Approved">
+                    Approved
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="settled" textValue="Settled">
+                    Settled
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="rejected" textValue="Rejected">
+                    Rejected
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                </ListBox>
+              </Select.Popover>
+            </Select>
           </div>
 
           <div className="flex items-center gap-2">
@@ -425,31 +454,14 @@ export function RefundsTab() {
           </Table>
 
           {/* Pagination */}
-          {summary && summary.totalCount > summary.pageSize && (
-            <div className="flex items-center justify-between text-xs text-muted px-2">
-              <span>
-                Showing {(summary.page - 1) * summary.pageSize + 1}–
-                {Math.min(summary.page * summary.pageSize, summary.totalCount)} of {summary.totalCount} refunds
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  isDisabled={page <= 1}
-                  onPress={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Previous
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  isDisabled={page * summary.pageSize >= summary.totalCount}
-                  onPress={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+          {summary && (
+            <OpsPagination
+              page={summary.page}
+              pageSize={summary.pageSize}
+              totalCount={summary.totalCount}
+              itemLabel="refunds"
+              onPageChange={setPage}
+            />
           )}
         </div>
       )}

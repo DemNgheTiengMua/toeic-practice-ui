@@ -6,6 +6,7 @@ import {
   Card,
   Chip,
   Modal,
+  SearchField,
   Tabs,
 } from '@heroui/react';
 import {
@@ -15,7 +16,6 @@ import {
   Mail,
   Phone,
   RefreshCw,
-  Search,
   Shield,
   ShieldAlert,
   Unlock,
@@ -309,34 +309,28 @@ export function AdminUsersPage() {
 
             {/* Filter Bar & Search */}
             <form onSubmit={handleSearchSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Search by email or name..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm bg-surface rounded-lg border border-border focus:border-accent focus:outline-none"
-                />
-              </div>
+              <SearchField
+                aria-label="Search users by email or name"
+                className="flex-1"
+                value={query}
+                onChange={setQuery}
+                onClear={() => {
+                  setQuery('');
+                  setPage(1);
+                  void loadUsers('', statusFilter, 1);
+                }}
+              >
+                <SearchField.Group>
+                  <SearchField.SearchIcon />
+                  <SearchField.Input placeholder="Search by email or name..." />
+                  <SearchField.ClearButton />
+                </SearchField.Group>
+              </SearchField>
 
               <div className="flex items-center gap-2">
                 <Button type="submit" variant="primary">
                   Search
                 </Button>
-                {query && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onPress={() => {
-                      setQuery('');
-                      setPage(1);
-                      void loadUsers('', statusFilter, 1);
-                    }}
-                  >
-                    Reset
-                  </Button>
-                )}
               </div>
             </form>
 

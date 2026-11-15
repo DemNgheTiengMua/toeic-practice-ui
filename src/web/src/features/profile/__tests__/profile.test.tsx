@@ -109,7 +109,7 @@ describe('Profile feature (#301)', () => {
     expect(await screen.findByRole('heading', { name: /profile & settings/i })).toBeInTheDocument();
     expect(await screen.findByDisplayValue('Learner Demo')).toBeInTheDocument();
     expect(screen.getByDisplayValue('0901234567')).toBeInTheDocument();
-    expect(screen.getByText('Asia/Ho_Chi_Minh')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /timezone/i })).toHaveTextContent('Asia/Ho_Chi_Minh');
     expect(screen.getByRole('link', { name: /top up credits/i })).toHaveAttribute('href', '/checkout');
   });
 

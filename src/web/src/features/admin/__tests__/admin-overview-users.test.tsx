@@ -445,12 +445,22 @@ describe('Admin Overview, Users, Roles, Credit Grants & Audit Queue (#302)', () 
       expect(screen.getByText('learner@demo.local')).toBeInTheDocument();
     });
 
-    // Search passes q parameter
-    const searchInput = screen.getByPlaceholderText(/search by email or name/i);
+    // Search passes q parameter using HeroUI SearchField (searchbox + clear button)
+    const searchInput = screen.getByRole('searchbox', { name: /search users/i });
     fireEvent.change(searchInput, { target: { value: 'learner' } });
     fireEvent.submit(searchInput.closest('form')!);
     await waitFor(() => {
       expect(requestedUrls.some((u) => u.includes('q=learner'))).toBe(true);
+    });
+
+    // Clear button resets query and reloads without q=learner
+    const clearBtn = screen.getByRole('button', { name: /clear/i });
+    const urlCountBeforeClear = requestedUrls.length;
+    fireEvent.click(clearBtn);
+    await waitFor(() => {
+      expect(searchInput).toHaveValue('');
+      expect(requestedUrls.length).toBeGreaterThan(urlCountBeforeClear);
+      expect(requestedUrls[requestedUrls.length - 1]).not.toContain('q=learner');
     });
 
     // View detail modal renders human-readable placement labels (not raw snake_case tokens)

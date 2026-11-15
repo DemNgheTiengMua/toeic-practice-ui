@@ -363,9 +363,9 @@ describe('Certificates Studio (/admin/certificates) (#303)', () => {
     // Modal opens at Step 1
     expect(await screen.findByRole('heading', { name: /certificate blueprint wizard/i })).toBeInTheDocument();
 
-    // Step 1: Select 2-skill template and fill certificate code & name
-    const presetSelect = screen.getByLabelText(/template/i);
-    fireEvent.change(presetSelect, { target: { value: 'two_skill' } });
+    // Step 1: Select 2-skill template using HeroUI Select and fill certificate code & name
+    fireEvent.click(screen.getByRole('button', { name: /template/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /two_skill/i }));
 
     const codeInput = screen.getByLabelText(/certificate code/i);
     fireEvent.change(codeInput, { target: { value: 'TOEFL' } });

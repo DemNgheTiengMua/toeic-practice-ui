@@ -7,7 +7,9 @@ import {
   Chip,
   Input,
   Label,
+  ListBox,
   Modal,
+  Select,
   Spinner,
   Switch,
   Table,
@@ -775,51 +777,72 @@ export function MentorsTab() {
                 </TextField>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="mentor-certificate" className="text-sm font-medium">
-                      Certificate
-                    </Label>
-                    <select
-                      id="mentor-certificate"
-                      aria-label="Certificate"
-                      className="mt-1.5 w-full h-9 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-focus"
-                      value={selectedCertId}
-                      onChange={(e) => {
-                        const newCertId = parseInt(e.target.value, 10);
-                        setSelectedCertId(newCertId);
-                        setSelectedSkillId(null);
-                      }}
-                    >
-                      {certOptions?.map((c) => (
-                        <option key={c.certId} value={c.certId}>
-                          {c.code} — {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <Select
+                    aria-label="Certificate"
+                    className="w-full"
+                    value={String(selectedCertId)}
+                    onChange={(key) => {
+                      if (key == null) return;
+                      const newCertId = parseInt(String(key), 10);
+                      setSelectedCertId(newCertId);
+                      setSelectedSkillId(null);
+                    }}
+                  >
+                    <Label>Certificate</Label>
+                    <Select.Trigger>
+                      <Select.Value />
+                      <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        {(certOptions ?? []).map((c) => (
+                          <ListBox.Item
+                            key={c.certId}
+                            id={String(c.certId)}
+                            textValue={`${c.code} — ${c.name}`}
+                          >
+                            {c.code} — {c.name}
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
 
-                  <div>
-                    <Label htmlFor="mentor-skill-focus" className="text-sm font-medium">
-                      Skill focus
-                    </Label>
-                    <select
-                      id="mentor-skill-focus"
-                      aria-label="Skill focus"
-                      className="mt-1.5 w-full h-9 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-focus"
-                      value={selectedSkillId ?? ''}
-                      onChange={(e) => {
-                        const val = e.target.value ? parseInt(e.target.value, 10) : null;
-                        setSelectedSkillId(val);
-                      }}
-                    >
-                      <option value="">General (All skills)</option>
-                      {availableSkills.map((s) => (
-                        <option key={s.skillId} value={s.skillId}>
-                          {s.name} ({s.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <Select
+                    aria-label="Skill focus"
+                    className="w-full"
+                    value={selectedSkillId !== null ? String(selectedSkillId) : 'general'}
+                    onChange={(key) => {
+                      const val =
+                        key != null && key !== 'general' ? parseInt(String(key), 10) : null;
+                      setSelectedSkillId(val);
+                    }}
+                  >
+                    <Label>Skill focus</Label>
+                    <Select.Trigger>
+                      <Select.Value />
+                      <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        <ListBox.Item id="general" textValue="General (All skills)">
+                          General (All skills)
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                        {availableSkills.map((s) => (
+                          <ListBox.Item
+                            key={s.skillId}
+                            id={String(s.skillId)}
+                            textValue={`${s.name} (${s.code})`}
+                          >
+                            {s.name} ({s.code})
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -997,24 +1020,34 @@ export function MentorsTab() {
                       Add recurring weekly window
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <Label htmlFor="schedule-weekday" className="text-xs font-medium">
-                          Weekday
-                        </Label>
-                        <select
-                          id="schedule-weekday"
-                          aria-label="Weekday"
-                          className="mt-1 w-full h-9 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-focus"
-                          value={newDayOfWeek}
-                          onChange={(e) => setNewDayOfWeek(parseInt(e.target.value, 10))}
-                        >
-                          {WEEKDAY_OPTIONS.map((opt) => (
-                            <option key={opt.dayOfWeek} value={opt.dayOfWeek}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      <Select
+                        aria-label="Weekday"
+                        className="w-full"
+                        value={String(newDayOfWeek)}
+                        onChange={(key) => {
+                          if (key != null) setNewDayOfWeek(parseInt(String(key), 10));
+                        }}
+                      >
+                        <Label className="text-xs font-medium">Weekday</Label>
+                        <Select.Trigger>
+                          <Select.Value />
+                          <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                          <ListBox>
+                            {WEEKDAY_OPTIONS.map((opt) => (
+                              <ListBox.Item
+                                key={opt.dayOfWeek}
+                                id={String(opt.dayOfWeek)}
+                                textValue={opt.label}
+                              >
+                                {opt.label}
+                                <ListBox.ItemIndicator />
+                              </ListBox.Item>
+                            ))}
+                          </ListBox>
+                        </Select.Popover>
+                      </Select>
 
                       <TextField className="w-full" name="windowStart">
                         <Label htmlFor="schedule-window-start" className="text-xs">

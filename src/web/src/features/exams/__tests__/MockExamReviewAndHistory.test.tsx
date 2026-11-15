@@ -247,8 +247,8 @@ describe('MockExamReviewPage & MockExamHistoryPage', () => {
       expect(screen.getByText('Review — TOEIC Full Mock Test 1')).toBeInTheDocument();
     });
 
-    const statusSelect = screen.getByLabelText(/Status:/i);
-    fireEvent.change(statusSelect, { target: { value: 'incorrect' } });
+    fireEvent.click(screen.getByRole('button', { name: /status/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /incorrect only/i }));
 
     // Question 2 (incorrect) is visible, Question 1 (correct) is hidden
     expect(screen.getByText('Ms. Sato submitted her report ______ than expected.')).toBeInTheDocument();

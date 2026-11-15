@@ -448,8 +448,8 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
     expect(await screen.findByRole('heading', { name: /quick ingest questions/i })).toBeInTheDocument();
 
     // Select required CEFR level and topic
-    const levelSelect = screen.getByLabelText(/cefr level/i);
-    fireEvent.change(levelSelect, { target: { value: 'B1' } });
+    fireEvent.click(screen.getByRole('button', { name: /cefr level/i }));
+    fireEvent.click(await screen.findByRole('option', { name: 'B1' }));
     const topicInput = screen.getByLabelText(/topic code/i);
     fireEvent.change(topicInput, { target: { value: 'L-RESP' } });
 
@@ -480,5 +480,38 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
       expect(committedRequest.topicCode).toBe('L-RESP');
       expect(committedRequest.questions.length).toBe(1);
     });
+  });
+
+  it('uses platform SearchField and Select filters on exam catalog (#338)', async () => {
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          id: 1,
+          email: 'author@demo.local',
+          fullName: 'Content Author',
+          role: 'staff',
+          permissions: [STAFF_PERMISSIONS.ContentAuthor],
+        });
+      }
+      if (url.startsWith('/api/admin/exams?')) {
+        return jsonResponse(mockExamList);
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin/exams');
+    expect(await screen.findByText('TOEIC Official Practice Test 1')).toBeInTheDocument();
+
+    const searchBox = screen.getByRole('searchbox', { name: /search exams/i });
+    fireEvent.change(searchBox, { target: { value: 'Mini' } });
+    expect(searchBox).toHaveValue('Mini');
+    fireEvent.click(screen.getByRole('button', { name: /clear/i }));
+    expect(searchBox).toHaveValue('');
+
+    fireEvent.click(screen.getByRole('button', { name: /filter status/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /^published$/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /filter purpose/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /mini mock exam/i }));
   });
 });
