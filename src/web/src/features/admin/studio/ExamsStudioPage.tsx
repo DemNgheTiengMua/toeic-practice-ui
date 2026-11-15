@@ -56,6 +56,7 @@ import type {
   QuickIngestParsedQuestionDto,
   QuickIngestSampleTemplateDto,
   CreateAdminExamRequest,
+  ExamStudioDetailDto,
 } from './types';
 import { EXAM_MEDIA_EXTENSIONS } from './types';
 
@@ -268,8 +269,108 @@ export function ExamsStudioPage() {
       loadAssembly(selectedExamId);
     } else if (activeWorkspaceTab === 'publish') {
       loadAudit(selectedExamId);
+    } else if (activeWorkspaceTab === 'content') {
+      loadStudio(selectedExamId);
     }
   }, [activeWorkspaceTab, selectedExamId]);
+
+  const loadStudio = async (examId: number) => {
+    setIsLoadingStudio(true);
+    try {
+      setStudioDetail(await studioApi.getExamStudio(examId));
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId: 0,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to load Section content.'),
+      });
+    } finally {
+      setIsLoadingStudio(false);
+    }
+  };
+
+  // #362: a Bundle is the shared stimulus its children hang off, so an edit writes the group - not
+  // each child, which would copy the passage per question.
+  const startEditingBundle = (sectionId: number, groupId: number) => {
+    const group = studioDetail?.sections
+      .find((s) => s.sectionId === sectionId)
+      ?.groups.find((g) => g.groupId === groupId);
+    if (!group) return;
+    setBundleNotice(null);
+    setBundleDraft({
+      sectionId,
+      groupId,
+      passage: group.passage ?? '',
+      transcript: group.transcript ?? '',
+      imagePath: group.imagePath ?? '',
+      imageAlt: group.imageAlt ?? '',
+      audioPath: group.audioPath ?? '',
+    });
+  };
+
+  const handleSaveBundle = async () => {
+    if (!selectedExamId || !bundleDraft) return;
+    setIsSavingBundle(true);
+    setBundleNotice(null);
+    try {
+      await studioApi.updateQuestionGroup(selectedExamId, bundleDraft.groupId, {
+        sectionId: bundleDraft.sectionId,
+        passage: bundleDraft.passage.trim() || null,
+        transcript: bundleDraft.transcript.trim() || null,
+        imagePath: bundleDraft.imagePath.trim() || null,
+        imageAlt: bundleDraft.imageAlt.trim() || null,
+        audioPath: bundleDraft.audioPath.trim() || null,
+      });
+      setBundleNotice({ sectionId: bundleDraft.sectionId, isError: false, text: 'Bundle saved.' });
+      setBundleDraft(null);
+      loadStudio(selectedExamId);
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId: bundleDraft.sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to save the Bundle.'),
+      });
+    } finally {
+      setIsSavingBundle(false);
+    }
+  };
+
+  const handleCreateBundle = async (sectionId: number, cefrLevelCode: string) => {
+    if (!selectedExamId) return;
+    setBundleNotice(null);
+    try {
+      await studioApi.createExamCluster(selectedExamId, {
+        sectionId,
+        questionCount: 1,
+        cefrLevelCode,
+      });
+      setBundleNotice({ sectionId, isError: false, text: 'Empty Bundle created. Add its stimulus and children.' });
+      setNewBundleSectionId(null);
+      loadStudio(selectedExamId);
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to create the Bundle.'),
+      });
+    }
+  };
+
+  const handleDeleteBundle = async (sectionId: number, groupId: number) => {
+    if (!selectedExamId) return;
+    setBundleNotice(null);
+    try {
+      await studioApi.deleteQuestionGroup(selectedExamId, groupId);
+      setBundleNotice({ sectionId, isError: false, text: 'Bundle removed.' });
+      loadStudio(selectedExamId);
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to remove the Bundle.'),
+      });
+    }
+  };
 
   const loadAssembly = async (examId: number) => {
     setIsLoadingAssembly(true);
@@ -352,6 +453,28 @@ export function ExamsStudioPage() {
       setUploadingSectionId(null);
     }
   };
+
+  // #362: the Section content workspace. Loaded lazily when its tab opens, because it is the heaviest
+  // read on the screen (every Section, every Bundle, every child question).
+  const [studioDetail, setStudioDetail] = useState<ExamStudioDetailDto | null>(null);
+  const [isLoadingStudio, setIsLoadingStudio] = useState(false);
+  const [expandedSectionId, setExpandedSectionId] = useState<number | null>(null);
+  const [bundleDraft, setBundleDraft] = useState<{
+    sectionId: number;
+    groupId: number;
+    passage: string;
+    transcript: string;
+    imagePath: string;
+    imageAlt: string;
+    audioPath: string;
+  } | null>(null);
+  const [bundleNotice, setBundleNotice] = useState<{
+    sectionId: number;
+    isError: boolean;
+    text: string;
+  } | null>(null);
+  const [isSavingBundle, setIsSavingBundle] = useState(false);
+  const [newBundleSectionId, setNewBundleSectionId] = useState<number | null>(null);
 
   // Create Exam
   const handleCreateExam = async () => {
@@ -790,6 +913,10 @@ export function ExamsStudioPage() {
                   <Tabs.Indicator />
                   <span>Studio & Quick Ingest</span>
                 </Tabs.Tab>
+                <Tabs.Tab id="content">
+                  <Tabs.Indicator />
+                  <span>Section content</span>
+                </Tabs.Tab>
                 <Tabs.Tab id="publish">
                   <Tabs.Indicator />
                   <span>Publish Readiness</span>
@@ -1185,7 +1312,243 @@ export function ExamsStudioPage() {
               </ul>
             </Tabs.Panel>
 
-            {/* Tab 5: Publish Readiness */}
+            {/* Tab 5: Section content — Bundles of passage + audio + image with their children (#362) */}
+            <Tabs.Panel id="content" className="pt-4 space-y-4">
+              <div>
+                <h3 className="text-base font-bold text-foreground">Section content</h3>
+                <p className="text-xs text-muted">
+                  A Section is Bundles. Each Bundle is its shared passage, audio track, image and
+                  transcript, plus the questions that refer to it — the shape a real paper has.
+                </p>
+              </div>
+
+              {isLoadingStudio && <p className="text-sm text-muted">Loading Section content…</p>}
+
+              {bundleNotice && (
+                <Alert status={bundleNotice.isError ? 'danger' : 'success'}>
+                  <Alert.Indicator />
+                  <Alert.Content>
+                    <Alert.Title>{bundleNotice.isError ? 'Refused' : 'Notice'}</Alert.Title>
+                    <Alert.Description>{bundleNotice.text}</Alert.Description>
+                  </Alert.Content>
+                </Alert>
+              )}
+
+              <ul aria-label="Section bundles" className="space-y-4">
+                {(studioDetail?.sections ?? []).map((sec) => (
+                  <li key={sec.sectionId}>
+                    <Card className="border border-border">
+                      <Card.Header className="pb-2">
+                        <div className="flex flex-wrap justify-between items-center gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-accent">{sec.code}</span>
+                            <Card.Title className="text-base">{sec.name}</Card.Title>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Chip size="sm" variant="soft" color="default">
+                              {sec.groups.length} {sec.groups.length === 1 ? 'bundle' : 'bundles'}
+                            </Chip>
+                            <Chip
+                              size="sm"
+                              variant="soft"
+                              color={sec.currentQuestionCount >= sec.expectedQuestionCount ? 'success' : 'warning'}
+                            >
+                              {sec.currentQuestionCount} / {sec.expectedQuestionCount}
+                            </Chip>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onPress={() =>
+                                setExpandedSectionId(
+                                  expandedSectionId === sec.sectionId ? null : sec.sectionId,
+                                )
+                              }
+                            >
+                              {expandedSectionId === sec.sectionId ? 'Hide' : 'Show'} bundles
+                            </Button>
+                          </div>
+                        </div>
+                      </Card.Header>
+
+                      {expandedSectionId === sec.sectionId && (
+                        <Card.Content className="space-y-3 border-t border-border pt-3">
+                          {sec.groups.length === 0 && (
+                            <p className="text-xs text-muted">
+                              No bundles yet. Create one to give this Section its passage, audio or image.
+                            </p>
+                          )}
+
+                          {sec.groups.map((bundle) => (
+                            <div
+                              key={bundle.groupId}
+                              className="p-3 rounded border border-border bg-surface space-y-2"
+                            >
+                              <div className="flex flex-wrap justify-between items-center gap-2">
+                                <span className="text-xs font-semibold text-foreground">
+                                  Bundle #{bundle.groupId} · {bundle.questions.length}{' '}
+                                  {bundle.questions.length === 1 ? 'question' : 'questions'}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onPress={() => startEditingBundle(sec.sectionId, bundle.groupId)}
+                                  >
+                                    Edit stimulus
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onPress={() => void handleDeleteBundle(sec.sectionId, bundle.groupId)}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                                <div className="flex gap-1">
+                                  <dt className="text-muted">Passage:</dt>
+                                  <dd className="text-foreground">
+                                    {bundle.passage ? `${bundle.passage.slice(0, 60)}…` : '—'}
+                                  </dd>
+                                </div>
+                                <div className="flex gap-1">
+                                  <dt className="text-muted">Audio:</dt>
+                                  <dd className="text-foreground">
+                                    {bundle.audioPath ? 'attached' : '—'}
+                                  </dd>
+                                </div>
+                                <div className="flex gap-1">
+                                  <dt className="text-muted">Image:</dt>
+                                  <dd className="text-foreground">
+                                    {bundle.imagePath ? bundle.imageAlt || 'alt missing' : '—'}
+                                  </dd>
+                                </div>
+                                <div className="flex gap-1">
+                                  <dt className="text-muted">Transcript:</dt>
+                                  <dd className="text-foreground">
+                                    {bundle.transcript ? 'present' : '—'}
+                                  </dd>
+                                </div>
+                              </dl>
+
+                              <ul className="space-y-1 pl-3 border-l border-separator">
+                                {bundle.questions.map((q) => (
+                                  <li key={q.questionId} className="text-xs text-foreground">
+                                    {q.stem}
+                                  </li>
+                                ))}
+                              </ul>
+
+                              {bundleDraft?.groupId === bundle.groupId && (
+                                <Form validationBehavior="aria" className="space-y-2 pt-2 border-t border-border">
+                                  <TextField
+                                    name="passage"
+                                    value={bundleDraft.passage}
+                                    onChange={(v) => setBundleDraft({ ...bundleDraft, passage: v })}
+                                  >
+                                    <Label className="text-xs">Passage</Label>
+                                    <TextArea rows={3} className="text-xs" />
+                                  </TextField>
+                                  <TextField
+                                    name="transcript"
+                                    value={bundleDraft.transcript}
+                                    onChange={(v) => setBundleDraft({ ...bundleDraft, transcript: v })}
+                                  >
+                                    <Label className="text-xs">Transcript</Label>
+                                    <TextArea rows={2} className="text-xs" />
+                                  </TextField>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <TextField
+                                      name="imagePath"
+                                      value={bundleDraft.imagePath}
+                                      onChange={(v) => setBundleDraft({ ...bundleDraft, imagePath: v })}
+                                    >
+                                      <Label className="text-xs">Image path</Label>
+                                      <Input className="text-xs font-mono" />
+                                    </TextField>
+                                    <TextField
+                                      name="imageAlt"
+                                      value={bundleDraft.imageAlt}
+                                      onChange={(v) => setBundleDraft({ ...bundleDraft, imageAlt: v })}
+                                    >
+                                      <Label className="text-xs">Image alt text</Label>
+                                      <Input className="text-xs" />
+                                    </TextField>
+                                  </div>
+                                  <TextField
+                                    name="audioPath"
+                                    value={bundleDraft.audioPath}
+                                    onChange={(v) => setBundleDraft({ ...bundleDraft, audioPath: v })}
+                                  >
+                                    <Label className="text-xs">Audio path</Label>
+                                    <Input className="text-xs font-mono" />
+                                  </TextField>
+                                  <div className="flex gap-2 pt-1">
+                                    <Button
+                                      size="sm"
+                                      variant="primary"
+                                      onPress={() => void handleSaveBundle()}
+                                      isDisabled={isSavingBundle}
+                                    >
+                                      Save Bundle
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onPress={() => setBundleDraft(null)}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </Form>
+                              )}
+                            </div>
+                          ))}
+
+                          <div className="pt-1">
+                            {newBundleSectionId === sec.sectionId ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs text-muted">Level for the new Bundle:</span>
+                                {['A2', 'B1', 'B2', 'C1'].map((lvl) => (
+                                  <Button
+                                    key={lvl}
+                                    size="sm"
+                                    variant="secondary"
+                                    onPress={() => void handleCreateBundle(sec.sectionId, lvl)}
+                                  >
+                                    {lvl}
+                                  </Button>
+                                ))}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onPress={() => setNewBundleSectionId(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onPress={() => setNewBundleSectionId(sec.sectionId)}
+                              >
+                                <Plus className="w-3.5 h-3.5 mr-1" />
+                                Add bundle
+                              </Button>
+                            )}
+                          </div>
+                        </Card.Content>
+                      )}
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            </Tabs.Panel>
+
+            {/* Tab 6: Publish Readiness */}
             <Tabs.Panel id="publish" className="pt-4 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>

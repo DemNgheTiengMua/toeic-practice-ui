@@ -210,6 +210,101 @@ const mockAssembly = {
   ],
 };
 
+const mockExamStudio = {
+  examId: 101,
+  certId: 1,
+  certCode: 'TOEIC',
+  certName: 'TOEIC Listening and Reading',
+  name: 'TOEIC Official Practice Test 1',
+  status: 'draft',
+  purpose: 'mock',
+  durationMinutes: 120,
+  description: null,
+  sourceName: null,
+  internalNote: null,
+  questionCount: 200,
+  actualQuestionCount: 195,
+  finishedAttemptCount: 0,
+  createdAt: '2026-11-15T01:00:00+07:00',
+  updatedAt: null,
+  sections: [
+    {
+      sectionId: 7,
+      certId: 1,
+      code: 'L1',
+      name: 'Listening Comprehension',
+      modality: 'listening',
+      expectedQuestionCount: 25,
+      displayOrder: 1,
+      currentQuestionCount: 1,
+      hasAudio: true,
+      masterAudioPath: 'exams/101/master.mp3',
+      masterAudioDurationSec: 1200,
+      groups: [
+        {
+          groupId: 11,
+          examId: 101,
+          certId: 1,
+          sectionId: 7,
+          sectionCode: 'L1',
+          sectionName: 'Listening Comprehension',
+          modality: 'listening',
+          passage: 'Questions 1 through 3 refer to the following announcement.',
+          audioPath: 'exams/101/master.mp3',
+          audioStartMs: 0,
+          audioEndMs: 52000,
+          imagePath: null,
+          imageAlt: null,
+          transcript: 'Attention, attendees of the Global FinTech Summit.',
+          prepSeconds: null,
+          responseSeconds: null,
+          displayOrder: 1,
+          unitNumber: 1,
+          questions: [
+            {
+              questionId: 501,
+              groupId: 11,
+              examId: 101,
+              sectionId: 7,
+              sectionCode: 'L1',
+              sectionName: 'Listening Comprehension',
+              skillId: 1,
+              skillCode: 'LIST',
+              stem: 'Which auditorium hosts the keynote?',
+              questionType: 'mcq',
+              explanation: null,
+              categoryId: null,
+              categoryCode: null,
+              categoryName: null,
+              prepSeconds: null,
+              responseSeconds: null,
+              minWords: null,
+              maxWords: null,
+              hint: null,
+              displayOrder: 1,
+              updatedAt: null,
+              options: [],
+              criteria: [],
+              hasAnswers: false,
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  availableCategories: [],
+  availableCriteria: [],
+  audit: {
+    canPublish: false,
+    totalQuestions: 1,
+    expectedQuestions: 25,
+    blockingErrorCount: 1,
+    warningCount: 0,
+    issues: [],
+    missingItems: [],
+  },
+};
+
 const mockAuditBlocked = {
   canPublish: false,
   totalQuestions: 195,
@@ -758,6 +853,66 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
     expect(audioBody.sectionId).toBe(mockExamDetail.sectionProgress[0].sectionId);
     expect(audioBody.durationSec).toBeGreaterThan(0);
     expect(audioBody.sizeBytes).toBe(goodFile.size);
+  });
+
+  it('lists the Bundles of a Section with their stimulus and saves an edited one (#362)', async () => {
+    let groupUpdate: { url: string; body: any } | null = null;
+
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          id: 1,
+          email: 'author@demo.local',
+          fullName: 'Content Author',
+          role: 'staff',
+          permissions: [STAFF_PERMISSIONS.ContentAuthor],
+        });
+      }
+      if (url.startsWith('/api/admin/exams?')) {
+        return jsonResponse(mockExamList);
+      }
+      if (url === '/api/admin/exams/101') {
+        return jsonResponse(mockExamDetail);
+      }
+      if (url === '/api/admin/exams/101/studio') {
+        return jsonResponse(mockExamStudio);
+      }
+      if (url.startsWith('/api/admin/exams/101/studio/groups/') && init?.method === 'PUT') {
+        groupUpdate = { url, body: JSON.parse(String(init.body)) };
+        return jsonResponse({ success: true });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin/exams');
+    fireEvent.click(
+      await screen.findByRole('button', { name: /open studio for toeic official practice test 1/i }),
+    );
+    fireEvent.click(await screen.findByRole('tab', { name: /section content/i }));
+
+    const sectionList = await screen.findByRole('list', { name: /section bundles/i });
+    const sectionCards = within(sectionList).getAllByRole('listitem');
+    expect(sectionCards[0]).toHaveTextContent('L1');
+    // The bundle count is on the Section header, before anything is expanded.
+    expect(within(sectionCards[0]).getByText(/1 bundle/i)).toBeInTheDocument();
+
+    fireEvent.click(within(sectionCards[0]).getByRole('button', { name: /show bundles/i }));
+
+    // The Bundle shows its stimulus and the child that refers to it.
+    expect(await within(sectionCards[0]).findByText(/1 question/i)).toBeInTheDocument();
+    expect(within(sectionCards[0]).getByText('attached')).toBeInTheDocument();
+    expect(
+      within(sectionCards[0]).getByText(/which auditorium hosts the keynote/i),
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(sectionCards[0]).getByRole('button', { name: /edit stimulus/i }));
+    fireEvent.click(within(sectionCards[0]).getByRole('button', { name: /save bundle/i }));
+
+    await waitFor(() => expect(groupUpdate).not.toBeNull());
+    expect(groupUpdate!.url).toBe('/api/admin/exams/101/studio/groups/11');
+    // The edit names the Section it lands in: a stimulus can be bound by two sections.
+    expect(groupUpdate!.body.sectionId).toBe(7);
+    expect(groupUpdate!.body.audioPath).toBe('exams/101/master.mp3');
   });
 
   it('binds backend RFC 7807 field errors to HeroUI FieldError controls in the create exam modal', async () => {
