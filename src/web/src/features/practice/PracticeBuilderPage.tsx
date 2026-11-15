@@ -57,10 +57,12 @@ function SectionCard({
   section,
   isStarting,
   onStart,
+  showUnlockCta = true,
 }: {
   section: PracticeSectionDto;
   isStarting: boolean;
   onStart: (sectionId: number) => void;
+  showUnlockCta?: boolean;
 }) {
   const reopenText = formatLocalReopenTime(section.nextReviewDueAt);
   const isUnlocked = section.isUnlocked !== false;
@@ -83,7 +85,9 @@ function SectionCard({
               </Chip>
             ) : (
               <Chip size="sm" variant="soft" color="warning">
-                <Chip.Label>Locked · complete in Learning Path</Chip.Label>
+                <Chip.Label>
+                  {showUnlockCta ? 'Locked · complete in Learning Path' : 'Locked'}
+                </Chip.Label>
               </Chip>
             )}
           </div>
@@ -124,13 +128,18 @@ function SectionCard({
             <Play className="h-3.5 w-3.5" aria-hidden="true" />
             <span>Start section drill</span>
           </Button>
-        ) : (
+        ) : showUnlockCta ? (
           <Link to="/learning-path" className="no-underline">
             <Button size="sm" variant="secondary">
               <Lock className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Unlock in Learning Path</span>
             </Button>
           </Link>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-muted">
+            <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Locked</span>
+          </span>
         )}
       </Card.Footer>
     </Card>
@@ -232,6 +241,11 @@ export function PracticeBuilderPage() {
     if (skillFilter === 'all') return allSections;
     return allSections.filter((s) => s.skillCode === skillFilter);
   }, [allSections, skillFilter]);
+
+  const allSectionsLocked = useMemo(
+    () => allSections.length > 0 && allSections.every((s) => s.isUnlocked === false),
+    [allSections],
+  );
 
   const handleStartSection = (sectionId: number) => {
     setActionError(null);
@@ -468,38 +482,75 @@ export function PracticeBuilderPage() {
               </Select>
             </div>
 
-            {catalog?.weakestSection && (
-              <Card className="border border-accent/40 bg-surface-secondary">
+            {allSectionsLocked && (
+              <Card className="border border-warning/50 bg-surface">
                 <Card.Content className="flex flex-wrap items-center justify-between gap-3 py-3">
                   <div className="flex items-center gap-3">
-                    <Target className="h-5 w-5 text-accent" aria-hidden="true" />
+                    <Lock className="h-5 w-5 text-warning" aria-hidden="true" />
                     <div>
-                      <div className="text-xs font-medium text-accent">Recommended focus</div>
                       <div className="text-sm font-semibold text-foreground">
-                        {catalog.weakestSection.name}{' '}
-                        {catalog.weakestSection.accuracyPercentage != null && (
-                          <span className="font-mono-tabular text-muted">
-                            ({catalog.weakestSection.accuracyPercentage}% accuracy)
-                          </span>
-                        )}
+                        All section drills are locked
+                      </div>
+                      <div className="text-xs text-muted">
+                        Complete the matching steps in your Learning Path to unlock free section drills.
                       </div>
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    isDisabled={
-                      catalog.weakestSection.availableQuestionCount === 0 ||
-                      startSessionMutation.isPending
-                    }
-                    onPress={() => handleStartSection(catalog.weakestSection!.sectionId)}
-                  >
-                    <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>Drill weakest section</span>
-                  </Button>
+                  <Link to="/learning-path" className="no-underline">
+                    <Button size="sm" variant="secondary">
+                      <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>Unlock in Learning Path</span>
+                    </Button>
+                  </Link>
                 </Card.Content>
               </Card>
             )}
+
+            {catalog?.weakestSection && (() => {
+              const weakestIsLocked = catalog.weakestSection.isUnlocked === false;
+              return (
+                <Card className="border border-accent/40 bg-surface-secondary">
+                  <Card.Content className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <div className="flex items-center gap-3">
+                      <Target className="h-5 w-5 text-accent" aria-hidden="true" />
+                      <div>
+                        <div className="text-xs font-medium text-accent">Recommended focus</div>
+                        <div className="text-sm font-semibold text-foreground">
+                          {catalog.weakestSection.name}{' '}
+                          {catalog.weakestSection.accuracyPercentage != null && (
+                            <span className="font-mono-tabular text-muted">
+                              ({catalog.weakestSection.accuracyPercentage}% accuracy)
+                            </span>
+                          )}
+                        </div>
+                        {weakestIsLocked && (
+                          <div className="text-xs text-muted mt-0.5">
+                            Locked — complete this section in your Learning Path before starting this drill.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      isDisabled={
+                        weakestIsLocked ||
+                        catalog.weakestSection.availableQuestionCount === 0 ||
+                        startSessionMutation.isPending
+                      }
+                      onPress={() => handleStartSection(catalog.weakestSection!.sectionId)}
+                    >
+                      {weakestIsLocked ? (
+                        <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                      ) : (
+                        <Play className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                      <span>{weakestIsLocked ? 'Locked' : 'Drill weakest section'}</span>
+                    </Button>
+                  </Card.Content>
+                </Card>
+              );
+            })()}
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filteredSections.map((section) => (
@@ -508,6 +559,7 @@ export function PracticeBuilderPage() {
                   section={section}
                   isStarting={startSessionMutation.isPending}
                   onStart={handleStartSection}
+                  showUnlockCta={!allSectionsLocked}
                 />
               ))}
             </div>

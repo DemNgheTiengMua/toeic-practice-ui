@@ -511,17 +511,26 @@ export function LearningPathPage() {
         <section className="space-y-4">
           <h2 className="text-xl font-bold tracking-tight text-foreground m-0">Four-week plan</h2>
           <div className="space-y-4">
-            {summary.weeks.map((week) => (
+            {summary.weeks.map((week) => {
+              const weekHasStarted =
+                week.completedSteps > 0 ||
+                week.completedMinutes > 0 ||
+                week.steps.some((s) => s.status === 'done' || s.status === 'in_progress');
+              const showTrackBadge = week.isOnTrack || weekHasStarted;
+
+              return (
               <Card key={week.weekNumber} className="border-border">
                 <Card.Header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-border pb-3 bg-surface-secondary/40">
                   <div className="flex items-center gap-2.5">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded font-mono font-semibold ${
-                        week.isOnTrack ? 'bg-success text-white' : 'bg-warning text-foreground'
-                      }`}
-                    >
-                      {week.isOnTrack ? 'On track' : 'Off track'}
-                    </span>
+                    {showTrackBadge && (
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded font-mono font-semibold ${
+                          week.isOnTrack ? 'bg-success text-white' : 'bg-warning text-foreground'
+                        }`}
+                      >
+                        {week.isOnTrack ? 'On track' : 'Off track'}
+                      </span>
+                    )}
                     <strong className="text-foreground text-sm">Week {week.weekNumber}</strong>
                   </div>
                   <span className="font-mono text-xs text-muted">
@@ -633,7 +642,8 @@ export function LearningPathPage() {
                   })}
                 </Card.Content>
               </Card>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
