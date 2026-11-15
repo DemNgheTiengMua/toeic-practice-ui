@@ -293,6 +293,41 @@ public sealed partial class MentorService
             r.AmountVnd)).ToList();
     }
 
+    /// <summary>
+    /// #353: one row per mentor, so a transfer needs no arithmetic outside the product.
+    /// <para>
+    /// Grouped from <see cref="QueryCompletedPayoutBookingsAsync"/> - the very rows the per-session export
+    /// serialises - rather than from a second query. That is what makes the two files reconcile by
+    /// construction: the compensation rule from #352, the cancelled-booking exclusion and the reporting
+    /// window are applied once, in one place, and both exports read the answer.
+    /// </para>
+    /// </summary>
+    public async Task<IReadOnlyList<MentorPayoutTotalsRow>> GetMentorPayoutTotalsAsync(
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken = default)
+    {
+        if (to < from)
+        {
+            throw new ValidationException("End date must be on or after start date.");
+        }
+
+        var rows = await QueryCompletedPayoutBookingsAsync(from, to, cancellationToken);
+
+        return rows
+            .GroupBy(r => new { r.MentorId, r.MentorName, r.CertCode })
+            .Select(g => new MentorPayoutTotalsRow(
+                g.Key.MentorId,
+                g.Key.MentorName,
+                g.Key.CertCode,
+                g.Count(),
+                g.Sum(x => x.PriceCredits),
+                g.Sum(x => x.AmountVnd)))
+            .OrderByDescending(m => m.TotalAmountVnd)
+            .ThenBy(m => m.MentorId)
+            .ToList();
+    }
+
     private static readonly string ResolvedComplaintCode = ComplaintStatus.Resolved.ToCode();
     private static readonly string CreditRefundMethodCode = RefundMethod.Credit.ToCode();
     private static readonly string ApprovedRefundStatusCode = RefundStatus.Approved.ToCode();
