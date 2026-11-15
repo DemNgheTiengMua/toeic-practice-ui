@@ -65,6 +65,8 @@ Reading. Tự mâu thuẫn trên cùng một trang.
 | H9 | Trang order `failed` | "Payment was not completed… Error code: 24" | ⚠️ LỖI-07 |
 | H10 | `/payment/result?orderCode=…` | Đúng cho cả `paid` và `failed` | ✅ PASS |
 | H10− | Thiếu mã order | "Missing order reference" + đường về ví | ✅ PASS |
+| H8d | Mock `pending` → `reconciling` | Order `DH-…-0006` → `reconciling`, balance không đổi | ✅ PASS |
+| H14 | Admin reconcile | `/admin/finance` hiện `reconcilingCount: 1`, nút **Reconcile** chỉ cho order đó, bấm ghi 4 `PaymentEvents` | ⚠️ LỖI-06 |
 
 **Ledger xác nhận:** 3 order, chỉ **1 dòng** `purchase +5` (từ order `paid`). `failed` và `expired`
 không ghi gì. Balance = SUM = 5. Đúng invariant "block before you charge".
@@ -79,6 +81,15 @@ nhiều lần, và mỗi lần bấm lại là **một order mới**. Đây là 
 payment.
 
 Chỉ nhánh `success` có phản hồi (thông báo rồi tự chuyển trang sau 1.5s).
+
+**Nguyên nhân đã xác minh trong code:** `mockActionMutation.onSuccess` chỉ rẽ nhánh khi
+`action === 'success'`. Với `failed` và `expired` không có nhánh nào, nên không set state, không
+invalidate, không thông báo. Nút **Reconcile** ở `/admin/finance` cũng vậy: server ghi 4
+`PaymentEvents` nhưng màn hình không đổi.
+
+**Chưa có nút "Slow gateway (reconcile)" trên checkout.** Backend hỗ trợ `action: "pending"` (đã gọi
+trực tiếp qua API: order → `reconciling`), nhưng type trong UI chỉ khai báo
+`'success' | 'failed' | 'expired'`. Nhánh reconcile chỉ chạm được từ `/admin/finance`.
 
 ### LỖI-07 ⚠️ Order `failed` vẫn ghi "Credits granted: +5 credits"
 
