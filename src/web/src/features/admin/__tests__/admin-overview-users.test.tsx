@@ -116,6 +116,13 @@ describe('Admin Overview, Users, Roles, Credit Grants & Audit Queue (#302)', () 
   beforeEach(() => {
     vi.restoreAllMocks();
     window.scrollTo = vi.fn();
+    if (typeof globalThis.ResizeObserver === 'undefined') {
+      globalThis.ResizeObserver = class ResizeObserver {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      };
+    }
   });
 
   afterEach(() => {
@@ -524,5 +531,147 @@ describe('Admin Overview, Users, Roles, Credit Grants & Audit Queue (#302)', () 
       expect(screen.getByText('operations.support.triage')).toBeInTheDocument();
       expect(screen.getByText('assessment.blueprint.design')).toBeInTheDocument();
     });
+  });
+});
+
+function assertNoNestedLinkButton(container: HTMLElement) {
+  const links = Array.from(container.querySelectorAll('a'));
+  for (const link of links) {
+    expect(link.querySelector('button, [role="button"]')).toBeNull();
+  }
+  const buttons = Array.from(container.querySelectorAll('button, [role="button"]'));
+  for (const button of buttons) {
+    expect(button.querySelector('a')).toBeNull();
+  }
+}
+
+describe('Single-control navigational links across admin surfaces (#341)', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    window.scrollTo = vi.fn();
+    if (typeof globalThis.ResizeObserver === 'undefined') {
+      globalThis.ResizeObserver = class ResizeObserver {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      };
+    }
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('renders zero nested button/link pairs across /admin (superadmin & staff), /admin/users, studio, finance, and operations routes', async () => {
+    let currentMe = makeMe();
+
+    installFetchMock((url) => {
+      if (url.endsWith('/api/auth/me')) return jsonResponse(currentMe);
+      if (url.endsWith('/api/admin/dashboard')) return jsonResponse(makeDashboard());
+      if (url.endsWith('/api/admin/dashboard/revision')) return jsonResponse(makeRevision());
+      if (url.includes('/api/admin/users')) {
+        return jsonResponse({ items: [], totalCount: 0, page: 1, pageSize: 20 });
+      }
+      if (url === '/api/admin/certificates' || url.startsWith('/api/admin/certificates?')) {
+        return jsonResponse([]);
+      }
+      if (url === '/api/admin/certificates/presets') {
+        return jsonResponse([]);
+      }
+      if (url.startsWith('/api/admin/exams')) {
+        return jsonResponse({ exams: [], totalCount: 0, page: 1, pageSize: 20 });
+      }
+      if (url === '/api/admin/coverage') {
+        return jsonResponse({ certId: 1, cells: [] });
+      }
+      if (url === '/api/admin/ingestion') {
+        return jsonResponse([]);
+      }
+      if (url.startsWith('/api/admin/lessons')) {
+        return jsonResponse([]);
+      }
+      if (url.startsWith('/api/admin/orders')) {
+        return jsonResponse({
+          items: [],
+          totalCount: 0,
+          page: 1,
+          pageSize: 20,
+          summary: {
+            totalOrdersCount: 0,
+            paidOrdersCount: 0,
+            pendingOrdersCount: 0,
+            failedOrExpiredOrdersCount: 0,
+            grossPaidVnd: 0,
+          },
+        });
+      }
+      if (url.startsWith('/api/admin/refunds')) {
+        return jsonResponse({ items: [], totalCount: 0, page: 1, pageSize: 20 });
+      }
+      if (url.startsWith('/api/admin/complaints')) {
+        return jsonResponse({ items: [], totalCount: 0, page: 1, pageSize: 20 });
+      }
+      if (url.startsWith('/api/admin/mentors')) {
+        return jsonResponse([]);
+      }
+      return jsonResponse({}, 404);
+    });
+
+    // 1. /admin (SuperAdmin)
+    const adminSuper = renderRoute('/admin');
+    expect(await screen.findByText(/needs attention/i)).toBeInTheDocument();
+    assertNoNestedLinkButton(adminSuper.container);
+    adminSuper.unmount();
+
+    // 2. /admin (Non-SuperAdmin staff with workspace links)
+    currentMe = makeMe({
+      permissions: ['pool.content.review', 'assessment.blueprint.design'],
+    });
+    const adminStaff = renderRoute('/admin');
+    expect(await screen.findByText(/available workspaces/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /certificates studio/i })).toBeInTheDocument();
+    assertNoNestedLinkButton(adminStaff.container);
+    adminStaff.unmount();
+
+    // Restore SuperAdmin for remaining routes
+    currentMe = makeMe();
+
+    // 3. /admin/users
+    const usersView = renderRoute('/admin/users');
+    expect(await screen.findByRole('heading', { name: /people & audit/i })).toBeInTheDocument();
+    assertNoNestedLinkButton(usersView.container);
+    usersView.unmount();
+
+    // 4. /admin/certificates
+    const certsView = renderRoute('/admin/certificates');
+    expect(await screen.findByRole('heading', { name: /certificates studio/i })).toBeInTheDocument();
+    assertNoNestedLinkButton(certsView.container);
+    certsView.unmount();
+
+    // 5. /admin/exams
+    const examsView = renderRoute('/admin/exams');
+    expect(await screen.findByRole('heading', { name: /exams authoring studio/i })).toBeInTheDocument();
+    assertNoNestedLinkButton(examsView.container);
+    examsView.unmount();
+
+    // 6. /admin/question-bank
+    const qbView = renderRoute('/admin/question-bank');
+    expect(await screen.findByRole('heading', { name: /question bank studio/i })).toBeInTheDocument();
+    assertNoNestedLinkButton(qbView.container);
+    qbView.unmount();
+
+    // 7. /admin/finance
+    const financeView = renderRoute('/admin/finance');
+    expect(await screen.findByRole('heading', { name: /finance & refunds/i })).toBeInTheDocument();
+    assertNoNestedLinkButton(financeView.container);
+    financeView.unmount();
+
+    // 8. /admin/operations
+    const opsView = renderRoute('/admin/operations');
+    expect(await screen.findByRole('heading', { name: /operations desk/i })).toBeInTheDocument();
+    assertNoNestedLinkButton(opsView.container);
+    opsView.unmount();
   });
 });
