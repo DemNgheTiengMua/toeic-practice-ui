@@ -183,66 +183,6 @@ const mockPresets = [
   },
 ];
 
-const mockScoreConversion = {
-  certId: 1,
-  certCode: 'TOEIC',
-  certName: 'TOEIC Listening and Reading',
-  certificates: [{ certId: 1, code: 'TOEIC', name: 'TOEIC Listening and Reading' }],
-  examId: null,
-  examName: null,
-  skillScales: [
-    {
-      skillId: 10,
-      skillCode: 'LISTENING',
-      skillName: 'Listening',
-      maxQuestions: 100,
-      scales: [
-        { scaleId: 1, skillId: 10, skillCode: 'LISTENING', skillName: 'Listening', rawScore: 0, scaledScore: 5 },
-        { scaleId: 2, skillId: 10, skillCode: 'LISTENING', skillName: 'Listening', rawScore: 100, scaledScore: 495 },
-      ],
-    },
-  ],
-  bands: [
-    { bandId: 101, code: 'GOLD', name: 'Gold Proficiency', minTotal: 860, maxTotal: 990, displayOrder: 1 },
-    { bandId: 102, code: 'BLUE', name: 'Blue Working', minTotal: 730, maxTotal: 855, displayOrder: 2 },
-  ],
-};
-
-const mockRubricStudio = {
-  certId: 1,
-  certCode: 'TOEIC',
-  skillId: 12,
-  skillCode: 'SPEAKING',
-  skillName: 'Speaking',
-  modality: 'speaking',
-  isLocked: false,
-  lockedAt: null,
-  criteria: [
-    {
-      criterionId: 201,
-      code: 'PRON',
-      name: 'Pronunciation and Intonation',
-      maxScore: 3,
-      weight: 1,
-      displayOrder: 1,
-      cells: [
-        { band: 0, descriptor: 'Unintelligible pronunciation', binaryGates: 'No English words articulated' },
-        { band: 1, descriptor: 'Frequent severe pronunciation errors', binaryGates: 'Single words identifiable' },
-        { band: 2, descriptor: 'Frequent lapses in stress and intonation', binaryGates: 'Phonemes mostly clear in isolation' },
-        { band: 3, descriptor: 'Intelligible though accent is evident', binaryGates: 'Sustained phrasing with minor errors' },
-        { band: 4, descriptor: 'Generally clear with natural rhythm', binaryGates: 'Intonation supports meaning' },
-        { band: 5, descriptor: 'Consistently clear and precise', binaryGates: 'Stress and rhythm consistently accurate' },
-        { band: 6, descriptor: 'Near-native fluency and precision', binaryGates: 'Complete phonetic mastery' },
-      ],
-      anchors: [
-        { band: 2, responseText: 'Sample A2 benchmark audio response transcript' },
-        { band: 3, responseText: 'Sample B1 benchmark audio response transcript' },
-        { band: 4, responseText: 'Sample B2 benchmark audio response transcript' },
-      ],
-    },
-  ],
-  ladder: null,
-};
 
 describe('Certificates Studio (/admin/certificates) (#303)', () => {
   beforeEach(() => {
@@ -301,12 +241,8 @@ describe('Certificates Studio (/admin/certificates) (#303)', () => {
       if (url === '/api/admin/certificates/presets') {
         return jsonResponse(mockPresets);
       }
-      if (url.startsWith('/api/admin/score-conversion')) {
-        return jsonResponse(mockScoreConversion);
-      }
-      if (url.startsWith('/api/admin/studio/rubric')) {
-        return jsonResponse(mockRubricStudio);
-      }
+      // #360: score-conversion and the rubric ladder have no client call and no screen, so mocking
+      // their routes would only keep a retired surface looking alive.
       return jsonResponse({}, 404);
     });
 

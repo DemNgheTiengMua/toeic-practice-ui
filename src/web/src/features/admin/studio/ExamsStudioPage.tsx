@@ -4,9 +4,11 @@ import {
   Button,
   Card,
   Chip,
+  Disclosure,
   Label,
   ListBox,
   Modal,
+  ProgressBar,
   SearchField,
   Select,
   Table,
@@ -33,6 +35,8 @@ import {
   Download,
   Trash2,
   ArrowLeft,
+  ArrowUp,
+  ArrowDown,
   ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
@@ -48,11 +52,61 @@ import type {
   AdminCertificateSummaryDto,
   AdminExamListItemDto,
   AdminExamDetailDto,
+  AdminExamSectionProgressDto,
   ExamAuditResultDto,
   ExamAssemblyDto,
   QuickIngestParsedQuestionDto,
+  QuickIngestSampleTemplateDto,
   CreateAdminExamRequest,
+  ExamStudioDetailDto,
+  ExamStudioQuestionDto,
+  AdminImportResultDto,
 } from './types';
+import { AUDIO_MEDIA_EXTENSIONS, IMAGE_MEDIA_EXTENSIONS } from './types';
+
+/**
+ * #359: the file's own duration, measured in the browser before it is recorded. A Listening Section
+ * refuses a zero duration and the server cannot measure an upload, so the answer has to come from
+ * here.
+ *
+ * Measuring is best-effort on purpose. A browser that cannot decode the file, or an environment with
+ * no `createObjectURL`, must not lose an upload the author already chose - the caller floors the
+ * result to 1 second, which is the smallest value the route accepts. A measurement failure that
+ * blocked the save would be worse than an approximate duration.
+ */
+function readAudioDurationSec(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    let url: string | null = null;
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    // Resolve exactly once: the timeout and the load event race, and a second call would resolve a
+    // promise already settled and revoke a URL already revoked.
+    const done = (seconds: number) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (url) URL.revokeObjectURL(url);
+      resolve(Number.isFinite(seconds) && seconds > 0 ? seconds : 0);
+    };
+
+    try {
+      if (typeof URL.createObjectURL !== 'function') {
+        done(0);
+        return;
+      }
+      url = URL.createObjectURL(file);
+      const audio = new Audio();
+      audio.addEventListener('loadedmetadata', () => done(audio.duration));
+      audio.addEventListener('error', () => done(0));
+      // A source that never loads must not strand the upload control.
+      timer = setTimeout(() => done(0), 5000);
+      audio.src = url;
+    } catch {
+      done(0);
+    }
+  });
+}
 
 // The only purposes CK_Exams_Purpose accepts. Every purpose control draws from this list so the
 // filter, the metadata editor and the create modal can never drift apart again (#357).
@@ -105,11 +159,11 @@ export function ExamsStudioPage() {
   const [metadataNotice, setMetadataNotice] = useState<string | null>(null);
   const [metadataFieldErrors, setMetadataFieldErrors] = useState<Record<string, string>>({});
 
-  // Sections & Audio state
-  const [selectedAudioSectionId, setSelectedAudioSectionId] = useState<number>(1);
-  const [audioPathInput, setAudioPathInput] = useState('');
-  const [audioDurationSec, setAudioDurationSec] = useState(300);
-  const [isSavingAudio, setIsSavingAudio] = useState(false);
+  // #359: which Section's upload control is busy, and the outcome shown beside it.
+  const [uploadingSectionId, setUploadingSectionId] = useState<number | null>(null);
+  const [sectionMediaNotice, setSectionMediaNotice] = useState<
+    { sectionId: number; isError: boolean; text: string } | null
+  >(null);
 
   // Assembly state
   const [assembly, setAssembly] = useState<ExamAssemblyDto | null>(null);
@@ -126,12 +180,32 @@ export function ExamsStudioPage() {
   const [isQuickIngestOpen, setIsQuickIngestOpen] = useState(false);
   const [ingestSectionId, setIngestSectionId] = useState<number>(1);
   const [ingestLevel, setIngestLevel] = useState<string>('B1');
+  const [ingestLevelBySection, setIngestLevelBySection] = useState<Record<number, string>>({});
   const [ingestTopic, setIngestTopic] = useState<string>('L-RESP');
   const [ingestText, setIngestText] = useState('');
   const [isParsingIngest, setIsParsingIngest] = useState(false);
   const [parsedQuestions, setParsedQuestions] = useState<QuickIngestParsedQuestionDto[]>([]);
   const [isCommitingIngest, setIsCommitingIngest] = useState(false);
-  const [ingestNotice, setIngestNotice] = useState<string | null>(null);
+  const [ingestNotice, setIngestNotice] = useState<{ text: string; isError: boolean } | null>(null);
+  const [ingestSample, setIngestSample] = useState<QuickIngestSampleTemplateDto | null>(null);
+
+  // The paste template belongs to the Section being filled, so it reloads whenever the target changes.
+  useEffect(() => {
+    if (!isQuickIngestOpen) return;
+    let cancelled = false;
+    setIngestSample(null);
+    studioApi
+      .getQuickIngestSample(ingestSectionId)
+      .then((sample) => {
+        if (!cancelled) setIngestSample(sample);
+      })
+      .catch(() => {
+        // A missing template is not an error: the generic placeholder still lets the author paste.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isQuickIngestOpen, ingestSectionId]);
 
   // Load Exam List
   useEffect(() => {
@@ -202,8 +276,280 @@ export function ExamsStudioPage() {
       loadAssembly(selectedExamId);
     } else if (activeWorkspaceTab === 'publish') {
       loadAudit(selectedExamId);
+    } else if (activeWorkspaceTab === 'content') {
+      loadStudio(selectedExamId);
     }
   }, [activeWorkspaceTab, selectedExamId]);
+
+  const loadStudio = async (examId: number) => {
+    setIsLoadingStudio(true);
+    try {
+      setStudioDetail(await studioApi.getExamStudio(examId));
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId: 0,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to load Section content.'),
+      });
+    } finally {
+      setIsLoadingStudio(false);
+    }
+  };
+
+  // #362: a Bundle is the shared stimulus its children hang off, so an edit writes the group - not
+  // each child, which would copy the passage per question.
+  const startEditingBundle = (sectionId: number, groupId: number) => {
+    const group = studioDetail?.sections
+      .find((s) => s.sectionId === sectionId)
+      ?.groups.find((g) => g.groupId === groupId);
+    if (!group) return;
+    setBundleNotice(null);
+    setBundleDraft({
+      sectionId,
+      groupId,
+      passage: group.passage ?? '',
+      transcript: group.transcript ?? '',
+      imagePath: group.imagePath ?? '',
+      imageAlt: group.imageAlt ?? '',
+      audioPath: group.audioPath ?? '',
+      // Carried, not dropped: the group route assigns the slice unconditionally, so omitting it would
+      // silently widen the Bundle's audio to the whole track - a data change nobody asked for.
+      audioStartMs: group.audioStartMs == null ? '' : String(group.audioStartMs),
+      audioEndMs: group.audioEndMs == null ? '' : String(group.audioEndMs),
+    });
+  };
+
+  const handleSaveBundle = async () => {
+    if (!selectedExamId || !bundleDraft) return;
+    setIsSavingBundle(true);
+    setBundleNotice(null);
+    try {
+      // The slice must survive a save that did not touch it: the group route assigns these two
+      // unconditionally, so a null here would widen the Bundle's audio to the whole track.
+      const start = bundleDraft.audioStartMs.trim();
+      const end = bundleDraft.audioEndMs.trim();
+      const hasSlice = start !== '' && end !== '';
+      if ((start === '') !== (end === '')) {
+        throw new Error('An audio slice needs both a start and an end, or neither.');
+      }
+
+      await studioApi.updateQuestionGroup(selectedExamId, bundleDraft.groupId, {
+        sectionId: bundleDraft.sectionId,
+        passage: bundleDraft.passage.trim() || null,
+        transcript: bundleDraft.transcript.trim() || null,
+        imagePath: bundleDraft.imagePath.trim() || null,
+        imageAlt: bundleDraft.imageAlt.trim() || null,
+        audioPath: bundleDraft.audioPath.trim() || null,
+        audioStartMs: hasSlice ? Number(start) : null,
+        audioEndMs: hasSlice ? Number(end) : null,
+      });
+      setBundleNotice({ sectionId: bundleDraft.sectionId, isError: false, text: 'Bundle saved.' });
+      setBundleDraft(null);
+      loadStudio(selectedExamId);
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId: bundleDraft.sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to save the Bundle.'),
+      });
+    } finally {
+      setIsSavingBundle(false);
+    }
+  };
+
+  // #362: a child question's content lives on the pool item version, so editing it names the ITEM, not
+  // the paper position. QuestionId is a position handle and would address nothing on that route.
+  const startEditingQuestion = (sectionId: number, question: ExamStudioQuestionDto) => {
+    const option = (label: string) =>
+      question.options.find((o) => o.label === label)?.text ?? '';
+    const key = question.options
+      .filter((o) => o.isCorrect)
+      .map((o) => o.label)
+      .sort()
+      .join(',');
+    setBundleNotice(null);
+    setQuestionDraft({
+      sectionId,
+      itemId: question.itemId,
+      stem: question.stem,
+      optionA: option('A'),
+      optionB: option('B'),
+      optionC: option('C'),
+      optionD: option('D'),
+      keyLabel: key,
+      explanation: question.explanation ?? '',
+    });
+  };
+
+  const handleSaveQuestion = async () => {
+    if (!questionDraft) return;
+    setIsSavingQuestion(true);
+    setBundleNotice(null);
+    try {
+      await studioApi.updatePoolItem(questionDraft.itemId, {
+        stem: questionDraft.stem.trim(),
+        optionA: questionDraft.optionA.trim() || null,
+        optionB: questionDraft.optionB.trim() || null,
+        optionC: questionDraft.optionC.trim() || null,
+        optionD: questionDraft.optionD.trim() || null,
+        keyLabel: questionDraft.keyLabel.trim() || null,
+        explanation: questionDraft.explanation.trim() || null,
+      });
+      setBundleNotice({ sectionId: questionDraft.sectionId, isError: false, text: 'Question saved as a new version.' });
+      setQuestionDraft(null);
+      if (selectedExamId) loadStudio(selectedExamId);
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId: questionDraft.sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to save the question.'),
+      });
+    } finally {
+      setIsSavingQuestion(false);
+    }
+  };
+
+  /**
+   * #362: adds a question to an EXISTING Bundle. Two acts, because the pool separates them: author the
+   * item carrying the Bundle's stimulus id, then bind that version to the next position in the Section.
+   * Creating a second Bundle instead would duplicate the passage the first one already owns.
+   */
+  const handleCreateChild = async () => {
+    if (!selectedExamId || !newChild) return;
+    setIsSavingChild(true);
+    setBundleNotice(null);
+    try {
+      const section = studioDetail?.sections.find((s) => s.sectionId === newChild.sectionId);
+      const nextOrder = (section?.currentQuestionCount ?? 0) + 1;
+
+      const created = await studioApi.createPoolItem({
+        modality: section?.modality ?? 'reading',
+        topicId: newChild.topicId,
+        cefrLevelCode: newChild.cefrLevelCode,
+        itemType: 'mcq',
+        stem: newChild.stem.trim(),
+        optionA: null,
+        optionB: null,
+        optionC: null,
+        optionD: null,
+        keyLabel: null,
+        explanation: newChild.explanation.trim() || null,
+        stimulusId: newChild.stimulusId,
+        targetBands: 'ALL',
+      });
+
+      // The pool answers an item; the paper needs one of its versions. The newest is the one just made.
+      await studioApi.bindPoolItem(selectedExamId, {
+        sectionId: newChild.sectionId,
+        itemVersionId: created.itemVersionId,
+        displayOrder: nextOrder,
+      });
+
+      setBundleNotice({
+        sectionId: newChild.sectionId,
+        isError: false,
+        text: 'Question added to the Bundle. Edit its stem and options below.',
+      });
+      setNewChild(null);
+      loadStudio(selectedExamId);
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId: newChild.sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to add the question.'),
+      });
+    } finally {
+      setIsSavingChild(false);
+    }
+  };
+
+  /** #362: reorder is the roster's own order, so it sends the position ids the read returned. */
+  const handleReorder = async (sectionId: number, orderedPositions: number[]) => {
+    if (!selectedExamId) return;
+    setBundleNotice(null);
+    try {
+      await studioApi.reorderExamItems(selectedExamId, {
+        sectionId,
+        items: orderedPositions.map((questionId, index) => ({
+          groupId: null,
+          questionId,
+          displayOrder: index + 1,
+        })),
+      });
+      setBundleNotice({ sectionId, isError: false, text: 'Order saved.' });
+      loadStudio(selectedExamId);
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to save the order.'),
+      });
+    }
+  };
+
+  const handleCreateBundle = async (sectionId: number, cefrLevelCode: string, questionCount: number) => {    if (!selectedExamId) return;
+    setBundleNotice(null);
+    try {
+      await studioApi.createExamCluster(selectedExamId, {
+        sectionId,
+        questionCount: Math.max(1, questionCount),
+        cefrLevelCode,
+      });
+      setBundleNotice({
+        sectionId,
+        isError: false,
+        text: `Bundle created with ${Math.max(1, questionCount)} question${questionCount === 1 ? '' : 's'}. Edit its stimulus and each question below.`,
+      });
+      setNewBundleSectionId(null);
+      loadStudio(selectedExamId);
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to create the Bundle.'),
+      });
+    }
+  };
+
+  const handleDeleteBundle = async (sectionId: number, groupId: number) => {
+    if (!selectedExamId) return;
+    setBundleNotice(null);
+    try {
+      await studioApi.deleteQuestionGroup(selectedExamId, groupId);
+      setBundleNotice({ sectionId, isError: false, text: 'Bundle removed.' });
+      loadStudio(selectedExamId);
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to remove the Bundle.'),
+      });
+    }
+  };
+
+  // #360: the manifest import door. The route writes Pool stock for the Exam's Certificate; the screen
+  // reports how many lines landed and how many were refused, because a silent import is a lie.
+  const handleImportManifest = async (file: File) => {
+    if (!examDetail) return;
+    setIsImportingManifest(true);
+    setImportResult(null);
+    try {
+      const result = await studioApi.uploadExamManifest(examDetail.certId, file);
+      setImportResult(result);
+      if (selectedExamId) {
+        loadExamDetail(selectedExamId);
+        if (activeWorkspaceTab === 'content') loadStudio(selectedExamId);
+      }
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId: 0,
+        isError: true,
+        text: extractErrorMessage(err, 'Import failed.'),
+      });
+    } finally {
+      setIsImportingManifest(false);
+    }
+  };
 
   const loadAssembly = async (examId: number) => {
     setIsLoadingAssembly(true);
@@ -228,6 +574,135 @@ export function ExamsStudioPage() {
       setIsLoadingAudit(false);
     }
   };
+
+  // #359: one audio file per Listening Section. The server names the file and answers the path, so
+  // this stores what came back rather than composing a path. Images share the same door.
+  const handleUploadSectionAudio = async (sectionId: number, file: File) => {
+    if (!selectedExamId) return;
+    const ext = `.${file.name.split('.').pop()?.toLowerCase() ?? ''}`;
+    // The audio control accepts only audio: the route's allow-list also holds images, so checking the
+    // union here let a .png be saved as a section's audio track.
+    if (!(AUDIO_MEDIA_EXTENSIONS as readonly string[]).includes(ext)) {
+      setSectionMediaNotice({
+        sectionId,
+        isError: true,
+        text: `'${ext}' is not audio. Choose ${AUDIO_MEDIA_EXTENSIONS.join(', ')}.`,
+      });
+      return;
+    }
+
+    setUploadingSectionId(sectionId);
+    setSectionMediaNotice(null);
+    try {
+      const uploaded = await studioApi.uploadExamMedia(selectedExamId, file);
+      // Duration is the audio element's own answer; a file we cannot measure gets 1s, which is the
+      // smallest value SaveSectionAudioRequest accepts.
+      const durationSec = Math.max(1, Math.round(await readAudioDurationSec(file)));
+      await studioApi.saveExamAudio(selectedExamId, {
+        sectionId,
+        audioPath: uploaded.path,
+        durationSec,
+        sizeBytes: file.size,
+      });
+      setSectionMediaNotice({ sectionId, isError: false, text: 'Audio saved to this Section.' });
+      loadExamDetail(selectedExamId);
+    } catch (err: unknown) {
+      setSectionMediaNotice({
+        sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Upload failed.'),
+      });
+    } finally {
+      setUploadingSectionId(null);
+    }
+  };
+
+  const handleUploadSectionImage = async (sectionId: number, file: File) => {
+    if (!selectedExamId) return;
+    const ext = `.${file.name.split('.').pop()?.toLowerCase() ?? ''}`;
+    // An image is a different kind from audio: the route's allow-list holds both, so the refusal has
+    // to name what THIS control accepts.
+    if (!(IMAGE_MEDIA_EXTENSIONS as readonly string[]).includes(ext)) {
+      setSectionMediaNotice({
+        sectionId,
+        isError: true,
+        text: `'${ext}' is not an image. Choose ${IMAGE_MEDIA_EXTENSIONS.join(', ')}.`,
+      });
+      return;
+    }
+    setUploadingSectionId(sectionId);
+    setSectionMediaNotice(null);
+    try {
+      const uploaded = await studioApi.uploadExamMedia(selectedExamId, file);
+      setSectionMediaNotice({
+        sectionId,
+        isError: false,
+        text: `Image stored at ${uploaded.path}. Attach it to a Bundle on the Section content tab.`,
+      });
+    } catch (err: unknown) {
+      setSectionMediaNotice({
+        sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Upload failed.'),
+      });
+    } finally {
+      setUploadingSectionId(null);
+    }
+  };
+
+  // #362: the Section content workspace. Loaded lazily when its tab opens, because it is the heaviest
+  // read on the screen (every Section, every Bundle, every child question).
+  const [studioDetail, setStudioDetail] = useState<ExamStudioDetailDto | null>(null);
+  const [isLoadingStudio, setIsLoadingStudio] = useState(false);
+  const [expandedSectionId, setExpandedSectionId] = useState<number | null>(null);
+  const [bundleDraft, setBundleDraft] = useState<{
+    sectionId: number;
+    groupId: number;
+    passage: string;
+    transcript: string;
+    imagePath: string;
+    imageAlt: string;
+    audioPath: string;
+    audioStartMs: string;
+    audioEndMs: string;
+  } | null>(null);
+  const [bundleNotice, setBundleNotice] = useState<{
+    sectionId: number;
+    isError: boolean;
+    text: string;
+  } | null>(null);
+  const [isSavingBundle, setIsSavingBundle] = useState(false);
+  const [newBundleSectionId, setNewBundleSectionId] = useState<number | null>(null);
+  const [newBundleCount, setNewBundleCount] = useState(3);
+  // #362: one child question being edited. Keyed by the pool item id, which is what the update route
+  // names - the position handle cannot be used there.
+  const [questionDraft, setQuestionDraft] = useState<{
+    sectionId: number;
+    itemId: number;
+    stem: string;
+    optionA: string;
+    optionB: string;
+    optionC: string;
+    optionD: string;
+    keyLabel: string;
+    explanation: string;
+  } | null>(null);
+  const [isSavingQuestion, setIsSavingQuestion] = useState(false);
+  // #362: a new child question for an existing Bundle, so a Bundle can grow past the count it was
+  // created with without forking a second Bundle (which would duplicate its passage).
+  const [newChild, setNewChild] = useState<{
+    sectionId: number;
+    groupId: number;
+    stimulusId: number;
+    cefrLevelCode: string;
+    topicId: number;
+    stem: string;
+    explanation: string;
+  } | null>(null);
+  const [isSavingChild, setIsSavingChild] = useState(false);
+  // #360: the Import & Export tab offered only export, so the import route had no caller.
+  const [isImportingManifest, setIsImportingManifest] = useState(false);
+  const [importResult, setImportResult] = useState<AdminImportResultDto | null>(null);
 
   // Create Exam
   const handleCreateExam = async () => {
@@ -315,7 +790,7 @@ export function ExamsStudioPage() {
       });
       setParsedQuestions(res.questions);
     } catch (err: any) {
-      setIngestNotice(err?.detail || err?.title || 'Parsing failed.');
+      setIngestNotice({ text: err?.detail || err?.title || 'Parsing failed.', isError: true });
     } finally {
       setIsParsingIngest(false);
     }
@@ -334,14 +809,30 @@ export function ExamsStudioPage() {
         cefrLevel: ingestLevel,
         topicCode: ingestTopic,
       });
-      setIngestNotice(res.message);
-      setIsQuickIngestOpen(false);
+      setIngestNotice({
+        text: `${res.message} ${res.poolItemsWritten ?? 0} pool items written, ${
+          res.poolItemsBound ?? 0
+        } bound to this section.`,
+        isError: false,
+      });
+      setParsedQuestions([]);
+      setIngestText('');
       loadExamDetail(selectedExamId);
     } catch (err: any) {
-      setIngestNotice(err?.detail || err?.title || 'Commit failed.');
+      setIngestNotice({ text: err?.detail || err?.title || 'Commit failed.', isError: true });
     } finally {
       setIsCommitingIngest(false);
     }
+  };
+
+  // A Section card names its own Section and hands the modal everything it needs to fill it.
+  const openQuickIngestFor = (section: AdminExamSectionProgressDto) => {
+    // SectionProgress carries no CEFR field, so the hint is the level last used for this Section.
+    setIngestSectionId(section.sectionId);
+    setIngestLevel(ingestLevelBySection[section.sectionId] ?? ingestLevel);
+    setIngestNotice(null);
+    setParsedQuestions([]);
+    setIsQuickIngestOpen(true);
   };
 
   // Publish Exam
@@ -650,6 +1141,10 @@ export function ExamsStudioPage() {
                   <Tabs.Indicator />
                   <span>Studio & Quick Ingest</span>
                 </Tabs.Tab>
+                <Tabs.Tab id="content">
+                  <Tabs.Indicator />
+                  <span>Section content</span>
+                </Tabs.Tab>
                 <Tabs.Tab id="publish">
                   <Tabs.Indicator />
                   <span>Publish Readiness</span>
@@ -847,6 +1342,66 @@ export function ExamsStudioPage() {
                         </span>
                       </div>
                       <p className="text-muted italic pt-1">{sec.statusText}</p>
+
+                      {/* #359: a file, never a typed path. The server names the file and answers it. */}
+                      <div className="pt-2 border-t border-border space-y-2">
+                        {sec.modality === 'listening' && (
+                          <div className="space-y-1">
+                            <label
+                              htmlFor={`section-audio-${sec.sectionId}`}
+                              className="block text-xs font-semibold text-foreground"
+                            >
+                              Upload audio track
+                            </label>
+                            <input
+                              id={`section-audio-${sec.sectionId}`}
+                              type="file"
+                              accept={AUDIO_MEDIA_EXTENSIONS.join(",")}
+                              disabled={uploadingSectionId === sec.sectionId}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) void handleUploadSectionAudio(sec.sectionId, file);
+                                e.target.value = '';
+                              }}
+                              className="block w-full text-xs text-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border file:border-border file:bg-surface file:text-xs file:text-foreground"
+                            />
+                          </div>
+                        )}
+
+                        <div className="space-y-1">
+                          <label
+                            htmlFor={`section-image-${sec.sectionId}`}
+                            className="block text-xs font-semibold text-foreground"
+                          >
+                            Upload image
+                          </label>
+                          <input
+                            id={`section-image-${sec.sectionId}`}
+                            type="file"
+                            accept={IMAGE_MEDIA_EXTENSIONS.join(",")}
+                            disabled={uploadingSectionId === sec.sectionId}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) void handleUploadSectionImage(sec.sectionId, file);
+                              e.target.value = '';
+                            }}
+                            className="block w-full text-xs text-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border file:border-border file:bg-surface file:text-xs file:text-foreground"
+                          />
+                        </div>
+
+                        {uploadingSectionId === sec.sectionId && (
+                          <p className="text-muted">Uploading…</p>
+                        )}
+
+                        {sectionMediaNotice?.sectionId === sec.sectionId && (
+                          <Alert status={sectionMediaNotice.isError ? 'danger' : 'success'}>
+                            <Alert.Indicator />
+                            <Alert.Content>
+                              <Alert.Description>{sectionMediaNotice.text}</Alert.Description>
+                            </Alert.Content>
+                          </Alert>
+                        )}
+                      </div>
                     </Card.Content>
                   </Card>
                 ))}
@@ -912,30 +1467,582 @@ export function ExamsStudioPage() {
 
             {/* Tab 4: Studio & Quick Ingest */}
             <Tabs.Panel id="studio" className="pt-4 space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-base font-bold text-foreground">Questions Authoring Tree</h3>
-                <Button size="sm" variant="primary" onPress={() => setIsQuickIngestOpen(true)}>
-                  <Sparkles className="w-3.5 h-3.5 mr-1" />
-                  Quick ingest
-                </Button>
+              <div>
+                <h3 className="text-base font-bold text-foreground">Sections</h3>
+                <p className="text-xs text-muted">
+                  Pick a Section, paste its questions, and the stock is written to the pool and bound
+                  to this Exam.
+                </p>
               </div>
 
-              {ingestNotice && (
-                <Alert status="accent">
+              {ingestNotice && !ingestNotice.isError && (
+                <Alert status="success">
                   <Alert.Indicator />
                   <Alert.Content>
                     <Alert.Title>Notice</Alert.Title>
-                    <Alert.Description>{ingestNotice}</Alert.Description>
+                    <Alert.Description>{ingestNotice.text}</Alert.Description>
                   </Alert.Content>
                 </Alert>
               )}
 
-              <Card className="p-4 text-center text-muted text-sm">
-                Select a section or group to edit questions, or use Quick Ingest to parse structured text directly.
-              </Card>
+              <ul aria-label="Exam sections" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {examDetail?.sectionProgress.map((sec) => (
+                  <li key={sec.sectionId}>
+                    <Card className="border border-border h-full">
+                      <Card.Header className="pb-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-mono text-xs font-bold text-accent">
+                            {sec.sectionCode}
+                          </span>
+                          <Chip
+                            size="sm"
+                            variant="soft"
+                            color={sec.isComplete ? 'success' : 'warning'}
+                          >
+                            {sec.isComplete ? 'Complete' : 'Incomplete'}
+                          </Chip>
+                        </div>
+                        <Card.Title className="text-base mt-1">{sec.sectionName}</Card.Title>
+                        <Card.Description className="text-xs">
+                          Modality: {formatModalityLabel(sec.modality)}
+                        </Card.Description>
+                      </Card.Header>
+                      <Card.Content className="space-y-3 border-t border-border pt-3">
+                        <div className="flex justify-between items-baseline text-xs">
+                          <span className="text-muted">Questions bound</span>
+                          <span className="font-mono-tabular font-medium text-foreground">
+                            {sec.questionCount} / {sec.expectedQuestionCount}
+                          </span>
+                        </div>
+                        <ProgressBar
+                          aria-label={`${sec.sectionCode} bound questions`}
+                          color={sec.isComplete ? 'success' : 'accent'}
+                          value={sec.questionCount}
+                          maxValue={Math.max(sec.expectedQuestionCount, 1)}
+                          size="sm"
+                        >
+                          <ProgressBar.Track>
+                            <ProgressBar.Fill />
+                          </ProgressBar.Track>
+                        </ProgressBar>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onPress={() => openQuickIngestFor(sec)}
+                        >
+                          <Sparkles className="w-3.5 h-3.5 mr-1" />
+                          Paste questions
+                        </Button>
+                      </Card.Content>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
             </Tabs.Panel>
 
-            {/* Tab 5: Publish Readiness */}
+            {/* Tab 5: Section content — Bundles of passage + audio + image with their children (#362) */}
+            <Tabs.Panel id="content" className="pt-4 space-y-4">
+              <div>
+                <h3 className="text-base font-bold text-foreground">Section content</h3>
+                <p className="text-xs text-muted">
+                  A Section is Bundles. Each Bundle is its shared passage, audio track, image and
+                  transcript, plus the questions that refer to it — the shape a real Exam has.
+                </p>
+              </div>
+
+              {isLoadingStudio && <p className="text-sm text-muted">Loading Section content…</p>}
+
+              {bundleNotice && (
+                <Alert status={bundleNotice.isError ? 'danger' : 'success'}>
+                  <Alert.Indicator />
+                  <Alert.Content>
+                    <Alert.Title>{bundleNotice.isError ? 'Refused' : 'Notice'}</Alert.Title>
+                    <Alert.Description>{bundleNotice.text}</Alert.Description>
+                  </Alert.Content>
+                </Alert>
+              )}
+
+              <ul aria-label="Section bundles" className="space-y-4">
+                {(studioDetail?.sections ?? []).map((sec) => (
+                  <li key={sec.sectionId}>
+                    <Card className="border border-border">
+                      <Card.Header className="pb-2">
+                        <div className="flex flex-wrap justify-between items-center gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-accent">{sec.code}</span>
+                            <Card.Title className="text-base">{sec.name}</Card.Title>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Chip size="sm" variant="soft" color="default">
+                              {sec.groups.length} {sec.groups.length === 1 ? 'bundle' : 'bundles'}
+                            </Chip>
+                            <Chip
+                              size="sm"
+                              variant="soft"
+                              color={sec.currentQuestionCount >= sec.expectedQuestionCount ? 'success' : 'warning'}
+                            >
+                              {sec.currentQuestionCount} / {sec.expectedQuestionCount}
+                            </Chip>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onPress={() =>
+                                setExpandedSectionId(
+                                  expandedSectionId === sec.sectionId ? null : sec.sectionId,
+                                )
+                              }
+                            >
+                              {expandedSectionId === sec.sectionId ? 'Hide' : 'Show'} bundles
+                            </Button>
+                          </div>
+                        </div>
+                      </Card.Header>
+
+                      {expandedSectionId === sec.sectionId && (
+                        <Card.Content className="space-y-3 border-t border-border pt-3">
+                          {sec.groups.length === 0 && (
+                            <p className="text-xs text-muted">
+                              No bundles yet. Create one to give this Section its passage, audio or image.
+                            </p>
+                          )}
+
+                          {sec.groups.map((bundle) => (
+                            <div
+                              key={bundle.groupId}
+                              className="p-3 rounded border border-border bg-surface space-y-2"
+                            >
+                              <div className="flex flex-wrap justify-between items-center gap-2">
+                                <span className="text-xs font-semibold text-foreground">
+                                  Bundle #{bundle.groupId} · {bundle.questions.length}{' '}
+                                  {bundle.questions.length === 1 ? 'question' : 'questions'}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onPress={() => startEditingBundle(sec.sectionId, bundle.groupId)}
+                                  >
+                                    Edit stimulus
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onPress={() => void handleDeleteBundle(sec.sectionId, bundle.groupId)}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                                <div className="flex gap-1">
+                                  <dt className="text-muted">Passage:</dt>
+                                  <dd className="text-foreground">
+                                    {bundle.passage ? `${bundle.passage.slice(0, 60)}…` : '—'}
+                                  </dd>
+                                </div>
+                                <div className="flex gap-1">
+                                  <dt className="text-muted">Audio:</dt>
+                                  <dd className="text-foreground">
+                                    {bundle.audioPath ? 'attached' : '—'}
+                                  </dd>
+                                </div>
+                                <div className="flex gap-1">
+                                  <dt className="text-muted">Image:</dt>
+                                  <dd className="text-foreground">
+                                    {bundle.imagePath ? bundle.imageAlt || 'alt missing' : '—'}
+                                  </dd>
+                                </div>
+                                <div className="flex gap-1">
+                                  <dt className="text-muted">Transcript:</dt>
+                                  <dd className="text-foreground">
+                                    {bundle.transcript ? 'present' : '—'}
+                                  </dd>
+                                </div>
+                              </dl>
+
+                              <ul className="space-y-1 pl-3 border-l border-separator">
+                                {bundle.questions.map((q) => (
+                                  <li key={q.questionId} className="text-xs text-foreground space-y-1">
+                                    <div className="flex flex-wrap justify-between items-start gap-2">
+                                      <span>{q.stem}</span>
+                                      <div className="flex items-center gap-1">
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          aria-label={`Move question ${q.displayOrder} up`}
+                                          isDisabled={q.displayOrder <= 1}
+                                          onPress={() => {
+                                            const ordered = [...bundle.questions]
+                                              .sort((a, b) => a.displayOrder - b.displayOrder)
+                                              .map((x) => x.questionId);
+                                            const i = ordered.indexOf(q.questionId);
+                                            if (i <= 0) return;
+                                            [ordered[i - 1], ordered[i]] = [ordered[i], ordered[i - 1]];
+                                            void handleReorder(sec.sectionId, ordered);
+                                          }}
+                                        >
+                                          <ArrowUp className="w-3.5 h-3.5" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          aria-label={`Move question ${q.displayOrder} down`}
+                                          isDisabled={q.displayOrder >= bundle.questions.length}
+                                          onPress={() => {
+                                            const ordered = [...bundle.questions]
+                                              .sort((a, b) => a.displayOrder - b.displayOrder)
+                                              .map((x) => x.questionId);
+                                            const i = ordered.indexOf(q.questionId);
+                                            if (i < 0 || i >= ordered.length - 1) return;
+                                            [ordered[i + 1], ordered[i]] = [ordered[i], ordered[i + 1]];
+                                            void handleReorder(sec.sectionId, ordered);
+                                          }}
+                                        >
+                                          <ArrowDown className="w-3.5 h-3.5" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onPress={() => startEditingQuestion(sec.sectionId, q)}
+                                        >
+                                          Edit question
+                                        </Button>
+                                      </div>
+                                    </div>
+
+                                    {questionDraft?.itemId === q.itemId && (
+                                      <Form validationBehavior="aria" className="space-y-2 pt-2">
+                                        <TextField
+                                          isRequired
+                                          name="stem"
+                                          value={questionDraft.stem}
+                                          onChange={(v) => setQuestionDraft({ ...questionDraft, stem: v })}
+                                        >
+                                          <Label className="text-xs">Stem</Label>
+                                          <TextArea rows={2} className="text-xs" />
+                                        </TextField>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                          {(['A', 'B', 'C', 'D'] as const).map((label) => {
+                                            const field = `option${label}` as
+                                              | 'optionA'
+                                              | 'optionB'
+                                              | 'optionC'
+                                              | 'optionD';
+                                            return (
+                                              <TextField
+                                                key={label}
+                                                name={field}
+                                                value={questionDraft[field]}
+                                                onChange={(v) =>
+                                                  setQuestionDraft({ ...questionDraft, [field]: v })
+                                                }
+                                              >
+                                                <Label className="text-xs">Option ({label})</Label>
+                                                <Input className="text-xs" />
+                                              </TextField>
+                                            );
+                                          })}
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                          <TextField
+                                            name="keyLabel"
+                                            value={questionDraft.keyLabel}
+                                            onChange={(v) => setQuestionDraft({ ...questionDraft, keyLabel: v })}
+                                          >
+                                            <Label className="text-xs">Key (A, B, C, D; or A,C for multi-select)</Label>
+                                            <Input className="text-xs font-mono uppercase" />
+                                          </TextField>
+                                          <TextField
+                                            isRequired
+                                            name="explanation"
+                                            value={questionDraft.explanation}
+                                            onChange={(v) =>
+                                              setQuestionDraft({ ...questionDraft, explanation: v })
+                                            }
+                                          >
+                                            <Label className="text-xs">Explanation</Label>
+                                            <Input className="text-xs" />
+                                          </TextField>
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <Button
+                                            size="sm"
+                                            variant="primary"
+                                            onPress={() => void handleSaveQuestion()}
+                                            isDisabled={isSavingQuestion}
+                                          >
+                                            Save question
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            onPress={() => setQuestionDraft(null)}
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      </Form>
+                                    )}
+                                  </li>
+                                ))}
+
+                                {/* #362: grow an existing Bundle instead of forking a second one,
+                                    which would duplicate the passage this Bundle already owns. */}
+                                {newChild?.groupId === bundle.groupId ? (
+                                  <li className="pt-2">
+                                    <Form validationBehavior="aria" className="space-y-2">
+                                      <TextField
+                                        isRequired
+                                        name="newChildStem"
+                                        value={newChild.stem}
+                                        onChange={(v) => setNewChild({ ...newChild, stem: v })}
+                                      >
+                                        <Label className="text-xs">New question stem</Label>
+                                        <TextArea rows={2} className="text-xs" />
+                                      </TextField>
+                                      <TextField
+                                        name="newChildExplanation"
+                                        value={newChild.explanation}
+                                        onChange={(v) => setNewChild({ ...newChild, explanation: v })}
+                                      >
+                                        <Label className="text-xs">Explanation</Label>
+                                        <Input className="text-xs" />
+                                      </TextField>
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          variant="primary"
+                                          onPress={() => void handleCreateChild()}
+                                          isDisabled={isSavingChild || newChild.stem.trim() === ''}
+                                        >
+                                          Add to Bundle
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="secondary"
+                                          onPress={() => setNewChild(null)}
+                                        >
+                                          Cancel
+                                        </Button>
+                                      </div>
+                                    </Form>
+                                  </li>
+                                ) : (
+                                  <li className="pt-1">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onPress={() =>
+                                        setNewChild({
+                                          sectionId: sec.sectionId,
+                                          groupId: bundle.groupId,
+                                          stimulusId: bundle.groupId,
+                                          cefrLevelCode: 'B1',
+                                          topicId: bundle.questions[0]?.topicId ?? 0,
+                                          stem: '',
+                                          explanation: '',
+                                        })
+                                      }
+                                    >
+                                      <Plus className="w-3.5 h-3.5 mr-1" />
+                                      Add question
+                                    </Button>
+                                  </li>
+                                )}
+                              </ul>
+
+                              {bundleDraft?.groupId === bundle.groupId && (
+                                <Form validationBehavior="aria" className="space-y-2 pt-2 border-t border-border">
+                                  <TextField
+                                    name="passage"
+                                    value={bundleDraft.passage}
+                                    onChange={(v) => setBundleDraft({ ...bundleDraft, passage: v })}
+                                  >
+                                    <Label className="text-xs">Passage</Label>
+                                    <TextArea rows={3} className="text-xs" />
+                                  </TextField>
+                                  <TextField
+                                    name="transcript"
+                                    value={bundleDraft.transcript}
+                                    onChange={(v) => setBundleDraft({ ...bundleDraft, transcript: v })}
+                                  >
+                                    <Label className="text-xs">Transcript</Label>
+                                    <TextArea rows={2} className="text-xs" />
+                                  </TextField>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                      <span className="block text-xs font-semibold text-foreground">
+                                        Bundle image
+                                      </span>
+                                      <input
+                                        aria-label="Upload bundle image"
+                                        type="file"
+                                        accept={IMAGE_MEDIA_EXTENSIONS.join(",")}
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          e.target.value = '';
+                                          if (!file || !selectedExamId) return;
+                                          void studioApi
+                                            .uploadExamMedia(selectedExamId, file)
+                                            .then((uploaded) =>
+                                              setBundleDraft({ ...bundleDraft, imagePath: uploaded.path }),
+                                            )
+                                            .catch((err: unknown) =>
+                                              setBundleNotice({
+                                                sectionId: bundleDraft.sectionId,
+                                                isError: true,
+                                                text: extractErrorMessage(err, 'Image upload failed.'),
+                                              }),
+                                            );
+                                        }}
+                                        className="block w-full text-xs text-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border file:border-border file:bg-surface file:text-xs file:text-foreground"
+                                      />
+                                      <p className="text-xs text-muted font-mono">
+                                        {bundleDraft.imagePath || 'no image'}
+                                      </p>
+                                    </div>
+                                    <TextField
+                                      name="imageAlt"
+                                      value={bundleDraft.imageAlt}
+                                      onChange={(v) => setBundleDraft({ ...bundleDraft, imageAlt: v })}
+                                    >
+                                      <Label className="text-xs">Image alt text</Label>
+                                      <Input className="text-xs" />
+                                    </TextField>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="block text-xs font-semibold text-foreground">
+                                      Bundle audio
+                                    </span>
+                                    <input
+                                      aria-label="Upload bundle audio"
+                                      type="file"
+                                      accept={AUDIO_MEDIA_EXTENSIONS.join(",")}
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        e.target.value = '';
+                                        if (!file || !selectedExamId) return;
+                                        void studioApi
+                                          .uploadExamMedia(selectedExamId, file)
+                                          .then((uploaded) =>
+                                            setBundleDraft({ ...bundleDraft, audioPath: uploaded.path }),
+                                          )
+                                          .catch((err: unknown) =>
+                                            setBundleNotice({
+                                              sectionId: bundleDraft.sectionId,
+                                              isError: true,
+                                              text: extractErrorMessage(err, 'Audio upload failed.'),
+                                            }),
+                                          );
+                                      }}
+                                      className="block w-full text-xs text-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border file:border-border file:bg-surface file:text-xs file:text-foreground"
+                                    />
+                                    <p className="text-xs text-muted font-mono">
+                                      {bundleDraft.audioPath || 'no audio'}
+                                    </p>
+                                    {/* #362: the slice of the section's master track this Bundle plays.
+                                        Carried on every save, because the route assigns it unconditionally. */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <TextField
+                                        name="audioStartMs"
+                                        value={bundleDraft.audioStartMs}
+                                        onChange={(v) => setBundleDraft({ ...bundleDraft, audioStartMs: v })}
+                                      >
+                                        <Label className="text-xs">Audio start (ms)</Label>
+                                        <Input className="text-xs font-mono-tabular" inputMode="numeric" />
+                                      </TextField>
+                                      <TextField
+                                        name="audioEndMs"
+                                        value={bundleDraft.audioEndMs}
+                                        onChange={(v) => setBundleDraft({ ...bundleDraft, audioEndMs: v })}
+                                      >
+                                        <Label className="text-xs">Audio end (ms)</Label>
+                                        <Input className="text-xs font-mono-tabular" inputMode="numeric" />
+                                      </TextField>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2 pt-1">
+                                    <Button
+                                      size="sm"
+                                      variant="primary"
+                                      onPress={() => void handleSaveBundle()}
+                                      isDisabled={isSavingBundle}
+                                    >
+                                      Save Bundle
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onPress={() => setBundleDraft(null)}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </Form>
+                              )}
+                            </div>
+                          ))}
+
+                          <div className="pt-1">
+                            {newBundleSectionId === sec.sectionId ? (
+                              <div className="flex flex-wrap items-end gap-2">
+                                <div className="space-y-1">
+                                  <label
+                                    htmlFor={`new-bundle-count-${sec.sectionId}`}
+                                    className="block text-xs font-semibold text-foreground"
+                                  >
+                                    Questions in this Bundle
+                                  </label>
+                                  <input
+                                    id={`new-bundle-count-${sec.sectionId}`}
+                                    type="number"
+                                    min={1}
+                                    max={50}
+                                    value={newBundleCount}
+                                    onChange={(e) => setNewBundleCount(Math.max(1, Number(e.target.value) || 1))}
+                                    className="w-24 px-2 py-1 rounded border border-border bg-surface text-foreground font-mono-tabular text-xs"
+                                  />
+                                </div>
+                                <span className="text-xs text-muted pb-1">Level:</span>
+                                {['A2', 'B1', 'B2', 'C1'].map((lvl) => (
+                                  <Button
+                                    key={lvl}
+                                    size="sm"
+                                    variant="secondary"
+                                    onPress={() => void handleCreateBundle(sec.sectionId, lvl, newBundleCount)}
+                                  >
+                                    {lvl}
+                                  </Button>
+                                ))}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onPress={() => setNewBundleSectionId(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onPress={() => setNewBundleSectionId(sec.sectionId)}
+                              >
+                                <Plus className="w-3.5 h-3.5 mr-1" />
+                                Add bundle
+                              </Button>
+                            )}
+                          </div>
+                        </Card.Content>
+                      )}
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            </Tabs.Panel>
+
+            {/* Tab 6: Publish Readiness */}
             <Tabs.Panel id="publish" className="pt-4 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -1033,25 +2140,62 @@ export function ExamsStudioPage() {
                   </Card.Description>
                 </Card.Header>
                 <Card.Content className="space-y-4">
-                  <div className="flex gap-3">
-                    <a
-                      href={`/api/admin/exams/${selectedExamId}/export?format=json`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-foreground text-xs font-medium no-underline hover:bg-surface-secondary"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Export JSON manifest
-                    </a>
-                    <a
-                      href={`/api/admin/exams/${selectedExamId}/export?format=zip`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-foreground text-xs font-medium no-underline hover:bg-surface-secondary"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Export ZIP package
-                    </a>
+                  {/* #360: the tab was called Import & Export and offered only export, so the client
+                      method that names the import route had no caller. This is that half. */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-foreground">Import a package</h4>
+                    <p className="text-xs text-muted">
+                      A JSON manifest or a ZIP package writes Pool stock for this Exam&apos;s Certificate.
+                      Per-line errors come back in the result.
+                    </p>
+                    <input
+                      aria-label="Import manifest or package"
+                      type="file"
+                      accept=".json,.zip"
+                      disabled={isImportingManifest}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        if (file) void handleImportManifest(file);
+                      }}
+                      className="block w-full text-xs text-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border file:border-border file:bg-surface file:text-xs file:text-foreground"
+                    />
+                    {isImportingManifest && <p className="text-muted">Importing…</p>}
+                    {importResult && (
+                      <Alert status={importResult.errorCount > 0 ? 'warning' : 'success'}>
+                        <Alert.Indicator />
+                        <Alert.Content>
+                          <Alert.Description>
+                            Batch {importResult.batchId}: {importResult.questionCount} question(s),{' '}
+                            {importResult.errorCount} error(s), {importResult.warningCount} warning(s).
+                          </Alert.Description>
+                        </Alert.Content>
+                      </Alert>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-border space-y-2">
+                    <h4 className="text-xs font-semibold text-foreground">Export this Exam</h4>
+                    <div className="flex gap-3">
+                      <a
+                        href={`/api/admin/exams/${selectedExamId}/export?format=json`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-foreground text-xs font-medium no-underline hover:bg-surface-secondary"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Export JSON manifest
+                      </a>
+                      <a
+                        href={`/api/admin/exams/${selectedExamId}/export?format=zip`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-foreground text-xs font-medium no-underline hover:bg-surface-secondary"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Export ZIP package
+                      </a>
+                    </div>
                   </div>
                 </Card.Content>
               </Card>
@@ -1069,13 +2213,28 @@ export function ExamsStudioPage() {
               <Modal.Heading>Quick Ingest Questions</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="space-y-4">
+              {ingestNotice && (
+                <Alert status={ingestNotice.isError ? 'danger' : 'success'}>
+                  <Alert.Indicator />
+                  <Alert.Content>
+                    <Alert.Title>
+                      {ingestNotice.isError ? 'Quick ingest failed' : 'Committed'}
+                    </Alert.Title>
+                    <Alert.Description>{ingestNotice.text}</Alert.Description>
+                  </Alert.Content>
+                </Alert>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Select
                   aria-label="Target section"
                   className="w-full"
                   value={ingestSectionId ? String(ingestSectionId) : undefined}
                   onChange={(key) => {
-                    if (key != null) setIngestSectionId(Number(key));
+                    if (key != null) {
+                      setIngestSectionId(Number(key));
+                      setParsedQuestions([]);
+                    }
                   }}
                 >
                   <Label className="text-xs font-semibold text-foreground">Target section</Label>
@@ -1104,7 +2263,11 @@ export function ExamsStudioPage() {
                   className="w-full"
                   value={ingestLevel}
                   onChange={(key) => {
-                    if (key != null) setIngestLevel(String(key));
+                    if (key != null) {
+                      const level = String(key);
+                      setIngestLevel(level);
+                      setIngestLevelBySection((prev) => ({ ...prev, [ingestSectionId]: level }));
+                    }
                   }}
                 >
                   <Label className="text-xs font-semibold text-foreground">CEFR level</Label>
@@ -1138,6 +2301,24 @@ export function ExamsStudioPage() {
                   />
                 </div>
               </div>
+
+              {ingestSample && (
+                <Disclosure>
+                  <Disclosure.Heading>
+                    <Disclosure.Trigger className="text-xs font-semibold text-accent">
+                      {ingestSample.formatDescription}
+                      <Disclosure.Indicator className="w-4 h-4" />
+                    </Disclosure.Trigger>
+                  </Disclosure.Heading>
+                  <Disclosure.Content>
+                    <Disclosure.Body>
+                      <pre className="p-3 rounded-md border border-border bg-surface-secondary text-foreground font-mono text-xs whitespace-pre-wrap overflow-x-auto">
+                        {ingestSample.template}
+                      </pre>
+                    </Disclosure.Body>
+                  </Disclosure.Content>
+                </Disclosure>
+              )}
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-foreground">Raw questions text</label>

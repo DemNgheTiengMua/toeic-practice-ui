@@ -29,6 +29,16 @@ const RETIRED_CLIENT_METHODS = [
   'discardWorkbenchRecord',
   'resubmitWorkbenchRecord',
   'uploadPoolManifest',
+  // These four named POST/PUT/DELETE /exams/{id}/questions, which the server does not map: the write
+  // routes were retired with the legacy question model. Only GET survives there.
+  'createQuestion',
+  'saveQuestion',
+  'deleteQuestion',
+  'createQuestionGroup',
+  // Superseded by the studio read or by withdraw; no screen calls them.
+  'getCertificateBlueprint',
+  'deleteExam',
+  'getExamQuestions',
 ];
 
 describe('admin studio client surface (#360)', () => {
@@ -58,14 +68,13 @@ describe('admin studio client surface (#360)', () => {
       'getLessons',
       // Kept for the Section content workspace (#362): each names a route that exists today.
       'getExamStudio',
-      'getExamQuestions',
       'createExamCluster',
       'updateQuestionGroup',
       'deleteQuestionGroup',
-      'reorderExamItems',
       'updatePoolItem',
       'saveExamAudio',
       'getQuickIngestSample',
+      'uploadExamMedia',
     ]) {
       expect(typeof (studioApi as Record<string, unknown>)[method]).toBe('function');
     }

@@ -15,14 +15,12 @@ import type {
   CreateAdminExamRequest,
   UpdateAdminExamRequest,
   SaveExamSectionAudioRequest,
+  AdminExamMediaUploadResultDto,
   ExamAuditResultDto,
   AdminPublishExamResultDto,
   ExamStudioDetailDto,
   ExamAssemblyDto,
   AdminExamQuestionsDto,
-  CreateQuestionRequest,
-  UpdateQuestionRequest,
-  CreateQuestionGroupRequest,
   UpdateQuestionGroupRequest,
   ReorderSectionItemsRequest,
   CreateExamClusterRequest,
@@ -51,8 +49,8 @@ export const studioApi = {
   getCertificates: () => apiFetch<AdminCertificateSummaryDto[]>('/api/admin/certificates'),
   getCertificatePresets: () =>
     apiFetch<CertificateBlueprintPresetDto[]>('/api/admin/certificates/presets'),
-  getCertificateBlueprint: (certId: number) =>
-    apiFetch<CertificateBlueprintDetailDto>(`/api/admin/certificates/${certId}/blueprint`),
+  // #360: getCertificateBlueprint had no caller. The wizard owns a certificate's configuration, and it
+  // saves through saveCertificateWizard below rather than loading a blueprint to edit.
   saveCertificateWizard: (body: SaveCertificateWizardRequest) =>
     apiFetch<SaveCertificateWizardResultDto>('/api/admin/certificates/wizard', {
       method: 'POST',
@@ -91,10 +89,8 @@ export const studioApi = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
-  deleteExam: (examId: number) =>
-    apiFetch<void>(`/api/admin/exams/${examId}`, {
-      method: 'DELETE',
-    }),
+  // #360: deleteExam had no caller. Withdraw is the reversible act an admin screen offers; a hard
+  // delete of a paper a learner may have sat is not something this client should be able to reach.
   publishExam: (examId: number) =>
     apiFetch<AdminPublishExamResultDto>(`/api/admin/exams/${examId}/publish`, {
       method: 'POST',
@@ -110,32 +106,30 @@ export const studioApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  /**
+   * #359: one file to the exam's own media directory. The server names the file and answers the path
+   * to store, so nothing here composes a path. Images and audio share this door; there is no video
+   * door, because the schema has no column for one.
+   */
+  uploadExamMedia: async (examId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiFetch<AdminExamMediaUploadResultDto>(`/api/admin/exams/${examId}/media`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
   getExamAudit: (examId: number) => apiFetch<ExamAuditResultDto>(`/api/admin/exams/${examId}/audit`),
   getExamStudio: (examId: number) =>
     apiFetch<ExamStudioDetailDto>(`/api/admin/exams/${examId}/studio`),
   getExamAssembly: (examId: number) =>
     apiFetch<ExamAssemblyDto>(`/api/admin/exams/${examId}/assembly`),
-  getExamQuestions: (examId: number) =>
-    apiFetch<AdminExamQuestionsDto>(`/api/admin/exams/${examId}/questions`),
-  createQuestion: (examId: number, body: CreateQuestionRequest) =>
-    apiFetch<{ questionId: number }>(`/api/admin/exams/${examId}/questions`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  saveQuestion: (examId: number, questionId: number, body: UpdateQuestionRequest) =>
-    apiFetch<void>(`/api/admin/exams/${examId}/questions/${questionId}`, {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    }),
-  deleteQuestion: (examId: number, questionId: number) =>
-    apiFetch<void>(`/api/admin/exams/${examId}/questions/${questionId}`, {
-      method: 'DELETE',
-    }),
-  createQuestionGroup: (examId: number, body: CreateQuestionGroupRequest) =>
-    apiFetch<{ groupId: number }>(`/api/admin/exams/${examId}/studio/groups`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
+  // #360: getExamQuestions had no caller. getExamStudio above returns the same paper shaped as the
+  // editor's Bundle tree, which is what every screen reads.
+  // #360: createQuestion / saveQuestion / deleteQuestion / createQuestionGroup are GONE. The server
+  // maps only GET /exams/{id}/questions; the write routes were retired with the legacy question model
+  // (#265) and a caller got a 404. Authoring writes the pool (POST /items) and the Bundle
+  // (PUT /studio/groups/{id}); those are below.
   updateQuestionGroup: (examId: number, groupId: number, body: UpdateQuestionGroupRequest) =>
     apiFetch<void>(`/api/admin/exams/${examId}/studio/groups/${groupId}`, {
       method: 'PUT',
