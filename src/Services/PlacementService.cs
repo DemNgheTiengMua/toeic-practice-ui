@@ -242,14 +242,27 @@ public sealed partial class PlacementService(
 
                 if (existingPlacement is not null)
                 {
+                    // #383: a placement stays 'in_progress' while its free responses are graded, but its
+                    // ATTEMPT is already submitted by then. Resuming that one handed the learner a
+                    // sitting whose every answer is refused ("Exam attempt is not in progress"), and
+                    // replaced the only control that works (the grading status / result page).
+                    // Only a placement whose attempt is still open can be resumed.
+                    var attemptOpen = existingPlacement.ExamAttempt is not null
+                        && existingPlacement.ExamAttempt.Status == AttemptStatus.InProgress.ToCode();
+
                     if (existingPlacement.ExamAttempt is not null && DateTimeOffset.UtcNow >= existingPlacement.ExamAttempt.ExpiresAt)
                     {
                         await SubmitPlacementInternalAsync(existingPlacement.PlacementId, userId, isAutoSubmit: true, cancellationToken);
                     }
-                    else
+                    else if (attemptOpen)
                     {
                         await tx.CommitAsync(cancellationToken);
                         return ToPlacementTestInfo(existingPlacement, examId, creditsCharged: 0);
+                    }
+                    else
+                    {
+                        // Submitted and awaiting grading: not a sitting to resume, and not a reason to
+                        // refuse a new one either. Leave it alone and fall through.
                     }
                 }
 

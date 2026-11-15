@@ -29,7 +29,15 @@ public sealed partial class AttemptEngine
         var question = questions.FirstOrDefault(q => q.Id == questionId)
             ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found in attempt.");
 
-        if (attempt.ActiveSkillId.HasValue && question.Section.SkillId != attempt.ActiveSkillId.Value)
+        // #383: a PLACEMENT attempt is ONE sitting across every skill it scopes, so locking a question
+        // to `ActiveSkillId` refused every answer after the first skill: measured on the seeded
+        // 4-skill placement, q44 (reading) answered AFTER q43/q91-92 (listening) was rejected with
+        // "This question is not in the active exam skill", so a learner could never finish the paper.
+        // PlacementScope is set on exactly the placement sittings; the active skill still governs a
+        // mock exam, where it is a real phase.
+        var isPlacement = !string.IsNullOrEmpty(attempt.PlacementScope);
+
+        if (!isPlacement && attempt.ActiveSkillId.HasValue && question.Section.SkillId != attempt.ActiveSkillId.Value)
         {
             throw new AttemptEngineException(
                 AttemptEngineException.WrongPhase,
