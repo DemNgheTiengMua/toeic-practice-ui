@@ -226,13 +226,7 @@ public sealed partial class AdminExamService
         // per (skill, band), so it binds one section per skill and nothing else. Auditing it against all
         // twenty TOEIC sections asked for 200 items on a seven-item paper and refused publication with
         // fifteen "section declares N but holds 0" errors - measured on the imported Reading B2 form.
-        var relevantSections = exam.Purpose switch
-        {
-            "speaking_practice" => sections.Where(s => s.Modality == "speaking").ToList(),
-            "writing_practice" => sections.Where(s => s.Modality == "writing").ToList(),
-            "placement" => sections.Where(s => rosterBySection.ContainsKey(s.SectionId)).ToList(),
-            _ => sections
-        };
+        var relevantSections = ScopeSections(exam, sections, rosterBySection.Keys);
 
         var relevantSectionIds = relevantSections.Select(s => s.SectionId).ToHashSet();
         var relevantGroups = groups.Where(g => relevantSectionIds.Contains(g.SectionId)).ToList();
@@ -260,7 +254,26 @@ public sealed partial class AdminExamService
             missingItems.Add(msg);
         }
 
-        if (exam.QuestionCount.HasValue && totalQuestions < exam.QuestionCount.Value)
+        // #382: a paper's size rule, in one place, because three checks asked it differently.
+        //
+        // A PRODUCTION paper must fill every section to its certificate-level blueprint: that is what
+        // "publish a paper" means when a learner is paying for a complete form.
+        //
+        // A PLACEMENT paper is a slice across skills - its stock is drawn per (skill, band), so it
+        // binds one section per skill and never fills any of them.
+        //
+        // A DEMO-tier paper is also a slice: it is sample content, and the demo seed carries one or two
+        // items in a section to prove the sitting works. Holding it to a 200-item blueprint made every
+        // demo paper unpublishable, which is how the seed ended up writing Status='published' directly
+        // and shipping five papers that fail their own audit. The rule now matches the tier: a demo
+        // paper declares its real size in QuestionCount and is judged against that.
+        var isSlice = IsSlicePaper(exam);
+
+        // #382: a demo-tier paper's QuestionCount is the size of the FORM it samples (ETS 2024 declares
+        // 200), not a promise this seeded slice keeps. Holding it as a floor left the two shipped mock
+        // papers unpublishable while their content is complete for what they carry. Production papers
+        // still answer to it: there the number is the contract with the learner.
+        if (!isSlice && exam.QuestionCount.HasValue && totalQuestions < exam.QuestionCount.Value)
         {
             var diff = exam.QuestionCount.Value - totalQuestions;
             var msg = $"Exam requires at least {exam.QuestionCount.Value} questions, but only has {totalQuestions} ({diff} missing).";
@@ -283,7 +296,11 @@ public sealed partial class AdminExamService
             // blueprint - ExpectedQuestionCount is a certificate-level number shared by every paper on
             // that section, so a 7-item slice can never satisfy the 16 a full form declares. The same
             // rule INV-1 applies; the two are deliberately kept in step.
-            if (exam.Purpose != "placement" && secRendered < sec.ExpectedQuestionCount)
+            //
+            // #382: a demo-tier paper is the same shape. The seed carries one or two items per section
+            // to prove the sitting works; holding it to a 200-item blueprint left five shipped papers
+            // unpublishable by their own audit.
+            if (!isSlice && secRendered < sec.ExpectedQuestionCount)
             {
                 var diff = sec.ExpectedQuestionCount - secRendered;
                 var msg = $"Section [{sec.Code}] '{sec.Name}' requires {sec.ExpectedQuestionCount} questions, but only has {secRendered} ({diff} missing).";
@@ -297,7 +314,10 @@ public sealed partial class AdminExamService
                 missingItems.Add(msg);
             }
 
-            if (sec.ClusterSize > 1 && secGroups.Count > 0)
+            // #382: cluster size is blueprint conformance too — a section that asks for 3 questions per
+            // stimulus is describing a full form. A demo slice carrying one question per stimulus is
+            // valid content, and the per-question checks below still judge it.
+            if (sec.ClusterSize > 1 && secGroups.Count > 0 && !isSlice)
             {
                 foreach (var g in secGroups)
                 {

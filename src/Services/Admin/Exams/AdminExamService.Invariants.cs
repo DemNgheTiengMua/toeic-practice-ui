@@ -88,7 +88,18 @@ public sealed partial class AdminExamService
         int RenderedIn(int sectionId) =>
             rosterBySection.FirstOrDefault(r => r.SectionId == sectionId)?.Count ?? 0;
 
-        var sectionsBySkill = sections.GroupBy(s => s.SkillId).ToDictionary(g => g.Key, g => g.ToList());
+        // #382: which sections this paper is actually judged on. A practice paper covers one modality,
+        // so judging a writing paper against the certificate's reading and listening sections demanded
+        // 80 items on a two-task paper - measured: the seeded IELTS writing paper was refused with
+        // "section [REC] declares 40 but holds 0" and could never be published. A PLACEMENT paper is a
+        // slice across skills and binds one section per skill, so it is judged on what it binds.
+        // The same rule already governs the content audit; keeping one function means the rail and the
+        // refusal cannot disagree about which sections exist for this paper.
+        var relevantSections = ScopeSections(exam, sections, rosterBySection.Select(r => r.SectionId));
+        var relevantSectionIds = relevantSections.Select(s => s.SectionId).ToHashSet();
+
+        var sectionsBySkill = relevantSections.GroupBy(s => s.SkillId).ToDictionary(g => g.Key, g => g.ToList());
+        var skillsInScope = skillRows.Where(s => sectionsBySkill.ContainsKey(s.SkillId)).ToList();
 
         // ---- INV-1: every enabled skill has a section, every section holds what it declares ----------
         var inv1 = new List<ExamAuditIssueDto>();
@@ -102,7 +113,7 @@ public sealed partial class AdminExamService
         //
         // A binding with no rendered position is therefore its own deficit, named separately below:
         // it is stock on the paper that no sitting can reach.
-        foreach (var skill in skillRows)
+        foreach (var skill in skillsInScope)
         {
             if (!sectionsBySkill.TryGetValue(skill.SkillId, out var skillSections) || skillSections.Count == 0)
             {
@@ -128,7 +139,9 @@ public sealed partial class AdminExamService
                 // The check that still means something is the ORPHAN check below: every binding must have
                 // a position behind it. And a placement paper is still held to "declares something",
                 // which `totalQuestions` enforces.
-                if (exam.Purpose != "placement" && rendered != declared)
+                // #382: a slice paper (placement or demo tier) is not held to the section blueprint, for
+                // the same reason the content audit no longer is. The orphan check below still applies.
+                if (!IsSlicePaper(exam) && rendered != declared)
                 {
                     var msg = rendered < declared
                         ? $"INV-1: section [{sec.Code}] '{sec.Name}' declares {declared} item(s) but holds {rendered} ({declared - rendered} short)."
@@ -207,12 +220,18 @@ public sealed partial class AdminExamService
         var inv5 = new List<ExamAuditIssueDto>();
 
         var servedSkillIds = sections
+            .Where(s => relevantSectionIds.Contains(s.SectionId))
             .Where(s => rosterBySection.Any(r => r.SectionId == s.SectionId && r.Count > 0))
             .Select(s => s.SkillId)
             .Distinct()
             .ToList();
 
-        if (servedSkillIds.Count > 0)
+        // #382: a PLACEMENT paper is a slice across skills, so its duration is its own - not the sum of
+        // the full-skill durations of everything it touches. Measured: the seeded placement declares 60
+        // minutes and serves four skills totalling 164, so it was refused for a duration it never
+        // claimed. A practice paper covers one skill and is still checked, because there the sum is the
+        // paper's own budget.
+        if (servedSkillIds.Count > 0 && !IsSlicePaper(exam))
         {
             var servedSkills = skillRows.Where(s => servedSkillIds.Contains(s.SkillId)).ToList();
 
@@ -270,4 +289,36 @@ public sealed partial class AdminExamService
 
     private static ExamInvariantDto Row(string code, string title, List<ExamAuditIssueDto> deficits) =>
         new(code, title, deficits.Count == 0, deficits.Count, deficits.FirstOrDefault()?.ElementTarget);
+
+    /// <summary>
+    /// #382: a paper whose size is its draw rather than a certificate-level blueprint. A placement is a
+    /// slice across skills; a demo-tier paper is sample content. Both legitimately hold fewer items than
+    /// a full section declares, and both are judged against their own declared <c>QuestionCount</c>.
+    /// </summary>
+    private static bool IsSlicePaper(Exam exam) =>
+        exam.Purpose == "placement"
+        || string.Equals(exam.ContentTier, "demo", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// #382: the sections a paper is judged on. One definition, used by both the content audit and the
+    /// invariant rows, so the rail and the refusal cannot disagree about the paper's shape.
+    /// <para>
+    /// A practice paper covers a single modality. A mock covers every section of its certificate. A
+    /// PLACEMENT paper is a slice across skills: its stock is drawn per (skill, band), so it binds one
+    /// section per skill and nothing else — judging it against all twenty of a certificate's sections
+    /// asks for 200 items on a twelve-item paper.
+    /// </para>
+    /// </summary>
+    private static List<Section> ScopeSections(Exam exam, List<Section> sections, IEnumerable<int> boundSectionIds)
+    {
+        var bound = boundSectionIds as HashSet<int> ?? boundSectionIds.ToHashSet();
+
+        return exam.Purpose switch
+        {
+            "speaking_practice" => sections.Where(s => s.Modality == "speaking").ToList(),
+            "writing_practice" => sections.Where(s => s.Modality == "writing").ToList(),
+            "placement" => sections.Where(s => bound.Contains(s.SectionId)).ToList(),
+            _ => sections
+        };
+    }
 }
