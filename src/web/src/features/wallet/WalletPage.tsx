@@ -203,11 +203,12 @@ export function WalletPage() {
                               <Table.Cell className="font-medium text-foreground">
                                 {formatCreditReason(entry.reason)}
                               </Table.Cell>
-                              <Table.Cell className="font-mono-tabular text-xs">
+                              <Table.Cell className="font-mono-tabular text-xs max-w-[160px]">
                                 {entry.orderCode ? (
                                   <Link
                                     to={`/orders/${entry.orderCode}`}
-                                    className="text-accent hover:underline font-mono"
+                                    className="text-accent hover:underline font-mono block truncate"
+                                    title={entry.orderCode}
                                   >
                                     {entry.orderCode}
                                   </Link>
@@ -215,8 +216,13 @@ export function WalletPage() {
                                   '—'
                                 )}
                               </Table.Cell>
-                              <Table.Cell className="text-xs text-muted max-w-xs truncate">
-                                {entry.note || '—'}
+                              <Table.Cell className="text-xs text-muted max-w-xs">
+                                <span
+                                  className="block truncate break-words"
+                                  title={entry.note || undefined}
+                                >
+                                  {entry.note || '—'}
+                                </span>
                               </Table.Cell>
                               <Table.Cell
                                 className={`text-right font-mono-tabular font-bold text-sm ${
@@ -270,10 +276,11 @@ export function WalletPage() {
                           const statusDisplay = formatOrderStatus(order.status);
                           return (
                             <Table.Row key={order.orderId}>
-                              <Table.Cell className="font-mono-tabular font-semibold">
+                              <Table.Cell className="font-mono-tabular font-semibold max-w-[160px]">
                                 <Link
                                   to={`/orders/${order.orderCode}`}
-                                  className="text-accent hover:underline"
+                                  className="text-accent hover:underline block truncate"
+                                  title={order.orderCode}
                                 >
                                   {order.orderCode}
                                 </Link>

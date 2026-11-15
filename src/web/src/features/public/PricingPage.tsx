@@ -20,6 +20,13 @@ import {
 } from 'lucide-react';
 import { formatVnd } from '../../lib/security';
 import { useAuth } from '../../context/AuthContext';
+import {
+  CREDITS_RANGE_ERROR,
+  FLAT_CREDIT_PRICE as PRICE_PER_CREDIT_VND,
+  MAX_CREDITS,
+  MIN_CREDITS,
+  PRESET_CREDITS,
+} from '../../lib/creditPurchase';
 
 const FAQ_ITEMS = [
   {
@@ -47,12 +54,6 @@ const FAQ_ITEMS = [
       'If a payment order fails or is reversed before settlement, no credits are posted. Approved billing refunds are recorded as explicit ledger adjustments so your transaction history stays auditable.',
   },
 ];
-
-const PRICE_PER_CREDIT_VND = 20_000;
-const MIN_CREDITS = 1;
-const MAX_CREDITS = 1000;
-const CREDITS_RANGE_ERROR = 'Credits must be between 1 and 1,000.';
-const PRESET_CREDITS = [5, 10, 20];
 
 export function PricingPage() {
   const { isAuthenticated, isStaff, learnerContext } = useAuth();

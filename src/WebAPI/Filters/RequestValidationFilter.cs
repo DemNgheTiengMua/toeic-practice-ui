@@ -72,3 +72,16 @@ public sealed class RequestValidationFilter<TRequest> : IEndpointFilter where TR
         return string.Join('.', memberName.Split('.').Select(JsonNamingPolicy.CamelCase.ConvertName));
     }
 }
+
+public static class RequestValidationExtensions
+{
+    /// <summary>
+    /// Attaches <see cref="RequestValidationFilter{TRequest}"/> to validate <typeparamref name="TRequest"/>
+    /// before the endpoint handler runs.
+    /// </summary>
+    public static RouteHandlerBuilder WithValidation<TRequest>(this RouteHandlerBuilder builder)
+        where TRequest : class
+    {
+        return builder.AddEndpointFilter<RequestValidationFilter<TRequest>>();
+    }
+}

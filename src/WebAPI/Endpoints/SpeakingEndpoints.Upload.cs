@@ -44,18 +44,23 @@ public static partial class SpeakingEndpoints
             int? durationMs = null;
             if (form.TryGetValue("durationMs", out var durationValue))
             {
-                if (!int.TryParse(durationValue, out int parsedDuration) || parsedDuration < 0)
+                if (!int.TryParse(durationValue, out int parsedDuration))
                 {
-                    return Problem(StatusCodes.Status400BadRequest, "Invalid audio duration", ApiError.Codes.Validation, "Audio duration must be a non-negative integer.");
+                    return Results.ValidationProblem(
+                        new Dictionary<string, string[]> { ["durationMs"] = ["Audio duration must be a non-negative integer."] },
+                        title: "Invalid audio duration",
+                        extensions: new Dictionary<string, object?> { ["code"] = ApiError.Codes.Validation });
                 }
-                if (parsedDuration > FreeResponseBounds.MaxSpeakingDurationMs)
+
+                var (isValidDuration, isTooLong, durationError) = AudioValidation.ValidateDuration(parsedDuration);
+                if (!isValidDuration)
                 {
-                    return Problem(
-                        StatusCodes.Status400BadRequest,
-                        "Recording too long",
-                        ApiError.Codes.Validation,
-                        $"Recording duration cannot exceed {FreeResponseBounds.MaxSpeakingDurationSeconds} seconds.");
+                    return Results.ValidationProblem(
+                        new Dictionary<string, string[]> { ["durationMs"] = [durationError ?? "Invalid audio duration."] },
+                        title: isTooLong ? "Recording too long" : "Invalid audio duration",
+                        extensions: new Dictionary<string, object?> { ["code"] = ApiError.Codes.Validation });
                 }
+
                 durationMs = parsedDuration;
             }
 

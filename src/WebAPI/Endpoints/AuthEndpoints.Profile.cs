@@ -18,8 +18,7 @@ public static partial class AuthEndpoints
         {
             var profile = await auth.GetProfileAsync(CurrentUserId(http), cancellationToken);
             return Results.Ok(new ProfileDto(profile.FullName, profile.Phone, profile.TimeZoneId));
-        }).RequireAuthorization()
-          .AddEndpointFilter<RequestValidationFilter<UpdateProfileRequest>>();
+        }).RequireAuthorization();
 
         app.MapPut("/api/profile", async Task<IResult> (
             UpdateProfileRequest request,
@@ -38,7 +37,7 @@ public static partial class AuthEndpoints
                 return ValidationProblem(ex);
             }
         }).RequireAuthorization()
-          .AddEndpointFilter<RequestValidationFilter<UpdateProfileRequest>>();
+          .WithValidation<UpdateProfileRequest>();
 
         app.MapPost("/api/profile/password", async Task<IResult> (
             ChangePasswordRequest request,

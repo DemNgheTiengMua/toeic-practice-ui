@@ -372,10 +372,18 @@ export function AdminUsersPage() {
                       ) : (
                         summary.users.map((u) => (
                           <tr key={u.userId} className="hover:bg-surface-secondary/30 transition-colors">
-                            <td className="py-3 px-4">
-                              <div className="font-medium text-foreground">{u.fullName || '—'}</div>
-                              <div className="text-xs text-muted font-mono-tabular">{u.email}</div>
-                              {u.phone && <div className="text-[11px] text-muted">{u.phone}</div>}
+                            <td className="py-3 px-4 max-w-[240px]">
+                              <div className="font-medium text-foreground truncate" title={u.fullName || undefined}>
+                                {u.fullName || '—'}
+                              </div>
+                              <div className="text-xs text-muted font-mono-tabular truncate" title={u.email}>
+                                {u.email}
+                              </div>
+                              {u.phone && (
+                                <div className="text-[11px] text-muted truncate" title={u.phone}>
+                                  {u.phone}
+                                </div>
+                              )}
                             </td>
                             <td className="py-3 px-3">
                               {u.isLocked ? (
@@ -513,13 +521,23 @@ export function AdminUsersPage() {
                 <div className="space-y-5">
                   {/* Account overview */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 rounded-lg bg-surface-secondary/40 border border-border/60 text-xs">
-                    <div>
+                    <div className="min-w-0">
                       <span className="text-muted block">Full name</span>
-                      <span className="font-medium text-foreground">{selectedUserDetail.user.fullName || '—'}</span>
+                      <span
+                        className="font-medium text-foreground block truncate break-words"
+                        title={selectedUserDetail.user.fullName || undefined}
+                      >
+                        {selectedUserDetail.user.fullName || '—'}
+                      </span>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <span className="text-muted block">Email</span>
-                      <span className="font-medium text-foreground font-mono-tabular">{selectedUserDetail.user.email}</span>
+                      <span
+                        className="font-medium text-foreground font-mono-tabular block truncate break-words"
+                        title={selectedUserDetail.user.email}
+                      >
+                        {selectedUserDetail.user.email}
+                      </span>
                     </div>
                     <div>
                       <span className="text-muted block">Credit balance</span>
@@ -575,9 +593,13 @@ export function AdminUsersPage() {
                           <tbody className="divide-y divide-border/60">
                             {selectedUserDetail.placements.map((p) => (
                               <tr key={p.placementId}>
-                                <td className="p-2.5">
-                                  <div className="font-medium text-foreground">{p.examName}</div>
-                                  <div className="text-[11px] text-muted font-mono-tabular">{p.certCode}</div>
+                                <td className="p-2.5 max-w-[220px]">
+                                  <div className="font-medium text-foreground truncate" title={p.examName}>
+                                    {p.examName}
+                                  </div>
+                                  <div className="text-[11px] text-muted font-mono-tabular truncate" title={p.certCode}>
+                                    {p.certCode}
+                                  </div>
                                 </td>
                                 <td className="p-2.5">
                                   <span className="font-medium text-foreground">
@@ -625,8 +647,11 @@ export function AdminUsersPage() {
         {adjustModalOpen && adjustTargetUser && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
             <div className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-2xl space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <h2 className="font-display text-lg font-semibold text-foreground">
+              <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
+                <h2
+                  className="font-display text-lg font-semibold text-foreground truncate max-w-[340px]"
+                  title={adjustTargetUser.fullName || adjustTargetUser.email}
+                >
                   Adjust credits: {adjustTargetUser.fullName || adjustTargetUser.email}
                 </h2>
                 <button

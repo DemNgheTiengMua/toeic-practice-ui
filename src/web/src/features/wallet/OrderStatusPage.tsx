@@ -135,8 +135,12 @@ export function OrderStatusPage() {
           </Alert.Indicator>
           <Alert.Content>
             <Alert.Title>Order not found</Alert.Title>
-            <Alert.Description>
-              Could not retrieve payment information for order “{orderCode}”.
+            <Alert.Description className="break-words">
+              Could not retrieve payment information for order “
+              <span className="inline-block max-w-[200px] truncate align-bottom font-mono-tabular" title={orderCode}>
+                {orderCode}
+              </span>
+              ”.
             </Alert.Description>
           </Alert.Content>
         </Alert>
@@ -171,8 +175,14 @@ export function OrderStatusPage() {
         <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground m-0">
           Order status
         </h1>
-        <p className="text-sm text-muted mt-1 mb-0">
-          Order invoice <span className="font-mono-tabular font-semibold text-foreground">{order.orderCode}</span>
+        <p className="text-sm text-muted mt-1 mb-0 break-words">
+          Order invoice{' '}
+          <span
+            className="font-mono-tabular font-semibold text-foreground inline-block max-w-[260px] truncate align-bottom"
+            title={order.orderCode}
+          >
+            {order.orderCode}
+          </span>
         </p>
       </div>
 

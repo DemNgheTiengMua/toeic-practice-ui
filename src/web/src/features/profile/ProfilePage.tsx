@@ -34,6 +34,8 @@ import { api, ApiClientError } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { TIME_ZONE_IDS } from '../../lib/domain-labels';
 
+const FULL_NAME_PATTERN = String.raw`^(?=.{2,70}$)[\p{L}\p{M}]+(?:['’.\- ][\p{L}\p{M}]+)*$`;
+
 export function ProfilePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -211,8 +213,12 @@ export function ProfilePage() {
           <Alert.Content>
             <Alert.Title>Email verification pending</Alert.Title>
             <Alert.Description className="space-y-2">
-              <p className="m-0 text-sm">
-                Your account email ({user?.email}) is not yet verified. Please verify your email to unlock credit purchases and exams.
+              <p className="m-0 text-sm break-words">
+                Your account email (
+                <span className="inline-block max-w-[240px] truncate align-bottom font-medium" title={user?.email}>
+                  {user?.email}
+                </span>
+                ) is not yet verified. Please verify your email to unlock credit purchases and exams.
               </p>
               {resendSuccess && (
                 <p className="text-xs text-success font-semibold m-0">{resendSuccess}</p>
@@ -341,7 +347,9 @@ export function ProfilePage() {
                 >
                   <Label>Full name</Label>
                   <Input
+                    minLength={2}
                     maxLength={70}
+                    pattern={FULL_NAME_PATTERN}
                     autoComplete="name"
                     placeholder="Nguyễn Văn A"
                   />
@@ -426,10 +434,13 @@ export function ProfilePage() {
               </Card.Header>
 
               <Card.Content className="space-y-4">
-                <div className="p-3.5 rounded-lg bg-surface-secondary border border-border flex items-center justify-between">
-                  <div>
+                <div className="p-3.5 rounded-lg bg-surface-secondary border border-border flex items-center justify-between gap-3">
+                  <div className="min-w-0">
                     <span className="text-xs text-muted block">Current certificate</span>
-                    <span className="font-bold text-foreground text-sm">
+                    <span
+                      className="font-bold text-foreground text-sm block truncate max-w-[260px] sm:max-w-[380px]"
+                      title={`${learnerContext.active?.code ?? ''} — ${learnerContext.active?.name ?? ''}`}
+                    >
                       {learnerContext.active?.code} — {learnerContext.active?.name}
                     </span>
                   </div>

@@ -28,12 +28,13 @@ import {
 import { api, ApiClientError, type CreateOrderResponseDto } from '../../lib/api';
 import { formatVnd } from '../../lib/security';
 import { PayOsEmbeddedModal } from './PayOsEmbeddedModal';
-
-const FLAT_CREDIT_PRICE = 20_000;
-const MIN_CREDITS = 1;
-const MAX_CREDITS = 1000;
-const CREDITS_RANGE_ERROR = 'Credits must be between 1 and 1,000.';
-const PRESET_CREDITS = [5, 10, 20];
+import {
+  CREDITS_RANGE_ERROR,
+  FLAT_CREDIT_PRICE,
+  MAX_CREDITS,
+  MIN_CREDITS,
+  PRESET_CREDITS,
+} from '../../lib/creditPurchase';
 
 export function useSearchParams() {
   const search = useSearch({ strict: false }) as {
@@ -443,8 +444,10 @@ export function CheckoutPage() {
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted">
                   Mock Gateway Simulator
                 </span>
-                <Chip size="sm" variant="soft" color="warning" className="font-mono text-xs">
-                  {activeOrder.orderCode}
+                <Chip size="sm" variant="soft" color="warning" className="font-mono text-xs max-w-[160px]">
+                  <span className="truncate" title={activeOrder.orderCode}>
+                    {activeOrder.orderCode}
+                  </span>
                 </Chip>
               </div>
               <p className="text-xs text-muted m-0">

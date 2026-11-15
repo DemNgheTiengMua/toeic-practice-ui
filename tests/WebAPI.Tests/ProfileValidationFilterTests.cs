@@ -23,6 +23,23 @@ namespace WebAPI.Tests;
 
 public sealed class ProfileValidationFilterTests
 {
+    [Fact]
+    public async Task Get_profile_returns_200_ok_with_profile_dto()
+    {
+        var stub = new StubAuthService();
+        var (client, app) = await ProfileAppAsync(stub);
+        await using (app)
+        {
+            var response = await client.GetAsync("/api/profile");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var dto = await response.Content.ReadFromJsonAsync<ProfileDto>();
+            Assert.NotNull(dto);
+            Assert.Equal("Nguyễn Văn A", dto.FullName);
+            Assert.Equal("0901234567", dto.Phone);
+            Assert.Equal("Asia/Ho_Chi_Minh", dto.TimeZoneId);
+        }
+    }
+
     [Theory]
     [InlineData("Demo Learner Meow 293819238")]
     [InlineData("<script>alert(1)</script>")]
@@ -172,7 +189,8 @@ public sealed class ProfileValidationFilterTests
         public Task<AuthUser> SignInAsync(SignInInput input, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<AuthUser?> GetUserAsync(int userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<SessionStatus> CheckSessionAsync(int userId, string? sessionStamp, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<ProfileInfo> GetProfileAsync(int userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<ProfileInfo> GetProfileAsync(int userId, CancellationToken cancellationToken = default)
+            => Task.FromResult(new ProfileInfo("Nguyễn Văn A", "0901234567", "Asia/Ho_Chi_Minh"));
         public Task ChangePasswordAsync(int userId, ChangePasswordInput input, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task VerifyEmailAsync(string token, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task ResendActivationAsync(int userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();

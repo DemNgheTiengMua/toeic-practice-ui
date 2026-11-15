@@ -221,17 +221,28 @@ export function OrdersTab() {
                 <Table.Body>
                   {summary?.orders.map((order) => (
                     <Table.Row key={order.orderId}>
-                      <Table.Cell>
-                        <span className="font-mono-tabular font-semibold text-foreground">
+                      <Table.Cell className="max-w-[160px]">
+                        <span
+                          className="font-mono-tabular font-semibold text-foreground block truncate"
+                          title={order.orderCode}
+                        >
                           {order.orderCode}
                         </span>
                       </Table.Cell>
-                      <Table.Cell>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
+                      <Table.Cell className="max-w-[220px]">
+                        <div className="min-w-0">
+                          <p
+                            className="text-sm font-medium text-foreground truncate"
+                            title={order.userFullName || undefined}
+                          >
                             {order.userFullName || '—'}
                           </p>
-                          <p className="text-xs text-muted font-mono-tabular">{order.userEmail}</p>
+                          <p
+                            className="text-xs text-muted font-mono-tabular truncate"
+                            title={order.userEmail}
+                          >
+                            {order.userEmail}
+                          </p>
                         </div>
                       </Table.Cell>
                       <Table.Cell>

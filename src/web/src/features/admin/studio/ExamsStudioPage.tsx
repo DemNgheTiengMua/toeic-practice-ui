@@ -1134,7 +1134,7 @@ export function ExamsStudioPage() {
                   isInvalid={Boolean(newExamFieldErrors.name)}
                 >
                   <Label>Exam name</Label>
-                  <Input placeholder="e.g. TOEIC Official Mock Test 2" className="text-sm" />
+                  <Input placeholder="e.g. TOEIC Official Mock Exam 2" className="text-sm" />
                   {newExamFieldErrors.name && (
                     <FieldError>{newExamFieldErrors.name}</FieldError>
                   )}
