@@ -34,10 +34,13 @@ function renderSafeParagraphs(text: string) {
   ));
 }
 
-export function MockExamReviewPage() {
-  const { attemptId } = useParams({ strict: false }) as { attemptId?: string };
+export function MockExamReviewPage({ sittingKind = 'mock' }: { sittingKind?: 'mock' | 'placement' } = {}) {
+  // #375: a placement review is addressed by the placement id, a mock review by the attempt id, so the
+  // page reads whichever its route carries.
+  const params = useParams({ strict: false }) as { attemptId?: string; placementId?: string };
   const navigate = useNavigate();
-  const id = Number(attemptId);
+  const isPlacement = sittingKind === 'placement';
+  const id = Number(isPlacement ? params.placementId : params.attemptId);
 
   const [review, setReview] = useState<AttemptReviewDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,8 +61,10 @@ export function MockExamReviewPage() {
 
     let cancelled = false;
     setLoading(true);
-    api.exams
-      .review(id)
+    // #375: a placement review is the same projection, addressed by the placement id the result page
+    // holds. One page, one reader; only the address differs.
+    const load = isPlacement ? api.placement.review(id) : api.exams.review(id);
+    load
       .then((data) => {
         if (!cancelled) {
           setReview(data);
@@ -78,7 +83,7 @@ export function MockExamReviewPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, isPlacement]);
 
   // Distinct sections for filter
   const distinctSections = useMemo(() => {
@@ -151,17 +156,26 @@ export function MockExamReviewPage() {
           </Alert.Content>
         </Alert>
         <div className="mt-4 flex gap-3">
-          <Button variant="secondary" size="sm" onClick={() => void navigate({ to: '/exams' })}>
-            Back to mock exams
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void navigate({ to: isPlacement ? '/placement' : '/exams' })}
+          >
+            {isPlacement ? 'Back to placement' : 'Back to mock exams'}
           </Button>
           <Button
             variant="secondary"
             size="sm"
             onClick={() =>
-              void navigate({
-                to: '/exams/result/$attemptId',
-                params: { attemptId: String(id) },
-              })
+              isPlacement
+                ? void navigate({
+                    to: '/placement/result/$attemptId',
+                    params: { attemptId: String(id) },
+                  })
+                : void navigate({
+                    to: '/exams/result/$attemptId',
+                    params: { attemptId: String(id) },
+                  })
             }
           >
             Back to results
@@ -181,13 +195,16 @@ export function MockExamReviewPage() {
           Home
         </Link>
         <span aria-hidden="true">/</span>
-        <Link to="/exams" className="hover:text-foreground transition-colors">
-          Mock exams
+        <Link
+          to={isPlacement ? '/placement' : '/exams'}
+          className="hover:text-foreground transition-colors"
+        >
+          {isPlacement ? 'Placement' : 'Mock exams'}
         </Link>
         <span aria-hidden="true">/</span>
         <Link
-          to="/exams/result/$attemptId"
-          params={{ attemptId: String(review.attemptId) }}
+          to={isPlacement ? '/placement/result/$attemptId' : '/exams/result/$attemptId'}
+          params={{ attemptId: String(isPlacement ? id : review.attemptId) }}
           className="hover:text-foreground transition-colors"
         >
           Results
@@ -224,25 +241,32 @@ export function MockExamReviewPage() {
             variant="secondary"
             size="sm"
             onClick={() =>
-              void navigate({
-                to: '/exams/result/$attemptId',
-                params: { attemptId: String(review.attemptId) },
-              })
+              isPlacement
+                ? void navigate({
+                    to: '/placement/result/$attemptId',
+                    params: { attemptId: String(id) },
+                  })
+                : void navigate({
+                    to: '/exams/result/$attemptId',
+                    params: { attemptId: String(review.attemptId) },
+                  })
             }
             className="text-foreground"
           >
             <ArrowLeft className="size-4 mr-1.5" />
             Back to results
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => void navigate({ to: '/exams/history' })}
-            className="text-muted hover:text-foreground"
-          >
-            <History className="size-4 mr-1.5" />
-            Exam history
-          </Button>
+          {!isPlacement && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void navigate({ to: '/exams/history' })}
+              className="text-muted hover:text-foreground"
+            >
+              <History className="size-4 mr-1.5" />
+              Exam history
+            </Button>
+          )}
         </div>
       </div>
 
@@ -425,8 +449,8 @@ export function MockExamReviewPage() {
                     {q.audioPath && (
                       <div className="mb-2">
                         <ExamAudioPlayer
-                          sittingKind="mock"
-                          sittingId={review.attemptId}
+                          sittingKind={sittingKind}
+                          sittingId={id}
                           questionId={q.questionId}
                           audioPath={q.audioPath}
                           audioStartMs={q.audioStartMs ?? undefined}
@@ -572,12 +596,17 @@ export function MockExamReviewPage() {
                               {q.rubricScores.map((rubric) => (
                                 <div
                                   key={rubric.criterionCode}
-                                  className="p-2 rounded bg-surface border border-border flex items-center justify-between"
+                                  className="p-2 rounded bg-surface border border-border space-y-1"
                                 >
-                                  <span>{rubric.criterionName}</span>
-                                  <span className="font-mono-tabular font-bold">
-                                    {rubric.score}/{rubric.maxScore}
-                                  </span>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span>{rubric.criterionName}</span>
+                                    <span className="font-mono-tabular font-bold">
+                                      {rubric.score}/{rubric.maxScore}
+                                    </span>
+                                  </div>
+                                  {rubric.feedback && (
+                                    <p className="text-muted leading-relaxed">{rubric.feedback}</p>
+                                  )}
                                 </div>
                               ))}
                             </div>

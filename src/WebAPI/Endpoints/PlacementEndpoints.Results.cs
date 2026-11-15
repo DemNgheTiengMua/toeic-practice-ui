@@ -34,5 +34,30 @@ public static partial class PlacementEndpoints
                 return Problem(StatusCodes.Status409Conflict, "Placement test abandoned", ApiError.Codes.PlacementAbandoned, ex.Message);
             }
         });
+
+        // #375: the submitted placement, reopened as a full review. Addressed by the placement id
+        // because that is what the result page holds, and it delegates to the attempt review reader so
+        // a placement review and a mock review render the same facts from the same projection.
+        learner.MapGet("/placement/result/{placementId:int}/review", async Task<IResult> (
+            int placementId,
+            HttpContext http,
+            IPlacementService placementService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var review = await placementService.GetPlacementReviewAsync(CurrentUserId(http), placementId, cancellationToken);
+                return Results.Ok(ExamEndpoints.ToAttemptReviewDto(review));
+            }
+            catch (PlacementException ex) when (ex.Code == PlacementException.PlacementNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Placement test not found", ApiError.Codes.PlacementNotFound, ex.Message);
+            }
+            catch (PlacementException ex) when (ex.Code == PlacementException.PlacementNotFinished)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Placement test not finished", ApiError.Codes.PlacementNotFinished, ex.Message);
+            }
+        })
+        .Produces<AttemptReviewDto>(StatusCodes.Status200OK);
     }
 }

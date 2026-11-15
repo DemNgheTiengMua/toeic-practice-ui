@@ -212,6 +212,24 @@ public sealed partial class AttemptEngine
         var reviewQuestions = new List<AttemptReviewQuestion>();
         var navigator = new List<ReviewNavigatorItem>();
 
+        // #375: a free response carries what the learner wrote or said, and the marks it earned. The
+        // review used to project only objective answers, so a placement review had nothing to show for
+        // its writing and speaking tasks. One read here serves both review pages.
+        var responses = await db.FreeResponses
+            .AsNoTracking()
+            .Where(fr => fr.AttemptId == attemptId)
+            .Include(fr => fr.AiGradingFreeResponse).ThenInclude(g => g!.AiGradingScores)
+                .ThenInclude(s => s.GradingCriterion)
+            .ToListAsync(cancellationToken);
+        var responseByExamItemId = responses
+            .GroupBy(fr => fr.ExamItemId)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var sectionCriteria = await db.SectionCriteria
+            .AsNoTracking()
+            .Where(sc => sc.Section.CertId == attempt.CertId)
+            .ToListAsync(cancellationToken);
+
         for (int idx = 0; idx < questions.Count; idx++)
         {
             var q = questions[idx];
@@ -244,6 +262,40 @@ public sealed partial class AttemptEngine
                     ans.SelectedOptionId, ans.SelectedLabel, ans.ResponseText, ans.SelectedOptionIdsJson);
             bool? isCorrect = isAnswered ? ans?.IsCorrect : null;
 
+            // #375: the free-response half. The written text and the spoken transcript both live on
+            // `FreeResponses` (the grader copies a transcript into `ResponseText` when there is one),
+            // and the marks live on the grading row, so the review reads them together.
+            var freeResponse = responseByExamItemId.GetValueOrDefault(q.ExamItemId);
+            var grading = freeResponse?.AiGradingFreeResponse;
+            string? responseText = freeResponse?.ResponseText;
+            string? responseAudioPath = freeResponse?.AudioPath;
+            decimal? aiScore = grading?.OverallScaled;
+            string? aiFeedback = grading?.PriorityFix;
+
+            List<AttemptReviewRubricScore>? rubricScores = null;
+            if (grading?.AiGradingScores is { Count: > 0 } scores && freeResponse is not null)
+            {
+                // The ceiling is the section's override when it declares one, else the criterion's own —
+                // the same rule `RubricTotalsAsync` scores and bands with, so the marks shown add up to
+                // the total the result page printed.
+                rubricScores = scores
+                    .OrderBy(s => s.GradingCriterion.DisplayOrder)
+                    .Select(s =>
+                    {
+                        var criterionMax = sectionCriteria
+                            .FirstOrDefault(sc => sc.SectionId == freeResponse.SectionId
+                                && sc.CriterionId == s.CriterionId)?.MaxScore
+                            ?? s.GradingCriterion.MaxScore;
+                        return new AttemptReviewRubricScore(
+                            s.GradingCriterion.Code,
+                            s.GradingCriterion.Name,
+                            s.Score,
+                            criterionMax,
+                            s.Comment);
+                    })
+                    .ToList();
+            }
+
             reviewQuestions.Add(new AttemptReviewQuestion(
                 q.Id,
                 displayOrder,
@@ -266,7 +318,12 @@ public sealed partial class AttemptEngine
                 options,
                 selectedOptionId,
                 isCorrect,
-                isFlagged));
+                isFlagged,
+                responseText,
+                responseAudioPath,
+                aiScore,
+                aiFeedback,
+                rubricScores));
 
             navigator.Add(new ReviewNavigatorItem(
                 q.Id,

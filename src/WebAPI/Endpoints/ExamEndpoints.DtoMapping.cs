@@ -154,7 +154,7 @@ public static partial class ExamEndpoints
                     s.SkillId, s.SkillCode, s.SkillName, s.Modality.MapTo<ModalityDto>(), s.RawScore, s.ScaledScore, s.TotalQuestions)).ToList(),
                 a.Status.MapTo<AttemptStatusDto>())).ToList());
 
-    private static AttemptReviewDto ToAttemptReviewDto(AttemptReviewView review) =>
+    internal static AttemptReviewDto ToAttemptReviewDto(AttemptReviewView review) =>
         new AttemptReviewDto(
             review.AttemptId,
             review.ExamId,
@@ -199,7 +199,13 @@ public static partial class ExamEndpoints
                 q.Options.Select(o => new AttemptReviewOptionDto(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale)).ToList(),
                 q.SelectedOptionId,
                 q.IsCorrect,
-                q.IsFlagged)).ToList(),
+                q.IsFlagged,
+                q.ResponseText,
+                q.ResponseAudioPath,
+                q.AiScore,
+                q.AiFeedback,
+                q.RubricScores?.Select(r => new AttemptReviewRubricScoreDto(
+                    r.CriterionCode, r.CriterionName, r.Score, r.MaxScore, r.Feedback)).ToList())).ToList(),
             review.Navigator.Select(n => new ReviewNavigatorItemDto(
                 n.QuestionId, n.DisplayOrder, n.SectionId, n.SectionCode, n.Modality.MapTo<ModalityDto>(), n.IsAnswered, n.IsFlagged, n.IsCorrect)).ToList());
 }

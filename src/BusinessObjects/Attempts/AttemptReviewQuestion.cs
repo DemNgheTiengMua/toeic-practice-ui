@@ -24,4 +24,11 @@ public sealed record AttemptReviewQuestion(
     IReadOnlyList<AttemptReviewOption> Options,
     int? SelectedOptionId,
     bool? IsCorrect,
-    bool IsFlagged);
+    bool IsFlagged,
+    // #375: a free response has no options, so the review reads its content from here. Null on an
+    // objective position, which is the only way the page can tell the two apart.
+    string? ResponseText = null,
+    string? ResponseAudioPath = null,
+    decimal? AiScore = null,
+    string? AiFeedback = null,
+    IReadOnlyList<AttemptReviewRubricScore>? RubricScores = null);

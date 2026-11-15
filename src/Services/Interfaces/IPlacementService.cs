@@ -73,6 +73,13 @@ public interface IPlacementService
 
     Task<PlacementResultView> GetPlacementResultAsync(int userId, int placementId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// #375: the submitted placement as a per-question review — the chosen answer beside the correct
+    /// one, the written answer with its rubric marks, and the speaking transcript. Delegates to the
+    /// attempt review reader so a placement review and a mock review cannot say different things.
+    /// </summary>
+    Task<AttemptReviewView> GetPlacementReviewAsync(int userId, int placementId, CancellationToken cancellationToken = default);
+
     Task<TargetBandView> GetTargetBandViewAsync(int userId, CancellationToken cancellationToken = default);
 
     Task<SaveTargetBandResult> SetTargetBandAsync(int userId, string targetBandCode, CancellationToken cancellationToken = default);
