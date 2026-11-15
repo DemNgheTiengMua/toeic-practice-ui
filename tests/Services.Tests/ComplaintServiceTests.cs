@@ -3,6 +3,7 @@ using Contracts;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
+using Services.Credits;
 using Xunit;
 
 namespace Services.Tests;
@@ -109,6 +110,104 @@ public sealed class ComplaintServiceTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var order = await db.Orders.Where(o => o.UserId == userId).OrderByDescending(o => o.OrderId).FirstAsync();
         return order.OrderId;
+    }
+
+    /// <summary>#347: credits have to exist before a charge can post; the ledger refuses to go negative.</summary>
+    private async Task SeedCreditsAsync(int userId, int amount)
+    {
+        await database.SqlAsync($"""
+            IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'admin')
+              INSERT INTO Roles (Code, Name) VALUES ('admin', N'Admin');
+            INSERT INTO Users (RoleId, Email, PasswordHash, FullName, EmailVerifiedAt)
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'admin'), 'seed-{Guid.NewGuid():N}@test.local', 0x01, N'Seed Admin', SYSDATETIMEOFFSET());
+            INSERT INTO CreditTransactions (UserId, Reason, Delta, AdminUserId, Note)
+            VALUES ({userId}, 'admin_grant', {amount}, SCOPE_IDENTITY(), N'Compensation context fixture');
+            """);
+    }
+
+    [Fact]
+    public async Task Complaint_on_booking_charged_one_credit_reports_one_credit_spent_and_the_credit_method()
+    {
+        var learner = await SeedLearnerAsync();
+        var (bookingId, _) = await SeedBookingAsync(learner);
+        await SeedCreditsAsync(learner, 5);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            await new CreditLedger(db, _clock).ChargeMentorBookingAsync(learner, bookingId, priceCredits: 1);
+        }
+
+        var service = CreateService();
+        var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
+            ComplaintTypeDto.MentorQuality, "Audio kept dropping.", BookingId: bookingId));
+
+        var detail = await service.GetAdminComplaintDetailAsync(complaint.ComplaintId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(1, detail.CreditsSpent);
+        Assert.Null(detail.MoneyPaid);
+        Assert.Equal(RefundMethodDto.Credit, detail.ImpliedRefundMethod);
+    }
+
+    [Fact]
+    public async Task Complaint_on_attempt_charged_twice_reports_both_the_sitting_and_the_grading_charge()
+    {
+        var learner = await SeedLearnerAsync();
+        var attemptId = await SeedExamAttemptAsync(learner);
+        await SeedCreditsAsync(learner, 5);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var ledger = new CreditLedger(db, _clock);
+            await ledger.ChargeMockExamAsync(learner, attemptId, amount: 1);
+            await ledger.ChargeAiGradingAsync(learner, attemptId, amount: 1);
+        }
+
+        var service = CreateService();
+        var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
+            ComplaintTypeDto.GradingIssue, "Speaking answer scored zero.", AttemptId: attemptId));
+
+        var detail = await service.GetAdminComplaintDetailAsync(complaint.ComplaintId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(2, detail.CreditsSpent);
+        Assert.Null(detail.MoneyPaid);
+        Assert.Equal(RefundMethodDto.Credit, detail.ImpliedRefundMethod);
+    }
+
+    [Fact]
+    public async Task Complaint_on_order_reports_the_order_amount_and_the_money_method()
+    {
+        var learner = await SeedLearnerAsync();
+        var orderId = await SeedOrderAsync(learner);
+
+        var service = CreateService();
+        var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
+            ComplaintTypeDto.PaymentIssue, "Charged twice by the bank.", OrderId: orderId));
+
+        var detail = await service.GetAdminComplaintDetailAsync(complaint.ComplaintId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(0, detail.CreditsSpent);
+        Assert.Equal(199000m, detail.MoneyPaid);
+        Assert.Equal(RefundMethodDto.Money, detail.ImpliedRefundMethod);
+    }
+
+    [Fact]
+    public async Task Complaint_on_a_never_charged_subject_reports_zero_credits_spent()
+    {
+        var learner = await SeedLearnerAsync();
+        var attemptId = await SeedExamAttemptAsync(learner);
+
+        var service = CreateService();
+        var complaint = await service.FileComplaintAsync(learner, new FileComplaintRequest(
+            ComplaintTypeDto.TechnicalError, "The timer froze.", AttemptId: attemptId));
+
+        var detail = await service.GetAdminComplaintDetailAsync(complaint.ComplaintId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(0, detail.CreditsSpent);
+        Assert.Null(detail.MoneyPaid);
     }
 
     [Fact]

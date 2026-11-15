@@ -139,6 +139,7 @@ public sealed partial class ComplaintService
         var statusDto = EnumCodes.Parse<ComplaintStatus>(complaint.Status).MapTo<ComplaintStatusDto>();
         var (subjectType, subjectId, summary) = DescribeSubject(complaint);
         var details = DescribeSubjectDetailed(complaint);
+        var (creditsSpent, moneyPaid, impliedMethod) = await DescribeCompensationContextAsync(complaint, cancellationToken);
 
         return new AdminComplaintDetailDto(
             complaint.ComplaintId,
@@ -159,7 +160,10 @@ public sealed partial class ComplaintService
             complaint.ResolvedByUser?.FullName ?? complaint.ResolvedByUser?.Email,
             complaint.ResolvedAt,
             complaint.ResolvedByGrantTxnId,
-            complaint.CreditTransaction?.Delta);
+            complaint.CreditTransaction?.Delta,
+            creditsSpent,
+            moneyPaid,
+            impliedMethod);
     }
 
     public async Task<AdminComplaintDetailDto> SetComplaintStatusAsync(
