@@ -3,6 +3,8 @@
  * Authenticates via the `ee_access_token` HttpOnly cookie (ADR-0015).
  */
 
+import type { components } from './api-types.gen';
+
 export class ApiClientError extends Error {
   public readonly status: number;
   public readonly code: string;
@@ -495,30 +497,9 @@ export interface MicroCheckResultDto {
   categoryId?: number | null;
 }
 
-export interface SectionAccuracyDto {
-  sectionId: number;
-  sectionCode: string;
-  sectionName: string;
-  skillCode: string;
-  skillName: string;
-  answeredCount: number;
-  correctCount: number;
-  accuracyPercentage: number;
-}
+export type SectionAccuracyDto = components['schemas']['SectionAccuracyDto'];
 
-export interface TopicAccuracyDto {
-  categoryId: number;
-  topicCode: string;
-  topicName: string;
-  skillCode: string;
-  skillName: string;
-  answeredCount: number;
-  correctCount: number;
-  accuracyPercentage: number;
-  levelCode?: string | null;
-  meetsFloor: boolean;
-  isWeakest: boolean;
-}
+export type TopicAccuracyDto = components['schemas']['TopicAccuracyDto'];
 
 export interface RecommendationItemDto {
   recId: number;
@@ -535,21 +516,7 @@ export interface ResolveRecommendationResultDto {
   isResolved: boolean;
 }
 
-export interface WeaknessAnalysisDto {
-  certificate: CertificateOptionDto;
-  hasData: boolean;
-  gradedExamCount: number;
-  completedPracticeCount: number;
-  totalAnswered: number;
-  totalCorrect: number;
-  overallAccuracyPercentage: number;
-  sections: SectionAccuracyDto[];
-  frequentlyMissedTopics: TopicAccuracyDto[];
-  recommendations: RecommendationItemDto[];
-  priorityPracticeSection?: SectionAccuracyDto | null;
-  topics: TopicAccuracyDto[];
-  weakestTopic?: TopicAccuracyDto | null;
-}
+export type WeaknessAnalysisDto = components['schemas']['WeaknessAnalysisDto'];
 
 export interface RecommendationDto {
   recId: number;
