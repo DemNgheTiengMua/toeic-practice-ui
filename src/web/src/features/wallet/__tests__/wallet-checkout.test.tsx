@@ -346,6 +346,64 @@ describe('Wallet & Checkout feature (#301)', () => {
     });
   });
 
+  // A failed or expired order must not read as "the money is already in your wallet". The page used to
+  // print "Credits granted: +N" for every status, including one the gateway declined.
+  it('a failed order says the credits were not granted', async () => {
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') return jsonResponse(MOCK_USER);
+      if (url === '/api/learner/context') return jsonResponse(MOCK_LEARNER_CONTEXT);
+      if (url.includes('/api/checkout/orders/ORD-FAILED-1/result')) {
+        return jsonResponse({
+          orderId: 501,
+          orderCode: 'ORD-FAILED-1',
+          status: 'failed',
+          credits: 5,
+          amount: 100000,
+          gateway: 'mock',
+          createdAt: '2026-11-13T12:00:00Z',
+          currentBalance: 0,
+          gatewayErrorCode: '24',
+        } satisfies PaymentResultDto);
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/orders/ORD-FAILED-1');
+
+    expect(await screen.findByRole('heading', { name: /order status/i })).toBeInTheDocument();
+    // The declined order states the credits were not granted...
+    expect(screen.getByText(/not granted/i)).toBeInTheDocument();
+    // ...and never claims they were.
+    expect(screen.queryByText(/credits granted:/i)).not.toBeInTheDocument();
+  });
+
+  it('a paid order still says the credits were granted', async () => {
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') return jsonResponse(MOCK_USER);
+      if (url === '/api/learner/context') return jsonResponse(MOCK_LEARNER_CONTEXT);
+      if (url.includes('/api/checkout/orders/ORD-PAID-1/result')) {
+        return jsonResponse({
+          orderId: 502,
+          orderCode: 'ORD-PAID-1',
+          status: 'paid',
+          credits: 5,
+          amount: 100000,
+          gateway: 'mock',
+          createdAt: '2026-11-13T12:00:00Z',
+          paidAt: '2026-11-13T12:01:00Z',
+          currentBalance: 5,
+        } satisfies PaymentResultDto);
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/orders/ORD-PAID-1');
+
+    expect(await screen.findByRole('heading', { name: /order status/i })).toBeInTheDocument();
+    expect(screen.getByText(/credits granted:/i)).toBeInTheDocument();
+    expect(screen.queryByText(/not granted/i)).not.toBeInTheDocument();
+  });
+
   it('renders safe payOS external payment link and protects against javascript: links', async () => {
     installFetchMock((url) => {
       if (url === '/api/auth/me') return jsonResponse(MOCK_USER);

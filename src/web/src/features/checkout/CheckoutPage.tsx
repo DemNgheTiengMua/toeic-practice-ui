@@ -70,6 +70,11 @@ export function CheckoutPage() {
   const [isPayOsModalOpen, setIsPayOsModalOpen] = useState(false);
   const [settlementSuccess, setSettlementSuccess] = useState(false);
   const [mockActionError, setMockActionError] = useState<string | null>(null);
+  const [mockActionOutcome, setMockActionOutcome] = useState<{
+    action: string;
+    orderCode: string;
+    message: string;
+  } | null>(null);
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -94,6 +99,7 @@ export function CheckoutPage() {
     onSuccess: (order) => {
       setErrorMessage(null);
       setActiveOrder(order);
+      setMockActionOutcome(null);
 
       if (order.gateway?.toLowerCase() === 'payos' && order.checkoutUrl) {
         setIsPayOsModalOpen(true);
@@ -142,7 +148,27 @@ export function CheckoutPage() {
         setTimeout(() => {
           void navigate({ to: returnUrl || '/pricing' });
         }, 1500);
+        return;
       }
+
+      // Every mock action must say what happened. Before this, only `success` reacted: clicking
+      // Failed or Expired changed the order server-side and left the panel unchanged, so an operator
+      // could not tell the click registered and would press again — creating another order each time.
+      setMockActionOutcome({
+        action,
+        orderCode: activeOrder?.orderCode ?? '',
+        message:
+          action === 'failed'
+            ? 'Payment simulated as failed. No credits were granted; a new order can be started.'
+            : 'Payment simulated as expired. No credits were granted; a new order can be started.',
+      });
+      // The order is now closed server-side, so the next step is a fresh one: drop the active order so
+      // the panel clears and the create button is usable again.
+      setActiveOrder(null);
+      setSettlementSuccess(false);
+      void queryClient.invalidateQueries({ queryKey: ['learner', 'context'] });
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'wallet'] });
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'checkout-preview'] });
     },
     onError: (err) => {
       setMockActionError((err as Error).message || 'Simulation action failed.');
@@ -306,6 +332,21 @@ export function CheckoutPage() {
             <Alert.Description>
               +{creditsToGrant} credits have been deposited into your wallet. Redirecting you to your destination...
             </Alert.Description>
+          </Alert.Content>
+        </Alert>
+      )}
+
+      {/* Mock action outcome — the panel used to change nothing on Failed/Expired */}
+      {mockActionOutcome && !settlementSuccess && (
+        <Alert status={mockActionOutcome.action === 'failed' ? 'danger' : 'warning'}>
+          <Alert.Indicator>
+            <XCircle className="w-5 h-5" />
+          </Alert.Indicator>
+          <Alert.Content>
+            <Alert.Title>
+              Mock gateway: {mockActionOutcome.action} ({mockActionOutcome.orderCode})
+            </Alert.Title>
+            <Alert.Description>{mockActionOutcome.message}</Alert.Description>
           </Alert.Content>
         </Alert>
       )}
