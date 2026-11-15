@@ -35,6 +35,8 @@ import {
   Download,
   Trash2,
   ArrowLeft,
+  ArrowUp,
+  ArrowDown,
   ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
@@ -411,8 +413,85 @@ export function ExamsStudioPage() {
     }
   };
 
-  const handleCreateBundle = async (sectionId: number, cefrLevelCode: string, questionCount: number) => {
+  /**
+   * #362: adds a question to an EXISTING Bundle. Two acts, because the pool separates them: author the
+   * item carrying the Bundle's stimulus id, then bind that version to the next position in the Section.
+   * Creating a second Bundle instead would duplicate the passage the first one already owns.
+   */
+  const handleCreateChild = async () => {
+    if (!selectedExamId || !newChild) return;
+    setIsSavingChild(true);
+    setBundleNotice(null);
+    try {
+      const section = studioDetail?.sections.find((s) => s.sectionId === newChild.sectionId);
+      const nextOrder = (section?.currentQuestionCount ?? 0) + 1;
+
+      const created = await studioApi.createPoolItem({
+        modality: section?.modality ?? 'reading',
+        topicId: newChild.topicId,
+        cefrLevelCode: newChild.cefrLevelCode,
+        itemType: 'mcq',
+        stem: newChild.stem.trim(),
+        optionA: null,
+        optionB: null,
+        optionC: null,
+        optionD: null,
+        keyLabel: null,
+        explanation: newChild.explanation.trim() || null,
+        stimulusId: newChild.stimulusId,
+        targetBands: 'ALL',
+      });
+
+      // The pool answers an item; the paper needs one of its versions. The newest is the one just made.
+      await studioApi.bindPoolItem(selectedExamId, {
+        sectionId: newChild.sectionId,
+        itemVersionId: created.itemVersionId,
+        displayOrder: nextOrder,
+      });
+
+      setBundleNotice({
+        sectionId: newChild.sectionId,
+        isError: false,
+        text: 'Question added to the Bundle. Edit its stem and options below.',
+      });
+      setNewChild(null);
+      loadStudio(selectedExamId);
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId: newChild.sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to add the question.'),
+      });
+    } finally {
+      setIsSavingChild(false);
+    }
+  };
+
+  /** #362: reorder is the roster's own order, so it sends the position ids the read returned. */
+  const handleReorder = async (sectionId: number, orderedPositions: number[]) => {
     if (!selectedExamId) return;
+    setBundleNotice(null);
+    try {
+      await studioApi.reorderExamItems(selectedExamId, {
+        sectionId,
+        items: orderedPositions.map((questionId, index) => ({
+          groupId: null,
+          questionId,
+          displayOrder: index + 1,
+        })),
+      });
+      setBundleNotice({ sectionId, isError: false, text: 'Order saved.' });
+      loadStudio(selectedExamId);
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to save the order.'),
+      });
+    }
+  };
+
+  const handleCreateBundle = async (sectionId: number, cefrLevelCode: string, questionCount: number) => {    if (!selectedExamId) return;
     setBundleNotice(null);
     try {
       await studioApi.createExamCluster(selectedExamId, {
@@ -589,6 +668,18 @@ export function ExamsStudioPage() {
     explanation: string;
   } | null>(null);
   const [isSavingQuestion, setIsSavingQuestion] = useState(false);
+  // #362: a new child question for an existing Bundle, so a Bundle can grow past the count it was
+  // created with without forking a second Bundle (which would duplicate its passage).
+  const [newChild, setNewChild] = useState<{
+    sectionId: number;
+    groupId: number;
+    stimulusId: number;
+    cefrLevelCode: string;
+    topicId: number;
+    stem: string;
+    explanation: string;
+  } | null>(null);
+  const [isSavingChild, setIsSavingChild] = useState(false);
 
   // Create Exam
   const handleCreateExam = async () => {
@@ -1552,13 +1643,49 @@ export function ExamsStudioPage() {
                                   <li key={q.questionId} className="text-xs text-foreground space-y-1">
                                     <div className="flex flex-wrap justify-between items-start gap-2">
                                       <span>{q.stem}</span>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onPress={() => startEditingQuestion(sec.sectionId, q)}
-                                      >
-                                        Edit question
-                                      </Button>
+                                      <div className="flex items-center gap-1">
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          aria-label={`Move question ${q.displayOrder} up`}
+                                          isDisabled={q.displayOrder <= 1}
+                                          onPress={() => {
+                                            const ordered = [...bundle.questions]
+                                              .sort((a, b) => a.displayOrder - b.displayOrder)
+                                              .map((x) => x.questionId);
+                                            const i = ordered.indexOf(q.questionId);
+                                            if (i <= 0) return;
+                                            [ordered[i - 1], ordered[i]] = [ordered[i], ordered[i - 1]];
+                                            void handleReorder(sec.sectionId, ordered);
+                                          }}
+                                        >
+                                          <ArrowUp className="w-3.5 h-3.5" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          aria-label={`Move question ${q.displayOrder} down`}
+                                          isDisabled={q.displayOrder >= bundle.questions.length}
+                                          onPress={() => {
+                                            const ordered = [...bundle.questions]
+                                              .sort((a, b) => a.displayOrder - b.displayOrder)
+                                              .map((x) => x.questionId);
+                                            const i = ordered.indexOf(q.questionId);
+                                            if (i < 0 || i >= ordered.length - 1) return;
+                                            [ordered[i + 1], ordered[i]] = [ordered[i], ordered[i + 1]];
+                                            void handleReorder(sec.sectionId, ordered);
+                                          }}
+                                        >
+                                          <ArrowDown className="w-3.5 h-3.5" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onPress={() => startEditingQuestion(sec.sectionId, q)}
+                                        >
+                                          Edit question
+                                        </Button>
+                                      </div>
                                     </div>
 
                                     {questionDraft?.itemId === q.itemId && (
@@ -1636,6 +1763,70 @@ export function ExamsStudioPage() {
                                     )}
                                   </li>
                                 ))}
+
+                                {/* #362: grow an existing Bundle instead of forking a second one,
+                                    which would duplicate the passage this Bundle already owns. */}
+                                {newChild?.groupId === bundle.groupId ? (
+                                  <li className="pt-2">
+                                    <Form validationBehavior="aria" className="space-y-2">
+                                      <TextField
+                                        isRequired
+                                        name="newChildStem"
+                                        value={newChild.stem}
+                                        onChange={(v) => setNewChild({ ...newChild, stem: v })}
+                                      >
+                                        <Label className="text-xs">New question stem</Label>
+                                        <TextArea rows={2} className="text-xs" />
+                                      </TextField>
+                                      <TextField
+                                        name="newChildExplanation"
+                                        value={newChild.explanation}
+                                        onChange={(v) => setNewChild({ ...newChild, explanation: v })}
+                                      >
+                                        <Label className="text-xs">Explanation</Label>
+                                        <Input className="text-xs" />
+                                      </TextField>
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          variant="primary"
+                                          onPress={() => void handleCreateChild()}
+                                          isDisabled={isSavingChild || newChild.stem.trim() === ''}
+                                        >
+                                          Add to Bundle
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="secondary"
+                                          onPress={() => setNewChild(null)}
+                                        >
+                                          Cancel
+                                        </Button>
+                                      </div>
+                                    </Form>
+                                  </li>
+                                ) : (
+                                  <li className="pt-1">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onPress={() =>
+                                        setNewChild({
+                                          sectionId: sec.sectionId,
+                                          groupId: bundle.groupId,
+                                          stimulusId: bundle.groupId,
+                                          cefrLevelCode: 'B1',
+                                          topicId: bundle.questions[0]?.topicId ?? 0,
+                                          stem: '',
+                                          explanation: '',
+                                        })
+                                      }
+                                    >
+                                      <Plus className="w-3.5 h-3.5 mr-1" />
+                                      Add question
+                                    </Button>
+                                  </li>
+                                )}
                               </ul>
 
                               {bundleDraft?.groupId === bundle.groupId && (

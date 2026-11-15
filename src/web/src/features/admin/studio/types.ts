@@ -603,6 +603,8 @@ export interface ExamStudioQuestionDto {
   sampleAnswerOrImageDesc?: string | null;
   referenceKind?: string | null;
   cefrLevelCode?: string | null;
+  /** #362: the pool topic this item sits in. Adding a child to a Bundle authors it in the same cell. */
+  topicId?: number;
 }
 
 export interface ExamStudioGroupDto {

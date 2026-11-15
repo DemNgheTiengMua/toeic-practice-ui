@@ -287,6 +287,7 @@ const mockExamStudio = {
               options: [],
               criteria: [],
               hasAnswers: false,
+              topicId: 12,
             },
           ],
         },
@@ -304,6 +305,32 @@ const mockExamStudio = {
     issues: [],
     missingItems: [],
   },
+};
+
+/** Two questions in one Bundle, so an order has somewhere to move to. */
+const mockExamStudioTwoQuestions = {
+  ...mockExamStudio,
+  sections: [
+    {
+      ...mockExamStudio.sections[0],
+      currentQuestionCount: 2,
+      groups: [
+        {
+          ...mockExamStudio.sections[0].groups[0],
+          questions: [
+            mockExamStudio.sections[0].groups[0].questions[0],
+            {
+              ...mockExamStudio.sections[0].groups[0].questions[0],
+              questionId: 502,
+              itemId: 9002,
+              stem: 'How large is the overflow room?',
+              displayOrder: 2,
+            },
+          ],
+        },
+      ],
+    },
+  ],
 };
 
 const mockAuditBlocked = {
@@ -969,6 +996,42 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
     // a different item or nothing at all.
     expect(itemUpdate!.url).toBe('/api/admin/items/9001');
     expect(itemUpdate!.body.stem).toBe('Which auditorium hosts the keynote session?');
+  });
+
+  it('reorders the questions of a Section through the roster order (#362)', async () => {
+    let reorderBody: any = null;
+
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') return jsonResponse({ id: 1, email: 'a@demo.local', fullName: 'A', role: 'staff', permissions: [STAFF_PERMISSIONS.ContentAuthor] });
+      if (url.startsWith('/api/admin/exams?')) return jsonResponse(mockExamList);
+      if (url === '/api/admin/exams/101') return jsonResponse(mockExamDetail);
+      if (url === '/api/admin/exams/101/studio') return jsonResponse(mockExamStudioTwoQuestions);
+      if (url === '/api/admin/exams/101/reorder' && init?.method === 'POST') {
+        reorderBody = JSON.parse(String(init.body));
+        return jsonResponse({ success: true });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin/exams');
+    fireEvent.click(await screen.findByRole('button', { name: /open studio for toeic official practice test 1/i }));
+    fireEvent.click(await screen.findByRole('tab', { name: /section content/i }));
+
+    const list = await screen.findByRole('list', { name: /section bundles/i });
+    fireEvent.click(within(list).getByRole('button', { name: /show bundles/i }));
+
+    // Question 1 cannot move up; question 2 cannot move down. That is the boundary, not a bug.
+    expect(await within(list).findByRole('button', { name: /move question 1 up/i })).toBeDisabled();
+
+    fireEvent.click(within(list).getByRole('button', { name: /move question 2 up/i }));
+
+    await waitFor(() => expect(reorderBody).not.toBeNull());
+    expect(reorderBody.sectionId).toBe(7);
+    // The roster's own order: questionId IS the position handle the reorder route expects.
+    expect(reorderBody.items).toEqual([
+      { groupId: null, questionId: 502, displayOrder: 1 },
+      { groupId: null, questionId: 501, displayOrder: 2 },
+    ]);
   });
 
   it('binds backend RFC 7807 field errors to HeroUI FieldError controls in the create exam modal', async () => {

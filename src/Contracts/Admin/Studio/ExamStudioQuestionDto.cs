@@ -43,4 +43,7 @@ public sealed record ExamStudioQuestionDto(
     ReferenceKindDto? ReferenceKind = null,
     // #229 / D1: the level this question is authored at. The authoring paths write it and an edit
     // reads it back.
-    string? CefrLevelCode = null);
+    string? CefrLevelCode = null,
+    // #362: the pool topic this item sits in. Adding a child to an existing Bundle has to author it in
+    // the same cell as its siblings, and CreatePoolItemRequest requires a topic it cannot guess.
+    int TopicId = 0);

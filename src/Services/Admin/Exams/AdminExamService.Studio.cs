@@ -70,6 +70,12 @@ public sealed partial class AdminExamService
     /// a binding's pinned version cannot differ between the two screens.
     /// </para>
     /// </summary>
+    /// <summary>
+    /// #362: the authoring facts a position's item carries that the sitting projection does not - its
+    /// level and its pool topic. Read together because adding a child to a Bundle needs both.
+    /// </summary>
+    private sealed record PositionAuthoring(string Code, int TopicId);
+
     private ExamStudioSectionDto BuildPoolSectionDto(
         Section sec,
         ExamSectionAudio? secAudio,
@@ -77,7 +83,7 @@ public sealed partial class AdminExamService
         IReadOnlyList<ExamStudioCriterionDto> availableCriteria,
         IReadOnlyList<SectionCriterion> sectionCriteria,
         HashSet<int> answeredPositionIds,
-        IReadOnlyDictionary<int, string> levelByPositionId)
+        IReadOnlyDictionary<int, PositionAuthoring> authoringByPosition)
     {
         var groupDtos = new List<ExamStudioGroupDto>();
         var displayOrder = 0;
@@ -136,7 +142,8 @@ public sealed partial class AdminExamService
                     ReferenceKind: position.ReferenceKind is null
                         ? null
                         : EnumCodes.Parse<ReferenceKindDto>(position.ReferenceKind),
-                    CefrLevelCode: levelByPositionId.GetValueOrDefault(examItemId)));
+                    CefrLevelCode: authoringByPosition.GetValueOrDefault(examItemId)?.Code,
+                    TopicId: authoringByPosition.GetValueOrDefault(examItemId)?.TopicId ?? 0));
             }
 
             groupDtos.Add(new ExamStudioGroupDto(
@@ -221,12 +228,17 @@ public sealed partial class AdminExamService
             .GroupBy(p => p.SectionId)
             .ToDictionary(g => g.Key, g => g.OrderBy(p => p.ExamItemId).ToList());
 
-        // A position's authored level lives on the item, not on the sitting projection: the projection
-        // exists to render, and a level is authoring metadata. Read once for the whole paper.
-        var levelsByPosition = await db.ExamItems.AsNoTracking()
+        // A position's authored level and topic live on the item, not on the sitting projection: the
+        // projection exists to render, and these are authoring metadata. Read once for the whole paper.
+        // #362: the topic travels too, because adding a child to a Bundle must author it in the same
+        // cell its siblings occupy - the create request requires a topic and cannot guess one.
+        var authoringByPosition = await db.ExamItems.AsNoTracking()
             .Where(i => i.ExamId == examId)
-            .Join(db.Items.AsNoTracking(), i => i.ItemId, item => item.ItemId, (i, item) => new { i.ExamItemId, item.CefrLevel })
-            .ToDictionaryAsync(x => x.ExamItemId, x => x.CefrLevel.Code, cancellationToken);
+            .Join(db.Items.AsNoTracking(), i => i.ItemId, item => item.ItemId, (i, item) => new { i.ExamItemId, item.CefrLevel, item.TopicId })
+            .ToDictionaryAsync(
+                x => x.ExamItemId,
+                x => new PositionAuthoring(x.CefrLevel.Code, x.TopicId),
+                cancellationToken);
 
         var paperPositionIds = paper
             .Select(p => p.ExamItemId)
@@ -268,7 +280,7 @@ public sealed partial class AdminExamService
             {
                 sectionDtos.Add(BuildPoolSectionDto(
                     sec, secAudio, secPositions, availableCriteria, sectionCriteria, answeredQuestionIds,
-                    levelsByPosition));
+                    authoringByPosition));
             }
             else
             {
