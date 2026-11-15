@@ -10,14 +10,6 @@ import type {
   CertificateBlueprintPresetDto,
   SaveCertificateWizardRequest,
   SaveCertificateWizardResultDto,
-  AdminScoreConversionDto,
-  UpdateScoreConversionRequest,
-  ScorePreviewRequestDto,
-  ScorePreviewResultDto,
-  RubricStudioDto,
-  SaveRubricRequest,
-  RunRubricLadderRequest,
-  RubricLadderDto,
   AdminExamListSummaryDto,
   AdminExamDetailDto,
   CreateAdminExamRequest,
@@ -45,18 +37,6 @@ import type {
   CreatePoolItemRequest,
   UpdatePoolItemRequest,
   PoolItemDto,
-  StimulusStudioOptionsDto,
-  StimulusDraftRequest,
-  StimulusDraftAnalysisDto,
-  StimulusBundleDto,
-  ProductiveStudioOptionsDto,
-  ProductiveTaskDraftRequest,
-  ProductiveTaskAnalysisDto,
-  ProductiveTaskBundleDto,
-  IngestionBatchListDto,
-  IngestionBatchDetailDto,
-  IngestionRecordDto,
-  IngestionUploadResultDto,
   AdminImportResultDto,
   AdminLessonSummaryDto,
   AdminLessonFormOptionsDto,
@@ -79,43 +59,8 @@ export const studioApi = {
       body: JSON.stringify(body),
     }),
 
-  // Score Conversion & Preview
-  getScoreConversion: (params?: { certCode?: string; examId?: number }) => {
-    const sp = new URLSearchParams();
-    if (params?.certCode) sp.set('certCode', params.certCode);
-    if (params?.examId != null) sp.set('examId', String(params.examId));
-    const q = sp.toString();
-    return apiFetch<AdminScoreConversionDto>(`/api/admin/score-conversion${q ? `?${q}` : ''}`);
-  },
-  updateScoreConversion: (certId: number, body: UpdateScoreConversionRequest) =>
-    apiFetch<AdminScoreConversionDto>(`/api/admin/score-conversion/${certId}`, {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    }),
-  previewScore: (body: ScorePreviewRequestDto) =>
-    apiFetch<ScorePreviewResultDto>('/api/admin/score-conversion/preview', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  // Rubric Studio
-  getRubricStudio: (certId: number, skillId: number) =>
-    apiFetch<RubricStudioDto>(`/api/admin/studio/rubric?certId=${certId}&skillId=${skillId}`),
-  saveRubric: (body: SaveRubricRequest) =>
-    apiFetch<RubricStudioDto>('/api/admin/studio/rubric', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  runRubricLadder: (body: RunRubricLadderRequest) =>
-    apiFetch<RubricLadderDto>('/api/admin/studio/rubric/ladder', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  lockRubric: (body: RunRubricLadderRequest) =>
-    apiFetch<RubricLadderDto>('/api/admin/studio/rubric/lock', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
+  // #360: score conversion and the rubric ladder had no route on this server. The wizard owns
+  // scoring configuration now, so the client's half is gone rather than pointing at a 404.
 
   // Exams Authoring
   getExams: (params?: {
@@ -250,70 +195,9 @@ export const studioApi = {
       body: JSON.stringify(body),
     }),
 
-  // Stimulus Studio
-  getStimulusOptions: (skill: string) =>
-    apiFetch<StimulusStudioOptionsDto>(
-      `/api/admin/studio/stimulus/options?skill=${encodeURIComponent(skill)}`,
-    ),
-  analyseStimulus: (body: StimulusDraftRequest) =>
-    apiFetch<StimulusDraftAnalysisDto>('/api/admin/studio/stimulus/analyse', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  saveStimulus: (body: StimulusDraftRequest) =>
-    apiFetch<StimulusBundleDto>('/api/admin/studio/stimulus', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  // Productive Studio
-  getProductiveOptions: (skill: string) =>
-    apiFetch<ProductiveStudioOptionsDto>(
-      `/api/admin/studio/productive/options?skill=${encodeURIComponent(skill)}`,
-    ),
-  analyseProductive: (body: ProductiveTaskDraftRequest) =>
-    apiFetch<ProductiveTaskAnalysisDto>('/api/admin/studio/productive/analyse', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  saveProductive: (body: ProductiveTaskDraftRequest) =>
-    apiFetch<ProductiveTaskBundleDto>('/api/admin/studio/productive', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  // Ingestion Workbench
-  getIngestionBatch: (batchId: number, rule?: string) =>
-    apiFetch<IngestionBatchDetailDto>(
-      rule
-        ? `/api/admin/ingestion/${batchId}?rule=${encodeURIComponent(rule)}`
-        : `/api/admin/ingestion/${batchId}`,
-    ),
-  clearWorkbenchItem: (batchId: number, itemId: number) =>
-    apiFetch<void>(`/api/admin/ingestion/${batchId}/items/${itemId}/clear`, {
-      method: 'POST',
-    }),
-  discardWorkbenchRecord: (batchId: number, line: number, reason?: string) =>
-    apiFetch<void>(`/api/admin/ingestion/${batchId}/records/${line}/discard`, {
-      method: 'POST',
-      body: JSON.stringify({ reason }),
-    }),
-  resubmitWorkbenchRecord: (batchId: number, line: number, recordJson: string) =>
-    apiFetch<IngestionRecordDto>(`/api/admin/ingestion/${batchId}/records/${line}/resubmit`, {
-      method: 'POST',
-      body: JSON.stringify({ recordJson }),
-    }),
-  uploadPoolManifest: async (skill: string, file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return apiFetch<IngestionUploadResultDto>(
-      `/api/admin/ingestion/upload?skill=${encodeURIComponent(skill)}`,
-      {
-        method: 'POST',
-        body: formData,
-      },
-    );
-  },
+  // #360: Stimulus Studio, Productive Studio, the rubric ladder and the ingestion workbench were
+  // retired with the legacy pool. Their routes do not exist, so neither does this client's half.
+  // Pool authoring is POST /items plus POST /exams/{id}/bindings, which are above.
 
   // Micro-Lessons
   getLessons: (params?: { certId?: number; skillId?: number }) => {
