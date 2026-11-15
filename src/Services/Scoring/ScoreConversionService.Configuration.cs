@@ -151,6 +151,32 @@ public sealed partial class ScoreConversionService
                     }
                 }
             }
+
+            if (command.ExamId is not null)
+            {
+                var skillBounds = await db.Skills
+                    .AsNoTracking()
+                    .Where(s => s.CertId == certId)
+                    .ToDictionaryAsync(s => s.SkillId, cancellationToken);
+
+                foreach (var entry in command.Scales)
+                {
+                    if (!skillBounds.TryGetValue(entry.SkillId, out var skill))
+                    {
+                        throw new ScoreConversionException(
+                            ScoreConversionException.InvalidData,
+                            $"Skill {entry.SkillId} does not belong to certificate {cert.Code}.");
+                    }
+
+                    if (skill.MaxScaledScore > skill.MinScaledScore &&
+                        (entry.ScaledScore < skill.MinScaledScore || entry.ScaledScore > skill.MaxScaledScore))
+                    {
+                        throw new ScoreConversionException(
+                            ScoreConversionException.InvalidBandRange,
+                            $"Scaled score {entry.ScaledScore} for skill '{skill.Name}' must be within certificate bounds [{skill.MinScaledScore}, {skill.MaxScaledScore}].");
+                    }
+                }
+            }
         }
 
         // 2. Validate Bands: non-empty, min <= max, non-overlapping

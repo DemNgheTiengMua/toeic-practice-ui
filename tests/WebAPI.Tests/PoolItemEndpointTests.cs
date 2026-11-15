@@ -39,7 +39,9 @@ public sealed class PoolItemEndpointTests
         {
             var response = await client.PostAsJsonAsync(
                 "/api/admin/items",
-                new CreatePoolItemRequest(ModalityDto.Listening, 1, "B1", "short_exchange", "Who signs the ledger?"));
+                new CreatePoolItemRequest(
+                    ModalityDto.Listening, 1, "B1", "short_exchange", "Who signs the ledger?",
+                    Explanation: "The speaker states who signs the ledger."));
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 

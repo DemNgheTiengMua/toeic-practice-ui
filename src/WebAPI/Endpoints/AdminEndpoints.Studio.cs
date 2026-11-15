@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BusinessObjects;
 using Contracts;
 using Services;
+using WebAPI.Filters;
 using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
@@ -73,7 +74,7 @@ public static partial class AdminEndpoints
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<ReorderSectionItemsRequest>>();
 
         admin.MapPost("/exams/{examId:int}/clusters", async (
             int examId,
@@ -90,7 +91,7 @@ public static partial class AdminEndpoints
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<CreateExamClusterRequest>>();
 
         // #273: the Studio's group card writes here. Its address is the one the read returns - a
         // stimulus id, or a solo position's negated id - because that is the only identity a pool paper
@@ -111,7 +112,7 @@ public static partial class AdminEndpoints
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<UpdateQuestionGroupRequest>>();
 
         admin.MapDelete("/exams/{examId:int}/studio/groups/{groupId:int}", async (
             int examId,

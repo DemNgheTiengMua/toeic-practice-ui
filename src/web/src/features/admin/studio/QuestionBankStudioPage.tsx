@@ -7,7 +7,14 @@ import {
   Modal,
   Table,
   Alert,
+  Form,
+  TextField,
+  Label,
+  Input,
+  TextArea,
+  FieldError,
 } from '@heroui/react';
+import { extractErrorMessage, extractFieldErrors } from './validationErrors';
 import {
   Layers,
   Plus,
@@ -80,6 +87,7 @@ export function QuestionBankStudioPage() {
   const [newItemPlacementEligible, setNewItemPlacementEligible] = useState(false);
   const [isSavingItem, setIsSavingItem] = useState(false);
   const [itemSaveError, setItemSaveError] = useState<string | null>(null);
+  const [itemFieldErrors, setItemFieldErrors] = useState<Record<string, string>>({});
 
   // Stimulus Studio State
   const [stimulusSkill, setStimulusSkill] = useState('reading');
@@ -174,10 +182,7 @@ export function QuestionBankStudioPage() {
   // Create Item Handler
   const handleCreatePoolItem = async () => {
     setItemSaveError(null);
-    if (!newItemStem.trim()) {
-      setItemSaveError('Question stem is required.');
-      return;
-    }
+    setItemFieldErrors({});
     setIsSavingItem(true);
     try {
       const payload: CreatePoolItemRequest = {
@@ -202,8 +207,9 @@ export function QuestionBankStudioPage() {
       await studioApi.createPoolItem(payload);
       setIsNewItemOpen(false);
       loadCoverage();
-    } catch (err: any) {
-      setItemSaveError(err?.detail || err?.title || 'Failed to create pool item.');
+    } catch (err: unknown) {
+      setItemFieldErrors(extractFieldErrors(err));
+      setItemSaveError(extractErrorMessage(err, 'Failed to create pool item.'));
     } finally {
       setIsSavingItem(false);
     }
@@ -640,156 +646,216 @@ export function QuestionBankStudioPage() {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground">Question stem</label>
-                <textarea
-                  rows={2}
+              <Form validationBehavior="aria" className="space-y-4">
+                <TextField
+                  isRequired
+                  name="stem"
                   value={newItemStem}
-                  onChange={(e) => setNewItemStem(e.target.value)}
-                  placeholder="Enter clear, concise question prompt..."
-                  className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                />
-              </div>
+                  onChange={(value) => {
+                    setNewItemStem(value);
+                    setItemFieldErrors((prev) => ({ ...prev, stem: '' }));
+                  }}
+                  isInvalid={Boolean(itemFieldErrors.stem)}
+                >
+                  <Label>Question stem</Label>
+                  <TextArea
+                    rows={2}
+                    placeholder="Enter clear, concise question prompt..."
+                    className="text-sm"
+                  />
+                  {itemFieldErrors.stem && (
+                    <FieldError>{itemFieldErrors.stem}</FieldError>
+                  )}
+                </TextField>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-foreground">Option (A)</label>
-                  <input
-                    type="text"
-                    value={newItemOptionA}
-                    onChange={(e) => setNewItemOptionA(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-md border border-border bg-surface text-foreground text-sm"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Rationale for option A..."
-                    value={newItemRationaleA}
-                    onChange={(e) => setNewItemRationaleA(e.target.value)}
-                    className="w-full px-3 py-1 rounded-md border border-border bg-surface-secondary text-muted text-xs"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <TextField
+                      name="optionA"
+                      value={newItemOptionA}
+                      onChange={(value) => {
+                        setNewItemOptionA(value);
+                        setItemFieldErrors((prev) => ({ ...prev, optionA: '' }));
+                      }}
+                      isInvalid={Boolean(itemFieldErrors.optionA)}
+                    >
+                      <Label>Option (A)</Label>
+                      <Input className="text-sm" />
+                      {itemFieldErrors.optionA && (
+                        <FieldError>{itemFieldErrors.optionA}</FieldError>
+                      )}
+                    </TextField>
+                    <input
+                      type="text"
+                      placeholder="Rationale for option A..."
+                      value={newItemRationaleA}
+                      onChange={(e) => setNewItemRationaleA(e.target.value)}
+                      className="w-full px-3 py-1 rounded-md border border-border bg-surface-secondary text-muted text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <TextField
+                      name="optionB"
+                      value={newItemOptionB}
+                      onChange={(value) => {
+                        setNewItemOptionB(value);
+                        setItemFieldErrors((prev) => ({ ...prev, optionB: '' }));
+                      }}
+                      isInvalid={Boolean(itemFieldErrors.optionB)}
+                    >
+                      <Label>Option (B)</Label>
+                      <Input className="text-sm" />
+                      {itemFieldErrors.optionB && (
+                        <FieldError>{itemFieldErrors.optionB}</FieldError>
+                      )}
+                    </TextField>
+                    <input
+                      type="text"
+                      placeholder="Rationale for option B..."
+                      value={newItemRationaleB}
+                      onChange={(e) => setNewItemRationaleB(e.target.value)}
+                      className="w-full px-3 py-1 rounded-md border border-border bg-surface-secondary text-muted text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <TextField
+                      name="optionC"
+                      value={newItemOptionC}
+                      onChange={(value) => {
+                        setNewItemOptionC(value);
+                        setItemFieldErrors((prev) => ({ ...prev, optionC: '' }));
+                      }}
+                      isInvalid={Boolean(itemFieldErrors.optionC)}
+                    >
+                      <Label>Option (C)</Label>
+                      <Input className="text-sm" />
+                      {itemFieldErrors.optionC && (
+                        <FieldError>{itemFieldErrors.optionC}</FieldError>
+                      )}
+                    </TextField>
+                    <input
+                      type="text"
+                      placeholder="Rationale for option C..."
+                      value={newItemRationaleC}
+                      onChange={(e) => setNewItemRationaleC(e.target.value)}
+                      className="w-full px-3 py-1 rounded-md border border-border bg-surface-secondary text-muted text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <TextField
+                      name="optionD"
+                      value={newItemOptionD}
+                      onChange={(value) => {
+                        setNewItemOptionD(value);
+                        setItemFieldErrors((prev) => ({ ...prev, optionD: '' }));
+                      }}
+                      isInvalid={Boolean(itemFieldErrors.optionD)}
+                    >
+                      <Label>Option (D)</Label>
+                      <Input className="text-sm" />
+                      {itemFieldErrors.optionD && (
+                        <FieldError>{itemFieldErrors.optionD}</FieldError>
+                      )}
+                    </TextField>
+                    <input
+                      type="text"
+                      placeholder="Rationale for option D..."
+                      value={newItemRationaleD}
+                      onChange={(e) => setNewItemRationaleD(e.target.value)}
+                      className="w-full px-3 py-1 rounded-md border border-border bg-surface-secondary text-muted text-xs"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-foreground">Option (B)</label>
-                  <input
-                    type="text"
-                    value={newItemOptionB}
-                    onChange={(e) => setNewItemOptionB(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-md border border-border bg-surface text-foreground text-sm"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Rationale for option B..."
-                    value={newItemRationaleB}
-                    onChange={(e) => setNewItemRationaleB(e.target.value)}
-                    className="w-full px-3 py-1 rounded-md border border-border bg-surface-secondary text-muted text-xs"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-foreground">Option (C)</label>
-                  <input
-                    type="text"
-                    value={newItemOptionC}
-                    onChange={(e) => setNewItemOptionC(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-md border border-border bg-surface text-foreground text-sm"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Rationale for option C..."
-                    value={newItemRationaleC}
-                    onChange={(e) => setNewItemRationaleC(e.target.value)}
-                    className="w-full px-3 py-1 rounded-md border border-border bg-surface-secondary text-muted text-xs"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-foreground">Option (D)</label>
-                  <input
-                    type="text"
-                    value={newItemOptionD}
-                    onChange={(e) => setNewItemOptionD(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-md border border-border bg-surface text-foreground text-sm"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Rationale for option D..."
-                    value={newItemRationaleD}
-                    onChange={(e) => setNewItemRationaleD(e.target.value)}
-                    className="w-full px-3 py-1 rounded-md border border-border bg-surface-secondary text-muted text-xs"
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-foreground">Correct key</label>
-                  <select
-                    value={newItemKey}
-                    onChange={(e) => setNewItemKey(e.target.value)}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground font-mono font-bold text-sm"
-                  >
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                    <option value="D">D</option>
-                  </select>
-                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-foreground">Correct key</label>
+                    <select
+                      value={newItemKey}
+                      onChange={(e) => {
+                        setNewItemKey(e.target.value);
+                        setItemFieldErrors((prev) => ({ ...prev, keyLabel: '' }));
+                      }}
+                      className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground font-mono font-bold text-sm"
+                    >
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                      <option value="D">D</option>
+                    </select>
+                    {itemFieldErrors.keyLabel && (
+                      <p className="text-xs text-danger">{itemFieldErrors.keyLabel}</p>
+                    )}
+                  </div>
 
-                <div className="flex items-center gap-2 pt-6">
-                  <input
-                    type="checkbox"
-                    id="new-placement-eligible"
-                    checked={newItemPlacementEligible}
-                    onChange={(e) => setNewItemPlacementEligible(e.target.checked)}
-                    className="w-4 h-4 rounded border-border"
-                  />
-                  <label htmlFor="new-placement-eligible" className="text-sm font-medium text-foreground">
-                    Placement eligible
-                  </label>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <span className="text-xs font-semibold text-foreground block">Target bands</span>
-                <div className="flex flex-wrap items-center gap-3">
-                  <label className="inline-flex items-center gap-1.5 text-xs text-foreground">
+                  <div className="flex items-center gap-2 pt-6">
                     <input
                       type="checkbox"
-                      checked={newItemTargetBands.length === 0}
-                      onChange={() => setNewItemTargetBands([])}
-                      className="w-3.5 h-3.5 rounded border-border"
+                      id="new-placement-eligible"
+                      checked={newItemPlacementEligible}
+                      onChange={(e) => setNewItemPlacementEligible(e.target.checked)}
+                      className="w-4 h-4 rounded border-border"
                     />
-                    ALL
-                  </label>
-                  {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((band) => {
-                    const checked = newItemTargetBands.includes(band);
-                    return (
-                      <label key={band} className="inline-flex items-center gap-1.5 text-xs text-foreground">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() =>
-                            setNewItemTargetBands((prev) =>
-                              checked ? prev.filter((b) => b !== band) : [...prev, band],
-                            )
-                          }
-                          className="w-3.5 h-3.5 rounded border-border"
-                        />
-                        {band}
-                      </label>
-                    );
-                  })}
+                    <label htmlFor="new-placement-eligible" className="text-sm font-medium text-foreground">
+                      Placement eligible
+                    </label>
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground">Explanation</label>
-                <textarea
-                  rows={2}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-semibold text-foreground block">Target bands</span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="inline-flex items-center gap-1.5 text-xs text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={newItemTargetBands.length === 0}
+                        onChange={() => setNewItemTargetBands([])}
+                        className="w-3.5 h-3.5 rounded border-border"
+                      />
+                      ALL
+                    </label>
+                    {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((band) => {
+                      const checked = newItemTargetBands.includes(band);
+                      return (
+                        <label key={band} className="inline-flex items-center gap-1.5 text-xs text-foreground">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              setNewItemTargetBands((prev) =>
+                                checked ? prev.filter((b) => b !== band) : [...prev, band],
+                              )
+                            }
+                            className="w-3.5 h-3.5 rounded border-border"
+                          />
+                          {band}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <TextField
+                  isRequired
+                  name="explanation"
                   value={newItemExplanation}
-                  onChange={(e) => setNewItemExplanation(e.target.value)}
-                  placeholder="Why the key is correct..."
-                  className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-xs"
-                />
-              </div>
+                  onChange={(value) => {
+                    setNewItemExplanation(value);
+                    setItemFieldErrors((prev) => ({ ...prev, explanation: '' }));
+                  }}
+                  isInvalid={Boolean(itemFieldErrors.explanation)}
+                >
+                  <Label>Explanation</Label>
+                  <TextArea
+                    rows={2}
+                    placeholder="Why the key is correct..."
+                    className="text-xs"
+                  />
+                  {itemFieldErrors.explanation && (
+                    <FieldError>{itemFieldErrors.explanation}</FieldError>
+                  )}
+                </TextField>
+              </Form>
             </Modal.Body>
             <Modal.Footer>
               <Button size="sm" variant="secondary" onPress={() => setIsNewItemOpen(false)}>

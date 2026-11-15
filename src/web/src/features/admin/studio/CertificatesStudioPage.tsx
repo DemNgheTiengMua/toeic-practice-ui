@@ -5,7 +5,14 @@ import {
   Chip,
   Modal,
   Alert,
+  Form,
+  TextField,
+  Label,
+  Input,
+  TextArea,
+  FieldError,
 } from '@heroui/react';
+import { extractErrorMessage, extractFieldErrors } from './validationErrors';
 import {
   Award,
   ShieldCheck,
@@ -51,6 +58,7 @@ export function CertificatesStudioPage() {
   const [wizardCriteria, setWizardCriteria] = useState<SaveGradingCriterionWizardDto[]>([]);
   const [isSavingWizard, setIsSavingWizard] = useState(false);
   const [wizardError, setWizardError] = useState<string | null>(null);
+  const [wizardFieldErrors, setWizardFieldErrors] = useState<Record<string, string>>({});
 
   // Initial load
   useEffect(() => {
@@ -196,11 +204,7 @@ export function CertificatesStudioPage() {
   // Save Blueprint Wizard
   const handleSaveWizard = async () => {
     setWizardError(null);
-    if (!wizardCode.trim() || !wizardName.trim()) {
-      setWizardError('Certificate Code and Name are required.');
-      return;
-    }
-
+    setWizardFieldErrors({});
     setIsSavingWizard(true);
     try {
       const payload: SaveCertificateWizardRequest = {
@@ -244,8 +248,13 @@ export function CertificatesStudioPage() {
       await studioApi.saveCertificateWizard(payload);
       setIsWizardOpen(false);
       loadCertificates();
-    } catch (err: any) {
-      setWizardError(err?.detail || err?.title || 'Failed to save certificate blueprint.');
+    } catch (err: unknown) {
+      const fieldErrs = extractFieldErrors(err);
+      setWizardFieldErrors(fieldErrs);
+      if (fieldErrs.code || fieldErrs.name || fieldErrs.description) {
+        setWizardStep(1);
+      }
+      setWizardError(extractErrorMessage(err, 'Failed to save certificate blueprint.'));
     } finally {
       setIsSavingWizard(false);
     }
@@ -427,48 +436,72 @@ export function CertificatesStudioPage() {
                     </select>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label htmlFor="wizard-cert-code" className="text-xs font-semibold text-foreground">
-                        Certificate code
-                      </label>
-                      <input
-                        id="wizard-cert-code"
-                        type="text"
+                  <Form validationBehavior="aria" className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <TextField
+                        isRequired
+                        name="code"
                         value={wizardCode}
-                        onChange={(e) => setWizardCode(e.target.value)}
-                        placeholder="e.g. TOEIC, TOEFL"
-                        className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground font-mono text-sm uppercase"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label htmlFor="wizard-cert-name" className="text-xs font-semibold text-foreground">
-                        Certificate name
-                      </label>
-                      <input
-                        id="wizard-cert-name"
-                        type="text"
-                        value={wizardName}
-                        onChange={(e) => setWizardName(e.target.value)}
-                        placeholder="Full certificate title"
-                        className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                      />
-                    </div>
-                  </div>
+                        onChange={(value) => {
+                          setWizardCode(value);
+                          setWizardFieldErrors((prev) => ({ ...prev, code: '' }));
+                        }}
+                        isInvalid={Boolean(wizardFieldErrors.code)}
+                      >
+                        <Label htmlFor="wizard-cert-code">Certificate code</Label>
+                        <Input
+                          id="wizard-cert-code"
+                          placeholder="e.g. TOEIC, TOEFL"
+                          className="font-mono text-sm uppercase"
+                        />
+                        {wizardFieldErrors.code && (
+                          <FieldError>{wizardFieldErrors.code}</FieldError>
+                        )}
+                      </TextField>
 
-                  <div className="space-y-1">
-                    <label htmlFor="wizard-cert-desc" className="text-xs font-semibold text-foreground">
-                      Description
-                    </label>
-                    <textarea
-                      id="wizard-cert-desc"
-                      rows={2}
+                      <TextField
+                        isRequired
+                        name="name"
+                        value={wizardName}
+                        onChange={(value) => {
+                          setWizardName(value);
+                          setWizardFieldErrors((prev) => ({ ...prev, name: '' }));
+                        }}
+                        isInvalid={Boolean(wizardFieldErrors.name)}
+                      >
+                        <Label htmlFor="wizard-cert-name">Certificate name</Label>
+                        <Input
+                          id="wizard-cert-name"
+                          placeholder="Full certificate title"
+                          className="text-sm"
+                        />
+                        {wizardFieldErrors.name && (
+                          <FieldError>{wizardFieldErrors.name}</FieldError>
+                        )}
+                      </TextField>
+                    </div>
+
+                    <TextField
+                      name="description"
                       value={wizardDescription}
-                      onChange={(e) => setWizardDescription(e.target.value)}
-                      placeholder="Official overview..."
-                      className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                    />
-                  </div>
+                      onChange={(value) => {
+                        setWizardDescription(value);
+                        setWizardFieldErrors((prev) => ({ ...prev, description: '' }));
+                      }}
+                      isInvalid={Boolean(wizardFieldErrors.description)}
+                    >
+                      <Label htmlFor="wizard-cert-desc">Description</Label>
+                      <TextArea
+                        id="wizard-cert-desc"
+                        rows={2}
+                        placeholder="Official overview..."
+                        className="text-sm"
+                      />
+                      {wizardFieldErrors.description && (
+                        <FieldError>{wizardFieldErrors.description}</FieldError>
+                      )}
+                    </TextField>
+                  </Form>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
@@ -707,10 +740,6 @@ export function CertificatesStudioPage() {
                   size="sm"
                   variant="primary"
                   onPress={() => {
-                    if (wizardStep === 1 && (!wizardCode.trim() || !wizardName.trim())) {
-                      setWizardError('Certificate Code and Name are required.');
-                      return;
-                    }
                     setWizardError(null);
                     setWizardStep((s) => (s === 1 ? 2 : 3));
                   }}

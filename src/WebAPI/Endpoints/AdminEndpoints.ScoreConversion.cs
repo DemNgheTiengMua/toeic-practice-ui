@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BusinessObjects;
 using Contracts;
 using Services;
+using WebAPI.Filters;
 using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
@@ -52,7 +53,7 @@ public static partial class AdminEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Score conversion invalid", ApiError.Codes.ScoreConversionInvalid, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<UpdateScoreConversionRequest>>();
 
         admin.MapPost("/score-conversion/preview", async (
             ScorePreviewRequestDto requestDto,
@@ -72,6 +73,6 @@ public static partial class AdminEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Score conversion invalid", ApiError.Codes.ScoreConversionInvalid, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<UpdateScoreConversionRequest>>();
     }
 }

@@ -41,7 +41,7 @@ public static partial class AdminEndpoints
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<CreateAdminExamRequest>>();
 
         admin.MapGet("/exams/{examId:int}", async (
             int examId,
@@ -74,7 +74,7 @@ public static partial class AdminEndpoints
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<UpdateAdminExamRequest>>();
 
         admin.MapPost("/exams/{examId:int}/publish", async (
             int examId,

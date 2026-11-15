@@ -396,4 +396,55 @@ describe('Certificates Studio (/admin/certificates) (#303)', () => {
       expect(savedRequest.skills[0].sections[0].expectedQuestionCount).toBe(30);
     });
   });
+
+  it('binds backend RFC 7807 field errors to HeroUI FieldError controls in the certificate wizard', async () => {
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          id: 1,
+          email: 'catalog@demo.local',
+          fullName: 'Catalog Manager',
+          role: 'staff',
+          permissions: [STAFF_PERMISSIONS.BlueprintDesign],
+        });
+      }
+      if (url === '/api/admin/certificates') {
+        return jsonResponse(mockCertificates);
+      }
+      if (url === '/api/admin/certificates/presets') {
+        return jsonResponse(mockPresets);
+      }
+      if (url === '/api/admin/certificates/wizard' && init?.method === 'POST') {
+        return jsonResponse(
+          {
+            title: 'Validation failed',
+            status: 400,
+            code: 'VALIDATION_ERROR',
+            errors: {
+              code: ['Certificate code is required.'],
+              name: ['Certificate name is required.'],
+            },
+          },
+          400,
+        );
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin/certificates');
+
+    fireEvent.click(await screen.findByRole('button', { name: /new certificate/i }));
+    expect(await screen.findByRole('heading', { name: /certificate blueprint wizard/i })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/template/i), { target: { value: 'two_skill' } });
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    await screen.findAllByLabelText(/expected questions/i);
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    await screen.findByRole('heading', { name: /score bands/i });
+
+    fireEvent.click(screen.getByRole('button', { name: /save blueprint/i }));
+
+    expect(await screen.findByText('Certificate code is required.')).toBeInTheDocument();
+    expect(screen.getByText('Certificate name is required.')).toBeInTheDocument();
+  });
 });
