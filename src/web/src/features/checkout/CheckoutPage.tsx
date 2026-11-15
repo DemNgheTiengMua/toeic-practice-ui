@@ -54,7 +54,7 @@ export function useSearchParams() {
 }
 
 export function CheckoutPage() {
-  const { credits: queryCredits, returnUrl } = useSearchParams();
+  const { credits: queryCredits } = useSearchParams();
 
   // If credits query param is given, use it; otherwise default to 5
   const initialCredits = queryCredits
@@ -146,7 +146,11 @@ export function CheckoutPage() {
         void queryClient.invalidateQueries({ queryKey: ['finance', 'wallet'] });
         void queryClient.invalidateQueries({ queryKey: ['finance', 'checkout-preview'] });
         setTimeout(() => {
-          void navigate({ to: returnUrl || '/pricing' });
+          // #381: the same destination the payOS modal uses, so a mock payment also shows its receipt.
+          void navigate({
+            to: '/payment/result',
+            search: { orderCode: activeOrder?.orderCode },
+          } as any);
         }, 1500);
         return;
       }
@@ -588,7 +592,6 @@ export function CheckoutPage() {
           checkoutUrl={activeOrder.checkoutUrl || ''}
           amount={activeOrder.amount}
           credits={activeOrder.credits ?? creditsToGrant}
-          returnUrl={returnUrl}
           onClose={() => {
             setIsPayOsModalOpen(false);
             setActiveOrder(null);
