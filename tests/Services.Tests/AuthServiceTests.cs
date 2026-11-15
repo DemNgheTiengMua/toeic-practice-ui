@@ -199,6 +199,22 @@ public sealed class AuthServiceTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task UpdateProfile_normalizes_whitespace_and_rejects_digits_or_html()
+    {
+        await SeedRolesAsync();
+        var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "norm@example.com", null, "password-ok", true));
+
+        var updated = await CreateService().UpdateProfileAsync(
+            user.UserId, new UpdateProfileInput("  Nguyễn   Thị  Minh  Khai  ", "0901234567", "Asia/Ho_Chi_Minh"));
+        Assert.Equal("Nguyễn Thị Minh Khai", updated.FullName);
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            CreateService().UpdateProfileAsync(user.UserId, new UpdateProfileInput("Demo Learner 29381", null, "Asia/Ho_Chi_Minh")));
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            CreateService().UpdateProfileAsync(user.UserId, new UpdateProfileInput("<script>alert(1)</script>", null, "Asia/Ho_Chi_Minh")));
+    }
+
+    [Fact]
     public async Task ChangePassword_requires_the_current_password()
     {
         await SeedRolesAsync();

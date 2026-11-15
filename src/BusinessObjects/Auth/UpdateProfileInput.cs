@@ -6,7 +6,7 @@ namespace BusinessObjects;
 /// view model mirrors it for instant per-field feedback.</summary>
 public sealed record UpdateProfileInput(
     [property: Required(ErrorMessage = "Please tell us your name.")]
-    [property: StringLength(120, ErrorMessage = "Name must be 120 characters or fewer.")]
+    [property: StringLength(70, MinimumLength = 2, ErrorMessage = "Name must be 2–70 characters and contain only letters, spaces, hyphens, or apostrophes.")]
     string FullName,
 
     [property: StringLength(20, ErrorMessage = "Phone must be 20 characters or fewer.")]

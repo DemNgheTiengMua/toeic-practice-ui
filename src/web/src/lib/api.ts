@@ -8,14 +8,22 @@ export class ApiClientError extends Error {
   public readonly code: string;
   public readonly title: string;
   public readonly detail?: string;
+  public readonly errors?: Record<string, string[]>;
 
-  constructor(status: number, code: string, title: string, detail?: string) {
+  constructor(
+    status: number,
+    code: string,
+    title: string,
+    detail?: string,
+    errors?: Record<string, string[]>,
+  ) {
     super(detail || title || `API error ${status} (${code})`);
     this.name = 'ApiClientError';
     this.status = status;
     this.code = code;
     this.title = title;
     this.detail = detail;
+    this.errors = errors;
   }
 }
 
@@ -52,6 +60,7 @@ export async function apiFetch<T>(
     let code = 'unexpected_error';
     let title = response.statusText || 'Request failed';
     let detail: string | undefined;
+    let errors: Record<string, string[]> | undefined;
 
     try {
       const problem = await response.json();
@@ -59,6 +68,9 @@ export async function apiFetch<T>(
         code = problem.code || problem.error || code;
         title = problem.title || problem.message || title;
         detail = problem.detail || problem.message;
+        if (problem.errors && typeof problem.errors === 'object' && !Array.isArray(problem.errors)) {
+          errors = problem.errors as Record<string, string[]>;
+        }
       }
     } catch {
       // Response body was not JSON
@@ -72,7 +84,7 @@ export async function apiFetch<T>(
       unauthorizedHandler();
     }
 
-    throw new ApiClientError(response.status, code, title, detail);
+    throw new ApiClientError(response.status, code, title, detail, errors);
   }
 
   if (response.status === 204) {

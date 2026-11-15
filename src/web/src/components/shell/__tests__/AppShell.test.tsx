@@ -253,4 +253,56 @@ describe('AppShell layout and domain copy', () => {
     const topUpLink = within(header).getByRole('link', { name: /\+ top up/i });
     expect(topUpLink).toHaveAttribute('href', '/checkout');
   });
+
+  it('truncates long learner names in the topbar header with a full-text title tooltip (#325)', async () => {
+    const longName = 'A'.repeat(70);
+    installFetchMock((url) => {
+      if (url.endsWith('/api/auth/me')) {
+        return jsonResponse({
+          userId: 7,
+          email: 'long@demo.local',
+          fullName: longName,
+          role: 'learner',
+          emailVerified: true,
+          permissions: [],
+        });
+      }
+      if (url.endsWith('/api/learner/context')) {
+        return jsonResponse({
+          active: { code: 'TOEIC', name: 'TOEIC' },
+          available: [{ code: 'TOEIC', name: 'TOEIC' }],
+          creditBalance: 10,
+        });
+      }
+      if (url.endsWith('/api/learner/onboarding')) {
+        return jsonResponse({ isOobeComplete: true });
+      }
+      if (url.endsWith('/api/learner/dashboard')) {
+        return jsonResponse({
+          certificate: { code: 'TOEIC', name: 'TOEIC' },
+          nextAction: {
+            eyebrow: 'NEXT UP',
+            title: 'Take placement',
+            description: 'Start with a free placement test.',
+            actionLabel: 'Start placement',
+            actionUrl: '/placement',
+            severity: 'accent',
+            cascadeStep: 'step_0',
+          },
+          goal: { hasNoMeasurement: true },
+          skills: [],
+        });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/dashboard');
+
+    const header = await screen.findByRole('banner');
+    const nameEl = await within(header).findByText(longName);
+    expect(nameEl).toHaveClass('truncate');
+    expect(nameEl.className).toContain('max-w-[140px]');
+    expect(nameEl.className).toContain('sm:max-w-[200px]');
+    expect(nameEl).toHaveAttribute('title', longName);
+  });
 });

@@ -272,4 +272,46 @@ describe('Profile feature (#301)', () => {
     expect(currentPwInput.value).toBe('WrongPass!');
     expect(newPwInput.value).toBe('NewSecret123!');
   });
+
+  it('enforces maxLength=70 on fullName and binds RFC 7807 field errors to inline alerts (#325)', async () => {
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') return jsonResponse(MOCK_USER);
+      if (url === '/api/learner/context') return jsonResponse(MOCK_LEARNER_CONTEXT);
+      if (url === '/api/profile') {
+        if (init?.method === 'PUT') {
+          return jsonResponse(
+            {
+              title: 'Validation failed',
+              status: 400,
+              code: 'VALIDATION',
+              errors: {
+                fullName: [
+                  'Name must be 2–70 characters and contain only letters, spaces, hyphens, or apostrophes.',
+                ],
+                phone: ["That doesn't look like a phone number."],
+              },
+            },
+            400,
+          );
+        }
+        return jsonResponse(MOCK_PROFILE);
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/profile');
+
+    const nameInput = (await screen.findByDisplayValue('Learner Demo')) as HTMLInputElement;
+    expect(nameInput).toHaveAttribute('maxLength', '70');
+
+    fireEvent.change(nameInput, { target: { value: 'Demo Learner 29381' } });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    expect(
+      await screen.findByText(
+        /name must be 2–70 characters and contain only letters, spaces, hyphens, or apostrophes\./i,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/that doesn't look like a phone number\./i)).toBeInTheDocument();
+  });
 });

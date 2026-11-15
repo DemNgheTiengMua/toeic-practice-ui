@@ -27,14 +27,27 @@ public sealed partial class AuthService
 
     public async Task<ProfileInfo> UpdateProfileAsync(int userId, UpdateProfileInput input, CancellationToken cancellationToken = default)
     {
-        Validator.ValidateObject(input, new ValidationContext(input), validateAllProperties: true);
-        if (!TimeZones.Contains(input.TimeZoneId))
+        if (!ProfileValidation.TryValidateFullName(input.FullName, out var fullNameError))
         {
-            throw new ValidationException("Pick a time zone from the list.");
+            throw new ValidationException(fullNameError);
         }
 
+        if (!ProfileValidation.TryValidatePhone(input.Phone, out var phoneError))
+        {
+            throw new ValidationException(phoneError);
+        }
+
+        if (!ProfileValidation.TryValidateTimeZone(input.TimeZoneId, out var tzError))
+        {
+            throw new ValidationException(tzError);
+        }
+
+        var normalizedName = ProfileValidation.NormalizeFullName(input.FullName);
+        var normalizedInput = input with { FullName = normalizedName };
+        Validator.ValidateObject(normalizedInput, new ValidationContext(normalizedInput), validateAllProperties: true);
+
         var user = await db.Users.SingleAsync(u => u.UserId == userId && !u.IsDeleted, cancellationToken);
-        user.FullName = input.FullName.Trim();
+        user.FullName = normalizedName;
         user.Phone = string.IsNullOrWhiteSpace(input.Phone) ? null : input.Phone.Trim();
         user.TimeZoneId = input.TimeZoneId;
         await db.SaveChangesAsync(cancellationToken);

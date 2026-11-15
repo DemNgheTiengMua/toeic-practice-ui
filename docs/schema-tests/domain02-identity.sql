@@ -21,3 +21,21 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected dup email as expected';
 END CATCH
+
+-- reject: empty or whitespace-only FullName (#325)
+BEGIN TRY
+  INSERT INTO Users (RoleId, Email, PasswordHash, FullName) VALUES (@r, 'blank@b.com', 0x00, N'   ');
+  THROW 50000, 'EXPECT_REJECT FAILED: whitespace-only FullName accepted', 1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected whitespace-only FullName as expected';
+END CATCH
+
+-- reject: single-character FullName (#325)
+BEGIN TRY
+  INSERT INTO Users (RoleId, Email, PasswordHash, FullName) VALUES (@r, 'short@b.com', 0x00, N' A ');
+  THROW 50000, 'EXPECT_REJECT FAILED: 1-char FullName accepted', 1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected 1-char FullName as expected';
+END CATCH

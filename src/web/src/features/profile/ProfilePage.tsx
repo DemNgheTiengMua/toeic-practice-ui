@@ -6,7 +6,13 @@ import {
   Button,
   Card,
   Chip,
+  Description,
+  FieldError,
+  Form,
+  Input,
+  Label,
   Spinner,
+  TextField,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -38,6 +44,11 @@ export function ProfilePage() {
   const [timeZoneId, setTimeZoneId] = useState<string>('Asia/Ho_Chi_Minh');
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    fullName?: string;
+    phone?: string;
+    timeZoneId?: string;
+  }>({});
 
   // Password fields
   const [currentPassword, setCurrentPassword] = useState<string>('');
@@ -74,6 +85,7 @@ export function ProfilePage() {
       }),
     onSuccess: (data) => {
       setProfileError(null);
+      setFieldErrors({});
       setProfileSuccess('Profile updated successfully.');
       queryClient.setQueryData(['learner', 'profile'], data);
       void queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
@@ -81,6 +93,13 @@ export function ProfilePage() {
     onError: (err) => {
       setProfileSuccess(null);
       if (err instanceof ApiClientError) {
+        if (err.errors) {
+          setFieldErrors({
+            fullName: err.errors.fullName?.[0],
+            phone: err.errors.phone?.[0],
+            timeZoneId: err.errors.timeZoneId?.[0],
+          });
+        }
         setProfileError(err.title || err.detail || 'Could not update profile.');
       } else {
         setProfileError((err as Error).message || 'Failed to update profile.');
@@ -284,56 +303,71 @@ export function ProfilePage() {
                 </Alert>
               )}
 
-              <form
+              <Form
                 onSubmit={(e) => {
                   e.preventDefault();
+                  setFieldErrors({});
                   updateProfileMutation.mutate();
                 }}
+                validationBehavior="aria"
                 className="space-y-4"
               >
-                <div className="space-y-1.5">
-                  <label htmlFor="email" className="text-xs font-semibold text-foreground block">
-                    Account email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    disabled
-                    value={user?.email || ''}
-                    className="w-full text-sm p-2.5 rounded-md border border-border bg-surface-secondary text-muted cursor-not-allowed"
-                  />
-                  <span className="text-xs text-muted block">
+                <TextField
+                  isDisabled
+                  name="email"
+                  type="email"
+                  value={user?.email || ''}
+                  className="w-full"
+                >
+                  <Label>Account email</Label>
+                  <Input className="bg-surface-secondary text-muted cursor-not-allowed" />
+                  <Description>
                     Account email cannot be modified directly. Contact support for email changes.
-                  </span>
-                </div>
+                  </Description>
+                </TextField>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="fullName" className="text-xs font-semibold text-foreground block">
-                    Full name
-                  </label>
-                  <input
-                    id="fullName"
-                    type="text"
-                    required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full text-sm p-2.5 rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                <TextField
+                  isRequired
+                  name="fullName"
+                  value={fullName}
+                  onChange={(value) => {
+                    setFullName(value);
+                    if (fieldErrors.fullName) {
+                      setFieldErrors((prev) => ({ ...prev, fullName: undefined }));
+                    }
+                  }}
+                  isInvalid={Boolean(fieldErrors.fullName)}
+                  className="w-full"
+                >
+                  <Label>Full name</Label>
+                  <Input
+                    maxLength={70}
+                    autoComplete="name"
+                    placeholder="Nguyễn Văn A"
                   />
-                </div>
+                  {fieldErrors.fullName && <FieldError>{fieldErrors.fullName}</FieldError>}
+                </TextField>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="phone" className="text-xs font-semibold text-foreground block">
-                    Phone number (optional)
-                  </label>
-                  <input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                <TextField
+                  name="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(value) => {
+                    setPhone(value);
+                    if (fieldErrors.phone) {
+                      setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                    }
+                  }}
+                  isInvalid={Boolean(fieldErrors.phone)}
+                  className="w-full"
+                >
+                  <Label>Phone number (optional)</Label>
+                  <Input
+                    maxLength={20}
                     placeholder="e.g. 0901234567"
-                    className="w-full text-sm p-2.5 rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
                   />
-                </div>
+                  {fieldErrors.phone && <FieldError>{fieldErrors.phone}</FieldError>}
+                </TextField>
 
                 <div className="space-y-1.5">
                   <label htmlFor="timeZoneId" className="text-xs font-semibold text-foreground block">
@@ -342,7 +376,13 @@ export function ProfilePage() {
                   <select
                     id="timeZoneId"
                     value={timeZoneId}
-                    onChange={(e) => setTimeZoneId(e.target.value)}
+                    onChange={(e) => {
+                      setTimeZoneId(e.target.value);
+                      if (fieldErrors.timeZoneId) {
+                        setFieldErrors((prev) => ({ ...prev, timeZoneId: undefined }));
+                      }
+                    }}
+                    aria-invalid={Boolean(fieldErrors.timeZoneId)}
                     className="w-full text-sm p-2.5 rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
                   >
                     {availableTimezones.map((tz) => (
@@ -351,6 +391,11 @@ export function ProfilePage() {
                       </option>
                     ))}
                   </select>
+                  {fieldErrors.timeZoneId && (
+                    <p className="text-xs text-danger mt-1" role="alert">
+                      {fieldErrors.timeZoneId}
+                    </p>
+                  )}
                   <span className="text-xs text-muted block">
                     All mentor sessions and exam countdowns are synchronized to this timezone.
                   </span>
@@ -365,7 +410,7 @@ export function ProfilePage() {
                     Save changes
                   </Button>
                 </div>
-              </form>
+              </Form>
             </Card.Content>
           </Card>
 

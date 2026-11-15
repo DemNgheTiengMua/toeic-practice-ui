@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
 using Contracts;
 using Services;
+using WebAPI.Filters;
 using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
@@ -17,7 +18,8 @@ public static partial class AuthEndpoints
         {
             var profile = await auth.GetProfileAsync(CurrentUserId(http), cancellationToken);
             return Results.Ok(new ProfileDto(profile.FullName, profile.Phone, profile.TimeZoneId));
-        }).RequireAuthorization();
+        }).RequireAuthorization()
+          .AddEndpointFilter<RequestValidationFilter<UpdateProfileRequest>>();
 
         app.MapPut("/api/profile", async Task<IResult> (
             UpdateProfileRequest request,
@@ -35,7 +37,8 @@ public static partial class AuthEndpoints
             {
                 return ValidationProblem(ex);
             }
-        }).RequireAuthorization();
+        }).RequireAuthorization()
+          .AddEndpointFilter<RequestValidationFilter<UpdateProfileRequest>>();
 
         app.MapPost("/api/profile/password", async Task<IResult> (
             ChangePasswordRequest request,

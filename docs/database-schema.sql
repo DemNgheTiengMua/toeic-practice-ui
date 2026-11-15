@@ -141,7 +141,8 @@ CREATE TABLE Users (
   -- IANA id (e.g. 'Asia/Ho_Chi_Minh'); the app offers a shortlist, not the full tz database.
   TimeZoneId   VARCHAR(64) NOT NULL CONSTRAINT DF_Users_TimeZoneId DEFAULT 'Asia/Ho_Chi_Minh',
   IsDeleted    BIT NOT NULL CONSTRAINT DF_Users_IsDeleted DEFAULT 0,
-  CreatedAt    DATETIMEOFFSET NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT SYSDATETIMEOFFSET()
+  CreatedAt    DATETIMEOFFSET NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT CK_Users_FullName_NotEmpty CHECK (FullName IS NULL OR LEN(TRIM(FullName)) >= 2)
 );
 GO
 -- one account per live email (filtered so soft-deleted emails can be reused)
