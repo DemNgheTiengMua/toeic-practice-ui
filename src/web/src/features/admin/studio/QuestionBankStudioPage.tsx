@@ -43,8 +43,6 @@ import type {
   AdminCoverageCellDto,
   StimulusDraftAnalysisDto,
   ProductiveTaskAnalysisDto,
-  IngestionBatchSummaryDto,
-  IngestionBatchDetailDto,
   AdminLessonSummaryDto,
   CreatePoolItemRequest,
 } from './types';
@@ -104,15 +102,6 @@ export function QuestionBankStudioPage() {
   const [isSavingProductive, setIsSavingProductive] = useState(false);
   const [productiveNotice, setProductiveNotice] = useState<string | null>(null);
 
-  // Ingestion Workbench State
-  const [batches, setBatches] = useState<IngestionBatchSummaryDto[]>([]);
-  const [isLoadingBatches, setIsLoadingBatches] = useState(false);
-  const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
-  const [batchDetail, setBatchDetail] = useState<IngestionBatchDetailDto | null>(null);
-  const [isLoadingBatchDetail, setIsLoadingBatchDetail] = useState(false);
-  const [workbenchRuleFilter, setWorkbenchRuleFilter] = useState('');
-  const [workbenchNotice, setWorkbenchNotice] = useState<string | null>(null);
-
   // Micro-Lessons State
   const [lessons, setLessons] = useState<AdminLessonSummaryDto[]>([]);
   const [isLoadingLessons, setIsLoadingLessons] = useState(false);
@@ -121,7 +110,6 @@ export function QuestionBankStudioPage() {
   useEffect(() => {
     if (!isCatalogManager) return;
     loadCoverage();
-    loadBatches();
     loadLessons();
   }, [isCatalogManager]);
 
@@ -134,31 +122,6 @@ export function QuestionBankStudioPage() {
       // Fallback
     } finally {
       setIsLoadingCoverage(false);
-    }
-  };
-
-  const loadBatches = async () => {
-    setIsLoadingBatches(true);
-    try {
-      const data = await studioApi.getIngestionBatches();
-      setBatches(data.batches);
-    } catch {
-      // Fallback
-    } finally {
-      setIsLoadingBatches(false);
-    }
-  };
-
-  const loadBatchDetail = async (batchId: number, rule?: string) => {
-    setIsLoadingBatchDetail(true);
-    setWorkbenchNotice(null);
-    try {
-      const data = await studioApi.getIngestionBatch(batchId, rule);
-      setBatchDetail(data);
-    } catch {
-      // Fallback
-    } finally {
-      setIsLoadingBatchDetail(false);
     }
   };
 
@@ -337,31 +300,6 @@ export function QuestionBankStudioPage() {
       setProductiveNotice(err?.detail || err?.title || 'Save failed.');
     } finally {
       setIsSavingProductive(false);
-    }
-  };
-
-  // Workbench Actions
-  const handleClearWorkbenchItem = async (batchId: number, itemId: number) => {
-    if (!canReviewContent) {
-      setWorkbenchNotice('Staff capability pool.content.review is required to clear items.');
-      return;
-    }
-    try {
-      await studioApi.clearWorkbenchItem(batchId, itemId);
-      setWorkbenchNotice(`Item ${itemId} cleared successfully.`);
-      loadBatchDetail(batchId, workbenchRuleFilter || undefined);
-    } catch (err: any) {
-      setWorkbenchNotice(err?.detail || err?.title || 'Clear failed.');
-    }
-  };
-
-  const handleDiscardRecord = async (batchId: number, line: number) => {
-    try {
-      await studioApi.discardWorkbenchRecord(batchId, line, 'Author withdrawal from workbench');
-      setWorkbenchNotice(`Record on line ${line} discarded.`);
-      loadBatchDetail(batchId, workbenchRuleFilter || undefined);
-    } catch (err: any) {
-      setWorkbenchNotice(err?.detail || err?.title || 'Discard failed.');
     }
   };
 

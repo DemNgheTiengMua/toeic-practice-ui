@@ -127,8 +127,8 @@ export function OnboardingPage() {
     },
     onSuccess: (res) => {
       void navigate({
-        to: '/placement/take/$placementId',
-        params: { placementId: String(res.placementId) },
+        to: '/placement/take/$attemptId',
+        params: { attemptId: String(res.placementId) },
       });
     },
     onError: (err: unknown) => {
@@ -310,8 +310,8 @@ export function OnboardingPage() {
                   type="button"
                   onPress={() =>
                     navigate({
-                      to: '/placement/take/$placementId',
-                      params: { placementId: String(onboardingState.activePlacementId) },
+                      to: '/placement/take/$attemptId',
+                      params: { attemptId: String(onboardingState.activePlacementId) },
                     })
                   }
                 >

@@ -337,4 +337,70 @@ describe('OOBE 4-Step Wizard & Soft-Lock (#311)', () => {
       expect(history.location.pathname).toBe('/dashboard');
     });
   });
+
+  it('navigates to /placement/take/$attemptId when starting or resuming placement (#342)', async () => {
+    const startState: OnboardingStateDto = {
+      hasCompletedPlacement: false,
+      activePlacementAttemptId: null,
+      activePlacementId: null,
+      latestPlacementId: null,
+      hasTargetGoal: false,
+      hasActiveLearningPath: false,
+      isOobeComplete: false,
+    };
+
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') return jsonResponse(LEARNER_USER);
+      if (url === '/api/learner/context') return jsonResponse(LEARNER_CONTEXT);
+      if (url === '/api/learner/onboarding-state') return jsonResponse(startState);
+      if (url === '/api/learner/placement') return jsonResponse(CATALOG);
+      if (url === '/api/learner/placement/start' && init?.method === 'POST') {
+        return jsonResponse({
+          placementId: 88,
+          attemptId: 99,
+          examId: 6,
+          status: 'in_progress',
+          startedAt: '2026-11-15T00:00:00Z',
+          expiresAt: '2026-11-15T01:00:00Z',
+        });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    const { history } = renderRoute('/onboarding');
+    const startBtn = await screen.findByRole('button', { name: /start universal placement/i });
+    fireEvent.click(startBtn);
+
+    await waitFor(() => {
+      expect(history.location.pathname).toBe('/placement/take/88');
+    });
+  });
+
+  it('navigates to /placement/take/$attemptId when resuming active placement (#342)', async () => {
+    const resumeState: OnboardingStateDto = {
+      hasCompletedPlacement: false,
+      activePlacementAttemptId: 99,
+      activePlacementId: 77,
+      latestPlacementId: null,
+      hasTargetGoal: false,
+      hasActiveLearningPath: false,
+      isOobeComplete: false,
+    };
+
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') return jsonResponse(LEARNER_USER);
+      if (url === '/api/learner/context') return jsonResponse(LEARNER_CONTEXT);
+      if (url === '/api/learner/onboarding-state') return jsonResponse(resumeState);
+      if (url === '/api/learner/placement') return jsonResponse(CATALOG);
+      return jsonResponse({}, 404);
+    });
+
+    const { history } = renderRoute('/onboarding');
+    const resumeBtn = await screen.findByRole('button', { name: /resume placement/i });
+    fireEvent.click(resumeBtn);
+
+    await waitFor(() => {
+      expect(history.location.pathname).toBe('/placement/take/77');
+    });
+  });
 });

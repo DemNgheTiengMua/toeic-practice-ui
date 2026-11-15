@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
@@ -44,8 +44,13 @@ type SupportCategory = 'mentor' | 'exam' | 'payment';
 
 export function SupportPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const [activeTab, setActiveTab] = useState<'history' | 'new'>('history');
+  const activeTab: 'history' | 'new' = pathname.endsWith('/report') ? 'new' : 'history';
+  const setActiveTab = (tab: 'history' | 'new') => {
+    void navigate({ to: tab === 'new' ? '/support/report' : '/support/history' });
+  };
 
   // Form state
   const [category, setCategory] = useState<SupportCategory>('mentor');

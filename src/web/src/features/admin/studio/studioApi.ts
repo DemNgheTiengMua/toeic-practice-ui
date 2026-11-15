@@ -283,7 +283,6 @@ export const studioApi = {
     }),
 
   // Ingestion Workbench
-  getIngestionBatches: () => apiFetch<IngestionBatchListDto>('/api/admin/ingestion'),
   getIngestionBatch: (batchId: number, rule?: string) =>
     apiFetch<IngestionBatchDetailDto>(
       rule

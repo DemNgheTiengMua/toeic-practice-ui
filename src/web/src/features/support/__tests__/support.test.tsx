@@ -246,4 +246,36 @@ describe('Support & complaints feature (#301)', () => {
       expect(toastEl.closest('[data-slot="toast-region"]')).toBeInTheDocument();
     });
   });
+
+  it('opens the report form tab when navigated directly to /support/report', async () => {
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') return jsonResponse(MOCK_USER);
+      if (url === '/api/learner/complaints') return jsonResponse(MOCK_COMPLAINTS);
+      if (url === '/api/learner/complaints/eligible-subjects')
+        return jsonResponse(MOCK_ELIGIBLE_SUBJECTS);
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/support/report');
+
+    const newReportTab = await screen.findByRole('tab', { name: /file a report/i });
+    expect(newReportTab).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByLabelText(/description & reason/i)).toBeInTheDocument();
+  });
+
+  it('opens the history tab when navigated directly to /support/history', async () => {
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') return jsonResponse(MOCK_USER);
+      if (url === '/api/learner/complaints') return jsonResponse(MOCK_COMPLAINTS);
+      if (url === '/api/learner/complaints/eligible-subjects')
+        return jsonResponse(MOCK_ELIGIBLE_SUBJECTS);
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/support/history');
+
+    const historyTab = await screen.findByRole('tab', { name: /my reports/i });
+    expect(historyTab).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByText(/verified meeting logs/i)).toBeInTheDocument();
+  });
 });

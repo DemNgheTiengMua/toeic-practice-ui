@@ -331,33 +331,6 @@ export interface SetGoalResultDto {
   goal: GoalStatusDto;
 }
 
-export interface CalibrationProposalDto {
-  proposedBandCode: string;
-  proposedBandName: string;
-  observedAccuracyPct: number;
-  validAnswerCount: number;
-  requiredAccuracyPct: number;
-  evidence: string;
-}
-
-export interface CalibrationViewDto {
-  placedBandCode: string;
-  placedBandName?: string | null;
-  validAnswerCount: number;
-  requiredValidAnswerCount: number;
-  excludedRushedCount: number;
-  observedAccuracyPct?: number | null;
-  reason: string;
-  proposal?: CalibrationProposalDto | null;
-}
-
-export interface CalibrationDecisionResultDto {
-  decision: string;
-  placedBandCode: string;
-  proposedBandCode: string;
-  pathAdjusted: boolean;
-}
-
 export interface PathStepDto {
   stepId: number;
   weekNumber: number;
@@ -2196,64 +2169,6 @@ export interface AdjustCreditsResultDto {
   newBalance: number;
   delta: number;
   reason: string;
-}
-
-export interface AuditSampleDto {
-  sampleItemId: number;
-  itemId: number;
-  stem: string;
-  optionA: string;
-  optionB: string;
-  optionC: string;
-  optionD: string;
-  solvedLabel?: string | null;
-  solvedAt?: string | null;
-  keyRevealedAt?: string | null;
-  keyRevealed: boolean;
-  verdict?: string | null;
-}
-
-export interface AuditStratumDto {
-  stratumId: number;
-  batchId: number;
-  topicCode: string;
-  cefrLevel: string;
-  modality: string;
-  itemCount: number;
-  sampleSize: number;
-  sampled: number;
-  unsampled: number;
-  status: string;
-  quarantineReason?: string | null;
-  decidedAt?: string | null;
-  items: AuditSampleDto[];
-}
-
-export interface AuditQueueDto {
-  batchId: number;
-  sourceName: string;
-  status: string;
-  strata: AuditStratumDto[];
-  sampledTotal: number;
-  unsampledTotal: number;
-}
-
-export interface AuditKeyRevealDto {
-  sampleItemId: number;
-  itemId: number;
-  keyLabel: string;
-  explanation?: string | null;
-  solvedLabel?: string | null;
-  revealedAt: string;
-}
-
-export interface AuditDecisionDto {
-  stratumId: number;
-  status: string;
-  quarantineReason?: string | null;
-  sampledPromoted: number;
-  unsampledPromoted: number;
-  quarantined: number;
 }
 
 // ============================================================================
