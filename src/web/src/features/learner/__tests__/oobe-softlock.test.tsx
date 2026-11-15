@@ -132,7 +132,10 @@ describe('OOBE 4-Step Wizard & Soft-Lock (#311)', () => {
     renderRoute('/practice');
 
     expect(await screen.findByTestId('oobe-softlock-empty-state')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /continue oobe|tiếp tục thiết lập/i })).toBeInTheDocument();
+    expect(screen.getByText(/complete your guided setup to unlock this area/i)).toBeInTheDocument();
+    expect(screen.getByText(/finish the universal placement test/i)).toBeInTheDocument();
+    expect(screen.queryByText(/hoàn tất|bạn cần|tiếp tục thiết lập/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continue oobe setup/i })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /learning path/i })).not.toBeInTheDocument();
   });
 

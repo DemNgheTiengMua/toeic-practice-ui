@@ -14,10 +14,10 @@ export function OobeSoftLockEmptyState() {
             </Chip>
           </div>
           <Card.Title className="text-xl font-semibold">
-            Hoàn tất thiết lập lộ trình học (OOBE) để mở khóa khu vực này
+            Complete your guided setup to unlock this area
           </Card.Title>
           <Card.Description>
-            Bạn cần hoàn thành bài kiểm tra đầu vào (Universal Placement), chọn mục tiêu chứng chỉ và tạo lộ trình học tập đầu tiên trước khi truy cập bảng điều khiển và bài luyện tập.
+            Finish the universal placement test, choose your target band, and generate your first learning path before accessing the dashboard and practice sessions.
           </Card.Description>
         </Card.Header>
         <Card.Content className="flex flex-wrap items-center gap-3 pt-2">
