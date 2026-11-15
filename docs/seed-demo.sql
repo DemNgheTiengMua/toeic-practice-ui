@@ -429,7 +429,7 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (25, N'B1', NULL, N'/audio/ielts/placement-diagnostic.mp3', NULL, NULL, N'Officer: The student housing office is open Monday to Thursday from 9 AM to 4 PM. On Fridays we close at 1 PM for staff training.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (25, N'B1', NULL, N'/audio/ielts/placement-diagnostic.mp3', 0, 30000, N'Officer: The student housing office is open Monday to Thursday from 9 AM to 4 PM. On Fridays we close at 1 PM for staff training.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -927,6 +927,18 @@ END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
+BEGIN TRY
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (7, 2, N'IELTS Academic Writing Practice', N'published', 60, N'writing_practice', N'practice', NULL, N'Two IELTS writing tasks: a chart report, then a discussion essay.', N'Demo practice', NULL, 2, N'demo', 1, NULL, 0, '2026-11-16T00:00:00.0000000+07:00', NULL, NULL);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (8, 2, N'IELTS Speaking Practice', N'published', 14, N'speaking_practice', N'practice', NULL, N'A cue-card talk and a topic-development response, graded against the IELTS speaking rubric.', N'Demo practice', NULL, 2, N'demo', 1, NULL, 0, '2026-11-16T00:00:00.0000000+07:00', NULL, NULL);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
 SET IDENTITY_INSERT [Exams] OFF;
 
 -- ---- GradingCriteria (28 rows)
@@ -980,6 +992,30 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 SET IDENTITY_INSERT [GradingCriteria] OFF;
+
+-- ---- SectionCriteria (12 rows)
+-- #382: the publish gate refuses a free-response question whose section has no rubric criterion,
+-- and this table was empty in the seed, so EVERY paper carrying a speaking or writing task could never
+-- be published. One criterion row per (section, rubric criterion) the section is graded against:
+-- Writing = T1/T2 (task response, coherence, lexis, grammar); Speaking = INT.
+BEGIN TRY
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (18, 9, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (18, 10, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (18, 11, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (18, 12, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (19, 9, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (19, 10, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (19, 11, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (19, 12, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (20, 13, 8, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (20, 14, 8, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (20, 15, 8, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (20, 16, 8, 9.00);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+
 
 -- ---- Items (140 rows)
 SET IDENTITY_INSERT [Items] ON;
@@ -2484,13 +2520,13 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (87, 87, 1, N'Summarise the main trends, select the most important features, and make relevant comparisons. Write at least 150 words.', NULL, NULL, NULL, NULL, NULL, N'Assessment focus: a clear overview, accurate comparisons, selective data, and a coherent progression from 2010 to 2020.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 150, 220, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1575543+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (87, 87, 1, N'Summarise the main trends, select the most important features, and make relevant comparisons. Write at least 150 words.', NULL, NULL, NULL, NULL, NULL, N'Assessment focus: a clear overview, accurate comparisons, selective data, and a coherent progression from 2010 to 2020.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 150, 220, NULL, 1200, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1575543+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (88, 88, 1, N'Discuss both views and give your own opinion. Support your position with reasons and relevant examples. Write at least 250 words.', NULL, NULL, NULL, NULL, NULL, N'Assessment focus: address both views, state a consistent position, develop supported ideas, and control paragraph cohesion.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 250, 350, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1575543+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (88, 88, 1, N'Discuss both views and give your own opinion. Support your position with reasons and relevant examples. Write at least 250 words.', NULL, NULL, NULL, NULL, NULL, N'Assessment focus: address both views, state a consistent position, develop supported ideas, and control paragraph cohesion.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 250, 350, NULL, 2400, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1575543+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -3592,6 +3628,30 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (100, 6, 18, 2, 47, 47, N'writing', 1, 1, '2026-11-11T01:44:03.1670000+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (101, 7, 18, 2, 87, 87, N'writing', 1, 1, '2026-11-16T00:00:00.0000000+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (102, 7, 19, 2, 88, 88, N'writing', 1, 1, '2026-11-16T00:00:00.0000000+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (103, 8, 20, 2, 51, 51, N'speaking', 1, 1, '2026-11-16T00:00:00.0000000+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (104, 8, 20, 2, 46, 46, N'speaking', 2, 1, '2026-11-16T00:00:00.0000000+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;

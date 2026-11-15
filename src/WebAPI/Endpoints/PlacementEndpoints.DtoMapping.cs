@@ -303,7 +303,8 @@ public static partial class PlacementEndpoints
                     r.PositionInBand,
                     r.MeasuredAt,
                     r.ReusedFromPrior,
-                    r.FailureReason))
+                    r.FailureReason,
+                    r.FailureDetail))
                 .ToList() ?? [],
             result.Scope.MapTo<PlacementScopeDto>(),
             result.ListeningPct,

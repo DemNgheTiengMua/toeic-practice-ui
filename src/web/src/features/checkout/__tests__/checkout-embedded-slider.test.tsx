@@ -200,7 +200,7 @@ describe('PayOS Embedded Checkout & Interactive Credit Slider (#317)', () => {
     expect(embeddedContainer?.className).not.toMatch(/overflow-auto|overflow-scroll/);
   });
 
-  it('handles PayOS onSuccess: displays positive confirmation, invalidates wallet, and navigates to returnUrl', async () => {
+  it('handles PayOS onSuccess: displays positive confirmation, invalidates wallet, and lands on the order receipt', async () => {
     installFetchMock((url, init) => {
       if (url === '/api/auth/me') return jsonResponse(MOCK_USER);
       if (url === '/api/learner/context') return jsonResponse(MOCK_LEARNER_CONTEXT);
@@ -246,10 +246,12 @@ describe('PayOS Embedded Checkout & Interactive Credit Slider (#317)', () => {
     // Displays positive confirmation in modal
     expect(await screen.findByRole('heading', { name: /payment successful!/i })).toBeInTheDocument();
 
-    // After 1.5s timeout, navigates to returnUrl
+    // After 1.5s timeout, navigates to the receipt for this order (#381), not the checkout page's
+    // returnUrl — that sent a paid learner to /pricing, where nothing said the order had settled.
     await waitFor(
       () => {
-        expect(history.location.pathname).toBe('/practice');
+        expect(history.location.pathname).toBe('/payment/result');
+        expect(history.location.search).toContain('orderCode=ORD-PAYOS-902');
       },
       { timeout: 3000 },
     );
@@ -309,7 +311,7 @@ describe('PayOS Embedded Checkout & Interactive Credit Slider (#317)', () => {
     });
   });
 
-  it('keeps Mock Simulator panel on checkout page when gateway is mock and navigates after 1.5s on simulate success', async () => {
+  it('keeps Mock Simulator panel on checkout page when gateway is mock and lands on the receipt after 1.5s', async () => {
     let simulatedAction: string | null = null;
 
     installFetchMock((url, init) => {
@@ -372,10 +374,12 @@ describe('PayOS Embedded Checkout & Interactive Credit Slider (#317)', () => {
 
     expect(await screen.findByText(/payment settled successfully!/i)).toBeInTheDocument();
 
-    // After 1.5s timeout, navigates to returnUrl
+    // After 1.5s timeout, navigates to the receipt for this order (#381). It no longer honours
+    // returnUrl: a paid learner was sent to /pricing, where nothing said the order had settled.
     await waitFor(
       () => {
-        expect(history.location.pathname).toBe('/practice');
+        expect(history.location.pathname).toBe('/payment/result');
+        expect(history.location.search).toContain('orderCode=ORD-MOCK-904');
       },
       { timeout: 3000 },
     );

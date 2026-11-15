@@ -853,10 +853,16 @@ export function ExamsStudioPage() {
         });
       }
     } catch (err: any) {
+      // #382: this used to append two hard-coded lines ("P2: 5 questions missing", "P2: Section audio
+      // file missing") to every refusal, so an admin fixing a stem saw a fabricated diagnosis beside the
+      // real one. The server names its own deficits; inventing more is a lie the screen cannot retract.
       setPublishRefusal({
-        message: err?.detail || err?.title || 'Publish refused: paper has unmet invariants.',
-        missingItems: err?.missingItems || ['P2: 5 questions missing', 'P2: Section audio file missing'],
+        message: err?.detail || err?.title || 'Publish refused: the paper has unmet requirements.',
+        missingItems: err?.missingItems || [],
       });
+      // The refusal is authoritative, so reload the audit it was based on rather than leaving the rail
+      // showing the pre-refusal state.
+      loadAudit(selectedExamId);
     } finally {
       setIsPublishing(false);
     }

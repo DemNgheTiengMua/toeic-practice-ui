@@ -47,6 +47,7 @@ import {
   validateWeeklySlots,
   WEEKDAY_OPTIONS,
 } from './opsHelpers';
+import { formatBookingStatus } from '../../../lib/domain-labels';
 
 export function MentorsTab() {
   const queryClient = useQueryClient();
@@ -76,6 +77,10 @@ export function MentorsTab() {
   const [newStartTime, setNewStartTime] = useState('08:00');
   const [newEndTime, setNewEndTime] = useState('09:00');
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+
+  // Bookings state (#381)
+  const [bookingMentorId, setBookingMentorId] = useState<number | null>(null);
+  const [bookingStatus, setBookingStatus] = useState('');
 
   // Payouts & CSV Export state
   const [payoutFrom, setPayoutFrom] = useState(defaultMonthRange.from);
@@ -115,6 +120,16 @@ export function MentorsTab() {
   const { data: payoutReport, isLoading: isLoadingPayouts } = useQuery({
     queryKey: ['admin-mentor-payouts', payoutFrom, payoutTo],
     queryFn: () => api.admin.mentorPayouts(payoutFrom || undefined, payoutTo || undefined),
+  });
+
+  const {
+    data: bookings,
+    isLoading: isLoadingBookings,
+    error: bookingsError,
+  } = useQuery({
+    queryKey: ['admin-mentor-bookings', bookingMentorId, bookingStatus],
+    queryFn: () =>
+      api.admin.mentorBookings(bookingMentorId ?? undefined, bookingStatus || undefined),
   });
 
   const saveMutation = useMutation({
@@ -515,6 +530,157 @@ export function MentorsTab() {
           </Table.ScrollContainer>
         </Table>
       )}
+
+      {/* Bookings — a session is visible here before it is over (#381). The payout card below only
+          ever sees delivered sessions, so a pending or confirmed booking was invisible to staff. */}
+      <Card className="border border-border">
+        <Card.Content className="p-6 space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold text-foreground">Mentor bookings</h3>
+              <p className="text-xs text-muted mt-0.5">
+                Every 1-on-1 session regardless of outcome — pending, confirmed, completed or cancelled.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-3">
+              <Select
+                aria-label="Filter bookings by mentor"
+                className="w-52"
+                value={bookingMentorId ? String(bookingMentorId) : 'all'}
+                onChange={(key) => {
+                  setBookingMentorId(key === 'all' || key == null ? null : parseInt(String(key), 10));
+                }}
+              >
+                <Select.Trigger>
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item id="all" textValue="All mentors">
+                      All mentors
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                    {(mentors ?? []).map((m) => (
+                      <ListBox.Item
+                        key={m.mentorId}
+                        id={String(m.mentorId)}
+                        textValue={m.displayName}
+                      >
+                        {m.displayName}
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+              </Select>
+
+              <Select
+                aria-label="Filter bookings by status"
+                className="w-44"
+                value={bookingStatus || 'all'}
+                onChange={(key) => {
+                  setBookingStatus(key === 'all' || key == null ? '' : String(key));
+                }}
+              >
+                <Select.Trigger>
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    {['all', 'pending', 'confirmed', 'done', 'cancelled'].map((s) => (
+                      <ListBox.Item key={s} id={s} textValue={s === 'all' ? 'All statuses' : s}>
+                        {s === 'all' ? 'All statuses' : s.charAt(0).toUpperCase() + s.slice(1)}
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+              </Select>
+            </div>
+          </div>
+
+          {isLoadingBookings ? (
+            <div className="flex justify-center py-8">
+              <Spinner size="md" />
+            </div>
+          ) : bookingsError ? (
+            <Alert status="danger">Could not load mentor bookings. Please try again.</Alert>
+          ) : !bookings || bookings.length === 0 ? (
+            <p className="text-xs text-muted py-4">
+              No mentor bookings match this filter.
+            </p>
+          ) : (
+            <Table>
+              <Table.ScrollContainer>
+                <Table.Content aria-label="Mentor bookings table">
+                  <Table.Header>
+                    <Table.Column isRowHeader>Booking</Table.Column>
+                    <Table.Column>Mentor</Table.Column>
+                    <Table.Column>Learner</Table.Column>
+                    <Table.Column>Session window</Table.Column>
+                    <Table.Column>Focus area</Table.Column>
+                    <Table.Column>Credits</Table.Column>
+                    <Table.Column>Status</Table.Column>
+                  </Table.Header>
+                  <Table.Body>
+                    {bookings.map((b) => {
+                      const statusDisplay = formatBookingStatus(b.status);
+                      return (
+                        <Table.Row key={b.bookingId}>
+                          <Table.Cell>
+                            <span className="font-mono-tabular font-semibold text-foreground">
+                              #{b.bookingId}
+                            </span>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <span className="text-sm font-medium text-foreground">
+                              {b.mentorName}
+                            </span>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <div>
+                              <p className="text-sm font-medium text-foreground">{b.learnerName}</p>
+                              <p className="text-xs font-mono-tabular text-muted">{b.learnerEmail}</p>
+                            </div>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <div>
+                              <p className="text-xs font-mono-tabular text-foreground">
+                                {formatDateTime(b.startAt)}
+                              </p>
+                              <p className="text-xs font-mono-tabular text-muted">
+                                to {formatDateTime(b.endAt)}
+                              </p>
+                            </div>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <span className="text-xs text-muted">
+                              {b.focusArea || '1-on-1 consultation'}
+                            </span>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <span className="font-mono-tabular text-xs font-semibold text-foreground">
+                              {b.priceCredits}
+                            </span>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <Chip size="sm" color={statusDisplay.tone} variant="soft">
+                              {statusDisplay.label}
+                            </Chip>
+                          </Table.Cell>
+                        </Table.Row>
+                      );
+                    })}
+                  </Table.Body>
+                </Table.Content>
+              </Table.ScrollContainer>
+            </Table>
+          )}
+        </Card.Content>
+      </Card>
 
       {/* Mentor Payouts & Completed Sessions Section */}
       <Card className="border border-border">

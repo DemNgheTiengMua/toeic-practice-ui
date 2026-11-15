@@ -140,6 +140,7 @@ export function PlacementResultPage() {
         measuredAt: result.takenAt,
         reusedFromPrior: false,
         failureReason: null,
+        failureDetail: null,
       } satisfies PlacementSkillResultInfoDto,
       score: sc,
     }));
@@ -156,6 +157,18 @@ export function PlacementResultPage() {
       (result?.failedFreeResponseCount ?? 0) > 0 ||
       mergedSkills.some((s) => s.result.failureReason === 'ai_grading_failed'),
     [result, mergedSkills],
+  );
+
+  // #376: a refused grading has no percentage, so the review link disappears with it - exactly when
+  // the learner most needs to open the task and read why it was not scored.
+  const refusedSkillCodes = useMemo(
+    () =>
+      new Set(
+        mergedSkills
+          .filter((s) => s.result.failureReason === 'ai_grading_failed')
+          .map((s) => s.result.skillCode.toLowerCase()),
+      ),
+    [mergedSkills],
   );
 
   if (loading) {
@@ -272,8 +285,9 @@ export function PlacementResultPage() {
           <Alert.Content>
             <Alert.Title>Partial placement result</Alert.Title>
             <Alert.Description>
-              One or more skills remain unmeasured and are excluded from scoring instead of being
-              counted as zero.
+              {hasFailedGrading
+                ? 'The grader refused one or more free responses, so that skill was not scored. Its reason is shown beside the skill below. Retrying costs no credits.'
+                : 'One or more skills remain unmeasured and are excluded from scoring instead of being counted as zero.'}
             </Alert.Description>
           </Alert.Content>
           {hasFailedGrading && (
@@ -284,7 +298,7 @@ export function PlacementResultPage() {
               onPress={() => void handleRetryGrading()}
             >
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
-              Retry grading
+              Retry grading (free)
             </Button>
           )}
         </Alert>
@@ -364,10 +378,10 @@ export function PlacementResultPage() {
               </Link>
             )}
             {[
-              { pct: result.speakingPct, to: '/speaking/result/$attemptId' as const, label: 'Speaking result' },
-              { pct: result.writingPct, to: '/writing/result/$attemptId' as const, label: 'Writing result' },
+              { pct: result.speakingPct, code: 'spea', to: '/speaking/result/$attemptId' as const, label: 'Speaking result' },
+              { pct: result.writingPct, code: 'writ', to: '/writing/result/$attemptId' as const, label: 'Writing result' },
             ]
-              .filter((link) => link.pct != null)
+              .filter((link) => link.pct != null || refusedSkillCodes.has(link.code))
               .map((link) => (
                 <Link
                   key={link.label}
@@ -433,9 +447,16 @@ export function PlacementResultPage() {
                   </div>
 
                   {status === 'not_measured' ? (
-                    <p className="text-xs text-muted">
-                      {formatNotMeasuredReason(row.failureReason)}
-                    </p>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted">
+                        {formatNotMeasuredReason(row.failureReason)}
+                      </p>
+                      {/* #376: the grader's own words. A refusal is not a missing answer, and the
+                          learner can only fix what they are told. */}
+                      {row.failureDetail && (
+                        <p className="text-xs text-foreground">{row.failureDetail}</p>
+                      )}
+                    </div>
                   ) : (
                     <div className="flex flex-wrap items-center gap-3 text-xs text-muted font-mono-tabular">
                       {row.measuredAt && (
@@ -460,7 +481,7 @@ export function PlacementResultPage() {
                         onPress={() => void handleRetryGrading()}
                       >
                         <RefreshCw className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
-                        Retry grading
+                        Retry grading (free)
                       </Button>
                     ) : (
                       <span className="text-sm text-muted">Not measured</span>

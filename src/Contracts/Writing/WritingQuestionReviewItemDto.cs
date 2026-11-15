@@ -24,5 +24,7 @@ public record WritingQuestionReviewItemDto(
     // rewrite of the weakest sentence. Empty when the grading stored nothing to fix.
     IReadOnlyList<WritingErrorSpanDto>? ErrorSpans = null,
     string? PriorityFix = null,
-    string? ModelRewrite = null
+    string? ModelRewrite = null,
+    // #376: the grader's refusal, when it refused this task.
+    string? FailureReason = null
 );
