@@ -2389,6 +2389,9 @@ export const api = {
       ),
     result: (placementId: number) =>
       apiFetch<PlacementResultViewDto>(`/api/learner/placement/result/${placementId}`),
+    // #375: the same review projection the mock-exam review renders, addressed by the placement.
+    review: (placementId: number) =>
+      apiFetch<AttemptReviewDto>(`/api/learner/placement/result/${placementId}/review`),
     gradingStatus: (placementId: number) =>
       apiFetch<PlacementGradingStatusDto>(`/api/learner/placement/result/${placementId}/status`),
     retryGrading: (placementId: number) =>

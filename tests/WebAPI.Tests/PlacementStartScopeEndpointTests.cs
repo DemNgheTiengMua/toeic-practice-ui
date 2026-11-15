@@ -114,6 +114,8 @@ public sealed class PlacementStartScopeEndpointTests
 
         public Task<PlacementCatalogView> GetPlacementCatalogAsync(int userId, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
+        public Task<AttemptReviewView> GetPlacementReviewAsync(int userId, int placementId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
         public Task<PlacementTestInfo> StartPlacementTestAsync(int userId, int examId, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
         public Task<PlacementTestInfo> StartPlacementTestAsync(int userId, int examId, PlacementReuseChoice reuse, CancellationToken cancellationToken = default) =>

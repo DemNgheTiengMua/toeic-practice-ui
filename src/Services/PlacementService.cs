@@ -775,6 +775,34 @@ public sealed partial class PlacementService(
         return await BuildPlacementResultViewAsync(placement, cancellationToken);
     }
 
+    /// <summary>
+    /// #375: a submitted placement reopened as a full review. The placement is addressed by its own id
+    /// because that is the id the result page holds; the reader is the attempt engine's, so the review
+    /// renders exactly what a mock-exam review renders rather than a second projection that can drift.
+    /// </summary>
+    public async Task<AttemptReviewView> GetPlacementReviewAsync(int userId, int placementId, CancellationToken cancellationToken = default)
+    {
+        var attemptId = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.PlacementId == placementId && p.UserId == userId)
+            .Select(p => p.AttemptId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (attemptId is not int id)
+        {
+            throw new PlacementException(PlacementException.PlacementNotFound, $"Placement test {placementId} not found.");
+        }
+
+        try
+        {
+            return await _attemptEngine.GetAttemptReviewAsync(id, userId, cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapPlacementException(ex);
+        }
+    }
+
     public async Task<TargetBandView> GetTargetBandViewAsync(int userId, CancellationToken cancellationToken = default)
     {
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);

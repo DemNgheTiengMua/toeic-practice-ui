@@ -366,6 +366,13 @@ const routeTree = rootRoute.addChildren([
     path: '/placement/result/$attemptId',
     component: PlacementResultPage,
   }),
+  // #375: the placement reopened as a full review, addressed by the placement id the result holds so
+  // the URL survives a reload.
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/placement/review/$placementId',
+    component: () => <MockExamReviewPage sittingKind="placement" />,
+  }),
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/exams',

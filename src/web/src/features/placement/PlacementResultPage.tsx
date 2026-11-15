@@ -363,9 +363,20 @@ export function PlacementResultPage() {
               Priority growth area: <strong>{result.weakerSkillName}</strong>
             </Card.Description>
           )}
-          {/* #366: a productive skill is only reviewable by its attempt, never by the placement id
-              this page is addressed by. The review endpoints take an attempt id. */}
+          {/* #375: the full answer review, addressed by the placement id so the link survives a
+              reload. #366: a productive skill is only reviewable by its attempt, never by the
+              placement id this page is addressed by. The review endpoints take an attempt id. */}
           <div className="flex flex-wrap items-center gap-3 pt-1">
+            {result.isGraded && (
+              <Link
+                to="/placement/review/$placementId"
+                params={{ placementId: String(result.placementId) }}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
+              >
+                Review every answer
+                <ArrowRight className="size-3.5" aria-hidden="true" />
+              </Link>
+            )}
             {[
               { pct: result.speakingPct, code: 'spea', to: '/speaking/result/$attemptId' as const, label: 'Speaking result' },
               { pct: result.writingPct, code: 'writ', to: '/writing/result/$attemptId' as const, label: 'Writing result' },
