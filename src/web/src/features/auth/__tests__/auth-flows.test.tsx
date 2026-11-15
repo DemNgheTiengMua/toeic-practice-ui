@@ -346,12 +346,12 @@ describe('Auth flows (#295)', () => {
         return jsonResponse({
           activeLearnersCount: 10,
           newLearners7DaysCount: 2,
-          creditsUsedThisMonth: 100,
-          creditsRefundedThisMonth: 0,
+          creditsUsedInPeriod: 100,
+          creditsRefundedInPeriod: 0,
           creditsPerDayAverage: 5,
           revenueTodayVnd: 0,
-          revenueThisMonthVnd: 0,
-          paidOrdersThisMonthCount: 0,
+          revenueInPeriodVnd: 0,
+          paidOrdersInPeriodCount: 0,
           mostAttemptedExams: [],
           needsAttention: {
             draftExamsCount: 0,
@@ -472,12 +472,12 @@ describe('Auth flows (#295)', () => {
         return jsonResponse({
           activeLearnersCount: 1,
           newLearners7DaysCount: 0,
-          creditsUsedThisMonth: 0,
-          creditsRefundedThisMonth: 0,
+          creditsUsedInPeriod: 0,
+          creditsRefundedInPeriod: 0,
           creditsPerDayAverage: 0,
           revenueTodayVnd: 0,
-          revenueThisMonthVnd: 0,
-          paidOrdersThisMonthCount: 0,
+          revenueInPeriodVnd: 0,
+          paidOrdersInPeriodCount: 0,
           mostAttemptedExams: [],
           needsAttention: {
             draftExamsCount: 0,

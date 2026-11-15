@@ -1947,6 +1947,12 @@ export interface AdminComplaintDetailDto {
   resolvedAt?: string | null;
   resolvedByGrantTxnId?: number | null;
   grantedCredits?: number | null;
+  /** #347: negative credit-ledger deltas attributable to the subject. */
+  creditsSpent?: number;
+  /** #347: the order's amount, and only when the subject is an order. */
+  moneyPaid?: number | null;
+  /** #347: implied by the subject; null when the complaint carries none. */
+  impliedRefundMethod?: RefundMethodDto | null;
 }
 
 export interface AdminComplaintsSummaryDto {
@@ -2098,14 +2104,17 @@ export interface AdminMostAttemptedExamDto {
 export interface AdminDashboardDto {
   activeLearnersCount: number;
   newLearners7DaysCount: number;
-  creditsUsedThisMonth: number;
-  creditsRefundedThisMonth: number;
+  /** #351: follows `periodLabel`, unlike the two `…Today` figures below. */
+  creditsUsedInPeriod: number;
+  creditsRefundedInPeriod: number;
   creditsPerDayAverage: number;
   revenueTodayVnd: number;
-  revenueThisMonthVnd: number;
-  paidOrdersThisMonthCount: number;
+  revenueInPeriodVnd: number;
+  paidOrdersInPeriodCount: number;
   mostAttemptedExams: AdminMostAttemptedExamDto[];
   needsAttention: AdminNeedsAttentionDto;
+  /** #351: the period the `…InPeriod` figures describe, named by the server that computed them. */
+  periodLabel: string;
 }
 
 export interface DashboardRevision {
@@ -2767,7 +2776,11 @@ export const api = {
   },
 
   admin: {
-    dashboard: () => apiFetch<AdminDashboardDto>('/api/admin/dashboard'),
+    /** #351: `month` is `YYYY-MM`. Absent means the current reporting month, as before the parameter. */
+    dashboard: (month?: string) =>
+      apiFetch<AdminDashboardDto>(
+        month ? `/api/admin/dashboard?month=${month}-01` : '/api/admin/dashboard',
+      ),
     dashboardRevision: () => apiFetch<DashboardRevision>('/api/admin/dashboard/revision'),
     discardWorkbenchRecord: (batchId: number, line: number, reason?: string) =>
       apiFetch<void>(`/api/admin/ingestion/${batchId}/records/${line}/discard`, {
@@ -2831,13 +2844,14 @@ export const api = {
           reason: body.reason,
         }),
       }),
-    orders: (params?: { q?: string; status?: string; gateway?: string; page?: number; pageSize?: number }) => {
+    orders: (params?: { q?: string; status?: string; gateway?: string; userId?: number; page?: number; pageSize?: number }) => {
       const sp = new URLSearchParams();
       sp.set('page', String(params?.page ?? 1));
       sp.set('pageSize', String(params?.pageSize ?? 25));
       if (params?.q) sp.set('q', params.q);
       if (params?.status) sp.set('status', params.status);
       if (params?.gateway) sp.set('gateway', params.gateway);
+      if (params?.userId) sp.set('userId', String(params.userId));
       return apiFetch<AdminOrdersSummaryDto>(`/api/admin/orders?${sp.toString()}`);
     },
     orderDetail: (orderId: number) =>

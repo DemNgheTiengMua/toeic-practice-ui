@@ -67,6 +67,42 @@ public sealed class AdminOrderServiceTests(DatabaseFixture database)
         Assert.True(paidResult.PaidThisMonthAmount >= 100000);
     }
 
+    /// <summary>
+    /// #349: the refund desk picks an order from "this learner's paid orders", so the orders list needs a
+    /// learner filter. It is a filter and not a separate query: the same route already answers "all paid
+    /// orders", and a second reader of Orders that disagreed with this one would be the #279 defect again.
+    /// </summary>
+    [Fact]
+    public async Task GetOrdersAsync_filters_to_one_learners_paid_orders_for_the_refund_desk()
+    {
+        var learner = await SeedUserAsync($"{Guid.NewGuid():N}@picker.local", "Picker Learner");
+        var other = await SeedUserAsync($"{Guid.NewGuid():N}@other-picker.local", "Other Learner");
+
+        var paymentService = new PaymentService(DbContextFactory.Create(database.ConnectionString), new MockPaymentGateway());
+        var paid = await paymentService.CreateOrderAsync(learner, 5, "http://localhost:5000");
+        await paymentService.ApplyMockGatewayActionAsync(learner, paid.OrderCode, "success");
+
+        var unpaid = await paymentService.CreateOrderAsync(learner, 3, "http://localhost:5000");
+        var otherOrder = await paymentService.CreateOrderAsync(other, 5, "http://localhost:5000");
+        await paymentService.ApplyMockGatewayActionAsync(other, otherOrder.OrderCode, "success");
+
+        var service = CreateService(paymentService);
+
+        var result = await service.GetOrdersAsync(userId: learner, status: "paid");
+
+        var row = Assert.Single(result.Orders);
+        Assert.Equal(paid.OrderCode, row.OrderCode);
+        Assert.NotEqual(unpaid.OrderCode, row.OrderCode);
+        Assert.NotEqual(otherOrder.OrderCode, row.OrderCode);
+
+        // The picker renders code, paid date, credits and amount from this one row, so the row must
+        // carry every figure the refund form then fills.
+        Assert.Equal(learner, row.UserId);
+        Assert.Equal(5, row.Credits);
+        Assert.Equal(paid.Amount, row.Amount);
+        Assert.NotNull(row.PaidAt);
+    }
+
     [Fact]
     public async Task GetOrderDetailAsync_shows_every_payment_event_in_chronological_order()
     {
@@ -185,12 +221,12 @@ public sealed class AdminOrderServiceTests(DatabaseFixture database)
             var orders = await new AdminOrderService(ordersDb, new PaymentService(ordersDb, new MockPaymentGateway()), clock)
                 .GetOrdersAsync();
 
-            Assert.Equal(2, dashboard.PaidOrdersThisMonthCount);
-            Assert.Equal(dashboard.PaidOrdersThisMonthCount, orders.PaidThisMonthCount);
+            Assert.Equal(2, dashboard.PaidOrdersInPeriodCount);
+            Assert.Equal(dashboard.PaidOrdersInPeriodCount, orders.PaidThisMonthCount);
 
             // Gross: the gateway took 298,000. Net: 100,000 of it went back, so October kept 198,000.
             Assert.Equal(199000m + 99000m, orders.PaidThisMonthAmount);
-            Assert.Equal(199000m + 99000m - 100000m, dashboard.RevenueThisMonthVnd);
+            Assert.Equal(199000m + 99000m - 100000m, dashboard.RevenueInPeriodVnd);
         }
         finally
         {

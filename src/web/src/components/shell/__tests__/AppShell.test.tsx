@@ -52,12 +52,12 @@ function makeAdminDashboard() {
   return {
     activeLearnersCount: 10,
     newLearners7DaysCount: 2,
-    creditsUsedThisMonth: 100,
-    creditsRefundedThisMonth: 0,
+    creditsUsedInPeriod: 100,
+    creditsRefundedInPeriod: 0,
     creditsPerDayAverage: 5,
     revenueTodayVnd: 0,
-    revenueThisMonthVnd: 0,
-    paidOrdersThisMonthCount: 0,
+    revenueInPeriodVnd: 0,
+    paidOrdersInPeriodCount: 0,
     mostAttemptedExams: [],
     needsAttention: {
       draftExamsCount: 0,
@@ -169,7 +169,7 @@ describe('AppShell layout and domain copy', () => {
       expect(within(header).getByText('Admin')).toBeInTheDocument();
     });
     expect(header.textContent ?? '').not.toMatch(/caps/i);
-    expect(header.textContent ?? '').not.toMatch(/Staff ·/i);
+    expect(header.textContent ?? '').not.toMatch(/Staff Â·/i);
   });
 
   it('displays clean "Staff" label for non-governance staff and never shows "caps" jargon', async () => {
@@ -194,7 +194,7 @@ describe('AppShell layout and domain copy', () => {
       expect(within(header).getByText('Staff')).toBeInTheDocument();
     });
     expect(header.textContent ?? '').not.toMatch(/caps/i);
-    expect(header.textContent ?? '').not.toMatch(/Staff ·/i);
+    expect(header.textContent ?? '').not.toMatch(/Staff Â·/i);
   });
 
   it('renders learner sidebar left-pinned with learner navigation and no staff role chip', async () => {
@@ -469,7 +469,7 @@ describe('AppShell layout and domain copy', () => {
       renderRoute('/certificates');
 
       const banner = await screen.findByTestId('oobe-return-banner');
-      expect(banner.textContent).not.toMatch(/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i);
+      expect(banner.textContent).not.toMatch(/[Ã Ã¡áº¡áº£Ã£Ã¢áº§áº¥áº­áº©áº«Äƒáº±áº¯áº·áº³áºµÃ¨Ã©áº¹áº»áº½Ãªá»áº¿á»‡á»ƒá»…Ã¬Ã­á»‹á»‰Ä©Ã²Ã³á»á»ÃµÃ´á»“á»‘á»™á»•á»—Æ¡á»á»›á»£á»Ÿá»¡Ã¹Ãºá»¥á»§Å©Æ°á»«á»©á»±á»­á»¯á»³Ã½á»µá»·á»¹Ä‘]/i);
       expect(within(banner).getByRole('link', { name: /continue setup/i })).toHaveAttribute(
         'href',
         '/onboarding',

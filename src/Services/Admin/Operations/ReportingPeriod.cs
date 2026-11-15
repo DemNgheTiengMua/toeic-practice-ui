@@ -31,6 +31,32 @@ public static class ReportingPeriod
     /// <summary>The instant on the accountant's calendar.</summary>
     public static DateTimeOffset LocalInstant(DateTimeOffset utcNow) => utcNow.ToOffset(UtcOffset);
 
+    /// <summary>
+    /// #351: how many days of <paramref name="window"/> have happened by <paramref name="utcNow"/>.
+    /// <para>
+    /// A per-day average must divide by the days the period has actually lived, not by the days of
+    /// whichever period happens to contain today. September read on 15 October is 30 days old, not 15;
+    /// dividing it by today's day-of-month reports 20 credits/day instead of 10 - an average for a month
+    /// that had not reached its end, roughly double the truth. A window that has not begun reports 1
+    /// rather than 0, so the caller never divides by zero for a month in the future - a month with no
+    /// rows in it averages nothing anyway.
+    /// </para>
+    /// </summary>
+    public static int ElapsedDays(ReportingWindow window, DateTimeOffset utcNow)
+    {
+        var elapsed = (int)Math.Floor((LocalInstant(utcNow) - window.Start).TotalDays) + 1;
+        var total = (int)Math.Round((window.End - window.Start).TotalDays);
+        return Math.Clamp(elapsed, 1, Math.Max(1, total));
+    }
+
+    /// <summary>
+    /// #351: the accountant's name for a month window cut by <see cref="Month(int, int)"/>, so a screen
+    /// that reports September can say so without re-deriving the label from a date and drifting from the
+    /// window it names. Invariant culture: the label is a period, not a translation.
+    /// </summary>
+    public static string MonthLabel(ReportingWindow window) =>
+        window.Start.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+
     /// <summary>The calendar day containing <paramref name="utcNow"/>, as the accountant sees it.</summary>
     public static ReportingWindow Day(DateTimeOffset utcNow)
     {
@@ -43,7 +69,18 @@ public static class ReportingPeriod
     public static ReportingWindow Month(DateTimeOffset utcNow)
     {
         var local = LocalInstant(utcNow);
-        var start = new DateTimeOffset(local.Year, local.Month, 1, 0, 0, 0, UtcOffset);
+        return Month(local.Year, local.Month);
+    }
+
+    /// <summary>
+    /// #351: the window of a month the caller names rather than the one <paramref name="utcNow"/> falls
+    /// in. It exists so a dashboard asked about September builds September's window from the same
+    /// definition as the current month - a second month-free helper would be a second boundary, and the
+    /// two would drift at the first change to <see cref="UtcOffset"/> or to the half-open shape.
+    /// </summary>
+    public static ReportingWindow Month(int year, int month)
+    {
+        var start = new DateTimeOffset(year, month, 1, 0, 0, 0, UtcOffset);
         return new ReportingWindow(start, start.AddMonths(1));
     }
 

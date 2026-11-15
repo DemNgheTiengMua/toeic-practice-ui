@@ -34,12 +34,12 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
 
             Assert.Equal(0, result.ActiveLearnersCount);
             Assert.Equal(0, result.NewLearners7DaysCount);
-            Assert.Equal(0, result.CreditsUsedThisMonth);
+            Assert.Equal(0, result.CreditsUsedInPeriod);
             Assert.Equal(0m, result.CreditsPerDayAverage);
-            Assert.Equal(0m, result.RevenueThisMonthVnd);
-            Assert.Equal(0, result.PaidOrdersThisMonthCount);
+            Assert.Equal(0m, result.RevenueInPeriodVnd);
+            Assert.Equal(0, result.PaidOrdersInPeriodCount);
             Assert.Equal(0m, result.RevenueTodayVnd);
-            Assert.Equal(0, result.CreditsRefundedThisMonth);
+            Assert.Equal(0, result.CreditsRefundedInPeriod);
             Assert.Empty(result.MostAttemptedExams);
             Assert.Equal(0, result.NeedsAttention.DraftExamsCount);
             Assert.Equal(0, result.NeedsAttention.StalePendingOrdersCount);
@@ -163,7 +163,7 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                 var result = await service.GetDashboardMetricsAsync();
 
                 // Credits used this month: 10 + 1 = 11 (excludes 5 admin_revoke and 8 from last month)
-                Assert.Equal(11, result.CreditsUsedThisMonth);
+                Assert.Equal(11, result.CreditsUsedInPeriod);
 
                 // Average per day: day is 10, so 11 / 10 = 1.1 credits/day
                 Assert.Equal(1.1m, result.CreditsPerDayAverage);
@@ -220,9 +220,9 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                 var service = CreateService(db, clock);
                 var result = await service.GetDashboardMetricsAsync();
 
-                Assert.Equal(199000m + 499000m + 99000m, result.RevenueThisMonthVnd);
+                Assert.Equal(199000m + 499000m + 99000m, result.RevenueInPeriodVnd);
                 Assert.Equal(99000m, result.RevenueTodayVnd);
-                Assert.Equal(3, result.PaidOrdersThisMonthCount);
+                Assert.Equal(3, result.PaidOrdersInPeriodCount);
             }
         }
         finally
@@ -299,11 +299,11 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                 var result = await service.GetDashboardMetricsAsync();
 
                 // 100,000 in, 280,000 out (250,000 today + 30,000 yesterday): the month is a 180,000 loss.
-                Assert.Equal(-180000m, result.RevenueThisMonthVnd);
+                Assert.Equal(-180000m, result.RevenueInPeriodVnd);
                 // The day holds the refund and none of the income: the deeper loss of the two, which is the
                 // clearest proof that the two figures read two different windows.
                 Assert.Equal(-250000m, result.RevenueTodayVnd);
-                Assert.Equal(1, result.PaidOrdersThisMonthCount);
+                Assert.Equal(1, result.PaidOrdersInPeriodCount);
             }
         }
         finally
@@ -359,8 +359,8 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                 var service = CreateService(db, clock);
                 var result = await service.GetDashboardMetricsAsync();
 
-                Assert.Equal(5, result.CreditsRefundedThisMonth);
-                Assert.Equal(0m, result.RevenueThisMonthVnd);
+                Assert.Equal(5, result.CreditsRefundedInPeriod);
+                Assert.Equal(0m, result.RevenueInPeriodVnd);
                 Assert.Equal(0m, result.RevenueTodayVnd);
             }
         }
@@ -613,9 +613,257 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                 var service = CreateService(db, leapClock);
                 var result = await service.GetDashboardMetricsAsync();
 
-                Assert.Equal(29, result.CreditsUsedThisMonth);
+                Assert.Equal(29, result.CreditsUsedInPeriod);
                 // 29 credits / 29 days in leap year Feb = 1.0 credits/day
                 Assert.Equal(1.0m, result.CreditsPerDayAverage);
+                Assert.Equal("February 2028", result.PeriodLabel);
+            }
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(dbName);
+        }
+    }
+
+    /// <summary>
+    /// #351: the seed every chosen-month case reads. The clock stays on 15 October 2026, so "today" is
+    /// the 15th while the month under test is September - which is exactly the pair that exposes an
+    /// average dividing by today's day-of-month instead of the chosen period's elapsed days.
+    /// <para>
+    /// The two boundary orders carry the ticket's 23:30 Vietnam case: 16:30Z on 30 September is the last
+    /// half hour of September locally, and 16:30Z on 31 October is the last half hour of October. Both
+    /// are UTC dates in the month before the one the accountant reads.
+    /// </para>
+    /// </summary>
+    private static string ChosenMonthSeed(DateTimeOffset now) => $"""
+        INSERT INTO Roles (Code, Name) VALUES ('learner', 'Learner'), ('admin', 'Admin');
+        INSERT INTO Certificates (Code, Name, Description, IsActive) VALUES ('toeic', 'TOEIC', 'Desc', 1);
+        DECLARE @CertId INT = SCOPE_IDENTITY();
+
+        INSERT INTO Users (RoleId, Email, PasswordHash, FullName, IsLocked, EmailVerifiedAt, IsDeleted, CreatedAt)
+        VALUES
+          ((SELECT RoleId FROM Roles WHERE Code='learner'), 'period@test.local', 0x01, N'Period Learner', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '2026-08-01 00:00:00 +00:00'),
+          ((SELECT RoleId FROM Roles WHERE Code='admin'), 'periodadmin@test.local', 0x01, N'Period Admin', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '2026-08-01 00:00:00 +00:00');
+        DECLARE @UserId INT = (SELECT UserId FROM Users WHERE Email='period@test.local');
+        DECLARE @AdminId INT = (SELECT UserId FROM Users WHERE Email='periodadmin@test.local');
+
+        -- Opening balance, so the September debits have room to post.
+        INSERT INTO CreditTransactions (UserId, AdminUserId, Reason, Delta, Note, CreatedAt)
+        VALUES (@UserId, @AdminId, 'admin_grant', 1000, N'Opening balance', '2026-08-02 00:00:00 +00:00');
+
+        INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, QuestionCount, IsDeleted, CreatedAt)
+        VALUES
+          (@CertId, 'September Paper', 'published', 120, 'mock', 'Desc', 200, 0, '2026-08-02 00:00:00 +00:00'),
+          (@CertId, 'October Paper', 'published', 120, 'mock', 'Desc', 200, 0, '2026-08-02 00:00:00 +00:00');
+        DECLARE @SepExam INT = (SELECT ExamId FROM Exams WHERE Name='September Paper');
+        DECLARE @OctExam INT = (SELECT ExamId FROM Exams WHERE Name='October Paper');
+
+        -- ===== September (the chosen previous month) =====
+        -- Paid 10 September: 300,000 in.
+        INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+        VALUES (@UserId, 5, 'paid', 300000, 'DH-SEP-0001', 50001, 'payos', '2026-09-10 09:00:00 +00:00', '2026-09-10 09:00:00 +00:00');
+
+        -- Paid 23:30 on 30 September Vietnam time (16:30Z the same day): still September.
+        INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+        VALUES (@UserId, 5, 'paid', 500000, 'DH-SEP-0002', 50002, 'payos', '2026-09-30 16:20:00 +00:00', '2026-09-30 16:30:00 +00:00');
+
+        -- 300 credits spent on two September sittings of the September paper.
+        INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
+        VALUES
+          (@UserId, @SepExam, @CertId, 'graded', '2026-09-10 09:00:00 +00:00', '2026-09-10 11:00:00 +00:00', 600),
+          (@UserId, @SepExam, @CertId, 'graded', '2026-09-12 09:00:00 +00:00', '2026-09-12 11:00:00 +00:00', 700);
+        INSERT INTO CreditTransactions (UserId, AttemptId, Reason, Delta, CreatedAt)
+        SELECT @UserId, AttemptId, 'mock_exam_start', -150, StartedAt
+        FROM ExamAttempts WHERE UserId = @UserId AND ExamId = @SepExam;
+
+        -- One money refund settled inside September: 600,000 gross becomes 400,000 net.
+        INSERT INTO Refunds (UserId, Method, Reason, Status, Amount, RequestedByUserId, DecidedByUserId, DecidedAt, SettledByUserId, SettledAt, CreatedAt)
+        VALUES (@UserId, 'money', N'Service not delivered', 'settled', 200000, @AdminId, @AdminId,
+                '2026-09-18 09:00:00 +00:00', @AdminId, '2026-09-20 09:00:00 +00:00', '2026-09-18 09:00:00 +00:00');
+
+        -- ===== October (the month the clock is in) =====
+        -- Paid 5 October: 111,000 in, so October's revenue is not September's.
+        INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+        VALUES (@UserId, 5, 'paid', 111000, 'DH-OCT-0001', 50003, 'payos', '2026-10-05 09:00:00 +00:00', '2026-10-05 09:00:00 +00:00');
+
+        -- Paid at 12:00 Vietnam on 15 October - "today" on this clock, and today for either chosen month.
+        INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+        VALUES (@UserId, 5, 'paid', 99000, 'DH-OCT-0002', 50004, 'payos', '2026-10-15 05:00:00 +00:00', '2026-10-15 05:00:00 +00:00');
+
+        -- Paid 23:30 on 31 October Vietnam time (16:30Z the same day): October, and never September.
+        INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+        VALUES (@UserId, 5, 'paid', 77000, 'DH-OCT-0003', 50005, 'payos', '2026-10-31 16:20:00 +00:00', '2026-10-31 16:30:00 +00:00');
+
+        -- 11 credits spent on one October sitting of the October paper.
+        INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
+        VALUES (@UserId, @OctExam, @CertId, 'graded', '2026-10-10 09:00:00 +00:00', '2026-10-10 11:00:00 +00:00', 800);
+        DECLARE @OctAttempt INT = SCOPE_IDENTITY();
+        INSERT INTO CreditTransactions (UserId, AttemptId, Reason, Delta, CreatedAt)
+        VALUES (@UserId, @OctAttempt, 'mock_exam_start', -11, '2026-10-10 09:00:00 +00:00');
+        """;
+
+    [Fact]
+    public async Task A_chosen_month_returns_that_months_revenue_credits_orders_and_ranking()
+    {
+        var dbName = $"EEDashPeriod_{Guid.NewGuid():N}"[..25];
+        var connStr = await database.CreateFreshDatabaseAsync(dbName);
+        try
+        {
+            var clock = new ManualTimeProvider(new DateTimeOffset(2026, 10, 15, 12, 0, 0, TimeSpan.Zero));
+            await using (var db = DbContextFactory.Create(connStr))
+            {
+                await db.Database.ExecuteSqlRawAsync(ChosenMonthSeed(clock.GetUtcNow()));
+            }
+
+            await using (var db = DbContextFactory.Create(connStr))
+            {
+                var result = await CreateService(db, clock)
+                    .GetDashboardMetricsAsync(new DateOnly(2026, 9, 1));
+
+                // 800,000 in (300,000 + 500,000) less the 200,000 refunded in September.
+                Assert.Equal(600000m, result.RevenueInPeriodVnd);
+                Assert.Equal(2, result.PaidOrdersInPeriodCount);
+                Assert.Equal(300, result.CreditsUsedInPeriod);
+                Assert.Equal(0, result.CreditsRefundedInPeriod);
+
+                // 300 credits over September's 30 elapsed days. Dividing by today's day-of-month (15)
+                // would report 20.0 - an average for a month that had not reached its end.
+                Assert.Equal(10.0m, result.CreditsPerDayAverage);
+
+                // The ranking describes the period it names: only September's paper was attempted.
+                var only = Assert.Single(result.MostAttemptedExams);
+                Assert.Equal("September Paper", only.ExamName);
+                Assert.Equal(2, only.AttemptsCount);
+
+                Assert.Equal("September 2026", result.PeriodLabel);
+            }
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(dbName);
+        }
+    }
+
+    /// <summary>
+    /// The two live figures do not follow the period control. A month picker that moved them would
+    /// silently redefine "today" into "the 15th of October", which is not a figure the accountant asked
+    /// for and not one the card claims.
+    /// </summary>
+    [Fact]
+    public async Task Todays_revenue_and_net_figure_ignore_the_chosen_month()
+    {
+        var dbName = $"EEDashPeriodToday_{Guid.NewGuid():N}"[..25];
+        var connStr = await database.CreateFreshDatabaseAsync(dbName);
+        try
+        {
+            var clock = new ManualTimeProvider(new DateTimeOffset(2026, 10, 15, 12, 0, 0, TimeSpan.Zero));
+            await using (var db = DbContextFactory.Create(connStr))
+            {
+                await db.Database.ExecuteSqlRawAsync(ChosenMonthSeed(clock.GetUtcNow()));
+            }
+
+            await using (var db = DbContextFactory.Create(connStr))
+            {
+                var service = CreateService(db, clock);
+                var noMonth = await service.GetDashboardMetricsAsync();
+                var september = await service.GetDashboardMetricsAsync(new DateOnly(2026, 9, 1));
+                var october = await service.GetDashboardMetricsAsync(new DateOnly(2026, 10, 1));
+
+                // Only the 99,000 paid at noon on the 15th is today's, whatever month is being read.
+                Assert.Equal(99000m, noMonth.RevenueTodayVnd);
+                Assert.Equal(99000m, september.RevenueTodayVnd);
+                Assert.Equal(99000m, october.RevenueTodayVnd);
+
+                // The period figures really did move, so the equality above is not an accident.
+                Assert.Equal(600000m, september.RevenueInPeriodVnd);
+                Assert.Equal(111000m + 99000m + 77000m, october.RevenueInPeriodVnd);
+                Assert.Equal("October 2026", october.PeriodLabel);
+            }
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(dbName);
+        }
+    }
+
+    /// <summary>
+    /// ADR-0014: a chosen month whose refunds exceed its income is a loss, and it is returned as one.
+    /// Clamping to zero would hide the one month an owner opens the screen to find.
+    /// </summary>
+    [Fact]
+    public async Task A_chosen_months_negative_net_revenue_is_returned_rather_than_clamped()
+    {
+        var dbName = $"EEDashPeriodLoss_{Guid.NewGuid():N}"[..25];
+        var connStr = await database.CreateFreshDatabaseAsync(dbName);
+        try
+        {
+            var clock = new ManualTimeProvider(new DateTimeOffset(2026, 10, 15, 12, 0, 0, TimeSpan.Zero));
+            await using (var db = DbContextFactory.Create(connStr))
+            {
+                await db.Database.ExecuteSqlRawAsync($"""
+                    INSERT INTO Roles (Code, Name) VALUES ('learner', 'Learner'), ('admin', 'Admin');
+                    INSERT INTO Users (RoleId, Email, PasswordHash, FullName, IsLocked, EmailVerifiedAt, IsDeleted, CreatedAt)
+                    VALUES
+                      ((SELECT RoleId FROM Roles WHERE Code='learner'), 'loss@test.local', 0x01, N'Loss Learner', 0, '{clock.GetUtcNow():yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '2026-08-01 00:00:00 +00:00'),
+                      ((SELECT RoleId FROM Roles WHERE Code='admin'), 'lossadmin@test.local', 0x01, N'Loss Admin', 0, '{clock.GetUtcNow():yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '2026-08-01 00:00:00 +00:00');
+                    DECLARE @UserId INT = (SELECT UserId FROM Users WHERE Email='loss@test.local');
+                    DECLARE @AdminId INT = (SELECT UserId FROM Users WHERE Email='lossadmin@test.local');
+
+                    -- 50,000 came in during September...
+                    INSERT INTO Orders (UserId, Credits, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
+                    VALUES (@UserId, 5, 'paid', 50000, 'DH-LOSS-0001', 60001, 'payos', '2026-09-05 09:00:00 +00:00', '2026-09-05 09:00:00 +00:00');
+
+                    -- ...and 400,000 went back out of it.
+                    INSERT INTO Refunds (UserId, Method, Reason, Status, Amount, RequestedByUserId, DecidedByUserId, DecidedAt, SettledByUserId, SettledAt, CreatedAt)
+                    VALUES (@UserId, 'money', N'Whole order refunded', 'settled', 400000, @AdminId, @AdminId,
+                            '2026-09-20 09:00:00 +00:00', @AdminId, '2026-09-22 09:00:00 +00:00', '2026-09-20 09:00:00 +00:00');
+                    """);
+            }
+
+            await using (var db = DbContextFactory.Create(connStr))
+            {
+                var result = await CreateService(db, clock)
+                    .GetDashboardMetricsAsync(new DateOnly(2026, 9, 1));
+
+                Assert.Equal(-350000m, result.RevenueInPeriodVnd);
+                Assert.Equal(1, result.PaidOrdersInPeriodCount);
+            }
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(dbName);
+        }
+    }
+
+    /// <summary>
+    /// A month nobody bought anything in is a real answer, not a failure mode. Nulls from every
+    /// <c>SUM</c> reach the payload as zeros, and the ranking is an empty list.
+    /// </summary>
+    [Fact]
+    public async Task A_chosen_period_with_no_orders_returns_zeros_rather_than_an_error()
+    {
+        var dbName = $"EEDashPeriodEmpty_{Guid.NewGuid():N}"[..25];
+        var connStr = await database.CreateFreshDatabaseAsync(dbName);
+        try
+        {
+            var clock = new ManualTimeProvider(new DateTimeOffset(2026, 10, 15, 12, 0, 0, TimeSpan.Zero));
+            await using (var db = DbContextFactory.Create(connStr))
+            {
+                await db.Database.ExecuteSqlRawAsync(ChosenMonthSeed(clock.GetUtcNow()));
+            }
+
+            await using (var db = DbContextFactory.Create(connStr))
+            {
+                var result = await CreateService(db, clock)
+                    .GetDashboardMetricsAsync(new DateOnly(2026, 7, 1));
+
+                Assert.Equal(0m, result.RevenueInPeriodVnd);
+                Assert.Equal(0, result.PaidOrdersInPeriodCount);
+                Assert.Equal(0, result.CreditsUsedInPeriod);
+                Assert.Equal(0, result.CreditsRefundedInPeriod);
+                Assert.Equal(0m, result.CreditsPerDayAverage);
+                Assert.Empty(result.MostAttemptedExams);
+                Assert.Equal("July 2026", result.PeriodLabel);
             }
         }
         finally

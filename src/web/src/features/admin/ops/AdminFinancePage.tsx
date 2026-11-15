@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Breadcrumbs, Tabs } from '@heroui/react';
+import { useSearch } from '@tanstack/react-router';
 import { FileText, Receipt } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { canManageBilling, canManageUsers, canTriageSupport } from '../../../lib/security';
@@ -13,7 +14,16 @@ export interface AdminFinancePageProps {
 
 export function AdminFinancePage({ initialTab }: AdminFinancePageProps) {
   const { user } = useAuth();
-  const [selectedTab, setSelectedTab] = useState<string | null>(initialTab ?? null);
+  // #349: a complaint's refund arrives with the complaint already identified. Carried in the URL by
+  // the screen that opened it, never retyped here.
+  const search = useSearch({ strict: false }) as { complaintId?: number | string | null };
+  const complaintId =
+    search.complaintId != null && String(search.complaintId).trim() !== ''
+      ? Number(search.complaintId)
+      : null;
+  const [selectedTab, setSelectedTab] = useState<string | null>(
+    complaintId !== null ? 'refunds' : (initialTab ?? null),
+  );
 
   const isBillingAllowed = canManageBilling(user);
   const isSystemAdmin = canManageUsers(user);
@@ -87,7 +97,7 @@ export function AdminFinancePage({ initialTab }: AdminFinancePageProps) {
 
         {(isSupportTriage || isSystemAdmin) && (
           <Tabs.Panel id="refunds" className="pt-6">
-            <RefundsTab />
+            <RefundsTab complaintId={complaintId} />
           </Tabs.Panel>
         )}
       </Tabs>
