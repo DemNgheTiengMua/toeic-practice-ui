@@ -120,7 +120,7 @@ export function LearningPathStepPage() {
               isDone
                 ? 'bg-success/10 text-success border border-success/30'
                 : isInProgress
-                ? 'bg-warning/20 text-warning border border-warning/40'
+                ? 'bg-warning/20 text-warning-text border border-warning/40'
                 : isLocked
                 ? 'bg-surface-secondary text-muted'
                 : 'bg-accent/10 text-accent border border-accent/30'

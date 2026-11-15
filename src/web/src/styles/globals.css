@@ -91,11 +91,13 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+@theme inline {
+  --color-warning-text: var(--warning-text);
+}
+
 :root,
 .light,
-[data-theme="light"],
-.dark,
-[data-theme="dark"] {
+[data-theme="light"] {
   --font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
   --font-display: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -107,8 +109,30 @@
   --success-foreground: #ffffff;
   --warning: #f2b705;
   --warning-foreground: #14181d;
+  --warning-text: #8a6200;
   --danger: #b31217;
   --danger-foreground: #ffffff;
+  --muted: #52525b;
+  --focus: var(--accent);
+}
+
+.dark,
+[data-theme="dark"] {
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-display: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Dark mode: preserve each semantic role's hue while raising lightness for >= 4.5:1 contrast */
+  --accent: #6ea8fe;
+  --accent-foreground: #091426;
+  --success: #3dd68c;
+  --success-foreground: #071f13;
+  --warning: #f2b705;
+  --warning-foreground: #14181d;
+  --warning-text: #f2b705;
+  --danger: #ff6b6e;
+  --danger-foreground: #1c0506;
+  --muted: oklch(70.5% 0.015 286.067);
   --focus: var(--accent);
 }
 

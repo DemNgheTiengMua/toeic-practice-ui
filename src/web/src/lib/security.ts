@@ -152,7 +152,7 @@ export function parseSafeInlineSegments(text: string): NarrativeSegment[] {
 }
 
 export function formatVnd(amount: number): string {
-  return `${new Intl.NumberFormat('vi-VN').format(amount)} ₫`;
+  return `${new Intl.NumberFormat('vi-VN').format(amount)}\u00a0₫`;
 }
 
 export function formatVndUnitPrice(price: number, credits: number): string {
@@ -167,9 +167,9 @@ export function formatVndUnitPrice(price: number, credits: number): string {
 export function formatSignedVnd(amount: number): string {
   const formatted = new Intl.NumberFormat('vi-VN').format(Math.abs(amount));
   if (amount < 0) {
-    return `\u2212${formatted} ₫`;
+    return `\u2212${formatted}\u00a0₫`;
   }
-  return `${formatted} ₫`;
+  return `${formatted}\u00a0₫`;
 }
 
 export function formatTimerSeconds(totalSeconds: number): string {
