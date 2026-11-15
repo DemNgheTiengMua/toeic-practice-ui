@@ -57,6 +57,43 @@ import type {
   QuickIngestSampleTemplateDto,
   CreateAdminExamRequest,
 } from './types';
+import { EXAM_MEDIA_EXTENSIONS } from './types';
+
+/**
+ * #359: the file's own duration, measured in the browser before it is recorded. A Listening Section
+ * refuses a zero duration and the server cannot measure an upload, so the answer has to come from
+ * here.
+ *
+ * Measuring is best-effort on purpose. A browser that cannot decode the file, or an environment with
+ * no `createObjectURL`, must not lose an upload the author already chose - the caller floors the
+ * result to 1 second, which is the smallest value the route accepts. A measurement failure that
+ * blocked the save would be worse than an approximate duration.
+ */
+function readAudioDurationSec(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    let url: string | null = null;
+    const done = (seconds: number) => {
+      if (url) URL.revokeObjectURL(url);
+      resolve(Number.isFinite(seconds) && seconds > 0 ? seconds : 0);
+    };
+
+    try {
+      if (typeof URL.createObjectURL !== 'function') {
+        done(0);
+        return;
+      }
+      url = URL.createObjectURL(file);
+      const audio = new Audio();
+      audio.addEventListener('loadedmetadata', () => done(audio.duration));
+      audio.addEventListener('error', () => done(0));
+      // A source that never loads must not strand the upload control.
+      setTimeout(() => done(0), 5000);
+      audio.src = url;
+    } catch {
+      done(0);
+    }
+  });
+}
 
 // The only purposes CK_Exams_Purpose accepts. Every purpose control draws from this list so the
 // filter, the metadata editor and the create modal can never drift apart again (#357).
@@ -114,6 +151,11 @@ export function ExamsStudioPage() {
   const [audioPathInput, setAudioPathInput] = useState('');
   const [audioDurationSec, setAudioDurationSec] = useState(300);
   const [isSavingAudio, setIsSavingAudio] = useState(false);
+  // #359: which Section's upload control is busy, and the outcome shown beside it.
+  const [uploadingSectionId, setUploadingSectionId] = useState<number | null>(null);
+  const [sectionMediaNotice, setSectionMediaNotice] = useState<
+    { sectionId: number; isError: boolean; text: string } | null
+  >(null);
 
   // Assembly state
   const [assembly, setAssembly] = useState<ExamAssemblyDto | null>(null);
@@ -250,6 +292,64 @@ export function ExamsStudioPage() {
       // Fallback
     } finally {
       setIsLoadingAudit(false);
+    }
+  };
+
+  // #359: one audio file per Listening Section. The server names the file and answers the path, so
+  // this stores what came back rather than composing a path. Images share the same door.
+  const handleUploadSectionAudio = async (sectionId: number, file: File) => {
+    if (!selectedExamId) return;
+    const ext = `.${file.name.split('.').pop()?.toLowerCase() ?? ''}`;
+    if (!(EXAM_MEDIA_EXTENSIONS as readonly string[]).includes(ext)) {
+      setSectionMediaNotice({ sectionId, isError: true, text: `'${ext}' is not accepted. Choose ${EXAM_MEDIA_EXTENSIONS.join(', ')}.` });
+      return;
+    }
+
+    setUploadingSectionId(sectionId);
+    setSectionMediaNotice(null);
+    try {
+      const uploaded = await studioApi.uploadExamMedia(selectedExamId, file);
+      // Duration is the audio element's own answer; a file we cannot measure gets 1s, which is the
+      // smallest value SaveSectionAudioRequest accepts.
+      const durationSec = Math.max(1, Math.round(await readAudioDurationSec(file)));
+      await studioApi.saveExamAudio(selectedExamId, {
+        sectionId,
+        audioPath: uploaded.path,
+        durationSec,
+        sizeBytes: file.size,
+      });
+      setSectionMediaNotice({ sectionId, isError: false, text: 'Audio saved to this Section.' });
+      loadExamDetail(selectedExamId);
+    } catch (err: unknown) {
+      setSectionMediaNotice({
+        sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Upload failed.'),
+      });
+    } finally {
+      setUploadingSectionId(null);
+    }
+  };
+
+  const handleUploadSectionImage = async (sectionId: number, file: File) => {
+    if (!selectedExamId) return;
+    setUploadingSectionId(sectionId);
+    setSectionMediaNotice(null);
+    try {
+      const uploaded = await studioApi.uploadExamMedia(selectedExamId, file);
+      setSectionMediaNotice({
+        sectionId,
+        isError: false,
+        text: `Image stored at ${uploaded.path}. Attach it to a Bundle on the Questions tab.`,
+      });
+    } catch (err: unknown) {
+      setSectionMediaNotice({
+        sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Upload failed.'),
+      });
+    } finally {
+      setUploadingSectionId(null);
     }
   };
 
@@ -887,6 +987,66 @@ export function ExamsStudioPage() {
                         </span>
                       </div>
                       <p className="text-muted italic pt-1">{sec.statusText}</p>
+
+                      {/* #359: a file, never a typed path. The server names the file and answers it. */}
+                      <div className="pt-2 border-t border-border space-y-2">
+                        {sec.modality === 'listening' && (
+                          <div className="space-y-1">
+                            <label
+                              htmlFor={`section-audio-${sec.sectionId}`}
+                              className="block text-xs font-semibold text-foreground"
+                            >
+                              Upload audio track
+                            </label>
+                            <input
+                              id={`section-audio-${sec.sectionId}`}
+                              type="file"
+                              accept=".mp3,.wav,.ogg,.m4a"
+                              disabled={uploadingSectionId === sec.sectionId}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) void handleUploadSectionAudio(sec.sectionId, file);
+                                e.target.value = '';
+                              }}
+                              className="block w-full text-xs text-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border file:border-border file:bg-surface file:text-xs file:text-foreground"
+                            />
+                          </div>
+                        )}
+
+                        <div className="space-y-1">
+                          <label
+                            htmlFor={`section-image-${sec.sectionId}`}
+                            className="block text-xs font-semibold text-foreground"
+                          >
+                            Upload image
+                          </label>
+                          <input
+                            id={`section-image-${sec.sectionId}`}
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.svg,.webp"
+                            disabled={uploadingSectionId === sec.sectionId}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) void handleUploadSectionImage(sec.sectionId, file);
+                              e.target.value = '';
+                            }}
+                            className="block w-full text-xs text-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border file:border-border file:bg-surface file:text-xs file:text-foreground"
+                          />
+                        </div>
+
+                        {uploadingSectionId === sec.sectionId && (
+                          <p className="text-muted">Uploading…</p>
+                        )}
+
+                        {sectionMediaNotice?.sectionId === sec.sectionId && (
+                          <Alert status={sectionMediaNotice.isError ? 'danger' : 'success'}>
+                            <Alert.Indicator />
+                            <Alert.Content>
+                              <Alert.Description>{sectionMediaNotice.text}</Alert.Description>
+                            </Alert.Content>
+                          </Alert>
+                        )}
+                      </div>
                     </Card.Content>
                   </Card>
                 ))}

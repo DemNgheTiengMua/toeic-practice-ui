@@ -690,6 +690,76 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
     expect(await screen.findByText('21 / 25')).toBeInTheDocument();
   });
 
+  it('uploads a Listening Section audio file and records the answered path (#359)', async () => {
+    let uploadCalls: { url: string; body: FormData | null }[] = [];
+    let audioBody: any = null;
+
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          id: 1,
+          email: 'author@demo.local',
+          fullName: 'Content Author',
+          role: 'staff',
+          permissions: [STAFF_PERMISSIONS.ContentAuthor],
+        });
+      }
+      if (url.startsWith('/api/admin/exams?')) {
+        return jsonResponse(mockExamList);
+      }
+      if (url === '/api/admin/exams/101') {
+        return jsonResponse(mockExamDetail);
+      }
+      if (url === '/api/admin/exams/101/media' && init?.method === 'POST') {
+        uploadCalls.push({ url, body: init.body as FormData });
+        return jsonResponse({
+          url: '/media/exams/101/abc.mp3',
+          path: 'exams/101/abc.mp3',
+          fileName: 'abc.mp3',
+        });
+      }
+      if (url === '/api/admin/exams/101/audio' && init?.method === 'POST') {
+        audioBody = JSON.parse(String(init.body));
+        return jsonResponse({}, 200);
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin/exams');
+    fireEvent.click(
+      await screen.findByRole('button', { name: /open studio for toeic official practice test 1/i }),
+    );
+    fireEvent.click(await screen.findByRole('tab', { name: /sections & audio/i }));
+
+    // A Listening Section offers the audio control; a Reading one must not.
+    const audioInputs = await screen.findAllByLabelText(/upload audio track/i);
+    const audioInput = audioInputs[0] as HTMLInputElement;
+    expect(audioInputs).toHaveLength(
+      mockExamDetail.sectionProgress.filter((s) => s.modality === 'listening').length,
+    );
+    expect(audioInput.type).toBe('file');
+    expect(audioInput.accept).toContain('.mp3');
+    expect(audioInput.accept).not.toContain('.mp4');
+
+    // A rejected format is refused before the bytes leave the browser.
+    const badFile = new File(['x'], 'clip.mp4', { type: 'video/mp4' });
+    fireEvent.change(audioInput, { target: { files: [badFile] } });
+    expect(await screen.findByText(/'\.mp4' is not accepted/i)).toBeInTheDocument();
+    expect(uploadCalls).toHaveLength(0);
+
+    // An accepted file uploads, and the path the server answered is what gets recorded.
+    const goodFile = new File(['audio'], 'part1.mp3', { type: 'audio/mpeg' });
+    fireEvent.change(audioInput, { target: { files: [goodFile] } });
+
+    await waitFor(() => expect(audioBody).not.toBeNull());
+    expect(uploadCalls).toHaveLength(1);
+    expect(uploadCalls[0].body?.get('file')).toBeInstanceOf(File);
+    expect(audioBody.audioPath).toBe('exams/101/abc.mp3');
+    expect(audioBody.sectionId).toBe(mockExamDetail.sectionProgress[0].sectionId);
+    expect(audioBody.durationSec).toBeGreaterThan(0);
+    expect(audioBody.sizeBytes).toBe(goodFile.size);
+  });
+
   it('binds backend RFC 7807 field errors to HeroUI FieldError controls in the create exam modal', async () => {
     installFetchMock((url, init) => {
       if (url === '/api/auth/me') {
