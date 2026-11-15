@@ -275,6 +275,9 @@ export function formatDateOnly(isoString?: string | null): string {
 
 export const DEFAULT_ORDERLESS_CEILING = 200;
 export const MAX_COMPLAINT_GRANT_CREDITS = 20;
+/** The API boundary refuses a longer reason (`RequestRefundRequest.Reason` is `MaxLength(400)`), so the
+ * form refuses it too: a 4000-character bound let a long explanation pass here and fail on submit. */
+export const MAX_REFUND_REASON_LENGTH = 400;
 
 export interface RefundValidationInput {
   userId: number;
@@ -300,8 +303,8 @@ export function validateRefundRequest(input: RefundValidationInput): ValidationR
   const trimmedReason = (input.reason || '').trim();
   if (!trimmedReason) {
     errors.reason = 'Reason is mandatory.';
-  } else if (trimmedReason.length > 4000) {
-    errors.reason = 'Reason cannot exceed 4000 characters.';
+  } else if (trimmedReason.length > MAX_REFUND_REASON_LENGTH) {
+    errors.reason = `Reason cannot exceed ${MAX_REFUND_REASON_LENGTH} characters.`;
   }
 
   if (input.method === 'money') {

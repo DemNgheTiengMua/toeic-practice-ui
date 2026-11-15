@@ -2828,13 +2828,14 @@ export const api = {
           reason: body.reason,
         }),
       }),
-    orders: (params?: { q?: string; status?: string; gateway?: string; page?: number; pageSize?: number }) => {
+    orders: (params?: { q?: string; status?: string; gateway?: string; userId?: number; page?: number; pageSize?: number }) => {
       const sp = new URLSearchParams();
       sp.set('page', String(params?.page ?? 1));
       sp.set('pageSize', String(params?.pageSize ?? 25));
       if (params?.q) sp.set('q', params.q);
       if (params?.status) sp.set('status', params.status);
       if (params?.gateway) sp.set('gateway', params.gateway);
+      if (params?.userId) sp.set('userId', String(params.userId));
       return apiFetch<AdminOrdersSummaryDto>(`/api/admin/orders?${sp.toString()}`);
     },
     orderDetail: (orderId: number) =>
