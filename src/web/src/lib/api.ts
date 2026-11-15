@@ -1999,6 +1999,9 @@ export interface AdminMentorListItemDto {
   completedSessionsCount: number;
   totalEarnedCredits: number;
   totalEarnedVnd: number;
+  /** #352: delivered sessions docked because their complaint was resolved with compensation. */
+  adjustedSessionsCount: number;
+  adjustedCredits: number;
   headline?: string | null;
   bio?: string | null;
   expertise?: string | null;
