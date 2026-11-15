@@ -160,6 +160,23 @@ public sealed class UniversalPlacementOobeTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task Placement_catalog_names_the_certificate_the_exam_belongs_to()
+    {
+        var fx = await SeedUniversalCatalogAsync();
+        // The learner measures against TOEIC; the Universal Placement Exam is hosted on IELTS.
+        var userId = await SeedLearnerAsync(fx.ToeicCode);
+
+        await using var db = Db();
+        var placement = new PlacementService(db, new LearnerService(db));
+
+        var catalog = await placement.GetPlacementCatalogAsync(userId);
+
+        var entry = Assert.Single(catalog.Exams, e => e.ExamId == fx.UniversalExamId);
+        Assert.Equal(fx.IeltsCertId, entry.CertId);
+        Assert.Equal(fx.IeltsCode, entry.CertCode);
+    }
+
+    [Fact]
     public async Task Submitting_2_skill_universal_placement_persists_percentages_and_maps_all_active_certificates()
     {
         var fx = await SeedUniversalCatalogAsync();
