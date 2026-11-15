@@ -1213,6 +1213,8 @@ export interface PlacementSkillResultInfoDto {
   measuredAt?: string | null;
   reusedFromPrior: boolean;
   failureReason?: string | null;
+  // #376: the grader's own refusal, when one refused this skill.
+  failureDetail?: string | null;
 }
 
 export interface CefrBandInfoDto {
