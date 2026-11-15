@@ -49,8 +49,8 @@ export const studioApi = {
   getCertificates: () => apiFetch<AdminCertificateSummaryDto[]>('/api/admin/certificates'),
   getCertificatePresets: () =>
     apiFetch<CertificateBlueprintPresetDto[]>('/api/admin/certificates/presets'),
-  getCertificateBlueprint: (certId: number) =>
-    apiFetch<CertificateBlueprintDetailDto>(`/api/admin/certificates/${certId}/blueprint`),
+  // #360: getCertificateBlueprint had no caller. The wizard owns a certificate's configuration, and it
+  // saves through saveCertificateWizard below rather than loading a blueprint to edit.
   saveCertificateWizard: (body: SaveCertificateWizardRequest) =>
     apiFetch<SaveCertificateWizardResultDto>('/api/admin/certificates/wizard', {
       method: 'POST',
@@ -89,10 +89,8 @@ export const studioApi = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
-  deleteExam: (examId: number) =>
-    apiFetch<void>(`/api/admin/exams/${examId}`, {
-      method: 'DELETE',
-    }),
+  // #360: deleteExam had no caller. Withdraw is the reversible act an admin screen offers; a hard
+  // delete of a paper a learner may have sat is not something this client should be able to reach.
   publishExam: (examId: number) =>
     apiFetch<AdminPublishExamResultDto>(`/api/admin/exams/${examId}/publish`, {
       method: 'POST',
@@ -126,8 +124,8 @@ export const studioApi = {
     apiFetch<ExamStudioDetailDto>(`/api/admin/exams/${examId}/studio`),
   getExamAssembly: (examId: number) =>
     apiFetch<ExamAssemblyDto>(`/api/admin/exams/${examId}/assembly`),
-  getExamQuestions: (examId: number) =>
-    apiFetch<AdminExamQuestionsDto>(`/api/admin/exams/${examId}/questions`),
+  // #360: getExamQuestions had no caller. getExamStudio above returns the same paper shaped as the
+  // editor's Bundle tree, which is what every screen reads.
   // #360: createQuestion / saveQuestion / deleteQuestion / createQuestionGroup are GONE. The server
   // maps only GET /exams/{id}/questions; the write routes were retired with the legacy question model
   // (#265) and a caller got a 404. Authoring writes the pool (POST /items) and the Bundle

@@ -35,6 +35,10 @@ const RETIRED_CLIENT_METHODS = [
   'saveQuestion',
   'deleteQuestion',
   'createQuestionGroup',
+  // Superseded by the studio read or by withdraw; no screen calls them.
+  'getCertificateBlueprint',
+  'deleteExam',
+  'getExamQuestions',
 ];
 
 describe('admin studio client surface (#360)', () => {
@@ -64,7 +68,6 @@ describe('admin studio client surface (#360)', () => {
       'getLessons',
       // Kept for the Section content workspace (#362): each names a route that exists today.
       'getExamStudio',
-      'getExamQuestions',
       'createExamCluster',
       'updateQuestionGroup',
       'deleteQuestionGroup',

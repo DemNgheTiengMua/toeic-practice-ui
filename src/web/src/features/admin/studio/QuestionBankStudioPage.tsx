@@ -196,7 +196,8 @@ export function QuestionBankStudioPage() {
             </Chip>
           </div>
           <p className="text-sm text-muted mt-1">
-            Author and inspect warehouse coverage stock, stimulus bundles, productive tasks, ingestion batches, and micro-lessons.
+            Author and inspect warehouse coverage stock and micro-lessons. Bundle stimuli are authored
+            per Section in the Exams studio.
           </p>
         </div>
 

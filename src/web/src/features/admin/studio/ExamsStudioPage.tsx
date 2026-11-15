@@ -60,6 +60,7 @@ import type {
   CreateAdminExamRequest,
   ExamStudioDetailDto,
   ExamStudioQuestionDto,
+  AdminImportResultDto,
 } from './types';
 import { AUDIO_MEDIA_EXTENSIONS, IMAGE_MEDIA_EXTENSIONS } from './types';
 
@@ -158,11 +159,6 @@ export function ExamsStudioPage() {
   const [metadataNotice, setMetadataNotice] = useState<string | null>(null);
   const [metadataFieldErrors, setMetadataFieldErrors] = useState<Record<string, string>>({});
 
-  // Sections & Audio state
-  const [selectedAudioSectionId, setSelectedAudioSectionId] = useState<number>(1);
-  const [audioPathInput, setAudioPathInput] = useState('');
-  const [audioDurationSec, setAudioDurationSec] = useState(300);
-  const [isSavingAudio, setIsSavingAudio] = useState(false);
   // #359: which Section's upload control is busy, and the outcome shown beside it.
   const [uploadingSectionId, setUploadingSectionId] = useState<number | null>(null);
   const [sectionMediaNotice, setSectionMediaNotice] = useState<
@@ -531,6 +527,30 @@ export function ExamsStudioPage() {
     }
   };
 
+  // #360: the manifest import door. The route writes Pool stock for the Exam's Certificate; the screen
+  // reports how many lines landed and how many were refused, because a silent import is a lie.
+  const handleImportManifest = async (file: File) => {
+    if (!examDetail) return;
+    setIsImportingManifest(true);
+    setImportResult(null);
+    try {
+      const result = await studioApi.uploadExamManifest(examDetail.certId, file);
+      setImportResult(result);
+      if (selectedExamId) {
+        loadExamDetail(selectedExamId);
+        if (activeWorkspaceTab === 'content') loadStudio(selectedExamId);
+      }
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId: 0,
+        isError: true,
+        text: extractErrorMessage(err, 'Import failed.'),
+      });
+    } finally {
+      setIsImportingManifest(false);
+    }
+  };
+
   const loadAssembly = async (examId: number) => {
     setIsLoadingAssembly(true);
     try {
@@ -680,6 +700,9 @@ export function ExamsStudioPage() {
     explanation: string;
   } | null>(null);
   const [isSavingChild, setIsSavingChild] = useState(false);
+  // #360: the Import & Export tab offered only export, so the import route had no caller.
+  const [isImportingManifest, setIsImportingManifest] = useState(false);
+  const [importResult, setImportResult] = useState<AdminImportResultDto | null>(null);
 
   // Create Exam
   const handleCreateExam = async () => {
@@ -2117,25 +2140,62 @@ export function ExamsStudioPage() {
                   </Card.Description>
                 </Card.Header>
                 <Card.Content className="space-y-4">
-                  <div className="flex gap-3">
-                    <a
-                      href={`/api/admin/exams/${selectedExamId}/export?format=json`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-foreground text-xs font-medium no-underline hover:bg-surface-secondary"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Export JSON manifest
-                    </a>
-                    <a
-                      href={`/api/admin/exams/${selectedExamId}/export?format=zip`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-foreground text-xs font-medium no-underline hover:bg-surface-secondary"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Export ZIP package
-                    </a>
+                  {/* #360: the tab was called Import & Export and offered only export, so the client
+                      method that names the import route had no caller. This is that half. */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-foreground">Import a package</h4>
+                    <p className="text-xs text-muted">
+                      A JSON manifest or a ZIP package writes Pool stock for this Exam&apos;s Certificate.
+                      Per-line errors come back in the result.
+                    </p>
+                    <input
+                      aria-label="Import manifest or package"
+                      type="file"
+                      accept=".json,.zip"
+                      disabled={isImportingManifest}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        if (file) void handleImportManifest(file);
+                      }}
+                      className="block w-full text-xs text-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border file:border-border file:bg-surface file:text-xs file:text-foreground"
+                    />
+                    {isImportingManifest && <p className="text-muted">Importing…</p>}
+                    {importResult && (
+                      <Alert status={importResult.errorCount > 0 ? 'warning' : 'success'}>
+                        <Alert.Indicator />
+                        <Alert.Content>
+                          <Alert.Description>
+                            Batch {importResult.batchId}: {importResult.questionCount} question(s),{' '}
+                            {importResult.errorCount} error(s), {importResult.warningCount} warning(s).
+                          </Alert.Description>
+                        </Alert.Content>
+                      </Alert>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-border space-y-2">
+                    <h4 className="text-xs font-semibold text-foreground">Export this Exam</h4>
+                    <div className="flex gap-3">
+                      <a
+                        href={`/api/admin/exams/${selectedExamId}/export?format=json`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-foreground text-xs font-medium no-underline hover:bg-surface-secondary"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Export JSON manifest
+                      </a>
+                      <a
+                        href={`/api/admin/exams/${selectedExamId}/export?format=zip`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-foreground text-xs font-medium no-underline hover:bg-surface-secondary"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Export ZIP package
+                      </a>
+                    </div>
                   </div>
                 </Card.Content>
               </Card>
