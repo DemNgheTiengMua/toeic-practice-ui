@@ -306,10 +306,9 @@ export function DashboardPage() {
                   </h2>
                 </div>
                 <div className="flex items-center gap-2">
-                  {goal.overallLevelCode && (
+                  {goal.limitingSkillName && (
                     <span className="font-mono text-xs px-2.5 py-0.5 rounded bg-surface-secondary text-foreground font-semibold border border-border">
-                      OVERALL {goal.overallLevelCode}
-                      {goal.limitingSkillName && ` · ${goal.limitingSkillName}`}
+                      Weakest skill: {goal.limitingSkillName}
                     </span>
                   )}
                   <Link
@@ -328,17 +327,34 @@ export function DashboardPage() {
                       <th scope="row" className="px-4 py-3 text-left font-medium text-muted w-1/3">
                         Level against target
                       </th>
-                      <td className="px-4 py-3 font-mono font-semibold text-foreground">
-                        {goal.currentBandCode ?? 'None'} → {goal.targetBandCode ?? 'None'}
-                        {goal.targetBandName && ` (${goal.targetBandName})`}
+                      <td className="px-4 py-3 text-foreground">
+                        {goal.currentBandCode && goal.targetBandCode ? (
+                          <span className="font-mono font-semibold">
+                            {goal.currentBandCode} → {goal.targetBandCode}
+                            {goal.targetBandName && ` (${goal.targetBandName})`}
+                          </span>
+                        ) : goal.currentBandCode ? (
+                          <span>
+                            <span className="font-mono font-semibold">{goal.currentBandCode}</span> now. No
+                            target band set for {certificate.code} yet.
+                          </span>
+                        ) : (
+                          <span>Nothing on {certificate.code} has been measured yet.</span>
+                        )}
                       </td>
                     </tr>
                     <tr className="hover:bg-surface-secondary/40">
                       <th scope="row" className="px-4 py-3 text-left font-medium text-muted">
                         Remaining guided hours
                       </th>
-                      <td className="px-4 py-3 font-mono font-semibold text-foreground">
-                        {goal.requiredTotalHours != null ? `${goal.requiredTotalHours}h remaining` : 'Cannot judge'}
+                      <td className="px-4 py-3 text-foreground">
+                        {!goal.targetBandCode ? (
+                          <span>Set a target band to know how many hours it takes.</span>
+                        ) : goal.requiredTotalHours != null ? (
+                          <span className="font-mono font-semibold">{goal.requiredTotalHours}h remaining</span>
+                        ) : (
+                          <span>Cannot judge</span>
+                        )}
                       </td>
                     </tr>
                     <tr className="hover:bg-surface-secondary/40">

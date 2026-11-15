@@ -35,6 +35,12 @@ public sealed record LearnerDashboard(
     public bool IsNew => AttemptCount == 0 && PracticeCount == 0;
 
     /// <summary>#241 / LRN-13: nothing has been measured, so the page owes the learner a placement and
-    /// a sentence, not a grid of empty figures.</summary>
-    public bool IsUnplaced => Standing is null || Standing.HasNoMeasurement;
+    /// a sentence, not a grid of empty figures.
+    /// <para>
+    /// #380: a goal row that names its own starting band IS a statement of where the learner is - it is
+    /// the band the placement mapping wrote for this certificate. Collapsing the page there would hide
+    /// level, target and pacing behind a placement request the learner has already answered, so the one
+    /// block stays.
+    /// </para></summary>
+    public bool IsUnplaced => (Standing is null || Standing.HasNoMeasurement) && Goal.CurrentBandCode is null;
 }
