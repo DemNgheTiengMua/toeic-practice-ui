@@ -57,8 +57,17 @@ export function PayOsEmbeddedModal({
     }
   };
 
+  // payOS compares this frame's redirect_uri against the returnUrl the link was created with, and
+  // refuses the request when they differ. window.location.href was the checkout page itself, so every
+  // embed answered "Thông tin truyền lên không hợp lệ". The result page is the URL the link was
+  // registered with, so the frame accepts it.
+  const payOsReturnUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/payment/result?orderCode=${encodeURIComponent(orderCode)}`
+      : '';
+
   const { open, exit } = usePayOS({
-    RETURN_URL: typeof window !== 'undefined' ? window.location.href : '',
+    RETURN_URL: payOsReturnUrl,
     ELEMENT_ID: 'payos-embedded-container',
     CHECKOUT_URL: checkoutUrl,
     embedded: true,
