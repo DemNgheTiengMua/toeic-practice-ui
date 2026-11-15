@@ -178,6 +178,9 @@ export function AdminOverviewPage() {
           <div className="flex flex-wrap items-end gap-3">
             <TextField className="w-full sm:w-56">
               <Label>Reporting month</Label>
+              {/* shortcut: `type="month"` renders as a plain text box in Firefox and Safari, which do not
+                  implement it. The two buttons below are the real control there, so the month is still
+                  reachable; build a calendar only if a browser without it ever has to pick by typing. */}
               <Input
                 type="month"
                 aria-label="Reporting month"
