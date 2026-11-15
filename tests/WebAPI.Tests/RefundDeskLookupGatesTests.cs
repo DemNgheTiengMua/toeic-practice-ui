@@ -201,6 +201,9 @@ public sealed class RefundDeskLookupGatesTests
 
         public Task ResendActivationAsync(int targetUserId, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("The lookup must not send mail.");
+
+        public Task VerifyEmailAsync(int targetUserId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("The lookup must not verify addresses.");
     }
 
     private static readonly AdminUserDto Learner = new(
