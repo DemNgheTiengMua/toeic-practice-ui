@@ -1059,6 +1059,8 @@ export interface AttemptReviewQuestionDto {
   responseAudioPath?: string | null;
   aiScore?: number | null;
   aiFeedback?: string | null;
+  /** #385: a refused grading carries no score, so the review must carry its reason. */
+  aiFailureReason?: string | null;
   rubricScores?: AttemptReviewRubricScoreDto[] | null;
 }
 

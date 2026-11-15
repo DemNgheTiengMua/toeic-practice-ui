@@ -254,13 +254,6 @@ public sealed partial class AttemptEngine
                 ? ans?.SelectedOptionId
                 : SelectedPoolOptionId(pinnedVersion.ItemVersionId, ans);
             bool isFlagged = ans?.IsFlagged ?? false;
-            // #253: answered is "carries content", not "chose an option". A productive answer has no
-            // option id at all, so reading only selectedOptionId reported a graded writing answer as
-            // unanswered and, because isCorrect is derived from this flag, hid a grade that exists.
-            bool isAnswered = ans is not null
-                && AnswerContent.IsAnswered(
-                    ans.SelectedOptionId, ans.SelectedLabel, ans.ResponseText, ans.SelectedOptionIdsJson);
-            bool? isCorrect = isAnswered ? ans?.IsCorrect : null;
 
             // #375: the free-response half. The written text and the spoken transcript both live on
             // `FreeResponses` (the grader copies a transcript into `ResponseText` when there is one),
@@ -271,6 +264,25 @@ public sealed partial class AttemptEngine
             string? responseAudioPath = freeResponse?.AudioPath;
             decimal? aiScore = grading?.OverallScaled;
             string? aiFeedback = grading?.PriorityFix;
+            // #385: a refused grading has no score, so the page needs the grader's own words or the
+            // learner sees an unexplained blank where a mark should be.
+            string? aiFailureReason = grading?.FailureReason;
+
+            // #253: answered is "carries content", not "chose an option". A productive answer has no
+            // option id at all, so reading only selectedOptionId reported a graded writing answer as
+            // unanswered and, because isCorrect is derived from this flag, hid a grade that exists.
+            //
+            // #385: and a productive answer frequently has NO AttemptAnswers row at all - it lives on
+            // FreeResponses. The answer row alone therefore called every written and spoken task
+            // "Left blank" on the review, while the response text sat right below it on the same card.
+            // Measured on the seeded placement: the writing card said "Left blank" above 1043
+            // characters of the learner's essay, and the speaking card above the graded transcript.
+            bool isAnswered = (ans is not null
+                && AnswerContent.IsAnswered(
+                    ans.SelectedOptionId, ans.SelectedLabel, ans.ResponseText, ans.SelectedOptionIdsJson))
+                || !string.IsNullOrWhiteSpace(responseText)
+                || !string.IsNullOrWhiteSpace(responseAudioPath);
+            bool? isCorrect = isAnswered ? ans?.IsCorrect : null;
 
             List<AttemptReviewRubricScore>? rubricScores = null;
             if (grading?.AiGradingScores is { Count: > 0 } scores && freeResponse is not null)
@@ -323,6 +335,7 @@ public sealed partial class AttemptEngine
                 responseAudioPath,
                 aiScore,
                 aiFeedback,
+                aiFailureReason,
                 rubricScores));
 
             navigator.Add(new ReviewNavigatorItem(

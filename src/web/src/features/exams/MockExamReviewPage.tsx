@@ -8,6 +8,7 @@ import {
   HelpCircle,
   History,
   XCircle,
+  AlertCircle,
 } from 'lucide-react';
 import {
   api,
@@ -403,6 +404,9 @@ export function MockExamReviewPage({ sittingKind = 'mock' }: { sittingKind?: 'mo
             filteredQuestions.map((q: AttemptReviewQuestionDto) => {
               const isCorrect = q.isCorrect === true;
               const isIncorrect = q.isCorrect === false;
+              // #385: a free-response position has no option and never a verdict, so it must not fall
+              // into the "Left blank" chip just because isCorrect is null.
+              const isFreeResponse = Boolean(q.responseText || q.responseAudioPath);
 
               return (
                 <Card
@@ -419,7 +423,26 @@ export function MockExamReviewPage({ sittingKind = 'mock' }: { sittingKind?: 'mo
                         {q.sectionCode} — {q.sectionName}
                       </Chip>
 
-                      {isCorrect ? (
+                      {isFreeResponse ? (
+                        // #385: a productive task is not "left blank" just because it has no option id.
+                        // It carries a response and either a mark, a refusal with a reason, or a place
+                        // in the queue - all three are states a learner can act on.
+                        q.aiScore != null ? (
+                          <Chip color="success" variant="soft" size="sm">
+                            <CheckCircle2 className="size-3.5 mr-1" />
+                            Graded
+                          </Chip>
+                        ) : q.aiFailureReason ? (
+                          <Chip color="warning" variant="soft" size="sm">
+                            <AlertCircle className="size-3.5 mr-1" />
+                            Not graded
+                          </Chip>
+                        ) : (
+                          <Chip variant="soft" size="sm">
+                            Awaiting grading
+                          </Chip>
+                        )
+                      ) : isCorrect ? (
                         <Chip color="success" variant="soft" size="sm">
                           <CheckCircle2 className="size-3.5 mr-1" />
                           Correct
@@ -578,6 +601,24 @@ export function MockExamReviewPage({ sittingKind = 'mock' }: { sittingKind?: 'mo
                               {q.aiScore} pts
                             </span>
                           </div>
+                        )}
+
+                        {/* #385: a refused grading has no score, so the reason is the only thing that
+                            explains the empty mark. Without it the card shows an answer and no verdict,
+                            which reads as a lost result rather than a decision. */}
+                        {q.aiFailureReason && (
+                          <div className="pt-2 border-t border-separator/40 text-xs">
+                            <Chip color="warning" variant="soft" size="sm">
+                              Not graded
+                            </Chip>
+                            <p className="text-muted mt-2">{q.aiFailureReason}</p>
+                          </div>
+                        )}
+
+                        {!q.aiScore && !q.aiFailureReason && (
+                          <p className="text-xs text-muted pt-2 border-t border-separator/40">
+                            Waiting for the grader. This answer is queued and will be scored.
+                          </p>
                         )}
 
                         {q.aiFeedback && (

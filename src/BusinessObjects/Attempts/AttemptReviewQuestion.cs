@@ -31,4 +31,8 @@ public sealed record AttemptReviewQuestion(
     string? ResponseAudioPath = null,
     decimal? AiScore = null,
     string? AiFeedback = null,
+    // #385: a refused grading carries no score, so the review must carry its reason - otherwise a
+    // learner sees an unexplained blank where a mark should be, which is the defect #376 fixed on the
+    // result page and this is the same fact one screen further in.
+    string? AiFailureReason = null,
     IReadOnlyList<AttemptReviewRubricScore>? RubricScores = null);

@@ -204,6 +204,7 @@ public static partial class ExamEndpoints
                 q.ResponseAudioPath,
                 q.AiScore,
                 q.AiFeedback,
+                q.AiFailureReason,
                 q.RubricScores?.Select(r => new AttemptReviewRubricScoreDto(
                     r.CriterionCode, r.CriterionName, r.Score, r.MaxScore, r.Feedback)).ToList())).ToList(),
             review.Navigator.Select(n => new ReviewNavigatorItemDto(

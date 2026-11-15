@@ -31,4 +31,6 @@ public sealed record AttemptReviewQuestionDto(
     string? ResponseAudioPath = null,
     decimal? AiScore = null,
     string? AiFeedback = null,
+    // #385: a refused grading carries no score, so the review must carry its reason.
+    string? AiFailureReason = null,
     IReadOnlyList<AttemptReviewRubricScoreDto>? RubricScores = null);

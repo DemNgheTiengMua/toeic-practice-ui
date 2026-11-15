@@ -7788,6 +7788,15 @@ export interface components {
             isCorrect: boolean;
             rationale: null | string;
         };
+        AttemptReviewRubricScoreDto: {
+            criterionCode: string;
+            criterionName: string;
+            /** Format: decimal */
+            score: number | string;
+            /** Format: decimal */
+            maxScore: number | string;
+            feedback: null | string;
+        };
         AttemptReviewQuestionDto: {
             /** Format: int32 */
             questionId: number | string;
@@ -7818,6 +7827,12 @@ export interface components {
             selectedOptionId: null | number | string;
             isCorrect: null | boolean;
             isFlagged: boolean;
+            responseText?: null | string;
+            responseAudioPath?: null | string;
+            aiScore?: null | number | string;
+            aiFeedback?: null | string;
+            aiFailureReason?: null | string;
+            rubricScores?: null | components["schemas"]["AttemptReviewRubricScoreDto"][];
         };
         AttemptSkillScoreDto: {
             /** Format: int32 */
