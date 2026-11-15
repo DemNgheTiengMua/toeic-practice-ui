@@ -16,8 +16,11 @@ export function MockExamTakePage() {
   const navigate = useNavigate();
 
   const id = Number(attemptId);
-  const initialRequestedOrder =
-    search?.q != null && Number.isFinite(Number(search.q)) ? Number(search.q) : null;
+  // #368: `?q=` seeds the first load only. The shell owns navigation afterwards and writes `?q=`
+  // itself, so re-reading it here would refetch the sitting and remount the paper on every move.
+  const [initialRequestedOrder] = useState<number | null>(() =>
+    search?.q != null && Number.isFinite(Number(search.q)) ? Number(search.q) : null,
+  );
 
   const [take, setTake] = useState<AttemptTakeDto | null>(null);
   const [preflightStatus, setPreflightStatus] = useState<PreflightStatusDto | null>(null);
