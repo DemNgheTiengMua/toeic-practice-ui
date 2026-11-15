@@ -162,6 +162,11 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         /// <summary>#281: the order or complaint a refund names is not the learner's.</summary>
         public const string RefundInvalidSubject = "REFUND_INVALID_SUBJECT";
 
+        /// <summary>#348: the complaint this refund compensates already has a live refund against it,
+        /// so the incident is already spoken for. A rejected refund releases the claim, so the
+        /// refusal names the open one rather than forbidding a retry.</summary>
+        public const string RefundAlreadyOpenForComplaint = "REFUND_ALREADY_OPEN_FOR_COMPLAINT";
+
         public const string ExamIncomplete = "EXAM_INCOMPLETE";
         public const string ExamHasFinishedAttempts = "EXAM_HAS_FINISHED_ATTEMPTS";
         public const string QuestionHasAttemptAnswers = "QUESTION_HAS_ATTEMPT_ANSWERS";
