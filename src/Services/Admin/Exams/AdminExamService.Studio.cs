@@ -97,6 +97,7 @@ public sealed partial class AdminExamService
 
                 qDtos.Add(new ExamStudioQuestionDto(
                     QuestionId: examItemId,
+                    ItemId: position.ItemId,
                     GroupId: groupId,
                     ExamId: position.ExamId,
                     SectionId: sec.SectionId,

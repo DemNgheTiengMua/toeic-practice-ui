@@ -57,6 +57,7 @@ import type {
   QuickIngestSampleTemplateDto,
   CreateAdminExamRequest,
   ExamStudioDetailDto,
+  ExamStudioQuestionDto,
 } from './types';
 import { AUDIO_MEDIA_EXTENSIONS, IMAGE_MEDIA_EXTENSIONS } from './types';
 
@@ -313,6 +314,10 @@ export function ExamsStudioPage() {
       imagePath: group.imagePath ?? '',
       imageAlt: group.imageAlt ?? '',
       audioPath: group.audioPath ?? '',
+      // Carried, not dropped: the group route assigns the slice unconditionally, so omitting it would
+      // silently widen the Bundle's audio to the whole track - a data change nobody asked for.
+      audioStartMs: group.audioStartMs == null ? '' : String(group.audioStartMs),
+      audioEndMs: group.audioEndMs == null ? '' : String(group.audioEndMs),
     });
   };
 
@@ -321,6 +326,15 @@ export function ExamsStudioPage() {
     setIsSavingBundle(true);
     setBundleNotice(null);
     try {
+      // The slice must survive a save that did not touch it: the group route assigns these two
+      // unconditionally, so a null here would widen the Bundle's audio to the whole track.
+      const start = bundleDraft.audioStartMs.trim();
+      const end = bundleDraft.audioEndMs.trim();
+      const hasSlice = start !== '' && end !== '';
+      if ((start === '') !== (end === '')) {
+        throw new Error('An audio slice needs both a start and an end, or neither.');
+      }
+
       await studioApi.updateQuestionGroup(selectedExamId, bundleDraft.groupId, {
         sectionId: bundleDraft.sectionId,
         passage: bundleDraft.passage.trim() || null,
@@ -328,6 +342,8 @@ export function ExamsStudioPage() {
         imagePath: bundleDraft.imagePath.trim() || null,
         imageAlt: bundleDraft.imageAlt.trim() || null,
         audioPath: bundleDraft.audioPath.trim() || null,
+        audioStartMs: hasSlice ? Number(start) : null,
+        audioEndMs: hasSlice ? Number(end) : null,
       });
       setBundleNotice({ sectionId: bundleDraft.sectionId, isError: false, text: 'Bundle saved.' });
       setBundleDraft(null);
@@ -343,16 +359,72 @@ export function ExamsStudioPage() {
     }
   };
 
-  const handleCreateBundle = async (sectionId: number, cefrLevelCode: string) => {
+  // #362: a child question's content lives on the pool item version, so editing it names the ITEM, not
+  // the paper position. QuestionId is a position handle and would address nothing on that route.
+  const startEditingQuestion = (sectionId: number, question: ExamStudioQuestionDto) => {
+    const option = (label: string) =>
+      question.options.find((o) => o.label === label)?.text ?? '';
+    const key = question.options
+      .filter((o) => o.isCorrect)
+      .map((o) => o.label)
+      .sort()
+      .join(',');
+    setBundleNotice(null);
+    setQuestionDraft({
+      sectionId,
+      itemId: question.itemId,
+      stem: question.stem,
+      optionA: option('A'),
+      optionB: option('B'),
+      optionC: option('C'),
+      optionD: option('D'),
+      keyLabel: key,
+      explanation: question.explanation ?? '',
+    });
+  };
+
+  const handleSaveQuestion = async () => {
+    if (!questionDraft) return;
+    setIsSavingQuestion(true);
+    setBundleNotice(null);
+    try {
+      await studioApi.updatePoolItem(questionDraft.itemId, {
+        stem: questionDraft.stem.trim(),
+        optionA: questionDraft.optionA.trim() || null,
+        optionB: questionDraft.optionB.trim() || null,
+        optionC: questionDraft.optionC.trim() || null,
+        optionD: questionDraft.optionD.trim() || null,
+        keyLabel: questionDraft.keyLabel.trim() || null,
+        explanation: questionDraft.explanation.trim() || null,
+      });
+      setBundleNotice({ sectionId: questionDraft.sectionId, isError: false, text: 'Question saved as a new version.' });
+      setQuestionDraft(null);
+      if (selectedExamId) loadStudio(selectedExamId);
+    } catch (err: unknown) {
+      setBundleNotice({
+        sectionId: questionDraft.sectionId,
+        isError: true,
+        text: extractErrorMessage(err, 'Failed to save the question.'),
+      });
+    } finally {
+      setIsSavingQuestion(false);
+    }
+  };
+
+  const handleCreateBundle = async (sectionId: number, cefrLevelCode: string, questionCount: number) => {
     if (!selectedExamId) return;
     setBundleNotice(null);
     try {
       await studioApi.createExamCluster(selectedExamId, {
         sectionId,
-        questionCount: 1,
+        questionCount: Math.max(1, questionCount),
         cefrLevelCode,
       });
-      setBundleNotice({ sectionId, isError: false, text: 'Empty Bundle created. Add its stimulus and children.' });
+      setBundleNotice({
+        sectionId,
+        isError: false,
+        text: `Bundle created with ${Math.max(1, questionCount)} question${questionCount === 1 ? '' : 's'}. Edit its stimulus and each question below.`,
+      });
       setNewBundleSectionId(null);
       loadStudio(selectedExamId);
     } catch (err: unknown) {
@@ -448,6 +520,17 @@ export function ExamsStudioPage() {
 
   const handleUploadSectionImage = async (sectionId: number, file: File) => {
     if (!selectedExamId) return;
+    const ext = `.${file.name.split('.').pop()?.toLowerCase() ?? ''}`;
+    // An image is a different kind from audio: the route's allow-list holds both, so the refusal has
+    // to name what THIS control accepts.
+    if (!(IMAGE_MEDIA_EXTENSIONS as readonly string[]).includes(ext)) {
+      setSectionMediaNotice({
+        sectionId,
+        isError: true,
+        text: `'${ext}' is not an image. Choose ${IMAGE_MEDIA_EXTENSIONS.join(', ')}.`,
+      });
+      return;
+    }
     setUploadingSectionId(sectionId);
     setSectionMediaNotice(null);
     try {
@@ -455,7 +538,7 @@ export function ExamsStudioPage() {
       setSectionMediaNotice({
         sectionId,
         isError: false,
-        text: `Image stored at ${uploaded.path}. Attach it to a Bundle on the Questions tab.`,
+        text: `Image stored at ${uploaded.path}. Attach it to a Bundle on the Section content tab.`,
       });
     } catch (err: unknown) {
       setSectionMediaNotice({
@@ -481,6 +564,8 @@ export function ExamsStudioPage() {
     imagePath: string;
     imageAlt: string;
     audioPath: string;
+    audioStartMs: string;
+    audioEndMs: string;
   } | null>(null);
   const [bundleNotice, setBundleNotice] = useState<{
     sectionId: number;
@@ -489,6 +574,21 @@ export function ExamsStudioPage() {
   } | null>(null);
   const [isSavingBundle, setIsSavingBundle] = useState(false);
   const [newBundleSectionId, setNewBundleSectionId] = useState<number | null>(null);
+  const [newBundleCount, setNewBundleCount] = useState(3);
+  // #362: one child question being edited. Keyed by the pool item id, which is what the update route
+  // names - the position handle cannot be used there.
+  const [questionDraft, setQuestionDraft] = useState<{
+    sectionId: number;
+    itemId: number;
+    stem: string;
+    optionA: string;
+    optionB: string;
+    optionC: string;
+    optionD: string;
+    keyLabel: string;
+    explanation: string;
+  } | null>(null);
+  const [isSavingQuestion, setIsSavingQuestion] = useState(false);
 
   // Create Exam
   const handleCreateExam = async () => {
@@ -1449,8 +1549,91 @@ export function ExamsStudioPage() {
 
                               <ul className="space-y-1 pl-3 border-l border-separator">
                                 {bundle.questions.map((q) => (
-                                  <li key={q.questionId} className="text-xs text-foreground">
-                                    {q.stem}
+                                  <li key={q.questionId} className="text-xs text-foreground space-y-1">
+                                    <div className="flex flex-wrap justify-between items-start gap-2">
+                                      <span>{q.stem}</span>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onPress={() => startEditingQuestion(sec.sectionId, q)}
+                                      >
+                                        Edit question
+                                      </Button>
+                                    </div>
+
+                                    {questionDraft?.itemId === q.itemId && (
+                                      <Form validationBehavior="aria" className="space-y-2 pt-2">
+                                        <TextField
+                                          isRequired
+                                          name="stem"
+                                          value={questionDraft.stem}
+                                          onChange={(v) => setQuestionDraft({ ...questionDraft, stem: v })}
+                                        >
+                                          <Label className="text-xs">Stem</Label>
+                                          <TextArea rows={2} className="text-xs" />
+                                        </TextField>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                          {(['A', 'B', 'C', 'D'] as const).map((label) => {
+                                            const field = `option${label}` as
+                                              | 'optionA'
+                                              | 'optionB'
+                                              | 'optionC'
+                                              | 'optionD';
+                                            return (
+                                              <TextField
+                                                key={label}
+                                                name={field}
+                                                value={questionDraft[field]}
+                                                onChange={(v) =>
+                                                  setQuestionDraft({ ...questionDraft, [field]: v })
+                                                }
+                                              >
+                                                <Label className="text-xs">Option ({label})</Label>
+                                                <Input className="text-xs" />
+                                              </TextField>
+                                            );
+                                          })}
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                          <TextField
+                                            name="keyLabel"
+                                            value={questionDraft.keyLabel}
+                                            onChange={(v) => setQuestionDraft({ ...questionDraft, keyLabel: v })}
+                                          >
+                                            <Label className="text-xs">Key (A, B, C, D; or A,C for multi-select)</Label>
+                                            <Input className="text-xs font-mono uppercase" />
+                                          </TextField>
+                                          <TextField
+                                            isRequired
+                                            name="explanation"
+                                            value={questionDraft.explanation}
+                                            onChange={(v) =>
+                                              setQuestionDraft({ ...questionDraft, explanation: v })
+                                            }
+                                          >
+                                            <Label className="text-xs">Explanation</Label>
+                                            <Input className="text-xs" />
+                                          </TextField>
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <Button
+                                            size="sm"
+                                            variant="primary"
+                                            onPress={() => void handleSaveQuestion()}
+                                            isDisabled={isSavingQuestion}
+                                          >
+                                            Save question
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            onPress={() => setQuestionDraft(null)}
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      </Form>
+                                    )}
                                   </li>
                                 ))}
                               </ul>
@@ -1544,6 +1727,26 @@ export function ExamsStudioPage() {
                                     <p className="text-xs text-muted font-mono">
                                       {bundleDraft.audioPath || 'no audio'}
                                     </p>
+                                    {/* #362: the slice of the section's master track this Bundle plays.
+                                        Carried on every save, because the route assigns it unconditionally. */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <TextField
+                                        name="audioStartMs"
+                                        value={bundleDraft.audioStartMs}
+                                        onChange={(v) => setBundleDraft({ ...bundleDraft, audioStartMs: v })}
+                                      >
+                                        <Label className="text-xs">Audio start (ms)</Label>
+                                        <Input className="text-xs font-mono-tabular" inputMode="numeric" />
+                                      </TextField>
+                                      <TextField
+                                        name="audioEndMs"
+                                        value={bundleDraft.audioEndMs}
+                                        onChange={(v) => setBundleDraft({ ...bundleDraft, audioEndMs: v })}
+                                      >
+                                        <Label className="text-xs">Audio end (ms)</Label>
+                                        <Input className="text-xs font-mono-tabular" inputMode="numeric" />
+                                      </TextField>
+                                    </div>
                                   </div>
                                   <div className="flex gap-2 pt-1">
                                     <Button
@@ -1569,14 +1772,31 @@ export function ExamsStudioPage() {
 
                           <div className="pt-1">
                             {newBundleSectionId === sec.sectionId ? (
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-xs text-muted">Level for the new Bundle:</span>
+                              <div className="flex flex-wrap items-end gap-2">
+                                <div className="space-y-1">
+                                  <label
+                                    htmlFor={`new-bundle-count-${sec.sectionId}`}
+                                    className="block text-xs font-semibold text-foreground"
+                                  >
+                                    Questions in this Bundle
+                                  </label>
+                                  <input
+                                    id={`new-bundle-count-${sec.sectionId}`}
+                                    type="number"
+                                    min={1}
+                                    max={50}
+                                    value={newBundleCount}
+                                    onChange={(e) => setNewBundleCount(Math.max(1, Number(e.target.value) || 1))}
+                                    className="w-24 px-2 py-1 rounded border border-border bg-surface text-foreground font-mono-tabular text-xs"
+                                  />
+                                </div>
+                                <span className="text-xs text-muted pb-1">Level:</span>
                                 {['A2', 'B1', 'B2', 'C1'].map((lvl) => (
                                   <Button
                                     key={lvl}
                                     size="sm"
                                     variant="secondary"
-                                    onPress={() => void handleCreateBundle(sec.sectionId, lvl)}
+                                    onPress={() => void handleCreateBundle(sec.sectionId, lvl, newBundleCount)}
                                   >
                                     {lvl}
                                   </Button>

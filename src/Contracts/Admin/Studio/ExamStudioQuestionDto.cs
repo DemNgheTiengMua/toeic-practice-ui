@@ -5,6 +5,13 @@ namespace Contracts;
 
 public sealed record ExamStudioQuestionDto(
     int QuestionId,
+    /// <summary>
+    /// #362: the pool item this position pins. <see cref="QuestionId"/> is a paper-position handle
+    /// (the roster id), which is what an answer row names - so an editor that wants to change the
+    /// content must send THIS to <c>PUT /items/{itemId}</c>, not the position handle. Without it the
+    /// screen can render a question and cannot edit one.
+    /// </summary>
+    int ItemId,
     int GroupId,
     int ExamId,
     int SectionId,

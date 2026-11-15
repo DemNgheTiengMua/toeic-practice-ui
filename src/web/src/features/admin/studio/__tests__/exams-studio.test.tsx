@@ -263,6 +263,7 @@ const mockExamStudio = {
           questions: [
             {
               questionId: 501,
+              itemId: 9001,
               groupId: 11,
               examId: 101,
               sectionId: 7,
@@ -920,6 +921,54 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
     // The edit names the Section it lands in: a stimulus can be bound by two sections.
     expect(groupUpdate!.body.sectionId).toBe(7);
     expect(groupUpdate!.body.audioPath).toBe('exams/101/master.mp3');
+    // The audio slice survives a save that did not touch it. The group route assigns both fields
+    // unconditionally, so omitting them would widen the Bundle's audio to the whole track.
+    expect(groupUpdate!.body.audioStartMs).toBe(0);
+    expect(groupUpdate!.body.audioEndMs).toBe(52000);
+  });
+
+  it('edits a child question through the pool item route, not the paper position (#362)', async () => {
+    let itemUpdate: { url: string; body: any } | null = null;
+
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          id: 1,
+          email: 'author@demo.local',
+          fullName: 'Content Author',
+          role: 'staff',
+          permissions: [STAFF_PERMISSIONS.ContentAuthor],
+        });
+      }
+      if (url.startsWith('/api/admin/exams?')) return jsonResponse(mockExamList);
+      if (url === '/api/admin/exams/101') return jsonResponse(mockExamDetail);
+      if (url === '/api/admin/exams/101/studio') return jsonResponse(mockExamStudio);
+      if (url === '/api/admin/items/9001' && init?.method === 'PUT') {
+        itemUpdate = { url, body: JSON.parse(String(init.body)) };
+        return jsonResponse({ itemId: 9001 });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin/exams');
+    fireEvent.click(
+      await screen.findByRole('button', { name: /open studio for toeic official practice test 1/i }),
+    );
+    fireEvent.click(await screen.findByRole('tab', { name: /section content/i }));
+
+    const sectionList = await screen.findByRole('list', { name: /section bundles/i });
+    fireEvent.click(within(sectionList).getByRole('button', { name: /show bundles/i }));
+    fireEvent.click(await within(sectionList).findByRole('button', { name: /edit question/i }));
+
+    const stem = within(sectionList).getByLabelText(/^stem$/i);
+    fireEvent.change(stem, { target: { value: 'Which auditorium hosts the keynote session?' } });
+    fireEvent.click(within(sectionList).getByRole('button', { name: /save question/i }));
+
+    await waitFor(() => expect(itemUpdate).not.toBeNull());
+    // The pool item id, NOT questionId (the paper position handle, 501): PUT /items/501 would address
+    // a different item or nothing at all.
+    expect(itemUpdate!.url).toBe('/api/admin/items/9001');
+    expect(itemUpdate!.body.stem).toBe('Which auditorium hosts the keynote session?');
   });
 
   it('binds backend RFC 7807 field errors to HeroUI FieldError controls in the create exam modal', async () => {

@@ -571,6 +571,8 @@ export interface ExamStudioCriterionDto {
 
 export interface ExamStudioQuestionDto {
   questionId: number;
+  /** The pool item this position pins. Send THIS to updatePoolItem; questionId is the position handle. */
+  itemId: number;
   groupId: number;
   examId: number;
   sectionId: number;
