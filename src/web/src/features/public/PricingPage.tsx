@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Chip,
+  FieldError,
   Label,
   NumberField,
   Slider,
@@ -48,16 +49,29 @@ const FAQ_ITEMS = [
 ];
 
 const PRICE_PER_CREDIT_VND = 20_000;
+const MIN_CREDITS = 1;
+const MAX_CREDITS = 1000;
+const CREDITS_RANGE_ERROR = 'Credits must be between 1 and 1,000.';
 const PRESET_CREDITS = [5, 10, 20];
 
 export function PricingPage() {
   const { isAuthenticated, isStaff, learnerContext } = useAuth();
   const [credits, setCredits] = useState<number>(5);
+  const [creditsError, setCreditsError] = useState<string | null>(null);
 
   const handleCreditsChange = (val: number) => {
-    if (Number.isNaN(val)) return;
-    const clamped = Math.max(1, Math.min(100, Math.floor(val)));
-    setCredits(clamped);
+    if (Number.isNaN(val)) {
+      setCreditsError(CREDITS_RANGE_ERROR);
+      return;
+    }
+    const floored = Math.floor(val);
+    if (floored < MIN_CREDITS || floored > MAX_CREDITS) {
+      setCreditsError(CREDITS_RANGE_ERROR);
+      setCredits(Math.max(MIN_CREDITS, Math.min(MAX_CREDITS, floored)));
+    } else {
+      setCreditsError(null);
+      setCredits(floored);
+    }
   };
 
   const handleSliderChange = (v: number | number[]) => {
@@ -131,42 +145,44 @@ export function PricingPage() {
           <Card.Content className="space-y-6">
             <div className="p-4 rounded-lg bg-surface-secondary border border-border space-y-4">
               <NumberField
-                minValue={1}
-                maxValue={100}
+                minValue={MIN_CREDITS}
+                maxValue={MAX_CREDITS}
                 step={1}
                 value={credits}
+                isInvalid={Boolean(creditsError)}
                 onChange={handleCreditsChange}
-                className="flex items-center justify-between"
+                className="space-y-1.5"
               >
-                <Label className="text-sm font-semibold text-foreground">
-                  Credits to purchase
-                </Label>
-                <div className="flex items-center gap-2">
-                  <NumberField.Group className="w-28 h-8">
-                    <NumberField.DecrementButton />
-                    <NumberField.Input
-                      id="pricing-credits-input"
-                      aria-label="Credits count"
-                      className="w-12 text-center font-mono font-bold text-sm"
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!Number.isNaN(val)) {
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold text-foreground">
+                    Credits to purchase
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <NumberField.Group className="w-28 h-8">
+                      <NumberField.DecrementButton />
+                      <NumberField.Input
+                        id="pricing-credits-input"
+                        aria-label="Credits count"
+                        className="w-12 text-center font-mono font-bold text-sm"
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
                           handleCreditsChange(val);
-                        }
-                      }}
-                    />
-                    <NumberField.IncrementButton />
-                  </NumberField.Group>
-                  <span className="text-xs text-muted">credits</span>
+                        }}
+                      />
+                      <NumberField.IncrementButton />
+                    </NumberField.Group>
+                    <span className="text-xs text-muted">credits</span>
+                  </div>
                 </div>
+                {creditsError && <FieldError className="text-xs text-danger">{creditsError}</FieldError>}
               </NumberField>
 
               {/* HeroUI v3 Compound Slider */}
               <div className="pt-2">
                 <Slider
                   aria-label="Credit slider"
-                  minValue={1}
-                  maxValue={100}
+                  minValue={MIN_CREDITS}
+                  maxValue={MAX_CREDITS}
                   step={1}
                   value={credits}
                   onChange={handleSliderChange}
@@ -174,7 +190,7 @@ export function PricingPage() {
                   <div className="flex items-center justify-between text-xs text-muted mb-1">
                     <span>1 credit</span>
                     <Slider.Output className="font-mono-tabular font-semibold text-foreground" />
-                    <span>100 credits</span>
+                    <span>1,000 credits</span>
                   </div>
                   <Slider.Track>
                     <Slider.Fill />
@@ -191,7 +207,10 @@ export function PricingPage() {
                     key={preset}
                     size="sm"
                     variant={credits === preset ? 'primary' : 'secondary'}
-                    onPress={() => setCredits(preset)}
+                    onPress={() => {
+                      setCreditsError(null);
+                      setCredits(preset);
+                    }}
                     className="font-mono text-xs px-2.5 h-7 min-w-0"
                   >
                     {preset} credits

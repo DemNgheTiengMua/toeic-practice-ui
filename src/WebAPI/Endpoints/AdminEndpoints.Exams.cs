@@ -3,6 +3,7 @@ using BusinessObjects;
 using Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Services;
+using WebAPI.Filters;
 using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
@@ -18,14 +19,13 @@ public static partial class AdminEndpoints
             string? status,
             int? certId,
             string? purpose,
-            int? page,
-            int? pageSize,
+            [AsParameters] PaginationQuery pagination,
             IAdminExamService exams,
             CancellationToken cancellationToken) =>
         {
-            var summary = await exams.GetExamsAsync(q, status, certId, purpose, page ?? 1, pageSize ?? 20, cancellationToken);
+            var summary = await exams.GetExamsAsync(q, status, certId, purpose, pagination.PageOrDefault, pagination.PageSizeOrDefault, cancellationToken);
             return Results.Ok(summary);
-        });
+        }).AddEndpointFilter<RequestValidationFilter<PaginationQuery>>();
 
         admin.MapPost("/exams", async (
             CreateAdminExamRequest request,

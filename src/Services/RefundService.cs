@@ -513,14 +513,14 @@ public sealed class RefundService : IRefundService
             throw new RefundException(ApiError.Codes.RefundReasonRequired, "A reason is required on every refund.", 400);
         }
 
-        var trimmed = reason.Trim();
+        var normalized = System.Text.RegularExpressions.Regex.Replace(reason.Trim(), @"\s{2,}", " ");
         // Reason is NVARCHAR(400); a longer string would be truncated by the insert rather than refused.
-        if (trimmed.Length > 400)
+        if (normalized.Length > 400)
         {
             throw new RefundException(ApiError.Codes.RefundReasonRequired, "A refund reason cannot exceed 400 characters.", 400);
         }
 
-        return trimmed;
+        return normalized;
     }
 
     private static int ValidateCreditCount(int creditCount)

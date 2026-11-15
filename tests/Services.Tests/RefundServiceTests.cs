@@ -600,6 +600,14 @@ public sealed class RefundServiceTests(DatabaseFixture database)
         var noCredits = await Assert.ThrowsAsync<RefundException>(() =>
             service.RequestCreditRefundAsync(staff, learner, creditCount: 0, reason: "Zero credits"));
         Assert.Equal(ApiError.Codes.RefundCreditCountInvalid, noCredits.Code);
+
+        var tooLongReason = await Assert.ThrowsAsync<RefundException>(() =>
+            service.RequestCreditRefundAsync(staff, learner, creditCount: 1, reason: new string('x', 401)));
+        Assert.Equal(ApiError.Codes.RefundReasonRequired, tooLongReason.Code);
+
+        var normalized = await service.RequestCreditRefundAsync(
+            staff, learner, creditCount: 1, reason: "  Duplicate   charge   fix  ");
+        Assert.Equal("Duplicate charge fix", normalized.Reason);
     }
 
     [Fact]

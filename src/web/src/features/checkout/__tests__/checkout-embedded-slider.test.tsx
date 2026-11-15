@@ -377,4 +377,35 @@ describe('PayOS Embedded Checkout & Interactive Credit Slider (#317)', () => {
       { timeout: 3000 },
     );
   });
+
+  it('supports up to 1,000 credits and shows inline error for out-of-range input', async () => {
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') return jsonResponse(MOCK_USER);
+      if (url === '/api/learner/context') return jsonResponse(MOCK_LEARNER_CONTEXT);
+      if (url.startsWith('/api/checkout/preview')) {
+        const preview: CheckoutPreviewDto = {
+          credits: 500,
+          price: 10000000,
+          currentBalance: 25,
+          balanceAfter: 525,
+        };
+        return jsonResponse(preview);
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/checkout?credits=500');
+
+    expect(await screen.findByText('500 Platform Credits')).toBeInTheDocument();
+    expect(screen.getByText('1,000 credits')).toBeInTheDocument();
+
+    const numberInput = screen.getByLabelText(/custom credits count/i) as HTMLInputElement;
+    fireEvent.change(numberInput, { target: { value: '1500' } });
+    expect(await screen.findByText(/credits must be between 1 and 1,000\./i)).toBeInTheDocument();
+
+    fireEvent.change(numberInput, { target: { value: '250' } });
+    await waitFor(() => {
+      expect(screen.queryByText(/credits must be between 1 and 1,000\./i)).not.toBeInTheDocument();
+    });
+  });
 });

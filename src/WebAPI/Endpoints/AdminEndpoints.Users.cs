@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BusinessObjects;
 using Contracts;
 using Services;
+using WebAPI.Filters;
 using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
@@ -14,14 +15,13 @@ public static partial class AdminEndpoints
         admin.MapGet("/users", async (
             string? q,
             string? status,
-            int? page,
-            int? pageSize,
+            [AsParameters] PaginationQuery pagination,
             IAdminUserService users,
             CancellationToken cancellationToken) =>
         {
-            var summary = await users.GetUsersAsync(q, status, page ?? 1, pageSize ?? 20, cancellationToken);
+            var summary = await users.GetUsersAsync(q, status, pagination.PageOrDefault, pagination.PageSizeOrDefault, cancellationToken);
             return Results.Ok(summary);
-        });
+        }).AddEndpointFilter<RequestValidationFilter<PaginationQuery>>();
 
         admin.MapGet("/users/{userId:int}", async (
             int userId,

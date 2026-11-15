@@ -1,6 +1,7 @@
 using BusinessObjects;
 using Contracts;
 using Services;
+using WebAPI.Filters;
 using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
@@ -22,14 +23,13 @@ public static partial class RefundEndpoints
         admin.MapGet("", async (
             string? q,
             string? status,
-            int? page,
-            int? pageSize,
+            [AsParameters] PaginationQuery pagination,
             IRefundService refunds,
             CancellationToken cancellationToken) =>
         {
-            var summary = await refunds.GetAdminRefundsAsync(q, status, page ?? 1, pageSize ?? 20, cancellationToken);
+            var summary = await refunds.GetAdminRefundsAsync(q, status, pagination.PageOrDefault, pagination.PageSizeOrDefault, cancellationToken);
             return Results.Ok(summary);
-        });
+        }).AddEndpointFilter<RequestValidationFilter<PaginationQuery>>();
 
         admin.MapGet("/{refundId:int}", async (
             int refundId,
@@ -59,7 +59,7 @@ public static partial class RefundEndpoints
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<RequestRefundRequest>>();
 
         admin.MapPost("/{refundId:int}/approve", async (
             int refundId,
@@ -103,7 +103,7 @@ public static partial class RefundEndpoints
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
-        });
+        }).AddEndpointFilter<RequestValidationFilter<RejectRefundRequest>>();
 
         // #282: the accountant's step. A separate route because it is a separate decision point: an
         // approval says "pay this", a settlement says "it was paid", and the second is what counts.

@@ -1,22 +1,28 @@
+using System.ComponentModel.DataAnnotations;
 using Contracts;
 using Services;
+using WebAPI.Filters;
 using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
 
 public static partial class CheckoutEndpoints
 {
+    private sealed record CheckoutPreviewQuery(
+        [property: Range(1, 1000, ErrorMessage = "Credits must be between 1 and 1,000.")]
+        int Credits);
+
     private static void MapOrders(IEndpointRouteBuilder app)
     {
         app.MapGet("/api/checkout/preview", async (
-            int credits,
+            [AsParameters] CheckoutPreviewQuery query,
             HttpContext http,
             IPaymentService payments,
             CancellationToken cancellationToken) =>
         {
             try
             {
-                var preview = await payments.GetCheckoutPreviewAsync(CurrentUserId(http), credits, cancellationToken);
+                var preview = await payments.GetCheckoutPreviewAsync(CurrentUserId(http), query.Credits, cancellationToken);
                 return Results.Ok(preview);
             }
             catch (EmailNotVerifiedException ex)
@@ -27,7 +33,8 @@ public static partial class CheckoutEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Invalid request", "invalid_request", ex.Message);
             }
-        }).RequireAuthorization(Roles.Learner);
+        }).RequireAuthorization(Roles.Learner)
+          .AddEndpointFilter<RequestValidationFilter<CheckoutPreviewQuery>>();
 
         app.MapPost("/api/checkout/orders", async (
             CreateOrderRequest request,
@@ -56,7 +63,8 @@ public static partial class CheckoutEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Invalid request", "invalid_request", ex.Message);
             }
-        }).RequireAuthorization(Roles.Learner);
+        }).RequireAuthorization(Roles.Learner)
+          .AddEndpointFilter<RequestValidationFilter<CreateOrderRequest>>();
 
         app.MapPost("/api/checkout/return", async (
             HandleReturnRequest request,

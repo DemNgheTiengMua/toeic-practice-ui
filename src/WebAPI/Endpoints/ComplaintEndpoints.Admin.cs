@@ -1,6 +1,7 @@
 using BusinessObjects;
 using Contracts;
 using Services;
+using WebAPI.Filters;
 using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
@@ -13,14 +14,13 @@ public static partial class ComplaintEndpoints
         admin.MapGet("", async (
             string? q,
             string? status,
-            int? page,
-            int? pageSize,
+            [AsParameters] PaginationQuery pagination,
             IComplaintService complaints,
             CancellationToken cancellationToken) =>
         {
-            var summary = await complaints.GetAdminComplaintsAsync(q, status, page ?? 1, pageSize ?? 20, cancellationToken);
+            var summary = await complaints.GetAdminComplaintsAsync(q, status, pagination.PageOrDefault, pagination.PageSizeOrDefault, cancellationToken);
             return Results.Ok(summary);
-        });
+        }).AddEndpointFilter<RequestValidationFilter<PaginationQuery>>();
 
         admin.MapGet("/{complaintId:int}", async (
             int complaintId,

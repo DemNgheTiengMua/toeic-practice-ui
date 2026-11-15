@@ -258,6 +258,17 @@ describe('Public catalog, pricing & legal pages (#295)', () => {
     const preset20 = within(main).getByRole('button', { name: /20 credits/i });
     fireEvent.click(preset20);
     expect(within(main).getByText(/400\.000 ₫/i)).toBeInTheDocument();
+
+    // Slider max is 1,000 and out-of-range input shows inline error
+    expect(within(main).getByText('1,000 credits')).toBeInTheDocument();
+    const creditsInput = within(main).getByLabelText(/credits count/i) as HTMLInputElement;
+    fireEvent.change(creditsInput, { target: { value: '1500' } });
+    expect(await within(main).findByText(/credits must be between 1 and 1,000\./i)).toBeInTheDocument();
+
+    fireEvent.change(creditsInput, { target: { value: '500' } });
+    await waitFor(() => {
+      expect(within(main).queryByText(/credits must be between 1 and 1,000\./i)).not.toBeInTheDocument();
+    });
   });
 
   it('renders /terms, /privacy, and neutral capability-safe /access-denied routes', async () => {

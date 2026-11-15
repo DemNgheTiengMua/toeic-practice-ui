@@ -14,7 +14,21 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
 {
     public const decimal PricePerCreditVnd = 20000m;
 
+    public const int MinCreditsPerOrder = 1;
+    public const int MaxCreditsPerOrder = 1000;
+
     private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db);
+
+    private static void ValidateCredits(int credits)
+    {
+        if (credits is < MinCreditsPerOrder or > MaxCreditsPerOrder)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(credits),
+                credits,
+                $"Credits must be between {MinCreditsPerOrder} and {MaxCreditsPerOrder:N0}.");
+        }
+    }
 
     public async Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(
         int userId,
@@ -22,10 +36,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         CancellationToken cancellationToken = default)
     {
         await AssertUserEmailVerifiedAsync(userId, cancellationToken);
-        if (credits <= 0)
-        {
-            throw new ArgumentException("Credits must be greater than zero.", nameof(credits));
-        }
+        ValidateCredits(credits);
 
         await ExpireStaleOrdersAsync(olderThanMinutes: 15, cancellationToken);
 
@@ -55,10 +66,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         CancellationToken cancellationToken = default)
     {
         await AssertUserEmailVerifiedAsync(userId, cancellationToken);
-        if (credits <= 0)
-        {
-            throw new ArgumentException("Credits must be greater than zero.", nameof(credits));
-        }
+        ValidateCredits(credits);
 
         await ExpireStaleOrdersAsync(olderThanMinutes: 15, cancellationToken);
 

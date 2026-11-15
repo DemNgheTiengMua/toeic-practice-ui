@@ -664,4 +664,19 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
 
         Assert.Equal(first.OrderCode, ex.OrderCode);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    [InlineData(1001)]
+    public async Task GetCheckoutPreviewAsync_and_CreateOrderAsync_reject_out_of_range_credits(int badCredits)
+    {
+        var userId = await SeedUserAsync(isVerified: true);
+        var service = CreateService();
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            service.GetCheckoutPreviewAsync(userId, badCredits));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            service.CreateOrderAsync(userId, badCredits, "http://localhost:5000"));
+    }
 }

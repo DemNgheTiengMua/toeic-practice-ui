@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Contracts;
 
 /// <summary>
@@ -14,6 +16,8 @@ public sealed record RequestRefundRequest(
     int UserId,
     RefundMethodDto Method,
     int CreditCount,
+    [property: Required(ErrorMessage = "A reason is required on every refund.")]
+    [property: MaxLength(400, ErrorMessage = "A refund reason cannot exceed 400 characters.")]
     string Reason,
     int? OrderId = null,
     int? ComplaintId = null,
