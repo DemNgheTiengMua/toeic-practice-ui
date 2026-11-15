@@ -10,27 +10,17 @@ import type {
   CertificateBlueprintPresetDto,
   SaveCertificateWizardRequest,
   SaveCertificateWizardResultDto,
-  AdminScoreConversionDto,
-  UpdateScoreConversionRequest,
-  ScorePreviewRequestDto,
-  ScorePreviewResultDto,
-  RubricStudioDto,
-  SaveRubricRequest,
-  RunRubricLadderRequest,
-  RubricLadderDto,
   AdminExamListSummaryDto,
   AdminExamDetailDto,
   CreateAdminExamRequest,
   UpdateAdminExamRequest,
   SaveExamSectionAudioRequest,
+  AdminExamMediaUploadResultDto,
   ExamAuditResultDto,
   AdminPublishExamResultDto,
   ExamStudioDetailDto,
   ExamAssemblyDto,
   AdminExamQuestionsDto,
-  CreateQuestionRequest,
-  UpdateQuestionRequest,
-  CreateQuestionGroupRequest,
   UpdateQuestionGroupRequest,
   ReorderSectionItemsRequest,
   CreateExamClusterRequest,
@@ -45,18 +35,6 @@ import type {
   CreatePoolItemRequest,
   UpdatePoolItemRequest,
   PoolItemDto,
-  StimulusStudioOptionsDto,
-  StimulusDraftRequest,
-  StimulusDraftAnalysisDto,
-  StimulusBundleDto,
-  ProductiveStudioOptionsDto,
-  ProductiveTaskDraftRequest,
-  ProductiveTaskAnalysisDto,
-  ProductiveTaskBundleDto,
-  IngestionBatchListDto,
-  IngestionBatchDetailDto,
-  IngestionRecordDto,
-  IngestionUploadResultDto,
   AdminImportResultDto,
   AdminLessonSummaryDto,
   AdminLessonFormOptionsDto,
@@ -71,51 +49,16 @@ export const studioApi = {
   getCertificates: () => apiFetch<AdminCertificateSummaryDto[]>('/api/admin/certificates'),
   getCertificatePresets: () =>
     apiFetch<CertificateBlueprintPresetDto[]>('/api/admin/certificates/presets'),
-  getCertificateBlueprint: (certId: number) =>
-    apiFetch<CertificateBlueprintDetailDto>(`/api/admin/certificates/${certId}/blueprint`),
+  // #360: getCertificateBlueprint had no caller. The wizard owns a certificate's configuration, and it
+  // saves through saveCertificateWizard below rather than loading a blueprint to edit.
   saveCertificateWizard: (body: SaveCertificateWizardRequest) =>
     apiFetch<SaveCertificateWizardResultDto>('/api/admin/certificates/wizard', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
 
-  // Score Conversion & Preview
-  getScoreConversion: (params?: { certCode?: string; examId?: number }) => {
-    const sp = new URLSearchParams();
-    if (params?.certCode) sp.set('certCode', params.certCode);
-    if (params?.examId != null) sp.set('examId', String(params.examId));
-    const q = sp.toString();
-    return apiFetch<AdminScoreConversionDto>(`/api/admin/score-conversion${q ? `?${q}` : ''}`);
-  },
-  updateScoreConversion: (certId: number, body: UpdateScoreConversionRequest) =>
-    apiFetch<AdminScoreConversionDto>(`/api/admin/score-conversion/${certId}`, {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    }),
-  previewScore: (body: ScorePreviewRequestDto) =>
-    apiFetch<ScorePreviewResultDto>('/api/admin/score-conversion/preview', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  // Rubric Studio
-  getRubricStudio: (certId: number, skillId: number) =>
-    apiFetch<RubricStudioDto>(`/api/admin/studio/rubric?certId=${certId}&skillId=${skillId}`),
-  saveRubric: (body: SaveRubricRequest) =>
-    apiFetch<RubricStudioDto>('/api/admin/studio/rubric', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  runRubricLadder: (body: RunRubricLadderRequest) =>
-    apiFetch<RubricLadderDto>('/api/admin/studio/rubric/ladder', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  lockRubric: (body: RunRubricLadderRequest) =>
-    apiFetch<RubricLadderDto>('/api/admin/studio/rubric/lock', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
+  // #360: score conversion and the rubric ladder had no route on this server. The wizard owns
+  // scoring configuration now, so the client's half is gone rather than pointing at a 404.
 
   // Exams Authoring
   getExams: (params?: {
@@ -146,10 +89,8 @@ export const studioApi = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
-  deleteExam: (examId: number) =>
-    apiFetch<void>(`/api/admin/exams/${examId}`, {
-      method: 'DELETE',
-    }),
+  // #360: deleteExam had no caller. Withdraw is the reversible act an admin screen offers; a hard
+  // delete of a paper a learner may have sat is not something this client should be able to reach.
   publishExam: (examId: number) =>
     apiFetch<AdminPublishExamResultDto>(`/api/admin/exams/${examId}/publish`, {
       method: 'POST',
@@ -165,32 +106,30 @@ export const studioApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  /**
+   * #359: one file to the exam's own media directory. The server names the file and answers the path
+   * to store, so nothing here composes a path. Images and audio share this door; there is no video
+   * door, because the schema has no column for one.
+   */
+  uploadExamMedia: async (examId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiFetch<AdminExamMediaUploadResultDto>(`/api/admin/exams/${examId}/media`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
   getExamAudit: (examId: number) => apiFetch<ExamAuditResultDto>(`/api/admin/exams/${examId}/audit`),
   getExamStudio: (examId: number) =>
     apiFetch<ExamStudioDetailDto>(`/api/admin/exams/${examId}/studio`),
   getExamAssembly: (examId: number) =>
     apiFetch<ExamAssemblyDto>(`/api/admin/exams/${examId}/assembly`),
-  getExamQuestions: (examId: number) =>
-    apiFetch<AdminExamQuestionsDto>(`/api/admin/exams/${examId}/questions`),
-  createQuestion: (examId: number, body: CreateQuestionRequest) =>
-    apiFetch<{ questionId: number }>(`/api/admin/exams/${examId}/questions`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  saveQuestion: (examId: number, questionId: number, body: UpdateQuestionRequest) =>
-    apiFetch<void>(`/api/admin/exams/${examId}/questions/${questionId}`, {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    }),
-  deleteQuestion: (examId: number, questionId: number) =>
-    apiFetch<void>(`/api/admin/exams/${examId}/questions/${questionId}`, {
-      method: 'DELETE',
-    }),
-  createQuestionGroup: (examId: number, body: CreateQuestionGroupRequest) =>
-    apiFetch<{ groupId: number }>(`/api/admin/exams/${examId}/studio/groups`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
+  // #360: getExamQuestions had no caller. getExamStudio above returns the same paper shaped as the
+  // editor's Bundle tree, which is what every screen reads.
+  // #360: createQuestion / saveQuestion / deleteQuestion / createQuestionGroup are GONE. The server
+  // maps only GET /exams/{id}/questions; the write routes were retired with the legacy question model
+  // (#265) and a caller got a 404. Authoring writes the pool (POST /items) and the Bundle
+  // (PUT /studio/groups/{id}); those are below.
   updateQuestionGroup: (examId: number, groupId: number, body: UpdateQuestionGroupRequest) =>
     apiFetch<void>(`/api/admin/exams/${examId}/studio/groups/${groupId}`, {
       method: 'PUT',
@@ -250,70 +189,9 @@ export const studioApi = {
       body: JSON.stringify(body),
     }),
 
-  // Stimulus Studio
-  getStimulusOptions: (skill: string) =>
-    apiFetch<StimulusStudioOptionsDto>(
-      `/api/admin/studio/stimulus/options?skill=${encodeURIComponent(skill)}`,
-    ),
-  analyseStimulus: (body: StimulusDraftRequest) =>
-    apiFetch<StimulusDraftAnalysisDto>('/api/admin/studio/stimulus/analyse', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  saveStimulus: (body: StimulusDraftRequest) =>
-    apiFetch<StimulusBundleDto>('/api/admin/studio/stimulus', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  // Productive Studio
-  getProductiveOptions: (skill: string) =>
-    apiFetch<ProductiveStudioOptionsDto>(
-      `/api/admin/studio/productive/options?skill=${encodeURIComponent(skill)}`,
-    ),
-  analyseProductive: (body: ProductiveTaskDraftRequest) =>
-    apiFetch<ProductiveTaskAnalysisDto>('/api/admin/studio/productive/analyse', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  saveProductive: (body: ProductiveTaskDraftRequest) =>
-    apiFetch<ProductiveTaskBundleDto>('/api/admin/studio/productive', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  // Ingestion Workbench
-  getIngestionBatch: (batchId: number, rule?: string) =>
-    apiFetch<IngestionBatchDetailDto>(
-      rule
-        ? `/api/admin/ingestion/${batchId}?rule=${encodeURIComponent(rule)}`
-        : `/api/admin/ingestion/${batchId}`,
-    ),
-  clearWorkbenchItem: (batchId: number, itemId: number) =>
-    apiFetch<void>(`/api/admin/ingestion/${batchId}/items/${itemId}/clear`, {
-      method: 'POST',
-    }),
-  discardWorkbenchRecord: (batchId: number, line: number, reason?: string) =>
-    apiFetch<void>(`/api/admin/ingestion/${batchId}/records/${line}/discard`, {
-      method: 'POST',
-      body: JSON.stringify({ reason }),
-    }),
-  resubmitWorkbenchRecord: (batchId: number, line: number, recordJson: string) =>
-    apiFetch<IngestionRecordDto>(`/api/admin/ingestion/${batchId}/records/${line}/resubmit`, {
-      method: 'POST',
-      body: JSON.stringify({ recordJson }),
-    }),
-  uploadPoolManifest: async (skill: string, file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return apiFetch<IngestionUploadResultDto>(
-      `/api/admin/ingestion/upload?skill=${encodeURIComponent(skill)}`,
-      {
-        method: 'POST',
-        body: formData,
-      },
-    );
-  },
+  // #360: Stimulus Studio, Productive Studio, the rubric ladder and the ingestion workbench were
+  // retired with the legacy pool. Their routes do not exist, so neither does this client's half.
+  // Pool authoring is POST /items plus POST /exams/{id}/bindings, which are above.
 
   // Micro-Lessons
   getLessons: (params?: { certId?: number; skillId?: number }) => {

@@ -197,6 +197,59 @@ describe('ExamSittingShell', () => {
     expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/placement/take/77?q=2');
   });
 
+  it.each(['mcq', 'mcq_3'])(
+    'selects an option when the click lands on the row away from the text (%s)',
+    async (questionType) => {
+      const base = makeTake();
+      const question: AttemptQuestionDto = { ...base.questions[0], questionType };
+      const take: PlacementTakeViewDto = { ...base, currentQuestion: question };
+      const onSaveAnswer = vi.fn(
+        async (
+          questionId: number,
+          payload: { selectedOptionId?: number | null; isFlagged: boolean },
+        ): Promise<SaveAnswerResultDto> => ({
+          questionId,
+          selectedOptionId: payload.selectedOptionId ?? null,
+          isFlagged: payload.isFlagged,
+          remainingSeconds: 1790,
+          isAutoSubmitted: false,
+        }),
+      );
+
+      render(
+        <ExamSittingShell
+          sittingKind="placement"
+          sittingId={77}
+          attemptId={500}
+          examName={take.examName}
+          certCode={take.certCode}
+          initialTake={take}
+          basePath="/placement/take/77"
+          onFetchQuestion={vi.fn(async () => take)}
+          onSaveAnswer={onSaveAnswer}
+          onSubmit={vi.fn(async () => {})}
+        />,
+      );
+
+      const radio = screen.getByRole('radio', { name: /Paris/i });
+      // The bordered box is what the learner sees as the row, so it must be what they click.
+      const row = radio.closest('.border');
+      expect(row).not.toBeNull();
+
+      fireEvent.click(row!);
+
+      await waitFor(() => {
+        expect(onSaveAnswer).toHaveBeenCalledWith(
+          101,
+          expect.objectContaining({ selectedOptionId: 1002 }),
+        );
+      });
+      expect(radio).toBeChecked();
+      // Selected state still renders: the visible row sits inside the selected radio.
+      expect(radio.closest('[data-slot="radio"]')).toHaveAttribute('data-selected', 'true');
+    },
+  );
+
   it('SIT-01: reconciles locked ?q= tampering back to active unlocked question via replaceState', async () => {
     const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
     const take = makeTake();

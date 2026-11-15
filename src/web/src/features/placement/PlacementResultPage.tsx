@@ -349,6 +349,26 @@ export function PlacementResultPage() {
               Priority growth area: <strong>{result.weakerSkillName}</strong>
             </Card.Description>
           )}
+          {/* #366: a productive skill is only reviewable by its attempt, never by the placement id
+              this page is addressed by. The review endpoints take an attempt id. */}
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            {[
+              { pct: result.speakingPct, to: '/speaking/result/$attemptId' as const, label: 'Speaking result' },
+              { pct: result.writingPct, to: '/writing/result/$attemptId' as const, label: 'Writing result' },
+            ]
+              .filter((link) => link.pct != null)
+              .map((link) => (
+                <Link
+                  key={link.label}
+                  to={link.to}
+                  params={{ attemptId: String(result.attemptId) }}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
+                >
+                  {link.label}
+                  <ArrowRight className="size-3.5" aria-hidden="true" />
+                </Link>
+              ))}
+          </div>
         </Card.Header>
         <Card.Content className="divide-y divide-separator">
           {mergedSkills.map(({ result: row, score }) => {

@@ -19,17 +19,13 @@ export function formatExamStatusLabel(status: string | null | undefined): string
 }
 
 export function formatExamPurposeLabel(purpose: string | null | undefined): string {
+  // Only the four codes CK_Exams_Purpose accepts. 'full_mock'/'mini_mock'/'diagnostic' were never in
+  // the schema, so labelling them promised a paper the API refuses to create.
   switch (purpose?.toLowerCase()) {
-    case 'full_mock':
-      return 'Full mock exam';
-    case 'mini_mock':
-      return 'Mini mock exam';
+    case 'mock':
+      return 'Mock exam';
     case 'placement':
       return 'Placement test';
-    case 'diagnostic':
-      return 'Diagnostic';
-    case 'practice':
-      return 'Practice drill';
     case 'speaking_practice':
       return 'Speaking practice';
     case 'writing_practice':

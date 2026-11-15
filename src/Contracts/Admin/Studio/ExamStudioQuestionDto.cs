@@ -5,6 +5,13 @@ namespace Contracts;
 
 public sealed record ExamStudioQuestionDto(
     int QuestionId,
+    /// <summary>
+    /// #362: the pool item this position pins. <see cref="QuestionId"/> is a paper-position handle
+    /// (the roster id), which is what an answer row names - so an editor that wants to change the
+    /// content must send THIS to <c>PUT /items/{itemId}</c>, not the position handle. Without it the
+    /// screen can render a question and cannot edit one.
+    /// </summary>
+    int ItemId,
     int GroupId,
     int ExamId,
     int SectionId,
@@ -36,4 +43,7 @@ public sealed record ExamStudioQuestionDto(
     ReferenceKindDto? ReferenceKind = null,
     // #229 / D1: the level this question is authored at. The authoring paths write it and an edit
     // reads it back.
-    string? CefrLevelCode = null);
+    string? CefrLevelCode = null,
+    // #362: the pool topic this item sits in. Adding a child to an existing Bundle has to author it in
+    // the same cell as its siblings, and CreatePoolItemRequest requires a topic it cannot guess.
+    int TopicId = 0);

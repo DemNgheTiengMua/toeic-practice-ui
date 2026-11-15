@@ -13,6 +13,7 @@ import {
 } from '@heroui/react';
 import { Mail, Send, ShieldAlert } from 'lucide-react';
 import { ApiClientError, api } from '../../lib/api';
+import { useResendCooldown } from '../../lib/useResendCooldown';
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -20,6 +21,29 @@ export function ForgotPasswordPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { remaining, isCoolingDown, start: startCooldown } = useResendCooldown(60);
+
+  const sendTo = async (trimmed: string) => {
+    if (isSubmitting || isCoolingDown) return;
+    setFormError(null);
+    setIsSubmitting(true);
+    try {
+      await api.auth.forgotPassword(trimmed);
+      setSent(true);
+      startCooldown();
+    } catch (err) {
+      if (err instanceof ApiClientError && err.status === 429) {
+        setFormError('Too many requests. Please wait a while before asking for another link.');
+        startCooldown();
+      } else if (err instanceof ApiClientError && err.status === 400) {
+        setFormError(err.detail || err.title || 'Please enter a valid email address.');
+      } else {
+        setFormError('Could not send the password reset link. Try again in a few minutes.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,20 +59,7 @@ export function ForgotPasswordPage() {
       return;
     }
     setEmailError(null);
-
-    setIsSubmitting(true);
-    try {
-      await api.auth.forgotPassword(trimmed);
-      setSent(true);
-    } catch (err) {
-      if (err instanceof ApiClientError && err.status === 400) {
-        setFormError(err.detail || err.title || 'Please enter a valid email address.');
-      } else {
-        setFormError('Could not send the password reset link. Try again in a few minutes.');
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+    await sendTo(trimmed);
   };
 
   return (
@@ -79,7 +90,20 @@ export function ForgotPasswordPage() {
                     </Alert.Description>
                   </Alert.Content>
                 </Alert>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="primary"
+                    isPending={isSubmitting}
+                    isDisabled={isSubmitting || isCoolingDown}
+                    onPress={() => void sendTo(email.trim())}
+                  >
+                    <Send className="w-4 h-4" />
+                    {isSubmitting
+                      ? 'Sending...'
+                      : isCoolingDown
+                        ? `Send a new link in ${remaining}s`
+                        : 'Send a new link'}
+                  </Button>
                   <Link
                     to="/sign-in"
                     className={buttonVariants({ variant: 'secondary', className: 'no-underline' })}
@@ -132,10 +156,14 @@ export function ForgotPasswordPage() {
                       size="lg"
                       className="w-full"
                       isPending={isSubmitting}
-                      isDisabled={isSubmitting}
+                      isDisabled={isSubmitting || isCoolingDown}
                     >
                       <Send className="w-4 h-4" />
-                      {isSubmitting ? 'Sending...' : 'Send link'}
+                      {isSubmitting
+                        ? 'Sending...'
+                        : isCoolingDown
+                          ? `Send link in ${remaining}s`
+                          : 'Send link'}
                     </Button>
                   </Card.Footer>
                 </Form>

@@ -236,12 +236,23 @@ export function OrderStatusPage() {
                 {formatVnd(order.amount)}
               </span>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted">Credits granted:</span>
-              <span className="font-mono-tabular font-bold text-accent">
-                +{order.credits} credits
-              </span>
-            </div>
+            {/* Credits are only granted once an order is paid. Showing the figure on a failed or
+                expired order read as "the money is already in your wallet". */}
+            {isPaid ? (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted">Credits granted:</span>
+                <span className="font-mono-tabular font-bold text-accent">
+                  +{order.credits} credits
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted">Credits requested:</span>
+                <span className="font-mono-tabular font-bold text-muted">
+                  {order.credits} credits (not granted)
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted">Placed at:</span>
               <span className="font-mono-tabular text-xs text-muted">

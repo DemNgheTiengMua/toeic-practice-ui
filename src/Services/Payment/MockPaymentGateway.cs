@@ -11,6 +11,13 @@ public sealed class MockPaymentGateway : IMockPaymentGateway
     private readonly ConcurrentDictionary<long, (GatewayStatus Status, string? ErrorCode)> _byPaymentNo = new();
     private readonly ConcurrentBag<long> _cancelledPaymentNos = new();
 
+    /// <summary>
+    /// Every cancel URL this gateway was handed, in creation order. A test asserts what a learner lands
+    /// on after cancelling, and the URL is decided here rather than anywhere the caller can read back.
+    /// Instance-scoped, so parallel tests cannot see each other's links.
+    /// </summary>
+    public List<string> CancelUrls { get; } = [];
+
     public bool IsCancelled(long paymentNo) => _cancelledPaymentNos.Contains(paymentNo);
     public IReadOnlyCollection<long> CancelledPaymentNos => _cancelledPaymentNos.ToArray();
 
@@ -34,6 +41,7 @@ public sealed class MockPaymentGateway : IMockPaymentGateway
         PaymentGatewayOrderInfo orderInfo,
         CancellationToken cancellationToken = default)
     {
+        CancelUrls.Add(orderInfo.CancelUrl);
         var checkoutUrl = $"/checkout/mock-gateway?orderCode={Uri.EscapeDataString(orderInfo.OrderCode)}";
         var gatewayTxnRef = $"MOCK-{orderInfo.PaymentNo}";
         return Task.FromResult(new PaymentGatewayLinkResult(checkoutUrl, gatewayTxnRef));

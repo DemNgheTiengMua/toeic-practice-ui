@@ -9,6 +9,7 @@ import {
   type PreflightStatusDto,
 } from '@/lib/api';
 import { ExamSittingShell } from '../sitting/ExamSittingShell';
+import { readInitialQuestionOrder } from '../sitting/sitting-helpers';
 
 export function PlacementTakePage() {
   const { attemptId } = useParams({ strict: false }) as { attemptId?: string };
@@ -16,8 +17,7 @@ export function PlacementTakePage() {
   const navigate = useNavigate();
 
   const placementId = Number(attemptId);
-  const initialRequestedOrder =
-    search?.q != null && Number.isFinite(Number(search.q)) ? Number(search.q) : null;
+  const [initialRequestedOrder] = useState<number | null>(() => readInitialQuestionOrder(search));
 
   const [take, setTake] = useState<PlacementTakeViewDto | null>(null);
   const [preflightStatus, setPreflightStatus] = useState<PreflightStatusDto | null>(null);

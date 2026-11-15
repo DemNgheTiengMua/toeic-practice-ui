@@ -512,3 +512,51 @@ describe('Auth flows (#295)', () => {
     expect(within(main).queryByText('Password is required.')).not.toBeInTheDocument();
   });
 });
+
+// #370: the free/paid list is the one place a newcomer sees the whole cost model, so every row must
+// match a charge the ledger actually makes. Expected costs are transcribed from the backend sources:
+// PlacementOptions (5 / 3 retake), LearningPathService.LearningPathCostCredits (5),
+// MockExam/Speaking/WritingPractice CreditCost and the Mentors default PriceCredits (1 each). Practice by
+// section and weakness analysis write no ledger row, and the first placement per certificate is free.
+describe('Auth pricing copy matches what the ledger charges (#370)', () => {
+  const expectedRows: Array<[string, string]> = [
+    ['Placement exam (first per certificate)', 'Free'],
+    ['Practice by section, any skill', 'Free'],
+    ['Learning path', '5 credits'],
+    ['Weakness analysis', 'Free'],
+    ['Start a mock exam', '1 credit'],
+    ['AI grading of speaking or writing', '1 credit'],
+    ['Book a mentor session', '1 credit'],
+    ['Placement retake (4 skills / L+R)', '5 / 3 credits'],
+  ];
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    window.scrollTo = vi.fn();
+    installFetchMock(() => jsonResponse({ code: 'AUTH_REQUIRED' }, 401));
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    ['/register', 'What you get on day one'],
+    ['/sign-in', 'What is free and what costs credits'],
+  ])('states the ledger cost of every action on %s', async (url, tableName) => {
+    renderRoute(url);
+
+    const grid = await screen.findByRole('grid', { name: tableName });
+
+    for (const [action, cost] of expectedRows) {
+      const actionCell = within(grid).getByRole('rowheader', { name: action });
+      const row = actionCell.closest('tr');
+      expect(row, `no row rendered for "${action}"`).not.toBeNull();
+      expect(row!).toHaveTextContent(cost);
+      if (cost !== 'Free') {
+        expect(row!).not.toHaveTextContent(/free/i);
+      }
+    }
+  });
+});

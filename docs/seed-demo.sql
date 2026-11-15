@@ -39,7 +39,7 @@ END CATCH
 -- ---- Certificates (5 rows)
 SET IDENTITY_INSERT [Certificates] ON;
 BEGIN TRY
-  INSERT INTO [Certificates] ([CertId], [Code], [Name], [Description], [IsActive], [ScoreAggregationRule], [PresetCode], [SectionNoun]) VALUES (1, N'TOEIC', N'TOEIC Listening & Reading', N'The standard workplace English test. 200 multiple-choice questions, about 2 hours, scored 10–990. Practice speaking and writing separately with AI-graded tasks.', 1, N'sum', N'toeic_lr_std', N'Part');
+  INSERT INTO [Certificates] ([CertId], [Code], [Name], [Description], [IsActive], [ScoreAggregationRule], [PresetCode], [SectionNoun]) VALUES (1, N'TOEIC', N'TOEIC Listening & Reading', N'The standard workplace English test. Two skills, Listening and Reading: 200 multiple-choice questions, about 2 hours, scored 10-990.', 1, N'sum', N'toeic_lr_std', N'Part');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;

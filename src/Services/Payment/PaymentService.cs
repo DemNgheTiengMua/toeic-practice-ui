@@ -132,7 +132,10 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         var now = DateTimeOffset.UtcNow;
         var orderCode = $"DH-{now:yyyyMMdd}-{paymentNo:D4}";
 
-        var cancelUrl = $"{baseUrl.TrimEnd('/')}/checkout?credits={credits}";
+        // Cancelling on the gateway page returns the learner here. The order code travels with it, so
+        // the page can show what was cancelled instead of an empty checkout form — without it the
+        // learner saw a fresh form while the server still held their order open.
+        var cancelUrl = $"{baseUrl.TrimEnd('/')}/payment/result?orderCode={Uri.EscapeDataString(orderCode)}&cancelled=1";
         var returnUrl = $"{baseUrl.TrimEnd('/')}/payment/result?orderCode={Uri.EscapeDataString(orderCode)}";
 
         var linkResult = await gateway.CreatePaymentLinkAsync(new PaymentGatewayOrderInfo(
@@ -373,9 +376,42 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
                         .Where(o => o.OrderCode == orderCode && o.UserId == userId)
                         .SingleAsync(cancellationToken);
                 }
+                else if (gatewayStatus.Status is GatewayStatus.Failed
+                    or GatewayStatus.Cancelled
+                    or GatewayStatus.Expired)
+                {
+                    // A gateway that has reported a terminal non-paid status closes the order here.
+                    // It used to be logged and ignored, which left the row `pending` while
+                    // UX_Orders_OnePendingPerUser refused every new purchase for fifteen minutes —
+                    // a learner who cancelled on the payOS page simply could not buy credits.
+                    var closedAs = gatewayStatus.Status switch
+                    {
+                        GatewayStatus.Expired => OrderStatus.Expired,
+                        _ => OrderStatus.Failed,
+                    };
+                    order.Status = closedAs.ToCode();
+                    order.GatewayErrorCode = gatewayStatus.ErrorCode
+                        ?? (closedAs == OrderStatus.Failed ? "gateway_declined" : null);
+
+                    db.PaymentEvents.Add(new PaymentEvent
+                    {
+                        OrderId = order.OrderId,
+                        Source = PaymentEventSource.StatusQuery.ToCode(),
+                        ReportedStatus = gatewayStatus.Status.ToCode(),
+                        SignatureValid = false,
+                        WasApplied = true,
+                        Payload = gatewayStatus.RawPayload,
+                        Note = closedAs == OrderStatus.Expired
+                            ? "Status query reported the payment link expired"
+                            : "Status query reported a failed or cancelled payment",
+                        CreatedAt = DateTimeOffset.UtcNow
+                    });
+                    await db.SaveChangesAsync(cancellationToken);
+                }
                 else
                 {
-                    // ADR-0003: Every status query is logged as a payment event
+                    // ADR-0003: Every status query is logged as a payment event. A still-pending answer
+                    // changes nothing, so it is recorded and the order stays open.
                     var reportedStatus = gatewayStatus.Status;
                     db.PaymentEvents.Add(new PaymentEvent
                     {

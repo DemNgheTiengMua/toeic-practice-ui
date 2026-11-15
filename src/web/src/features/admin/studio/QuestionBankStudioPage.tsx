@@ -47,8 +47,6 @@ import {
 import type {
   AdminCoverageMatrixDto,
   AdminCoverageCellDto,
-  StimulusDraftAnalysisDto,
-  ProductiveTaskAnalysisDto,
   AdminLessonSummaryDto,
   CreatePoolItemRequest,
 } from './types';
@@ -88,26 +86,6 @@ export function QuestionBankStudioPage() {
   const [isSavingItem, setIsSavingItem] = useState(false);
   const [itemSaveError, setItemSaveError] = useState<string | null>(null);
   const [itemFieldErrors, setItemFieldErrors] = useState<Record<string, string>>({});
-
-  // Stimulus Studio State
-  const [stimulusSkill, setStimulusSkill] = useState('reading');
-  const [stimulusLevel, setStimulusLevel] = useState('B1');
-  const [stimulusItemType, setStimulusItemType] = useState('mcq');
-  const [stimulusPassage, setStimulusPassage] = useState('Sample reading passage discussing organizational efficiency...');
-  const [stimulusAnalysis, setStimulusAnalysis] = useState<StimulusDraftAnalysisDto | null>(null);
-  const [isAnalysingStimulus, setIsAnalysingStimulus] = useState(false);
-  const [isSavingStimulus, setIsSavingStimulus] = useState(false);
-  const [stimulusNotice, setStimulusNotice] = useState<string | null>(null);
-
-  // Productive Studio State
-  const [productiveSkill, setProductiveSkill] = useState('writing');
-  const [productiveLevel, setProductiveLevel] = useState('B1');
-  const [productiveTopic, setProductiveTopic] = useState('W-ARG');
-  const [productivePrompt, setProductivePrompt] = useState('Write an essay examining the advantages of hybrid working models.');
-  const [productiveAnalysis, setProductiveAnalysis] = useState<ProductiveTaskAnalysisDto | null>(null);
-  const [isAnalysingProductive, setIsAnalysingProductive] = useState(false);
-  const [isSavingProductive, setIsSavingProductive] = useState(false);
-  const [productiveNotice, setProductiveNotice] = useState<string | null>(null);
 
   // Micro-Lessons State
   const [lessons, setLessons] = useState<AdminLessonSummaryDto[]>([]);
@@ -180,133 +158,8 @@ export function QuestionBankStudioPage() {
     }
   };
 
-  // Stimulus Studio Handlers
-  const handleAnalyseStimulus = async () => {
-    setIsAnalysingStimulus(true);
-    setStimulusNotice(null);
-    try {
-      const res = await studioApi.analyseStimulus({
-        modality: stimulusSkill,
-        stimulusLevel,
-        itemType: stimulusItemType,
-        passage: stimulusPassage,
-        children: [
-          {
-            position: 1,
-            cefrLevel: stimulusLevel,
-            topicCode: 'R-GIST',
-            stem: 'What is the main topic of the passage?',
-            optionA: 'Organizational efficiency models',
-            optionB: 'Employee benefit structures',
-            optionC: 'Annual corporate taxation',
-            optionD: 'Office hardware procurement',
-            keyLabel: 'A',
-            explanation: 'The opening paragraph clearly establishes organizational models.',
-            rationaleA: 'Directly supported by paragraph 1 thesis.',
-            rationaleB: 'Discussed only in minor detail.',
-            rationaleC: 'Not mentioned in text.',
-            rationaleD: 'Unrelated topic.',
-          },
-        ],
-      });
-      setStimulusAnalysis(res);
-    } catch (err: any) {
-      setStimulusNotice(err?.detail || err?.title || 'Analysis failed.');
-    } finally {
-      setIsAnalysingStimulus(false);
-    }
-  };
-
-  const handleSaveStimulus = async () => {
-    setIsSavingStimulus(true);
-    setStimulusNotice(null);
-    try {
-      await studioApi.saveStimulus({
-        modality: stimulusSkill,
-        stimulusLevel,
-        itemType: stimulusItemType,
-        passage: stimulusPassage,
-        children: [
-          {
-            position: 1,
-            cefrLevel: stimulusLevel,
-            topicCode: 'R-GIST',
-            stem: 'What is the main topic of the passage?',
-            optionA: 'Organizational efficiency models',
-            optionB: 'Employee benefit structures',
-            keyLabel: 'A',
-            explanation: 'Verified explanation.',
-          },
-        ],
-      });
-      setStimulusNotice('Stimulus bundle saved successfully to the pool stock!');
-      loadCoverage();
-    } catch (err: any) {
-      setStimulusNotice(err?.detail || err?.title || 'Save failed.');
-    } finally {
-      setIsSavingStimulus(false);
-    }
-  };
-
-  // Productive Studio Handlers
-  const handleAnalyseProductive = async () => {
-    setIsAnalysingProductive(true);
-    setProductiveNotice(null);
-    try {
-      const res = await studioApi.analyseProductive({
-        modality: productiveSkill,
-        level: productiveLevel,
-        topicCode: productiveTopic,
-        promptCopy: productivePrompt,
-        subTasks: [
-          {
-            itemType: productiveTopic,
-            prompt: productivePrompt,
-            minWords: 250,
-            maxWords: 400,
-            prepSeconds: 30,
-            responseSeconds: 1800,
-            explanation: 'Benchmark essay should provide two distinct arguments.',
-          },
-        ],
-      });
-      setProductiveAnalysis(res);
-    } catch (err: any) {
-      setProductiveNotice(err?.detail || err?.title || 'Analysis failed.');
-    } finally {
-      setIsAnalysingProductive(false);
-    }
-  };
-
-  const handleSaveProductive = async () => {
-    setIsSavingProductive(true);
-    setProductiveNotice(null);
-    try {
-      await studioApi.saveProductive({
-        modality: productiveSkill,
-        level: productiveLevel,
-        topicCode: productiveTopic,
-        promptCopy: productivePrompt,
-        subTasks: [
-          {
-            itemType: productiveTopic,
-            prompt: productivePrompt,
-            minWords: 250,
-            maxWords: 400,
-            prepSeconds: 30,
-            responseSeconds: 1800,
-            explanation: 'Benchmark essay should provide two distinct arguments.',
-          },
-        ],
-      });
-      setProductiveNotice('Productive task bundle saved successfully to the pool stock!');
-      loadCoverage();
-    } catch (err: any) {
-      setProductiveNotice(err?.detail || err?.title || 'Save failed.');
-    } finally {
-      setIsSavingProductive(false);
-    }
-  };
+  // #360: Stimulus Studio and Productive Studio handlers are gone with their routes. Pool authoring
+  // is POST /items (below) plus the exam's binding route; nothing else writes stock.
 
   if (!isCatalogManager) {
     return (
@@ -343,7 +196,8 @@ export function QuestionBankStudioPage() {
             </Chip>
           </div>
           <p className="text-sm text-muted mt-1">
-            Author and inspect warehouse coverage stock, stimulus bundles, productive tasks, ingestion batches, and micro-lessons.
+            Author and inspect warehouse coverage stock and micro-lessons. Bundle stimuli are authored
+            per Section in the Exams studio.
           </p>
         </div>
 

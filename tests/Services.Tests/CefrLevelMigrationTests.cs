@@ -41,7 +41,7 @@ public sealed class CefrLevelMigrationTests
             DisplayOrder: 1, UpdatedAt: null, Options: [], HasAnswers: false, CefrLevelCode: code),
 
         [typeof(ExamStudioQuestionDto)] = code => new ExamStudioQuestionDto(
-            QuestionId: 1, GroupId: 2, ExamId: 3, SectionId: 4, SectionCode: "R", SectionName: "Reading",
+            QuestionId: 1, ItemId: 1, GroupId: 2, ExamId: 3, SectionId: 4, SectionCode: "R", SectionName: "Reading",
             SkillId: 5, SkillCode: "reading", Stem: "Stem",
             QuestionType: QuestionTypeDto.Mcq, Explanation: null, CategoryId: null, CategoryCode: null,
             CategoryName: null, PrepSeconds: null, ResponseSeconds: null, MinWords: null, MaxWords: null,

@@ -10,6 +10,7 @@ import {
   FieldError,
   Form,
   Input,
+  NumberField,
   Select,
   TextArea,
   TextField,
@@ -33,6 +34,69 @@ import type {
   SaveGradingCriterionWizardDto,
 } from './types';
 
+/**
+ * CK_Certificates_ScoreAggregationRule and CertificateService's own allow-list: these three codes
+ * and nothing else. `AVERAGE` was never the spelling, and `BAND_CEFR` was never a rule.
+ */
+export const SCORE_AGGREGATION_RULES = [
+  { id: 'sum', label: 'Sum of skill scores' },
+  { id: 'avg_half_step', label: 'Average, rounded to nearest 0.5' },
+  { id: 'avg_whole', label: 'Average, rounded to nearest whole number' },
+] as const;
+
+/** A preset could name a rule the API refuses; fall back to `sum` rather than fail the save. */
+function normaliseAggregationRule(rule: string | null | undefined): string {
+  const candidate = rule?.trim().toLowerCase();
+  return SCORE_AGGREGATION_RULES.find((r) => r.id === candidate)?.id ?? 'sum';
+}
+
+/**
+ * Mirrors CertificateConfigurationValidator.TotalRange: `sum` adds the skill scores, the average
+ * rules keep the skill range. The two must agree or the validator refuses the derived bands.
+ */
+function totalRangeFor(
+  rule: string,
+  skillMin: number,
+  skillMax: number,
+  skillCount: number,
+): [number, number] {
+  const skills = Math.max(skillCount, 1);
+  return normaliseAggregationRule(rule) === 'sum'
+    ? [skillMin * skills, skillMax * skills]
+    : [skillMin, skillMax];
+}
+
+const DEFAULT_BAND_LABELS = [
+  { code: 'A2', name: 'Elementary (A2)' },
+  { code: 'B1', name: 'Intermediate (B1)' },
+  { code: 'B2', name: 'Upper-Intermediate (B2)' },
+  { code: 'C1', name: 'Advanced (C1)' },
+];
+
+/**
+ * Four contiguous bands covering the whole total range: the validator refuses a gap and an overlap
+ * alike, so each band starts where the previous one ended, plus one.
+ */
+export function deriveDefaultBands(
+  rule: string,
+  skillCount: number,
+  min: number,
+  max: number,
+): SaveScoreBandWizardDto[] {
+  const [low, high] = totalRangeFor(rule, min, max, skillCount);
+  const span = Math.max(high - low + 1, 1);
+  const count = Math.min(DEFAULT_BAND_LABELS.length, span);
+  const size = Math.ceil(span / count);
+
+  return DEFAULT_BAND_LABELS.slice(0, count).map((label, index) => ({
+    code: label.code,
+    name: label.name,
+    minTotal: low + index * size,
+    maxTotal: index === count - 1 ? high : Math.min(low + (index + 1) * size - 1, high),
+    displayOrder: index + 1,
+  }));
+}
+
 export function CertificatesStudioPage() {
   const { user } = useAuth();
 
@@ -53,7 +117,10 @@ export function CertificatesStudioPage() {
   const [wizardCode, setWizardCode] = useState('');
   const [wizardName, setWizardName] = useState('');
   const [wizardDescription, setWizardDescription] = useState('');
-  const [wizardRule, setWizardRule] = useState('SUM');
+  const [wizardRule, setWizardRule] = useState('sum');
+  const [wizardMinScore, setWizardMinScore] = useState(0);
+  const [wizardMaxScore, setWizardMaxScore] = useState(100);
+  const [wizardScoreStep, setWizardScoreStep] = useState(1);
   const [wizardIsActive, setWizardIsActive] = useState(true);
   const [wizardSkills, setWizardSkills] = useState<SaveSkillWizardDto[]>([]);
   const [wizardBands, setWizardBands] = useState<SaveScoreBandWizardDto[]>([]);
@@ -97,7 +164,8 @@ export function CertificatesStudioPage() {
     const found = presets.find((p) => p.presetCode === presetCode);
     if (!found) return;
 
-    setWizardRule(found.scoreAggregationRule);
+    const rule = normaliseAggregationRule(found.scoreAggregationRule);
+    setWizardRule(rule);
     const mappedSkills: SaveSkillWizardDto[] = found.skills.map((s) => ({
       code: s.code,
       name: s.name,
@@ -126,14 +194,9 @@ export function CertificatesStudioPage() {
     }));
     setWizardSkills(mappedSkills);
 
-    if (wizardBands.length === 0) {
-      setWizardBands([
-        { code: 'A2', name: 'Elementary (A2)', minTotal: 0, maxTotal: 40, displayOrder: 1 },
-        { code: 'B1', name: 'Intermediate (B1)', minTotal: 41, maxTotal: 65, displayOrder: 2 },
-        { code: 'B2', name: 'Upper-Intermediate (B2)', minTotal: 66, maxTotal: 85, displayOrder: 3 },
-        { code: 'C1', name: 'Advanced (C1)', minTotal: 86, maxTotal: 100, displayOrder: 4 },
-      ]);
-    }
+    // A preset brings its own skills and rule, so the bands must follow them; keeping the previous
+    // tile would leave the validator a gap at the top when the skill count changed.
+    setWizardBands(deriveDefaultBands(rule, mappedSkills.length, wizardMinScore, wizardMaxScore));
 
     const productiveSkills = mappedSkills.filter(
       (s) => s.modality === 'speaking' || s.modality === 'writing',
@@ -243,8 +306,21 @@ export function CertificatesStudioPage() {
             ],
           },
         ],
-        bands: wizardBands,
+        // A save that never touched the template still needs bands that tile the range, or the
+        // validator refuses it on the first press.
+        bands:
+          wizardBands.length > 0
+            ? wizardBands
+            : deriveDefaultBands(
+                wizardRule,
+                Math.max(wizardSkills.length, 1),
+                wizardMinScore,
+                wizardMaxScore,
+              ),
         criteria: wizardCriteria,
+        minScaledScore: wizardMinScore,
+        maxScaledScore: wizardMaxScore,
+        scoreStep: wizardScoreStep,
       };
 
       await studioApi.saveCertificateWizard(payload);
@@ -253,7 +329,14 @@ export function CertificatesStudioPage() {
     } catch (err: unknown) {
       const fieldErrs = extractFieldErrors(err);
       setWizardFieldErrors(fieldErrs);
-      if (fieldErrs.code || fieldErrs.name || fieldErrs.description) {
+      if (
+        fieldErrs.code ||
+        fieldErrs.name ||
+        fieldErrs.description ||
+        fieldErrs.minScaledScore ||
+        fieldErrs.maxScaledScore ||
+        fieldErrs.scoreStep
+      ) {
         setWizardStep(1);
       }
       setWizardError(extractErrorMessage(err, 'Failed to save certificate blueprint.'));
@@ -310,6 +393,10 @@ export function CertificatesStudioPage() {
               setWizardSkills([]);
               setWizardBands([]);
               setWizardCriteria([]);
+              setWizardRule('sum');
+              setWizardMinScore(0);
+              setWizardMaxScore(100);
+              setWizardScoreStep(1);
               setWizardStep(1);
               setWizardError(null);
               setIsWizardOpen(true);
@@ -522,9 +609,17 @@ export function CertificatesStudioPage() {
                     <Select
                       aria-label="Score aggregation rule"
                       className="w-full"
-                      value={wizardRule}
+                      value={normaliseAggregationRule(wizardRule)}
                       onChange={(key) => {
-                        if (key != null) setWizardRule(String(key));
+                        if (key == null) return;
+                        const rule = normaliseAggregationRule(String(key));
+                        setWizardRule(rule);
+                        // The bands tile a range the rule just changed, so stale ones would gap.
+                        setWizardBands((prev) =>
+                          prev.length === 0
+                            ? prev
+                            : deriveDefaultBands(rule, wizardSkills.length, wizardMinScore, wizardMaxScore),
+                        );
                       }}
                     >
                       <Label className="text-xs font-semibold text-foreground">
@@ -536,18 +631,16 @@ export function CertificatesStudioPage() {
                       </Select.Trigger>
                       <Select.Popover>
                         <ListBox>
-                          <ListBox.Item id="SUM" textValue="SUM (Sum across sections)">
-                            SUM (Sum across sections)
-                            <ListBox.ItemIndicator />
-                          </ListBox.Item>
-                          <ListBox.Item id="AVERAGE" textValue="AVERAGE (Average band/scores)">
-                            AVERAGE (Average band/scores)
-                            <ListBox.ItemIndicator />
-                          </ListBox.Item>
-                          <ListBox.Item id="BAND_CEFR" textValue="BAND_CEFR (Direct CEFR mapping)">
-                            BAND_CEFR (Direct CEFR mapping)
-                            <ListBox.ItemIndicator />
-                          </ListBox.Item>
+                          {SCORE_AGGREGATION_RULES.map((rule) => (
+                            <ListBox.Item
+                              key={rule.id}
+                              id={rule.id}
+                              textValue={`${rule.label} (${rule.id})`}
+                            >
+                              {rule.label}
+                              <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                          ))}
                         </ListBox>
                       </Select.Popover>
                     </Select>
@@ -564,6 +657,85 @@ export function CertificatesStudioPage() {
                         Active certificate
                       </label>
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <NumberField
+                      isRequired
+                      name="minScaledScore"
+                      minValue={0}
+                      value={wizardMinScore}
+                      onChange={(value) => {
+                        setWizardMinScore(value);
+                        // The bands tile the total range, so a new scale invalidates them.
+                        setWizardBands((prev) =>
+                          prev.length === 0
+                            ? prev
+                            : deriveDefaultBands(wizardRule, wizardSkills.length, value, wizardMaxScore),
+                        );
+                        setWizardFieldErrors((prev) => ({ ...prev, minScaledScore: '' }));
+                      }}
+                      isInvalid={Boolean(wizardFieldErrors.minScaledScore)}
+                    >
+                      <Label>Minimum scaled score</Label>
+                      <NumberField.Group>
+                        <NumberField.DecrementButton />
+                        <NumberField.Input className="font-mono-tabular text-sm" />
+                        <NumberField.IncrementButton />
+                      </NumberField.Group>
+                      {wizardFieldErrors.minScaledScore && (
+                        <FieldError>{wizardFieldErrors.minScaledScore}</FieldError>
+                      )}
+                    </NumberField>
+
+                    <NumberField
+                      isRequired
+                      name="maxScaledScore"
+                      minValue={1}
+                      value={wizardMaxScore}
+                      onChange={(value) => {
+                        setWizardMaxScore(value);
+                        setWizardBands((prev) =>
+                          prev.length === 0
+                            ? prev
+                            : deriveDefaultBands(wizardRule, wizardSkills.length, wizardMinScore, value),
+                        );
+                        setWizardFieldErrors((prev) => ({ ...prev, maxScaledScore: '' }));
+                      }}
+                      isInvalid={Boolean(wizardFieldErrors.maxScaledScore)}
+                    >
+                      <Label>Maximum scaled score</Label>
+                      <NumberField.Group>
+                        <NumberField.DecrementButton />
+                        <NumberField.Input className="font-mono-tabular text-sm" />
+                        <NumberField.IncrementButton />
+                      </NumberField.Group>
+                      {wizardFieldErrors.maxScaledScore && (
+                        <FieldError>{wizardFieldErrors.maxScaledScore}</FieldError>
+                      )}
+                    </NumberField>
+
+                    <NumberField
+                      isRequired
+                      name="scoreStep"
+                      minValue={1}
+                      value={wizardScoreStep}
+                      onChange={(value) => {
+                        setWizardScoreStep(value);
+                        setWizardFieldErrors((prev) => ({ ...prev, scoreStep: '' }));
+                      }}
+                      isInvalid={Boolean(wizardFieldErrors.scoreStep)}
+                    >
+                      <Label>Score step</Label>
+                      <NumberField.Group>
+                        <NumberField.DecrementButton />
+                        <NumberField.Input className="font-mono-tabular text-sm" />
+                        <NumberField.IncrementButton />
+                      </NumberField.Group>
+                      {wizardFieldErrors.scoreStep && (
+                        <FieldError>{wizardFieldErrors.scoreStep}</FieldError>
+                      )}
+                    </NumberField>
                   </div>
                 </div>
               )}
