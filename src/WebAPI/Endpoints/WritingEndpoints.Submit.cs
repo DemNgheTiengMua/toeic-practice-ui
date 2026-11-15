@@ -37,6 +37,13 @@ public static partial class WritingEndpoints
             {
                 return Problem(StatusCodes.Status409Conflict, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
             }
+            catch (WritingPracticeException ex) when (ex.Code == WritingPracticeException.InvalidResponse)
+            {
+                return Results.ValidationProblem(
+                    new Dictionary<string, string[]> { ["response"] = [ex.Message] },
+                    title: "Validation failed",
+                    extensions: new Dictionary<string, object?> { ["code"] = ApiError.Codes.Validation });
+            }
         });
     }
 }

@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Contracts;
 
 namespace Services;
 
 public static class AudioValidation
 {
-    public const long MaxAudioSizeBytes = 10 * 1024 * 1024; // 10 MB
+    public const long MaxAudioSizeBytes = FreeResponseBounds.MaxSpeakingAudioBytes;
 
     public static readonly Dictionary<string, string> ExtensionToMime = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -74,6 +75,31 @@ public static class AudioValidation
         }
 
         return (true, null);
+    }
+
+    public static (bool IsValid, bool IsTooLong, string? ErrorMessage) ValidateDuration(int? durationMs, int? taskResponseSeconds = null)
+    {
+        if (durationMs is null)
+        {
+            return (true, false, null);
+        }
+
+        if (durationMs.Value < 0)
+        {
+            return (false, false, "Audio duration must be a non-negative integer.");
+        }
+
+        if (durationMs.Value > FreeResponseBounds.MaxSpeakingDurationMs)
+        {
+            return (false, true, $"Recording duration cannot exceed {FreeResponseBounds.MaxSpeakingDurationSeconds} seconds.");
+        }
+
+        if (taskResponseSeconds is int declared && durationMs.Value > declared * 1000)
+        {
+            return (false, true, $"This task records for {declared}s; the take is {durationMs.Value / 1000.0:0.#}s. It was not saved.");
+        }
+
+        return (true, false, null);
     }
 }
 

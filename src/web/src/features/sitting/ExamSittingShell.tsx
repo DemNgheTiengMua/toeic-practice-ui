@@ -6,6 +6,7 @@ import {
   Card,
   Chip,
   Description,
+  FieldError,
   Label,
   Modal,
   ProgressBar,
@@ -41,7 +42,10 @@ import {
   countWords,
   formatTimerSeconds,
   parseSafeInlineSegments,
+  MAX_WRITING_CHARS,
+  MAX_WRITING_WORDS,
   toBrowserMediaUrl,
+  validateWritingBounds,
 } from '@/lib/security';
 import {
   dequeueOfflineMutation,
@@ -1034,26 +1038,44 @@ export function ExamSittingShell({
                     </div>
                   )}
 
-                  {questionKind === 'writing' && (
+                  {questionKind === 'writing' && (() => {
+                    const writingBounds = validateWritingBounds(draftText);
+                    return (
                     <div className="space-y-3">
-                      <TextField aria-label="Written response">
+                      <TextField aria-label="Written response" isInvalid={writingBounds.hasError}>
                         <Label>Your written response</Label>
                         <TextArea
                           rows={10}
                           fullWidth
+                          maxLength={MAX_WRITING_CHARS}
                           value={draftText}
                           onChange={(e) => handleDraftChange(e.target.value)}
-                          placeholder="Write your response here..."
+                          placeholder="Write your response here (10–1,000 words, max 5,000 characters)..."
                         />
                         <Description>
                           Drafts autosave shortly after you stop typing.
                         </Description>
+                        {writingBounds.errorMessage && (
+                          <FieldError>{writingBounds.errorMessage}</FieldError>
+                        )}
                       </TextField>
 
                       <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted">
                         <div className="flex items-center gap-3 font-mono-tabular">
-                          <span>{wordCount} words</span>
-                          <span>{draftText.length} characters</span>
+                          <span
+                            className={
+                              writingBounds.overMaxWords
+                                ? 'font-semibold text-danger'
+                                : writingBounds.belowMinWords
+                                  ? 'font-semibold text-warning'
+                                  : undefined
+                            }
+                          >
+                            {wordCount} / {MAX_WRITING_WORDS.toLocaleString()} words
+                          </span>
+                          <span className={writingBounds.overMaxChars ? 'font-semibold text-danger' : undefined}>
+                            {draftText.length.toLocaleString()} / {MAX_WRITING_CHARS.toLocaleString()} characters
+                          </span>
                           {currentQuestion.minWords != null && (
                             <span
                               className={
@@ -1078,7 +1100,8 @@ export function ExamSittingShell({
                         </Button>
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
 
                   {questionKind === 'speaking' &&
                     (renderSpeakingPane ? (

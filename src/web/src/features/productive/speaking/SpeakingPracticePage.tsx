@@ -3,7 +3,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { Alert, Button, Card, Chip, Label, Modal, ProgressBar, Spinner } from '@heroui/react';
 import { AlertTriangle, CheckCircle2, Clock, Mic, RotateCcw, Send, Square } from 'lucide-react';
 import { api } from '@/lib/api';
-import { formatTimerSeconds, toBrowserMediaUrl } from '@/lib/security';
+import { formatTimerSeconds, MAX_SPEAKING_SECONDS, toBrowserMediaUrl } from '@/lib/security';
 import { SpeakingMicrophoneCard } from './SpeakingMicrophoneCard';
 import { useMicrophoneCheck } from './useMicrophoneCheck';
 import { formatSpeakingAudioUrl, type SpeakingTake } from './types';
@@ -158,7 +158,7 @@ export function SpeakingPracticePage({ attemptId, initialQuestionId }: SpeakingP
       recorderRef.current = recorder;
 
       const qId = take.question.questionId;
-      const maxSeconds = take.question.responseSeconds ?? 120;
+      const maxSeconds = Math.min(MAX_SPEAKING_SECONDS, take.question.responseSeconds ?? 120);
 
       recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -215,7 +215,7 @@ export function SpeakingPracticePage({ attemptId, initialQuestionId }: SpeakingP
 
   useEffect(() => {
     if (phase !== 'recording' || !take) return;
-    const maxSec = take.question.responseSeconds ?? 120;
+    const maxSec = Math.min(MAX_SPEAKING_SECONDS, take.question.responseSeconds ?? 120);
     if (recordElapsedSec >= maxSec) {
       stopRecording();
       return;

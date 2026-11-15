@@ -141,6 +141,17 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
 
         var (validMp3, _) = AudioValidation.Validate(4096, "audio/mpeg", "answer.mp3");
         Assert.True(validMp3);
+
+        // Duration > 180s rejected even when taskResponseSeconds is null; <= 180s accepted
+        var (durOver, tooLongOver, _) = AudioValidation.ValidateDuration(181_000, taskResponseSeconds: null);
+        Assert.False(durOver);
+        Assert.True(tooLongOver);
+
+        var (durNeg, _, _) = AudioValidation.ValidateDuration(-1, taskResponseSeconds: null);
+        Assert.False(durNeg);
+
+        var (durExact, _, _) = AudioValidation.ValidateDuration(180_000, taskResponseSeconds: null);
+        Assert.True(durExact);
     }
 
     [Fact]

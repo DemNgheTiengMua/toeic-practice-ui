@@ -25,6 +25,12 @@ public sealed partial class AttemptEngine
             throw new AttemptEngineException(AttemptEngineException.InvalidOption, error ?? "Invalid audio file.");
         }
 
+        var (durationValid, _, durationError) = AudioValidation.ValidateDuration(durationMs);
+        if (!durationValid)
+        {
+            throw new AttemptEngineException(AttemptEngineException.InvalidOption, durationError ?? "Invalid audio duration.");
+        }
+
         var attempt = await LoadSittingAttemptAsync(db.ExamAttempts, attemptId, userId, cancellationToken);
 
         var now = DateTimeOffset.UtcNow;

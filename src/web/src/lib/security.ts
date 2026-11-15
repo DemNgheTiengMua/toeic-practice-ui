@@ -185,8 +185,54 @@ export function formatTimerSeconds(totalSeconds: number): string {
   return `${mm}:${ss}`;
 }
 
+export const MIN_WRITING_WORDS = 10;
+export const MAX_WRITING_WORDS = 1000;
+export const MAX_WRITING_CHARS = 5000;
+export const MAX_SPEAKING_SECONDS = 180;
+
 export function countWords(text: string): number {
   const trimmed = text.trim();
   if (!trimmed) return 0;
   return trimmed.split(/\s+/).length;
+}
+
+export interface WritingBoundsState {
+  words: number;
+  chars: number;
+  belowMinWords: boolean;
+  overMaxWords: boolean;
+  overMaxChars: boolean;
+  hasError: boolean;
+  canSubmit: boolean;
+  errorMessage: string | null;
+}
+
+export function validateWritingBounds(text: string): WritingBoundsState {
+  const words = countWords(text);
+  const chars = text.length;
+  const belowMinWords = words > 0 && words < MIN_WRITING_WORDS;
+  const overMaxWords = words > MAX_WRITING_WORDS;
+  const overMaxChars = chars > MAX_WRITING_CHARS;
+  const hasError = belowMinWords || overMaxWords || overMaxChars;
+  const canSubmit = words >= MIN_WRITING_WORDS && !overMaxWords && !overMaxChars;
+
+  let errorMessage: string | null = null;
+  if (overMaxChars) {
+    errorMessage = `Response cannot exceed ${MAX_WRITING_CHARS.toLocaleString()} characters.`;
+  } else if (overMaxWords) {
+    errorMessage = `Response cannot exceed ${MAX_WRITING_WORDS.toLocaleString()} words.`;
+  } else if (belowMinWords) {
+    errorMessage = `Response must be at least ${MIN_WRITING_WORDS} words (currently ${words}).`;
+  }
+
+  return {
+    words,
+    chars,
+    belowMinWords,
+    overMaxWords,
+    overMaxChars,
+    hasError,
+    canSubmit,
+    errorMessage,
+  };
 }

@@ -149,7 +149,7 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         Assert.Equal(0, instructions.CreditBalance);
 
         var attempt = await service.StartAttemptAsync(userId, examId);
-        await service.SaveDraftAsync(userId, attempt.AttemptId, q1Id, "A clear diagnostic writing response.");
+        await service.SaveDraftAsync(userId, attempt.AttemptId, q1Id, "A clear diagnostic writing response that describes the main workplace trend clearly.");
         await service.SubmitAttemptAsync(userId, attempt.AttemptId);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -215,7 +215,7 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         var (service, _, _, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
-        await service.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book near the window.");
+        await service.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book near the sunny window in the library.");
         await service.SaveDraftAsync(userId, info.AttemptId, q2Id, "In my opinion, working from home provides greater flexibility and boosts personal productivity significantly.");
 
         var submitResult = await service.SubmitAttemptAsync(userId, info.AttemptId);
@@ -255,7 +255,7 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         var (service, _, gradingProcessor, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
-        await service.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book near the window.");
+        await service.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book near the sunny window in the library.");
         await service.SaveDraftAsync(userId, info.AttemptId, q2Id, "In my opinion, working from home provides greater flexibility and boosts personal productivity significantly.");
         await service.SubmitAttemptAsync(userId, info.AttemptId);
 
@@ -449,7 +449,7 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
 
         var info = await service.StartAttemptAsync(userId, examId);
         // Include simulate_fail marker to trigger failure in FakeAiGrader
-        await service.SaveDraftAsync(userId, info.AttemptId, q1Id, "Here is text with [simulate_fail] to simulate error.");
+        await service.SaveDraftAsync(userId, info.AttemptId, q1Id, "Here is a longer sample text with [simulate_fail] to simulate a grading error.");
         await service.SubmitAttemptAsync(userId, info.AttemptId);
 
         // Process pending -> should fail
@@ -491,7 +491,7 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         var (service, _, gradingProcessor, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
-        await service.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book near the window.");
+        await service.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book near the sunny window in the library.");
         await service.SaveDraftAsync(userId, info.AttemptId, q2Id, "In my opinion, working from home provides greater flexibility and boosts personal productivity significantly.");
         await service.SubmitAttemptAsync(userId, info.AttemptId);
         await gradingProcessor.ProcessPendingGradingsAsync();
@@ -523,5 +523,35 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         // Overall total score equals sum of question totals
         Assert.Equal(q1.TotalScore + q2.TotalScore, review.TotalScore);
         Assert.Equal(16.0m, review.MaxScore);
+    }
+
+    [Fact]
+    public async Task SubmitAttempt_rejects_under_10_words_and_SaveDraft_rejects_over_5000_chars_without_enqueuing_ai_grading()
+    {
+        var certCode = Unique("WR08");
+        var (_, examId, q1Id, _) = await SeedWritingExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 2);
+        var (service, _, _, _) = CreateServices();
+
+        var info = await service.StartAttemptAsync(userId, examId);
+
+        // > 5,000 characters rejected at SaveDraftAsync
+        var draftEx = await Assert.ThrowsAsync<WritingPracticeException>(() =>
+            service.SaveDraftAsync(userId, info.AttemptId, q1Id, new string('a', 5001)));
+        Assert.Equal(WritingPracticeException.InvalidResponse, draftEx.Code);
+
+        // < 10 words saved as draft, rejected on SubmitAttemptAsync before charging or queuing AiGradings
+        await service.SaveDraftAsync(userId, info.AttemptId, q1Id, "Only five words here now");
+        var submitEx = await Assert.ThrowsAsync<WritingPracticeException>(() =>
+            service.SubmitAttemptAsync(userId, info.AttemptId));
+        Assert.Equal(WritingPracticeException.InvalidResponse, submitEx.Code);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var gradings = await db.AiGradings
+            .Where(g => g.FreeResponse.AttemptId == info.AttemptId)
+            .ToListAsync();
+        Assert.Empty(gradings);
+        var balance = await db.vw_UserCreditBalances.Where(b => b.UserId == userId).Select(b => b.Balance).SingleAsync();
+        Assert.Equal(2, balance);
     }
 }
