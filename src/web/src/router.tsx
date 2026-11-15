@@ -8,7 +8,7 @@ import {
   useNavigate,
   type RouterHistory,
 } from '@tanstack/react-router';
-import { Button, Card } from '@heroui/react';
+import { Button, Card, buttonVariants } from '@heroui/react';
 import { AppShell } from './components/shell/AppShell';
 import { OobeSoftLockEmptyState } from './components/shell/OobeSoftLockEmptyState';
 import { useAuth } from './context/AuthContext';
@@ -81,10 +81,40 @@ function PlaceholderView({ title, ticket }: { title: string; ticket: string }) {
         </Card.Description>
       </Card.Header>
       <Card.Content className="flex gap-2">
-        <Link to="/" className="no-underline">
-          <Button size="sm" variant="secondary">
-            Home
+        <Link
+          to="/"
+          className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'no-underline' })}
+        >
+          Home
+        </Link>
+      </Card.Content>
+    </Card>
+  );
+}
+
+function RouteErrorFallback({ error, reset }: { error?: unknown; reset?: () => void }) {
+  const message =
+    error instanceof Error && error.message
+      ? error.message
+      : 'An unexpected error occurred while rendering this page.';
+
+  return (
+    <Card className="max-w-lg mx-auto mt-8">
+      <Card.Header>
+        <Card.Title>Something went wrong</Card.Title>
+        <Card.Description>{message}</Card.Description>
+      </Card.Header>
+      <Card.Content className="flex flex-wrap gap-2">
+        {reset ? (
+          <Button size="sm" variant="primary" onPress={reset}>
+            Try again
           </Button>
+        ) : null}
+        <Link
+          to="/"
+          className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'no-underline' })}
+        >
+          Return home
         </Link>
       </Card.Content>
     </Card>
@@ -97,6 +127,7 @@ const rootRoute = createRootRoute({
       <Outlet />
     </AppShell>
   ),
+  errorComponent: RouteErrorFallback,
   notFoundComponent: () => (
     <Card className="max-w-lg mx-auto mt-8">
       <Card.Header>
@@ -104,10 +135,11 @@ const rootRoute = createRootRoute({
         <Card.Description>The requested route does not exist.</Card.Description>
       </Card.Header>
       <Card.Content>
-        <Link to="/" className="no-underline">
-          <Button size="sm" variant="primary">
-            Return home
-          </Button>
+        <Link
+          to="/"
+          className={buttonVariants({ variant: 'primary', size: 'sm', className: 'no-underline' })}
+        >
+          Return home
         </Link>
       </Card.Content>
     </Card>
@@ -445,7 +477,11 @@ const routeTree = rootRoute.addChildren([
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/weakness-analysis',
-    component: WeaknessAnalysisPage,
+    component: () => (
+      <OobeGate>
+        <WeaknessAnalysisPage />
+      </OobeGate>
+    ),
   }),
   createRoute({
     getParentRoute: () => rootRoute,
@@ -547,6 +583,7 @@ const routeTree = rootRoute.addChildren([
 export function createAppRouter(history?: RouterHistory) {
   return createRouter({
     routeTree,
+    defaultErrorComponent: RouteErrorFallback,
     ...(history ? { history } : {}),
   });
 }

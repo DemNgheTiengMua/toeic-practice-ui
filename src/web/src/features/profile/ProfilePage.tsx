@@ -11,8 +11,12 @@ import {
   Form,
   Input,
   Label,
+  ListBox,
+  Select,
   Spinner,
   TextField,
+  toast,
+  buttonVariants,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -44,7 +48,6 @@ export function ProfilePage() {
   const [fullName, setFullName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [timeZoneId, setTimeZoneId] = useState<string>('Asia/Ho_Chi_Minh');
-  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     fullName?: string;
@@ -59,7 +62,6 @@ export function ProfilePage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
   // Email verification resend feedback
-  const [resendSuccess, setResendSuccess] = useState<string | null>(null);
   const [resendError, setResendError] = useState<string | null>(null);
 
   const profileQuery = useQuery({
@@ -88,12 +90,11 @@ export function ProfilePage() {
     onSuccess: (data) => {
       setProfileError(null);
       setFieldErrors({});
-      setProfileSuccess('Profile updated successfully.');
+      toast.success('Profile updated successfully.');
       queryClient.setQueryData(['learner', 'profile'], data);
       void queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
     },
     onError: (err) => {
-      setProfileSuccess(null);
       if (err instanceof ApiClientError) {
         if (err.errors) {
           setFieldErrors({
@@ -113,10 +114,9 @@ export function ProfilePage() {
     mutationFn: () => api.auth.resendActivation(),
     onSuccess: () => {
       setResendError(null);
-      setResendSuccess('Verification email sent. Please check your inbox.');
+      toast.success('Verification email sent. Please check your inbox.');
     },
     onError: (err) => {
-      setResendSuccess(null);
       if (err instanceof ApiClientError) {
         setResendError(err.title || err.detail || 'Failed to resend verification email.');
       } else {
@@ -195,11 +195,12 @@ export function ProfilePage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link to="/checkout" className="no-underline">
-            <Button variant="secondary" size="sm">
-              <Wallet className="w-4 h-4 mr-1.5" />
-              Top up credits
-            </Button>
+          <Link
+            to="/checkout"
+            className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'no-underline' })}
+          >
+            <Wallet className="w-4 h-4 mr-1.5" />
+            Top up credits
           </Link>
         </div>
       </div>
@@ -220,9 +221,6 @@ export function ProfilePage() {
                 </span>
                 ) is not yet verified. Please verify your email to unlock credit purchases and exams.
               </p>
-              {resendSuccess && (
-                <p className="text-xs text-success font-semibold m-0">{resendSuccess}</p>
-              )}
               {resendError && (
                 <p className="text-xs text-danger font-semibold m-0">{resendError}</p>
               )}
@@ -285,18 +283,6 @@ export function ProfilePage() {
             </Card.Header>
 
             <Card.Content className="space-y-5">
-              {profileSuccess && (
-                <Alert status="success">
-                  <Alert.Indicator>
-                    <CheckCircle2 className="w-4 h-4 text-success" />
-                  </Alert.Indicator>
-                  <Alert.Content>
-                    <Alert.Title>Success</Alert.Title>
-                    <Alert.Description>{profileSuccess}</Alert.Description>
-                  </Alert.Content>
-                </Alert>
-              )}
-
               {profileError && (
                 <Alert status="danger">
                   <Alert.Indicator>
@@ -378,27 +364,38 @@ export function ProfilePage() {
                 </TextField>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="timeZoneId" className="text-xs font-semibold text-foreground block">
-                    Timezone
-                  </label>
-                  <select
-                    id="timeZoneId"
+                  <Select
+                    aria-label="Timezone"
+                    className="w-full"
                     value={timeZoneId}
-                    onChange={(e) => {
-                      setTimeZoneId(e.target.value);
-                      if (fieldErrors.timeZoneId) {
-                        setFieldErrors((prev) => ({ ...prev, timeZoneId: undefined }));
+                    onChange={(key) => {
+                      if (key != null) {
+                        setTimeZoneId(String(key));
+                        if (fieldErrors.timeZoneId) {
+                          setFieldErrors((prev) => ({ ...prev, timeZoneId: undefined }));
+                        }
                       }
                     }}
-                    aria-invalid={Boolean(fieldErrors.timeZoneId)}
-                    className="w-full text-sm p-2.5 rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                    isInvalid={Boolean(fieldErrors.timeZoneId)}
                   >
-                    {availableTimezones.map((tz) => (
-                      <option key={tz} value={tz}>
-                        {tz}
-                      </option>
-                    ))}
-                  </select>
+                    <Label className="text-xs font-semibold text-foreground block">
+                      Timezone
+                    </Label>
+                    <Select.Trigger>
+                      <Select.Value />
+                      <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        {availableTimezones.map((tz) => (
+                          <ListBox.Item key={tz} id={tz} textValue={tz}>
+                            {tz}
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
                   {fieldErrors.timeZoneId && (
                     <p className="text-xs text-danger mt-1" role="alert">
                       {fieldErrors.timeZoneId}

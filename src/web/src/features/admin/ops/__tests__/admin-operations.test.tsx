@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
 import { AuthProvider } from '../../../../context/AuthContext';
@@ -528,7 +528,8 @@ describe('AdminOperationsPage (#304)', () => {
     expect(await screen.findByText(/08:00 – 09:00/)).toBeInTheDocument();
 
     // Try adding an overlapping window on Monday (08:30 - 09:30 overlaps 08:00 - 09:00)
-    fireEvent.change(screen.getByLabelText(/weekday/i), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: /weekday/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /monday/i }));
     fireEvent.change(screen.getByLabelText(/window start/i), { target: { value: '08:30' } });
     fireEvent.change(screen.getByLabelText(/window end/i), { target: { value: '09:30' } });
     fireEvent.click(screen.getByRole('button', { name: /add window/i }));
@@ -568,4 +569,53 @@ describe('AdminOperationsPage (#304)', () => {
       expect(clickSpy).toHaveBeenCalled();
     });
   }, 15_000);
+
+  it('uses platform SearchField, Select, and Pagination in ComplaintsTab (#338)', async () => {
+    const baseImpl = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (typeof url === 'string' && url.startsWith('/api/admin/complaints')) {
+        return jsonResponse({
+          ...SAMPLE_COMPLAINTS_SUMMARY,
+          totalCount: 50,
+          pageSize: 25,
+          page: 1,
+        });
+      }
+      return baseImpl(url, init);
+    });
+
+    renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    expect(await screen.findByText('Đặng Thị E')).toBeInTheDocument();
+
+    // SearchField with searchbox role and Clear button
+    const searchBox = screen.getByRole('searchbox', { name: /search complaints/i });
+    fireEvent.change(searchBox, { target: { value: 'John' } });
+    expect(searchBox).toHaveValue('John');
+    fireEvent.click(screen.getByRole('button', { name: /clear/i }));
+    expect(searchBox).toHaveValue('');
+
+    // HeroUI Select for status filter
+    fireEvent.click(screen.getByRole('button', { name: /filter status/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /^open$/i }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('status=open'),
+        expect.anything(),
+      );
+    });
+
+    // HeroUI Pagination with page numbers and summary
+    expect(await screen.findByText(/showing 1–25 of 50 complaints/i)).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: /complaints pagination/i });
+    expect(within(nav).getByRole('button', { name: '1' })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: '2' })).toBeInTheDocument();
+  });
 });

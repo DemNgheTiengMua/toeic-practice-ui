@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Card, Chip } from '@heroui/react';
+import { Card, Chip, buttonVariants } from '@heroui/react';
 import { ArrowRight, BarChart3, BookOpen, CheckCircle2, Compass, FileCheck2, MessageSquare } from 'lucide-react';
 import { api, type CertificateDto } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
@@ -72,16 +72,18 @@ export function LandingPage() {
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Link to={primaryActionTo} className="no-underline">
-              <Button variant="primary" size="lg">
-                {isAuthenticated ? 'Open workspace' : 'Start for free'}
-                <ArrowRight className="w-4 h-4" />
-              </Button>
+            <Link
+              to={primaryActionTo}
+              className={buttonVariants({ variant: 'primary', size: 'lg', className: 'no-underline' })}
+            >
+              {isAuthenticated ? 'Open workspace' : 'Start for free'}
+              <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link to="/certificates" className="no-underline">
-              <Button variant="secondary" size="lg">
-                Explore certificates
-              </Button>
+            <Link
+              to="/certificates"
+              className={buttonVariants({ variant: 'secondary', size: 'lg', className: 'no-underline' })}
+            >
+              Explore certificates
             </Link>
           </div>
 
@@ -217,12 +219,15 @@ export function LandingPage() {
                     <Link
                       to="/certificates/$slug"
                       params={{ slug: cert.code.toLowerCase() }}
-                      className="no-underline w-full"
+                      className={buttonVariants({
+                        variant: 'secondary',
+                        size: 'sm',
+                        fullWidth: true,
+                        className: 'no-underline',
+                      })}
                     >
-                      <Button variant="secondary" size="sm" className="w-full">
-                        See test details
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Button>
+                      See test details
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </Card.Footer>
                 </Card>
@@ -323,10 +328,11 @@ export function LandingPage() {
               One place to practice regularly, understand your results, and know what to do next.
             </p>
           </div>
-          <Link to={primaryActionTo} className="no-underline">
-            <Button variant="primary" size="sm">
-              Build my path
-            </Button>
+          <Link
+            to={primaryActionTo}
+            className={buttonVariants({ variant: 'primary', size: 'sm', className: 'no-underline' })}
+          >
+            Build my path
           </Link>
         </div>
 

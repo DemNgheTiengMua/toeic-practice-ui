@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Alert,
   Button,
   Card,
   Chip,
-  Tabs,
-  Modal,
-  Table,
-  Alert,
-  Form,
-  TextField,
   Label,
-  Input,
-  TextArea,
-  NumberField,
+  ListBox,
+  Modal,
+  SearchField,
+  Select,
+  Table,
   FieldError,
+  Form,
+  Input,
+  NumberField,
+  Tabs,
+  TextArea,
+  TextField,
 } from '@heroui/react';
 import { extractErrorMessage, extractFieldErrors } from './validationErrors';
 import {
@@ -30,7 +33,6 @@ import {
   Download,
   Trash2,
   ArrowLeft,
-  Search,
   ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
@@ -404,38 +406,83 @@ export function ExamsStudioPage() {
         <div className="space-y-4">
           {/* Filters Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search exams by name..."
-                value={examSearch}
-                onChange={(e) => setExamSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-              />
-              <Search className="w-4 h-4 text-muted absolute left-3 top-2.5" />
-            </div>
-
-            <select
-              value={examStatusFilter}
-              onChange={(e) => setExamStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
+            <SearchField
+              aria-label="Search exams by name"
+              className="w-full"
+              value={examSearch}
+              onChange={setExamSearch}
+              onClear={() => setExamSearch('')}
             >
-              <option value="">All statuses</option>
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-            </select>
+              <SearchField.Group>
+                <SearchField.SearchIcon />
+                <SearchField.Input placeholder="Search exams by name..." />
+                <SearchField.ClearButton />
+              </SearchField.Group>
+            </SearchField>
 
-            <select
-              value={examPurposeFilter}
-              onChange={(e) => setExamPurposeFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
+            <Select
+              aria-label="Filter status"
+              className="w-full"
+              value={examStatusFilter || 'all'}
+              onChange={(key) => setExamStatusFilter(key === 'all' || key == null ? '' : String(key))}
             >
-              <option value="">All purposes</option>
-              <option value="full_mock">Full mock exam</option>
-              <option value="mini_mock">Mini mock exam</option>
-              <option value="placement">Placement test</option>
-              <option value="diagnostic">Diagnostic</option>
-            </select>
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id="all" textValue="All statuses">
+                    All statuses
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="draft" textValue="Draft">
+                    Draft
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="published" textValue="Published">
+                    Published
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                </ListBox>
+              </Select.Popover>
+            </Select>
+
+            <Select
+              aria-label="Filter purpose"
+              className="w-full"
+              value={examPurposeFilter || 'all'}
+              onChange={(key) => setExamPurposeFilter(key === 'all' || key == null ? '' : String(key))}
+            >
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id="all" textValue="All purposes">
+                    All purposes
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="full_mock" textValue="Full mock exam">
+                    Full mock exam
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="mini_mock" textValue="Mini mock exam">
+                    Mini mock exam
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="placement" textValue="Placement test">
+                    Placement test
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="diagnostic" textValue="Diagnostic">
+                    Diagnostic
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                </ListBox>
+              </Select.Popover>
+            </Select>
           </div>
 
           {/* Exams Table */}
@@ -648,20 +695,44 @@ export function ExamsStudioPage() {
                           <FieldError>{metadataFieldErrors.durationMinutes}</FieldError>
                         )}
                       </NumberField>
-                      <div className="space-y-1">
-                        <label className="text-xs font-semibold text-foreground">Purpose</label>
-                        <select
-                          value={editPurpose}
-                          onChange={(e) => setEditPurpose(e.target.value)}
-                          className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                        >
-                          <option value="full_mock">Full mock exam</option>
-                          <option value="mini_mock">Mini mock exam</option>
-                          <option value="placement">Placement test</option>
-                          <option value="diagnostic">Diagnostic</option>
-                          <option value="practice">Practice drill</option>
-                        </select>
-                      </div>
+                      <Select
+                        aria-label="Purpose"
+                        className="w-full"
+                        value={editPurpose}
+                        onChange={(key) => {
+                          if (key != null) setEditPurpose(String(key));
+                        }}
+                      >
+                        <Label className="text-xs font-semibold text-foreground">Purpose</Label>
+                        <Select.Trigger>
+                          <Select.Value />
+                          <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                          <ListBox>
+                            <ListBox.Item id="full_mock" textValue="Full mock exam">
+                              Full mock exam
+                              <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                            <ListBox.Item id="mini_mock" textValue="Mini mock exam">
+                              Mini mock exam
+                              <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                            <ListBox.Item id="placement" textValue="Placement test">
+                              Placement test
+                              <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                            <ListBox.Item id="diagnostic" textValue="Diagnostic">
+                              Diagnostic
+                              <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                            <ListBox.Item id="practice" textValue="Practice drill">
+                              Practice drill
+                              <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                          </ListBox>
+                        </Select.Popover>
+                      </Select>
                     </div>
 
                     <TextField
@@ -988,42 +1059,59 @@ export function ExamsStudioPage() {
             </Modal.Header>
             <Modal.Body className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <label htmlFor="qi-sec-select" className="text-xs font-semibold text-foreground">
-                    Target section
-                  </label>
-                  <select
-                    id="qi-sec-select"
-                    value={ingestSectionId}
-                    onChange={(e) => setIngestSectionId(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                  >
-                    {examDetail?.sectionProgress.map((s) => (
-                      <option key={s.sectionId} value={s.sectionId}>
-                        {s.sectionCode} — {s.sectionName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <Select
+                  aria-label="Target section"
+                  className="w-full"
+                  value={ingestSectionId ? String(ingestSectionId) : undefined}
+                  onChange={(key) => {
+                    if (key != null) setIngestSectionId(Number(key));
+                  }}
+                >
+                  <Label className="text-xs font-semibold text-foreground">Target section</Label>
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      {(examDetail?.sectionProgress ?? []).map((s) => (
+                        <ListBox.Item
+                          key={s.sectionId}
+                          id={String(s.sectionId)}
+                          textValue={`${s.sectionCode} — ${s.sectionName}`}
+                        >
+                          {s.sectionCode} — {s.sectionName}
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                      ))}
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
 
-                <div className="space-y-1">
-                  <label htmlFor="qi-cefr-level" className="text-xs font-semibold text-foreground">
-                    CEFR level
-                  </label>
-                  <select
-                    id="qi-cefr-level"
-                    value={ingestLevel}
-                    onChange={(e) => setIngestLevel(e.target.value)}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground font-mono text-sm"
-                  >
-                    <option value="A1">A1</option>
-                    <option value="A2">A2</option>
-                    <option value="B1">B1</option>
-                    <option value="B2">B2</option>
-                    <option value="C1">C1</option>
-                    <option value="C2">C2</option>
-                  </select>
-                </div>
+                <Select
+                  aria-label="CEFR level"
+                  className="w-full"
+                  value={ingestLevel}
+                  onChange={(key) => {
+                    if (key != null) setIngestLevel(String(key));
+                  }}
+                >
+                  <Label className="text-xs font-semibold text-foreground">CEFR level</Label>
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((lvl) => (
+                        <ListBox.Item key={lvl} id={lvl} textValue={lvl}>
+                          {lvl}
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                      ))}
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
 
                 <div className="space-y-1">
                   <label htmlFor="qi-topic-code" className="text-xs font-semibold text-foreground">
@@ -1163,19 +1251,40 @@ export function ExamsStudioPage() {
                       <FieldError>{newExamFieldErrors.durationMinutes}</FieldError>
                     )}
                   </NumberField>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-foreground">Purpose</label>
-                    <select
-                      value={newPurpose}
-                      onChange={(e) => setNewPurpose(e.target.value)}
-                      className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                    >
-                      <option value="full_mock">Full mock exam</option>
-                      <option value="mini_mock">Mini mock exam</option>
-                      <option value="placement">Placement test</option>
-                      <option value="diagnostic">Diagnostic</option>
-                    </select>
-                  </div>
+                  <Select
+                    aria-label="Purpose"
+                    className="w-full"
+                    value={newPurpose}
+                    onChange={(key) => {
+                      if (key != null) setNewPurpose(String(key));
+                    }}
+                  >
+                    <Label className="text-xs font-semibold text-foreground">Purpose</Label>
+                    <Select.Trigger>
+                      <Select.Value />
+                      <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        <ListBox.Item id="full_mock" textValue="Full mock exam">
+                          Full mock exam
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                        <ListBox.Item id="mini_mock" textValue="Mini mock exam">
+                          Mini mock exam
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                        <ListBox.Item id="placement" textValue="Placement test">
+                          Placement test
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                        <ListBox.Item id="diagnostic" textValue="Diagnostic">
+                          Diagnostic
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
                 </div>
 
                 <TextField

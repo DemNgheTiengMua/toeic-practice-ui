@@ -121,18 +121,18 @@ export function toBrowserMediaUrl(rawPath: string | null | undefined): string | 
 }
 
 export interface NarrativeSegment {
-  type: 'text' | 'bold';
+  type: 'text' | 'bold' | 'italic';
   value: string;
 }
 
 /**
- * Parses **bold** markers into safe React-renderable segments without ever
+ * Parses **bold** and *italic* markers into safe React-renderable segments without ever
  * interpreting raw HTML tags (<script>, <iframe>, etc. remain literal text).
  */
 export function parseSafeInlineSegments(text: string): NarrativeSegment[] {
   if (!text) return [];
   const segments: NarrativeSegment[] = [];
-  const regex = /\*\*([^*]+)\*\*/g;
+  const regex = /\*\*([^*]+)\*\*|\*([^\s*][^*]*[^\s*]|[^\s*])\*/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -140,7 +140,11 @@ export function parseSafeInlineSegments(text: string): NarrativeSegment[] {
     if (match.index > lastIndex) {
       segments.push({ type: 'text', value: text.slice(lastIndex, match.index) });
     }
-    segments.push({ type: 'bold', value: match[1] });
+    if (match[1] !== undefined) {
+      segments.push({ type: 'bold', value: match[1] });
+    } else if (match[2] !== undefined) {
+      segments.push({ type: 'italic', value: match[2] });
+    }
     lastIndex = regex.lastIndex;
   }
 
@@ -152,7 +156,7 @@ export function parseSafeInlineSegments(text: string): NarrativeSegment[] {
 }
 
 export function formatVnd(amount: number): string {
-  return `${new Intl.NumberFormat('vi-VN').format(amount)} ₫`;
+  return `${new Intl.NumberFormat('vi-VN').format(amount)}\u00a0₫`;
 }
 
 export function formatVndUnitPrice(price: number, credits: number): string {
@@ -167,9 +171,9 @@ export function formatVndUnitPrice(price: number, credits: number): string {
 export function formatSignedVnd(amount: number): string {
   const formatted = new Intl.NumberFormat('vi-VN').format(Math.abs(amount));
   if (amount < 0) {
-    return `\u2212${formatted} ₫`;
+    return `\u2212${formatted}\u00a0₫`;
   }
-  return `${formatted} ₫`;
+  return `${formatted}\u00a0₫`;
 }
 
 export function formatTimerSeconds(totalSeconds: number): string {

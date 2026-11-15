@@ -10,6 +10,7 @@ import {
   RadioGroup,
   Spinner,
   ToggleButton,
+  buttonVariants,
 } from '@heroui/react';
 import {
   ArrowLeft,
@@ -283,7 +284,7 @@ export function PlacementRetakePage() {
                       {offer.includedSkills.join(', ')}
                     </p>
                     {offer.excludedSkills.length > 0 && (
-                      <p className="text-warning font-medium">
+                      <p className="text-warning-text font-medium">
                         Left unmeasured: {offer.excludedSkills.join(', ')}
                       </p>
                     )}
@@ -318,16 +319,15 @@ export function PlacementRetakePage() {
                   returnUrl: preflight?.certId ? `/placement/retake/${preflight.certId}` : '/placement/preflight',
                 } as any
               }
-              className="no-underline"
+              className={buttonVariants({ size: 'sm', variant: 'primary', className: 'no-underline' })}
             >
-              <Button size="sm" variant="primary">
-                Top up wallet
-              </Button>
+              Top up wallet
             </Link>
-            <Link to="/pricing" className="no-underline">
-              <Button size="sm" variant="secondary">
-                View credit pricing
-              </Button>
+            <Link
+              to="/pricing"
+              className={buttonVariants({ size: 'sm', variant: 'secondary', className: 'no-underline' })}
+            >
+              View credit pricing
             </Link>
           </div>
         </Alert>

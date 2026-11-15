@@ -76,72 +76,6 @@ const mockCoverage = {
   ],
 };
 
-const mockIngestionBatches = {
-  batches: [
-    {
-      batchId: 901,
-      sourceName: 'ETS_2026_Reading_Pool.json',
-      status: 'completed',
-      uploadedBy: 1,
-      uploadedByEmail: 'author@demo.local',
-      createdAt: '2026-11-10T08:00:00Z',
-      completedAt: '2026-11-10T08:02:00Z',
-      records: 50,
-      accepted: 48,
-      discarded: 2,
-    },
-  ],
-};
-
-const mockBatchDetail = {
-  batch: {
-    batchId: 901,
-    sourceName: 'ETS_2026_Reading_Pool.json',
-    status: 'completed',
-    uploadedBy: 1,
-    uploadedByEmail: 'author@demo.local',
-    createdAt: '2026-11-10T08:00:00Z',
-    completedAt: '2026-11-10T08:02:00Z',
-    records: 50,
-    accepted: 48,
-    discarded: 2,
-  },
-  records: [
-    {
-      line: 12,
-      attempt: 1,
-      accepted: false,
-      itemId: null,
-      refusals: [
-        {
-          rule: 'gate1.options.rationale_required',
-          message: 'All 4 options require clear author rationale before validation.',
-        },
-      ],
-      recordJson: '{"stem":"Sample flawed question without rationale"}',
-      discarded: false,
-      note: 'Pending author update',
-      message: 'All 4 options require clear author rationale before validation.',
-      rule: 'gate1.options.rationale_required',
-    },
-  ],
-  ruleGroups: [
-    {
-      rule: 'gate1.options.rationale_required',
-      records: 1,
-    },
-  ],
-  staged: [
-    {
-      itemId: 801,
-      topicCode: 'R-GIST',
-      cefrLevel: 'B1',
-      modality: 'reading',
-      lifecycleStatus: 'draft',
-      versionNumber: 1,
-    },
-  ],
-};
 
 const mockLessons = [
   {
@@ -243,7 +177,7 @@ describe('Question Bank Studio (/admin/question-bank) (#303)', () => {
   });
 
   it('renders coverage matrix and displays authoritative deficit figures without recalculation', async () => {
-    installFetchMock((url) => {
+    const fetchMock = installFetchMock((url) => {
       if (url === '/api/auth/me') {
         return jsonResponse({
           id: 1,
@@ -255,9 +189,6 @@ describe('Question Bank Studio (/admin/question-bank) (#303)', () => {
       }
       if (url === '/api/admin/coverage') {
         return jsonResponse(mockCoverage);
-      }
-      if (url === '/api/admin/ingestion') {
-        return jsonResponse(mockIngestionBatches);
       }
       if (url.startsWith('/api/admin/lessons')) {
         return jsonResponse(mockLessons);
@@ -274,6 +205,12 @@ describe('Question Bank Studio (/admin/question-bank) (#303)', () => {
 
     // Deficit cell renders authoritative deficit count
     expect(screen.getByText('Deficit: 5')).toBeInTheDocument();
+
+    // #342: Question Bank mount must not issue a 404 call to /api/admin/ingestion
+    const calledIngestion = fetchMock.mock.calls.some((c) =>
+      String(c[0]).includes('/api/admin/ingestion'),
+    );
+    expect(calledIngestion).toBe(false);
 
     // #310: Only 2 flat tabs (Question Bank & Lessons)
     expect(screen.getByRole('tab', { name: /question bank/i })).toBeInTheDocument();
@@ -346,6 +283,12 @@ describe('Question Bank Studio (/admin/question-bank) (#303)', () => {
     const stemInput = await screen.findByPlaceholderText(/enter clear, concise question prompt/i);
     fireEvent.change(stemInput, { target: { value: 'What is the main idea of the memo?' } });
 
+    // Select Modality and Correct key via HeroUI Select
+    fireEvent.click(screen.getByRole('button', { name: /modality/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /^listening$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /correct key/i }));
+    fireEvent.click(await screen.findByRole('option', { name: /^B$/i }));
+
     // Select multi-band TargetBands (uncheck ALL or click B1, B2)
     const bandB1 = screen.getByRole('checkbox', { name: /^B1$/i });
     const bandB2 = screen.getByRole('checkbox', { name: /^B2$/i });
@@ -357,6 +300,8 @@ describe('Question Bank Studio (/admin/question-bank) (#303)', () => {
 
     await waitFor(() => {
       expect(savedBody).not.toBeNull();
+      expect(savedBody.modality).toBe('listening');
+      expect(savedBody.keyLabel).toBe('B');
       expect(savedBody.targetBands).toBe('B1,B2');
     });
   });

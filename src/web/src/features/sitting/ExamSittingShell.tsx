@@ -7,6 +7,7 @@ import {
   Chip,
   Description,
   FieldError,
+  Kbd,
   Label,
   Modal,
   ProgressBar,
@@ -58,6 +59,7 @@ import {
   buildSectionSubmitSummary,
   canNavigateBackInSitting,
   classifyQuestionKind,
+  formatSessionExpiry,
   needsLockBoundaryServerFetch,
   reconcileRequestedQuestionOrder,
 } from './sitting-helpers';
@@ -207,6 +209,11 @@ export function ExamSittingShell({
   }, [initialRequestedOrder, initialTake]);
 
   const [currentOrder, setCurrentOrder] = useState<number>(initialOrderResolved.resolvedOrder);
+  const [navFocusedOrder, setNavFocusedOrder] = useState<number>(initialOrderResolved.resolvedOrder);
+  const navButtonRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
+  useEffect(() => {
+    setNavFocusedOrder(currentOrder);
+  }, [currentOrder]);
   const [reconciliationNotice, setReconciliationNotice] = useState<string | null>(() =>
     initialOrderResolved.wasReconciled
       ? `Navigated to question ${initialOrderResolved.resolvedOrder} (locked or out-of-range index clamped).`
@@ -733,6 +740,126 @@ export function ExamSittingShell({
 
   const canGoBack = canNavigateBackInSitting(currentQuestion, navigatorItems, phases);
   const isLastQuestion = currentOrder >= totalQuestions;
+
+  const activeRovingOrder = useMemo(() => {
+    const focusedItem = navigatorItems.find(
+      (item) => item.displayOrder === navFocusedOrder && !item.isLocked,
+    );
+    if (focusedItem) return focusedItem.displayOrder;
+    const currentItem = navigatorItems.find(
+      (item) => item.displayOrder === currentOrder && !item.isLocked,
+    );
+    if (currentItem) return currentItem.displayOrder;
+    return navigatorItems.find((item) => !item.isLocked)?.displayOrder ?? currentOrder;
+  }, [navigatorItems, navFocusedOrder, currentOrder]);
+
+  const handleNavigatorKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>, idx: number) => {
+      const cols = 5;
+      let targetIdx: number | null = null;
+
+      if (e.key === 'ArrowRight') {
+        for (let i = idx + 1; i < navigatorItems.length; i++) {
+          if (!navigatorItems[i].isLocked) {
+            targetIdx = i;
+            break;
+          }
+        }
+      } else if (e.key === 'ArrowLeft') {
+        for (let i = idx - 1; i >= 0; i--) {
+          if (!navigatorItems[i].isLocked) {
+            targetIdx = i;
+            break;
+          }
+        }
+      } else if (e.key === 'ArrowDown') {
+        for (let i = idx + cols; i < navigatorItems.length; i += cols) {
+          if (!navigatorItems[i].isLocked) {
+            targetIdx = i;
+            break;
+          }
+        }
+      } else if (e.key === 'ArrowUp') {
+        for (let i = idx - cols; i >= 0; i -= cols) {
+          if (!navigatorItems[i].isLocked) {
+            targetIdx = i;
+            break;
+          }
+        }
+      } else if (e.key === 'Home') {
+        targetIdx = navigatorItems.findIndex((item) => !item.isLocked);
+        if (targetIdx === -1) targetIdx = null;
+      } else if (e.key === 'End') {
+        for (let i = navigatorItems.length - 1; i >= 0; i--) {
+          if (!navigatorItems[i].isLocked) {
+            targetIdx = i;
+            break;
+          }
+        }
+      }
+
+      if (targetIdx != null && targetIdx !== idx) {
+        e.preventDefault();
+        const nextOrder = navigatorItems[targetIdx].displayOrder;
+        setNavFocusedOrder(nextOrder);
+        navButtonRefs.current.get(nextOrder)?.focus();
+      }
+    },
+    [navigatorItems],
+  );
+
+  // Keyboard shortcuts (`1-4` option, `N` next, `P` previous, `F` flag) outside form inputs
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) {
+        return;
+      }
+      if (!currentQuestion || isLoadingQuestion || isSubmitModalOpen || pendingBoundaryOrder != null) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      const qKind = classifyQuestionKind(currentQuestion);
+      if (['1', '2', '3', '4'].includes(key)) {
+        const idx = Number(key) - 1;
+        const opt = currentQuestion.options[idx];
+        if (!opt) return;
+        if (qKind === 'mcq') {
+          e.preventDefault();
+          handleMcqSelect(String(opt.optionId));
+        } else if (qKind === 'mcq_multi') {
+          e.preventDefault();
+          handleMultiSelectToggle(opt.optionId);
+        }
+      } else if (key === 'n' && !isLastQuestion) {
+        e.preventDefault();
+        requestNavigateTo(currentOrder + 1);
+      } else if (key === 'p' && canGoBack && currentOrder > 1) {
+        e.preventDefault();
+        requestNavigateTo(currentOrder - 1);
+      } else if (key === 'f') {
+        e.preventDefault();
+        handleToggleFlag(!currentQuestion.isFlagged);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [
+    currentQuestion,
+    isLoadingQuestion,
+    isSubmitModalOpen,
+    pendingBoundaryOrder,
+    isLastQuestion,
+    canGoBack,
+    currentOrder,
+    handleMcqSelect,
+    handleMultiSelectToggle,
+    requestNavigateTo,
+    handleToggleFlag,
+  ]);
   const placard = formatSavePlacard(isOnline, queuedCount, isSaving, waitingForBoundary);
   const sectionSummaries = useMemo(
     () => buildSectionSubmitSummary(navigatorItems, allQuestions),
@@ -776,32 +903,48 @@ export function ExamSittingShell({
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <Chip
-              size="sm"
-              variant="soft"
-              color={
-                placard.tone === 'saved'
-                  ? 'success'
-                  : placard.tone === 'saving'
-                    ? 'accent'
-                    : 'warning'
-              }
-            >
-              {placard.tone === 'offline' && <WifiOff className="h-3 w-3 mr-1 inline" />}
-              {placard.text}
-            </Chip>
-
-            <div
-              className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-mono-tabular font-semibold ${
-                remainingSeconds <= 60
-                  ? 'border-danger/40 bg-danger/10 text-danger'
-                  : 'border-border bg-surface-secondary text-foreground'
-              }`}
-              aria-label="Time remaining"
-            >
-              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>{formatTimerSeconds(remainingSeconds)}</span>
+            <div role="status" aria-live="polite" aria-atomic="true">
+              <Chip
+                size="sm"
+                variant="soft"
+                color={
+                  placard.tone === 'saved'
+                    ? 'success'
+                    : placard.tone === 'saving'
+                      ? 'accent'
+                      : 'warning'
+                }
+              >
+                {placard.tone === 'offline' && <WifiOff className="h-3 w-3 mr-1 inline" />}
+                {placard.text}
+              </Chip>
             </div>
+
+            {sittingKind === 'placement' ? (
+              <div
+                className={
+                  remainingSeconds < 3600
+                    ? 'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium border-danger/40 bg-danger/10 text-danger'
+                    : 'inline-flex items-center gap-1.5 px-2 py-1 text-xs text-muted'
+                }
+                aria-label="Session expiry"
+              >
+                <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>{formatSessionExpiry(remainingSeconds)}</span>
+              </div>
+            ) : (
+              <div
+                className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-mono-tabular font-semibold ${
+                  remainingSeconds <= 60
+                    ? 'border-danger/40 bg-danger/10 text-danger'
+                    : 'border-border bg-surface-secondary text-foreground'
+                }`}
+                aria-label="Time remaining"
+              >
+                <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>{formatTimerSeconds(remainingSeconds)}</span>
+              </div>
+            )}
 
             {onSaveExit && (
               <Button size="sm" variant="outline" onPress={onSaveExit}>
@@ -1202,8 +1345,8 @@ export function ExamSittingShell({
               </Card.Description>
             </Card.Header>
             <Card.Content className="space-y-4">
-              <div className="grid grid-cols-5 gap-1.5">
-                {navigatorItems.map((item) => {
+              <div className="grid grid-cols-5 gap-1.5" role="group" aria-label="Question navigator">
+                {navigatorItems.map((item, idx) => {
                   const isCurrent = item.displayOrder === currentOrder;
                   const stateClass = item.isLocked
                     ? 'border-border bg-surface text-muted opacity-50 cursor-not-allowed'
@@ -1216,11 +1359,24 @@ export function ExamSittingShell({
                   return (
                     <button
                       key={item.questionId}
+                      ref={(el) => {
+                        if (el) {
+                          navButtonRefs.current.set(item.displayOrder, el);
+                        } else {
+                          navButtonRefs.current.delete(item.displayOrder);
+                        }
+                      }}
                       type="button"
                       disabled={item.isLocked}
-                      onClick={() => requestNavigateTo(item.displayOrder)}
+                      tabIndex={item.displayOrder === activeRovingOrder && !item.isLocked ? 0 : -1}
+                      aria-current={isCurrent ? 'step' : undefined}
+                      onClick={() => {
+                        setNavFocusedOrder(item.displayOrder);
+                        requestNavigateTo(item.displayOrder);
+                      }}
+                      onKeyDown={(e) => handleNavigatorKeyDown(e, idx)}
                       aria-label={`Question ${item.displayOrder}${item.isAnswered ? ', answered' : ''}${item.isFlagged ? ', flagged' : ''}${item.isLocked ? ', locked' : ''}`}
-                      className={`relative h-9 rounded-md border text-xs font-mono-tabular transition-colors flex items-center justify-center ${stateClass}`}
+                      className={`relative h-9 rounded-md border text-xs font-mono-tabular transition-colors flex items-center justify-center outline-none focus-visible:focus-ring ${stateClass}`}
                     >
                       {item.isLocked ? (
                         <Lock className="h-3 w-3" aria-hidden="true" />
@@ -1251,6 +1407,32 @@ export function ExamSittingShell({
                   <Lock className="h-3 w-3" aria-hidden="true" />
                   Locked
                 </span>
+              </div>
+
+              <div className="pt-2 border-t border-separator space-y-1.5" aria-label="Keyboard shortcuts">
+                <p className="text-xs font-medium text-muted">Shortcuts</p>
+                <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted">
+                  <span className="inline-flex items-center gap-1">
+                    <Kbd><Kbd.Content>1–4</Kbd.Content></Kbd>
+                    <span>Option</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Kbd><Kbd.Content>N</Kbd.Content></Kbd>
+                    <span>Next</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Kbd><Kbd.Content>P</Kbd.Content></Kbd>
+                    <span>Prev</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Kbd><Kbd.Content>F</Kbd.Content></Kbd>
+                    <span>Flag</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Kbd><Kbd.Content>←↑↓→</Kbd.Content></Kbd>
+                    <span>Grid</span>
+                  </span>
+                </div>
               </div>
             </Card.Content>
           </Card>

@@ -10,6 +10,7 @@ import {
   Input,
   Label,
   TextField,
+  buttonVariants,
 } from '@heroui/react';
 import { KeyRound, ShieldAlert } from 'lucide-react';
 import { ApiClientError, api } from '../../lib/api';
@@ -107,8 +108,11 @@ export function ResetPasswordPage() {
                   </Alert.Content>
                 </Alert>
                 <div>
-                  <Link to="/forgot-password" className="no-underline">
-                    <Button variant="primary">Send a new link</Button>
+                  <Link
+                    to="/forgot-password"
+                    className={buttonVariants({ variant: 'primary', className: 'no-underline' })}
+                  >
+                    Send a new link
                   </Link>
                 </div>
               </Card.Content>

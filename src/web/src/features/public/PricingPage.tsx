@@ -10,6 +10,7 @@ import {
   Label,
   NumberField,
   Slider,
+  buttonVariants,
 } from '@heroui/react';
 import {
   ArrowRight,
@@ -243,13 +244,16 @@ export function PricingPage() {
             <Link
               to="/checkout"
               search={{ credits } as never}
-              className="no-underline w-full block"
+              className={buttonVariants({
+                variant: 'primary',
+                size: 'lg',
+                fullWidth: true,
+                className: 'no-underline justify-center',
+              })}
             >
-              <Button variant="primary" size="lg" className="w-full justify-center">
-                <Sparkles className="w-4 h-4 mr-2" />
-                Proceed to Top-up
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Proceed to Top-up
+              <ArrowRight className="w-4 h-4 ml-2" />
             </Link>
           </Card.Footer>
         </Card>

@@ -7,6 +7,7 @@ import {
   Card,
   Chip,
   Spinner,
+  buttonVariants,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -105,8 +106,11 @@ export function OrderStatusPage() {
           </Alert.Content>
         </Alert>
         <div className="mt-4">
-          <Link to="/wallet" className="no-underline">
-            <Button variant="secondary">Back to wallet</Button>
+          <Link
+            to="/wallet"
+            className={buttonVariants({ variant: 'secondary', className: 'no-underline' })}
+          >
+            Back to wallet
           </Link>
         </div>
       </div>
@@ -145,8 +149,11 @@ export function OrderStatusPage() {
           </Alert.Content>
         </Alert>
         <div>
-          <Link to="/wallet" className="no-underline">
-            <Button variant="secondary">Back to wallet</Button>
+          <Link
+            to="/wallet"
+            className={buttonVariants({ variant: 'secondary', className: 'no-underline' })}
+          >
+            Back to wallet
           </Link>
         </div>
       </div>
@@ -326,12 +333,15 @@ export function OrderStatusPage() {
                 href={safePayOsHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="no-underline w-full block"
+                className={buttonVariants({
+                  variant: 'primary',
+                  size: 'lg',
+                  fullWidth: true,
+                  className: 'no-underline justify-center',
+                })}
               >
-                <Button variant="primary" size="lg" className="w-full justify-center">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Open VietQR checkout ({formatVnd(order.amount)})
-                </Button>
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Open VietQR checkout ({formatVnd(order.amount)})
               </a>
             </div>
           )}
@@ -390,18 +400,20 @@ export function OrderStatusPage() {
 
           {/* Bottom actions */}
           <div className="pt-4 border-t border-separator flex items-center justify-between">
-            <Link to="/wallet" className="no-underline">
-              <Button variant="secondary">
-                <Wallet className="w-4 h-4 mr-1.5" />
-                Return to wallet
-              </Button>
+            <Link
+              to="/wallet"
+              className={buttonVariants({ variant: 'secondary', className: 'no-underline' })}
+            >
+              <Wallet className="w-4 h-4 mr-1.5" />
+              Return to wallet
             </Link>
 
             {isPaid && (
-              <Link to="/practice" className="no-underline">
-                <Button variant="primary">
-                  Start practicing
-                </Button>
+              <Link
+                to="/practice"
+                className={buttonVariants({ variant: 'primary', className: 'no-underline' })}
+              >
+                Start practicing
               </Link>
             )}
           </div>

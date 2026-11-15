@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Button,
   Card,
   Chip,
   Spinner,
   Table,
   Tabs,
+  buttonVariants,
 } from '@heroui/react';
 import {
   CreditCard,
@@ -71,17 +71,19 @@ export function WalletPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link to="/pricing" className="no-underline">
-            <Button variant="secondary" size="sm">
-              <Package className="w-4 h-4 mr-1.5" />
-              Pricing plans
-            </Button>
+          <Link
+            to="/pricing"
+            className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'no-underline' })}
+          >
+            <Package className="w-4 h-4 mr-1.5" />
+            Pricing plans
           </Link>
-          <Link to="/checkout" className="no-underline">
-            <Button variant="primary" size="sm">
-              <Sparkles className="w-4 h-4 mr-1.5" />
-              Buy credits
-            </Button>
+          <Link
+            to="/checkout"
+            className={buttonVariants({ variant: 'primary', size: 'sm', className: 'no-underline' })}
+          >
+            <Sparkles className="w-4 h-4 mr-1.5" />
+            Buy credits
           </Link>
         </div>
       </div>
@@ -310,11 +312,9 @@ export function WalletPage() {
                               <Table.Cell className="text-right">
                                 <Link
                                   to={`/orders/${order.orderCode}`}
-                                  className="no-underline"
+                                  className={buttonVariants({ size: 'sm', variant: 'ghost', className: 'no-underline' })}
                                 >
-                                  <Button size="sm" variant="ghost">
-                                    View
-                                  </Button>
+                                  View
                                 </Link>
                               </Table.Cell>
                             </Table.Row>

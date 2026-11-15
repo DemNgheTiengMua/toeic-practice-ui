@@ -299,42 +299,53 @@ export function MockExamResultPage() {
       <div className="space-y-3">
         <h2 className="text-base font-semibold text-foreground">Section & skill breakdown</h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {result.skillScores.map((skill: AttemptSkillScoreDto) => {
-            const accuracyPct =
-              skill.totalQuestions > 0
-                ? Math.round((skill.rawScore / skill.totalQuestions) * 100)
-                : 0;
+        {result.skillScores.length === 0 ? (
+          <Card className="bg-surface-secondary border-border">
+            <Card.Content className="p-5 text-sm text-muted">
+              No per-skill scores were recorded for this attempt. Only the overall score is
+              available for this sitting.
+            </Card.Content>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {result.skillScores.map((skill: AttemptSkillScoreDto) => {
+              const totalQuestions = Number(skill.totalQuestions);
+              const rawScore = Number(skill.rawScore);
+              const accuracyPct =
+                totalQuestions > 0
+                  ? Math.round((rawScore / totalQuestions) * 100)
+                  : 0;
 
-            return (
-              <Card key={skill.skillId} className="bg-surface border-border">
-                <Card.Header className="flex flex-row items-center justify-between pb-2">
-                  <h3 className="font-semibold text-base text-foreground">{skill.skillName}</h3>
-                  <Chip size="sm" variant="secondary" className="font-mono-tabular font-bold">
-                    {skill.scaledScore} pts
-                  </Chip>
-                </Card.Header>
-                <Card.Content className="space-y-3 text-sm">
-                  <div className="flex items-center justify-between text-xs text-muted">
-                    <span>
-                      Correct items: <strong className="text-foreground">{skill.rawScore}</strong> /{' '}
-                      {skill.totalQuestions}
-                    </span>
-                    <span className="font-mono-tabular font-semibold text-foreground">
-                      {accuracyPct}%
-                    </span>
-                  </div>
+              return (
+                <Card key={skill.skillId} className="bg-surface border-border">
+                  <Card.Header className="flex flex-row items-center justify-between pb-2">
+                    <h3 className="font-semibold text-base text-foreground">{skill.skillName}</h3>
+                    <Chip size="sm" variant="secondary" className="font-mono-tabular font-bold">
+                      {skill.scaledScore} pts
+                    </Chip>
+                  </Card.Header>
+                  <Card.Content className="space-y-3 text-sm">
+                    <div className="flex items-center justify-between text-xs text-muted">
+                      <span>
+                        Correct items: <strong className="text-foreground">{skill.rawScore}</strong> /{' '}
+                        {skill.totalQuestions}
+                      </span>
+                      <span className="font-mono-tabular font-semibold text-foreground">
+                        {accuracyPct}%
+                      </span>
+                    </div>
 
-                  <ProgressBar
-                    value={accuracyPct}
-                    color="accent"
-                    aria-label={`${skill.skillName} accuracy percentage`}
-                  />
-                </Card.Content>
-              </Card>
-            );
-          })}
-        </div>
+                    <ProgressBar
+                      value={accuracyPct}
+                      color="accent"
+                      aria-label={`${skill.skillName} accuracy percentage`}
+                    />
+                  </Card.Content>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Bottom Actions */}

@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
 import { AuthProvider } from '../../../context/AuthContext';
@@ -304,5 +304,201 @@ describe('AppShell layout and domain copy', () => {
     expect(nameEl.className).toContain('max-w-[140px]');
     expect(nameEl.className).toContain('sm:max-w-[200px]');
     expect(nameEl).toHaveAttribute('title', longName);
+  });
+
+  it('opens mobile navigation in a drawer, marks active destination, and closes on selection', async () => {
+    installFetchMock((url) => {
+      if (url.endsWith('/api/auth/me')) {
+        return jsonResponse({
+          userId: 2,
+          email: 'learner@demo.local',
+          fullName: 'Demo Learner',
+          role: 'learner',
+          emailVerified: true,
+          permissions: [],
+        });
+      }
+      if (url.endsWith('/api/learner/context')) {
+        return jsonResponse({
+          active: { code: 'TOEIC', name: 'Test of English for International Communication' },
+          available: [{ code: 'TOEIC', name: 'Test of English for International Communication' }],
+          creditBalance: 25,
+        });
+      }
+      if (url.endsWith('/api/learner/dashboard')) {
+        return jsonResponse({
+          certificate: { code: 'TOEIC', name: 'Test of English for International Communication' },
+          nextAction: {
+            eyebrow: 'NEXT UP',
+            title: 'Take placement',
+            description: 'Start with a free placement test.',
+            actionLabel: 'Start placement',
+            actionUrl: '/placement',
+            severity: 'accent',
+            cascadeStep: 'step_0',
+          },
+          goal: { hasNoMeasurement: true },
+          skills: [],
+        });
+      }
+      if (url.endsWith('/api/certificates')) {
+        return jsonResponse([]);
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/dashboard');
+
+    const menuButton = await screen.findByRole('button', { name: /open navigation menu/i });
+    expect(menuButton.className).toContain('min-h-11');
+    expect(menuButton.className).toContain('min-w-11');
+
+    fireEvent.click(menuButton);
+
+    const dialog = await screen.findByRole('dialog');
+    const drawerNav = within(dialog).getByRole('navigation', { name: /mobile navigation/i });
+
+    const dashboardLink = within(drawerNav).getByRole('link', { name: 'Dashboard' });
+    expect(dashboardLink).toHaveAttribute('aria-current', 'page');
+    expect(dashboardLink.className).toContain('min-h-11');
+
+    expect(within(drawerNav).getByRole('link', { name: 'Placement' })).toBeInTheDocument();
+    expect(within(drawerNav).getByRole('link', { name: 'Support' })).toBeInTheDocument();
+    expect(within(drawerNav).getByRole('link', { name: 'Certificates' })).toBeInTheDocument();
+    expect(within(drawerNav).getByRole('link', { name: 'Pricing' })).toBeInTheDocument();
+    expect(within(drawerNav).getByRole('link', { name: 'Saved questions' })).toBeInTheDocument();
+
+    const certificatesLink = within(drawerNav).getByRole('link', { name: 'Certificates' });
+    fireEvent.click(certificatesLink);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows cert.code only in the certificate selector trigger and meets 44px touch target sizing', async () => {
+    installFetchMock((url) => {
+      if (url.endsWith('/api/auth/me')) {
+        return jsonResponse({
+          userId: 2,
+          email: 'learner@demo.local',
+          fullName: 'Demo Learner',
+          role: 'learner',
+          emailVerified: true,
+          permissions: [],
+        });
+      }
+      if (url.endsWith('/api/learner/context')) {
+        return jsonResponse({
+          active: { code: 'TOEIC', name: 'Test of English for International Communication' },
+          available: [
+            { code: 'TOEIC', name: 'Test of English for International Communication' },
+            { code: 'IELTS', name: 'International English Language Testing System' },
+          ],
+          creditBalance: 25,
+        });
+      }
+      if (url.endsWith('/api/learner/dashboard')) {
+        return jsonResponse({
+          certificate: { code: 'TOEIC', name: 'Test of English for International Communication' },
+          nextAction: {
+            eyebrow: 'NEXT UP',
+            title: 'Take placement',
+            description: 'Start with a free placement test.',
+            actionLabel: 'Start placement',
+            actionUrl: '/placement',
+            severity: 'accent',
+            cascadeStep: 'step_0',
+          },
+          goal: { hasNoMeasurement: true },
+          skills: [],
+        });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/dashboard');
+
+    const trigger = await screen.findByRole('button', { name: /active certificate/i });
+    expect(trigger.textContent?.trim()).toBe('TOEIC');
+    expect(trigger.textContent).not.toContain('Test of English for International Communication');
+    expect(trigger.className).toContain('min-h-11');
+
+    const header = screen.getByRole('banner');
+    const themeBtn = within(header).getByRole('button', { name: /switch to/i });
+    expect(themeBtn.className).toContain('min-h-11');
+    expect(themeBtn.className).toContain('min-w-11');
+
+    const signOutBtn = within(header).getByRole('button', { name: /sign out/i });
+    expect(signOutBtn.className).toContain('min-h-11');
+  });
+
+  it('renders the onboarding return banner in English with zero Vietnamese strings', async () => {
+    window.sessionStorage.setItem('ee_oobe_skip_session', '1');
+    try {
+      installFetchMock((url) => {
+        if (url.endsWith('/api/auth/me')) {
+          return jsonResponse({
+            userId: 2,
+            email: 'learner@demo.local',
+            fullName: 'Demo Learner',
+            role: 'learner',
+            emailVerified: true,
+            permissions: [],
+          });
+        }
+        if (url.endsWith('/api/learner/onboarding-state')) {
+          return jsonResponse({
+            isOobeComplete: false,
+            currentStep: 'goal',
+            hasTargetGoal: false,
+            hasPlacementAttempt: false,
+            hasLearningPath: false,
+          });
+        }
+        if (url.endsWith('/api/learner/context')) {
+          return jsonResponse({
+            active: { code: 'TOEIC', name: 'TOEIC' },
+            available: [{ code: 'TOEIC', name: 'TOEIC' }],
+            creditBalance: 25,
+          });
+        }
+        return jsonResponse({}, 404);
+      });
+
+      renderRoute('/certificates');
+
+      const banner = await screen.findByTestId('oobe-return-banner');
+      expect(banner.textContent).not.toMatch(/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i);
+      expect(within(banner).getByRole('link', { name: /continue setup/i })).toHaveAttribute(
+        'href',
+        '/onboarding',
+      );
+    } finally {
+      window.sessionStorage.removeItem('ee_oobe_skip_session');
+    }
+  });
+
+  it('renders unauthenticated Sign in and Register header links as single controls without nested buttons (#340)', async () => {
+    installFetchMock((url) => {
+      if (url.endsWith('/api/auth/me')) {
+        return jsonResponse({ code: 'AUTH_REQUIRED' }, 401);
+      }
+      if (url.endsWith('/api/certificates')) {
+        return jsonResponse([]);
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/pricing');
+
+    const [header] = await screen.findAllByRole('banner');
+    const signInLink = within(header).getByRole('link', { name: /^sign in$/i });
+    const registerLink = within(header).getByRole('link', { name: /^register$/i });
+    expect(signInLink).toHaveClass('button', 'button--secondary');
+    expect(registerLink).toHaveClass('button', 'button--primary');
+    for (const link of header.querySelectorAll('a')) {
+      expect(link.querySelector('button, [role="button"]')).toBeNull();
+    }
   });
 });

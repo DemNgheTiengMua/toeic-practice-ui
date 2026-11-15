@@ -71,14 +71,18 @@ describe('Security & Link-Injection Guards (Q12)', () => {
     );
   });
 
-  it('parses bold markers without executing HTML or corrupting Vietnamese diacritics', () => {
+  it('parses bold and italic markers without executing HTML or corrupting Vietnamese diacritics', () => {
     const raw =
-      "<script>alert('pwned')</script>**Đề thi thử TOEIC** và chọn đáp án đúng.";
+      "<script>alert('pwned')</script>**Đề thi thử TOEIC** và *\"The man is wearing a hat.\"* hoặc *lưu ý*.";
     const segments = parseSafeInlineSegments(raw);
     expect(segments).toEqual([
       { type: 'text', value: "<script>alert('pwned')</script>" },
       { type: 'bold', value: 'Đề thi thử TOEIC' },
-      { type: 'text', value: ' và chọn đáp án đúng.' },
+      { type: 'text', value: ' và ' },
+      { type: 'italic', value: '"The man is wearing a hat."' },
+      { type: 'text', value: ' hoặc ' },
+      { type: 'italic', value: 'lưu ý' },
+      { type: 'text', value: '.' },
     ]);
   });
 
@@ -88,9 +92,9 @@ describe('Security & Link-Injection Guards (Q12)', () => {
     expect(formatTimerSeconds(3661)).toBe('01:01:01');
     expect(countWords('what the fuck')).toBe(3);
     expect(countWords('   ')).toBe(0);
-    expect(formatVnd(199000)).toContain('199.000');
-    expect(formatSignedVnd(-250000)).toBe('\u2212250.000 \u20ab');
-    expect(formatSignedVnd(250000)).toContain('250.000');
+    expect(formatVnd(199000)).toBe('199.000\u00a0\u20ab');
+    expect(formatSignedVnd(-250000)).toBe('\u2212250.000\u00a0\u20ab');
+    expect(formatSignedVnd(250000)).toBe('250.000\u00a0\u20ab');
   });
 
   it('grants staff navigation solely from held capabilities (SEC-05)', () => {

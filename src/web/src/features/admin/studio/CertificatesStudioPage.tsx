@@ -1,16 +1,18 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
+  Alert,
   Button,
   Card,
   Chip,
-  Modal,
-  Alert,
-  Form,
-  TextField,
   Label,
-  Input,
-  TextArea,
+  ListBox,
+  Modal,
   FieldError,
+  Form,
+  Input,
+  Select,
+  TextArea,
+  TextField,
 } from '@heroui/react';
 import { extractErrorMessage, extractFieldErrors } from './validationErrors';
 import {
@@ -416,25 +418,38 @@ export function CertificatesStudioPage() {
 
               {wizardStep === 1 && (
                 <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label htmlFor="wizard-preset-select" className="text-xs font-semibold text-foreground">
+                  <Select
+                    aria-label="Template (2-Skill or 4-Skill)"
+                    className="w-full"
+                    value={selectedPresetCode || 'none'}
+                    onChange={(key) => handlePresetChange(key === 'none' || key == null ? '' : String(key))}
+                  >
+                    <Label className="text-xs font-semibold text-foreground">
                       Template (2-Skill or 4-Skill)
-                    </label>
-                    <select
-                      id="wizard-preset-select"
-                      aria-label="Template"
-                      value={selectedPresetCode}
-                      onChange={(e) => handlePresetChange(e.target.value)}
-                      className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                    >
-                      <option value="">-- Choose a skill template --</option>
-                      {presets.map((p) => (
-                        <option key={p.presetCode} value={p.presetCode}>
-                          {p.name} ({p.presetCode})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                    </Label>
+                    <Select.Trigger>
+                      <Select.Value />
+                      <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        <ListBox.Item id="none" textValue="Choose a skill template">
+                          -- Choose a skill template --
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                        {presets.map((p) => (
+                          <ListBox.Item
+                            key={p.presetCode}
+                            id={p.presetCode}
+                            textValue={`${p.name} (${p.presetCode})`}
+                          >
+                            {p.name} ({p.presetCode})
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
 
                   <Form validationBehavior="aria" className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -504,21 +519,38 @@ export function CertificatesStudioPage() {
                   </Form>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label htmlFor="wizard-score-agg" className="text-xs font-semibold text-foreground">
+                    <Select
+                      aria-label="Score aggregation rule"
+                      className="w-full"
+                      value={wizardRule}
+                      onChange={(key) => {
+                        if (key != null) setWizardRule(String(key));
+                      }}
+                    >
+                      <Label className="text-xs font-semibold text-foreground">
                         Score aggregation rule
-                      </label>
-                      <select
-                        id="wizard-score-agg"
-                        value={wizardRule}
-                        onChange={(e) => setWizardRule(e.target.value)}
-                        className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                      >
-                        <option value="SUM">SUM (Sum across sections)</option>
-                        <option value="AVERAGE">AVERAGE (Average band/scores)</option>
-                        <option value="BAND_CEFR">BAND_CEFR (Direct CEFR mapping)</option>
-                      </select>
-                    </div>
+                      </Label>
+                      <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                      </Select.Trigger>
+                      <Select.Popover>
+                        <ListBox>
+                          <ListBox.Item id="SUM" textValue="SUM (Sum across sections)">
+                            SUM (Sum across sections)
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                          <ListBox.Item id="AVERAGE" textValue="AVERAGE (Average band/scores)">
+                            AVERAGE (Average band/scores)
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                          <ListBox.Item id="BAND_CEFR" textValue="BAND_CEFR (Direct CEFR mapping)">
+                            BAND_CEFR (Direct CEFR mapping)
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        </ListBox>
+                      </Select.Popover>
+                    </Select>
 
                     <div className="flex items-center gap-2 pt-6">
                       <input

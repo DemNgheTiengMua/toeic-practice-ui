@@ -1,18 +1,20 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
+  Alert,
   Button,
   Card,
   Chip,
-  Tabs,
-  Modal,
-  Table,
-  Alert,
-  Form,
-  TextField,
   Label,
-  Input,
-  TextArea,
+  ListBox,
+  Modal,
+  Select,
+  Table,
   FieldError,
+  Form,
+  Input,
+  Tabs,
+  TextArea,
+  TextField,
 } from '@heroui/react';
 import { extractErrorMessage, extractFieldErrors } from './validationErrors';
 import {
@@ -47,8 +49,6 @@ import type {
   AdminCoverageCellDto,
   StimulusDraftAnalysisDto,
   ProductiveTaskAnalysisDto,
-  IngestionBatchSummaryDto,
-  IngestionBatchDetailDto,
   AdminLessonSummaryDto,
   CreatePoolItemRequest,
 } from './types';
@@ -109,15 +109,6 @@ export function QuestionBankStudioPage() {
   const [isSavingProductive, setIsSavingProductive] = useState(false);
   const [productiveNotice, setProductiveNotice] = useState<string | null>(null);
 
-  // Ingestion Workbench State
-  const [batches, setBatches] = useState<IngestionBatchSummaryDto[]>([]);
-  const [isLoadingBatches, setIsLoadingBatches] = useState(false);
-  const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
-  const [batchDetail, setBatchDetail] = useState<IngestionBatchDetailDto | null>(null);
-  const [isLoadingBatchDetail, setIsLoadingBatchDetail] = useState(false);
-  const [workbenchRuleFilter, setWorkbenchRuleFilter] = useState('');
-  const [workbenchNotice, setWorkbenchNotice] = useState<string | null>(null);
-
   // Micro-Lessons State
   const [lessons, setLessons] = useState<AdminLessonSummaryDto[]>([]);
   const [isLoadingLessons, setIsLoadingLessons] = useState(false);
@@ -126,7 +117,6 @@ export function QuestionBankStudioPage() {
   useEffect(() => {
     if (!isCatalogManager) return;
     loadCoverage();
-    loadBatches();
     loadLessons();
   }, [isCatalogManager]);
 
@@ -139,31 +129,6 @@ export function QuestionBankStudioPage() {
       // Fallback
     } finally {
       setIsLoadingCoverage(false);
-    }
-  };
-
-  const loadBatches = async () => {
-    setIsLoadingBatches(true);
-    try {
-      const data = await studioApi.getIngestionBatches();
-      setBatches(data.batches);
-    } catch {
-      // Fallback
-    } finally {
-      setIsLoadingBatches(false);
-    }
-  };
-
-  const loadBatchDetail = async (batchId: number, rule?: string) => {
-    setIsLoadingBatchDetail(true);
-    setWorkbenchNotice(null);
-    try {
-      const data = await studioApi.getIngestionBatch(batchId, rule);
-      setBatchDetail(data);
-    } catch {
-      // Fallback
-    } finally {
-      setIsLoadingBatchDetail(false);
     }
   };
 
@@ -340,31 +305,6 @@ export function QuestionBankStudioPage() {
       setProductiveNotice(err?.detail || err?.title || 'Save failed.');
     } finally {
       setIsSavingProductive(false);
-    }
-  };
-
-  // Workbench Actions
-  const handleClearWorkbenchItem = async (batchId: number, itemId: number) => {
-    if (!canReviewContent) {
-      setWorkbenchNotice('Staff capability pool.content.review is required to clear items.');
-      return;
-    }
-    try {
-      await studioApi.clearWorkbenchItem(batchId, itemId);
-      setWorkbenchNotice(`Item ${itemId} cleared successfully.`);
-      loadBatchDetail(batchId, workbenchRuleFilter || undefined);
-    } catch (err: any) {
-      setWorkbenchNotice(err?.detail || err?.title || 'Clear failed.');
-    }
-  };
-
-  const handleDiscardRecord = async (batchId: number, line: number) => {
-    try {
-      await studioApi.discardWorkbenchRecord(batchId, line, 'Author withdrawal from workbench');
-      setWorkbenchNotice(`Record on line ${line} discarded.`);
-      loadBatchDetail(batchId, workbenchRuleFilter || undefined);
-    } catch (err: any) {
-      setWorkbenchNotice(err?.detail || err?.title || 'Discard failed.');
     }
   };
 
@@ -599,51 +539,108 @@ export function QuestionBankStudioPage() {
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-foreground">Modality</label>
-                  <select
-                    value={newItemModality}
-                    onChange={(e) => setNewItemModality(e.target.value)}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                  >
-                    <option value="reading">Reading</option>
-                    <option value="listening">Listening</option>
-                    <option value="speaking">Speaking</option>
-                    <option value="writing">Writing</option>
-                  </select>
-                </div>
+                <Select
+                  aria-label="Modality"
+                  className="w-full"
+                  value={newItemModality}
+                  onChange={(key) => {
+                    if (key != null) setNewItemModality(String(key));
+                  }}
+                >
+                  <Label className="text-xs font-semibold text-foreground">Modality</Label>
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      <ListBox.Item id="reading" textValue="Reading">
+                        Reading
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                      <ListBox.Item id="listening" textValue="Listening">
+                        Listening
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                      <ListBox.Item id="speaking" textValue="Speaking">
+                        Speaking
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                      <ListBox.Item id="writing" textValue="Writing">
+                        Writing
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-foreground">CEFR level</label>
-                  <select
-                    value={newItemLevel}
-                    onChange={(e) => setNewItemLevel(e.target.value)}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground font-mono text-sm"
-                  >
-                    <option value="A1">A1</option>
-                    <option value="A2">A2</option>
-                    <option value="B1">B1</option>
-                    <option value="B2">B2</option>
-                    <option value="C1">C1</option>
-                    <option value="C2">C2</option>
-                  </select>
-                </div>
+                <Select
+                  aria-label="CEFR level"
+                  className="w-full"
+                  value={newItemLevel}
+                  onChange={(key) => {
+                    if (key != null) setNewItemLevel(String(key));
+                  }}
+                >
+                  <Label className="text-xs font-semibold text-foreground">CEFR level</Label>
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((lvl) => (
+                        <ListBox.Item key={lvl} id={lvl} textValue={lvl}>
+                          {lvl}
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                      ))}
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-foreground">Item type</label>
-                  <select
-                    value={newItemType}
-                    onChange={(e) => setNewItemType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                  >
-                    <option value="mcq">Multiple choice (4 options)</option>
-                    <option value="mcq_3">3-option choice</option>
-                    <option value="multi_select">Multiple select</option>
-                    <option value="inline_completion">Inline completion</option>
-                    <option value="dropdown">Dropdown select</option>
-                    <option value="drag_drop">Drag and drop</option>
-                  </select>
-                </div>
+                <Select
+                  aria-label="Item type"
+                  className="w-full"
+                  value={newItemType}
+                  onChange={(key) => {
+                    if (key != null) setNewItemType(String(key));
+                  }}
+                >
+                  <Label className="text-xs font-semibold text-foreground">Item type</Label>
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      <ListBox.Item id="mcq" textValue="Multiple choice (4 options)">
+                        Multiple choice (4 options)
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                      <ListBox.Item id="mcq_3" textValue="3-option choice">
+                        3-option choice
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                      <ListBox.Item id="multi_select" textValue="Multiple select">
+                        Multiple select
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                      <ListBox.Item id="inline_completion" textValue="Inline completion">
+                        Inline completion
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                      <ListBox.Item id="dropdown" textValue="Dropdown select">
+                        Dropdown select
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                      <ListBox.Item id="drag_drop" textValue="Drag and drop">
+                        Drag and drop
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
               </div>
 
               <Form validationBehavior="aria" className="space-y-4">
@@ -769,20 +766,34 @@ export function QuestionBankStudioPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-foreground">Correct key</label>
-                    <select
+                    <Select
+                      aria-label="Correct key"
+                      className="w-full"
                       value={newItemKey}
-                      onChange={(e) => {
-                        setNewItemKey(e.target.value);
-                        setItemFieldErrors((prev) => ({ ...prev, keyLabel: '' }));
+                      onChange={(key) => {
+                        if (key != null) {
+                          setNewItemKey(String(key));
+                          setItemFieldErrors((prev) => ({ ...prev, keyLabel: '' }));
+                        }
                       }}
-                      className="w-full px-3 py-2 rounded-md border border-border bg-surface text-foreground font-mono font-bold text-sm"
+                      isInvalid={Boolean(itemFieldErrors.keyLabel)}
                     >
-                      <option value="A">A</option>
-                      <option value="B">B</option>
-                      <option value="C">C</option>
-                      <option value="D">D</option>
-                    </select>
+                      <Label className="text-xs font-semibold text-foreground">Correct key</Label>
+                      <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                      </Select.Trigger>
+                      <Select.Popover>
+                        <ListBox>
+                          {['A', 'B', 'C', 'D'].map((k) => (
+                            <ListBox.Item key={k} id={k} textValue={k}>
+                              {k}
+                              <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                          ))}
+                        </ListBox>
+                      </Select.Popover>
+                    </Select>
                     {itemFieldErrors.keyLabel && (
                       <p className="text-xs text-danger">{itemFieldErrors.keyLabel}</p>
                     )}

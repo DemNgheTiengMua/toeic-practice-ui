@@ -8,7 +8,7 @@ import {
   Chip,
   ListBox,
   Select,
-  Spinner,
+  Skeleton,
 } from '@heroui/react';
 import type { Key } from '@heroui/react';
 import {
@@ -60,9 +60,47 @@ export function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-3">
-        <Spinner size="lg" />
-        <p className="text-sm text-muted font-mono">Loading your dashboard…</p>
+      <div
+        className="max-w-5xl mx-auto py-6 space-y-6"
+        aria-busy="true"
+        aria-label="Loading dashboard"
+      >
+        {/* Hero Next Action skeleton */}
+        <div className="rounded-xl border border-border p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-28 rounded-md" />
+            <Skeleton className="h-5 w-16 rounded-md" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-80 rounded-md" />
+            <Skeleton className="h-4 w-full max-w-xl rounded-md" />
+          </div>
+          <Skeleton className="h-10 w-44 rounded-lg" />
+        </div>
+        {/* Goal summary skeleton */}
+        <Card>
+          <Card.Header className="border-b border-border pb-3">
+            <Skeleton className="h-5 w-40 rounded-md" />
+          </Card.Header>
+          <Card.Content className="p-4 sm:p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Skeleton className="h-14 w-full rounded-md" />
+              <Skeleton className="h-14 w-full rounded-md" />
+              <Skeleton className="h-14 w-full rounded-md" />
+              <Skeleton className="h-14 w-full rounded-md" />
+            </div>
+          </Card.Content>
+        </Card>
+        {/* Per-skill table skeleton */}
+        <Card>
+          <Card.Header className="border-b border-border pb-3">
+            <Skeleton className="h-5 w-44 rounded-md" />
+          </Card.Header>
+          <Card.Content className="p-4 sm:p-6 space-y-3">
+            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </Card.Content>
+        </Card>
       </div>
     );
   }
@@ -182,9 +220,9 @@ export function DashboardPage() {
             </div>
             <Link
               to={`/exams/take/${unfinishedAttempt.attemptId}`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent text-white font-medium text-xs no-underline hover:opacity-90"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent text-accent-foreground font-medium text-xs no-underline hover:opacity-90"
             >
-              Resume sitting <ArrowRight className="w-3.5 h-3.5" />
+              Resume attempt <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </Alert.Content>
         </Alert>
@@ -289,7 +327,7 @@ export function DashboardPage() {
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <a
               href={nextAction.actionUrl}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-white font-semibold text-sm shadow hover:bg-accent/90 transition-colors no-underline"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-accent-foreground font-semibold text-sm shadow hover:bg-accent/90 transition-colors no-underline"
             >
               <span>{nextAction.actionLabel}</span>
               <ArrowRight className="w-4 h-4" />
@@ -378,7 +416,7 @@ export function DashboardPage() {
                           id="exam-date"
                           className={`font-mono text-xs px-2 py-0.5 rounded ${
                             isCountdown
-                              ? 'bg-warning/20 text-warning font-bold border border-warning/40'
+                              ? 'bg-warning/20 text-warning-text font-bold border border-warning/40'
                               : 'text-muted'
                           }`}
                         >
@@ -388,11 +426,11 @@ export function DashboardPage() {
                           id="feasibility-verdict"
                           className={`font-mono text-xs px-2.5 py-0.5 rounded font-bold ${
                             goal.status === 'feasible'
-                              ? 'bg-success text-white'
+                              ? 'bg-success text-success-foreground'
                               : goal.status === 'stretch'
-                              ? 'bg-warning text-foreground'
+                              ? 'bg-warning text-warning-foreground'
                               : goal.status === 'unrealistic'
-                              ? 'bg-danger text-white'
+                              ? 'bg-danger text-danger-foreground'
                               : 'bg-surface-secondary text-muted'
                           }`}
                         >
@@ -475,7 +513,7 @@ export function DashboardPage() {
                             </div>
                           ) : (
                             <div className="space-y-2">
-                              <span className="text-xs text-warning font-semibold block">Not measured yet</span>
+                              <span className="text-xs text-warning-text font-semibold block">Not measured yet</span>
                               <Link
                                 to="/placement"
                                 className="inline-block text-xs font-semibold text-accent hover:underline"

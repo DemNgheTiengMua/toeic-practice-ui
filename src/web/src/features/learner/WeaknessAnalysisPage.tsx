@@ -7,14 +7,15 @@ import {
   Card,
   Chip,
   ProgressBar,
-  Spinner,
+  Skeleton,
+  buttonVariants,
+  toast,
 } from '@heroui/react';
 import {
   AlertCircle,
   ArrowRight,
   BarChart3,
   BookOpen,
-  CheckCircle2,
   HelpCircle,
   RotateCw,
   Sparkles,
@@ -35,7 +36,6 @@ export function WeaknessAnalysisPage() {
   const queryClient = useQueryClient();
   const { learnerContext } = useAuth();
 
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 1. Weakness data
@@ -65,7 +65,7 @@ export function WeaknessAnalysisPage() {
       return await api.learningPath.resolveRecommendation(recId);
     },
     onSuccess: () => {
-      setSuccessMessage('Recommendation marked as resolved.');
+      toast.success('Recommendation marked as resolved.');
       queryClient.invalidateQueries({
         queryKey: ['learner', 'weakness-analysis'],
       });
@@ -87,9 +87,37 @@ export function WeaknessAnalysisPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-3">
-        <Spinner size="lg" />
-        <p className="text-sm text-muted font-mono">Loading weakness analysis…</p>
+      <div
+        className="max-w-5xl mx-auto py-6 space-y-6"
+        aria-busy="true"
+        aria-label="Loading weakness analysis"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64 rounded-md" />
+            <Skeleton className="h-4 w-80 rounded-md" />
+          </div>
+          <Skeleton className="h-6 w-24 rounded-md" />
+        </div>
+        <Card>
+          <Card.Header className="border-b border-border pb-3">
+            <Skeleton className="h-5 w-48 rounded-md" />
+          </Card.Header>
+          <Card.Content className="p-4 sm:p-6 space-y-3">
+            <Skeleton className="h-20 w-full rounded-lg" />
+            <Skeleton className="h-4 w-56 rounded-md" />
+          </Card.Content>
+        </Card>
+        <Card>
+          <Card.Header className="border-b border-border pb-3">
+            <Skeleton className="h-5 w-44 rounded-md" />
+          </Card.Header>
+          <Card.Content className="p-4 sm:p-6 space-y-3">
+            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </Card.Content>
+        </Card>
       </div>
     );
   }
@@ -129,6 +157,10 @@ export function WeaknessAnalysisPage() {
   } = weaknessData;
 
   const openRecommendations = recommendations.filter((r) => !r.isResolved);
+  const rankedWeakestTopic =
+    weakestTopic && Number(weakestTopic.answered) >= Number(weakestTopic.observationFloor)
+      ? weakestTopic
+      : null;
 
   return (
     <div className="max-w-5xl mx-auto py-6 space-y-6">
@@ -148,17 +180,6 @@ export function WeaknessAnalysisPage() {
         </span>
       </div>
 
-      {successMessage && (
-        <Alert status="success">
-          <Alert.Indicator>
-            <CheckCircle2 className="w-4 h-4" />
-          </Alert.Indicator>
-          <Alert.Content>
-            <Alert.Description>{successMessage}</Alert.Description>
-          </Alert.Content>
-        </Alert>
-      )}
-
       {errorMessage && (
         <Alert status="danger">
           <Alert.Indicator>
@@ -177,7 +198,7 @@ export function WeaknessAnalysisPage() {
           insight={insight}
           isLoading={isInsightLoading}
           onRetry={() => retryInsightMutation.mutate()}
-          overallAccuracyPercent={weaknessData.overallAccuracyPercentage}
+          overallAccuracyPercent={Number(weaknessData.overallAccuracyPercentage)}
         />
       )}
 
@@ -198,7 +219,7 @@ export function WeaknessAnalysisPage() {
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <Link
                 to="/practice"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-white font-semibold text-sm no-underline hover:bg-accent/90"
+                className={buttonVariants({ variant: 'primary', size: 'sm', className: 'no-underline' })}
               >
                 <span>Practice a section</span>
                 <ArrowRight className="w-4 h-4" />
@@ -232,24 +253,24 @@ export function WeaknessAnalysisPage() {
               <strong className="text-sm font-bold text-foreground">Weakest topic at its level</strong>
             </Card.Header>
             <Card.Content className="p-4 sm:p-6 space-y-4">
-              {weakestTopic ? (
+              {rankedWeakestTopic ? (
                 <div className="p-4 rounded-lg bg-surface-secondary border border-border space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm font-bold text-foreground">
-                      {weakestTopic.topicCode} — {weakestTopic.topicName}
+                      {rankedWeakestTopic.topicCode} — {rankedWeakestTopic.topicName}
                     </span>
-                    {weakestTopic.levelCode && (
+                    {rankedWeakestTopic.levelCode && (
                       <span className="font-mono text-xs px-2 py-0.5 rounded bg-surface border border-border text-foreground">
-                        {weakestTopic.levelCode}
+                        {rankedWeakestTopic.levelCode}
                       </span>
                     )}
-                    <span className="text-xs px-2 py-0.5 rounded bg-danger text-white font-mono font-semibold">
+                    <span className="text-xs px-2 py-0.5 rounded bg-danger text-danger-foreground font-mono font-semibold">
                       Weakest
                     </span>
                   </div>
                   <p className="text-xs text-muted m-0">
-                    <span className="font-mono font-semibold text-foreground">{weakestTopic.accuracyPercentage}%</span>{' '}
-                    accuracy ({weakestTopic.correctCount}/{weakestTopic.answeredCount} answered)
+                    <span className="font-mono font-semibold text-foreground">{rankedWeakestTopic.accuracyPercent}%</span>{' '}
+                    accuracy ({rankedWeakestTopic.correct}/{rankedWeakestTopic.answered} answered)
                   </p>
                 </div>
               ) : (
@@ -276,24 +297,33 @@ export function WeaknessAnalysisPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border font-mono">
-                      {topics.map((t) => (
-                        <tr key={t.categoryId} className="hover:bg-surface-secondary/40">
-                          <td className="py-2.5 pr-3 font-medium text-foreground">
-                            <strong>{t.topicCode}</strong> {t.topicName}
-                            {t.isWeakest && (
-                              <span className="ml-1.5 px-1.5 py-0.5 rounded bg-danger text-white text-[10px]">
-                                Weakest
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3">{t.levelCode ?? '--'}</td>
-                          <td className="py-2.5 px-3 font-sans">{formatModality(t.skillCode)}</td>
-                          <td className="py-2.5 px-3 font-bold">{t.accuracyPercentage}%</td>
-                          <td className="py-2.5 px-3 text-muted">
-                            {t.correctCount}/{t.answeredCount} answered
-                          </td>
-                        </tr>
-                      ))}
+                      {topics.map((t) => {
+                        const meetsFloor = Number(t.answered) >= Number(t.observationFloor);
+                        const showWeakestBadge = t.isWeakest && meetsFloor;
+                        return (
+                          <tr key={`${t.topicId}-${t.levelCode}`} className="hover:bg-surface-secondary/40">
+                            <td className="py-2.5 pr-3 font-medium text-foreground">
+                              <strong>{t.topicCode}</strong> {t.topicName}
+                              {showWeakestBadge && (
+                                <span className="ml-1.5 px-1.5 py-0.5 rounded bg-danger text-danger-foreground text-[10px]">
+                                  Weakest
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3">{t.levelCode ?? '--'}</td>
+                            <td className="py-2.5 px-3 font-sans">{formatModality(t.modality)}</td>
+                            <td className="py-2.5 px-3 font-bold">{t.accuracyPercent}%</td>
+                            <td className="py-2.5 px-3 text-muted">
+                              {t.correct}/{t.answered} answered
+                              {!meetsFloor && (
+                                <span className="ml-1.5 font-sans text-[11px] text-muted">
+                                  · not enough evidence ({t.observationFloor} needed)
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -313,24 +343,26 @@ export function WeaknessAnalysisPage() {
 
               <div className="space-y-4 pt-1">
                 {sections.map((sec) => {
-                  const hasAnswered = sec.answeredCount > 0;
-                  const isWeakest = sec.accuracyPercentage < 50;
-                  const isStrongest = sec.accuracyPercentage >= 80;
+                  const answered = Number(sec.answered);
+                  const accuracy = Number(sec.accuracyPercentage);
+                  const hasAnswered = answered > 0;
+                  const isWeakest = hasAnswered && sec.isWeakest;
+                  const isStrongest = hasAnswered && sec.isStrongest;
 
                   return (
                     <div key={sec.sectionId} className="space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-foreground">
-                            {sec.sectionCode} — {sec.sectionName}
+                            {sec.code} — {sec.name}
                           </span>
                           {isWeakest && (
-                            <span className="px-1.5 py-0.5 rounded bg-danger text-white text-[10px] font-mono">
+                            <span className="px-1.5 py-0.5 rounded bg-danger text-danger-foreground text-[10px] font-mono">
                               Weakest
                             </span>
                           )}
                           {isStrongest && (
-                            <span className="px-1.5 py-0.5 rounded bg-success text-white text-[10px] font-mono">
+                            <span className="px-1.5 py-0.5 rounded bg-success text-success-foreground text-[10px] font-mono">
                               Strongest
                             </span>
                           )}
@@ -338,7 +370,7 @@ export function WeaknessAnalysisPage() {
                         <span className="font-mono text-muted">
                           {hasAnswered ? (
                             <span>
-                              {sec.accuracyPercentage}% · {sec.correctCount}/{sec.answeredCount} answered
+                              {sec.accuracyPercentage}% · {sec.correct}/{sec.answered} answered
                             </span>
                           ) : (
                             'Not attempted yet'
@@ -349,15 +381,15 @@ export function WeaknessAnalysisPage() {
                       <div className="w-full bg-surface-secondary rounded-full h-2 overflow-hidden border border-border">
                         <div
                           className={`h-2 rounded-full transition-all duration-300 ${
-                            sec.accuracyPercentage >= 75
+                            accuracy >= 75
                               ? 'bg-success'
-                              : sec.accuracyPercentage >= 50
+                              : accuracy >= 50
                               ? 'bg-warning'
                               : 'bg-danger'
                           }`}
-                          style={{ width: `${hasAnswered ? sec.accuracyPercentage : 0}%` }}
+                          style={{ width: `${hasAnswered ? accuracy : 0}%` }}
                           role="progressbar"
-                          aria-valuenow={sec.accuracyPercentage}
+                          aria-valuenow={hasAnswered ? accuracy : 0}
                           aria-valuemin={0}
                           aria-valuemax={100}
                         />
@@ -379,16 +411,16 @@ export function WeaknessAnalysisPage() {
                 {priorityPracticeSection ? (
                   <>
                     <p className="text-xs text-muted m-0 leading-relaxed">
-                      {priorityPracticeSection.sectionCode} sits at your lowest accuracy level (
+                      {priorityPracticeSection.code} sits at your lowest accuracy level (
                       {priorityPracticeSection.accuracyPercentage}%). This is where you can improve your score
                       fastest.
                     </p>
                     <div className="pt-2">
                       <Link
                         to="/practice"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent text-white text-xs font-semibold no-underline"
+                        className={buttonVariants({ variant: 'primary', size: 'sm', className: 'no-underline' })}
                       >
-                        Practice {priorityPracticeSection.sectionCode} now <ArrowRight className="w-3.5 h-3.5" />
+                        Practice {priorityPracticeSection.code} now <ArrowRight className="w-3.5 h-3.5" />
                       </Link>
                     </div>
                   </>
@@ -400,7 +432,7 @@ export function WeaknessAnalysisPage() {
                     <div className="pt-2">
                       <Link
                         to="/practice"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent text-white text-xs font-semibold no-underline"
+                        className={buttonVariants({ variant: 'primary', size: 'sm', className: 'no-underline' })}
                       >
                         Practice now <ArrowRight className="w-3.5 h-3.5" />
                       </Link>
@@ -418,13 +450,13 @@ export function WeaknessAnalysisPage() {
                 {frequentlyMissedTopics.length > 0 ? (
                   <ul className="space-y-2 m-0 pl-4 text-xs">
                     {frequentlyMissedTopics.map((cell) => (
-                      <li key={cell.categoryId} className="text-foreground">
+                      <li key={`${cell.topicId}-${cell.levelCode}`} className="text-foreground">
                         <strong>{cell.topicName}</strong>{' '}
                         <span className="font-mono text-[10px] px-1 rounded bg-surface-secondary border border-border">
                           {cell.levelCode}
                         </span>
-                        : <span className="font-mono font-semibold">{cell.accuracyPercentage}%</span> ({cell.correctCount}/
-                        {cell.answeredCount} correct)
+                        : <span className="font-mono font-semibold">{cell.accuracyPercent}%</span> ({cell.correct}/
+                        {cell.answered} correct)
                       </li>
                     ))}
                   </ul>
@@ -478,7 +510,7 @@ export function WeaknessAnalysisPage() {
                           size="sm"
                           variant="secondary"
                           isDisabled={resolveRecMutation.isPending}
-                          onPress={() => resolveRecMutation.mutate(reco.recId)}
+                          onPress={() => resolveRecMutation.mutate(Number(reco.recId))}
                           className="shrink-0 text-xs"
                         >
                           Mark resolved

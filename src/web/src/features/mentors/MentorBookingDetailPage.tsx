@@ -7,6 +7,7 @@ import {
   Card,
   Chip,
   Spinner,
+  buttonVariants,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -126,11 +127,12 @@ export function MentorBookingDetailPage() {
           </Alert.Content>
         </Alert>
         <div>
-          <Link to="/mentors/bookings" className="no-underline">
-            <Button variant="secondary">
-              <ArrowLeft className="w-4 h-4 mr-1.5" />
-              Back to bookings
-            </Button>
+          <Link
+            to="/mentors/bookings"
+            className={buttonVariants({ variant: 'secondary', className: 'no-underline' })}
+          >
+            <ArrowLeft className="w-4 h-4 mr-1.5" />
+            Back to bookings
           </Link>
         </div>
       </div>
@@ -237,13 +239,14 @@ export function MentorBookingDetailPage() {
                 href={safeMeetHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="no-underline inline-block"
+                className={buttonVariants({
+                  variant: 'primary',
+                  className: 'no-underline inline-flex',
+                })}
               >
-                <Button variant="primary">
-                  <Video className="w-4 h-4 mr-2" />
-                  Join meeting
-                  <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
-                </Button>
+                <Video className="w-4 h-4 mr-2" />
+                Join meeting
+                <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
               </a>
             ) : isDangerousMeetLink ? (
               <Alert status="warning">

@@ -202,6 +202,14 @@ _Avoid_: Unbounded free-text display name, raw whitespace-padded name
 Canonical server- and client-enforced limits for spoken and written learner responses (`FreeResponseBounds`: maximum 5,000 characters and 1,000 words for written responses; maximum 10 MB audio size and 180 seconds / 180,000 ms duration for speaking uploads).
 _Avoid_: Unbounded essay/draft payloads, client-only audio duration limits
 
+**Observation floor**:
+The minimum number of graded observations (`ObservationFloor`, matching `MasteryEstimate.MinimumObservationsFor`) required before a `(topic, level)` weakness cell has enough statistical evidence to be ranked: 12 answered items for `listening` and `reading`, or 3 evaluated tasks for `speaking` and `writing`.
+_Avoid_: Minimum sample size, arbitrary threshold, confidence cutoff
+
+**Rankable vs. unranked weakness cell**:
+A `(topic, level)` cell in Weakness Analysis is **rankable** once its `answered` count reaches its `observationFloor`, making it eligible to be sorted into the ranked tier and named `Weakest`; a cell below its `observationFloor` (or an unattempted section with 0 answers) is **unranked**, so it is still displayed with its counts and an evidence note stating how many answers are needed, and never carries a `Weakest` badge.
+_Avoid_: Hidden sub-floor topic, unmeasured weakness, zero-answer weakest section
+
 
 
 

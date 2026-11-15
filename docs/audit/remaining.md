@@ -6,16 +6,18 @@ next session must not re-litigate.**
 
 ---
 
-## ACTIVE REBUILD: ADR-0017 — Simplify Exams, Universal Placement, OOBE, Learning Path & AI Grading (Spec #308, Tickets #309–#314)
+## COMPLETED REBUILD: ADR-0017 — Simplify Exams, Universal Placement, OOBE, Learning Path & AI Grading (Spec #308, Tickets #309–#314)
+
+All six platform rebuild tickets (#309–#314) are **closed**. Current active work is the UI/UX Remediation & Learner Flow Polish wave (Spec #329, Tickets #330–#344) on `integ/329-ui-ux-remediation`.
 
 | Ticket | Title | Blocked By | State |
 |---|---|---|---|
-| **#309** | Expand schema & lean 2-certificate seed (`TOEIC`, `IELTS`, Universal Placement, `TargetBands`, `learning_path` ledger, `AiGradings`) | None | **open** |
-| **#310** | Streamlined Certificate Wizard, 2-State Exam Studio & Flat `TargetBands` Question/Lesson Bank | #309 | **open** |
-| **#311** | Single Universal Placement Exam (2/4-Skill Scope) & Guided Learner OOBE with Soft-Lock | #309 | **open** |
-| **#312** | Direct Rubric-Grounded LLM Grading & Fact-Grounded AI Insight with HeroUI v3 Visualizations | #309 | **open** |
-| **#313** | Paid 4-Week Deterministic Learning Path (5 Credits) & Stateless Free Practice Unlocked by Path Completion | #309 | **open** |
-| **#314** | Contract & Eradicate All Legacy Pool, Gate, Audit, Two-Stage Draw, CEFR Cell-Mastery, Sliding-Window & Single-Writer Artifacts | #310, #311, #312, #313 | **open** |
+| **#309** | Expand schema & lean 2-certificate seed (`TOEIC`, `IELTS`, Universal Placement, `TargetBands`, `learning_path` ledger, `AiGradings`) | None | **closed** |
+| **#310** | Streamlined Certificate Wizard, 2-State Exam Studio & Flat `TargetBands` Question/Lesson Bank | #309 | **closed** |
+| **#311** | Single Universal Placement Exam (2/4-Skill Scope) & Guided Learner OOBE with Soft-Lock | #309 | **closed** |
+| **#312** | Direct Rubric-Grounded LLM Grading & Fact-Grounded AI Insight with HeroUI v3 Visualizations | #309 | **closed** |
+| **#313** | Paid 4-Week Deterministic Learning Path (5 Credits) & Stateless Free Practice Unlocked by Path Completion | #309 | **closed** |
+| **#314** | Contract & Eradicate All Legacy Pool, Gate, Audit, Two-Stage Draw, CEFR Cell-Mastery, Sliding-Window & Single-Writer Artifacts | #310, #311, #312, #313 | **closed** |
 
 See [docs/specs/2026-11-14-simplify-exams-placement-learning-path-oobe-and-ai-rebuild.md](file:///D:/Study/PRN3/Project/extra_efficiency_ui/docs/specs/2026-11-14-simplify-exams-placement-learning-path-oobe-and-ai-rebuild.md), [docs/adr/0017-simplify-exams-placement-and-learning-path.md](file:///D:/Study/PRN3/Project/extra_efficiency_ui/docs/adr/0017-simplify-exams-placement-and-learning-path.md), and [GLOSSARY.md](file:///D:/Study/PRN3/Project/extra_efficiency_ui/GLOSSARY.md).
 **Locked Decisions (DO NOT RE-LITIGATE):**

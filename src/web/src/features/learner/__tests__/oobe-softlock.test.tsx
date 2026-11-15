@@ -131,8 +131,18 @@ describe('OOBE 4-Step Wizard & Soft-Lock (#311)', () => {
 
     renderRoute('/practice');
 
-    expect(await screen.findByTestId('oobe-softlock-empty-state')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /continue oobe|tiếp tục thiết lập/i })).toBeInTheDocument();
+    const emptyState = await screen.findByTestId('oobe-softlock-empty-state');
+    expect(emptyState).toBeInTheDocument();
+    expect(screen.getByText(/complete your guided setup to unlock this area/i)).toBeInTheDocument();
+    expect(screen.getByText(/finish the universal placement test/i)).toBeInTheDocument();
+    expect(screen.queryByText(/hoàn tất|bạn cần|tiếp tục thiết lập/i)).not.toBeInTheDocument();
+    const continueLink = screen.getByRole('link', { name: /continue oobe setup/i });
+    expect(continueLink).toHaveClass('button', 'button--primary');
+    const mentorsLink = screen.getByRole('link', { name: /explore mentors/i });
+    expect(mentorsLink).toHaveClass('button', 'button--secondary');
+    for (const link of emptyState.querySelectorAll('a')) {
+      expect(link.querySelector('button, [role="button"]')).toBeNull();
+    }
     expect(screen.queryByRole('link', { name: /learning path/i })).not.toBeInTheDocument();
   });
 
@@ -332,6 +342,72 @@ describe('OOBE 4-Step Wizard & Soft-Lock (#311)', () => {
 
     await waitFor(() => {
       expect(history.location.pathname).toBe('/dashboard');
+    });
+  });
+
+  it('navigates to /placement/take/$attemptId when starting or resuming placement (#342)', async () => {
+    const startState: OnboardingStateDto = {
+      hasCompletedPlacement: false,
+      activePlacementAttemptId: null,
+      activePlacementId: null,
+      latestPlacementId: null,
+      hasTargetGoal: false,
+      hasActiveLearningPath: false,
+      isOobeComplete: false,
+    };
+
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') return jsonResponse(LEARNER_USER);
+      if (url === '/api/learner/context') return jsonResponse(LEARNER_CONTEXT);
+      if (url === '/api/learner/onboarding-state') return jsonResponse(startState);
+      if (url === '/api/learner/placement') return jsonResponse(CATALOG);
+      if (url === '/api/learner/placement/start' && init?.method === 'POST') {
+        return jsonResponse({
+          placementId: 88,
+          attemptId: 99,
+          examId: 6,
+          status: 'in_progress',
+          startedAt: '2026-11-15T00:00:00Z',
+          expiresAt: '2026-11-15T01:00:00Z',
+        });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    const { history } = renderRoute('/onboarding');
+    const startBtn = await screen.findByRole('button', { name: /start universal placement/i });
+    fireEvent.click(startBtn);
+
+    await waitFor(() => {
+      expect(history.location.pathname).toBe('/placement/take/88');
+    });
+  });
+
+  it('navigates to /placement/take/$attemptId when resuming active placement (#342)', async () => {
+    const resumeState: OnboardingStateDto = {
+      hasCompletedPlacement: false,
+      activePlacementAttemptId: 99,
+      activePlacementId: 77,
+      latestPlacementId: null,
+      hasTargetGoal: false,
+      hasActiveLearningPath: false,
+      isOobeComplete: false,
+    };
+
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') return jsonResponse(LEARNER_USER);
+      if (url === '/api/learner/context') return jsonResponse(LEARNER_CONTEXT);
+      if (url === '/api/learner/onboarding-state') return jsonResponse(resumeState);
+      if (url === '/api/learner/placement') return jsonResponse(CATALOG);
+      return jsonResponse({}, 404);
+    });
+
+    const { history } = renderRoute('/onboarding');
+    const resumeBtn = await screen.findByRole('button', { name: /resume placement/i });
+    fireEvent.click(resumeBtn);
+
+    await waitFor(() => {
+      expect(history.location.pathname).toBe('/placement/take/77');
     });
   });
 });

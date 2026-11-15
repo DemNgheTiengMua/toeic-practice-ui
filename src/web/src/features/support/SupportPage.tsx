@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   Button,
   Card,
   Chip,
+  Label,
+  ListBox,
+  Select,
   Spinner,
   Table,
   Tabs,
+  toast,
 } from '@heroui/react';
 import {
   AlertCircle,
@@ -40,8 +44,13 @@ type SupportCategory = 'mentor' | 'exam' | 'payment';
 
 export function SupportPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const [activeTab, setActiveTab] = useState<'history' | 'new'>('history');
+  const activeTab: 'history' | 'new' = pathname.endsWith('/report') ? 'new' : 'history';
+  const setActiveTab = (tab: 'history' | 'new') => {
+    void navigate({ to: tab === 'new' ? '/support/report' : '/support/history' });
+  };
 
   // Form state
   const [category, setCategory] = useState<SupportCategory>('mentor');
@@ -49,7 +58,6 @@ export function SupportPage() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
   const [reason, setReason] = useState<string>('');
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
   const complaintsQuery = useQuery({
     queryKey: ['support', 'complaints'],
@@ -75,14 +83,13 @@ export function SupportPage() {
     }) => api.support.fileComplaint(payload),
     onSuccess: () => {
       setSubmitError(null);
-      setSubmitSuccess('Report submitted successfully. Our operations team will review it shortly.');
+      toast.success('Report submitted successfully. Our operations team will review it shortly.');
       setReason('');
       setSelectedSubjectId('');
       void queryClient.invalidateQueries({ queryKey: ['support', 'complaints'] });
       setActiveTab('history');
     },
     onError: (err) => {
-      setSubmitSuccess(null);
       if (err instanceof ApiClientError) {
         setSubmitError(err.title || err.detail || 'Could not submit support ticket.');
       } else {
@@ -176,18 +183,6 @@ export function SupportPage() {
           </Button>
         </div>
       </div>
-
-      {submitSuccess && (
-        <Alert status="success">
-          <Alert.Indicator>
-            <CheckCircle2 className="w-5 h-5 text-success" />
-          </Alert.Indicator>
-          <Alert.Content>
-            <Alert.Title>Ticket created</Alert.Title>
-            <Alert.Description>{submitSuccess}</Alert.Description>
-          </Alert.Content>
-        </Alert>
-      )}
 
       {/* Tabs */}
       <Tabs
@@ -376,40 +371,59 @@ export function SupportPage() {
                 </div>
 
                 {/* Specific complaint type */}
-                <div className="space-y-1.5">
-                  <label htmlFor="complaintType" className="text-xs font-semibold text-foreground block">
+                <Select
+                  aria-label="Report type"
+                  className="w-full"
+                  value={type}
+                  onChange={(key) => {
+                    if (key != null) setType(String(key));
+                  }}
+                >
+                  <Label className="text-xs font-semibold text-foreground block">
                     Report type:
-                  </label>
-                  <select
-                    id="complaintType"
-                    value={type}
-                    onChange={(e) => setType(e.target.value)}
-                    className="w-full text-sm p-2.5 rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
-                  >
-                    {category === 'mentor' && (
-                      <>
-                        <option value="mentor_no_show">Mentor did not attend</option>
-                        <option value="mentor_quality">Mentor quality or connection</option>
-                      </>
-                    )}
-                    {category === 'exam' && (
-                      <>
-                        <option value="grading_issue">Grading issue</option>
-                        <option value="technical_error">Technical error during exam</option>
-                      </>
-                    )}
-                    {category === 'payment' && (
-                      <option value="payment_issue">Payment or checkout issue</option>
-                    )}
-                  </select>
-                </div>
+                  </Label>
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      {category === 'mentor' && (
+                        <>
+                          <ListBox.Item id="mentor_no_show" textValue="Mentor did not attend">
+                            Mentor did not attend
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                          <ListBox.Item id="mentor_quality" textValue="Mentor quality or connection">
+                            Mentor quality or connection
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        </>
+                      )}
+                      {category === 'exam' && (
+                        <>
+                          <ListBox.Item id="grading_issue" textValue="Grading issue">
+                            Grading issue
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                          <ListBox.Item id="technical_error" textValue="Technical error during exam">
+                            Technical error during exam
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        </>
+                      )}
+                      {category === 'payment' && (
+                        <ListBox.Item id="payment_issue" textValue="Payment or checkout issue">
+                          Payment or checkout issue
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                      )}
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
 
                 {/* Eligible subject selector */}
                 <div className="space-y-1.5">
-                  <label htmlFor="subjectSelect" className="text-xs font-semibold text-foreground block">
-                    Related {category === 'mentor' ? 'booking' : category === 'exam' ? 'exam attempt' : 'order'}:
-                  </label>
-
                   {subjectsQuery.isLoading ? (
                     <div className="text-xs text-muted flex items-center gap-2">
                       <Spinner size="sm" />
@@ -421,18 +435,39 @@ export function SupportPage() {
                         No recent mentor bookings found.
                       </p>
                     ) : (
-                      <select
-                        id="subjectSelect"
+                      <Select
+                        aria-label="Related booking"
+                        className="w-full"
                         value={selectedSubjectId}
-                        onChange={(e) => setSelectedSubjectId(e.target.value)}
-                        className="w-full text-sm p-2.5 rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                        onChange={(key) => {
+                          if (key != null) setSelectedSubjectId(String(key));
+                        }}
                       >
-                        {subjects!.bookings.map((b) => (
-                          <option key={b.bookingId} value={b.bookingId}>
-                            Booking #{b.bookingId} — {b.mentorName} ({formatDateTime(b.scheduledAt)})
-                          </option>
-                        ))}
-                      </select>
+                        <Label className="text-xs font-semibold text-foreground block">
+                          Related booking:
+                        </Label>
+                        <Select.Trigger>
+                          <Select.Value />
+                          <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                          <ListBox>
+                            {subjects!.bookings.map((b) => {
+                              const label = `Booking #${b.bookingId} — ${b.mentorName} (${formatDateTime(b.scheduledAt)})`;
+                              return (
+                                <ListBox.Item
+                                  key={b.bookingId}
+                                  id={String(b.bookingId)}
+                                  textValue={label}
+                                >
+                                  {label}
+                                  <ListBox.ItemIndicator />
+                                </ListBox.Item>
+                              );
+                            })}
+                          </ListBox>
+                        </Select.Popover>
+                      </Select>
                     )
                   ) : category === 'exam' ? (
                     (subjects?.attempts?.length ?? 0) === 0 ? (
@@ -440,18 +475,39 @@ export function SupportPage() {
                         No recent exam attempts found.
                       </p>
                     ) : (
-                      <select
-                        id="subjectSelect"
+                      <Select
+                        aria-label="Related exam attempt"
+                        className="w-full"
                         value={selectedSubjectId}
-                        onChange={(e) => setSelectedSubjectId(e.target.value)}
-                        className="w-full text-sm p-2.5 rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                        onChange={(key) => {
+                          if (key != null) setSelectedSubjectId(String(key));
+                        }}
                       >
-                        {subjects!.attempts.map((a) => (
-                          <option key={a.attemptId} value={a.attemptId}>
-                            Attempt #{a.attemptId} — {a.examTitle} ({formatDateTime(a.startedAt)})
-                          </option>
-                        ))}
-                      </select>
+                        <Label className="text-xs font-semibold text-foreground block">
+                          Related exam attempt:
+                        </Label>
+                        <Select.Trigger>
+                          <Select.Value />
+                          <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                          <ListBox>
+                            {subjects!.attempts.map((a) => {
+                              const label = `Attempt #${a.attemptId} — ${a.examTitle} (${formatDateTime(a.startedAt)})`;
+                              return (
+                                <ListBox.Item
+                                  key={a.attemptId}
+                                  id={String(a.attemptId)}
+                                  textValue={label}
+                                >
+                                  {label}
+                                  <ListBox.ItemIndicator />
+                                </ListBox.Item>
+                              );
+                            })}
+                          </ListBox>
+                        </Select.Popover>
+                      </Select>
                     )
                   ) : (
                     (subjects?.orders?.length ?? 0) === 0 ? (
@@ -459,18 +515,39 @@ export function SupportPage() {
                         No recent orders found.
                       </p>
                     ) : (
-                      <select
-                        id="subjectSelect"
+                      <Select
+                        aria-label="Related order"
+                        className="w-full"
                         value={selectedSubjectId}
-                        onChange={(e) => setSelectedSubjectId(e.target.value)}
-                        className="w-full text-sm p-2.5 rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                        onChange={(key) => {
+                          if (key != null) setSelectedSubjectId(String(key));
+                        }}
                       >
-                        {subjects!.orders.map((o) => (
-                          <option key={o.orderId} value={o.orderId}>
-                            Order {o.orderCode} — {o.credits ? `${o.credits} credits` : (o.packageName || 'Credits')} ({formatVnd(o.amount)})
-                          </option>
-                        ))}
-                      </select>
+                        <Label className="text-xs font-semibold text-foreground block">
+                          Related order:
+                        </Label>
+                        <Select.Trigger>
+                          <Select.Value />
+                          <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                          <ListBox>
+                            {subjects!.orders.map((o) => {
+                              const label = `Order ${o.orderCode} — ${o.credits ? `${o.credits} credits` : (o.packageName || 'Credits')} (${formatVnd(o.amount)})`;
+                              return (
+                                <ListBox.Item
+                                  key={o.orderId}
+                                  id={String(o.orderId)}
+                                  textValue={label}
+                                >
+                                  {label}
+                                  <ListBox.ItemIndicator />
+                                </ListBox.Item>
+                              );
+                            })}
+                          </ListBox>
+                        </Select.Popover>
+                      </Select>
                     )
                   )}
                 </div>

@@ -20,6 +20,7 @@ import {
   TextArea,
   TextField,
   ToggleButton,
+  buttonVariants,
 } from '@heroui/react';
 import {
   ArrowLeft,
@@ -403,10 +404,11 @@ export function PracticeSessionPage() {
             {getPracticeErrorMessage(takeQuery.error, 'Practice session not found.')}
           </Alert.Description>
           <div className="mt-3">
-            <Link to="/practice" className="no-underline">
-              <Button size="sm" variant="secondary">
-                Back to practice drills
-              </Button>
+            <Link
+              to="/practice"
+              className={buttonVariants({ size: 'sm', variant: 'secondary', className: 'no-underline' })}
+            >
+              Back to practice drills
             </Link>
           </div>
         </Alert.Content>
@@ -448,11 +450,12 @@ export function PracticeSessionPage() {
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-separator pb-4">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Link to="/practice" className="no-underline">
-              <Button size="sm" variant="ghost">
-                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                <span>Practice drills</span>
-              </Button>
+            <Link
+              to="/practice"
+              className={buttonVariants({ size: 'sm', variant: 'ghost', className: 'no-underline' })}
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              <span>Practice drills</span>
             </Link>
             <h1 className="font-display text-xl font-bold text-foreground">
               {session.sectionName}
@@ -476,12 +479,14 @@ export function PracticeSessionPage() {
           <Link
             to="/practice/result/$sessionId"
             params={{ sessionId: String(session.sessionId) }}
-            className="no-underline"
+            className={buttonVariants({
+              size: 'sm',
+              variant: sessionFinished ? 'primary' : 'secondary',
+              className: 'no-underline',
+            })}
           >
-            <Button size="sm" variant={sessionFinished ? 'primary' : 'secondary'}>
-              <span>{sessionFinished ? 'View results' : 'Summary'}</span>
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Button>
+            <span>{sessionFinished ? 'View results' : 'Summary'}</span>
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         </div>
       </header>
@@ -511,12 +516,10 @@ export function PracticeSessionPage() {
             <Link
               to="/practice/result/$sessionId"
               params={{ sessionId: String(session.sessionId) }}
-              className="no-underline"
+              className={buttonVariants({ size: 'sm', variant: 'primary', className: 'no-underline' })}
             >
-              <Button size="sm" variant="primary">
-                <span>View results</span>
-                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </Button>
+              <span>View results</span>
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </Alert.Content>
         </Alert>
@@ -933,12 +936,10 @@ export function PracticeSessionPage() {
                   <Link
                     to="/practice/result/$sessionId"
                     params={{ sessionId: String(session.sessionId) }}
-                    className="no-underline"
+                    className={buttonVariants({ size: 'sm', variant: 'primary', className: 'no-underline' })}
                   >
-                    <Button size="sm" variant="primary">
-                      <span>Finish & review</span>
-                      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                    </Button>
+                    <span>Finish & review</span>
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                   </Link>
                 )}
               </div>

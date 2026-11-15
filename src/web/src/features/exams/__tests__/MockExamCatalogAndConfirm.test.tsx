@@ -215,6 +215,14 @@ describe('MockExamCatalogPage & MockExamConfirmPage', () => {
     expect(screen.getAllByText(/credits available/i).length).toBeGreaterThanOrEqual(1);
 
     // Section table
+    const tableGrid = screen.getByRole('grid', { name: 'Exam structure sections' });
+    expect(tableGrid.closest('[data-slot="table"]')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Skill' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Section' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Questions' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Duration' })).toBeInTheDocument();
+    expect(screen.getByText('Listening')).toBeInTheDocument();
+    expect(screen.getByText('Part 1')).toBeInTheDocument();
     expect(screen.getByText('Photographs')).toBeInTheDocument();
     expect(screen.getByText('Incomplete Sentences')).toBeInTheDocument();
   });

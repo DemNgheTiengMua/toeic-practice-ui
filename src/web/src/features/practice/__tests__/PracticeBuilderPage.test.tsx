@@ -243,6 +243,14 @@ describe('PracticeBuilderPage', () => {
     // Speaking sections must navigate to /speaking, never call startSession
     const speakingLink = screen.getByRole('link', { name: /speaking practice/i });
     expect(speakingLink.getAttribute('href')).toContain('/speaking');
+    expect(speakingLink.classList.contains('button')).toBe(true);
+    expect(speakingLink.classList.contains('button--secondary')).toBe(true);
+    const savedQuestionsLink = screen.getByRole('link', { name: /saved questions/i });
+    expect(savedQuestionsLink.classList.contains('button')).toBe(true);
+    expect(savedQuestionsLink.classList.contains('button--secondary')).toBe(true);
+    for (const link of document.querySelectorAll('a')) {
+      expect(link.querySelector('button, [role="button"]')).toBeNull();
+    }
 
     const startButtons = screen.getAllByRole('button', { name: /start section drill/i });
     fireEvent.click(startButtons[0]);
@@ -487,5 +495,103 @@ describe('PracticeBuilderPage', () => {
     expect(screen.getByRole('link', { name: /unlock in learning path/i }).getAttribute('href')).toContain(
       '/learning-path',
     );
+  });
+
+  it('shows a single unlock CTA when all sections are locked, and explains why a locked recommended focus cannot be started', async () => {
+    const lockedListening = {
+      sectionId: 101,
+      skillCode: 'LIST',
+      skillName: 'Listening',
+      modality: 'listening' as const,
+      code: 'PART1',
+      name: 'Photographs',
+      optionCount: 4,
+      expectedQuestionCount: 10,
+      availableQuestionCount: 25,
+      accuracyPercentage: 45,
+      answeredCount: 20,
+      displayOrder: 1,
+      totalCategoryCount: 4,
+      categoriesInCooldown: 0,
+      nextReviewDueAt: null,
+      isUnlocked: false,
+    };
+    const lockedReading1 = {
+      sectionId: 102,
+      skillCode: 'READ',
+      skillName: 'Reading',
+      modality: 'reading' as const,
+      code: 'PART5',
+      name: 'Incomplete Sentences',
+      optionCount: 4,
+      expectedQuestionCount: 10,
+      availableQuestionCount: 40,
+      accuracyPercentage: 55,
+      answeredCount: 15,
+      displayOrder: 5,
+      totalCategoryCount: 6,
+      categoriesInCooldown: 0,
+      nextReviewDueAt: null,
+      isUnlocked: false,
+    };
+    const lockedReading2 = {
+      ...lockedReading1,
+      sectionId: 103,
+      code: 'PART6',
+      name: 'Text Completion',
+      displayOrder: 6,
+    };
+    const lockedReading3 = {
+      ...lockedReading1,
+      sectionId: 104,
+      code: 'PART7',
+      name: 'Reading Comprehension',
+      displayOrder: 7,
+    };
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/api/learner/practice/catalog')) {
+          return new Response(
+            JSON.stringify(
+              makeCatalog({
+                listeningSections: [lockedListening],
+                readingSections: [lockedReading1, lockedReading2, lockedReading3],
+                weakestSection: lockedListening,
+              }),
+            ),
+            { status: 200 },
+          );
+        }
+        if (url.endsWith('/api/learner/practice/matrix')) {
+          return new Response(JSON.stringify([]), { status: 200 });
+        }
+        if (url.includes('/api/learner/practice/free-drill')) {
+          return new Response(JSON.stringify(makeFreeDrill()), { status: 200 });
+        }
+        return new Response('{}', { status: 404 });
+      }),
+    );
+
+    await renderPracticeBuilder('/practice');
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Photographs').length).toBeGreaterThan(0);
+    });
+
+    // Single unlock route across the entire locked catalog, not one per card
+    const unlockLinks = screen.getAllByRole('link', { name: /unlock in learning path/i });
+    expect(unlockLinks).toHaveLength(1);
+    expect(unlockLinks[0].getAttribute('href')).toContain('/learning-path');
+
+    // Recommended focus points at a locked section: must explain why it cannot be started and not offer an enabled start button
+    expect(screen.getByText(/recommended focus/i)).toBeTruthy();
+    expect(screen.getByText(/complete.*learning path.*before/i)).toBeTruthy();
+    const drillWeakestBtn = screen.queryByRole('button', { name: /drill weakest section/i });
+    if (drillWeakestBtn) {
+      expect((drillWeakestBtn as HTMLButtonElement).disabled).toBe(true);
+    }
   });
 });

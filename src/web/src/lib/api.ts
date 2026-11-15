@@ -3,6 +3,8 @@
  * Authenticates via the `ee_access_token` HttpOnly cookie (ADR-0015).
  */
 
+import type { components } from './api-types.gen';
+
 export class ApiClientError extends Error {
   public readonly status: number;
   public readonly code: string;
@@ -341,33 +343,6 @@ export interface SetGoalResultDto {
   goal: GoalStatusDto;
 }
 
-export interface CalibrationProposalDto {
-  proposedBandCode: string;
-  proposedBandName: string;
-  observedAccuracyPct: number;
-  validAnswerCount: number;
-  requiredAccuracyPct: number;
-  evidence: string;
-}
-
-export interface CalibrationViewDto {
-  placedBandCode: string;
-  placedBandName?: string | null;
-  validAnswerCount: number;
-  requiredValidAnswerCount: number;
-  excludedRushedCount: number;
-  observedAccuracyPct?: number | null;
-  reason: string;
-  proposal?: CalibrationProposalDto | null;
-}
-
-export interface CalibrationDecisionResultDto {
-  decision: string;
-  placedBandCode: string;
-  proposedBandCode: string;
-  pathAdjusted: boolean;
-}
-
 export interface PathStepDto {
   stepId: number;
   weekNumber: number;
@@ -507,30 +482,9 @@ export interface MicroCheckResultDto {
   categoryId?: number | null;
 }
 
-export interface SectionAccuracyDto {
-  sectionId: number;
-  sectionCode: string;
-  sectionName: string;
-  skillCode: string;
-  skillName: string;
-  answeredCount: number;
-  correctCount: number;
-  accuracyPercentage: number;
-}
+export type SectionAccuracyDto = components['schemas']['SectionAccuracyDto'];
 
-export interface TopicAccuracyDto {
-  categoryId: number;
-  topicCode: string;
-  topicName: string;
-  skillCode: string;
-  skillName: string;
-  answeredCount: number;
-  correctCount: number;
-  accuracyPercentage: number;
-  levelCode?: string | null;
-  meetsFloor: boolean;
-  isWeakest: boolean;
-}
+export type TopicAccuracyDto = components['schemas']['TopicAccuracyDto'];
 
 export interface RecommendationItemDto {
   recId: number;
@@ -547,21 +501,7 @@ export interface ResolveRecommendationResultDto {
   isResolved: boolean;
 }
 
-export interface WeaknessAnalysisDto {
-  certificate: CertificateOptionDto;
-  hasData: boolean;
-  gradedExamCount: number;
-  completedPracticeCount: number;
-  totalAnswered: number;
-  totalCorrect: number;
-  overallAccuracyPercentage: number;
-  sections: SectionAccuracyDto[];
-  frequentlyMissedTopics: TopicAccuracyDto[];
-  recommendations: RecommendationItemDto[];
-  priorityPracticeSection?: SectionAccuracyDto | null;
-  topics: TopicAccuracyDto[];
-  weakestTopic?: TopicAccuracyDto | null;
-}
+export type WeaknessAnalysisDto = components['schemas']['WeaknessAnalysisDto'];
 
 export interface RecommendationDto {
   recId: number;
@@ -1049,15 +989,7 @@ export interface SubmitAttemptResponseDto {
   isAutoSubmitted: boolean;
 }
 
-export interface AttemptSkillScoreDto {
-  skillId: number;
-  skillCode: string;
-  skillName: string;
-  modality: ModalityCode | string;
-  rawScore: number;
-  scaledScore: number;
-  totalQuestions: number;
-}
+export type AttemptSkillScoreDto = components['schemas']['AttemptSkillScoreDto'];
 
 export interface AttemptResultDto {
   attemptId: number;
@@ -2241,64 +2173,6 @@ export interface AdjustCreditsResultDto {
   newBalance: number;
   delta: number;
   reason: string;
-}
-
-export interface AuditSampleDto {
-  sampleItemId: number;
-  itemId: number;
-  stem: string;
-  optionA: string;
-  optionB: string;
-  optionC: string;
-  optionD: string;
-  solvedLabel?: string | null;
-  solvedAt?: string | null;
-  keyRevealedAt?: string | null;
-  keyRevealed: boolean;
-  verdict?: string | null;
-}
-
-export interface AuditStratumDto {
-  stratumId: number;
-  batchId: number;
-  topicCode: string;
-  cefrLevel: string;
-  modality: string;
-  itemCount: number;
-  sampleSize: number;
-  sampled: number;
-  unsampled: number;
-  status: string;
-  quarantineReason?: string | null;
-  decidedAt?: string | null;
-  items: AuditSampleDto[];
-}
-
-export interface AuditQueueDto {
-  batchId: number;
-  sourceName: string;
-  status: string;
-  strata: AuditStratumDto[];
-  sampledTotal: number;
-  unsampledTotal: number;
-}
-
-export interface AuditKeyRevealDto {
-  sampleItemId: number;
-  itemId: number;
-  keyLabel: string;
-  explanation?: string | null;
-  solvedLabel?: string | null;
-  revealedAt: string;
-}
-
-export interface AuditDecisionDto {
-  stratumId: number;
-  status: string;
-  quarantineReason?: string | null;
-  sampledPromoted: number;
-  unsampledPromoted: number;
-  quarantined: number;
 }
 
 // ============================================================================

@@ -16,6 +16,7 @@ import {
   Table,
   TextArea,
   TextField,
+  buttonVariants,
 } from '@heroui/react';
 import {
   AlertTriangle,
@@ -199,11 +200,12 @@ export function SavedQuestionsPage() {
           </p>
         </div>
 
-        <Link to="/practice" className="no-underline">
-          <Button size="sm" variant="primary">
-            <Play className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>Free practice</span>
-          </Button>
+        <Link
+          to="/practice"
+          className={buttonVariants({ size: 'sm', variant: 'primary', className: 'no-underline' })}
+        >
+          <Play className="h-3.5 w-3.5" aria-hidden="true" />
+          <span>Free practice</span>
         </Link>
       </header>
 
@@ -352,10 +354,15 @@ export function SavedQuestionsPage() {
                 <p className="text-sm text-muted">
                   Bookmark tricky questions during a free practice drill or adjust the filters above.
                 </p>
-                <Link to="/practice" className="inline-block no-underline">
-                  <Button size="sm" variant="primary">
-                    Start free practice
-                  </Button>
+                <Link
+                  to="/practice"
+                  className={buttonVariants({
+                    size: 'sm',
+                    variant: 'primary',
+                    className: 'inline-flex no-underline',
+                  })}
+                >
+                  Start free practice
                 </Link>
               </div>
             </Card>
@@ -515,11 +522,15 @@ export function SavedQuestionsPage() {
                                   <Link
                                     to="/saved-questions/$savedQuestionId"
                                     params={{ savedQuestionId: String(item.savedQuestionId) }}
-                                    className="no-underline"
+                                    aria-label="Full review"
+                                    className={buttonVariants({
+                                      size: 'sm',
+                                      variant: 'ghost',
+                                      isIconOnly: true,
+                                      className: 'no-underline',
+                                    })}
                                   >
-                                    <Button size="sm" variant="ghost" aria-label="Full review">
-                                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                                    </Button>
+                                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                                   </Link>
 
                                   <Button

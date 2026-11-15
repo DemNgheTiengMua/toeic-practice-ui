@@ -50,14 +50,14 @@ export function formatRecommendationSeverity(severity?: string | null): {
   switch (severity?.toLowerCase()) {
     case 'major':
     case 'high':
-      return { label: 'High', badgeClass: 'bg-danger text-white', chipColor: 'danger' };
+      return { label: 'High', badgeClass: 'bg-danger text-danger-foreground', chipColor: 'danger' };
     case 'minor':
     case 'medium':
-      return { label: 'Medium', badgeClass: 'bg-warning text-foreground', chipColor: 'warning' };
+      return { label: 'Medium', badgeClass: 'bg-warning text-warning-foreground', chipColor: 'warning' };
     case 'info':
     case 'low':
     default:
-      return { label: 'Low', badgeClass: 'bg-accent text-white', chipColor: 'accent' };
+      return { label: 'Low', badgeClass: 'bg-accent text-accent-foreground', chipColor: 'accent' };
   }
 }
 
@@ -81,12 +81,12 @@ export function formatAiInsightTrend(trend?: string | null): {
 } {
   switch (trend?.toLowerCase()) {
     case 'improving':
-      return { label: 'Improving', badgeClass: 'bg-success text-white', chipColor: 'success' };
+      return { label: 'Improving', badgeClass: 'bg-success text-success-foreground', chipColor: 'success' };
     case 'flat':
     case 'steady':
       return { label: 'Steady', badgeClass: 'bg-surface-secondary text-foreground', chipColor: 'default' };
     case 'declining':
-      return { label: 'Declining', badgeClass: 'bg-danger text-white', chipColor: 'danger' };
+      return { label: 'Declining', badgeClass: 'bg-danger text-danger-foreground', chipColor: 'danger' };
     default:
       return { label: 'Trend not reported', badgeClass: 'bg-surface-secondary text-muted', chipColor: 'default' };
   }

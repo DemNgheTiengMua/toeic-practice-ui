@@ -389,7 +389,14 @@ describe('PracticeSessionPage', () => {
       expect(screen.getByText(/session complete/i)).toBeTruthy();
     });
 
-    fireEvent.click(screen.getAllByRole('link', { name: /view results/i })[0]);
+    const viewResultsLinks = screen.getAllByRole('link', { name: /view results/i });
+    expect(viewResultsLinks[0].classList.contains('button')).toBe(true);
+    expect(viewResultsLinks[0].classList.contains('button--primary')).toBe(true);
+    for (const link of document.querySelectorAll('a')) {
+      expect(link.querySelector('button, [role="button"]')).toBeNull();
+    }
+
+    fireEvent.click(viewResultsLinks[0]);
     await waitFor(() => {
       expect(screen.getByTestId('result-route').textContent).toContain('Result #701');
     });

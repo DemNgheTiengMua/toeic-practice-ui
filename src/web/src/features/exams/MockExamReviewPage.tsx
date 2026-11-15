@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
-import { Alert, Button, Card, Chip, Spinner } from '@heroui/react';
+import { Alert, Button, Card, Chip, Label, ListBox, Select, Spinner } from '@heroui/react';
 import {
   ArrowLeft,
   Bookmark,
@@ -250,45 +250,87 @@ export function MockExamReviewPage() {
       <Card className="bg-surface border-border">
         <Card.Content className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-end gap-3">
             {/* Section filter */}
-            <div className="flex items-center gap-2">
-              <label htmlFor="review-section-filter" className="text-xs font-medium text-muted">
-                Section:
-              </label>
-              <select
-                id="review-section-filter"
-                value={selectedSection}
-                onChange={(e) => setSelectedSection(e.target.value)}
-                className="text-xs rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
-              >
-                <option value="all">All sections ({review.totalQuestions})</option>
-                {distinctSections.map((sec) => (
-                  <option key={sec.code} value={sec.code}>
-                    {sec.code} — {sec.name} ({sec.count})
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              aria-label="Section"
+              className="w-56"
+              value={selectedSection}
+              onChange={(key) => setSelectedSection(key != null ? String(key) : 'all')}
+            >
+              <Label className="text-xs font-medium text-muted">Section</Label>
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id="all" textValue={`All sections (${review.totalQuestions})`}>
+                    All sections ({review.totalQuestions})
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  {distinctSections.map((sec) => (
+                    <ListBox.Item
+                      key={sec.code}
+                      id={sec.code}
+                      textValue={`${sec.code} — ${sec.name} (${sec.count})`}
+                    >
+                      {sec.code} — {sec.name} ({sec.count})
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
+            </Select>
 
             {/* Status filter */}
-            <div className="flex items-center gap-2">
-              <label htmlFor="review-status-filter" className="text-xs font-medium text-muted">
-                Status:
-              </label>
-              <select
-                id="review-status-filter"
-                value={selectedStatusFilter}
-                onChange={(e) => setSelectedStatusFilter(e.target.value as any)}
-                className="text-xs rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
-              >
-                <option value="all">All answers</option>
-                <option value="incorrect">Incorrect only</option>
-                <option value="blank">Left blank only</option>
-                <option value="flagged">Flagged only</option>
-                <option value="correct">Correct only</option>
-              </select>
-            </div>
+            <Select
+              aria-label="Status"
+              className="w-48"
+              value={selectedStatusFilter}
+              onChange={(key) => {
+                const next = key != null ? String(key) : 'all';
+                if (
+                  next === 'all' ||
+                  next === 'incorrect' ||
+                  next === 'blank' ||
+                  next === 'flagged' ||
+                  next === 'correct'
+                ) {
+                  setSelectedStatusFilter(next);
+                }
+              }}
+            >
+              <Label className="text-xs font-medium text-muted">Status</Label>
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id="all" textValue="All answers">
+                    All answers
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="incorrect" textValue="Incorrect only">
+                    Incorrect only
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="blank" textValue="Left blank only">
+                    Left blank only
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="flagged" textValue="Flagged only">
+                    Flagged only
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  <ListBox.Item id="correct" textValue="Correct only">
+                    Correct only
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                </ListBox>
+              </Select.Popover>
+            </Select>
           </div>
 
           {/* Aggregate Badges */}

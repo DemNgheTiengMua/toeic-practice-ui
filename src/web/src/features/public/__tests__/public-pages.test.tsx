@@ -352,3 +352,110 @@ describe('Public catalog, pricing & legal pages (#295)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not switch active certificate to ALT/i);
   });
 });
+
+function assertNoLinkContainsButton(container: HTMLElement) {
+  const main = container.querySelector('main');
+  expect(main).not.toBeNull();
+  const links = Array.from(main!.querySelectorAll('a'));
+  for (const link of links) {
+    expect(link.querySelector('button, [role="button"]')).toBeNull();
+  }
+}
+
+describe('Single-control button-styled links (#339)', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    window.scrollTo = vi.fn();
+    if (typeof globalThis.ResizeObserver === 'undefined') {
+      globalThis.ResizeObserver = class ResizeObserver {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      };
+    }
+    if (typeof Element !== 'undefined' && typeof Element.prototype.getAnimations !== 'function') {
+      Element.prototype.getAnimations = () => [];
+    }
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('renders public marketing and catalog CTAs as single link controls without nested buttons', async () => {
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') return jsonResponse({ code: 'AUTH_REQUIRED' }, 401);
+      if (url === '/api/certificates') return jsonResponse(DEMO_CERTIFICATES);
+      return jsonResponse({}, 404);
+    });
+
+    const landing = renderRoute('/');
+    const startLink = await screen.findByRole('link', { name: /start for free/i });
+    expect(startLink).toHaveClass('button', 'button--primary');
+    expect(screen.getByRole('link', { name: /explore certificates/i })).toHaveClass('button', 'button--secondary');
+    expect(screen.getAllByRole('link', { name: /see test details/i })[0]).toHaveClass('button', 'button--secondary');
+    expect(screen.getByRole('link', { name: /build my path/i })).toHaveClass('button', 'button--primary');
+    assertNoLinkContainsButton(landing.container);
+    landing.unmount();
+
+    const catalog = renderRoute('/certificates');
+    expect(await screen.findByRole('link', { name: /start with DEMO/i })).toHaveClass('button', 'button--primary');
+    expect(screen.getAllByRole('link', { name: /inspect structure & bands/i })[0]).toHaveClass('button', 'button--secondary');
+    assertNoLinkContainsButton(catalog.container);
+    catalog.unmount();
+
+    const detail = renderRoute('/certificates/demo');
+    expect(await screen.findByRole('link', { name: /start free with DEMO/i })).toHaveClass('button', 'button--primary');
+    assertNoLinkContainsButton(detail.container);
+    detail.unmount();
+
+    const notFound = renderRoute('/certificates/unknown-cert');
+    expect(await screen.findByRole('link', { name: /back to certificates/i })).toHaveClass('button', 'button--secondary');
+    assertNoLinkContainsButton(notFound.container);
+    notFound.unmount();
+
+    const pricing = renderRoute('/pricing');
+    expect(await screen.findByRole('link', { name: /proceed to top-up/i })).toHaveClass('button', 'button--primary');
+    assertNoLinkContainsButton(pricing.container);
+    pricing.unmount();
+  });
+
+  it('renders auth recovery and verification CTAs as single link controls without nested buttons', async () => {
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') return jsonResponse({ code: 'AUTH_REQUIRED' }, 401);
+      if (url === '/api/auth/forgot-password' && init?.method === 'POST') return new Response(null, { status: 204 });
+      if (url === '/api/auth/verify-email' && init?.method === 'POST') return new Response(null, { status: 204 });
+      return jsonResponse({}, 404);
+    });
+
+    const forgot = renderRoute('/forgot-password');
+    const emailInput = await screen.findByPlaceholderText('you@example.com');
+    fireEvent.change(emailInput, { target: { value: 'learner@demo.local' } });
+    fireEvent.click(screen.getByRole('button', { name: /send link/i }));
+    await screen.findByText(/link sent/i);
+    const backFromForgot = screen.getAllByRole('link', { name: /back to sign in/i })[0];
+    expect(backFromForgot).toHaveClass('button', 'button--secondary');
+    assertNoLinkContainsButton(forgot.container);
+    forgot.unmount();
+
+    const reset = renderRoute('/reset-password');
+    const sendNewLink = await screen.findByRole('link', { name: /send a new link/i });
+    expect(sendNewLink).toHaveClass('button', 'button--primary');
+    assertNoLinkContainsButton(reset.container);
+    reset.unmount();
+
+    const verifyInvalid = renderRoute('/verify-email');
+    const backFromVerify = await screen.findByRole('link', { name: /back to sign in/i });
+    expect(backFromVerify).toHaveClass('button', 'button--secondary');
+    assertNoLinkContainsButton(verifyInvalid.container);
+    verifyInvalid.unmount();
+
+    const verifyValid = renderRoute('/verify-email?token=valid-token');
+    fireEvent.click(await screen.findByRole('button', { name: /verify my email/i }));
+    const signInContinue = await screen.findByRole('link', { name: /sign in to continue/i });
+    expect(signInContinue).toHaveClass('button', 'button--primary');
+    assertNoLinkContainsButton(verifyValid.container);
+    verifyValid.unmount();
+  });
+});
