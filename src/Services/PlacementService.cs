@@ -1602,16 +1602,24 @@ public sealed partial class PlacementService(
         string attemptStatus,
         CancellationToken cancellationToken)
     {
-        var gradingStates = await db.AiGradings
+        // #384: `total` used to count every free response, while `graded + failed` could only count the
+        // ones that have a grading ROW. A speaking task submitted with no audio produces no row at all
+        // (there is nothing to grade), so the two counts could never meet and IsGraded stayed false
+        // forever - measured on the seeded 4-skill placement: 1 done + 1 failed against 2 responses,
+        // so the result page polled "Evaluating grammar structure..." indefinitely and the review page
+        // answered 400 "Placement test not finished" for a sitting that was finished.
+        //
+        // What this question actually means is "has every free response that was sent to the grader
+        // come back?". A response with no grading row was never sent, so it is not outstanding work.
+        var gradedFreeResponseIds = await db.AiGradings
             .AsNoTracking()
             .Where(g => g.FreeResponse.AttemptId == attemptId)
-            .Select(g => g.Status)
+            .Select(g => new { g.FreeResponseId, g.Status })
             .ToListAsync(cancellationToken);
 
-        var total = await db.FreeResponses
-            .CountAsync(fr => fr.AttemptId == attemptId, cancellationToken);
-        var graded = gradingStates.Count(s => s == AiGradingStatus.Done.ToCode());
-        var failed = gradingStates.Count(s => s == AiGradingStatus.Failed.ToCode());
+        var total = gradedFreeResponseIds.Count;
+        var graded = gradedFreeResponseIds.Count(s => s.Status == AiGradingStatus.Done.ToCode());
+        var failed = gradedFreeResponseIds.Count(s => s.Status == AiGradingStatus.Failed.ToCode());
         var isGraded = attemptStatus == AttemptStatus.Graded.ToCode()
             || total == 0
             || (graded + failed >= total && total > 0);

@@ -530,8 +530,14 @@ public sealed partial class AttemptEngine
                         .Where(c => c.SkillId == response.SkillId)
                         .SumAsync(c => (decimal?)c.MaxScore, cancellationToken) ?? 0m;
 
-                var fraction = maxScore > 0m
-                    ? Math.Clamp((response.AiGradingFreeResponse!.OverallScaled ?? 0m) / maxScore, 0m, 1m)
+                // #384: a task with NO grading row is settled, not outstanding - a blank or silent
+                // response has nothing to score, so AiGradingFreeResponse is null. The `!` here threw
+                // NullReferenceException, so `Finalize` could never complete an attempt that carried a
+                // silent task: the sitting stayed `submitted` and the review page answered 400. A
+                // response with no grading contributes a zero fraction, which is the honest reading -
+                // nothing was measured for it.
+                var fraction = maxScore > 0m && response.AiGradingFreeResponse is not null
+                    ? Math.Clamp((response.AiGradingFreeResponse.OverallScaled ?? 0m) / maxScore, 0m, 1m)
                     : 0m;
                 fractionByResponse[response.FreeResponseId] = fraction;
             }
