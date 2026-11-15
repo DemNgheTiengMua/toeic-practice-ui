@@ -12,8 +12,16 @@ public static class ProblemDetailsExtensions
         services.AddProblemDetails(options =>
             options.CustomizeProblemDetails = context =>
             {
+                if (context.ProblemDetails.Extensions.TryGetValue("code", out var existing)
+                    && existing is not null
+                    && existing is not string { Length: 0 })
+                {
+                    return;
+                }
+
                 context.ProblemDetails.Extensions["code"] = context.ProblemDetails.Status switch
                 {
+                    StatusCodes.Status400BadRequest => ApiError.Codes.Validation,
                     StatusCodes.Status404NotFound => ApiError.Codes.NotFound,
                     StatusCodes.Status429TooManyRequests => ApiError.Codes.TooManyRequests,
                     _ => ApiError.Codes.Unexpected,

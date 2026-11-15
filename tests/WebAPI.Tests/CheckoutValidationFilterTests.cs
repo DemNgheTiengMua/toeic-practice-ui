@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -102,6 +104,20 @@ public sealed class CheckoutValidationFilterTests
         }
     }
 
+    [Fact]
+    public async Task Post_orders_through_real_host_pipeline_returns_400_with_validation_code()
+    {
+        using var factory = new CheckoutSite();
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/checkout/orders", new CreateOrderRequest(0));
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.True(json.TryGetProperty("code", out var code), $"Expected 'code' in response: {json}");
+        Assert.Equal(ApiError.Codes.Validation, code.GetString());
+    }
+
     private static async Task<(HttpClient Client, WebApplication App)> CheckoutAppAsync(IPaymentService paymentService)
     {
         var builder = WebApplication.CreateBuilder();
@@ -130,6 +146,27 @@ public sealed class CheckoutValidationFilterTests
             .Addresses.First();
 
         return (new HttpClient { BaseAddress = new Uri(address) }, app);
+    }
+
+    private sealed class CheckoutSite : WebApplicationFactory<Program>
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            builder.UseSetting("Jwt:SigningKey", Convert.ToBase64String(new byte[32]));
+            builder.UseSetting("Jwt:Issuer", "webapi-tests");
+            builder.UseSetting("Jwt:Audience", "webapi-tests");
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddSingleton<IPaymentService>(new StubPaymentService());
+                services.AddAuthentication("Test")
+                    .AddScheme<AuthenticationSchemeOptions, AllowLearner>("Test", null);
+                services.PostConfigure<AuthenticationOptions>(options =>
+                {
+                    options.DefaultAuthenticateScheme = "Test";
+                    options.DefaultChallengeScheme = "Test";
+                });
+            });
+        }
     }
 
     private sealed class AllowLearner : AuthenticationHandler<AuthenticationSchemeOptions>
