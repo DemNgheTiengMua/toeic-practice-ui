@@ -40,6 +40,14 @@ internal static class OperationsLabels
             ("payment_issue", "Payment issue"),
         ]);
 
+        // #350: the three endings a resolution offers. Each reads as what staff chose, because the
+        // stored code is the decision and the screen must not show it back as `make_good`.
+        LabelFamily.Add<ComplaintCompensationDto>(families, "Compensation ending not reported", [
+            ("none", "No compensation"),
+            ("make_good", "Make-good credits"),
+            ("refund", "Record a refund"),
+        ]);
+
         LabelFamily.Add<OrderStatusDto>(families, "Order status not reported", [
             ("pending", "Pending"),
             ("reconciling", "Confirming with the gateway"),

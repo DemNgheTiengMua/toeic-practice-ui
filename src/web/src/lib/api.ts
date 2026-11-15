@@ -1967,9 +1967,13 @@ export interface AdminComplaintsSummaryDto {
   oldestPendingType?: ComplaintTypeDto | null;
 }
 
+export type ComplaintCompensationDto = 'none' | 'make_good' | 'refund';
+
 export interface ResolveComplaintRequest {
   resolution: string;
   internalNotes: string;
+  /** #350: exactly one ending. `refund` records a handoff and moves no value. */
+  compensation: ComplaintCompensationDto;
   grantCredits?: number;
 }
 
@@ -2920,25 +2924,16 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ status }),
       }),
-    resolveComplaint: (
-      complaintId: number,
-      body: ResolveComplaintRequest | { resolution: string; adminNotes?: string; internalNotes?: string; grantCredits?: number },
-    ) => {
-      const internalNotes =
-        'internalNotes' in body && body.internalNotes
-          ? body.internalNotes
-          : 'adminNotes' in body && body.adminNotes
-            ? body.adminNotes
-            : '';
-      return apiFetch<AdminComplaintDetailDto>(`/api/admin/complaints/${complaintId}/resolve`, {
+    resolveComplaint: (complaintId: number, body: ResolveComplaintRequest) =>
+      apiFetch<AdminComplaintDetailDto>(`/api/admin/complaints/${complaintId}/resolve`, {
         method: 'POST',
         body: JSON.stringify({
           resolution: body.resolution,
-          internalNotes,
+          internalNotes: body.internalNotes,
+          compensation: body.compensation,
           grantCredits: body.grantCredits ?? 0,
         }),
-      });
-    },
+      }),
     mentors: () => apiFetch<AdminMentorListItemDto[]>('/api/admin/mentors'),
     mentorOptions: () => apiFetch<MentorCertificateOptionDto[]>('/api/admin/mentors/options'),
     mentorDetail: (mentorId: number) => apiFetch<MentorSummaryDto>(`/api/admin/mentors/${mentorId}`),

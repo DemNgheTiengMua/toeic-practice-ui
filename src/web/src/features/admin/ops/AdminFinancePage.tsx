@@ -14,13 +14,18 @@ export interface AdminFinancePageProps {
 
 export function AdminFinancePage({ initialTab }: AdminFinancePageProps) {
   const { user } = useAuth();
-  // #349: a complaint's refund arrives with the complaint already identified. Carried in the URL by
-  // the screen that opened it, never retyped here.
-  const search = useSearch({ strict: false }) as { complaintId?: number | string | null };
+  // #349/#350: a complaint's refund arrives with the incident already identified - the complaint and
+  // the learner it belongs to. Carried in the URL by the screen that opened it, never retyped here.
+  const search = useSearch({ strict: false }) as {
+    complaintId?: number | string | null;
+    userId?: number | string | null;
+  };
   const complaintId =
     search.complaintId != null && String(search.complaintId).trim() !== ''
       ? Number(search.complaintId)
       : null;
+  const learnerId =
+    search.userId != null && String(search.userId).trim() !== '' ? Number(search.userId) : null;
   const [selectedTab, setSelectedTab] = useState<string | null>(
     complaintId !== null ? 'refunds' : (initialTab ?? null),
   );
@@ -97,7 +102,7 @@ export function AdminFinancePage({ initialTab }: AdminFinancePageProps) {
 
         {(isSupportTriage || isSystemAdmin) && (
           <Tabs.Panel id="refunds" className="pt-6">
-            <RefundsTab complaintId={complaintId} />
+            <RefundsTab complaintId={complaintId} learnerId={learnerId} />
           </Tabs.Panel>
         )}
       </Tabs>

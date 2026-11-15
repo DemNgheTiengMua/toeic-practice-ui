@@ -7875,6 +7875,11 @@ export interface components {
             currentPassword: string;
             newPassword: string;
         };
+        /**
+         * @default none
+         * @enum {unknown}
+         */
+        ComplaintCompensationDto: "none" | "make_good" | "refund";
         /** @enum {unknown} */
         ComplaintStatusDto: "open" | "reviewing" | "resolved";
         /** @enum {unknown} */
@@ -8218,6 +8223,7 @@ export interface components {
         ResolveComplaintRequest: {
             resolution: string;
             internalNotes: string;
+            compensation?: components["schemas"]["ComplaintCompensationDto"];
             /**
              * Format: int32
              * @default 0
