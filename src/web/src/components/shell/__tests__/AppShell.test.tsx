@@ -27,6 +27,13 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+// #345 review: an encoding round-trip through this file once turned both patterns into mojibake, and
+// a `not.toMatch` that can never match passes forever. They are constants so that the guards and the
+// proof below cannot drift apart: `keeps_the_copy_guards_matching_the_strings_they_were_written_for`
+// asserts each one against the string it is meant to catch.
+const STAFF_SEPARATOR_GUARD = /Staff ·/i;
+const VIETNAMESE_DIACRITICS_GUARD = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+
 function renderRoute(initialUrl: string) {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -84,6 +91,20 @@ function makeAdminRevision() {
 }
 
 describe('AppShell layout and domain copy', () => {
+  // #345 review: restored from a mojibake round-trip. A `not.toMatch` proves the copy is clean only if
+  // the pattern can match the dirty string, and both here could not. This asserts the direction the
+  // guard is used in is the direction it works in.
+  it('keeps the copy guards matching the strings they were written for', () => {
+    expect('Staff · Admin').toMatch(STAFF_SEPARATOR_GUARD);
+    expect('Staff Studio').not.toMatch(STAFF_SEPARATOR_GUARD);
+
+    // Every diacritic the guard claims to catch, plus the two that had silently dropped out.
+    for (const word of ['à', 'đ', 'ả', 'ấ', 'ơ', 'ư', 'Học', 'Đặng']) {
+      expect(word).toMatch(VIETNAMESE_DIACRITICS_GUARD);
+    }
+    expect("You haven't finished setting up").not.toMatch(VIETNAMESE_DIACRITICS_GUARD);
+  });
+
   beforeEach(() => {
     vi.restoreAllMocks();
     window.scrollTo = vi.fn();
@@ -169,7 +190,7 @@ describe('AppShell layout and domain copy', () => {
       expect(within(header).getByText('Admin')).toBeInTheDocument();
     });
     expect(header.textContent ?? '').not.toMatch(/caps/i);
-    expect(header.textContent ?? '').not.toMatch(/Staff Â·/i);
+    expect(header.textContent ?? '').not.toMatch(STAFF_SEPARATOR_GUARD);
   });
 
   it('displays clean "Staff" label for non-governance staff and never shows "caps" jargon', async () => {
@@ -194,7 +215,7 @@ describe('AppShell layout and domain copy', () => {
       expect(within(header).getByText('Staff')).toBeInTheDocument();
     });
     expect(header.textContent ?? '').not.toMatch(/caps/i);
-    expect(header.textContent ?? '').not.toMatch(/Staff Â·/i);
+    expect(header.textContent ?? '').not.toMatch(STAFF_SEPARATOR_GUARD);
   });
 
   it('renders learner sidebar left-pinned with learner navigation and no staff role chip', async () => {
@@ -469,7 +490,7 @@ describe('AppShell layout and domain copy', () => {
       renderRoute('/certificates');
 
       const banner = await screen.findByTestId('oobe-return-banner');
-      expect(banner.textContent).not.toMatch(/[Ã Ã¡áº¡áº£Ã£Ã¢áº§áº¥áº­áº©áº«Äƒáº±áº¯áº·áº³áºµÃ¨Ã©áº¹áº»áº½Ãªá»áº¿á»‡á»ƒá»…Ã¬Ã­á»‹á»‰Ä©Ã²Ã³á»á»ÃµÃ´á»“á»‘á»™á»•á»—Æ¡á»á»›á»£á»Ÿá»¡Ã¹Ãºá»¥á»§Å©Æ°á»«á»©á»±á»­á»¯á»³Ã½á»µá»·á»¹Ä‘]/i);
+      expect(banner.textContent).not.toMatch(VIETNAMESE_DIACRITICS_GUARD);
       expect(within(banner).getByRole('link', { name: /continue setup/i })).toHaveAttribute(
         'href',
         '/onboarding',
