@@ -21,9 +21,6 @@ import type {
   ExamStudioDetailDto,
   ExamAssemblyDto,
   AdminExamQuestionsDto,
-  CreateQuestionRequest,
-  UpdateQuestionRequest,
-  CreateQuestionGroupRequest,
   UpdateQuestionGroupRequest,
   ReorderSectionItemsRequest,
   CreateExamClusterRequest,
@@ -131,25 +128,10 @@ export const studioApi = {
     apiFetch<ExamAssemblyDto>(`/api/admin/exams/${examId}/assembly`),
   getExamQuestions: (examId: number) =>
     apiFetch<AdminExamQuestionsDto>(`/api/admin/exams/${examId}/questions`),
-  createQuestion: (examId: number, body: CreateQuestionRequest) =>
-    apiFetch<{ questionId: number }>(`/api/admin/exams/${examId}/questions`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  saveQuestion: (examId: number, questionId: number, body: UpdateQuestionRequest) =>
-    apiFetch<void>(`/api/admin/exams/${examId}/questions/${questionId}`, {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    }),
-  deleteQuestion: (examId: number, questionId: number) =>
-    apiFetch<void>(`/api/admin/exams/${examId}/questions/${questionId}`, {
-      method: 'DELETE',
-    }),
-  createQuestionGroup: (examId: number, body: CreateQuestionGroupRequest) =>
-    apiFetch<{ groupId: number }>(`/api/admin/exams/${examId}/studio/groups`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
+  // #360: createQuestion / saveQuestion / deleteQuestion / createQuestionGroup are GONE. The server
+  // maps only GET /exams/{id}/questions; the write routes were retired with the legacy question model
+  // (#265) and a caller got a 404. Authoring writes the pool (POST /items) and the Bundle
+  // (PUT /studio/groups/{id}); those are below.
   updateQuestionGroup: (examId: number, groupId: number, body: UpdateQuestionGroupRequest) =>
     apiFetch<void>(`/api/admin/exams/${examId}/studio/groups/${groupId}`, {
       method: 'PUT',
