@@ -429,7 +429,7 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (25, N'B1', NULL, N'/audio/ielts/placement-diagnostic.mp3', NULL, NULL, N'Officer: The student housing office is open Monday to Thursday from 9 AM to 4 PM. On Fridays we close at 1 PM for staff training.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
+  INSERT INTO [Stimuli] ([StimulusId], [CefrLevel], [Passage], [AudioPath], [AudioStartMs], [AudioEndMs], [Transcript], [DomainContext], [PromptCopy], [ImagePath], [ImageAlt], [PrepSeconds], [ResponseSeconds], [DisplayOrder], [CreatedAt]) VALUES (25, N'B1', NULL, N'/audio/ielts/placement-diagnostic.mp3', 0, 30000, N'Officer: The student housing office is open Monday to Thursday from 9 AM to 4 PM. On Fridays we close at 1 PM for staff training.', N'general', NULL, NULL, NULL, NULL, NULL, 0, '2026-11-11T01:44:03.0840572+07:00');
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -923,6 +923,18 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (6, 2, N'Universal Placement Exam', N'published', 60, N'placement', N'strict_exam', NULL, N'Single universal 4-skill diagnostic placement exam (Listening, Reading, Speaking, Writing) supporting 2-skill or 4-skill OOBE scope.', N'Universal Placement', NULL, 12, N'demo', 1, NULL, 0, '2026-11-11T01:44:01.4937789+07:00', NULL, NULL);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (7, 2, N'IELTS Academic Writing Practice', N'published', 60, N'writing_practice', N'practice', NULL, N'Two IELTS writing tasks: a chart report, then a discussion essay.', N'Demo practice', NULL, 2, N'demo', 1, NULL, 0, '2026-11-16T00:00:00.0000000+07:00', NULL, NULL);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [Exams] ([ExamId], [CertId], [Name], [Status], [DurationMinutes], [Purpose], [DeliveryMode], [ExamFamily], [Description], [SourceName], [InternalNote], [QuestionCount], [ContentTier], [EditionNumber], [SupersedesExamId], [IsDeleted], [CreatedAt], [UpdatedAt], [LastWrittenBy]) VALUES (8, 2, N'IELTS Speaking Practice', N'published', 15, N'speaking_practice', N'practice', NULL, N'A cue-card talk and a topic-development response, graded against the IELTS speaking rubric.', N'Demo practice', NULL, 2, N'demo', 1, NULL, 0, '2026-11-16T00:00:00.0000000+07:00', NULL, NULL);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -3592,6 +3604,30 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (100, 6, 18, 2, 47, 47, N'writing', 1, 1, '2026-11-11T01:44:03.1670000+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (101, 7, 18, 2, 87, 87, N'writing', 1, 1, '2026-11-16T00:00:00.0000000+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (102, 7, 19, 2, 88, 88, N'writing', 1, 1, '2026-11-16T00:00:00.0000000+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (103, 8, 20, 2, 51, 51, N'speaking', 1, 1, '2026-11-16T00:00:00.0000000+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (104, 8, 20, 2, 46, 46, N'speaking', 2, 1, '2026-11-16T00:00:00.0000000+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;

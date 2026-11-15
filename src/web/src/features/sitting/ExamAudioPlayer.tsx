@@ -35,9 +35,12 @@ export function ExamAudioPlayer({
   audioKey,
 }: ExamAudioPlayerProps) {
   const resolvedUrl = toBrowserMediaUrl(audioPath);
+  // Scoped by sitting attempt, so a new attempt never inherits an old one's "played" state.
   const storageKey = useMemo(
-    () => audioKey || `${audioPath}::${audioStartMs ?? 0}-${audioEndMs ?? 'end'}::q${questionId}`,
-    [audioKey, audioPath, audioStartMs, audioEndMs, questionId],
+    () =>
+      audioKey ||
+      `${sittingKind}:${sittingId}::${audioPath}::${audioStartMs ?? 0}-${audioEndMs ?? 'end'}::q${questionId}`,
+    [audioKey, sittingKind, sittingId, audioPath, audioStartMs, audioEndMs, questionId],
   );
 
   const audioRef = useRef<HTMLAudioElement | null>(null);

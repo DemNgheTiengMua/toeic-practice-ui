@@ -45,15 +45,17 @@ public sealed partial class PracticeService
         // sitting. Re-posting the same (now known) answer used to move mastery again every time, so
         // one card answered in a loop farmed a category to Mastered - the "click until green" #155
         // closed in the drill. The guard is this table because it is the one keyed by (learner, card);
-        // a second visit therefore reveals the verdict it already earned and writes no second row.
+        // #373: the stored row is the mastery guard, not the answer to this post - the reply reports
+        // the verdict of the attempt just made, and the card still counts as reached.
         var alreadyGraded = await db.LearnerLessonMicroChecks
             .AsNoTracking()
             .FirstOrDefaultAsync(m => m.UserId == userId && m.CardId == cardId, cancellationToken);
 
         if (alreadyGraded is not null)
         {
+            await LessonProgressRecorder.RecordAsync(db, userId, lessonId, cardId, _clock.GetUtcNow(), cardDone: true);
             return new LessonMicroCheckAnswer(
-                alreadyGraded.IsCorrect, card.CorrectOption, card.Explanation, card.Lesson.CategoryId);
+                isCorrect, card.CorrectOption, card.Explanation, card.Lesson.CategoryId, AlreadyGraded: true);
         }
 
         PracticeSession? session = null;
@@ -70,8 +72,9 @@ public sealed partial class PracticeService
                 .FirstOrDefaultAsync(m => m.UserId == userId && m.CardId == cardId, cancellationToken);
             if (gradedWhileWaiting is not null)
             {
+                await LessonProgressRecorder.RecordAsync(db, userId, lessonId, cardId, _clock.GetUtcNow(), cardDone: true);
                 return new LessonMicroCheckAnswer(
-                    gradedWhileWaiting.IsCorrect, card.CorrectOption, card.Explanation, card.Lesson.CategoryId);
+                    isCorrect, card.CorrectOption, card.Explanation, card.Lesson.CategoryId, AlreadyGraded: true);
             }
         }
 
@@ -116,8 +119,9 @@ public sealed partial class PracticeService
                 .FirstOrDefaultAsync(m => m.UserId == userId && m.CardId == cardId, cancellationToken);
             if (concurrent is not null)
             {
+                await LessonProgressRecorder.RecordAsync(db, userId, lessonId, cardId, _clock.GetUtcNow(), cardDone: true);
                 return new LessonMicroCheckAnswer(
-                    concurrent.IsCorrect, card.CorrectOption, card.Explanation, card.Lesson.CategoryId);
+                    isCorrect, card.CorrectOption, card.Explanation, card.Lesson.CategoryId, AlreadyGraded: true);
             }
 
             throw;
@@ -130,6 +134,10 @@ public sealed partial class PracticeService
         {
             await ApplyMasteryAsync(userId, categoryId, certId, isCorrect, now, cancellationToken);
         }
+
+        // #373: the card was reached by answering it, so it counts toward the module. Without this a
+        // lesson sits at 3 of 4 cards forever and its path step never closes.
+        await LessonProgressRecorder.RecordAsync(db, userId, lessonId, cardId, now, cardDone: true);
 
         await CloseLessonSittingIfFinishedAsync(session, cancellationToken);
 

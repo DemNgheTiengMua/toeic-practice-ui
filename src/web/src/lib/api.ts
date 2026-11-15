@@ -480,6 +480,7 @@ export interface MicroCheckResultDto {
   correctOption: string;
   explanation?: string | null;
   categoryId?: number | null;
+  alreadyGraded?: boolean;
 }
 
 export type SectionAccuracyDto = components['schemas']['SectionAccuracyDto'];
@@ -2090,6 +2091,23 @@ export interface AdminMentorPayoutsReportDto {
   sessions: AdminMentorPayoutItemDto[];
 }
 
+/** #381: a booking in any state, so staff can see a session before it is over. */
+export interface AdminMentorBookingDto {
+  bookingId: number;
+  mentorId: number;
+  mentorName: string;
+  learnerUserId: number;
+  learnerName: string;
+  learnerEmail: string;
+  startAt: string;
+  endAt: string;
+  status: string;
+  focusArea?: string | null;
+  priceCredits: number;
+  cancelledAt?: string | null;
+  createdAt: string;
+}
+
 export interface MentorSkillOptionDto {
   skillId: number;
   code: string;
@@ -3014,6 +3032,16 @@ export const api = {
       const q = sp.toString();
       return apiFetch<AdminMentorPayoutsReportDto>(
         `/api/admin/mentors/payouts${q ? `?${q}` : ''}`,
+      );
+    },
+    // #381: every booking in any status, so a session is visible before it is over.
+    mentorBookings: (mentorId?: number, status?: string) => {
+      const sp = new URLSearchParams();
+      if (mentorId != null) sp.set('mentorId', String(mentorId));
+      if (status) sp.set('status', status);
+      const q = sp.toString();
+      return apiFetch<AdminMentorBookingDto[]>(
+        `/api/admin/mentors/bookings${q ? `?${q}` : ''}`,
       );
     },
     mentorPayoutsExportUrl: (from?: string, to?: string, kind: 'sessions' | 'totals' = 'sessions') => {
