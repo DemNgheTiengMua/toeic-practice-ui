@@ -123,9 +123,24 @@ export function ComplaintsTab() {
       // #350: recording a refund is a promise, not a payment. The desk owns creating it, with its own
       // permission, so this ending hands the incident over and moves no money.
       if (compensation === 'refund') {
+        // #345: carry what the complaint already knows about the subject, not only who it is about. The
+        // desk can then land the order pick and the pre-filled amount (or the credit count) without the
+        // agent reading a figure off one screen and retyping it into another. It is convenience, not
+        // authority: the refund route still resolves the subject's ownership server-side. The values come
+        // from the server's post-resolve detail, not from this render's cached copy.
+        const isOrderSubject = updated.subjectType === 'Order';
         await navigate({
           to: '/admin/finance',
-          search: { complaintId: updated.complaintId, userId: updated.userId } as never,
+          search: {
+            complaintId: updated.complaintId,
+            userId: updated.userId,
+            orderId: isOrderSubject ? updated.subjectId : undefined,
+            // Only a credit subject has a credit count to offer; an order's value is its money amount,
+            // which the desk reads from the order rather than from a number in a URL.
+            creditCount: !isOrderSubject && updated.creditsSpent
+              ? updated.creditsSpent
+              : undefined,
+          } as never,
         });
       }
 

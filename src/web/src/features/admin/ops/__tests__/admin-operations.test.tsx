@@ -621,12 +621,47 @@ describe('AdminOperationsPage (#304)', () => {
       '/api/admin/refunds',
       expect.objectContaining({ method: 'POST' }),
     );
-    // The desk opens with the learner and the complaint carried in the URL.
+    // The desk opens with the learner and the complaint carried in the URL, plus what the complaint
+    // already knows about the subject: #345 carries the credit count so the desk need not be told again.
     await waitFor(() => {
       expect(history.location.pathname).toBe('/admin/finance');
     });
     expect(history.location.search).toContain('complaintId=301');
     expect(history.location.search).toContain('userId=15');
+    expect(history.location.search).toContain('creditCount=1');
+    expect(history.location.search).not.toContain('orderId=');
+  }, 20_000);
+
+  it('carries the subject order to the refund desk so the amount lands without transcription (#345)', async () => {
+    const { history } = renderRoute('/admin/operations', {
+      userId: 2,
+      email: 'triage@test.local',
+      fullName: 'Triage Specialist',
+      role: 'staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    await screen.findByText('Vũ Thị G');
+    // Complaint 303's subject is the order itself, so the desk is handed that order.
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[2]);
+    fireEvent.click(await screen.findByRole('button', { name: /resolve complaint/i }));
+
+    fireEvent.change(await screen.findByLabelText(/message for learner/i), {
+      target: { value: 'Refunding the duplicate deduction.' },
+    });
+    fireEvent.change(screen.getByLabelText(/internal investigation notes/i), {
+      target: { value: 'Bank statement confirms two deductions for order 77.' },
+    });
+    fireEvent.click(screen.getByRole('radio', { name: /record a refund/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm resolution/i }));
+
+    await waitFor(() => {
+      expect(history.location.pathname).toBe('/admin/finance');
+    });
+    expect(history.location.search).toContain('complaintId=303');
+    expect(history.location.search).toContain('userId=17');
+    expect(history.location.search).toContain('orderId=77');
   }, 20_000);
   it('offers only a money refund on an order subject and says nothing is refundable on an uncharged one (#350)', async () => {
     renderRoute('/admin/operations', {

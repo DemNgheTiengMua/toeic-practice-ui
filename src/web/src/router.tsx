@@ -583,6 +583,15 @@ const routeTree = rootRoute.addChildren([
       // than asking staff to search for somebody the complaint already names.
       userId:
         search.userId == null || search.userId === '' ? undefined : Number(search.userId),
+      // #345: the subject the complaint already identifies, so the order pick and the pre-filled
+      // amount (or the credit count) land without a figure being transcribed from another screen.
+      // A hint for convenience only: the refund route resolves ownership server-side.
+      orderId:
+        search.orderId == null || search.orderId === '' ? undefined : Number(search.orderId),
+      creditCount:
+        search.creditCount == null || search.creditCount === ''
+          ? undefined
+          : Number(search.creditCount),
     }),
   }),
   createRoute({

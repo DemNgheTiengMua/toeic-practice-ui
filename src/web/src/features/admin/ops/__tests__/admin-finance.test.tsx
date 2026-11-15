@@ -698,6 +698,45 @@ describe('AdminFinancePage (#304)', () => {
     });
   }, 20_000);
 
+  it('opens on the complaint subject order and its amount, so no figure is transcribed (#345)', async () => {
+    renderRoute('/admin/finance?complaintId=303&userId=5&orderId=101', {
+      userId: 1,
+      email: 'support@test.local',
+      fullName: 'Support Agent',
+      role: 'Staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    expect(await screen.findByText(/carried from complaint #303/i)).toBeInTheDocument();
+
+    // The order is picked from that learner's paid orders, so the amount and the credit count are the
+    // order's own figures rather than the form's 100000 / 5 defaults.
+    await waitFor(() => {
+      expect(screen.getByLabelText(/money amount/i)).toHaveValue(199000);
+    });
+    expect(screen.getByLabelText(/credits to refund/i)).toHaveValue(5);
+    expect(screen.getByRole('radio', { name: /money/i })).toBeChecked();
+  }, 20_000);
+
+  it('opens on the credits a credit subject cost, not the placeholder default (#345)', async () => {
+    renderRoute('/admin/finance?complaintId=301&userId=5&creditCount=12', {
+      userId: 1,
+      email: 'support@test.local',
+      fullName: 'Support Agent',
+      role: 'Staff',
+      emailVerified: true,
+      permissions: [STAFF_PERMISSIONS.SupportTriage],
+    });
+
+    expect(await screen.findByText(/carried from complaint #301/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText(/credits to refund/i)).toHaveValue(12);
+    });
+    // No order was carried, so the method stays credits and no money figure is filled.
+    expect(screen.getByRole('radio', { name: /^credits/i })).toBeChecked();
+  }, 20_000);
+
   it('uses platform SearchField, Select, and Pagination in OrdersTab and RefundsTab (#338)', async () => {
     const baseImpl = fetchMock.getMockImplementation()!;
     fetchMock.mockImplementation(async (url, init) => {

@@ -59,9 +59,19 @@ export interface RefundsTabProps {
   /** #350: the learner the complaint belongs to, so the desk opens on the right person. Also never
    * typed - the complaint already knows who it is about. */
   learnerId?: number | null;
+  /** #345: the subject's order, when the complaint has one. The desk picks it from the learner's paid
+   * orders and pre-fills the amount from it, so no figure is transcribed from another screen. */
+  subjectOrderId?: number | null;
+  /** #345: the credits the subject cost, when it is an attempt or a booking. */
+  subjectCreditCount?: number | null;
 }
 
-export function RefundsTab({ complaintId = null, learnerId = null }: RefundsTabProps) {
+export function RefundsTab({
+  complaintId = null,
+  learnerId = null,
+  subjectOrderId = null,
+  subjectCreditCount = null,
+}: RefundsTabProps) {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -148,6 +158,23 @@ export function RefundsTab({ complaintId = null, learnerId = null }: RefundsTabP
     setLearnerSearch(carriedLearner.email);
     setIsCreateOpen(true);
   }, [learnerId, carriedLearner, selectedLearner]);
+
+  // #345: once that learner's paid orders have arrived, the complaint's subject order is picked and its
+  // amount is filled by the same path a manual pick uses. A subject order that is not among them - an
+  // unpaid one, or one belonging to somebody else - is refused rather than selected: the desk must not
+  // pre-fill a refund against an order the API would reject.
+  React.useEffect(() => {
+    if (subjectOrderId === null || selectedOrder !== null) return;
+    const carried = learnerOrders?.orders.find((o) => o.orderId === subjectOrderId);
+    if (carried) pickOrder(carried);
+  }, [subjectOrderId, learnerOrders, selectedOrder]);
+
+  // #345: a credit subject hands over the count it cost, so the desk opens on the loss rather than on
+  // the placeholder five.
+  React.useEffect(() => {
+    if (subjectCreditCount === null || subjectOrderId !== null) return;
+    setCreateCreditCount(String(subjectCreditCount));
+  }, [subjectCreditCount, subjectOrderId]);
 
   const createMutation = useMutation({
     mutationFn: () => {
