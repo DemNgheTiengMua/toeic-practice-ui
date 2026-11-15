@@ -293,3 +293,17 @@ export function formatSessionExpiry(totalSeconds: number): string {
   }
   return `Session expires in ${formatTimerSeconds(clamped)}`;
 }
+
+/**
+ * The question a sitting page opens on, read from `?q=` exactly once.
+ *
+ * <p><b>Why this is not read on every render:</b> the sitting shell owns navigation and writes `?q=`
+ * itself as the learner moves. A page that re-reads the search parameter would treat that write as a
+ * new instruction, refetch the sitting, and unmount the shell mid-paper — which is precisely the reload
+ * the learner saw on every Next. Seeding it once keeps the shell mounted while still making a manual
+ * reload land on the question that was shown.</p>
+ */
+export function readInitialQuestionOrder(search: { q?: number | string } | undefined): number | null {
+  const raw = search?.q;
+  return raw != null && Number.isFinite(Number(raw)) ? Number(raw) : null;
+}

@@ -46,7 +46,7 @@ const FAQ_ITEMS = [
     id: 'free-practice',
     question: 'What stays free without credits?',
     answer:
-      'Unlimited practice drilling by skill or section, deterministic weakness analysis across topics and sections, the learning path, and your first placement test per certificate cost zero credits.',
+      'Unlimited practice drilling by skill or section, deterministic weakness analysis across topics and sections, and your first placement test per certificate cost zero credits. The learning path is a separate 5-credit purchase.',
   },
   {
     id: 'refunds',
@@ -269,7 +269,7 @@ export function PricingPage() {
           </Card.Header>
           <Card.Content className="space-y-2 text-sm text-muted">
             <p>First placement test for every certificate on your account.</p>
-            <p>Skill &amp; section practice sessions, learning paths, and accuracy diagnostics.</p>
+            <p>Skill &amp; section practice sessions and accuracy diagnostics.</p>
           </Card.Content>
         </Card>
 

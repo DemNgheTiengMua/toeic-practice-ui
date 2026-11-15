@@ -9,6 +9,7 @@ import {
   type PreflightStatusDto,
 } from '@/lib/api';
 import { ExamSittingShell } from '../sitting/ExamSittingShell';
+import { readInitialQuestionOrder } from '../sitting/sitting-helpers';
 
 export function MockExamTakePage() {
   const { attemptId } = useParams({ strict: false }) as { attemptId?: string };
@@ -16,11 +17,7 @@ export function MockExamTakePage() {
   const navigate = useNavigate();
 
   const id = Number(attemptId);
-  // #368: `?q=` seeds the first load only. The shell owns navigation afterwards and writes `?q=`
-  // itself, so re-reading it here would refetch the sitting and remount the paper on every move.
-  const [initialRequestedOrder] = useState<number | null>(() =>
-    search?.q != null && Number.isFinite(Number(search.q)) ? Number(search.q) : null,
-  );
+  const [initialRequestedOrder] = useState<number | null>(() => readInitialQuestionOrder(search));
 
   const [take, setTake] = useState<AttemptTakeDto | null>(null);
   const [preflightStatus, setPreflightStatus] = useState<PreflightStatusDto | null>(null);
