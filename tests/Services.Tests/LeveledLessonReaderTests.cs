@@ -487,4 +487,78 @@ public sealed class LeveledLessonReaderTests(DatabaseFixture database)
         Assert.Equal(StepRoute.LessonReader, start.Route);
         Assert.Contains($"module={LessonModule.Remedial}", start.RedirectUrl);
     }
+
+    [Fact]
+    public async Task SubmitLessonMicroCheckAsync_concurrent_first_submissions_succeed_idempotently_with_one_sitting_and_one_answer()
+    {
+        var seed = await SeedAsync(Unique("L6"));
+        const int callers = 4;
+        var latch = new TableLookupLatch("[PracticeSessions]", callers);
+
+        var options = new DbContextOptionsBuilder<CompanionDbContext>()
+            .UseSqlServer(database.ConnectionString)
+            .AddInterceptors(latch)
+            .Options;
+
+        latch.Arm();
+        var contexts = Enumerable.Range(0, callers).Select(_ => new CompanionDbContext(options)).ToList();
+        try
+        {
+            var results = await Task.WhenAll(contexts.Select(db => Task.Run(() =>
+                new PracticeService(db, new LearnerService(db))
+                    .SubmitLessonMicroCheckAsync(seed.UserId, seed.LessonId, seed.MicroCheckCardId, "A"))));
+
+            Assert.All(results, r =>
+            {
+                Assert.True(r.IsCorrect);
+                Assert.Equal("A", r.CorrectOption);
+            });
+        }
+        finally
+        {
+            foreach (var db in contexts)
+            {
+                await db.DisposeAsync();
+            }
+        }
+
+        await using var verify = Db();
+        Assert.Equal(1, await verify.PracticeSessions.AsNoTracking()
+            .CountAsync(s => s.UserId == seed.UserId && s.LessonId == seed.LessonId));
+        Assert.Equal(1, await verify.PracticeAnswers.AsNoTracking()
+            .CountAsync(pa => pa.CardId == seed.MicroCheckCardId));
+        Assert.Equal(1, await verify.LearnerLessonMicroChecks.AsNoTracking()
+            .CountAsync(m => m.UserId == seed.UserId && m.CardId == seed.MicroCheckCardId));
+    }
+
+    private sealed class TableLookupLatch(string tableToken, int callers)
+        : Microsoft.EntityFrameworkCore.Diagnostics.DbCommandInterceptor
+    {
+        private readonly TaskCompletionSource allArrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int armed;
+        private int arrived;
+
+        public void Arm() => System.Threading.Volatile.Write(ref armed, 1);
+
+        public override async ValueTask<System.Data.Common.DbDataReader> ReaderExecutedAsync(
+            System.Data.Common.DbCommand command,
+            Microsoft.EntityFrameworkCore.Diagnostics.CommandExecutedEventData eventData,
+            System.Data.Common.DbDataReader result,
+            System.Threading.CancellationToken cancellationToken = default)
+        {
+            if (System.Threading.Volatile.Read(ref armed) == 1
+                && command.CommandText.Contains(tableToken, StringComparison.Ordinal)
+                && command.CommandText.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+            {
+                if (System.Threading.Interlocked.Increment(ref arrived) >= callers)
+                {
+                    allArrived.TrySetResult();
+                }
+
+                await Task.WhenAny(allArrived.Task, Task.Delay(TimeSpan.FromSeconds(2), cancellationToken));
+            }
+
+            return result;
+        }
+    }
 }

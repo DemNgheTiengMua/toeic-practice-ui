@@ -260,4 +260,73 @@ public sealed class LessonServiceTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         return await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
     }
+
+    [Fact]
+    public async Task RecordCardViewAsync_concurrent_first_views_succeed_idempotently_with_one_progress_row()
+    {
+        var fixture = await SeedLessonFixtureAsync();
+        var userId = await SeedLearnerAsync();
+        const int callers = 4;
+        var latch = new ProgressLookupLatch(callers);
+
+        var options = new DbContextOptionsBuilder<CompanionDbContext>()
+            .UseSqlServer(database.ConnectionString)
+            .AddInterceptors(latch)
+            .Options;
+
+        latch.Arm();
+        var contexts = Enumerable.Range(0, callers).Select(_ => new CompanionDbContext(options)).ToList();
+        try
+        {
+            await Task.WhenAll(contexts.Select(db => Task.Run(() =>
+                new LessonService(db).RecordCardViewAsync(userId, fixture.lessonId, fixture.card1Id))));
+        }
+        finally
+        {
+            foreach (var db in contexts)
+            {
+                await db.DisposeAsync();
+            }
+        }
+
+        await using var verify = DbContextFactory.Create(database.ConnectionString);
+        var rows = await verify.LearnerLessonProgresses
+            .AsNoTracking()
+            .Where(p => p.UserId == userId && p.LessonId == fixture.lessonId && p.Module == "primary")
+            .ToListAsync();
+        var row = Assert.Single(rows);
+        Assert.Equal(1, row.CardsCompleted);
+        Assert.Equal(fixture.card1Id, row.LastViewedCardId);
+    }
+
+    private sealed class ProgressLookupLatch(int callers)
+        : Microsoft.EntityFrameworkCore.Diagnostics.DbCommandInterceptor
+    {
+        private readonly TaskCompletionSource allArrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int armed;
+        private int arrived;
+
+        public void Arm() => System.Threading.Volatile.Write(ref armed, 1);
+
+        public override async ValueTask<System.Data.Common.DbDataReader> ReaderExecutedAsync(
+            System.Data.Common.DbCommand command,
+            Microsoft.EntityFrameworkCore.Diagnostics.CommandExecutedEventData eventData,
+            System.Data.Common.DbDataReader result,
+            System.Threading.CancellationToken cancellationToken = default)
+        {
+            if (System.Threading.Volatile.Read(ref armed) == 1
+                && command.CommandText.Contains("[LearnerLessonProgress]", StringComparison.Ordinal)
+                && command.CommandText.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+            {
+                if (System.Threading.Interlocked.Increment(ref arrived) >= callers)
+                {
+                    allArrived.TrySetResult();
+                }
+
+                await Task.WhenAny(allArrived.Task, Task.Delay(TimeSpan.FromSeconds(2), cancellationToken));
+            }
+
+            return result;
+        }
+    }
 }
