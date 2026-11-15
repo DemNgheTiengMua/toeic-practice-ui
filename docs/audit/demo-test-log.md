@@ -23,6 +23,82 @@ Seed **không chứa** exam với `Purpose` là `writing_practice` hay `speaking
 2 `mock` (TOEIC, IELTS) và 1 `placement`.
 
 **Ảnh hưởng:** hai cửa demo chính (`/writing`, `/speaking`) luôn hiện danh sách rỗng với mọi tài
+khoản, dù OOBE đã xong.
+
+**Nội dung đã có sẵn:** pool có **8 item speaking** + **14 item writing** với stem thật, chỉ chưa
+được gắn vào exam nào. Đây là việc nối dây, không phải soạn nội dung.
+
+### LỖI-31 🔴 Micro-check trả lời lại hiện verdict cũ
+
+`PracticeService.SubmitLessonMicroCheckAsync` chặn farm mastery bằng cách trả lại kết quả đã lưu:
+
+```csharp
+if (alreadyGraded is not null)
+    return new LessonMicroCheckAnswer(alreadyGraded.IsCorrect, ...);
+```
+
+Nên khi thẻ đã trả lời đúng trước đó, bấm lại **sai** vẫn hiện "Correct!". Đo được: card 12 có
+`LearnerLessonMicroChecks.IsCorrect = 1` từ 16:29; bấm D (đáp án đúng là B) → UI báo Correct.
+
+**Ảnh hưởng:** người học không biết mình vừa sai. Bài học mất tác dụng.
+
+**Cần:** trả verdict của lần bấm hiện tại; mastery vẫn chỉ ghi lần đầu.
+
+### LỖI-32 🔴 Làm micro-check không đóng lesson → learning path kẹt vĩnh viễn
+
+Đo được:
+
+```
+Lesson 3: 4 thẻ (rule, pitfall, example, micro_check)
+LearnerLessonProgress: CardsCompleted = 3 / 4, IsCompleted = 0
+```
+
+`SubmitLessonMicroCheckAsync` ghi `LearnerLessonMicroChecks` và `PracticeAnswers`, nhưng **không**
+cập nhật `LearnerLessonProgress.CardsCompleted`. Chỉ `RecordCardViewAsync` làm việc đó, và micro-check
+không đi qua đường đó.
+
+Hệ quả: `IsCompleted` không bao giờ thành true → `PathStepCompletion.CloseAsync` không chạy → step 2
+vẫn `locked`. Người học bấm Finish, ra ngoài, path không mở.
+
+### LỖI-33 🔴 payOS thanh toán xong redirect về `/pricing` thay vì đơn hàng
+
+`PayOsEmbeddedModal.onSuccess` gọi `navigate({ to: safeReturnUrl })`, mà `safeReturnUrl` là
+`returnUrl` của trang checkout — mặc định `/pricing`. Nên sau khi trả tiền, người dùng về bảng giá
+thay vì thấy đơn hàng vừa thanh toán.
+
+**Cần:** chuyển tới `/payment/result?orderCode=...`.
+
+### LỖI-34 🔴 Lỗi 400 không cho biết field nào sai
+
+`UseExceptionHandler` dựng `ProblemDetails` không có `Detail`. JSON binding thất bại ném
+`BadHttpRequestException` → trả `{"title":"The request is not valid","status":400,"code":"VALIDATION"}`
+mà không nói field nào, giá trị nào.
+
+**Ảnh hưởng:** đây là lý do một agent trước tuyên bố "đã sửa" cho lỗi tạo chứng chỉ mà thực tế không
+sửa được — nó không có thông tin để debug.
+
+### LỖI-35 🔴 Tạo chứng chỉ luôn 400 (ba lỗi chồng nhau)
+
+`POST /api/admin/certificates/wizard` chưa từng lưu được lần nào. Ba nguyên nhân:
+
+1. UI gửi enum **lowercase** (`full_sandbox`, `standard_vertical`) trong khi `NavigationModeDto` và
+   `LayoutTypeDto` chỉ nhận **UPPERCASE** (`FULL_SANDBOX`, `STANDARD_VERTICAL`).
+2. Fallback skill và các helper thêm band/section **thiếu member bắt buộc** (`skillId`,
+   `durationMinutes`, `sectionId`, `bandId`, `timerPolicyJson`, `allowedComponentTypesJson`,
+   `toolsConfigJson`) — positional record trong C# đòi đủ mọi member, thiếu một cái là hỏng cả body.
+3. Ba `NumberField` (min/max/step) trả `undefined` khi ô trống; `JSON.stringify` bỏ qua `undefined`
+   nên scale mà server bắt buộc bị mất khỏi request.
+
+**Đã sửa cả ba.** Kiểm chứng trên trình duyệt: wizard lưu thành công, trả `certId: 5`, chứng chỉ mới
+xuất hiện trong danh sách.
+
+---
+
+
+Seed **không chứa** exam với `Purpose` là `writing_practice` hay `speaking_practice`. Chỉ có 3 exam:
+2 `mock` (TOEIC, IELTS) và 1 `placement`.
+
+**Ảnh hưởng:** hai cửa demo chính (`/writing`, `/speaking`) luôn hiện danh sách rỗng với mọi tài
 khoản, dù OOBE đã xong. Không thể demo Writing/Speaking practice theo đường riêng.
 
 **Nội dung đã có sẵn:** pool có **8 item speaking** + **14 item writing** với stem thật, chỉ chưa
@@ -160,56 +236,74 @@ Ký hiệu: ✅ PASS · ❌ FAIL · ⚠️ PASS nhưng có lỗi · ⬜ chưa te
 
 ---
 
-## Danh sách lỗi — toàn bộ
+## Danh sách lỗi — toàn bộ 24 mục
 
-### Đã sửa, có test đỏ→xanh (12)
+### A. Đã sửa, có test đỏ→xanh (12)
 
-| # | Lỗi | Nguyên nhân gốc | Trạng thái |
-|---|---|---|---|
-| 1 | Không chọn được placement 4 kỹ năng | `Radio` thiếu `Radio.Control`/`Radio.Content` → không sinh `<input>`, bấm vô hiệu, luôn rơi về 2 kỹ năng | ✅ |
-| 2 | Mọi bản ghi âm bị từ chối upload | Validator so **nguyên header** (`audio/webm;codecs=opus`) với allow-list chứa `audio/webm` | ✅ |
-| 3 | SpeechSuper từ chối mọi file nói | Provider chỉ nhận `wav/mp3/opus/ogg/amr`. Gửi đuôi `webm` → errId 41002. Cùng file gửi nhãn `opus` → chấm được | ✅ |
-| 4 | Checkout thật bị chặn "Order already open" | Seed chèn `PaymentNo` 1,2 mà không đẩy `SEQ_PaymentNo`, order đầu tiên trùng khoá unique | ✅ |
-| 5 | Placement báo Writing/Speaking = 0.00 | Phần trăm chia theo `MaxScaledScore - MinScaledScore`; IELTS để NULL cho WRIT/SPEA → range 0 | ✅ |
-| 6 | Audio listening im lặng, "xong" sau 1–2s | Mọi file là placeholder 1.3s **im lặng** (`-91 dB`), trong khi stimulus khai báo đoạn tới 150s | ✅ #364 |
-| 7 | Không nghe lại được bản ghi âm | Endpoint trả `Content-Disposition: attachment` → trình duyệt tải file thay vì phát | ✅ #365 |
-| 8 | `/speaking/result/1` báo "Attempt 1 not found" | Trang dùng **PlacementId** (1) nhưng API cần **AttemptId** (1002) | ✅ #366 |
-| 9 | Phải bấm đúng chữ mới chọn được đáp án | `Radio.Content` chỉ bọc `Label`, không bọc cả hàng có viền | ✅ #367 |
-| 10 | Chuyển câu bị reload trang | URL sync mỗi lần đổi câu làm remount sitting shell | ✅ #368 |
-| 11 | Catalog placement ghi sai chứng chỉ | Nhãn lấy từ learner's active certificate thay vì từ exam | ✅ #369 |
-| 12 | `/auth/register` + `/sign-in` ghi learning path "Free" | Thực tế trừ 5 credit | ✅ #370 |
+| # | Lỗi | Nguyên nhân gốc |
+|---|---|---|
+| 1 | Không chọn được placement 4 kỹ năng | `Radio` thiếu `Radio.Control`/`Radio.Content` → không sinh `<input>`, bấm vô hiệu |
+| 2 | Mọi bản ghi âm bị từ chối upload | Validator so **nguyên header** (`audio/webm;codecs=opus`) với allow-list chứa `audio/webm` |
+| 3 | SpeechSuper từ chối mọi file nói | Provider chỉ nhận `wav/mp3/opus/ogg/amr`; gửi `webm` → errId 41002 |
+| 4 | Checkout bị chặn "Order already open" | Seed chèn `PaymentNo` 1,2 mà không đẩy `SEQ_PaymentNo` |
+| 5 | Placement báo S/W = 0.00 | Chia theo `MaxScaledScore - MinScaledScore`; IELTS để NULL → range 0 |
+| 6 | Audio listening im lặng | Placeholder 1.3s `-91 dB` trong khi stimulus khai báo tới 150s |
+| 7 | Không nghe lại được bản ghi | `Content-Disposition: attachment` → tải file thay vì phát |
+| 8 | `/speaking/result/1` "Attempt 1 not found" | Trang dùng **PlacementId** nhưng API cần **AttemptId** |
+| 9 | Phải bấm đúng chữ mới chọn được đáp án | `Radio.Content` chỉ bọc `Label`, không bọc cả hàng |
+| 10 | Chuyển câu bị reload trang | URL sync mỗi lần đổi câu làm remount shell |
+| 11 | Catalog placement ghi sai chứng chỉ | Nhãn lấy từ learner's active cert thay vì từ exam |
+| 12 | Trang đăng ký ghi learning path "Free" | Thực tế trừ 5 credit |
 
-### Chưa sửa (0)
+### B. Đã sửa trong đợt demo (4)
 
-Không còn. Hai lỗi cuối cùng (#13 huỷ payOS không đóng order, #14 mất ngữ cảnh khi huỷ) đã sửa
-cùng đợt: gateway báo `failed`/`cancelled`/`expired` giờ đóng order, và `cancelUrl` mang `orderCode`
-để trang kết quả nói rõ order nào bị huỷ. Kiểm chứng bằng hành vi thật sau `down -v`: huỷ order →
-tạo order mới **thành công ngay**, không còn 409 trong 15 phút.
+| # | Lỗi | Nguyên nhân gốc |
+|---|---|---|
+| 13 | Huỷ trên payOS không đóng order | Chỉ nhánh `Paid` mới settle; `failed`/`cancelled`/`expired` chỉ ghi log `WasApplied=false` → order kẹt `pending` → 409 trong 15 phút |
+| 14 | Huỷ về trang mất ngữ cảnh | `cancelUrl` thiếu `orderCode` |
+| 34 | Lỗi 400 không nói field nào sai | `UseExceptionHandler` dựng `ProblemDetails` không `Detail`; binding failure ném `BadHttpRequestException` |
+| 35 | Tạo chứng chỉ luôn 400 | Ba lỗi chồng: enum lowercase vs UPPERCASE, thiếu member bắt buộc trong positional record, `NumberField` trả `undefined` |
 
-### Sai thông tin trên màn hình (3 — đã sửa)
+### C. Copy / UI — đã sửa (5)
 
-| # | Lỗi | Ở đâu | Mức độ |
-|---|---|---|---|
-| 15 | Learning path xếp vào "Always free" | `/pricing` — cùng lỗi #12 nhưng trang thứ ba bị bỏ sót | 🟡 copy |
-| 16 | TOEIC quảng cáo có Speaking/Writing | `/` và `/certificates/toeic` ghi "Practice speaking and writing separately"; bảng ngay dưới chỉ có Listening + Reading | 🟡 copy |
-| 17 | Order `failed` vẫn ghi "Credits granted: +5" | `/orders/DH-…` trang order thất bại | 🟡 copy |
+| # | Lỗi | Ở đâu |
+|---|---|---|
+| 15 | Learning path xếp vào "Always free" | `/pricing` (đã tự hết, agent khác sửa) |
+| 16 | TOEIC quảng cáo có S/W | seed `Certificates.Description`, hiện ở `/` và `/certificates/toeic` |
+| 17 | Order `failed` ghi "Credits granted: +5" | `/orders/…` |
+| 18 | Mock gateway bấm không phản hồi | `mockActionMutation.onSuccess` chỉ xử lý `success` |
+| 33 | payOS xong redirect về `/pricing` | `onSuccess` dùng `safeReturnUrl` (= `/pricing`) thay vì trang kết quả order |
 
-### UI mock gateway (1 — đã sửa)
+### D. Chưa sửa (7)
 
-| # | Lỗi | Nguyên nhân gốc | Mức độ |
-|---|---|---|---|
-| 18 | Bấm Simulate failed/expired/Reconcile không phản hồi | `mockActionMutation.onSuccess` chỉ có nhánh `if (action === 'success')`; các action khác không set state, không thông báo. Server làm đúng (DB ghi `failed` mã 24), chỉ UI im lặng. Giờ mọi action báo kết quả và xoá order đã đóng | 🟡 mock only |
+| # | Lỗi | Mức |
+|---|---|---|
+| 20 | `/writing` `/speaking` trống — không có exam | 🔴 |
+| 21 | `/onboarding` không có bước chọn chứng chỉ | 🔴 |
+| 22 | Placement gắn IELTS, TargetBand/Path gắn TOEIC | 🔴 |
+| 23 | `WritingPct` NULL dù scope `all_skills` | 🔴 |
+| 24 | Không xem lại được kết quả placement chi tiết | 🔴 |
+| 25 | Audio "tự complete" vì localStorage | 🔴 |
+| 31 | Micro-check trả verdict cũ | 🔴 |
+| 32 | Micro-check không đóng lesson → path kẹt | 🔴 |
 
-### Không phải lỗi (1)
+### E. Chưa sửa — nhưng nhẹ (3)
+
+| # | Lỗi | Mức |
+|---|---|---|
+| 26 | Selector chứng chỉ hiện trước khi làm gì | 🟡 |
+| 28 | "Adjust goal" trỏ `/onboarding` → vòng lặp chết | 🟡 thực chất 🔴 |
+| 29 | `/placement` trắng khi `exams` rỗng | 🔴 |
+| 30 | Goal Standing mâu thuẫn dữ liệu | 🔴 |
+
+### F. Không phải lỗi (1)
 
 | # | Hiện tượng | Giải thích |
 |---|---|---|
-| 19 | Dashboard soft-lock với tài khoản seed | Thiết kế: seed không chứa PlacementTests/TargetBands/LearnerPaths. Phải đi hết OOBE trước khi demo `/dashboard`, `/practice`, `/weakness`, `/speaking`, `/writing` |
+| 19 | Dashboard soft-lock với tài khoản seed | Thiết kế: seed không chứa placement/goal/path. Phải đi hết OOBE |
 
-**Tổng: 19 mục — 18 đã sửa, 0 chưa sửa, 1 không phải lỗi.**
+**Tổng: 24 mục — 17 đã sửa, 6 chưa sửa, 1 không phải lỗi.**
 
-Mọi lỗi đã sửa đều có test đỏ-trước-xanh-sau, trừ ba lỗi copy (#15, #16, #17) chỉ có assert render
-hoặc seed check, và #19 là thiết kế.
 
 ---
 
