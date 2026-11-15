@@ -64,6 +64,51 @@ public sealed partial class MentorService
         }).ToList();
     }
 
+    /// <summary>
+    /// #381: staff see every booking in any state, unlike the payout report which only ever sees
+    /// delivered sessions. Status is a nullable filter rather than an enum so an unknown code from
+    /// a query string returns an empty list instead of throwing.
+    /// </summary>
+    public async Task<IReadOnlyList<AdminMentorBookingDto>> GetAdminBookingsAsync(
+        int? mentorId,
+        string? status,
+        CancellationToken cancellationToken = default)
+    {
+        var query = db.Bookings
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (mentorId is { } id)
+        {
+            query = query.Where(b => b.MentorId == id);
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            var code = status.Trim().ToLowerInvariant();
+            query = query.Where(b => b.Status == code);
+        }
+
+        return await query
+            .OrderByDescending(b => b.Slot.StartAt)
+            .ThenByDescending(b => b.BookingId)
+            .Select(b => new AdminMentorBookingDto(
+                b.BookingId,
+                b.MentorId,
+                b.Mentor.DisplayName,
+                b.UserId,
+                b.User.FullName ?? b.User.Email,
+                b.User.Email,
+                b.Slot.StartAt,
+                b.Slot.EndAt,
+                b.Status,
+                b.FocusArea,
+                b.PriceCredits,
+                b.CancelledAt,
+                b.CreatedAt))
+            .ToListAsync(cancellationToken);
+    }
+
     private static MentorBookingDto ToBookingDto(
         Booking b,
         MentorProfile mentor,
