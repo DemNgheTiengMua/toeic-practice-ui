@@ -349,6 +349,22 @@ describe('PlacementResumePage, PlacementTakePage & PlacementResultPage', () => {
     expect(api.placement.result).toHaveBeenCalledTimes(2);
   });
 
+  it('#366 Result: links to the Speaking and Writing review pages by attempt id, not placement id', async () => {
+    // A real sitting diverges: placement 42 was attempt 420. The review endpoints take the attempt.
+    vi.mocked(api.placement.result).mockResolvedValueOnce(
+      makeResult({ isGraded: true, speakingPct: 36.11, writingPct: 61.11 }),
+    );
+
+    render(<PlacementResultPage />);
+
+    expect(
+      (await screen.findByRole('link', { name: /speaking result/i })).getAttribute('href'),
+    ).toBe('/speaking/result/420');
+    expect(screen.getByRole('link', { name: /writing result/i }).getAttribute('href')).toBe(
+      '/writing/result/420',
+    );
+  });
+
   it('Result renders Unmeasured badge (never 0), Carried over, AI-estimated, 2-skill notice, and Retry grading', async () => {
     vi.mocked(api.placement.result).mockResolvedValueOnce(
       makeResult({
