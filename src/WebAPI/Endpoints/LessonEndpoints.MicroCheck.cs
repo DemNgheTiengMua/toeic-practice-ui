@@ -21,7 +21,7 @@ public static partial class LessonEndpoints
             var result = await practice.SubmitLessonMicroCheckAsync(
                 CurrentUserId(http), id, cardId, request.SelectedOption);
             return Results.Ok(new MicroCheckResultDto(
-                result.IsCorrect, result.CorrectOption, result.Explanation, result.CategoryId));
+                result.IsCorrect, result.CorrectOption, result.Explanation, result.CategoryId, result.AlreadyGraded));
         }
         catch (PracticeException ex) when (ex.Code is PracticeException.QuestionNotFound or PracticeException.InvalidOption)
         {

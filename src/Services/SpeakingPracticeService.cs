@@ -748,7 +748,8 @@ public sealed class SpeakingPracticeService(
                 criteriaItems,
                 AiErrorSpan.Deserialize(grading?.ErrorSpansJson),
                 grading?.PriorityFix,
-                grading?.ModelRewrite));
+                grading?.ModelRewrite,
+                grading?.FailureReason));
 
             overallTotalScore += qTotal;
             overallMaxScore += qMax;

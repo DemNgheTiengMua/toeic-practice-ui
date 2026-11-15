@@ -153,6 +153,8 @@ export interface SpeakingQuestionReviewItem {
   errorSpans?: WritingErrorSpan[] | null;
   priorityFix?: string | null;
   modelRewrite?: string | null;
+  // #376: the grader's refusal, when it refused this task.
+  failureReason?: string | null;
 }
 
 export interface SpeakingReview {

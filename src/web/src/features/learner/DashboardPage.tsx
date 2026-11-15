@@ -312,7 +312,7 @@ export function DashboardPage() {
                     </span>
                   )}
                   <Link
-                    to="/onboarding"
+                    to="/goal"
                     className="text-xs font-semibold text-accent hover:underline inline-flex items-center gap-1"
                   >
                     Adjust goal <ArrowRight className="w-3 h-3" />

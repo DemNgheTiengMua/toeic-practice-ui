@@ -25,6 +25,11 @@ namespace BusinessObjects;
 /// <param name="MeasuredAt">When this result was measured — the original sitting, for a carried skill.</param>
 /// <param name="ReusedFromPrior">True when this result was carried over rather than measured here.</param>
 /// <param name="FailureReason">Why it was not measured, when that is the status.</param>
+/// <param name="FailureDetail">
+/// #376: the grader's own words when <see cref="PlacementResultStatus.NotMeasured"/> happened because
+/// its grading was refused. The code alone told the learner "the grader could not score this task"
+/// while the row held the actual reason; this carries it to the page.
+/// </param>
 public sealed record PlacementSkillResultInfo(
     int SkillId,
     string SkillCode,
@@ -34,7 +39,8 @@ public sealed record PlacementSkillResultInfo(
     int? PositionInBand,
     DateTimeOffset? MeasuredAt,
     bool ReusedFromPrior,
-    string? FailureReason)
+    string? FailureReason,
+    string? FailureDetail = null)
 {
     /// <summary>One of the two statuses that count as a measurement (PLC-19, PLC-33).</summary>
     public bool IsMeasured =>
