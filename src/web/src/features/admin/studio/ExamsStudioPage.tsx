@@ -4,9 +4,11 @@ import {
   Button,
   Card,
   Chip,
+  Disclosure,
   Label,
   ListBox,
   Modal,
+  ProgressBar,
   SearchField,
   Select,
   Table,
@@ -48,9 +50,11 @@ import type {
   AdminCertificateSummaryDto,
   AdminExamListItemDto,
   AdminExamDetailDto,
+  AdminExamSectionProgressDto,
   ExamAuditResultDto,
   ExamAssemblyDto,
   QuickIngestParsedQuestionDto,
+  QuickIngestSampleTemplateDto,
   CreateAdminExamRequest,
 } from './types';
 
@@ -126,12 +130,32 @@ export function ExamsStudioPage() {
   const [isQuickIngestOpen, setIsQuickIngestOpen] = useState(false);
   const [ingestSectionId, setIngestSectionId] = useState<number>(1);
   const [ingestLevel, setIngestLevel] = useState<string>('B1');
+  const [ingestLevelBySection, setIngestLevelBySection] = useState<Record<number, string>>({});
   const [ingestTopic, setIngestTopic] = useState<string>('L-RESP');
   const [ingestText, setIngestText] = useState('');
   const [isParsingIngest, setIsParsingIngest] = useState(false);
   const [parsedQuestions, setParsedQuestions] = useState<QuickIngestParsedQuestionDto[]>([]);
   const [isCommitingIngest, setIsCommitingIngest] = useState(false);
-  const [ingestNotice, setIngestNotice] = useState<string | null>(null);
+  const [ingestNotice, setIngestNotice] = useState<{ text: string; isError: boolean } | null>(null);
+  const [ingestSample, setIngestSample] = useState<QuickIngestSampleTemplateDto | null>(null);
+
+  // The paste template belongs to the Section being filled, so it reloads whenever the target changes.
+  useEffect(() => {
+    if (!isQuickIngestOpen) return;
+    let cancelled = false;
+    setIngestSample(null);
+    studioApi
+      .getQuickIngestSample(ingestSectionId)
+      .then((sample) => {
+        if (!cancelled) setIngestSample(sample);
+      })
+      .catch(() => {
+        // A missing template is not an error: the generic placeholder still lets the author paste.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isQuickIngestOpen, ingestSectionId]);
 
   // Load Exam List
   useEffect(() => {
@@ -315,7 +339,7 @@ export function ExamsStudioPage() {
       });
       setParsedQuestions(res.questions);
     } catch (err: any) {
-      setIngestNotice(err?.detail || err?.title || 'Parsing failed.');
+      setIngestNotice({ text: err?.detail || err?.title || 'Parsing failed.', isError: true });
     } finally {
       setIsParsingIngest(false);
     }
@@ -334,14 +358,30 @@ export function ExamsStudioPage() {
         cefrLevel: ingestLevel,
         topicCode: ingestTopic,
       });
-      setIngestNotice(res.message);
-      setIsQuickIngestOpen(false);
+      setIngestNotice({
+        text: `${res.message} ${res.poolItemsWritten ?? 0} pool items written, ${
+          res.poolItemsBound ?? 0
+        } bound to this section.`,
+        isError: false,
+      });
+      setParsedQuestions([]);
+      setIngestText('');
       loadExamDetail(selectedExamId);
     } catch (err: any) {
-      setIngestNotice(err?.detail || err?.title || 'Commit failed.');
+      setIngestNotice({ text: err?.detail || err?.title || 'Commit failed.', isError: true });
     } finally {
       setIsCommitingIngest(false);
     }
+  };
+
+  // A Section card names its own Section and hands the modal everything it needs to fill it.
+  const openQuickIngestFor = (section: AdminExamSectionProgressDto) => {
+    // SectionProgress carries no CEFR field, so the hint is the level last used for this Section.
+    setIngestSectionId(section.sectionId);
+    setIngestLevel(ingestLevelBySection[section.sectionId] ?? ingestLevel);
+    setIngestNotice(null);
+    setParsedQuestions([]);
+    setIsQuickIngestOpen(true);
   };
 
   // Publish Exam
@@ -912,27 +952,77 @@ export function ExamsStudioPage() {
 
             {/* Tab 4: Studio & Quick Ingest */}
             <Tabs.Panel id="studio" className="pt-4 space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-base font-bold text-foreground">Questions Authoring Tree</h3>
-                <Button size="sm" variant="primary" onPress={() => setIsQuickIngestOpen(true)}>
-                  <Sparkles className="w-3.5 h-3.5 mr-1" />
-                  Quick ingest
-                </Button>
+              <div>
+                <h3 className="text-base font-bold text-foreground">Sections</h3>
+                <p className="text-xs text-muted">
+                  Pick a Section, paste its questions, and the stock is written to the pool and bound
+                  to this paper.
+                </p>
               </div>
 
-              {ingestNotice && (
-                <Alert status="accent">
+              {ingestNotice && !ingestNotice.isError && (
+                <Alert status="success">
                   <Alert.Indicator />
                   <Alert.Content>
                     <Alert.Title>Notice</Alert.Title>
-                    <Alert.Description>{ingestNotice}</Alert.Description>
+                    <Alert.Description>{ingestNotice.text}</Alert.Description>
                   </Alert.Content>
                 </Alert>
               )}
 
-              <Card className="p-4 text-center text-muted text-sm">
-                Select a section or group to edit questions, or use Quick Ingest to parse structured text directly.
-              </Card>
+              <ul aria-label="Exam sections" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {examDetail?.sectionProgress.map((sec) => (
+                  <li key={sec.sectionId}>
+                    <Card className="border border-border h-full">
+                      <Card.Header className="pb-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-mono text-xs font-bold text-accent">
+                            {sec.sectionCode}
+                          </span>
+                          <Chip
+                            size="sm"
+                            variant="soft"
+                            color={sec.isComplete ? 'success' : 'warning'}
+                          >
+                            {sec.isComplete ? 'Complete' : 'Incomplete'}
+                          </Chip>
+                        </div>
+                        <Card.Title className="text-base mt-1">{sec.sectionName}</Card.Title>
+                        <Card.Description className="text-xs">
+                          Modality: {formatModalityLabel(sec.modality)}
+                        </Card.Description>
+                      </Card.Header>
+                      <Card.Content className="space-y-3 border-t border-border pt-3">
+                        <div className="flex justify-between items-baseline text-xs">
+                          <span className="text-muted">Questions bound</span>
+                          <span className="font-mono-tabular font-medium text-foreground">
+                            {sec.questionCount} / {sec.expectedQuestionCount}
+                          </span>
+                        </div>
+                        <ProgressBar
+                          aria-label={`${sec.sectionCode} bound questions`}
+                          color={sec.isComplete ? 'success' : 'accent'}
+                          value={sec.questionCount}
+                          maxValue={Math.max(sec.expectedQuestionCount, 1)}
+                          size="sm"
+                        >
+                          <ProgressBar.Track>
+                            <ProgressBar.Fill />
+                          </ProgressBar.Track>
+                        </ProgressBar>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onPress={() => openQuickIngestFor(sec)}
+                        >
+                          <Sparkles className="w-3.5 h-3.5 mr-1" />
+                          Paste questions
+                        </Button>
+                      </Card.Content>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
             </Tabs.Panel>
 
             {/* Tab 5: Publish Readiness */}
@@ -1069,13 +1159,28 @@ export function ExamsStudioPage() {
               <Modal.Heading>Quick Ingest Questions</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="space-y-4">
+              {ingestNotice && (
+                <Alert status={ingestNotice.isError ? 'danger' : 'success'}>
+                  <Alert.Indicator />
+                  <Alert.Content>
+                    <Alert.Title>
+                      {ingestNotice.isError ? 'Quick ingest failed' : 'Committed'}
+                    </Alert.Title>
+                    <Alert.Description>{ingestNotice.text}</Alert.Description>
+                  </Alert.Content>
+                </Alert>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Select
                   aria-label="Target section"
                   className="w-full"
                   value={ingestSectionId ? String(ingestSectionId) : undefined}
                   onChange={(key) => {
-                    if (key != null) setIngestSectionId(Number(key));
+                    if (key != null) {
+                      setIngestSectionId(Number(key));
+                      setParsedQuestions([]);
+                    }
                   }}
                 >
                   <Label className="text-xs font-semibold text-foreground">Target section</Label>
@@ -1104,7 +1209,11 @@ export function ExamsStudioPage() {
                   className="w-full"
                   value={ingestLevel}
                   onChange={(key) => {
-                    if (key != null) setIngestLevel(String(key));
+                    if (key != null) {
+                      const level = String(key);
+                      setIngestLevel(level);
+                      setIngestLevelBySection((prev) => ({ ...prev, [ingestSectionId]: level }));
+                    }
                   }}
                 >
                   <Label className="text-xs font-semibold text-foreground">CEFR level</Label>
@@ -1138,6 +1247,24 @@ export function ExamsStudioPage() {
                   />
                 </div>
               </div>
+
+              {ingestSample && (
+                <Disclosure>
+                  <Disclosure.Heading>
+                    <Disclosure.Trigger className="text-xs font-semibold text-accent">
+                      {ingestSample.formatDescription}
+                      <Disclosure.Indicator className="w-4 h-4" />
+                    </Disclosure.Trigger>
+                  </Disclosure.Heading>
+                  <Disclosure.Content>
+                    <Disclosure.Body>
+                      <pre className="p-3 rounded-md border border-border bg-surface-secondary text-foreground font-mono text-xs whitespace-pre-wrap overflow-x-auto">
+                        {ingestSample.template}
+                      </pre>
+                    </Disclosure.Body>
+                  </Disclosure.Content>
+                </Disclosure>
+              )}
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-foreground">Raw questions text</label>

@@ -475,9 +475,10 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
     const studioTab = await screen.findByRole('tab', { name: /studio & quick ingest/i });
     fireEvent.click(studioTab);
 
-    // Open Quick Ingest modal
-    const openIngestBtn = await screen.findByRole('button', { name: /quick ingest/i });
-    fireEvent.click(openIngestBtn);
+    // Open Quick Ingest modal from the P1 Section card
+    const sectionList = await screen.findByRole('list', { name: /exam sections/i });
+    const sectionCards = within(sectionList).getAllByRole('listitem');
+    fireEvent.click(within(sectionCards[0]).getByRole('button', { name: /paste questions/i }));
 
     expect(await screen.findByRole('heading', { name: /quick ingest questions/i })).toBeInTheDocument();
 
@@ -514,6 +515,179 @@ describe('Exams Authoring Studio (/admin/exams) (#303)', () => {
       expect(committedRequest.topicCode).toBe('L-RESP');
       expect(committedRequest.questions.length).toBe(1);
     });
+  });
+
+  it('lists every Section with its bound and expected question count (#358)', async () => {
+    installFetchMock((url) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          id: 1,
+          email: 'author@demo.local',
+          fullName: 'Content Author',
+          role: 'staff',
+          permissions: [STAFF_PERMISSIONS.ContentAuthor],
+        });
+      }
+      if (url.startsWith('/api/admin/exams?')) {
+        return jsonResponse(mockExamList);
+      }
+      if (url === '/api/admin/exams/101') {
+        return jsonResponse(mockExamDetail);
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin/exams');
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /open studio for toeic official practice test 1/i }),
+    );
+    fireEvent.click(await screen.findByRole('tab', { name: /studio & quick ingest/i }));
+
+    const sectionList = await screen.findByRole('list', { name: /exam sections/i });
+    const cards = within(sectionList).getAllByRole('listitem');
+
+    expect(cards).toHaveLength(mockExamDetail.sectionProgress.length);
+    expect(within(cards[0]).getByText('P1')).toBeInTheDocument();
+    expect(within(cards[0]).getByText('Photographs')).toBeInTheDocument();
+    expect(within(cards[0]).getByText('6 / 6')).toBeInTheDocument();
+    expect(within(cards[1]).getByText('Question-Response')).toBeInTheDocument();
+    expect(within(cards[1]).getByText('20 / 25')).toBeInTheDocument();
+    expect(
+      within(cards[1]).getByRole('button', { name: /paste questions/i }),
+    ).toBeInTheDocument();
+
+    // The dead placeholder is gone for good.
+    expect(screen.queryByText(/select a section or group to edit questions/i)).toBeNull();
+  });
+
+  it('launches Quick Ingest from the chosen Section and commits against it (#358)', async () => {
+    let parseBody: any = null;
+    let committedRequest: any = null;
+    let detailCalls = 0;
+
+    installFetchMock((url, init) => {
+      if (url === '/api/auth/me') {
+        return jsonResponse({
+          id: 1,
+          email: 'author@demo.local',
+          fullName: 'Content Author',
+          role: 'staff',
+          permissions: [STAFF_PERMISSIONS.ContentAuthor],
+        });
+      }
+      if (url.startsWith('/api/admin/exams?')) {
+        return jsonResponse(mockExamList);
+      }
+      if (url === '/api/admin/exams/101') {
+        detailCalls += 1;
+        // The second read is the post-commit refresh: P2 gained one bound question.
+        const detail =
+          detailCalls === 1
+            ? mockExamDetail
+            : {
+                ...mockExamDetail,
+                sectionProgress: mockExamDetail.sectionProgress.map((sec) =>
+                  sec.sectionId === 2 ? { ...sec, questionCount: 21 } : sec,
+                ),
+              };
+        return jsonResponse(detail);
+      }
+      if (url === '/api/admin/sections/2/quick-ingest/sample') {
+        return jsonResponse({
+          template: '1. A\nTRANSCRIPT: When does the shuttle leave?',
+          formatDescription: 'Section Blueprint Tailored Template',
+        });
+      }
+      if (url === '/api/admin/exams/101/quick-ingest/parse' && init?.method === 'POST') {
+        parseBody = JSON.parse(init.body as string);
+        return jsonResponse({
+          success: true,
+          totalQuestions: 1,
+          validQuestions: 1,
+          errorCount: 0,
+          questions: [
+            {
+              index: 1,
+              startLineNumber: 1,
+              endLineNumber: 2,
+              stem: 'Where is the nearest bus stop?',
+              explanation: null,
+              categoryCode: null,
+              options: [
+                { label: 'A', text: 'Next to the library.', isCorrect: true },
+                { label: 'B', text: 'Two hours ago.', isCorrect: false },
+                { label: 'C', text: 'Mr. Tanaka will attend.', isCorrect: false },
+              ],
+              issues: [],
+              isValid: true,
+              questionType: 'mcq_3',
+            },
+          ],
+          globalIssues: [],
+        });
+      }
+      if (url === '/api/admin/exams/101/quick-ingest/commit' && init?.method === 'POST') {
+        committedRequest = JSON.parse(init.body as string);
+        return jsonResponse({
+          success: true,
+          questionsCommitted: 1,
+          groupsCreated: 1,
+          message: 'Committed 1 question and created 1 pool item.',
+          poolItemsWritten: 1,
+          poolStimuliWritten: 0,
+          poolItemsBound: 1,
+        });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    renderRoute('/admin/exams');
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /open studio for toeic official practice test 1/i }),
+    );
+    fireEvent.click(await screen.findByRole('tab', { name: /studio & quick ingest/i }));
+
+    const sectionList = await screen.findByRole('list', { name: /exam sections/i });
+    fireEvent.click(
+      within(within(sectionList).getAllByRole('listitem')[1]).getByRole('button', {
+        name: /paste questions/i,
+      }),
+    );
+
+    expect(await screen.findByRole('heading', { name: /quick ingest questions/i })).toBeInTheDocument();
+
+    // The modal opens on the Section the author clicked, not on the first Section.
+    expect(screen.getByRole('button', { name: /target section/i })).toHaveTextContent('P2');
+    // The Section's own paste template is offered.
+    expect(
+      await screen.findByRole('button', { name: /section blueprint tailored template/i }),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText(/paste questions here/i), {
+      target: { value: '1. A\nTRANSCRIPT: Where is the nearest bus stop?' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /parse text/i }));
+    expect(await screen.findByText(/Where is the nearest bus stop/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /commit questions/i }));
+
+    await waitFor(() => {
+      expect(committedRequest).not.toBeNull();
+    });
+    expect(parseBody.sectionId).toBe(2);
+    expect(committedRequest.sectionId).toBe(2);
+
+    // The write is reported inside the modal, with what was actually written.
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      within(dialog).getByText(/1 pool items written, 1 bound to this section/i),
+    ).toBeInTheDocument();
+
+    // The refreshed detail raises P2's bound count before the author closes the modal.
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+    expect(await screen.findByText('21 / 25')).toBeInTheDocument();
   });
 
   it('binds backend RFC 7807 field errors to HeroUI FieldError controls in the create exam modal', async () => {
