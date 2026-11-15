@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 
 namespace Contracts;
 
@@ -56,53 +55,28 @@ public static class RefundExportCsv
     public const string Header =
         "Refund ID,Requested on,Settled on,Learner email,Learner name,Order code,Method,Money amount,Credit count,Reason,Decided by,Exported at";
 
-    /// <summary>RFC 4180 uses CRLF between records, and Excel accepts nothing else consistently.</summary>
-    private const string RecordSeparator = "\r\n";
-
     /// <summary>
     /// The bytes of the file. <paramref name="exportedAt"/> is stamped on every row and changes no
     /// refund's status: an export is a read, so exporting twice yields the same rows.
     /// </summary>
     public static byte[] Format(IReadOnlyList<RefundExportRow> rows, DateTimeOffset exportedAt)
     {
-        var text = new StringBuilder();
-        text.Append(Header).Append(RecordSeparator);
+        var stamp = Rfc4180Csv.ExportStamp(exportedAt);
 
-        var stamp = exportedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
-
-        foreach (var row in rows)
-        {
-            var fields = new[]
-            {
-                row.RefundId.ToString(CultureInfo.InvariantCulture),
-                row.RequestedOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                row.SettledOn?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "",
-                row.LearnerEmail,
-                row.LearnerName,
-                row.OrderCode ?? "",
-                row.Method.ToWireCode(),
-                row.Amount?.ToString("0.00", CultureInfo.InvariantCulture) ?? "",
-                row.CreditCount?.ToString(CultureInfo.InvariantCulture) ?? "",
-                row.Reason,
-                row.DecidingAdmin ?? "",
-                stamp,
-            };
-
-            text.AppendJoin(',', fields.Select(Quote)).Append(RecordSeparator);
-        }
-
-        // The preamble is the byte-order mark. Encoding.UTF8.GetBytes never emits it, so it is prepended
-        // by hand rather than relying on an encoding flag whose behaviour differs between the writer APIs.
-        return [.. Encoding.UTF8.GetPreamble(), .. Encoding.UTF8.GetBytes(text.ToString())];
+        return Rfc4180Csv.Format(Header, rows.Select(row => (IReadOnlyList<string>)
+        [
+            row.RefundId.ToString(CultureInfo.InvariantCulture),
+            Rfc4180Csv.Date(row.RequestedOn),
+            Rfc4180Csv.Date(row.SettledOn),
+            row.LearnerEmail,
+            row.LearnerName,
+            row.OrderCode ?? "",
+            row.Method.ToWireCode(),
+            Rfc4180Csv.Money(row.Amount),
+            Rfc4180Csv.Count(row.CreditCount),
+            row.Reason,
+            row.DecidingAdmin ?? "",
+            stamp,
+        ]).ToList());
     }
-
-    /// <summary>
-    /// RFC 4180: a field is quoted when it contains a comma, a quote, CR or LF, and an embedded quote is
-    /// doubled. A reason is free text up to 400 characters, so all four cases are reachable from a real
-    /// refund - an unquoted one would shift every column to its right.
-    /// </summary>
-    private static string Quote(string field) =>
-        field.AsSpan().IndexOfAny(",\"\r\n") < 0
-            ? field
-            : $"\"{field.Replace("\"", "\"\"")}\"";
 }

@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 
 namespace Contracts;
 
@@ -21,8 +20,8 @@ public sealed record MentorPayoutExportRow(
     decimal AmountVnd);
 
 /// <summary>
-/// Pure RFC 4180 CSV formatter for completed mentor payouts with UTF-8 BOM, ISO-8601 dates in UTC+7,
-/// and bare decimal money formatting (ADR-0016, mirroring <see cref="RefundExportCsv"/>).
+/// Pure RFC 4180 CSV formatter for completed mentor payouts, over the shared writer
+/// (<see cref="Rfc4180Csv"/>): UTF-8 BOM, ISO-8601 dates in UTC+7, and bare decimal money.
 /// </summary>
 public static class MentorPayoutExportCsv
 {
@@ -31,42 +30,25 @@ public static class MentorPayoutExportCsv
     public const string Header =
         "Booking ID,Session date,Start time,End time,Mentor ID,Mentor name,Certificate,Skill,Learner email,Learner name,Credits,Money amount,Exported at";
 
-    private const string RecordSeparator = "\r\n";
-
     public static byte[] Format(IReadOnlyList<MentorPayoutExportRow> rows, DateTimeOffset exportedAt)
     {
-        var text = new StringBuilder();
-        text.Append(Header).Append(RecordSeparator);
+        var stamp = Rfc4180Csv.ExportStamp(exportedAt);
 
-        var stamp = exportedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
-
-        foreach (var row in rows)
-        {
-            var fields = new[]
-            {
-                row.BookingId.ToString(CultureInfo.InvariantCulture),
-                row.SessionDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                row.StartTime.ToString("HH:mm", CultureInfo.InvariantCulture),
-                row.EndTime.ToString("HH:mm", CultureInfo.InvariantCulture),
-                row.MentorId.ToString(CultureInfo.InvariantCulture),
-                row.MentorName,
-                row.CertCode,
-                row.SkillName ?? "",
-                row.LearnerEmail,
-                row.LearnerName,
-                row.PriceCredits.ToString(CultureInfo.InvariantCulture),
-                row.AmountVnd.ToString("0.00", CultureInfo.InvariantCulture),
-                stamp,
-            };
-
-            text.AppendJoin(',', fields.Select(Quote)).Append(RecordSeparator);
-        }
-
-        return [.. Encoding.UTF8.GetPreamble(), .. Encoding.UTF8.GetBytes(text.ToString())];
+        return Rfc4180Csv.Format(Header, rows.Select(row => (IReadOnlyList<string>)
+        [
+            row.BookingId.ToString(CultureInfo.InvariantCulture),
+            Rfc4180Csv.Date(row.SessionDate),
+            row.StartTime.ToString("HH:mm", CultureInfo.InvariantCulture),
+            row.EndTime.ToString("HH:mm", CultureInfo.InvariantCulture),
+            row.MentorId.ToString(CultureInfo.InvariantCulture),
+            row.MentorName,
+            row.CertCode,
+            row.SkillName ?? "",
+            row.LearnerEmail,
+            row.LearnerName,
+            Rfc4180Csv.Count(row.PriceCredits),
+            Rfc4180Csv.Money(row.AmountVnd),
+            stamp,
+        ]).ToList());
     }
-
-    private static string Quote(string field) =>
-        field.AsSpan().IndexOfAny(",\"\r\n") < 0
-            ? field
-            : $"\"{field.Replace("\"", "\"\"")}\"";
 }

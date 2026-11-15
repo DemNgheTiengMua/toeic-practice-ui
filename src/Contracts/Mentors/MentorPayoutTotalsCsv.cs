@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 
 namespace Contracts;
 
@@ -22,7 +21,8 @@ public sealed record MentorPayoutTotalsRow(
 /// <summary>
 /// #353: the second accounting file. One row per mentor, same contract as
 /// <see cref="MentorPayoutExportCsv"/> - UTF-8 byte-order mark, RFC 4180 quoting, ISO-8601 dates, bare
-/// decimal money - because accounting opens both in the same spreadsheet.
+/// decimal money - because accounting opens both in the same spreadsheet. Both are written by
+/// <see cref="Rfc4180Csv"/> so that contract cannot drift between them.
 /// <para>
 /// Two files rather than one: mixing per-session and per-mentor rows inside a single CSV breaks Excel's
 /// column typing and every importer that reads the header.
@@ -35,39 +35,21 @@ public static class MentorPayoutTotalsCsv
     public const string Header =
         "Mentor ID,Mentor name,Certificate,Sessions,Credits,Money amount,Exported at";
 
-    /// <summary>RFC 4180 uses CRLF between records, and Excel accepts nothing else consistently.</summary>
-    private const string RecordSeparator = "\r\n";
-
     public static byte[] Format(IReadOnlyList<MentorPayoutTotalsRow> rows, DateTimeOffset exportedAt)
     {
-        var text = new StringBuilder();
-        text.Append(Header).Append(RecordSeparator);
-
-        var stamp = exportedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
-
-        foreach (var row in rows)
-        {
-            var fields = new[]
-            {
-                row.MentorId.ToString(CultureInfo.InvariantCulture),
-                row.MentorName,
-                row.CertCode,
-                row.SessionCount.ToString(CultureInfo.InvariantCulture),
-                row.TotalCredits.ToString(CultureInfo.InvariantCulture),
-                row.TotalAmountVnd.ToString("0.00", CultureInfo.InvariantCulture),
-                stamp,
-            };
-
-            text.AppendJoin(',', fields.Select(Quote)).Append(RecordSeparator);
-        }
+        var stamp = Rfc4180Csv.ExportStamp(exportedAt);
 
         // A period with nothing delivered yields this header and nothing else: an empty file accounting
         // cannot open is worse than a file that states there is nothing to pay.
-        return [.. Encoding.UTF8.GetPreamble(), .. Encoding.UTF8.GetBytes(text.ToString())];
+        return Rfc4180Csv.Format(Header, rows.Select(row => (IReadOnlyList<string>)
+        [
+            row.MentorId.ToString(CultureInfo.InvariantCulture),
+            row.MentorName,
+            row.CertCode,
+            Rfc4180Csv.Count(row.SessionCount),
+            Rfc4180Csv.Count(row.TotalCredits),
+            Rfc4180Csv.Money(row.TotalAmountVnd),
+            stamp,
+        ]).ToList());
     }
-
-    private static string Quote(string field) =>
-        field.AsSpan().IndexOfAny(",\"\r\n") < 0
-            ? field
-            : $"\"{field.Replace("\"", "\"\"")}\"";
 }

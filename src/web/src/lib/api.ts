@@ -3006,66 +3006,31 @@ export const api = {
         `/api/admin/mentors/payouts${q ? `?${q}` : ''}`,
       );
     },
-    mentorPayoutsExportUrl: (from?: string, to?: string) => {
+    mentorPayoutsExportUrl: (from?: string, to?: string, kind: 'sessions' | 'totals' = 'sessions') => {
       const sp = new URLSearchParams();
       if (from) sp.set('from', from);
       if (to) sp.set('to', to);
       const q = sp.toString();
-      return `/api/admin/mentors/payouts/export${q ? `?${q}` : ''}`;
-    },
-    mentorPayoutTotalsExportUrl: (from?: string, to?: string) => {
-      const sp = new URLSearchParams();
-      if (from) sp.set('from', from);
-      if (to) sp.set('to', to);
-      const q = sp.toString();
-      return `/api/admin/mentors/payouts/totals/export${q ? `?${q}` : ''}`;
+      const path = kind === 'totals' ? 'totals/export' : 'export';
+      return `/api/admin/mentors/payouts/${path}${q ? `?${q}` : ''}`;
     },
     // #353: the second accounting file - one row per mentor, so a transfer needs no arithmetic.
-    exportMentorPayoutTotalsCsv: async (
-      from?: string,
-      to?: string,
-    ): Promise<{ blob: Blob; filename: string }> => {
-      const sp = new URLSearchParams();
-      if (from) sp.set('from', from);
-      if (to) sp.set('to', to);
-      const query = sp.toString() ? `?${sp.toString()}` : '';
-      const response = await fetch(`/api/admin/mentors/payouts/totals/export${query}`, {
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        let code = 'unexpected_error';
-        let title = response.statusText || 'Export failed';
-        let detail: string | undefined;
-        try {
-          const problem = await response.json();
-          if (problem && typeof problem === 'object') {
-            code = problem.code || problem.error || code;
-            title = problem.title || problem.message || title;
-            detail = problem.detail || problem.message;
-          }
-        } catch {}
-        throw new ApiClientError(response.status, code, title, detail);
-      }
-      const disposition = response.headers.get('content-disposition');
-      let filename = `mentor-payout-totals-${from || 'today'}-to-${to || 'today'}.csv`;
-      if (disposition) {
-        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (match && match[1]) {
-          filename = match[1].replace(/['"]/g, '').trim();
-        }
-      }
-      const blob = await response.blob();
-      return { blob, filename };
-    },
+    // One parameterised export for both files: they differ only in the path segment and the default
+    // filename, so a second ~35-line copy would be the same request written twice.
     exportMentorPayoutsCsv: async (
       from?: string,
       to?: string,
+      kind: 'sessions' | 'totals' = 'sessions',
     ): Promise<{ blob: Blob; filename: string }> => {
       const sp = new URLSearchParams();
       if (from) sp.set('from', from);
       if (to) sp.set('to', to);
       const query = sp.toString() ? `?${sp.toString()}` : '';
-      const response = await fetch(`/api/admin/mentors/payouts/export${query}`, {
+      const path =
+        kind === 'totals'
+          ? `/api/admin/mentors/payouts/totals/export${query}`
+          : `/api/admin/mentors/payouts/export${query}`;
+      const response = await fetch(path, {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -3083,7 +3048,11 @@ export const api = {
         throw new ApiClientError(response.status, code, title, detail);
       }
       const disposition = response.headers.get('content-disposition');
-      let filename = `mentor-payouts-${from || 'today'}-to-${to || 'today'}.csv`;
+      const fallback =
+        kind === 'totals'
+          ? `mentor-payout-totals-${from || 'today'}-to-${to || 'today'}.csv`
+          : `mentor-payouts-${from || 'today'}-to-${to || 'today'}.csv`;
+      let filename = fallback;
       if (disposition) {
         const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
         if (match && match[1]) {

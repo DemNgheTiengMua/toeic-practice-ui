@@ -106,7 +106,7 @@ public sealed partial class ComplaintService
 
         if (request.Compensation == ComplaintCompensationDto.MakeGood)
         {
-            AssertMakeGoodAllowed(complaint, creditsSpent, impliedMethod, request.GrantCredits);
+            AssertMakeGoodAllowed(creditsSpent, impliedMethod, request.GrantCredits);
         }
 
         if (request.Compensation == ComplaintCompensationDto.Refund)
@@ -156,7 +156,6 @@ public sealed partial class ComplaintService
     /// for an order hands back a currency the learner never paid in. The ceiling is the spend itself.
     /// </summary>
     private static void AssertMakeGoodAllowed(
-        Complaint complaint,
         int creditsSpent,
         RefundMethodDto? impliedMethod,
         int grantCredits)

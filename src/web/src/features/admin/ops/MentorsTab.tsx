@@ -342,9 +342,10 @@ export function MentorsTab() {
     try {
       setIsExportingTotalsCsv(true);
       setPayoutError(null);
-      const { blob, filename } = await api.admin.exportMentorPayoutTotalsCsv(
+      const { blob, filename } = await api.admin.exportMentorPayoutsCsv(
         payoutFrom || undefined,
         payoutTo || undefined,
+        'totals',
       );
       triggerBlobDownload(blob, filename);
     } catch (err: any) {
@@ -354,7 +355,8 @@ export function MentorsTab() {
     }
   }
 
-  const selectedCert = certOptions?.find((c) => c.certId === selectedCertId);  const availableSkills = selectedCert?.skills || [];
+  const selectedCert = certOptions?.find((c) => c.certId === selectedCertId);
+  const availableSkills = selectedCert?.skills || [];
   const parsedFormCredits = Math.max(0, parseInt(priceCredits, 10) || 0);
   const liveVndEquivalent = creditsToVnd(parsedFormCredits);
 
