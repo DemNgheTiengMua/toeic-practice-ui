@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { Alert, Button, Card, Chip, Spinner } from '@heroui/react';
-import { Headphones, Mic, CheckCircle2 } from 'lucide-react';
+import { Headphones, CheckCircle2 } from 'lucide-react';
 import {
   api,
   ApiClientError,
@@ -10,11 +10,18 @@ import {
 } from '@/lib/api';
 import { ExamSittingShell } from '../sitting/ExamSittingShell';
 import { readInitialQuestionOrder } from '../sitting/sitting-helpers';
+import { useAuth } from '../../context/AuthContext';
+import { SpeakingMicrophoneCard } from '../productive/speaking/SpeakingMicrophoneCard';
+import { useMicrophoneCheck } from '../productive/speaking/useMicrophoneCheck';
 
 export function PlacementTakePage() {
   const { attemptId } = useParams({ strict: false }) as { attemptId?: string };
   const search = useSearch({ strict: false }) as { q?: number | string };
   const navigate = useNavigate();
+  const { refreshOnboardingState } = useAuth();
+  // Asked for a real device permission, so the learner picks the microphone they will speak into and
+  // the sitting cannot open with a blocked one. Runs only when the paper actually records.
+  const mic = useMicrophoneCheck(false);
 
   const placementId = Number(attemptId);
   const [initialRequestedOrder] = useState<number | null>(() => readInitialQuestionOrder(search));
@@ -50,6 +57,11 @@ export function PlacementTakePage() {
         try {
           const status = await api.placement.preflightStatus(placementId);
           setPreflightStatus(status);
+          // The check runs when the equipment step appears, and only for a paper that records: a
+          // 2-skill sitting never asks the browser for a device it will not use.
+          if (status.requiresMicrophone) {
+            void mic.retry();
+          }
         } catch {
           setError({
             code: err.code,
@@ -127,11 +139,10 @@ export function PlacementTakePage() {
                 <span>Headphones or speakers checked for Listening sections.</span>
               </div>
             )}
+            {/* Only a paper that records demands the microphone. A 2-skill sitting has nothing to
+                record, so it is never asked and cannot be blocked by a browser that refuses. */}
             {preflightStatus.requiresMicrophone && (
-              <div className="flex items-center gap-2 text-foreground">
-                <Mic className="h-4 w-4 text-accent" aria-hidden="true" />
-                <span>Microphone ready for Speaking sections.</span>
-              </div>
+              <SpeakingMicrophoneCard mic={mic} compact />
             )}
           </Card.Content>
           <Card.Footer className="flex items-center justify-between gap-3 pt-4 border-t border-border">
@@ -141,6 +152,7 @@ export function PlacementTakePage() {
             <Button
               variant="primary"
               isPending={verifyingPreflight}
+              isDisabled={preflightStatus.requiresMicrophone && mic.status !== 'ready'}
               onPress={() => void handleVerifyPreflight()}
             >
               <CheckCircle2 className="h-4 w-4 mr-1.5" aria-hidden="true" />
@@ -207,6 +219,12 @@ export function PlacementTakePage() {
       }
       onSubmit={async (isAutoSubmit) => {
         await api.placement.submit(take.placementId, isAutoSubmit);
+
+        // The wizard's step comes from the onboarding state, which the auth context caches for 30s.
+        // Without this refresh a learner who returns to /onboarding straight after submitting still
+        // sees step 1 ("choose 2 or 4 skills") until an F5 — the state was stale, not the step wrong.
+        await refreshOnboardingState();
+
         await navigate({
           to: '/placement/result/$attemptId',
           params: { attemptId: String(take.placementId) },

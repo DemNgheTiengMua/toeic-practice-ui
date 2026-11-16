@@ -233,10 +233,16 @@ public sealed partial class LearnerService(
             .Select(p => new { p.PlacementId, p.AttemptId })
             .FirstOrDefaultAsync(cancellationToken);
 
-        // #379: a goal and a path belong to ONE certificate, so "does this learner have a goal" is
-        // only answerable for the certificate being studied. Reading them unscoped made a TOEIC goal
-        // satisfy the wizard for an IELTS learner, who then skipped the certificate step and was
-        // handed a path for the wrong certificate.
+        // #379/#387: a goal and a path belong to ONE certificate — that part holds, and it is why a path
+        // is never handed to the wrong certificate. But "is the wizard finished" must not mean "is it
+        // finished for the certificate I happen to be studying right now": the placement is ONE universal
+        // sitting shared by every certificate, so a learner who completed setup for IELTS and then
+        // switched to TOEIC was sent back to step 1 and told to sit the placement again, which the
+        // product does not charge for and does not want them to repeat.
+        //
+        // The two questions are answered separately: `IsOobeComplete` asks whether setup has been done
+        // at all (any certificate), while the per-certificate readers below stay scoped so the goal
+        // editor and the path still resolve against the certificate being studied.
         var activeCertId = await GetActiveCertIdAsync(userId, cancellationToken);
 
         var hasTargetGoal = await db.TargetBands
@@ -247,8 +253,15 @@ public sealed partial class LearnerService(
             .AsNoTracking()
             .AnyAsync(p => p.UserId == userId && p.CertId == activeCertId && p.Status == LearnerPathStatus.Active.ToCode(), cancellationToken);
 
+        var hasAnyTargetGoal = hasTargetGoal
+            || await db.TargetBands.AsNoTracking().AnyAsync(t => t.UserId == userId, cancellationToken);
+
+        var hasAnyActiveLearningPath = hasActiveLearningPath
+            || await db.LearnerPaths.AsNoTracking()
+                .AnyAsync(p => p.UserId == userId && p.Status == LearnerPathStatus.Active.ToCode(), cancellationToken);
+
         var hasCompletedPlacement = donePlacementId.HasValue;
-        var isOobeComplete = hasCompletedPlacement && hasTargetGoal && hasActiveLearningPath;
+        var isOobeComplete = hasCompletedPlacement && hasAnyTargetGoal && hasAnyActiveLearningPath;
 
         return new OnboardingState(
             HasCompletedPlacement: hasCompletedPlacement,

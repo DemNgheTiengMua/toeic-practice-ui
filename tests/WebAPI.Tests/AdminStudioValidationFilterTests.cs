@@ -316,7 +316,9 @@ public sealed class AdminStudioValidationFilterTests
             throw new NotSupportedException();
         }
 
+        
         public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<CertificateRemovalResultDto> RemoveCertificateAsync(int certId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public IReadOnlyList<CertificateBlueprintPresetDto> GetOfficialPresets() => throw new NotSupportedException();
         public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(int certId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(string code, CancellationToken cancellationToken = default) => throw new NotSupportedException();

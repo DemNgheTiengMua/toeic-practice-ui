@@ -167,13 +167,24 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
                 Assert.True(complaintCount >= 1, "Should have a resolved complaint referencing admin grant");
             }
 
-            // 6. Verify Mentors and average rating view
+            // 6. Mentors exist, and no review is seeded. A seeded review is a review nobody wrote,
+            //    rendered as "verified" to a prospective learner; the page shows an empty state instead.
             await using (var cmd = conn.CreateCommand())
             {
-                cmd.CommandText = @"SELECT AvgRating FROM vw_MentorAvgRating 
+                cmd.CommandText = @"SELECT COUNT(*) FROM MentorProfiles WHERE DisplayName = N'Dr. Trần Minh Khoa'";
+                Assert.Equal(1, Convert.ToInt32(await cmd.ExecuteScalarAsync()));
+            }
+            await using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = "SELECT COUNT(*) FROM Reviews";
+                Assert.Equal(0, Convert.ToInt32(await cmd.ExecuteScalarAsync()));
+            }
+            await using (var cmd = conn.CreateCommand())
+            {
+                // The aggregate view must survive having no rows to average.
+                cmd.CommandText = @"SELECT COUNT(*) FROM vw_MentorAvgRating
                                     WHERE MentorId = (SELECT MentorId FROM MentorProfiles WHERE DisplayName = N'Dr. Trần Minh Khoa')";
-                var rating = Convert.ToDecimal(await cmd.ExecuteScalarAsync());
-                Assert.Equal(5.00m, rating);
+                Assert.True(Convert.ToInt32(await cmd.ExecuteScalarAsync()) >= 0);
             }
 
             // 7. #224: the demo learner's bank is two POOL links, each pinned to an item version. The

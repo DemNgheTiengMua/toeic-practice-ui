@@ -17,6 +17,20 @@ const mockNavigate = vi.fn();
 let mockParams: Record<string, string> = { attemptId: '42' };
 let mockSearch: Record<string, unknown> = {};
 
+// PlacementTakePage reads refreshOnboardingState after submitting, so the auth context is stubbed
+// here rather than booting a real provider inside a router-less test.
+vi.mock('../../../context/AuthContext', () => ({
+  useAuth: () => ({
+    refreshOnboardingState: vi.fn().mockResolvedValue(undefined),
+    isAuthenticated: true,
+    isStaff: false,
+    onboardingState: null,
+    learnerContext: null,
+    user: null,
+    switchCertificate: vi.fn(),
+  }),
+}));
+
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mockNavigate,
   useParams: () => mockParams,

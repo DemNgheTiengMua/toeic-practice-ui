@@ -63,5 +63,27 @@ public static partial class AdminEndpoints
                     statusCode: StatusCodes.Status400BadRequest);
             }
         }).AddEndpointFilter<RequestValidationFilter<SaveCertificateWizardRequest>>();
+
+        // Deleting a certificate is a destructive act, so the answer says which of the two things
+        // actually happened: destroyed, or withdrawn because learners depend on it.
+        admin.MapDelete("/certificates/{certId:int}", async Task<IResult> (
+            int certId,
+            ICertificateService certificates,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var result = await certificates.RemoveCertificateAsync(certId, cancellationToken);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Certificate not found", ApiError.Codes.NotFound, ex.Message);
+            }
+            catch (CertificateRemovalException ex) when (ex.Code == CertificateRemovalException.LastActiveCertificate)
+            {
+                return Problem(StatusCodes.Status409Conflict, "Cannot remove the last certificate", ApiError.Codes.Validation, ex.Message);
+            }
+        });
     }
 }

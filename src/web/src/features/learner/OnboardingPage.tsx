@@ -80,15 +80,17 @@ export function OnboardingPage({ standalone = false }: { standalone?: boolean } 
   // done": it is where a learner chooses which certificate to study, so a finished learner who
   // reopens the wizard still lands on something they can change. The route no longer redirects them
   // to the dashboard, because that made the certificate impossible to revisit.
+  // The wizard's step is derived from the SETUP state, not from the certificate being studied: the
+  // placement is one universal sitting shared by every certificate, so switching certificates must not
+  // send a finished learner back to step 1. `hasTargetGoal` / `hasActiveLearningPath` stay
+  // per-certificate for the goal editor and the path itself, which is why they are not read here.
   const derivedStep: OobeStep = !onboardingState
     ? 3
     : !onboardingState.hasCompletedPlacement
       ? 1
-      : !onboardingState.hasTargetGoal
-        ? 2
-        : !onboardingState.hasActiveLearningPath
-          ? 4
-          : 3;
+      : !onboardingState.isOobeComplete
+        ? (onboardingState.hasTargetGoal ? 4 : 2)
+        : 3;
 
   // The standalone editor is always the goal step: "Adjust goal" must open an editor even when the
   // wizard itself would show a placement or a path hand-off.

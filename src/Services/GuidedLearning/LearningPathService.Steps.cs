@@ -79,9 +79,13 @@ public sealed partial class LearningPathService
 
         if (existingSession is not null)
         {
+            // The frontend owns these paths, so they must name its routes exactly: a finished drill
+            // opens /practice/result/{id}, an unfinished one /practice/session/{id}. The old
+            // "/practice/{id}" and "/practice/{id}/summary" matched no route and answered "Page not
+            // found" — a path defect, not missing content.
             var target = existingSession.Status == PracticeStatus.Finished.ToCode()
-                ? $"/practice/{existingSession.SessionId}/summary"
-                : $"/practice/{existingSession.SessionId}";
+                ? $"/practice/result/{existingSession.SessionId}"
+                : $"/practice/session/{existingSession.SessionId}";
             return new StartStepResult(step.StepId, stepType, StepRoute.ItemSelector, target, existingSession.SessionId, null);
         }
 
@@ -148,7 +152,7 @@ public sealed partial class LearningPathService
         await db.SaveChangesAsync(cancellationToken);
 
         return new StartStepResult(
-            step.StepId, stepType, StepRoute.ItemSelector, $"/practice/{session.SessionId}", session.SessionId, null)
+            step.StepId, stepType, StepRoute.ItemSelector, $"/practice/session/{session.SessionId}", session.SessionId, null)
         {
             SubstitutedFromTopicId = substituted ? step.TopicId : null,
         };
@@ -219,6 +223,8 @@ public sealed partial class LearningPathService
             .FirstOrDefaultAsync(cancellationToken);
 
         return new StartStepResult(
-            step.StepId, stepType, StepRoute.AttemptEngine, $"/exams/{examId}/instructions", null, attempt);
+            // /exams/{id} is the instructions/confirm page; "/exams/{id}/instructions" matched no
+            // frontend route and answered "Page not found".
+            step.StepId, stepType, StepRoute.AttemptEngine, $"/exams/{examId}", null, attempt);
     }
 }

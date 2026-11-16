@@ -40,7 +40,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
-import { canManageCatalog, hasCapability, STAFF_PERMISSIONS } from '../../../lib/security';
+import { canManageCatalog, hasCapability, STAFF_PERMISSIONS, toBrowserMediaUrl } from '../../../lib/security';
 import { studioApi } from './studioApi';
 import {
   formatExamStatusLabel,
@@ -276,7 +276,9 @@ export function ExamsStudioPage() {
       loadAssembly(selectedExamId);
     } else if (activeWorkspaceTab === 'publish') {
       loadAudit(selectedExamId);
-    } else if (activeWorkspaceTab === 'content') {
+    } else if (activeWorkspaceTab === 'content' || activeWorkspaceTab === 'sections') {
+      // 'sections' needs the studio detail too: it is the only place a Section's master audio path
+      // lives, and the tab must be able to play the track it reports as uploaded.
       loadStudio(selectedExamId);
     }
   }, [activeWorkspaceTab, selectedExamId]);
@@ -1341,12 +1343,41 @@ export function ExamsStudioPage() {
                           {sec.questionCount} / {sec.expectedQuestionCount}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center gap-2">
                         <span className="text-muted">Audio track:</span>
-                        <span className="font-medium">
-                          {sec.hasAudio ? 'Audio uploaded' : 'Missing audio'}
-                        </span>
+                        {sec.hasAudio ? (
+                          <span className="font-medium text-success">Audio uploaded</span>
+                        ) : (
+                          <span className="font-medium text-warning">Missing audio</span>
+                        )}
                       </div>
+                      {/* A track you cannot hear is a track you cannot check. The sitting resolves a
+                          Bundle's own slice first and falls back to this master track, so what plays
+                          here is what the candidate hears when the Bundle declares no slice.
+                          "Audio uploaded" was the only evidence before, and it lied. */}
+                      {(() => {
+                        // The master path lives on the studio detail, not on the progress row this
+                        // card renders, so it is looked up by section id.
+                        const studioSection = studioDetail?.sections.find(
+                          (s) => s.sectionId === sec.sectionId,
+                        );
+                        if (!studioSection?.masterAudioPath) return null;
+                        return (
+                          <div className="space-y-1">
+                            <audio
+                              controls
+                              preload="metadata"
+                              className="w-full h-9"
+                              src={toBrowserMediaUrl(studioSection.masterAudioPath) ?? undefined}
+                              aria-label={`Section master audio for ${sec.sectionCode}`}
+                            />
+                            <p className="text-[11px] text-muted m-0">
+                              Section master track. A Bundle that declares its own audio slice plays
+                              that slice instead.
+                            </p>
+                          </div>
+                        );
+                      })()}
                       <p className="text-muted italic pt-1">{sec.statusText}</p>
 
                       {/* #359: a file, never a typed path. The server names the file and answers it. */}
@@ -1554,6 +1585,21 @@ export function ExamsStudioPage() {
                   A Section is Bundles. Each Bundle is its shared passage, audio track, image and
                   transcript, plus the questions that refer to it — the shape a real Exam has.
                 </p>
+                {/* Two tabs can both hold an audio file, and which one plays is not obvious, so it is
+                    stated where an author meets the second one rather than in a doc nobody opens. */}
+                <Alert status="accent" className="mt-3">
+                  <Alert.Indicator />
+                  <Alert.Content>
+                    <Alert.Title>Where the audio actually comes from</Alert.Title>
+                    <Alert.Description>
+                      A Bundle that declares its own audio slice plays that slice. Everything else falls
+                      back to the Section master track uploaded on{' '}
+                      <strong className="font-semibold">Sections &amp; Audio</strong>. You do not need to
+                      upload the same file twice: set the Bundle slice only when this Bundle needs a
+                      different part of the track, and clear it to reuse the master.
+                    </Alert.Description>
+                  </Alert.Content>
+                </Alert>
               </div>
 
               {isLoadingStudio && <p className="text-sm text-muted">Loading Section content…</p>}
@@ -1652,8 +1698,7 @@ export function ExamsStudioPage() {
                                   <dd className="text-foreground">
                                     {bundle.audioPath ? 'attached' : '—'}
                                   </dd>
-                                </div>
-                                <div className="flex gap-1">
+                                </div>                                <div className="flex gap-1">
                                   <dt className="text-muted">Image:</dt>
                                   <dd className="text-foreground">
                                     {bundle.imagePath ? bundle.imageAlt || 'alt missing' : '—'}

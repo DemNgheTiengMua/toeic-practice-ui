@@ -87,7 +87,7 @@ public sealed partial class LearnerService
                 $"Finish {unfinishedPractice.SectionName}",
                 $"{unfinishedPractice.CorrectCount} of {unfinishedPractice.QuestionCount} questions answered. Finishing updates your accuracy and your weak points.",
                 "Resume practice",
-                $"/practice/{unfinishedPractice.SessionId}",
+                $"/practice/session/{unfinishedPractice.SessionId}",
                 "warning",
                 NextActionCascade.ResumeInProgress,
                 "IN PROGRESS");

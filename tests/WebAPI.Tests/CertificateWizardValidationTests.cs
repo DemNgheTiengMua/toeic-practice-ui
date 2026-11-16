@@ -176,8 +176,10 @@ public sealed class CertificateWizardValidationTests
 
         public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(string code, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
-
         public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<CertificateRemovalResultDto> RemoveCertificateAsync(int certId, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }
 
@@ -257,8 +259,10 @@ public sealed class CertificateWizardValidationTests
 
         public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(string code, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
-
         public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<CertificateRemovalResultDto> RemoveCertificateAsync(int certId, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }
 }

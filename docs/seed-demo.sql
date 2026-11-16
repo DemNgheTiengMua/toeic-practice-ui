@@ -3904,14 +3904,10 @@ BEGIN CATCH
 END CATCH
 SET IDENTITY_INSERT [LessonCards] OFF;
 
--- ---- Reviews (1 rows)
-SET IDENTITY_INSERT [Reviews] ON;
-BEGIN TRY
-  INSERT INTO [Reviews] ([ReviewId], [BookingId], [UserId], [Rating], [Text], [CreatedAt]) VALUES (1, 1, 2, 5, N'Very patient and explains listening strategies clearly. Score improved significantly in 2 months.', '2026-11-07T01:44:01.8642311+07:00');
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
+-- ---- Reviews (0 rows)
+-- A seeded review would be a review nobody wrote, shown to a prospective learner as "verified".
+-- The mentor page renders an honest empty state instead ("No learner reviews published yet"), and
+-- DemoSeedTests asserts that state rather than an invented rating.
 SET IDENTITY_INSERT [Reviews] OFF;
 
 -- ---- CreditTransactions (6 rows)

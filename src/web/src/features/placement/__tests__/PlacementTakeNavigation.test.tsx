@@ -10,6 +10,8 @@ import {
 } from '@tanstack/react-router';
 import { api, type AttemptQuestionDto, type PlacementTakeViewDto } from '@/lib/api';
 import { PlacementTakePage } from '../PlacementTakePage';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '../../../context/AuthContext';
 
 vi.mock('@/lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api')>();
@@ -103,7 +105,18 @@ function renderTake() {
   const router = createRouter({
     routeTree: rootRoute.addChildren([takeRoute, resultRoute]),
   });
-  render(<RouterProvider router={router} />);
+  // PlacementTakePage now reads refreshOnboardingState from auth, so the real providers wrap it —
+  // the same way the app mounts it, rather than a stub that would hide a missing provider.
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
   return router;
 }
 

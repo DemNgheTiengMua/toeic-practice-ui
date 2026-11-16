@@ -21,4 +21,11 @@ public interface ICertificateService
     Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default);
 
     Task<SaveCertificateWizardResultDto> SaveCertificateWizardAsync(SaveCertificateWizardRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Removes a certificate from the catalogue. A certificate that has been studied is never destroyed:
+    /// its attempts, ledger rows and placements are a learner's history, so it is deactivated instead and
+    /// a learner already on it is moved to another active certificate first.
+    /// </summary>
+    Task<CertificateRemovalResultDto> RemoveCertificateAsync(int certId, CancellationToken cancellationToken = default);
 }

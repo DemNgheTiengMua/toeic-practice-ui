@@ -446,7 +446,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         Assert.Equal(PathStepType.FocusPractice, result.StepType);
         Assert.Equal(StepRoute.ItemSelector, result.Route);
         Assert.NotNull(result.SessionId);
-        Assert.Equal($"/practice/{result.SessionId}", result.RedirectUrl);
+        Assert.Equal($"/practice/session/{result.SessionId}", result.RedirectUrl);
 
         var updatedStep = await db.LearnerPathSteps.FindAsync(drill.StepId);
         Assert.Equal("in_progress", updatedStep!.Status);
@@ -522,7 +522,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
         Assert.Equal(PathStepType.MockSection, result.StepType);
         Assert.Equal(StepRoute.AttemptEngine, result.Route);
-        Assert.Equal($"/exams/{examId}/instructions", result.RedirectUrl);
+        Assert.Equal($"/exams/{examId}", result.RedirectUrl);
         Assert.Null(result.SessionId);
         Assert.Equal(examId, mockStep.RefExamId);
     }
