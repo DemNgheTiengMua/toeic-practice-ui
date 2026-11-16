@@ -47,6 +47,17 @@ import type {
 export const studioApi = {
   // Certificates & Blueprints
   getCertificates: () => apiFetch<AdminCertificateSummaryDto[]>('/api/admin/certificates'),
+  // Removal answers which of the two things happened — deleted, or withdrawn because learners depend
+  // on it — so the caller can report it rather than assume.
+  removeCertificate: (certId: number) =>
+    apiFetch<{
+      deleted: boolean;
+      certId: number;
+      certCode: string;
+      learnersReassigned: number;
+      reassignedToCode: string | null;
+      message: string;
+    }>(`/api/admin/certificates/${certId}`, { method: 'DELETE' }),
   getCertificatePresets: () =>
     apiFetch<CertificateBlueprintPresetDto[]>('/api/admin/certificates/presets'),
   // #360: getCertificateBlueprint had no caller. The wizard owns a certificate's configuration, and it

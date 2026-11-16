@@ -112,6 +112,11 @@ export function CertificatesStudioPage() {
   const [presets, setPresets] = useState<CertificateBlueprintPresetDto[]>([]);
   const [isLoadingCerts, setIsLoadingCerts] = useState(false);
   const [certError, setCertError] = useState<string | null>(null);
+  // Removal is confirmed before it runs: it either destroys an untouched certificate or withdraws one
+  // holding learner history, and neither is undoable from this screen.
+  const [removalTarget, setRemovalTarget] = useState<AdminCertificateSummaryDto | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [removalNotice, setRemovalNotice] = useState<string | null>(null);
 
   // Wizard Modal State (3-step template flow)
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -158,6 +163,31 @@ export function CertificatesStudioPage() {
       setPresets(data);
     } catch {
       // Non-fatal
+    }
+  };
+
+  /**
+   * Removes the certificate the admin confirmed. The server decides whether that means destroying an
+   * untouched certificate or withdrawing one that holds learner history, and says which — so the page
+   * reports what happened instead of assuming the row disappeared.
+   */
+  const handleRemoveCertificate = async () => {
+    if (!removalTarget) return;
+    setIsRemoving(true);
+    setCertError(null);
+    setRemovalNotice(null);
+    try {
+      const result = await studioApi.removeCertificate(removalTarget.certId);
+      setRemovalNotice(result.message);
+      setRemovalTarget(null);
+      await loadCertificates();
+    } catch (err: any) {
+      setCertError(
+        err?.detail || err?.title || `Could not remove '${removalTarget.code}'.`,
+      );
+      setRemovalTarget(null);
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -452,6 +482,16 @@ export function CertificatesStudioPage() {
             </Alert>
           )}
 
+          {removalNotice && (
+            <Alert status="success">
+              <Alert.Indicator />
+              <Alert.Content>
+                <Alert.Title>Certificate removed</Alert.Title>
+                <Alert.Description>{removalNotice}</Alert.Description>
+              </Alert.Content>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {certificates.map((cert) => (
               <Card key={cert.certId} className="border border-border">
@@ -487,6 +527,19 @@ export function CertificatesStudioPage() {
                   <div className="flex justify-between text-muted">
                     <span>Authored exams:</span>
                     <span className="font-mono-tabular font-medium text-foreground">{cert.examsCount}</span>
+                  </div>
+                  <div className="pt-2 border-t border-border">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-danger"
+                      onPress={() => {
+                        setRemovalNotice(null);
+                        setRemovalTarget(cert);
+                      }}
+                    >
+                      Remove certificate
+                    </Button>
                   </div>
                 </Card.Content>
               </Card>
@@ -989,6 +1042,40 @@ export function CertificatesStudioPage() {
                   Save blueprint
                 </Button>
               )}
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+
+      {/* Confirmed before it runs. The wording says what will happen to a certificate that holds
+          learner history, because "remove" would otherwise promise a deletion it cannot perform. */}
+      <Modal.Backdrop
+        isOpen={removalTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRemovalTarget(null);
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog className="sm:max-w-md">
+            <Modal.Header>
+              <Modal.Heading>Remove {removalTarget?.code}?</Modal.Heading>
+              <p className="text-sm text-muted m-0 mt-1">
+                A certificate with no learner history is deleted. One that holds attempts, placements or
+                a learning path is withdrawn from the catalogue instead, and any learner on it is moved
+                to another active certificate.
+              </p>
+            </Modal.Header>
+            <Modal.Footer>
+              <Button variant="secondary" onPress={() => setRemovalTarget(null)}>
+                Keep it
+              </Button>
+              <Button
+                variant="danger"
+                isPending={isRemoving}
+                onPress={() => void handleRemoveCertificate()}
+              >
+                Remove
+              </Button>
             </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>
