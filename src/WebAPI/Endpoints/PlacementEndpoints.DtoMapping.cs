@@ -27,7 +27,8 @@ public static partial class PlacementEndpoints
             view.IsRetake,
             view.AllSkillsRetakeCredits,
             view.ListeningAndReadingRetakeCredits,
-            view.CreditBalance);
+            view.CreditBalance,
+            view.LatestResultPlacementId);
 
     private static PlacementTestInfoDto ToPlacementTestInfoDto(PlacementTestInfo info) =>
         new PlacementTestInfoDto(

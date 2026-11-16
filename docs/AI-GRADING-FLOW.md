@@ -1,144 +1,144 @@
-﻿# AI cháº¥m thi vÃ  AI Ä‘Ã¡nh giÃ¡ â€” luá»“ng, gá»i á»Ÿ Ä‘Ã¢u, tráº£ vá» Ä‘Ã¢u
+# AI chấm thi và AI đánh giá — luồng, gọi ở đâu, trả về đâu
 
-TÃ i liá»‡u Ä‘á»ƒ tráº£ lá»i Ä‘Ãºng cÃ¢u cháº¯c cháº¯n bá»‹ há»i: **"AI trong há»‡ thá»‘ng cá»§a em hoáº¡t Ä‘á»™ng tháº¿ nÃ o?"**
+Tài liệu để trả lời đúng câu chắc chắn bị hỏi: **"AI trong hệ thống của em hoạt động thế nào?"**
 
-CÃ³ **hai** AI khÃ¡c nhau, Ä‘á»«ng láº«n:
+Có **hai** AI khác nhau, đừng lẫn:
 
-| | **AI cháº¥m bÃ i** (grading) | **AI Ä‘Ã¡nh giÃ¡** (insight) |
+| | **AI chấm bài** (grading) | **AI đánh giá** (insight) |
 |---|---|---|
-| Cháº¥m cÃ¡i gÃ¬ | Má»™t bÃ i viáº¿t hoáº·c má»™t bÃ i nÃ³i | ToÃ n bá»™ lá»‹ch sá»­ há»c cá»§a há»c viÃªn |
-| Tráº£ vá» | Äiá»ƒm + nháº­n xÃ©t cho bÃ i Ä‘Ã³ | Lá»i khuyÃªn chiáº¿n lÆ°á»£c ("Ä‘iá»ƒm yáº¿u cá»§a báº¡n lÃ  X") |
+| Chấm cái gì | Một bài viết hoặc một bài nói | Toàn bộ lịch sử học của học viên |
+| Trả về | Điểm + nhận xét cho bài đó | Lời khuyên chiến lược ("điểm yếu của bạn là X") |
 | Interface | `IAiGrader` | `IAiInsightGenerator` |
-| Báº£ng | `AiGradings` | `AiInsights` |
+| Bảng | `AiGradings` | `AiInsights` |
 | Worker | `AiGradingBackgroundService` | `AiInsightBackgroundService` |
-| NhÃ  cung cáº¥p | SpeechSuper (nÃ³i) + Claude (viáº¿t) | Claude |
+| Nhà cung cấp | SpeechSuper (nói) + Claude (viết) | Claude |
 
 ---
 
-## 1. Kiáº¿n trÃºc má»™t cÃ¢u
+## 1. Kiến trúc một câu
 
-> **KhÃ´ng cÃ³ endpoint nÃ o gá»i AI trá»±c tiáº¿p.** Request cá»§a há»c viÃªn chá»‰ *ghi má»™t dÃ²ng vÃ o hÃ ng Ä‘á»£i*
-> rá»“i tráº£ vá» ngay. Má»™t background worker poll hÃ ng Ä‘á»£i má»—i **2 giÃ¢y**, gá»i AI, rá»“i ghi káº¿t quáº£ láº¡i.
-> Web chá»‰ *Ä‘á»c* káº¿t quáº£ Ä‘Ã³.
+> **Không có endpoint nào gọi AI trực tiếp.** Request của học viên chỉ *ghi một dòng vào hàng đợi*
+> rồi trả về ngay. Một background worker poll hàng đợi mỗi **2 giây**, gọi AI, rồi ghi kết quả lại.
+> Web chỉ *đọc* kết quả đó.
 
-ÄÃ¢y lÃ  cÃ¢u tráº£ lá»i quan trá»ng nháº¥t. Ba lÃ½ do:
-1. **Request khÃ´ng bá»‹ treo.** AI máº¥t 5â€“30 giÃ¢y; khÃ´ng thá»ƒ Ä‘á»ƒ HTTP request chá».
-2. **Thá»­ láº¡i Ä‘Æ°á»£c.** DÃ²ng `failed` cÃ³ `AttemptCount`; worker cÃ³ thá»ƒ cháº¡y láº¡i.
-3. **KhÃ´ng máº¥t tiá»n khi lá»—i.** Há»c viÃªn ná»™p xong lÃ  xong, khÃ´ng phá»¥ thuá»™c máº¡ng tá»›i AI.
+Đây là câu trả lời quan trọng nhất. Ba lý do:
+1. **Request không bị treo.** AI mất 5–30 giây; không thể để HTTP request chờ.
+2. **Thử lại được.** Dòng `failed` có `AttemptCount`; worker có thể chạy lại.
+3. **Không mất tiền khi lỗi.** Học viên nộp xong là xong, không phụ thuộc mạng tới AI.
 
 ---
 
-## 2. Luá»“ng Ä‘áº§y Ä‘á»§: tá»« lÃºc há»c viÃªn báº¥m Submit Ä‘áº¿n lÃºc tháº¥y Ä‘iá»ƒm
+## 2. Luồng đầy đủ: từ lúc học viên bấm Submit đến lúc thấy điểm
 
 ```
-â”Œâ”€ GIAI ÄOáº N 1: REQUEST (Ä‘á»“ng bá»™, ~200ms) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                                                                              â”‚
-â”‚  Há»c viÃªn báº¥m Submit                                                         â”‚
-â”‚    â”‚                                                                          â”‚
-â”‚    â–¼ src/web  â†’  POST /api/learner/placement/take/1/submit                   â”‚
-â”‚    â”‚                                                                          â”‚
-â”‚    â–¼ src/WebAPI/Endpoints/PlacementEndpoints.Submission.cs                   â”‚
-â”‚    â–¼ src/Services/PlacementService.SubmitPlacementTestAsync  (dÃ²ng 728)      â”‚
-â”‚    â–¼ src/Services/Attempts/AttemptEngine.Submission.cs                        â”‚
-â”‚         â€¢ cháº¥m pháº§n tráº¯c nghiá»‡m (so Ä‘Ã¡p Ã¡n) â†’ AttemptSkillScores              â”‚
-â”‚         â€¢ táº¡o FreeResponses cho cÃ¢u tá»± luáº­n/nÃ³i                              â”‚
-â”‚         â€¢ INSERT AiGradings (Status = 'pending')  â† CHá»ˆ GHI HÃ€NG Äá»¢I         â”‚
-â”‚         â€¢ ExamAttempts.Status = 'submitted'                                  â”‚
-â”‚    â”‚                                                                          â”‚
-â”‚    â—„â”€ TRáº¢ Vá»€ NGAY: HTTP 200 { totalScore, skillScores, isGraded: false }      â”‚
-â”‚                                                                              â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌─ GIAI ĐOẠN 1: REQUEST (đồng bộ, ~200ms) ────────────────────────────────────┐
+│                                                                              │
+│  Học viên bấm Submit                                                         │
+│    │                                                                          │
+│    ▼ src/web  →  POST /api/learner/placement/take/1/submit                   │
+│    │                                                                          │
+│    ▼ src/WebAPI/Endpoints/PlacementEndpoints.Submission.cs                   │
+│    ▼ src/Services/PlacementService.SubmitPlacementTestAsync  (dòng 728)      │
+│    ▼ src/Services/Attempts/AttemptEngine.Submission.cs                        │
+│         • chấm phần trắc nghiệm (so đáp án) → AttemptSkillScores              │
+│         • tạo FreeResponses cho câu tự luận/nói                              │
+│         • INSERT AiGradings (Status = 'pending')  ← CHỈ GHI HÀNG ĐỢI         │
+│         • ExamAttempts.Status = 'submitted'                                  │
+│    │                                                                          │
+│    ◄─ TRẢ VỀ NGAY: HTTP 200 { totalScore, skillScores, isGraded: false }      │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 
-â”Œâ”€ GIAI ÄOáº N 2: Xá»¬ LÃ (báº¥t Ä‘á»“ng bá»™, 5â€“30 giÃ¢y) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                                                                              â”‚
-â”‚  AiGradingBackgroundService  (src/WebAPI/AiGradingBackgroundService.cs)      â”‚
-â”‚    loop má»—i 2 giÃ¢y:                                                          â”‚
-â”‚      â–²                                                                        â”‚
-â”‚      â”‚  IAiGradingProcessor.ProcessPendingGradingsAsync(batchSize: 10)       â”‚
-â”‚      â”‚    â”‚                                                                   â”‚
-â”‚      â”‚    â–¼ src/Services/AiGradingProcessor.cs  (dÃ²ng 25)                    â”‚
-â”‚      â”‚      SELECT TOP 10 * FROM AiGradings WHERE Status='pending'           â”‚
-â”‚      â”‚              ORDER BY RequestedAt                                     â”‚
-â”‚      â”‚      â”‚                                                                 â”‚
-â”‚      â”‚      â–¼ vá»›i má»—i dÃ²ng â†’ ProcessSingleGradingAsync                       â”‚
-â”‚      â”‚        â€¢ LoadGradedPositionAsync  â†’ láº¥y stem, min/max words, audio    â”‚
-â”‚      â”‚        â€¢ láº¥y rubric tá»« SectionCriteria  â†’ List<GradingCriterionDetail> â”‚
-â”‚      â”‚        â€¢ dá»±ng AiGradingRequest  (record: stem, text, audio, rubric)   â”‚
-â”‚      â”‚        â”‚                                                               â”‚
-â”‚      â”‚        â–¼ IAiGrader.GradeAsync(request)     â† ÄÃ‚Y LÃ€ CHá»– Gá»ŒI AI THáº¬T   â”‚
-â”‚      â”‚          â”‚                                                             â”‚
-â”‚      â”‚          â”œâ”€â”€ AudioPath != null?  â†’ SpeechSuperAiGrader  (bÃ i NÃ“I)     â”‚
-â”‚      â”‚          â””â”€â”€ AudioPath == null?  â†’ ClaudeAiGrader        (bÃ i VIáº¾T)   â”‚
-â”‚      â”‚        â”‚                                                               â”‚
-â”‚      â”‚        â—„â”€ AiGradingResult { Success, Scores[], Transcript,            â”‚
-â”‚      â”‚                              PriorityFix, ModelRewrite, ErrorSpans }  â”‚
-â”‚      â”‚        â”‚                                                               â”‚
-â”‚      â”‚        â–¼ ghi káº¿t quáº£                                                  â”‚
-â”‚      â”‚          Success=true  â†’ AiGradings.Status='done',  OverallScaled     â”‚
-â”‚      â”‚                          AiGradingScores (tá»«ng tiÃªu chÃ­ + comment)    â”‚
-â”‚      â”‚                          FreeResponses.Status='graded'                â”‚
-â”‚      â”‚          Success=false â†’ AiGradings.Status='failed', FailureReason     â”‚
-â”‚      â”‚                          (váº«n settle FreeResponse Ä‘á»ƒ khÃ´ng treo)      â”‚
-â”‚      â”‚        â”‚                                                               â”‚
-â”‚      â”‚        â–¼ cÃ²n bÃ i nÃ o pending?                                         â”‚
-â”‚      â”‚          KhÃ´ng â†’ AttemptEngine.FinalizeAiGradedAttemptAsync           â”‚
-â”‚      â”‚                  â†’ ExamAttempts.Status='graded'                       â”‚
-â”‚      â”‚                  â†’ PlacementTests.Status='done', band, *Pct           â”‚
-â”‚      â”‚                                                                        â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌─ GIAI ĐOẠN 2: XỬ LÝ (bất đồng bộ, 5–30 giây) ───────────────────────────────┐
+│                                                                              │
+│  AiGradingBackgroundService  (src/WebAPI/AiGradingBackgroundService.cs)      │
+│    loop mỗi 2 giây:                                                          │
+│      ▲                                                                        │
+│      │  IAiGradingProcessor.ProcessPendingGradingsAsync(batchSize: 10)       │
+│      │    │                                                                   │
+│      │    ▼ src/Services/AiGradingProcessor.cs  (dòng 25)                    │
+│      │      SELECT TOP 10 * FROM AiGradings WHERE Status='pending'           │
+│      │              ORDER BY RequestedAt                                     │
+│      │      │                                                                 │
+│      │      ▼ với mỗi dòng → ProcessSingleGradingAsync                       │
+│      │        • LoadGradedPositionAsync  → lấy stem, min/max words, audio    │
+│      │        • lấy rubric từ SectionCriteria  → List<GradingCriterionDetail> │
+│      │        • dựng AiGradingRequest  (record: stem, text, audio, rubric)   │
+│      │        │                                                               │
+│      │        ▼ IAiGrader.GradeAsync(request)     ← ĐÂY LÀ CHỖ GỌI AI THẬT   │
+│      │          │                                                             │
+│      │          ├── AudioPath != null?  → SpeechSuperAiGrader  (bài NÓI)     │
+│      │          └── AudioPath == null?  → ClaudeAiGrader        (bài VIẾT)   │
+│      │        │                                                               │
+│      │        ◄─ AiGradingResult { Success, Scores[], Transcript,            │
+│      │                              PriorityFix, ModelRewrite, ErrorSpans }  │
+│      │        │                                                               │
+│      │        ▼ ghi kết quả                                                  │
+│      │          Success=true  → AiGradings.Status='done',  OverallScaled     │
+│      │                          AiGradingScores (từng tiêu chí + comment)    │
+│      │                          FreeResponses.Status='graded'                │
+│      │          Success=false → AiGradings.Status='failed', FailureReason     │
+│      │                          (vẫn settle FreeResponse để không treo)      │
+│      │        │                                                               │
+│      │        ▼ còn bài nào pending?                                         │
+│      │          Không → AttemptEngine.FinalizeAiGradedAttemptAsync           │
+│      │                  → ExamAttempts.Status='graded'                       │
+│      │                  → PlacementTests.Status='done', band, *Pct           │
+│      │                                                                        │
+└──────────────────────────────────────────────────────────────────────────────┘
 
-â”Œâ”€ GIAI ÄOáº N 3: HIá»‚N THá»Š (web poll) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                                                                              â”‚
-â”‚  src/web  poll GET /api/learner/placement/result/1/status  má»—i vÃ i giÃ¢y      â”‚
-â”‚    isGraded=false â†’ hiá»‡n "Evaluating grammar structure..."                   â”‚
-â”‚    isGraded=true  â†’ táº£i GET .../result/1   (band + Ä‘iá»ƒm tá»«ng ká»¹ nÄƒng)        â”‚
-â”‚                     nÃºt "Review every answer" báº­t                            â”‚
+┌─ GIAI ĐOẠN 3: HIỂN THỊ (web poll) ──────────────────────────────────────────┐
+│                                                                              │
+│  src/web  poll GET /api/learner/placement/result/1/status  mỗi vài giây      │
+│    isGraded=false → hiện "Evaluating grammar structure..."                   │
+│    isGraded=true  → tải GET .../result/1   (band + điểm từng kỹ năng)        │
+│                     nút "Review every answer" bật                            │
 │                     → GET .../result/1/review  (từng câu + rubric)    │
-â”‚                                                                              â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. "Call á»Ÿ Ä‘Ã¢u, tráº£ vá» á»Ÿ Ä‘Ã¢u" â€” báº£ng chÃ­nh xÃ¡c
+## 3. "Call ở đâu, trả về ở đâu" — bảng chính xác
 
-### 3a. Chá»— gá»i AI (chá»‰ má»™t chá»—)
+### 3a. Chỗ gọi AI (chỉ một chỗ)
 
 | | |
 |---|---|
 | **File** | `src/Services/AiGradingProcessor.cs` |
-| **HÃ m** | `ProcessSingleGradingAsync` |
-| **DÃ²ng gá»i** | `await aiGrader.GradeAsync(request, cancellationToken)` |
-| **Interface** | `src/Services/Interfaces/IAiGrader.cs` â†’ `Task<AiGradingResult> GradeAsync(AiGradingRequest, CancellationToken)` |
-| **Ai cung cáº¥p nÃ³** | ÄÄƒng kÃ½ DI trong `src/WebAPI/Extensions/ServiceCollectionExtensions.cs` dÃ²ng ~153 |
+| **Hàm** | `ProcessSingleGradingAsync` |
+| **Dòng gọi** | `await aiGrader.GradeAsync(request, cancellationToken)` |
+| **Interface** | `src/Services/Interfaces/IAiGrader.cs` → `Task<AiGradingResult> GradeAsync(AiGradingRequest, CancellationToken)` |
+| **Ai cung cấp nó** | Đăng ký DI trong `src/WebAPI/Extensions/ServiceCollectionExtensions.cs` dòng ~153 |
 
-**Quan trá»ng:** `AiGradingProcessor` lÃ  **chá»§ sá»Ÿ há»¯u duy nháº¥t** cá»§a hÃ ng Ä‘á»£i. KhÃ´ng service nÃ o khÃ¡c
-Ä‘Æ°á»£c gá»i `IAiGrader`. `WritingPracticeService` vÃ  `SpeakingPracticeService` chá»‰ táº¡o bÃ i vÃ  ná»™p, khÃ´ng
-bao giá» chá» AI.
+**Quan trọng:** `AiGradingProcessor` là **chủ sở hữu duy nhất** của hàng đợi. Không service nào khác
+được gọi `IAiGrader`. `WritingPracticeService` và `SpeakingPracticeService` chỉ tạo bài và nộp, không
+bao giờ chờ AI.
 
-### 3b. Hai nhÃ  cung cáº¥p, chá»n theo dá»¯ liá»‡u
+### 3b. Hai nhà cung cấp, chọn theo dữ liệu
 
 ```csharp
-// SpeechSuperAiGrader.GradeAsync â€” dÃ²ng 44
+// SpeechSuperAiGrader.GradeAsync — dòng 44
 if (string.IsNullOrEmpty(request.AudioPath))
 {
-    return await _writtenGrader.GradeAsync(request, cancellationToken);  // â†’ Claude
+    return await _writtenGrader.GradeAsync(request, cancellationToken);  // → Claude
 }
-// ... ngÆ°á»£c láº¡i: gá»­i audio tá»›i SpeechSuper
+// ... ngược lại: gửi audio tới SpeechSuper
 ```
 
-| Loáº¡i bÃ i | Grader | VÃ¬ sao |
+| Loại bài | Grader | Vì sao |
 |---|---|---|
-| **Viáº¿t** (khÃ´ng cÃ³ audio) | `ClaudeAiGrader` | Claude Ä‘á»c vÄƒn báº£n, cháº¥m theo rubric |
-| **NÃ³i** (cÃ³ audio) | `SpeechSuperAiGrader` | Cáº§n Ä‘o phÃ¡t Ã¢m + Ä‘á»™ lÆ°u loÃ¡t tá»« tÃ­n hiá»‡u Ã¢m thanh |
+| **Viết** (không có audio) | `ClaudeAiGrader` | Claude đọc văn bản, chấm theo rubric |
+| **Nói** (có audio) | `SpeechSuperAiGrader` | Cần đo phát âm + độ lưu loát từ tín hiệu âm thanh |
 
-`SpeechSuperAiGrader` **bá»c** Claude: nÃ³ gá»i SpeechSuper cho pháº§n Ã¢m, rá»“i chuyá»ƒn cho Claude nhá»¯ng
-tiÃªu chÃ­ SpeechSuper khÃ´ng Ä‘o Ä‘Æ°á»£c (tá»« vá»±ng, ngá»¯ phÃ¡p). ÄÃ³ lÃ  lÃ½ do transcript cÃ³ thá»ƒ do Claude sinh.
+`SpeechSuperAiGrader` **bọc** Claude: nó gọi SpeechSuper cho phần âm, rồi chuyển cho Claude những
+tiêu chí SpeechSuper không đo được (từ vựng, ngữ pháp). Đó là lý do transcript có thể do Claude sinh.
 
-### 3c. Chá»n grader tháº­t hay giáº£ â€” má»™t biáº¿n mÃ´i trÆ°á»ng
+### 3c. Chọn grader thật hay giả — một biến môi trường
 
 ```csharp
-// ServiceCollectionExtensions.cs dÃ²ng 153
+// ServiceCollectionExtensions.cs dòng 153
 var aiProvider = configuration["AI_PROVIDER"] ?? configuration["AiProviders:Provider"] ?? "real";
 if (aiProvider.Equals("real", StringComparison.OrdinalIgnoreCase))
 {
@@ -147,255 +147,255 @@ if (aiProvider.Equals("real", StringComparison.OrdinalIgnoreCase))
 }
 else
 {
-    services.AddSingleton<IAiGrader, FakeAiGrader>();           // â† cháº¡y test / demo offline
+    services.AddSingleton<IAiGrader, FakeAiGrader>();           // ← chạy test / demo offline
     services.AddSingleton<IAiInsightGenerator, FakeAiInsightGenerator>();
 }
 ```
 
-`AI_PROVIDER=fake` trong `.env.docker` â†’ khÃ´ng tá»‘n quota, khÃ´ng cáº§n máº¡ng, káº¿t quáº£ táº¥t Ä‘á»‹nh.
-ÄÃ¢y lÃ  thá»© Ä‘á»ƒ nÃ³i khi giÃ¡o viÃªn há»i "demo lá»—i máº¡ng thÃ¬ sao".
+`AI_PROVIDER=fake` trong `.env.docker` → không tốn quota, không cần mạng, kết quả tất định.
+Đây là thứ để nói khi giáo viên hỏi "demo lỗi mạng thì sao".
 
 ---
 
-## 4. Request vÃ  response chÃ­nh xÃ¡c
+## 4. Request và response chính xác
 
-### `AiGradingRequest` â€” gá»­i Ä‘i
+### `AiGradingRequest` — gửi đi
 
 ```csharp
 public record AiGradingRequest(
     int FreeResponseId,
     int SkillId,
     int CertId,
-    string QuestionStem,                        // Ä‘á» bÃ i
-    int? MinWords, int? MaxWords,               // giá»›i háº¡n tá»« (bÃ i viáº¿t)
-    string ResponseText,                        // bÃ i lÃ m
+    string QuestionStem,                        // đề bài
+    int? MinWords, int? MaxWords,               // giới hạn từ (bài viết)
+    string ResponseText,                        // bài làm
     IReadOnlyList<GradingCriterionDetail> Criteria,  // rubric
     int AttemptCount = 1,
-    string? AudioPath = null,                   // â† quyáº¿t Ä‘á»‹nh chá»n grader nÃ o
+    string? AudioPath = null,                   // ← quyết định chọn grader nào
     int? DurationMs = null,
-    string? ReferenceText = null,               // cÃ¢u máº«u Ä‘á»ƒ cháº¥m phÃ¡t Ã¢m
+    string? ReferenceText = null,               // câu mẫu để chấm phát âm
     bool ReferenceDescribesImage = false,
-    string? RequiredKeywords = null,            // checklist tá»« khoÃ¡ báº¯t buá»™c
+    string? RequiredKeywords = null,            // checklist từ khoá bắt buộc
     string? CertName = null,
     string? CurrentBandCode = null,
     string? TargetBandCode = null,
     string? Guide = null);
 ```
 
-Äiá»ƒm Ä‘Ã¡ng nÃ³i: **rubric lÃ  dá»¯ liá»‡u, khÃ´ng pháº£i chuá»—i trong prompt.** `Criteria` Ä‘Æ°á»£c náº¡p tá»« báº£ng
-`SectionCriteria` join `GradingCriteria` â€” nÃªn Ä‘á»•i thang Ä‘iá»ƒm trong database lÃ  Ä‘á»•i cÃ¡ch cháº¥m,
-khÃ´ng pháº£i sá»­a code.
+Điểm đáng nói: **rubric là dữ liệu, không phải chuỗi trong prompt.** `Criteria` được nạp từ bảng
+`SectionCriteria` join `GradingCriteria` — nên đổi thang điểm trong database là đổi cách chấm,
+không phải sửa code.
 
-### `AiGradingResult` â€” tráº£ vá»
+### `AiGradingResult` — trả về
 
 ```csharp
 public record AiGradingResult(
     bool Success,
-    string? FailureReason,                      // â† lÃ½ do khi tá»« chá»‘i
+    string? FailureReason,                      // ← lý do khi từ chối
     string? Model,
     IReadOnlyList<AiCriterionScoreResult> Scores,
-    string? Transcript = null,                  // â† bÃ i nÃ³i: lá»i â†’ chá»¯
-    IReadOnlyList<AiErrorSpan>? ErrorSpans = null,  // tá»‘i Ä‘a 5 lá»—i, trÃ­ch nguyÃªn vÄƒn
-    string? PriorityFix = null,                 // 1 viá»‡c nÃªn sá»­a nháº¥t
-    string? ModelRewrite = null);               // viáº¿t láº¡i Ä‘oáº¡n yáº¿u nháº¥t
+    string? Transcript = null,                  // ← bài nói: lời → chữ
+    IReadOnlyList<AiErrorSpan>? ErrorSpans = null,  // tối đa 5 lỗi, trích nguyên văn
+    string? PriorityFix = null,                 // 1 việc nên sửa nhất
+    string? ModelRewrite = null);               // viết lại đoạn yếu nhất
 ```
 
-**Bá»‘n thá»© nÃ y tráº£ lá»i "AI Ä‘Ã¡nh giÃ¡ cá»¥ thá»ƒ ra sao":**
+**Bốn thứ này trả lời "AI đánh giá cụ thể ra sao":**
 
-| TrÆ°á»ng | Hiá»‡n á»Ÿ Ä‘Ã¢u | Ã nghÄ©a |
+| Trường | Hiện ở đâu | Ý nghĩa |
 |---|---|---|
-| `Scores[]` | Rubric breakdown | Tá»«ng tiÃªu chÃ­: Ä‘iá»ƒm + nháº­n xÃ©t |
-| `Transcript` | Khá»‘i "Your response" cá»§a bÃ i nÃ³i | Lá»i nÃ³i â†’ chá»¯ |
-| `PriorityFix` | "AI feedback" | Má»™t viá»‡c nÃªn sá»­a nháº¥t |
-| `ErrorSpans[]` | (Ä‘Ã£ lÆ°u, hiá»‡n trong bÃ¡o cÃ¡o) | Tá»‘i Ä‘a 5 lá»—i, trÃ­ch Ä‘Ãºng chá»¯ há»c viÃªn |
+| `Scores[]` | Rubric breakdown | Từng tiêu chí: điểm + nhận xét |
+| `Transcript` | Khối "Your response" của bài nói | Lời nói → chữ |
+| `PriorityFix` | "AI feedback" | Một việc nên sửa nhất |
+| `ErrorSpans[]` | (đã lưu, hiện trong báo cáo) | Tối đa 5 lỗi, trích đúng chữ học viên |
 
-### Báº£ng lÆ°u káº¿t quáº£
+### Bảng lưu kết quả
 
-| Báº£ng | Cá»™t quan trá»ng |
+| Bảng | Cột quan trọng |
 |---|---|
 | `AiGradings` | `Status` (pending/done/failed), `OverallScaled`, `FailureReason`, `AttemptCount`, `PriorityFix`, `ModelRewrite`, `ErrorSpansJson` |
-| `AiGradingScores` | `CriterionId`, `Score`, `Comment` â€” má»™t dÃ²ng má»—i tiÃªu chÃ­ |
-| `FreeResponses` | `ResponseText` (bÃ i lÃ m / transcript), `AudioPath`, `Status` |
+| `AiGradingScores` | `CriterionId`, `Score`, `Comment` — một dòng mỗi tiêu chí |
+| `FreeResponses` | `ResponseText` (bài làm / transcript), `AudioPath`, `Status` |
 
 ---
 
-## 5. Ba nguyÃªn táº¯c thiáº¿t káº¿ â€” dÃ¹ng Ä‘á»ƒ tráº£ lá»i cÃ¢u há»i khÃ³
+## 5. Ba nguyên tắc thiết kế — dùng để trả lời câu hỏi khó
 
-### NguyÃªn táº¯c 1: Thiáº¿u tiÃªu chÃ­ thÃ¬ **tháº¥t báº¡i**, khÃ´ng bá»‹a Ä‘iá»ƒm
+### Nguyên tắc 1: Thiếu tiêu chí thì **thất bại**, không bịa điểm
 
 ```csharp
-// ClaudeAiGrader.cs â€” prompt + kiá»ƒm tra
+// ClaudeAiGrader.cs — prompt + kiểm tra
 // A criterion the model leaves out is not filled in with a plausible number:
 // the call is retried once, and a second omission fails the grading.
 ```
 
-Náº¿u model tráº£ vá» 3/4 tiÃªu chÃ­, há»‡ thá»‘ng **thá»­ láº¡i má»™t láº§n**. Láº§n hai váº«n thiáº¿u â†’ `Status='failed'`
-kÃ¨m lÃ½ do. KhÃ´ng bao giá» Ä‘iá»n sá»‘ cho Ä‘á»§.
+Nếu model trả về 3/4 tiêu chí, hệ thống **thử lại một lần**. Lần hai vẫn thiếu → `Status='failed'`
+kèm lý do. Không bao giờ điền số cho đủ.
 
-**VÃ¬ sao:** má»™t Ä‘iá»ƒm bá»‹a trÃ´ng giá»‘ng há»‡t má»™t Ä‘iá»ƒm tháº­t. Sai láº·ng láº½ tá»‡ hÆ¡n sai á»“n Ã o.
+**Vì sao:** một điểm bịa trông giống hệt một điểm thật. Sai lặng lẽ tệ hơn sai ồn ào.
 
-### NguyÃªn táº¯c 2: AI cÃ³ quyá»n **tá»« chá»‘i** cháº¥m
+### Nguyên tắc 2: AI có quyền **từ chối** chấm
 
 ```csharp
 return Fail("The response does not answer the task, so it cannot be scored.");
 ```
 
-Khi Ä‘Ã³:
-- `AiGradings.Status = 'failed'`, `FailureReason` cÃ³ lÃ½ do
+Khi đó:
+- `AiGradings.Status = 'failed'`, `FailureReason` có lý do
 - `PlacementTests.WritingPct = NULL`
-- **UI pháº£i hiá»‡n lÃ½ do**, khÃ´ng Ä‘Æ°á»£c im láº·ng bá» qua
+- **UI phải hiện lý do**, không được im lặng bỏ qua
 
-ÄÃ¢y lÃ  lá»—i tÃ´i Ä‘Ã£ gáº·p tháº­t: trang káº¿t quáº£ Ã¢m tháº§m áº©n ká»¹ nÄƒng Ä‘i, há»c viÃªn tháº¥y thiáº¿u má»™t dÃ²ng mÃ 
-khÃ´ng biáº¿t vÃ¬ sao. ÄÃ£ sá»­a (#376, #385): giá» hiá»‡n chip **"Not graded"** + nguyÃªn vÄƒn lÃ½ do.
+Đây là lỗi tôi đã gặp thật: trang kết quả âm thầm ẩn kỹ năng đi, học viên thấy thiếu một dòng mà
+không biết vì sao. Đã sửa (#376, #385): giờ hiện chip **"Not graded"** + nguyên văn lý do.
 
-### NguyÃªn táº¯c 3: KhÃ´ng cÃ³ gÃ¬ treo vÄ©nh viá»…n
+### Nguyên tắc 3: Không có gì treo vĩnh viễn
 
-Ba Ä‘Æ°á»ng thoÃ¡t cho má»™t bÃ i:
+Ba đường thoát cho một bài:
 
-| TÃ¬nh huá»‘ng | Xá»­ lÃ½ |
+| Tình huống | Xử lý |
 |---|---|
-| Cháº¥m thÃ nh cÃ´ng | `done` + Ä‘iá»ƒm |
-| Grader tá»« chá»‘i | `failed` + lÃ½ do, **váº«n settle** bÃ i Ä‘Ã³ |
-| Exception (máº¡ng, timeout) | `failed` + message, **váº«n settle** |
+| Chấm thành công | `done` + điểm |
+| Grader từ chối | `failed` + lý do, **vẫn settle** bài đó |
+| Exception (mạng, timeout) | `failed` + message, **vẫn settle** |
 
-Sau Ä‘Ã³: náº¿u **má»i** bÃ i tá»± luáº­n Ä‘Ã£ settle â†’ `FinalizeAiGradedAttemptAsync` â†’ attempt `graded` â†’
-placement `done`. KhÃ´ng cÃ²n tráº¡ng thÃ¡i "quay mÃ£i".
+Sau đó: nếu **mọi** bài tự luận đã settle → `FinalizeAiGradedAttemptAsync` → attempt `graded` →
+placement `done`. Không còn trạng thái "quay mãi".
 
-**Con sá»‘ tháº­t:** tÃ´i Ä‘o Ä‘Æ°á»£c má»™t ca mÃ  bÃ i nÃ³i khÃ´ng cÃ³ audio (khÃ´ng cÃ³ gÃ¬ Ä‘á»ƒ cháº¥m) â†’ khÃ´ng cÃ³
-dÃ²ng `AiGradings` nÃ o â†’ Ä‘iá»u kiá»‡n "má»i bÃ i xong" khÃ´ng bao giá» Ä‘Ãºng â†’ há»c viÃªn chá» vÃ´ háº¡n. ÄÃ£ sá»­a
-(#384): chá»‰ Ä‘áº¿m nhá»¯ng bÃ i **thá»±c sá»± Ä‘Æ°á»£c gá»­i Ä‘i cháº¥m**.
+**Con số thật:** tôi đo được một ca mà bài nói không có audio (không có gì để chấm) → không có
+dòng `AiGradings` nào → điều kiện "mọi bài xong" không bao giờ đúng → học viên chờ vô hạn. Đã sửa
+(#384): chỉ đếm những bài **thực sự được gửi đi chấm**.
 
 ---
 
-## 6. AI Ä‘Ã¡nh giÃ¡ (insight) â€” khÃ¡c hoÃ n toÃ n
+## 6. AI đánh giá (insight) — khác hoàn toàn
 
 | | |
 |---|---|
 | **Interface** | `src/Services/Interfaces/IAiInsightGenerator.cs` |
-| **HÃ m** | `GenerateInsightAsync(AiInsightGenerationRequest, CancellationToken)` |
+| **Hàm** | `GenerateInsightAsync(AiInsightGenerationRequest, CancellationToken)` |
 | **Service** | `src/Services/AiInsightService*.cs` (7 file partial) |
-| **Worker** | `src/WebAPI/AiInsightBackgroundService.cs`, poll 2 giÃ¢y |
-| **Báº£ng** | `AiInsights` (`Status` pending/done/failed, `Narrative`, `Trend`) |
+| **Worker** | `src/WebAPI/AiInsightBackgroundService.cs`, poll 2 giây |
+| **Bảng** | `AiInsights` (`Status` pending/done/failed, `Narrative`, `Trend`) |
 
-**Input khÃ´ng pháº£i má»™t bÃ i lÃ m, mÃ  lÃ  *dá»¯ liá»‡u tá»•ng há»£p***: Ä‘á»™ chÃ­nh xÃ¡c theo section/topic tá»« cÃ¡c
-view `vw_UserSectionAccuracyAll`, `vw_UserTopicAccuracy` â€” tá»©c weakness analysis.
+**Input không phải một bài làm, mà là *dữ liệu tổng hợp***: độ chính xác theo section/topic từ các
+view `vw_UserSectionAccuracyAll`, `vw_UserTopicAccuracy` — tức weakness analysis.
 
-NÃ³i cÃ¡ch khÃ¡c:
-- **Grading** tráº£ lá»i: *"BÃ i nÃ y Ä‘Æ°á»£c máº¥y Ä‘iá»ƒm?"*
-- **Insight** tráº£ lá»i: *"NhÃ¬n toÃ n bá»™ lá»‹ch sá»­, báº¡n yáº¿u cÃ¡i gÃ¬ vÃ  nÃªn lÃ m gÃ¬?"*
+Nói cách khác:
+- **Grading** trả lời: *"Bài này được mấy điểm?"*
+- **Insight** trả lời: *"Nhìn toàn bộ lịch sử, bạn yếu cái gì và nên làm gì?"*
 
-**Äiá»ƒm máº¡nh khi báº£o vá»‡:** insight **khÃ´ng bá»‹a sá»‘**. NÃ³ Ä‘á»c tá»« view SQL â€” cÃ¹ng con sá»‘ mÃ  trang
-Weakness Analysis hiá»ƒn thá»‹. AI chá»‰ viáº¿t *lá»i vÄƒn* quanh con sá»‘ Ä‘Ã³, khÃ´ng tá»± tÃ­nh.
+**Điểm mạnh khi bảo vệ:** insight **không bịa số**. Nó đọc từ view SQL — cùng con số mà trang
+Weakness Analysis hiển thị. AI chỉ viết *lời văn* quanh con số đó, không tự tính.
 
 ---
 
-## 7. CÃ¢u há»i giÃ¡o viÃªn cÃ³ thá»ƒ há»i â€” vÃ  tráº£ lá»i
+## 7. Câu hỏi giáo viên có thể hỏi — và trả lời
 
 <details open>
-<summary><strong>"Request ná»™p bÃ i cÃ³ chá» AI khÃ´ng?"</strong></summary>
+<summary><strong>"Request nộp bài có chờ AI không?"</strong></summary>
 
-**KhÃ´ng.** Request chá»‰ ghi má»™t dÃ²ng `AiGradings` vá»›i `Status='pending'` rá»“i tráº£ vá» ngay (~200ms).
-Má»™t `BackgroundService` riÃªng poll má»—i **2 giÃ¢y**, cháº¥m, ghi káº¿t quáº£. Web poll tráº¡ng thÃ¡i Ä‘á»ƒ biáº¿t khi
-nÃ o xong.
+**Không.** Request chỉ ghi một dòng `AiGradings` với `Status='pending'` rồi trả về ngay (~200ms).
+Một `BackgroundService` riêng poll mỗi **2 giây**, chấm, ghi kết quả. Web poll trạng thái để biết khi
+nào xong.
 
-Náº¿u chá» trong request: AI máº¥t 5â€“30 giÃ¢y, proxy cÃ³ thá»ƒ timeout, vÃ  má»™t láº§n máº¡ng há»ng lÃ  máº¥t bÃ i Ä‘Ã£ ná»™p.
+Nếu chờ trong request: AI mất 5–30 giây, proxy có thể timeout, và một lần mạng hỏng là mất bài đã nộp.
 </details>
 
 <details>
-<summary><strong>"AI Ä‘Æ°á»£c gá»i á»Ÿ file nÃ o?"</strong></summary>
+<summary><strong>"AI được gọi ở file nào?"</strong></summary>
 
-`src/Services/AiGradingProcessor.cs`, hÃ m `ProcessSingleGradingAsync`, qua interface
-`IAiGrader.GradeAsync`. `IAiGrader` cÃ³ hai cÃ i Ä‘áº·t: `SpeechSuperAiGrader` (bÃ i nÃ³i) vÃ 
-`ClaudeAiGrader` (bÃ i viáº¿t). Chá»n theo `request.AudioPath` cÃ³ null hay khÃ´ng.
+`src/Services/AiGradingProcessor.cs`, hàm `ProcessSingleGradingAsync`, qua interface
+`IAiGrader.GradeAsync`. `IAiGrader` có hai cài đặt: `SpeechSuperAiGrader` (bài nói) và
+`ClaudeAiGrader` (bài viết). Chọn theo `request.AudioPath` có null hay không.
 
-ÄÄƒng kÃ½ DI á»Ÿ `src/WebAPI/Extensions/ServiceCollectionExtensions.cs` dÃ²ng 153.
+Đăng ký DI ở `src/WebAPI/Extensions/ServiceCollectionExtensions.cs` dòng 153.
 </details>
 
 <details>
-<summary><strong>"LÃ m sao cháº¯c AI khÃ´ng cho Ä‘iá»ƒm bá»«a?"</strong></summary>
+<summary><strong>"Làm sao chắc AI không cho điểm bừa?"</strong></summary>
 
-Ba lá»›p:
-1. **Checklist trÆ°á»›c khi cháº¥m.** Äá»™ dÃ i, tá»« khoÃ¡ báº¯t buá»™c Ä‘Æ°á»£c kiá»ƒm báº±ng code, khÃ´ng há»i model.
-2. **Rubric lÃ  dá»¯ liá»‡u.** Má»—i tiÃªu chÃ­ cÃ³ `MaxScore` trong database; model chá»‰ tráº£ vá» tá»‰ lá»‡.
-3. **Thiáº¿u tiÃªu chÃ­ = tháº¥t báº¡i.** Model bá» sÃ³t má»™t tiÃªu chÃ­ â†’ thá»­ láº¡i má»™t láº§n â†’ váº«n thiáº¿u thÃ¬
-   `failed` kÃ¨m lÃ½ do. KhÃ´ng bao giá» Ä‘iá»n sá»‘ cho Ä‘á»§.
+Ba lớp:
+1. **Checklist trước khi chấm.** Độ dài, từ khoá bắt buộc được kiểm bằng code, không hỏi model.
+2. **Rubric là dữ liệu.** Mỗi tiêu chí có `MaxScore` trong database; model chỉ trả về tỉ lệ.
+3. **Thiếu tiêu chí = thất bại.** Model bỏ sót một tiêu chí → thử lại một lần → vẫn thiếu thì
+   `failed` kèm lý do. Không bao giờ điền số cho đủ.
 </details>
 
 <details>
-<summary><strong>"Náº¿u AI lá»—i giá»¯a chá»«ng thÃ¬ há»c viÃªn máº¥t bÃ i Ã ?"</strong></summary>
+<summary><strong>"Nếu AI lỗi giữa chừng thì học viên mất bài à?"</strong></summary>
 
-KhÃ´ng. BÃ i Ä‘Ã£ ná»™p náº±m trong `FreeResponses`, khÃ´ng phá»¥ thuá»™c AI. Grading `failed` cÃ³ `AttemptCount`
-vÃ  `FailureReason`; cÃ³ endpoint retry (`POST /api/learner/placement/result/{id}/retry`) cháº¡y láº¡i
-**miá»…n phÃ­** â€” khÃ´ng ghi thÃªm dÃ²ng ledger nÃ o.
+Không. Bài đã nộp nằm trong `FreeResponses`, không phụ thuộc AI. Grading `failed` có `AttemptCount`
+và `FailureReason`; có endpoint retry (`POST /api/learner/placement/result/{id}/retry`) chạy lại
+**miễn phí** — không ghi thêm dòng ledger nào.
 
-VÃ  quan trá»ng: lá»—i AI **khÃ´ng lÃ m treo** attempt. Má»i Ä‘Æ°á»ng (thÃ nh cÃ´ng / tá»« chá»‘i / exception) Ä‘á»u
-settle bÃ i Ä‘Ã³, Ä‘á»ƒ attempt cÃ³ thá»ƒ chá»‘t.
+Và quan trọng: lỗi AI **không làm treo** attempt. Mọi đường (thành công / từ chối / exception) đều
+settle bài đó, để attempt có thể chốt.
 </details>
 
 <details>
-<summary><strong>"Transcript bÃ i nÃ³i láº¥y tá»« Ä‘Ã¢u?"</strong></summary>
+<summary><strong>"Transcript bài nói lấy từ đâu?"</strong></summary>
 
-Tá»« `AiGradingResult.Transcript`. Vá»›i bÃ i nÃ³i, `SpeechSuperAiGrader` gá»­i file audio tá»›i SpeechSuper
-(`speak.eval.pro`), nháº­n vá» Ä‘iá»ƒm phÃ¡t Ã¢m/lÆ°u loÃ¡t vÃ  báº£n chuyá»ƒn lá»i. Káº¿t quáº£ Ä‘Æ°á»£c ghi vÃ o
-`FreeResponses.ResponseText`, nÃªn trang review Ä‘á»c cÃ¹ng má»™t cá»™t vá»›i bÃ i viáº¿t.
+Từ `AiGradingResult.Transcript`. Với bài nói, `SpeechSuperAiGrader` gửi file audio tới SpeechSuper
+(`speak.eval.pro`), nhận về điểm phát âm/lưu loát và bản chuyển lời. Kết quả được ghi vào
+`FreeResponses.ResponseText`, nên trang review đọc cùng một cột với bài viết.
 
-Há»‡ quáº£ cáº§n biáº¿t: **transcript chá»‰ cÃ³ sau khi cháº¥m xong.** TrÆ°á»›c Ä‘Ã³ khá»‘i "Your response" cá»§a bÃ i nÃ³i
-Ä‘á»ƒ trá»‘ng â€” Ä‘Ã³ lÃ  lÃ½ do nÃºt Review chá»‰ báº­t khi `isGraded = true`.
+Hệ quả cần biết: **transcript chỉ có sau khi chấm xong.** Trước đó khối "Your response" của bài nói
+để trống — đó là lý do nút Review chỉ bật khi `isGraded = true`.
 </details>
 
 <details>
-<summary><strong>"WebM cá»§a trÃ¬nh duyá»‡t, SpeechSuper cÃ³ nháº­n khÃ´ng?"</strong></summary>
+<summary><strong>"WebM của trình duyệt, SpeechSuper có nhận không?"</strong></summary>
 
-CÃ³, nhÆ°ng pháº£i khai Ä‘Ãºng tÃªn. SpeechSuper tá»« chá»‘i `webm` vá»›i lá»—i `41002 "audio type is not
-supported"`. File ghi tá»« trÃ¬nh duyá»‡t lÃ  container WebM chá»©a Opus â€” gá»­i vá»›i nhÃ£n **`opus`** thÃ¬ nháº­n,
-cho cÃ¹ng transcript vÃ  Ä‘iá»ƒm nhÆ° báº£n mp3. KhÃ´ng cáº§n transcode.
+Có, nhưng phải khai đúng tên. SpeechSuper từ chối `webm` với lỗi `41002 "audio type is not
+supported"`. File ghi từ trình duyệt là container WebM chứa Opus — gửi với nhãn **`opus`** thì nhận,
+cho cùng transcript và điểm như bản mp3. Không cần transcode.
 
-Chi tiáº¿t nÃ y á»Ÿ `SpeechSuperAiGrader` dÃ²ng ~70, vÃ  lÃ  má»™t trong nhá»¯ng lá»—i tÃ´i Ä‘Ã£ sá»­a trÃªn `main`.
+Chi tiết này ở `SpeechSuperAiGrader` dòng ~70, và là một trong những lỗi tôi đã sửa trên `main`.
 </details>
 
 <details>
-<summary><strong>"AI Ä‘Ã¡nh giÃ¡ khÃ¡c AI cháº¥m tháº¿ nÃ o?"</strong></summary>
+<summary><strong>"AI đánh giá khác AI chấm thế nào?"</strong></summary>
 
-| | Cháº¥m (grading) | ÄÃ¡nh giÃ¡ (insight) |
+| | Chấm (grading) | Đánh giá (insight) |
 |---|---|---|
-| Input | Má»™t bÃ i lÃ m | ToÃ n bá»™ lá»‹ch sá»­ (tá»« view SQL) |
-| Output | Äiá»ƒm tá»«ng tiÃªu chÃ­ + sá»­a lá»—i | Lá»i khuyÃªn chiáº¿n lÆ°á»£c |
-| CÃ¢u há»i nÃ³ tráº£ lá»i | "BÃ i nÃ y máº¥y Ä‘iá»ƒm?" | "TÃ´i nÃªn há»c gÃ¬ tiáº¿p?" |
+| Input | Một bài làm | Toàn bộ lịch sử (từ view SQL) |
+| Output | Điểm từng tiêu chí + sửa lỗi | Lời khuyên chiến lược |
+| Câu hỏi nó trả lời | "Bài này mấy điểm?" | "Tôi nên học gì tiếp?" |
 
-Cáº£ hai Ä‘á»u báº¥t Ä‘á»“ng bá»™, Ä‘á»u cÃ³ báº£ng riÃªng, Ä‘á»u cÃ³ worker poll 2 giÃ¢y.
+Cả hai đều bất đồng bộ, đều có bảng riêng, đều có worker poll 2 giây.
 </details>
 
 <details>
-<summary><strong>"Demo mÃ  máº¡ng há»ng thÃ¬ sao?"</strong></summary>
+<summary><strong>"Demo mà mạng hỏng thì sao?"</strong></summary>
 
-Äáº·t `AI_PROVIDER=fake` trong `.env.docker` rá»“i `docker compose up -d --force-recreate api`.
-`FakeAiGrader` tráº£ káº¿t quáº£ táº¥t Ä‘á»‹nh, khÃ´ng gá»i máº¡ng, khÃ´ng tá»‘n quota. ToÃ n bá»™ luá»“ng váº«n cháº¡y y
-nguyÃªn â€” chá»‰ khÃ¡c lÃ  Ä‘iá»ƒm do mÃ¡y sinh thay vÃ¬ model.
+Đặt `AI_PROVIDER=fake` trong `.env.docker` rồi `docker compose up -d --force-recreate api`.
+`FakeAiGrader` trả kết quả tất định, không gọi mạng, không tốn quota. Toàn bộ luồng vẫn chạy y
+nguyên — chỉ khác là điểm do máy sinh thay vì model.
 </details>
 
 ---
 
-## 8. Má»™t phÃºt Ä‘á»ƒ nhá»›
+## 8. Một phút để nhớ
 
 ```
-Ná»™p bÃ i
-  â†’ ghi AiGradings(pending)       â† request tráº£ vá» ngay
-  â†’ worker poll 2s
-      â†’ AiGradingProcessor
-          â†’ IAiGrader.GradeAsync   â† CHá»– DUY NHáº¤T gá»i AI
-              â”œâ”€ cÃ³ audio â†’ SpeechSuper
-              â””â”€ khÃ´ng audio â†’ Claude
-          â† AiGradingResult { Scores, Transcript, FailureReason }
-      â†’ ghi AiGradings(done|failed)
-      â†’ má»i bÃ i xong â†’ FinalizeAiGradedAttemptAsync â†’ attempt graded
-  â†’ web poll status â†’ hiá»‡n Ä‘iá»ƒm
+Nộp bài
+  → ghi AiGradings(pending)       ← request trả về ngay
+  → worker poll 2s
+      → AiGradingProcessor
+          → IAiGrader.GradeAsync   ← CHỖ DUY NHẤT gọi AI
+              ├─ có audio → SpeechSuper
+              └─ không audio → Claude
+          ← AiGradingResult { Scores, Transcript, FailureReason }
+      → ghi AiGradings(done|failed)
+      → mọi bài xong → FinalizeAiGradedAttemptAsync → attempt graded
+  → web poll status → hiện điểm
 ```
 
-**Ba cÃ¢u chá»‘t khi báº£o vá»‡:**
+**Ba câu chốt khi bảo vệ:**
 
-1. "AI **khÃ´ng** náº±m trong request cá»§a ngÆ°á»i dÃ¹ng. NÃ³ náº±m trong má»™t worker ná»n, vÃ¬ request khÃ´ng
-   thá»ƒ chá» 30 giÃ¢y."
-2. "Rubric lÃ  **dá»¯ liá»‡u trong database**, khÃ´ng pháº£i chuá»—i viáº¿t cá»©ng trong prompt. Äá»•i thang Ä‘iá»ƒm lÃ 
-   Ä‘á»•i dá»¯ liá»‡u, khÃ´ng pháº£i sá»­a code."
-3. "AI **Ä‘Æ°á»£c quyá»n tá»« chá»‘i**, vÃ  khi tá»« chá»‘i thÃ¬ UI pháº£i nÃ³i lÃ½ do. Má»™t cá»™t Ä‘iá»ƒm NULL khÃ´ng pháº£i lÃ 
-   khÃ´ng cÃ³ dá»¯ liá»‡u â€” nÃ³ lÃ  má»™t sá»± kiá»‡n cáº§n giáº£i thÃ­ch."
+1. "AI **không** nằm trong request của người dùng. Nó nằm trong một worker nền, vì request không
+   thể chờ 30 giây."
+2. "Rubric là **dữ liệu trong database**, không phải chuỗi viết cứng trong prompt. Đổi thang điểm là
+   đổi dữ liệu, không phải sửa code."
+3. "AI **được quyền từ chối**, và khi từ chối thì UI phải nói lý do. Một cột điểm NULL không phải là
+   không có dữ liệu — nó là một sự kiện cần giải thích."

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Alert, Button, Card, Chip, Radio, RadioGroup, Label, Spinner, buttonVariants } from '@heroui/react';
-import { Award, AlertCircle, Clock, Play, RotateCcw, Sparkles, Wallet } from 'lucide-react';
+import { Award, AlertCircle, Clock, Eye, ListChecks, Play, RotateCcw, Sparkles, Wallet } from 'lucide-react';
 import {
   api,
   ApiClientError,
@@ -153,6 +153,42 @@ export function PlacementCatalogPage() {
           )}
         </div>
       </header>
+
+      {/* #386: the band the header shows came from a paper, so the way back to that paper belongs on
+          this page. Before this, a learner who left the result page had no route to it at all - the
+          only way back was typing the address, which is not a thing a demo (or a user) should need. */}
+      {catalog.latestResultPlacementId != null && !catalog.activePlacementId && (
+        <Card variant="secondary">
+          <Card.Content className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="space-y-0.5">
+              <p className="text-sm font-semibold text-foreground">Your last placement result</p>
+              <p className="text-xs text-muted">
+                Band {catalog.currentBandCode ?? '—'}
+                {catalog.currentBandName ? ` · ${catalog.currentBandName}` : ''} — reopen it to read
+                every answer, and the AI's marks on your writing and speaking.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                to="/placement/result/$attemptId"
+                params={{ attemptId: String(catalog.latestResultPlacementId) }}
+                className="button button--sm button--secondary"
+              >
+                <Eye className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+                View result
+              </Link>
+              <Link
+                to="/placement/review/$placementId"
+                params={{ placementId: String(catalog.latestResultPlacementId) }}
+                className="button button--sm button--secondary"
+              >
+                <ListChecks className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+                Review answers
+              </Link>
+            </div>
+          </Card.Content>
+        </Card>
+      )}
 
       {error && (
         <Alert status="danger">

@@ -142,7 +142,8 @@ public sealed partial class PlacementService(
             IsRetake: isRetake,
             AllSkillsRetakeCredits: _options.AllSkillsRetakeCredits,
             ListeningAndReadingRetakeCredits: _options.ListeningAndReadingRetakeCredits,
-            CreditBalance: creditBalance);
+            CreditBalance: creditBalance,
+            LatestResultPlacementId: latestDone?.PlacementId);
     }
 
     public Task<PlacementTestInfo> StartPlacementTestAsync(int userId, int examId, CancellationToken cancellationToken = default) =>

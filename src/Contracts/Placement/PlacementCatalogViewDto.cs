@@ -13,4 +13,6 @@ public sealed record PlacementCatalogViewDto(
     bool IsRetake = false,
     int AllSkillsRetakeCredits = 5,
     int ListeningAndReadingRetakeCredits = 3,
-    int? CreditBalance = null);
+    int? CreditBalance = null,
+    // #386: lets the catalog offer a way back to the result that produced the band on screen.
+    int? LatestResultPlacementId = null);

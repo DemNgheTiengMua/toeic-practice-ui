@@ -1765,6 +1765,8 @@ export interface PlacementCatalogViewDto {
   allSkillsRetakeCredits?: number;
   listeningAndReadingRetakeCredits?: number;
   creditBalance?: number | null;
+  /** #386: the placement whose result produced the band on screen. */
+  latestResultPlacementId?: number | null;
 }
 
 export interface PlacementTestInfoDto {
