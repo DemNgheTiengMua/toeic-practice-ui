@@ -993,29 +993,6 @@ BEGIN CATCH
 END CATCH
 SET IDENTITY_INSERT [GradingCriteria] OFF;
 
--- ---- SectionCriteria (12 rows)
--- #382: the publish gate refuses a free-response question whose section has no rubric criterion,
--- and this table was empty in the seed, so EVERY paper carrying a speaking or writing task could never
--- be published. One criterion row per (section, rubric criterion) the section is graded against:
--- Writing = T1/T2 (task response, coherence, lexis, grammar); Speaking = INT.
-BEGIN TRY
-  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (18, 9, 7, 9.00);
-  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (18, 10, 7, 9.00);
-  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (18, 11, 7, 9.00);
-  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (18, 12, 7, 9.00);
-  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (19, 9, 7, 9.00);
-  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (19, 10, 7, 9.00);
-  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (19, 11, 7, 9.00);
-  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (19, 12, 7, 9.00);
-  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (20, 13, 8, 9.00);
-  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (20, 14, 8, 9.00);
-  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (20, 15, 8, 9.00);
-  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (20, 16, 8, 9.00);
-END TRY
-BEGIN CATCH
-  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
-END CATCH
-
 
 -- ---- Items (140 rows)
 SET IDENTITY_INSERT [Items] ON;
@@ -2268,7 +2245,7 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (45, 45, 1, N'Part 1: Do you work or are you a student? What do you enjoy most about your studies or job?', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 60, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1253700+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (45, 45, 1, N'Part 1: Do you work or are you a student? What do you enjoy most about your studies or job?', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 30, 60, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1253700+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -2280,7 +2257,7 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (47, 47, 1, N'Write at least 150 words summarizing the main features and comparisons in the chart.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 150, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1263764+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (47, 47, 1, N'Write at least 150 words summarizing the main features and comparisons in the chart.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 150, 220, NULL, 1200, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1263764+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -2304,7 +2281,7 @@ BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
 END CATCH
 BEGIN TRY
-  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (51, 51, 1, N'Part 1: Social Interaction: Talk about your favorite leisure activity. Why do you enjoy it?', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 60, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1293815+07:00', 1);
+  INSERT INTO [ItemVersions] ([ItemVersionId], [ItemId], [VersionNumber], [Stem], [OptionA], [OptionB], [OptionC], [OptionD], [KeyLabel], [Explanation], [RationaleA], [RationaleB], [RationaleC], [RationaleD], [EvidenceStart], [EvidenceEnd], [EvidenceUnit], [EvidenceQuote], [ReferenceText], [ReferenceKind], [MinWords], [MaxWords], [PrepSeconds], [ResponseSeconds], [MaxSelections], [AllowNumber], [AcceptedAnswersJson], [RequiredKeywords], [Hint], [CreatedAt], [LastWrittenBy]) VALUES (51, 51, 1, N'Part 1: Social Interaction: Talk about your favorite leisure activity. Why do you enjoy it?', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 30, 60, NULL, 1, NULL, NULL, NULL, '2026-11-11T01:44:03.1293815+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
@@ -3452,6 +3429,34 @@ BEGIN CATCH
 END CATCH
 SET IDENTITY_INSERT [Sections] OFF;
 
+-- ---- SectionCriteria (12 rows)
+-- #382: the publish gate refuses a free-response question whose section has no rubric criterion,
+-- and this table was empty in the seed, so EVERY paper carrying a speaking or writing task could never
+-- be published. One criterion row per (section, rubric criterion) the section is graded against:
+-- Writing = T1/T2 (task response, coherence, lexis, grammar); Speaking = INT.
+--
+-- This block MUST stay below the Sections inserts. It first sat beside GradingCriteria, where the FK to
+-- Sections had nothing to point at yet, the CATCH below swallowed error 547 as if it were a duplicate,
+-- and all twelve rows vanished with no message - so a fresh database still refused to publish every
+-- speaking and writing paper. A silent CATCH is only safe for rows whose parents are already loaded.
+BEGIN TRY
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (18, 9, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (18, 10, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (18, 11, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (18, 12, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (19, 9, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (19, 10, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (19, 11, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (19, 12, 7, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (20, 13, 8, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (20, 14, 8, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (20, 15, 8, 9.00);
+  INSERT INTO [SectionCriteria] ([SectionId], [CriterionId], [SkillId], [MaxScore]) VALUES (20, 16, 8, 9.00);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+
 -- ---- Bookings (2 rows)
 SET IDENTITY_INSERT [Bookings] ON;
 BEGIN TRY
@@ -3652,6 +3657,13 @@ BEGIN CATCH
 END CATCH
 BEGIN TRY
   INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (104, 8, 20, 2, 46, 46, N'speaking', 2, 1, '2026-11-16T00:00:00.0000000+07:00', 1);
+END TRY
+BEGIN CATCH
+  IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
+END CATCH
+
+BEGIN TRY
+  INSERT INTO [ExamItems] ([ExamItemId], [ExamId], [SectionId], [CertId], [ItemVersionId], [ItemId], [Modality], [DisplayOrder], [UnitNumber], [CreatedAt], [LastWrittenBy]) VALUES (105, 8, 20, 2, 52, 52, N'speaking', 3, 1, '2026-11-16T00:00:00.0000000+07:00', 1);
 END TRY
 BEGIN CATCH
   IF ERROR_NUMBER() NOT IN (2627, 2601, 547) THROW;
